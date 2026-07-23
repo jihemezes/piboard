@@ -1,0 +1,126 @@
+# ============================================================
+# PiBoard - electron-builder.yml
+# Configuration de l'empaquetage Windows (installeur NSIS) et de la
+# publication des mises a jour sur GitHub Releases.
+# Windows packaging configuration (NSIS installer) and publication of
+# updates to GitHub Releases.
+# ============================================================
+
+# Identifiant applicatif : chaine unique identifiant PiBoard aupres de
+# Windows (entree de desinstallation dans le registre, dossier
+# %APPDATA%, identite verifiee par electron-updater). Convention DNS
+# inversee ; le domaine n'a pas besoin d'exister.
+# NE DOIT PLUS JAMAIS CHANGER apres la premiere version publiee : les
+# installations existantes ne se reconnaitraient plus et la mise a jour
+# automatique cesserait de fonctionner.
+#
+# Application id: a unique string identifying PiBoard to Windows
+# (uninstall entry in the registry, %APPDATA% folder, identity verified
+# by electron-updater). Reverse-DNS convention; the domain need not
+# exist. MUST NEVER CHANGE after the first published version: existing
+# installations would no longer recognize themselves and automatic
+# updating would stop working.
+appId: com.jihemezes.piboard
+productName: PiBoard
+copyright: Copyright (c) 2026 EZES Jean-Michel
+
+directories:
+  output: dist
+  buildResources: build
+
+# Contenu embarque dans l'application. Les dependances de production
+# declarees dans package.json sont incluses automatiquement ; on exclut
+# ici ce qui n'a aucun sens sur un poste Windows : les tests, la
+# documentation, et les scripts d'installation propres au Raspberry Pi.
+# Content bundled into the application. Production dependencies declared
+# in package.json are included automatically; we exclude here what makes
+# no sense on a Windows machine: tests, documentation, and the Raspberry
+# Pi installation scripts.
+files:
+  - electron/**
+  - server/**
+  - public/**
+  - package.json
+  - "!test/**"
+  - "!docs/**"
+  - "!install/**"
+  - "!data/**"
+  - "!dist/**"
+  - "!**/*.md"
+
+# ARCHIVE ASAR DESACTIVEE, VOLONTAIREMENT.
+# PiBoard sert son interface avec express.static, qui lit les fichiers
+# par flux (fs.createReadStream) et par statistiques de descripteur.
+# Electron sait rendre une archive asar transparente pour la plupart des
+# appels fs, mais cette compatibilite reste une emulation, et un
+# tableau de bord qui sert plusieurs centaines de fichiers statiques
+# (widgets, CSS, icones SVG, bibliotheques vendorisees) est precisement
+# le cas ou les differences se manifestent.
+# Le code etant public et sous licence MIT, l'archive n'apporterait
+# aucune protection : on prefere la robustesse. A reconsiderer seulement
+# si le nombre de fichiers devient un probleme a l'installation.
+#
+# ASAR ARCHIVE DELIBERATELY DISABLED.
+# PiBoard serves its interface with express.static, which reads files
+# through streams (fs.createReadStream) and descriptor stats. Electron
+# can make an asar archive transparent for most fs calls, but that
+# compatibility remains an emulation, and a dashboard serving several
+# hundred static files (widgets, CSS, SVG icons, vendored libraries) is
+# exactly where the differences show up.
+# The code being public and MIT-licensed, the archive would provide no
+# protection whatsoever: robustness is preferred. To be reconsidered
+# only if the file count becomes an install-time problem.
+asar: false
+
+win:
+  target:
+    - nsis
+  icon: build/icon.ico
+  # Nom de l'editeur affiche par Windows. Sans certificat de signature
+  # de code, SmartScreen affichera malgre tout un avertissement au
+  # premier lancement de l'installeur : c'est attendu.
+  # Publisher name shown by Windows. Without a code-signing certificate,
+  # SmartScreen will still display a warning the first time the
+  # installer runs: this is expected.
+  publisherName: EZES Jean-Michel
+
+nsis:
+  # Installation PAR UTILISATEUR (%LOCALAPPDATA%\Programs\PiBoard) plutot
+  # que pour toute la machine. Trois consequences, toutes souhaitables
+  # ici : aucune elevation UAC a l'installation, et surtout aucune a la
+  # mise a jour automatique -- electron-updater ne peut pas ecrire dans
+  # Program Files sans privileges, ce qui casserait silencieusement les
+  # mises a jour.
+  # PER-USER installation (%LOCALAPPDATA%\Programs\PiBoard) rather than
+  # machine-wide. Three consequences, all desirable here: no UAC
+  # elevation at install time, and above all none for automatic updates
+  # -- electron-updater cannot write into Program Files without
+  # privileges, which would silently break updating.
+  perMachine: false
+  # Installeur avec assistant plutot qu'en un clic : l'utilisateur voit
+  # ce qui se passe et choisit le dossier.
+  # Wizard installer rather than one-click: the user sees what happens
+  # and picks the folder.
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PiBoard
+  # Les donnees (%APPDATA%\PiBoard) sont CONSERVEES a la desinstallation :
+  # disposition des tuiles, cles API, photos televersees. Les effacer
+  # sans le demander serait brutal, et une reinstallation retrouve tout.
+  # Data (%APPDATA%\PiBoard) is KEPT on uninstall: tile layout, API keys,
+  # uploaded photos. Wiping it unasked would be brutal, and a
+  # reinstallation finds everything back.
+  deleteAppDataOnUninstall: false
+
+# Publication des mises a jour. electron-builder depose ici l'installeur
+# ET le fichier latest.yml que lit electron-updater. Le depot doit etre
+# PUBLIC (voir electron/updater.js).
+# Update publication. electron-builder drops the installer AND the
+# latest.yml file read by electron-updater here. The repository must be
+# PUBLIC (see electron/updater.js).
+publish:
+  provider: github
+  owner: jihemezes
+  repo: piboard

@@ -1,0 +1,151 @@
+{
+  "id": "weather",
+  "version": "0.5.0",
+  "name": {
+    "en": "Weather",
+    "fr": "Météo"
+  },
+  "description": {
+    "en": "Current weather with a choice of national weather models (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, or your own custom source), a real photo background matching conditions, and tomorrow's forecast laid out automatically to fit the tile's shape.",
+    "fr": "Météo actuelle avec un choix de modèles météo nationaux (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, ou votre propre source personnalisée), une vraie photo de fond selon les conditions, et la prévision du lendemain disposée automatiquement selon la forme de la tuile."
+  },
+  "size": {
+    "w": 3,
+    "h": 2,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 8,
+    "maxH": 4
+  },
+  "settings": [
+    {
+      "key": "city",
+      "type": "text",
+      "default": "Toulouse",
+      "label": {
+        "en": "City",
+        "fr": "Ville"
+      }
+    },
+    {
+      "key": "provider",
+      "type": "select",
+      "default": "best_match",
+      "label": {
+        "en": "Weather model / source",
+        "fr": "Modèle météo / source"
+      },
+      "hint": {
+        "en": "All options (except Custom) still use Open-Meteo's free, keyless API — this just picks which national weather service's underlying model it uses. \"Best match\" (the previous default) blends the best available model per location. If forecasts feel off for your area, a specific national model can sometimes do better locally.",
+        "fr": "Toutes les options (sauf Personnalisé) utilisent toujours l'API gratuite et sans clé d'Open-Meteo — ceci choisit seulement quel modèle météo national elle utilise en coulisses. « Meilleure correspondance » (l'ancien réglage par défaut) mélange le meilleur modèle disponible par lieu. Si les prévisions semblent décalées pour votre région, un modèle national précis fait parfois mieux localement."
+      },
+      "options": [
+        {
+          "value": "best_match",
+          "label": {
+            "en": "🌐 Best match (automatic — previous default)",
+            "fr": "🌐 Meilleure correspondance (automatique — ancien défaut)"
+          }
+        },
+        {
+          "value": "meteofrance_seamless",
+          "label": {
+            "en": "🇫🇷 Météo-France (ARPEGE / AROME)",
+            "fr": "🇫🇷 Météo-France (ARPEGE / AROME)"
+          }
+        },
+        {
+          "value": "ecmwf_ifs",
+          "label": {
+            "en": "🇪🇺 ECMWF (Europe, medium-range)",
+            "fr": "🇪🇺 ECMWF (Europe, moyen terme)"
+          }
+        },
+        {
+          "value": "icon_seamless",
+          "label": {
+            "en": "🇩🇪 DWD ICON (Germany)",
+            "fr": "🇩🇪 DWD ICON (Allemagne)"
+          }
+        },
+        {
+          "value": "metno_seamless",
+          "label": {
+            "en": "🇳🇴 MET Norway / Yr (N./W. Europe, short-term)",
+            "fr": "🇳🇴 MET Norway / Yr (Europe N./O., court terme)"
+          }
+        },
+        {
+          "value": "ncep_gfs_seamless",
+          "label": {
+            "en": "🇺🇸 NOAA GFS (USA / global)",
+            "fr": "🇺🇸 NOAA GFS (États-Unis / mondial)"
+          }
+        },
+        {
+          "value": "custom",
+          "label": {
+            "en": "⚙️ Custom (advanced, see field below)",
+            "fr": "⚙️ Personnalisé (avancé, voir le champ ci-dessous)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "customUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Custom forecast URL (only used by \"Custom\")",
+        "fr": "URL de prévision personnalisée (utilisé seulement par « Personnalisé »)"
+      },
+      "hint": {
+        "en": "Use <code>{lat}</code> and <code>{lon}</code> as placeholders — PiBoard fills them in. The response must be JSON in Open-Meteo's exact format (a <code>current</code> object with <code>temperature_2m</code>/<code>weather_code</code>/<code>wind_speed_10m</code>, and a <code>daily</code> object with 2-day arrays for <code>temperature_2m_min</code>/<code>_max</code>/<code>weather_code</code>). This works well with a <a href=\"https://github.com/open-meteo/open-meteo\" target=\"_blank\">self-hosted Open-Meteo</a> instance or a small proxy you write yourself that reformats another provider's data.",
+        "fr": "Utilisez <code>{lat}</code> et <code>{lon}</code> comme espaces réservés — PiBoard les remplit automatiquement. La réponse doit être du JSON au format exact d'Open-Meteo (un objet <code>current</code> avec <code>temperature_2m</code>/<code>weather_code</code>/<code>wind_speed_10m</code>, et un objet <code>daily</code> avec des tableaux sur 2 jours pour <code>temperature_2m_min</code>/<code>_max</code>/<code>weather_code</code>). Fonctionne bien avec une instance <a href=\"https://github.com/open-meteo/open-meteo\" target=\"_blank\">Open-Meteo auto-hébergée</a>, ou un petit proxy que vous écrivez vous-même pour reformater les données d'un autre fournisseur."
+      }
+    },
+    {
+      "key": "showTomorrow",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show tomorrow's forecast",
+        "fr": "Afficher la prévision du lendemain"
+      },
+      "hint": {
+        "en": "When on, the layout adapts to the tile's shape: side by side if wide, stacked if tall, hidden if roughly square (today only, more room for it).",
+        "fr": "Une fois activé, la disposition s'adapte à la forme de la tuile : côte à côte si large, empilée si haute, masquée si à peu près carrée (aujourd'hui seul, avec plus de place)."
+      }
+    },
+    {
+      "key": "showWind",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show wind",
+        "fr": "Afficher le vent"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 15,
+      "min": 5,
+      "max": 120,
+      "step": 5,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      }
+    },
+    {
+      "key": "usePhotos",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Use a photo background (falls back to color if unavailable)",
+        "fr": "Utiliser une photo de fond (repli sur la couleur si indisponible)"
+      }
+    }
+  ]
+}

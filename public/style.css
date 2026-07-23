@@ -1,0 +1,1369 @@
+/* ============================================================
+   PiBoard - style.css
+   Deux themes : nuit (encre bleutee) et jour (papier).
+   Accent unique : framboise Raspberry Pi (#D6335C).
+   Aucune police externe : tout fonctionne hors ligne.
+   Two themes: night (blue-ink) and day (paper).
+   Single accent: Raspberry Pi raspberry (#D6335C).
+   No external fonts: everything works offline.
+   ============================================================ */
+
+:root {
+  --accent: #D6335C;
+  --radius: 14px;
+  --gap: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+}
+
+body[data-theme="dark"] {
+  --bg: #0B0E14;
+  --tile: #141926;
+  --tile-edge: #1E2536;
+  --text: #E8ECF4;
+  --muted: #8B93A7;
+  --faint: #565E73;
+  --overlay: rgba(6, 8, 12, 0.72);
+  --field-bg: #0E1220;
+}
+
+body[data-theme="light"] {
+  --bg: #EFEDE7;
+  --tile: #FFFFFF;
+  --tile-edge: #DDD9CF;
+  --text: #1B1F2A;
+  --muted: #6B7180;
+  --faint: #A3A8B4;
+  --overlay: rgba(30, 32, 38, 0.45);
+  --field-bg: #F6F5F1;
+}
+
+* { box-sizing: border-box; }
+
+/* L'attribut hidden gagne TOUJOURS, meme sur les elements en display:flex.
+   Sans cette regle, un display explicite neutralise hidden : c'etait la cause
+   du voile invisible .board-empty qui bloquait toute la souris.
+   The hidden attribute ALWAYS wins, even over display:flex rules. Without it,
+   an explicit display defeats hidden: this was the invisible .board-empty
+   veil swallowing every mouse event. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  transition: background 0.6s ease, color 0.6s ease;
+}
+
+body.hide-cursor, body.hide-cursor * { cursor: none !important; }
+
+.board {
+  position: absolute;
+  inset: 0;
+  padding: var(--gap);
+}
+
+.board-empty {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 20px;
+  text-align: center;
+  padding: 0 10vw;
+}
+
+/* ---------- Tuiles / tiles ---------- */
+
+.grid-stack-item-content {
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.6s ease, border-color 0.6s ease;
+}
+
+.tile-head {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px dashed var(--tile-edge);
+  user-select: none;
+}
+
+body.editing .tile-head { display: flex; cursor: grab; }
+
+.tile-head .tile-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tile-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 2px;
+  cursor: pointer;
+  line-height: 0;
+}
+.tile-btn:hover { color: var(--text); }
+.tile-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Barre de titre optionnelle des tuiles / optional tile title bar */
+.tile-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 7px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--tile-edge);
+  flex-shrink: 0;
+  user-select: none;
+}
+.tile-title img { width: 14px; height: 14px; flex-shrink: 0; }
+.tile-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  /* Isole la tuile dans son propre contexte d'empilement CSS. Sans ça, un
+     z-index eleve pose A L'INTERIEUR d'une tuile (ex. les badges du
+     widget Trafic, montes a 1001 pour passer au-dessus des controles
+     natifs de Leaflet, eux-memes a 1000) peut "fuir" et rivaliser
+     directement avec des elements du document entier -- notamment les
+     fenetres modales de l'app (elles aussi a z-index:1000), qui se
+     retrouvaient alors recouvertes par un badge de tuile. Avec
+     isolation:isolate, un z-index interne, aussi eleve soit-il, reste
+     confine a la tuile et ne peut plus jamais depasser un element
+     exterieur comme une modale.
+     Isolates the tile in its own CSS stacking context. Without this, a
+     high z-index set INSIDE a tile (e.g. the Traffic widget's badges,
+     raised to 1001 to sit above Leaflet's own native controls, which are
+     themselves at 1000) could "leak" and compete directly with elements
+     from the whole document -- notably the app's modal windows (also at
+     z-index:1000), which ended up covered by a tile badge. With
+     isolation:isolate, an internal z-index, however high, stays confined
+     to the tile and can never again exceed an outside element like a
+     modal. */
+  isolation: isolate;
+}
+
+.tile-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+body.editing .grid-stack-item-content {
+  border-color: var(--accent);
+  border-style: dashed;
+  cursor: grab;
+}
+
+/* Le contenu devient inerte en edition : les iframes, textarea et liens
+   ne capturent plus la souris, la tuile entiere se saisit d'un geste.
+   Content is inert while editing: iframes, textareas and links no longer
+   swallow the pointer, the whole tile can be grabbed anywhere. */
+body.editing .tile-body {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+body.editing .grid-stack-item.ui-draggable-dragging .grid-stack-item-content { cursor: grabbing; }
+
+/* Poignees de redimensionnement bien visibles / clearly visible resize handles */
+body.editing .ui-resizable-handle {
+  opacity: 1;
+  background: none;
+  z-index: 20;
+}
+body.editing .ui-resizable-se,
+body.editing .ui-resizable-sw {
+  width: 18px;
+  height: 18px;
+  bottom: 5px !important;
+  transform: none !important;
+}
+body.editing .ui-resizable-se {
+  right: 5px !important;
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  border-radius: 0 0 9px 0;
+}
+body.editing .ui-resizable-sw {
+  left: 5px !important;
+  border-left: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  border-radius: 0 0 0 9px;
+}
+body.editing .ui-resizable-e,
+body.editing .ui-resizable-w {
+  width: 10px;
+}
+body.editing .ui-resizable-s {
+  height: 10px;
+}
+body.editing .ui-resizable-e::after,
+body.editing .ui-resizable-w::after,
+body.editing .ui-resizable-s::after {
+  content: "";
+  position: absolute;
+  background: var(--accent);
+  border-radius: 3px;
+  opacity: 0.85;
+}
+body.editing .ui-resizable-e::after,
+body.editing .ui-resizable-w::after {
+  top: 50%;
+  margin-top: -14px;
+  height: 28px;
+  width: 4px;
+  left: 3px;
+}
+body.editing .ui-resizable-s::after {
+  left: 50%;
+  margin-left: -14px;
+  width: 28px;
+  height: 4px;
+  top: 3px;
+}
+
+.grid-stack-placeholder > .placeholder-content {
+  background: none !important;
+  border: 2px dashed var(--accent) !important;
+  border-radius: var(--radius);
+}
+
+/* ---------- Languette + barre d'outils / pull tab + toolbar ---------- */
+
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Barre-tiroir de configuration agrandie x2 par rapport aux dimensions
+   d'origine, pour un usage tactile au doigt sur ecran ~10". Ces tailles
+   sont desormais la base (que le "Mode tactile" soit active ou non) ; le
+   Mode tactile peut encore les agrandir davantage par-dessus.
+   Config pull-out bar enlarged 2x from its original dimensions, for
+   finger use on a ~10" touchscreen. These sizes are now the baseline
+   (whether "Touch mode" is on or not); Touch mode can still enlarge them
+   further on top. */
+.dock-tab {
+  width: 128px;
+  height: 24px;
+  border: none;
+  border-radius: 12px 12px 0 0;
+  background: var(--tile-edge);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.2s ease, height 0.15s ease;
+}
+.dock-tab:hover { opacity: 1; height: 32px; }
+
+.dock-tab-dot {
+  width: 44px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.dock-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dock-btn {
+  width: 88px;
+  height: 88px;
+  border: none;
+  border-radius: 18px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dock-btn:hover { background: var(--field-bg); color: var(--text); }
+.dock-btn.active { color: var(--accent); background: var(--field-bg); }
+.dock-btn svg { width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.dock-sep { width: 1px; height: 52px; background: var(--tile-edge); margin: 0 4px; }
+
+/* ---------- Modales / modals ---------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 4vh 4vw;
+}
+.modal[hidden] { display: none; }
+
+.modal-card {
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius);
+  width: min(560px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.modal-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.modal-close:hover { color: var(--text); }
+
+.modal-foot { padding: 0 18px 16px; }
+
+/* ---------- Catalogue / catalog ---------- */
+
+.catalog {
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.catalog-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  background: var(--field-bg);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: var(--font);
+}
+.catalog-item:hover { border-color: var(--accent); }
+.catalog-item img { width: 30px; height: 30px; margin-top: 2px; }
+.catalog-item .ci-name { font-weight: 600; font-size: 14px; }
+.catalog-item .ci-desc { color: var(--muted); font-size: 12.5px; margin-top: 3px; line-height: 1.45; }
+
+/* ---------- Selecteur de configuration enregistree / saved config picker ---------- */
+
+.config-picker-blank {
+  border-style: dashed;
+  color: var(--accent);
+}
+.config-picker-blank .ci-name { color: var(--accent); }
+
+.config-picker-row {
+  position: relative;
+  display: flex;
+}
+.config-picker-row .catalog-item { flex: 1; }
+.config-picker-row .cp-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--tile-edge);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.config-picker-row .cp-delete:hover { background: #E0556F; color: #fff; }
+
+.exit-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 20px;
+}
+.exit-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  background: var(--field-bg);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: var(--font);
+}
+.exit-option:hover { border-color: var(--accent); }
+.exit-option-title { font-weight: 600; font-size: 14px; }
+.exit-option-desc { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.exit-option-warn:hover { border-color: #E0A63C; }
+
+/* ---------- Formulaires / forms ---------- */
+
+.form { padding: 16px 18px; overflow-y: auto; }
+
+.field { display: block; margin-bottom: 14px; }
+.field > span {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+
+.field input[type="text"],
+.field input[type="number"],
+.field input[type="url"],
+.field input[type="password"],
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 9px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+}
+.field textarea { min-height: 90px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field-password-wrap { display: flex; gap: 8px; align-items: center; }
+.field-password-wrap input[type="password"],
+.field-password-wrap input[type="text"] { flex: 1; width: auto; }
+.field-password-wrap .field-password-toggle { flex: none; white-space: nowrap; }
+
+.field.checkbox { display: flex; align-items: center; gap: 9px; }
+.field.checkbox > span { margin: 0; }
+.field.checkbox input { width: 17px; height: 17px; accent-color: var(--accent); }
+
+.field-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+.field-hint a { color: var(--muted); }
+.field-hint code {
+  background: var(--field-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.hint { font-size: 12px; color: var(--faint); margin: -6px 0 14px; line-height: 1.5; }
+
+.form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 6px; }
+
+#tileSaveConfigMsg {
+  display: inline;
+  margin-top: 0;
+  font-size: 12.5px;
+}
+#tileSaveConfigMsg.field-hint-error { color: #E0556F; }
+
+.btn {
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  background: var(--field-bg);
+  color: var(--text);
+  padding: 9px 18px;
+  font-size: 14px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.danger { color: #E0556F; margin-right: auto; }
+.btn.danger:hover { border-color: #E0556F; }
+
+.about {
+  margin: 18px 0 2px;
+  font-size: 12px;
+  color: var(--faint);
+  text-align: center;
+}
+.about a { color: var(--muted); }
+
+/* ---------- Tiroir lateral gauche / left side drawer ----------
+   Une seconde grille de widgets, tiree depuis le bord gauche. Les widgets
+   y tournent en permanence (le tiroir est seulement translate hors ecran,
+   jamais demonte), pour que compte a rebours, scores, etc. restent actifs.
+   A second widget grid, pulled from the left edge. Widgets keep running at
+   all times (the drawer is only translated off-screen, never unmounted),
+   so countdowns, scores, etc. stay live. */
+
+.drawer {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--drawer-w, 50vw);
+  min-width: 240px;
+  z-index: 500; /* au-dessus du tableau, sous les modales (1000) */
+  transform: translateX(-100%);
+  transition: transform 0.28s ease;
+  pointer-events: none; /* la languette reactive ses propres events */
+}
+.drawer.open { transform: translateX(0); }
+
+.drawer-inner {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 88%, black 12%);
+  border-right: 1px solid var(--tile-edge);
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.drawer:not(.open) .drawer-inner { pointer-events: none; }
+
+.drawer-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 24px;
+  pointer-events: none;
+}
+
+/* Languette : depasse du bord droit du tiroir, reste visible tiroir ferme
+   Pull tab: sticks out past the drawer's right edge, visible when closed */
+.drawer-tab {
+  position: absolute;
+  right: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 84px;
+  border: 1px solid var(--tile-edge);
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+  background: var(--tile);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  padding: 0;
+}
+.drawer-tab:hover { color: var(--accent); }
+.drawer-tab svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.28s ease;
+}
+.drawer.open .drawer-tab svg { transform: rotate(180deg); }
+
+/* Poignee de redimensionnement : bord droit du tiroir, visible ouvert
+   Resize handle: drawer's right edge, visible when open */
+.drawer-resize {
+  position: absolute;
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+  pointer-events: none;
+}
+.drawer.open .drawer-resize { pointer-events: auto; }
+.drawer-resize::after {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.drawer-resize:hover::after,
+.drawer.resizing .drawer-resize::after { background: var(--accent); }
+.drawer.resizing { transition: none; }
+
+/* ---------- Clavier virtuel / on-screen keyboard ---------- */
+
+.vkb {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200; /* au-dessus des modales (1000) */
+  /* Clavier agrandi pour l'usage tactile au doigt. On vise ~x2 la
+     largeur d'origine (620 -> 1240px) mais on ne depasse jamais la
+     largeur de l'ecran (min() retombe automatiquement sur 96vw si 1240px
+     ne tient pas) : sur un ecran plus etroit, le clavier reste donc
+     entierement visible au lieu de deborder -- c'est le "x1,5 si x2 ne
+     passe pas" demande, gere ici en continu par le navigateur.
+     Keyboard enlarged for finger use on a touchscreen. We aim for ~2x
+     the original width (620 -> 1240px) but never exceed the screen width
+     (min() automatically falls back to 96vw if 1240px doesn't fit): on a
+     narrower screen the keyboard stays fully visible instead of
+     overflowing -- this is the requested "x1.5 if x2 doesn't fit",
+     handled continuously here by the browser. */
+  width: min(96vw, 1240px);
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vkb[hidden] { display: none; }
+
+.vkb-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.vkb-key {
+  flex: 1;
+  min-width: 0;
+  /* Hauteur ~x2 (42 -> 84px) : une touche large comme un doigt.
+     Height ~2x (42 -> 84px): a key as wide as a fingertip. */
+  height: 84px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 26px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.vkb-key:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+.vkb-key.vkb-wide { flex: 1.6; font-size: 20px; }
+.vkb-key.vkb-space { flex: 5; }
+.vkb-key.vkb-active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.vkb-key.vkb-done { background: var(--accent); color: #fff; border-color: var(--accent); flex: 1.4; font-size: 20px; }
+
+/* Sur un ecran vraiment court en hauteur, des touches de 84px + une
+   modale peuvent trop remplir l'ecran : on reduit alors legerement la
+   hauteur des touches (repli "x1,5"), sans jamais repasser sous une
+   cible confortable au doigt.
+   On a screen that's genuinely short in height, 84px keys plus a modal
+   can fill too much: we then slightly reduce key height (the "x1.5"
+   fallback), without ever going below a comfortable finger target. */
+@media (max-height: 720px) {
+  .vkb-key { height: 64px; font-size: 22px; }
+  .vkb { padding: 12px; gap: 8px; }
+  .vkb-row { gap: 8px; }
+}
+
+/* ---------- Flash plein ecran (alerte de compte a rebours) / full-screen flash (countdown alert) ---------- */
+
+.board-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: 0;
+}
+
+@keyframes board-flash-pulse {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.85; }
+  50%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* Variante en boucle continue : la duree totale est pilotee par JS
+   (widgetApi.startAlert/stopAlert), pas par un nombre d'iterations CSS fixe.
+   Continuous loop variant: total duration is driven by JS
+   (widgetApi.startAlert/stopAlert), not by a fixed CSS iteration count. */
+.board-flash.board-flash-loop {
+  animation: board-flash-pulse 0.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-flash { display: none; }
+  * { transition: none !important; animation: none !important; }
+}
+
+/* ---------- Recherche de ville / city search ---------- */
+
+.city-box { position: relative; }
+
+.city-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.city-suggest button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+}
+.city-suggest button:hover { background: var(--field-bg); }
+.city-suggest button small { color: var(--muted); }
+
+.city-current {
+  font-size: 12px;
+  color: var(--accent);
+  margin: 4px 0 0;
+}
+
+/* ---------- Couleurs personnalisees / custom colors ---------- */
+
+.color-grid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.color-grid .cg-head {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.color-grid .cg-row {
+  font-size: 13px;
+  color: var(--muted);
+}
+.color-grid input[type="color"] {
+  width: 100%;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  background: var(--field-bg);
+  cursor: pointer;
+}
+.btn.small { padding: 6px 12px; font-size: 12.5px; }
+
+/* Separateur de section dans les formulaires / form section separator */
+.form-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.form-sep::before, .form-sep::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--tile-edge);
+}
+
+/* Sections de configuration : chaque groupe logique de reglages est
+   encadre et titre, pour organiser la fenetre en blocs coherents plutot
+   qu'une longue liste (limite le defilement). La section "generale"
+   (champs sans groupe) reste sans cadre.
+   Config sections: each logical group of settings is boxed and titled,
+   to organize the window into coherent blocks rather than one long list
+   (limits scrolling). The "general" section (ungrouped fields) stays
+   frameless. */
+.form-section {
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  padding: 14px 16px 4px;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.form-section > legend {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 0 8px;
+  margin-left: -4px;
+}
+.form-section-plain {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0 0 4px;
+}
+
+/* ==================== Fiabilite tactile generale ====================
+   Independant du "Mode tactile" (qui, lui, agrandit les cibles) : ces
+   regles s'appliquent toujours, meme sans ce mode active, car elles ne
+   changent rien visuellement -- elles rendent juste le tap fiable.
+
+   Sans touch-action:manipulation, un ecran tactile peut interpreter un
+   tap legerement imprecis (ou deux taps rapprochés sur des icones
+   voisines) comme le debut d'un double-tap-zoom : le navigateur attend
+   ~300ms avant de valider le premier tap, au cas ou un second suivrait,
+   ce qui donne exactement l'impression de clics "aleatoires" un coup
+   sur deux. Le meme phenomene existe avec la selection de texte ou le
+   menu contextuel (appui un peu trop long sur une icone).
+
+   General touch reliability: independent from "Touch mode" (which
+   enlarges targets) -- these rules always apply, even with that mode
+   off, since they don't change anything visually, they just make taps
+   reliable.
+
+   Without touch-action:manipulation, a touchscreen can interpret a
+   slightly imprecise tap (or two taps close together on neighboring
+   icons) as the start of a double-tap-to-zoom gesture: the browser
+   waits ~300ms before validating the first tap, in case a second one
+   follows -- giving exactly the impression of "random" clicks working
+   every other time. The same happens with text selection or a context
+   menu (a press held just a bit too long on an icon). */
+.dock-tab, .dock-btn, .drawer-tab, .drawer-resize,
+.tile-btn, .modal-close, .btn,
+.field input[type="checkbox"], .field select, .field input[type="color"],
+.pwt-boost-trigger, .pwt-boost-menu button, .pwt-pause-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Contenu de widget : neutraliser un eventuel touch-action:none impose
+   par Gridstack (parfois pose directement en style inline par la
+   bibliotheque pour ses propres besoins de glisser-deposer, ce qui
+   passerait devant une regle CSS normale -- d'ou le !important, limite
+   au mode non-edition). Le conteneur Leaflet lui-meme n'est PAS touche
+   ici : Leaflet a besoin de son propre touch-action:none pour gerer le
+   pincer-zoomer via ses propres gestionnaires tactiles JS ; le forcer a
+   "auto" ferait a l'inverse passer le geste au navigateur et casserait
+   ce pincer-zoomer au lieu de le reparer.
+   Widget content: neutralize any touch-action:none imposed by Gridstack
+   (sometimes set directly as an inline style by the library for its own
+   drag-and-drop needs, which would take precedence over a normal CSS
+   rule -- hence !important, scoped to non-editing mode). The Leaflet
+   container itself is NOT touched here: Leaflet needs its own
+   touch-action:none to handle pinch-zoom via its own JS touch handlers;
+   forcing it to "auto" would instead hand the gesture to the browser and
+   break that pinch-zoom rather than fix it. */
+body:not(.editing) .tile-body {
+  touch-action: auto !important;
+}
+body.editing .tile-body {
+  touch-action: none; /* la tuile entiere se saisit pour la deplacer / the whole tile is grabbed to move it */
+}
+   Active via Reglages > "Mode tactile". Agrandit toutes les cibles
+   d'interaction du tableau (onglets des tiroirs, boutons de la barre
+   d'outils, icones des tuiles, poignees de redimensionnement) aux
+   ~44px minimum recommandes pour un doigt, sans toucher au contenu
+   des widgets eux-memes.
+   Enabled via Settings > "Touch mode". Enlarges every interaction
+   target of the board (drawer tabs, toolbar buttons, tile icons,
+   resize handles) to the ~44px minimum recommended for a finger,
+   without touching the widgets' own content. */
+
+/* Languette de la barre d'outils / toolbar pull tab */
+body.touch .dock-tab { width: 148px; height: 30px; border-radius: 14px 14px 0 0; }
+body.touch .dock-tab:hover { height: 38px; }
+body.touch .dock-tab-dot { width: 52px; height: 7px; border-radius: 4px; }
+
+/* Boutons de la barre d'outils / toolbar buttons */
+body.touch .dock-bar { gap: 16px; padding: 18px 22px; }
+body.touch .dock-btn { width: 104px; height: 104px; border-radius: 20px; }
+body.touch .dock-btn svg { width: 52px; height: 52px; }
+
+/* Onglet du tiroir lateral / side drawer tab */
+body.touch .drawer-tab { right: -48px; width: 48px; height: 132px; border-radius: 0 14px 14px 0; }
+body.touch .drawer-tab svg { width: 28px; height: 28px; }
+
+/* Poignee de redimensionnement du tiroir : zone de prise elargie
+   Drawer resize handle: widened grab area */
+body.touch .drawer-resize { right: -12px; width: 24px; }
+body.touch .drawer-resize::after { left: 10px; width: 4px; }
+
+/* Icones des tuiles (engrenage, croix) / tile icons (gear, cross) */
+body.touch .tile-btn { padding: 10px; }
+body.touch .tile-btn svg { width: 24px; height: 24px; }
+body.touch .tile-title { gap: 10px; }
+
+/* Poignees de redimensionnement des tuiles en mode edition, agrandies
+   pour le doigt. On agrandit a la fois la zone de prise (le handle
+   lui-meme) ET l'indicateur visuel interne (::after pour les bords), afin
+   que la cible reste coherente avec ce qu'on voit.
+   Tile resize handles in edit mode, enlarged for the finger. We enlarge
+   both the grab area (the handle itself) AND the internal visual
+   indicator (::after for edges), so the target stays consistent with
+   what's shown. */
+body.touch.editing .ui-resizable-se,
+body.touch.editing .ui-resizable-sw {
+  width: 44px;
+  height: 44px;
+  border-width: 6px;
+  bottom: 6px !important;
+}
+body.touch.editing .ui-resizable-se { right: 6px !important; border-radius: 0 0 16px 0; }
+body.touch.editing .ui-resizable-sw { left: 6px !important; border-radius: 0 0 0 16px; }
+body.touch.editing .ui-resizable-e,
+body.touch.editing .ui-resizable-w { width: 28px; }
+body.touch.editing .ui-resizable-n,
+body.touch.editing .ui-resizable-s { height: 28px; }
+
+/* Barres visuelles des bords (E/W verticales, S horizontale) agrandies.
+   Edge visual bars (E/W vertical, S horizontal) enlarged. */
+body.touch.editing .ui-resizable-e::after,
+body.touch.editing .ui-resizable-w::after {
+  margin-top: -24px;
+  height: 48px;
+  width: 6px;
+  left: 8px;
+}
+body.touch.editing .ui-resizable-s::after {
+  margin-left: -24px;
+  width: 48px;
+  height: 6px;
+}
+
+/* ---- Fenetres de configuration en mode tactile ----
+   Champs, cases a cocher et boutons agrandis pour le doigt, et
+   disposition du formulaire sur plusieurs colonnes quand la largeur le
+   permet (le modal est elargi en mode tactile). Un champ tient sur une
+   colonne ; les elements larges (zone de texte, separateur de section,
+   case a cocher pleine ligne, indice) s'etendent sur toute la largeur.
+   Config windows in touch mode. Fields, checkboxes and buttons enlarged
+   for the finger, and the form laid out over several columns when width
+   allows (the modal is widened in touch mode). A field takes one column;
+   wide elements (textarea, section separator, full-row checkbox, hint)
+   span the full width. */
+
+/* Modal elargi pour laisser la place a 2 colonnes. Sur un ecran large
+   (>=1100px) on autorise 3 colonnes.
+   Modal widened to fit 2 columns. On a large screen (>=1100px) we allow
+   3 columns. */
+/* Largeur de la fenetre de configuration en mode tactile, adaptee au
+   nombre de colonnes reellement retenu par layoutFormColumns() (attribut
+   data-cols pose par le JS). Plus il y a de colonnes, plus la fenetre est
+   large et occupe l'ecran ; une seule colonne reste etroite et lisible.
+   Config window width in touch mode, adapted to the column count actually
+   chosen by layoutFormColumns() (data-cols attribute set by the JS). The
+   more columns, the wider the window; a single column stays narrow and
+   readable. */
+body.touch .modal-card { width: min(1000px, 96vw); }
+body.touch .modal-card[data-cols="1"] { width: min(620px, 96vw); }
+body.touch .modal-card[data-cols="2"] { width: min(1080px, 96vw); }
+body.touch .modal-card[data-cols="3"] { width: min(1600px, 96vw); }
+body.touch .modal-head { padding: 18px 24px; }
+body.touch .modal-head h2 { font-size: 22px; }
+body.touch .modal-close { width: 52px; height: 52px; font-size: 30px; border-radius: 12px; }
+body.touch .modal-foot { padding: 0 24px 20px; }
+
+/* Le formulaire dispose les SECTIONS en grille : chaque section est une
+   cellule placee cote a cote, alignee en haut. Contrairement a CSS
+   "columns" (flux facon journal, qui remplit une colonne AVANT de passer
+   a la suivante et laisse souvent des colonnes vides quand une section
+   est plus haute que les autres), une grille plante reellement N
+   sections sur une rangee. C'est ce qui exploite enfin les 3 colonnes.
+   grid-auto-flow:row dense comble les trous laisses par des sections de
+   hauteurs inegales.
+   The form lays out SECTIONS in a grid: each section is a cell placed
+   side by side, top-aligned. Unlike CSS "columns" (newspaper flow, which
+   fills one column BEFORE moving to the next and often leaves columns
+   empty when a section is taller than the others), a grid actually
+   places N sections on a row. This is what finally uses the 3 columns.
+/* Disposition des sections calculee en JavaScript (voir layoutFormColumns
+   dans app.js) plutot que laissee au CSS. Ni CSS "columns" ni CSS Grid ne
+   savent choisir dynamiquement le NOMBRE de colonnes selon le contenu, ni
+   ranger chaque bloc dans la colonne ou il tient le mieux. Le JS mesure la
+   hauteur reelle de chaque section, essaie 1, 2 puis 3 colonnes, et retient
+   la repartition qui minimise la hauteur totale (donc le defilement), en
+   preferant moins de colonnes a hauteur egale (colonnes plus larges =
+   lignes plus longues, blocs moins hauts).
+   Section layout computed in JavaScript (see layoutFormColumns in app.js)
+   rather than left to CSS. Neither CSS "columns" nor CSS Grid can
+   dynamically choose the NUMBER of columns based on content, nor place
+   each block in the column where it best fits. The JS measures each
+   section's real height, tries 1, 2 then 3 columns, and keeps the layout
+   that minimizes total height (thus scrolling), preferring fewer columns
+   at equal height (wider columns = longer lines, shorter blocks). */
+body.touch .form {
+  padding: 20px 24px;
+}
+/* Rangee de colonnes creee par layoutFormColumns() : les colonnes cote a
+   cote. Les elements pleine largeur (actions, about) sont ajoutes APRES
+   cette rangee, donc restent sous les colonnes sur toute la largeur.
+   Column row created by layoutFormColumns(): columns side by side. The
+   full-width elements (actions, about) are appended AFTER this row, so
+   they stay below the columns across the full width. */
+body.touch .form .form-cols-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+/* Chaque colonne est une pile verticale de sections. Each column is a
+   vertical stack of sections. */
+body.touch .form .form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+body.touch .form .form-section,
+body.touch .form .form-section-plain {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+}
+/* Les champs a l'interieur d'une section (cellule de grille possiblement
+   etroite) ne doivent jamais deborder : on borne leur largeur.
+   Fields inside a section (a possibly narrow grid cell) must never
+   overflow: we bound their width. */
+body.touch .form-section .field,
+body.touch .form-section .field input,
+body.touch .form-section .field select,
+body.touch .form-section .field textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+/* La zone d'action (Enregistrer/Supprimer) et le pied "about" restent
+   hors du systeme de colonnes : le JS les laisse en pleine largeur apres
+   les colonnes. The action row (Save/Remove) and "about" footer stay
+   outside the column system: the JS keeps them full-width after the
+   columns. */
+body.touch .form-actions { padding-top: 8px; width: 100%; }
+body.touch .form > .form-actions,
+body.touch .form > .about { width: 100%; }
+
+/* Champs plus grands (cible et lisibilite au doigt).
+   Larger fields (finger target and readability). */
+body.touch .field { margin-bottom: 18px; }
+body.touch .field > span { font-size: 16px; margin-bottom: 8px; }
+body.touch .field input[type="text"],
+body.touch .field input[type="number"],
+body.touch .field input[type="url"],
+body.touch .field select,
+body.touch .field textarea {
+  padding: 14px 14px;
+  font-size: 17px;
+  border-radius: 11px;
+  min-height: 52px;
+}
+body.touch .field textarea { min-height: 120px; }
+body.touch .field input[type="color"] { height: 52px; width: 100%; }
+
+/* Cases a cocher : grande cible tactile, libelle plus lisible.
+   Checkboxes: large touch target, more readable label. */
+body.touch .field.checkbox { gap: 14px; padding: 6px 0; }
+body.touch .field.checkbox input,
+body.touch .field input[type="checkbox"] {
+  width: 30px; height: 30px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+body.touch .field.checkbox > span { font-size: 16px; }
+
+body.touch .field-hint { font-size: 13.5px; }
+body.touch .form-actions { padding-top: 8px; }
+body.touch .form-actions .btn { padding: 15px 28px; font-size: 17px; }
+
+/* Widget Trafic : bouton pause et menu "Rafraichir maintenant"
+   Traffic widget: pause button and "Refresh now" menu */
+body.touch .pwt-pause-btn { padding: 11px 18px; font-size: 15px; min-height: 44px; }
+body.touch .pwt-boost-trigger { padding: 12px 16px; font-size: 16px; min-height: 46px; }
+body.touch .pwt-boost-menu button { padding: 14px 16px; font-size: 17px; min-height: 48px; }
+
+/* ==================== Aide du tableau de bord ====================
+   Fenetre 2 colonnes : sommaire etroit a gauche, contenu large a droite.
+   Largeur fixe, reprise de celle deja definie pour les fenetres de
+   configuration a 3 colonnes (1600px) -- une fenetre d'aide se consulte,
+   elle n'a pas besoin de s'adapter au nombre de colonnes d'un formulaire.
+   Active que le mode tactile soit actif ou non (contrairement aux
+   formulaires, l'aide n'a pas de champs a taper).
+   Dashboard help. 2-column window: narrow table of contents on the left,
+   wide content on the right. Fixed width, reusing the one already defined
+   for 3-column config windows (1600px) -- a help window is for reading,
+   it doesn't need to adapt to a form's column count. Active whether touch
+   mode is on or not (unlike forms, help has no fields to type into). */
+.help-card {
+  width: min(1600px, 96vw) !important;
+  max-height: 90vh;
+}
+.help-body {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+.help-nav {
+  flex: 0 0 260px;
+  max-width: 260px;
+  overflow-y: auto;
+  border-right: 1px solid var(--tile-edge);
+  padding: 10px 0;
+}
+.help-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 22px 32px;
+  line-height: 1.55;
+}
+
+/* Groupes du sommaire (Presentation, Tiroir, Tuiles, Remerciements)
+   Table of contents groups (Presentation, Drawer, Tiles, Credits) */
+.help-nav-group {
+  padding: 12px 18px 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.help-nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 18px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.help-nav-item:hover { color: var(--text); background: var(--field-bg); }
+.help-nav-item.active {
+  color: var(--text);
+  background: var(--field-bg);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* Contenu d'une section : titre, paragraphes, listes d'options
+   Section content: title, paragraphs, option lists */
+.help-content h3 {
+  margin: 0 0 4px;
+  font-size: 21px;
+}
+.help-content .help-sub {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.help-content h4 {
+  margin: 24px 0 8px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.help-content p { margin: 0 0 12px; color: var(--text); }
+.help-content ul { margin: 0 0 12px; padding-left: 20px; }
+.help-content li { margin-bottom: 6px; }
+.help-content .help-size {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  padding: 3px 9px;
+  margin-bottom: 16px;
+}
+/* Liste des options d'une tuile : nom en avant, description en dessous
+   A tile's option list: name upfront, description below */
+.help-opt { margin-bottom: 14px; }
+.help-opt-name {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.help-opt-desc { color: var(--muted); font-size: 13.5px; }
+/* Remerciements : liste de services externes avec lien
+   Credits: list of external services with a link */
+.help-credit { margin-bottom: 14px; }
+.help-credit a { color: var(--accent); }
+
+@media (max-width: 760px) {
+  .help-body { flex-direction: column; }
+  .help-nav { flex: 0 0 auto; max-width: none; max-height: 160px; border-right: none; border-bottom: 1px solid var(--tile-edge); }
+}
+
+/* ==================== Economiseur d'ecran ====================
+   Calque plein ecran. Mode "noir" : fond noir uni, rien d'autre. Mode
+   "diaporama" : la classe SlideshowWidget existante (deja chargee au
+   demarrage, voir loadWidgetAssets) est instanciee directement dans
+   #screensaverSlideshow -- aucun code de rendu duplique.
+   Full-screen overlay. "Black" mode: plain black background, nothing
+   else. "Slideshow" mode: the existing SlideshowWidget class (already
+   loaded at startup, see loadWidgetAssets) is instantiated directly
+   inside #screensaverSlideshow -- no duplicated rendering code. */
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #000;
+  cursor: pointer;
+}
+.screensaver[hidden] { display: none; }
+.screensaver-slideshow {
+  position: absolute;
+  inset: 0;
+}
+
+/* Section "Economiseur d'ecran" des reglages generaux : les 5 plages
+   horaires, chacune sur une ligne compacte (debut, fin, mode).
+   "Screensaver" section of the general settings: the 5 time slots, each
+   on a compact row (start, end, mode). */
+.ss-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ss-slot input[type="time"] { width: 110px; flex: none; }
+.ss-slot select { flex: 1; min-width: 0; }
+.ss-slot-sep { color: var(--faint); font-size: 12px; }
+
+/* Zone de gestion des photos de la veille : reprend le meme esprit visuel
+   que la gestion de photos du widget Diaporama (liste + suppression).
+   Screensaver photo management area: same visual spirit as the
+   Slideshow widget's own photo management (list + delete). */
+.ss-media-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.ss-media-item {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--tile-edge);
+}
+.ss-media-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ss-media-item button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ss-media-empty { color: var(--muted); font-size: 12.5px; margin: 6px 0; }

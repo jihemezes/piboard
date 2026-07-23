@@ -1,0 +1,357 @@
+.pw-traffic {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #1a1c20;
+  /* Identite visuelle du widget, alignee sur l'app Umbrel de reference
+     ("brique toulousaine"), independante de --accent (theme global
+     PiBoard, utilise par les autres widgets).
+     Widget's own visual identity, aligned with the reference Umbrel app
+     ("Toulouse brick"), independent from --accent (PiBoard's global
+     theme, used by other widgets). */
+  --tw-accent: #e2493b;
+  --tw-panel-bg: rgba(20, 22, 27, 0.90);
+  --tw-panel-border: rgba(255, 255, 255, 0.10);
+  --tw-radius: 12px;
+}
+.pw-traffic .pwt-map {
+  position: absolute;
+  inset: 0;
+}
+
+/* Zoom et deplacement libres, comme demande. L'attribution est
+   maintenant necessaire (licence CARTO/OpenStreetMap du fond de carte) :
+   gardee minuscule et discrete plutot que masquee. Les boutons +/- sont
+   stylises pour rester coherents avec le theme de PiBoard.
+   Free pan/zoom, as requested. Attribution is now required (CARTO/
+   OpenStreetMap base map license): kept tiny and unobtrusive rather than
+   hidden. The +/- buttons are styled to match PiBoard's theme. */
+.pw-traffic .leaflet-control-attribution {
+  background: rgba(10,12,18,0.55) !important;
+  color: rgba(255,255,255,0.6) !important;
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+  border-radius: 4px 0 0 0;
+}
+/* Liens d'attribution rendus NON cliquables. Le texte reste affiche
+   (l'attribution CARTO/OpenStreetMap est requise par la licence du fond
+   de carte), mais sur un kiosque tactile sans clavier, un tap
+   involontaire sur ces liens ouvrait une nouvelle page qu'on ne pouvait
+   plus fermer -- un vrai piege. pointer-events:none neutralise le lien
+   sans le masquer ; cursor:default et la couleur unifiee retirent
+   l'apparence "cliquable".
+   Attribution links made NON-clickable. The text stays visible (CARTO/
+   OpenStreetMap attribution is required by the base map's license), but
+   on a keyboard-less touch kiosk, an accidental tap on these links
+   opened a new page that couldn't be closed anymore -- a real trap.
+   pointer-events:none neutralizes the link without hiding it;
+   cursor:default and the unified color remove the "clickable" look. */
+.pw-traffic .leaflet-control-attribution a {
+  color: rgba(255,255,255,0.6) !important;
+  text-decoration: none !important;
+  pointer-events: none !important;
+  cursor: default !important;
+}
+.pw-traffic .leaflet-control-zoom {
+  border: none !important;
+  margin: 8px !important;
+}
+.pw-traffic .leaflet-control-zoom a {
+  background: rgba(10,12,18,0.68) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+}
+.pw-traffic .leaflet-container {
+  background: #1a1c20;
+  font-family: var(--font);
+}
+
+/* ---- Correction tactile des panneaux de controle superposes a la carte ----
+
+   Symptome : les boutons (legende, pause, "Rafraichir maintenant")
+   repondaient a la souris mais PAS au doigt. Cause : la carte Leaflet
+   occupe toute la surface du widget (position:absolute; inset:0) et
+   installe ses propres gestionnaires TACTILES (touchstart/touchmove) sur
+   son conteneur pour gerer le pan/zoom. Meme si les panneaux flottent
+   visuellement au-dessus (z-index), le navigateur, voyant un
+   touch-action heritant de la carte, commence par router le geste vers
+   le pan de Leaflet -- le tap n'arrive jamais au bouton. Un clic souris,
+   lui, ne passe pas par cette machinerie tactile, d'ou "souris OK /
+   doigt KO".
+
+   Correctif : sur chaque panneau interactif, touch-action:manipulation
+   redonne au navigateur la gestion normale du tap (et interdit
+   pan/pinch A CET ENDROIT, ce qui est voulu : on ne veut pas deplacer la
+   carte en tapant un bouton). Le z-index passe au-dessus des controles
+   Leaflet (jusqu'a 1000). pointer-events:auto garantit qu'ils restent
+   cibles meme si un parent passait en pointer-events:none.
+
+   Touch fix for control panels overlaid on the map. Symptom: buttons
+   (legend, pause, "Refresh now") responded to mouse but NOT to finger.
+   Cause: the Leaflet map covers the whole widget (position:absolute;
+   inset:0) and installs its own TOUCH handlers (touchstart/touchmove)
+   on its container for pan/zoom. Even though the panels visually float
+   above (z-index), the browser -- seeing a touch-action inherited from
+   the map -- first routes the gesture to Leaflet's pan, so the tap never
+   reaches the button. A mouse click doesn't go through that touch
+   machinery, hence "mouse OK / finger KO".
+   Fix: on each interactive panel, touch-action:manipulation restores the
+   browser's normal tap handling (and disables pan/pinch HERE, which is
+   intended: we don't want to move the map by tapping a button). z-index
+   goes above Leaflet's controls (up to 1000). pointer-events:auto keeps
+   them targetable even if a parent went pointer-events:none. */
+.pw-traffic .pwt-legend,
+.pw-traffic .pwt-badge-row,
+.pw-traffic .pwt-boost,
+.pw-traffic .pwt-boost-menu,
+.pw-traffic .pwt-pause-btn,
+.pw-traffic .pwt-boost-trigger,
+.pw-traffic .pwt-boost-menu button {
+  touch-action: manipulation;
+  z-index: 1001;
+  pointer-events: auto;
+}
+
+.pwt-legend {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: var(--tw-panel-bg);
+  color: #eef0f3;
+  font-size: 10px;
+  font-family: var(--mono);
+  padding: 8px 11px;
+  border-radius: var(--tw-radius);
+  border: 1px solid var(--tw-panel-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+.pwt-legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  align-items: center;
+}
+.pwt-legend-item { display: flex; align-items: center; gap: 4px; white-space: nowrap; }
+.pwt-swatch {
+  display: inline-block;
+  width: 12px;
+  height: 4px;
+  border-radius: 2px;
+}
+/* Couleurs de la legende, alignees sur le rendu reel des tuiles TomTom
+   (qui affichent bien le vert pour les axes fluides) et sur la palette de
+   l'app Umbrel de reference.
+   Legend colors, aligned with TomTom tiles' actual rendering (which does
+   show green for free-flowing roads) and with the reference Umbrel app's
+   palette. */
+.pwt-sw-free  { background: #34c26b; }
+.pwt-sw-slow  { background: #f5c542; }
+.pwt-sw-heavy { background: #f5a623; }
+.pwt-sw-jam   { background: #e2493b; }
+.pwt-legend .pwt-incident-icon { width: 10px; height: 10px; margin: 0; }
+
+.pwt-refresh-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-top: 4px;
+  border-top: 1px solid var(--tw-panel-border);
+}
+.pwt-refresh-countdown {
+  color: #9aa1ab;
+  white-space: nowrap;
+}
+.pwt-pause-btn {
+  background: rgba(255,255,255,0.08);
+  color: #eef0f3;
+  border: 1px solid var(--tw-panel-border);
+  border-radius: 9px;
+  padding: 8px 14px;
+  font-size: 13px;
+  min-height: 36px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+/* Ce bouton est niche dans le panneau opaque de la legende (contrairement
+   a .pwt-boost-trigger, qui flotte directement sur la carte) : un fond
+   translucide blanc au survol reste donc bien visible, pas besoin du
+   meme correctif en double calque.
+   This button sits inside the legend's opaque panel (unlike
+   .pwt-boost-trigger, which floats directly over the map): a translucent
+   white hover background therefore stays clearly visible, no need for
+   the same double-layer fix. */
+.pwt-pause-btn:hover { background: rgba(255,255,255,0.16); }
+.pwt-pause-btn.pwt-paused { background: var(--tw-accent); border-color: var(--tw-accent); color: #fff; }
+
+.pwt-badge-row {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 500;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  pointer-events: none;
+}
+.pwt-badge {
+  background: var(--tw-panel-bg);
+  color: #eef0f3;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  padding: 3px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--tw-panel-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  letter-spacing: 0.02em;
+  pointer-events: auto;
+}
+.pwt-badge.pwt-stale { color: #f5a623; border-color: rgba(245,166,35,0.5); }
+.pwt-badge.pwt-quota-warn { color: #e2493b; }
+
+.pwt-boost {
+  position: absolute;
+  /* Colle immediatement a GAUCHE des boutons de zoom Leaflet, sur la
+     meme ligne (tout en haut a droite). Les boutons de zoom occupent
+     ~48px depuis le bord droit (32px de large + 8px de marge de chaque
+     cote via Leaflet) ; on demarre donc le boost a right:52px. top:8px
+     l'aligne sur le haut des boutons de zoom.
+     Sits immediately to the LEFT of Leaflet's zoom buttons, on the same
+     line (top-right). The zoom buttons take ~48px from the right edge
+     (32px wide + 8px margin each side via Leaflet); so the boost starts
+     at right:52px. top:8px aligns it with the top of the zoom buttons. */
+  right: 52px;
+  top: 8px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+/* Declencheur : toute sa surface est cliquable (c'est un vrai <button>,
+   pas juste un texte a l'interieur d'une zone plus grande).
+   Trigger: its entire surface is clickable (it's a real <button>, not
+   just text inside a larger area). */
+.pwt-boost-trigger {
+  background: var(--tw-panel-bg);
+  color: #eef0f3;
+  border: 1px solid var(--tw-panel-border);
+  border-radius: 9px;
+  /* Agrandi pour rester utilisable au doigt sur un ecran ~10" : l'ancienne
+     taille (11px / padding 4x6, sur un <select> natif) etait pensee pour
+     un usage souris -- et le popup natif se comportait en plus mal au
+     toucher sur ce navigateur kiosque.
+     Enlarged to stay usable with a finger on a ~10" screen: the previous
+     size (11px / 4x6 padding, on a native <select>) was designed for
+     mouse use -- and the native popup also behaved poorly to touch on
+     this kiosk browser. */
+  font-size: 14px;
+  font-family: var(--font);
+  padding: 10px 14px;
+  min-height: 40px;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.pwt-boost-trigger:hover {
+  /* Le survol doit ECLAIRCIR le panneau sombre existant, pas le
+     REMPLACER : "background: rgba(255,255,255,0.14)" seul effacait le
+     fond sombre translucide du bouton, ne laissant plus qu'un voile
+     blanc quasi transparent -- sur un fond de carte clair, le bouton
+     devenait presque invisible. Le degrade plat superpose l'eclaircissement
+     par-dessus le panneau (garde --tw-panel-bg en second calque), et le
+     flou d'arriere-plan continue de fonctionner (les deux calques restent
+     semi-transparents).
+     Hover must LIGHTEN the existing dark panel, not REPLACE it:
+     "background: rgba(255,255,255,0.14)" alone erased the button's
+     translucent dark background, leaving only a near-transparent white
+     veil -- on a light base map, the button became almost invisible. The
+     flat gradient layers the lightening ON TOP of the panel (keeps
+     --tw-panel-bg as the second layer), and the backdrop blur keeps
+     working (both layers stay semi-transparent). */
+  background: linear-gradient(rgba(255,255,255,0.14), rgba(255,255,255,0.14)), var(--tw-panel-bg);
+}
+.pwt-boost-trigger:active {
+  background: linear-gradient(rgba(255,255,255,0.24), rgba(255,255,255,0.24)), var(--tw-panel-bg);
+}
+
+/* Menu : s'ouvre vers le BAS (le declencheur est maintenant en haut de
+   la tuile), pour ne jamais se retrouver rogne par le bord.
+   Menu: opens DOWNWARD (the trigger now sits at the top of the tile), so
+   it never ends up clipped by the edge. */
+.pwt-boost-menu {
+  position: absolute;
+  right: 0;
+  top: 100%;
+  list-style: none;
+  padding: 6px;
+  margin: 8px 0 0;
+  min-width: 140px;
+  background: var(--tw-panel-bg);
+  border: 1px solid var(--tw-panel-border);
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+.pwt-boost-menu[hidden] { display: none; }
+.pwt-boost-menu li { margin: 2px 0; }
+/* Chaque ligne est un vrai <button> qui remplit toute la largeur : c'est
+   donc bien la LIGNE ENTIERE qui est cliquable/tapable, pas seulement le
+   texte du chiffre.
+   Each row is a real <button> that fills the full width: so it's the
+   WHOLE ROW that's clickable/tappable, not just the number's text. */
+.pwt-boost-menu button {
+  display: block;
+  width: 100%;
+  background: transparent;
+  color: #eef0f3;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: var(--font);
+  text-align: left;
+  padding: 12px 14px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.pwt-boost-menu button:hover { background: rgba(255,255,255,0.10); }
+.pwt-boost-menu button:active { background: var(--tw-accent); color: #fff; }
+
+.pwt-err {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9aa1ab;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+  background: #1a1c20;
+}
+
+/* Icones d'incidents : marqueurs simples, colores par severite
+   Incident icons: simple markers, colored by severity */
+.pwt-incident-icon {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  box-shadow: 0 0 4px rgba(0,0,0,0.6);
+}
+.pwt-incident-icon.pwt-sev-1 { background: #f5c542; }
+.pwt-incident-icon.pwt-sev-2 { background: #f5a623; }
+.pwt-incident-icon.pwt-sev-3 { background: #e2493b; }
+.pwt-incident-icon.pwt-sev-4 { background: #8b1e14; }

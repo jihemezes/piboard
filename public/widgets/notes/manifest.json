@@ -1,0 +1,31 @@
+{
+  "id": "notes",
+  "version": "0.3.0",
+  "name": { "en": "Notes", "fr": "Bloc-notes" },
+  "titleBar": true,
+  "description": {
+    "en": "Notepad with light Markdown, interactive checklists, sticky-note colors and auto-fitting text. Saved on the server, shared by all screens.",
+    "fr": "Bloc-notes avec Markdown léger, listes à cocher interactives, couleurs post-it et texte auto-ajusté. Enregistré sur le serveur, partagé entre les écrans."
+  },
+  "size": { "w": 3, "h": 3, "minW": 2, "minH": 2, "maxW": 8, "maxH": 8 },
+  "settings": [
+    { "key": "color", "type": "select", "default": "none",
+      "label": { "en": "Sticky-note color", "fr": "Couleur post-it" },
+      "options": [
+        { "value": "none",   "label": { "en": "Tile color", "fr": "Couleur de tuile" } },
+        { "value": "yellow", "label": { "en": "Yellow", "fr": "Jaune" } },
+        { "value": "green",  "label": { "en": "Green", "fr": "Vert" } },
+        { "value": "blue",   "label": { "en": "Blue", "fr": "Bleu" } },
+        { "value": "pink",   "label": { "en": "Pink", "fr": "Rose" } },
+        { "value": "orange", "label": { "en": "Orange", "fr": "Orange" } }
+      ] },
+    { "key": "autoFit", "type": "checkbox", "default": true,
+      "label": { "en": "Auto-fit text size to the tile", "fr": "Ajuster automatiquement la taille du texte" } },
+    { "key": "fontSize", "type": "number", "default": 16, "min": 12, "max": 40, "step": 1,
+      "label": { "en": "Text size when auto-fit is off (px)", "fr": "Taille du texte si ajustement désactivé (px)" } },
+    { "key": "readOnly", "type": "checkbox", "default": false,
+      "label": { "en": "Read-only (checkboxes stay tappable)", "fr": "Lecture seule (les cases restent cochables)" } },
+    { "key": "showMeta", "type": "checkbox", "default": true,
+      "label": { "en": "Show timestamp and word count", "fr": "Afficher l'horodatage et le compteur de mots" } }
+  ]
+}

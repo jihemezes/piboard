@@ -1,0 +1,268 @@
+{
+  "id": "commute",
+  "version": "0.2.0",
+  "name": {
+    "en": "Commute time",
+    "fr": "Trajet domicile-travail"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Live driving times between two addresses, plus up to 5 extra trips to named destinations (OpenStreetMap geocoding + OSRM routing, no API key).",
+    "fr": "Temps de trajet en voiture en direct entre deux adresses, plus jusqu'à 5 trajets supplémentaires vers des destinations nommées (géocodage OpenStreetMap + itinéraire OSRM, sans clé API)."
+  },
+  "size": {
+    "w": 3,
+    "h": 2,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 6,
+    "maxH": 4
+  },
+  "settings": [
+    {
+      "key": "home",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Address A (e.g. home)",
+        "fr": "Adresse A (ex. domicile)"
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "work",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Address B (e.g. work)",
+        "fr": "Adresse B (ex. travail)"
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "direction",
+      "type": "select",
+      "default": "toWork",
+      "label": {
+        "en": "Direction",
+        "fr": "Sens"
+      },
+      "options": [
+        {
+          "value": "toWork",
+          "label": {
+            "en": "A → B",
+            "fr": "A → B"
+          }
+        },
+        {
+          "value": "toHome",
+          "label": {
+            "en": "B → A",
+            "fr": "B → A"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "Both, side by side",
+            "fr": "Les deux, côte à côte"
+          }
+        }
+      ],
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "layout",
+      "type": "select",
+      "default": "columns",
+      "label": {
+        "en": "Trip arrangement",
+        "fr": "Disposition des trajets"
+      },
+      "hint": {
+        "en": "Side by side suits wide tiles; stacked suits tall or narrow tiles, especially with several trips.",
+        "fr": "Côte à côte convient aux tuiles larges ; empilés convient aux tuiles hautes ou étroites, surtout avec plusieurs trajets."
+      },
+      "options": [
+        {
+          "value": "columns",
+          "label": {
+            "en": "Side by side",
+            "fr": "Côte à côte"
+          }
+        },
+        {
+          "value": "rows",
+          "label": {
+            "en": "Stacked",
+            "fr": "Empilés"
+          }
+        }
+      ],
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "trip1Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 1 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 1 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip1Address",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 1 — destination address",
+        "fr": "Trajet supplémentaire 1 — adresse de destination"
+      },
+      "hint": {
+        "en": "Each extra trip is computed from address A (e.g. home) to its destination. Leave name and address empty to disable a slot. Up to 5 extra trips.",
+        "fr": "Chaque trajet supplémentaire est calculé depuis l'adresse A (ex. domicile) vers sa destination. Laissez nom et adresse vides pour désactiver un emplacement. Jusqu'à 5 trajets supplémentaires."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip2Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 2 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 2 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip2Address",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 2 — destination address",
+        "fr": "Trajet supplémentaire 2 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip3Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 3 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 3 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip3Address",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 3 — destination address",
+        "fr": "Trajet supplémentaire 3 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip4Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 4 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 4 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip4Address",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 4 — destination address",
+        "fr": "Trajet supplémentaire 4 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip5Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 5 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 5 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip5Address",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 5 — destination address",
+        "fr": "Trajet supplémentaire 5 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 10,
+      "min": 5,
+      "max": 60,
+      "step": 5,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    }
+  ]
+}

@@ -1,0 +1,42 @@
+.pw-sport {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  overflow: hidden;
+}
+.pw-sport ul { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow: hidden; }
+.pw-sport li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pw-sport li:last-child { border-bottom: none; }
+.pw-sport .pws-teams { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.pw-sport .pws-team { display: flex; justify-content: space-between; gap: 8px; font-size: 13.5px; }
+.pw-sport .pws-team-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.pw-sport .pws-team-name.pws-winner { font-weight: 700; }
+.pw-sport .pws-score { font-family: var(--mono); font-variant-numeric: tabular-nums; color: var(--muted); flex-shrink: 0; }
+.pw-sport .pws-status {
+  flex-shrink: 0;
+  font-size: 10.5px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  color: var(--faint);
+  min-width: 3.6em;
+  text-align: right;
+}
+.pw-sport .pws-live { color: var(--accent); font-weight: 700; }
+.pw-sport .pws-live::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 4px;
+  animation: pws-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pws-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+.pw-sport .pws-err, .pw-sport .pws-empty { margin: auto; color: var(--muted); font-size: 13px; text-align: center; }

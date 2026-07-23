@@ -1,0 +1,199 @@
+.pw-slideshow {
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #000;
+}
+.pw-slideshow .pws-slide {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+/* Photo reelle (plus un simple background-image) : necessaire pour
+   pouvoir lire ses dimensions naturelles et determiner son orientation.
+   Actual <img> (rather than a background-image): needed to read its
+   natural dimensions and determine its orientation. */
+.pw-slideshow .pws-slide-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+.pw-slideshow .pws-slide.pws-active .pws-slide-img { opacity: 1; }
+.pw-slideshow .pws-slide-img.pws-fit-cover { object-fit: cover; }
+.pw-slideshow .pws-slide-img.pws-fit-contain { object-fit: contain; }
+
+/* Fond "photo floutee" derriere une photo en mode Contenir : la meme
+   photo, agrandie et floutee, plutot qu'une couleur unie.
+   "Blurred photo" background behind a photo shown in Contain mode: the
+   same photo, enlarged and blurred, instead of a solid color. */
+.pw-slideshow .pws-slide-blurbg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  object-fit: cover;
+  filter: blur(24px) brightness(0.55);
+  transform: scale(1.15); /* masque le halo net sur les bords flous / hides the blur's sharp edge halo */
+  opacity: 0;
+  transition: opacity 1.1s ease;
+}
+.pw-slideshow .pws-slide.pws-active .pws-slide-blurbg { opacity: 1; }
+
+/* Zoom marque (photo qui remplit la tuile, recadree) : la photo peut
+   deborder sans risque, l'espace autour est de toute facon rogne.
+   Strong zoom (photo filling the tile, cropped): the photo can safely
+   overflow, the surrounding space is cropped away anyway. */
+.pw-slideshow .pws-slide-img.pws-kb { animation: pws-kenburns 100s linear forwards; }
+.pw-slideshow .pws-slide-img.pws-kb.pws-alt { animation-name: pws-kenburns-alt; }
+@keyframes pws-kenburns {
+  from { transform: scale(1); }
+  to { transform: scale(1.12); }
+}
+@keyframes pws-kenburns-alt {
+  from { transform: scale(1.12); }
+  to { transform: scale(1); }
+}
+
+/* Zoom tres leger (photo entierement visible, mode Contenir) : reste
+   dans le cadre de la photo, ne rogne jamais dedans -- voir le choix
+   fait pour ce widget (option G).
+   Very light zoom (fully visible photo, Contain mode): stays within the
+   photo's frame, never crops into it -- per the choice made for this
+   widget (option G). */
+.pw-slideshow .pws-slide-img.pws-kb-light { animation: pws-kenburns-light 100s linear forwards; }
+.pw-slideshow .pws-slide-img.pws-kb-light.pws-alt { animation-name: pws-kenburns-light-alt; }
+@keyframes pws-kenburns-light {
+  from { transform: scale(1); }
+  to { transform: scale(1.03); }
+}
+@keyframes pws-kenburns-light-alt {
+  from { transform: scale(1.03); }
+  to { transform: scale(1); }
+}
+
+.pw-slideshow .pws-empty {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 12px;
+  background: var(--tile);
+}
+.pw-slideshow .pws-empty p { margin: 0; max-width: 90%; }
+
+.pw-slideshow .pws-dots {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: center;
+  gap: 5px;
+  z-index: 2;
+}
+.pw-slideshow .pws-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.4);
+}
+.pw-slideshow .pws-dots span.pws-dot-active { background: #fff; }
+
+/* Bouton de gestion des photos (mode "upload") : discret sur le
+   diaporama en cours, plus visible sur l'etat vide.
+   Photo management button (upload mode): discreet over a running
+   slideshow, more prominent on the empty state. */
+.pw-slideshow .pws-manage-btn {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  z-index: 3;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.35);
+  background: rgba(10,12,18,0.55);
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pw-slideshow .pws-manage-btn:hover { background: rgba(10,12,18,0.8); }
+
+.pw-slideshow .pws-add-btn-big {
+  border: 1px solid var(--tile-edge);
+  background: var(--accent);
+  color: #fff;
+  border-radius: 10px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pw-slideshow .pws-slide-img.pws-kb,
+  .pw-slideshow .pws-slide-img.pws-kb-light { animation: none; }
+}
+
+/* ---------- Gestionnaire de photos (fenetre propre au widget) ----------
+   Photo manager (widget-owned window) ---------- */
+.pws-manager-card { width: min(92vw, 640px); }
+.pws-manager-body { padding: 0 18px 14px; }
+.pws-manager-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  max-height: 50vh;
+  overflow-y: auto;
+  padding: 2px;
+}
+.pws-thumb {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+}
+.pws-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pws-thumb-del {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(10,12,18,0.65);
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pws-thumb-del:hover { background: var(--accent); }
+.pws-manager-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  color: var(--muted);
+  font-size: 13.5px;
+  padding: 20px 0;
+}
+.pws-manager-status {
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+}

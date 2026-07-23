@@ -1,0 +1,125 @@
+{
+  "id": "clock",
+  "version": "0.2.0",
+  "name": {
+    "en": "Clock",
+    "fr": "Horloge"
+  },
+  "description": {
+    "en": "Digital or analog clock with today's date, and an optional day/night background that follows the board's sun-based theme.",
+    "fr": "Horloge digitale ou analogique avec la date du jour, et un fond jour/nuit optionnel qui suit le thème solaire du tableau."
+  },
+  "size": {
+    "w": 3,
+    "h": 2,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 6,
+    "maxH": 5
+  },
+  "settings": [
+    {
+      "key": "mode",
+      "type": "select",
+      "default": "digital",
+      "label": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "options": [
+        {
+          "value": "digital",
+          "label": {
+            "en": "Digital",
+            "fr": "Digitale"
+          }
+        },
+        {
+          "value": "analog",
+          "label": {
+            "en": "Analog",
+            "fr": "Analogique"
+          }
+        }
+      ]
+    },
+    {
+      "key": "showSeconds",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show seconds",
+        "fr": "Afficher les secondes"
+      }
+    },
+    {
+      "key": "showDate",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show date",
+        "fr": "Afficher la date"
+      }
+    },
+    {
+      "key": "layout",
+      "type": "select",
+      "default": "stacked",
+      "label": {
+        "en": "Time and date arrangement",
+        "fr": "Disposition heure et date"
+      },
+      "hint": {
+        "en": "Only applies to the digital clock when the date is shown. Side by side works best on wide, short tiles.",
+        "fr": "S'applique seulement à l'horloge digitale quand la date est affichée. Côte à côte convient surtout aux tuiles larges et basses."
+      },
+      "options": [
+        {
+          "value": "stacked",
+          "label": {
+            "en": "Date below the time",
+            "fr": "Date sous l'heure"
+          }
+        },
+        {
+          "value": "row",
+          "label": {
+            "en": "Side by side",
+            "fr": "Côte à côte"
+          }
+        }
+      ]
+    },
+    {
+      "key": "dayNightBg",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Day/night background",
+        "fr": "Fond jour/nuit"
+      },
+      "hint": {
+        "en": "Switches automatically with the board's theme (sunrise/sunset, or your manual day/night choice). Overrides the tile's custom color from the Appearance section below while enabled.",
+        "fr": "Bascule automatiquement avec le thème du tableau (lever/coucher du soleil, ou votre choix manuel jour/nuit). Prend le pas sur la couleur personnalisée de la tuile (section Apparence ci-dessous) tant que c'est activé."
+      }
+    },
+    {
+      "key": "dayColor",
+      "type": "color",
+      "default": "#DCE9F7",
+      "label": {
+        "en": "Day color",
+        "fr": "Couleur de jour"
+      }
+    },
+    {
+      "key": "nightColor",
+      "type": "color",
+      "default": "#0B1220",
+      "label": {
+        "en": "Night color",
+        "fr": "Couleur de nuit"
+      }
+    }
+  ]
+}

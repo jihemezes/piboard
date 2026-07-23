@@ -1,0 +1,104 @@
+/* PiBoard notes v3 : vue rendue + editeur, couleurs post-it, meta */
+.pw-notes {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 12px 8px;
+  gap: 4px;
+  background: var(--pwn-tint, transparent);
+}
+
+/* Couleurs post-it : teintes translucides, lisibles dans les deux themes
+   Sticky-note colors: translucent tints, readable in both themes */
+.pwn-c-yellow { --pwn-tint: rgba(238, 198, 60, 0.16); }
+.pwn-c-green  { --pwn-tint: rgba(96, 200, 120, 0.15); }
+.pwn-c-blue   { --pwn-tint: rgba(84, 148, 224, 0.16); }
+.pwn-c-pink   { --pwn-tint: rgba(232, 110, 170, 0.15); }
+.pwn-c-orange { --pwn-tint: rgba(240, 150, 70, 0.16); }
+
+/* Vue rendue / rendered view */
+.pwn-view {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  line-height: 1.5;
+  cursor: text;
+}
+.pwn-view .pwn-line { margin: 0 0 0.15em; overflow-wrap: break-word; }
+.pwn-view .pwn-h { font-weight: 700; font-size: 1.25em; margin: 0.2em 0 0.25em; }
+.pwn-view .pwn-bullet { padding-left: 1.1em; position: relative; }
+.pwn-view .pwn-bullet::before {
+  content: "";
+  position: absolute;
+  left: 0.25em;
+  top: 0.62em;
+  width: 0.32em;
+  height: 0.32em;
+  border-radius: 50%;
+  background: var(--accent);
+}
+.pwn-view .pwn-empty { min-height: 0.7em; }
+.pwn-view .pwn-hint { color: var(--faint); }
+
+/* Lignes a cocher / checklist lines */
+.pwn-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5em;
+}
+.pwn-check {
+  flex-shrink: 0;
+  width: 1.05em;
+  height: 1.05em;
+  margin-top: 0.22em;
+  border: 0.09em solid var(--muted);
+  border-radius: 0.25em;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+}
+.pwn-task.pwn-done .pwn-check {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.pwn-task.pwn-done .pwn-check::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: no-repeat center / 80% url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-11"/></svg>');
+}
+.pwn-task.pwn-done .pwn-task-text {
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: var(--faint);
+}
+
+/* Editeur / editor */
+.pwn-edit {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  resize: none;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--font);
+  line-height: 1.5;
+  padding: 0;
+}
+.pwn-edit:focus { outline: none; }
+
+/* Pied : horodatage, compteur, statut / footer: timestamp, counter, status */
+.pwn-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  min-height: 13px;
+  flex-shrink: 0;
+}
+.pwn-status { color: var(--muted); }

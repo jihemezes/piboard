@@ -1,0 +1,140 @@
+{
+  "id": "sportscore",
+  "version": "0.3.0",
+  "name": {
+    "en": "Live sports scores",
+    "fr": "Scores sportifs en direct"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Live and upcoming scores for football, rugby (Top 14), or any other ESPN-covered competition via its code.",
+    "fr": "Scores en direct et à venir de football, de rugby (Top 14), ou de toute autre compétition couverte par ESPN via son code."
+  },
+  "size": {
+    "w": 4,
+    "h": 3,
+    "minW": 2,
+    "minH": 1,
+    "maxW": 8,
+    "maxH": 8
+  },
+  "settings": [
+    {
+      "key": "league",
+      "type": "select",
+      "default": "soccer:fifa.world",
+      "label": {
+        "en": "Competition",
+        "fr": "Compétition"
+      },
+      "options": [
+        {
+          "value": "soccer:fifa.world",
+          "label": {
+            "en": "⚽ FIFA World Cup",
+            "fr": "⚽ Coupe du monde FIFA"
+          }
+        },
+        {
+          "value": "soccer:uefa.champions",
+          "label": {
+            "en": "⚽ UEFA Champions League",
+            "fr": "⚽ Ligue des champions UEFA"
+          }
+        },
+        {
+          "value": "soccer:fra.1",
+          "label": {
+            "en": "⚽ Ligue 1 (France)",
+            "fr": "⚽ Ligue 1 (France)"
+          }
+        },
+        {
+          "value": "soccer:eng.1",
+          "label": {
+            "en": "⚽ Premier League (England)",
+            "fr": "⚽ Premier League (Angleterre)"
+          }
+        },
+        {
+          "value": "soccer:esp.1",
+          "label": {
+            "en": "⚽ La Liga (Spain)",
+            "fr": "⚽ Liga (Espagne)"
+          }
+        },
+        {
+          "value": "soccer:ger.1",
+          "label": {
+            "en": "⚽ Bundesliga (Germany)",
+            "fr": "⚽ Bundesliga (Allemagne)"
+          }
+        },
+        {
+          "value": "soccer:ita.1",
+          "label": {
+            "en": "⚽ Serie A (Italy)",
+            "fr": "⚽ Serie A (Italie)"
+          }
+        },
+        {
+          "value": "rugby:270559",
+          "label": {
+            "en": "🏉 Top 14 (Rugby, France)",
+            "fr": "🏉 Top 14 (Rugby, France)"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Not in the list? Leave this as-is and fill in the custom code field below instead — it takes over automatically.",
+        "fr": "Pas dans la liste ? Laissez ce choix tel quel et remplissez plutôt le champ « code personnalisé » ci-dessous — il prend le relais automatiquement."
+      }
+    },
+    {
+      "key": "customLeague",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Custom ESPN code (sport:league) — overrides the list above",
+        "fr": "Code ESPN personnalisé (sport:ligue) — prend le pas sur la liste ci-dessus"
+      },
+      "hint": {
+        "en": "Example for the NFL: <code>football:nfl</code>. See the League standings widget's own hint (or the PiBoard README) for how to find any code via your browser's DevTools.",
+        "fr": "Exemple pour la NFL : <code>football:nfl</code>. Voir l'aide du widget Classement (ou le README de PiBoard) pour la méthode de recherche d'un code via les outils de développement du navigateur."
+      }
+    },
+    {
+      "key": "teamFilter",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Filter by team (optional, e.g. \"Toulouse\")",
+        "fr": "Filtrer par équipe (optionnel, ex. « Toulouse »)"
+      }
+    },
+    {
+      "key": "maxItems",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "label": {
+        "en": "Matches shown",
+        "fr": "Nombre de matchs affichés"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 2,
+      "min": 1,
+      "max": 30,
+      "step": 1,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      }
+    }
+  ]
+}

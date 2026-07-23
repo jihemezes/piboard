@@ -1,0 +1,114 @@
+.pw-crypto {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+}
+.pw-crypto .pwc-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  cursor: pointer;
+  border-radius: 6px;
+  padding: 2px 4px;
+  margin: -2px -4px;
+}
+.pw-crypto .pwc-row:hover { background: var(--field-bg); }
+.pw-crypto .pwc-name {
+  font-size: 13px;
+  color: var(--text);
+  text-transform: capitalize;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pw-crypto .pwc-right { display: flex; align-items: baseline; gap: 8px; flex-shrink: 0; }
+.pw-crypto .pwc-price {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+.pw-crypto .pwc-change {
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  min-width: 3.6em;
+  text-align: right;
+}
+.pw-crypto .pwc-up { color: #4CAF7D; }
+.pw-crypto .pwc-down { color: #E0556F; }
+.pw-crypto .pwc-err { margin: auto; color: var(--muted); font-size: 13px; text-align: center; }
+
+/* ---------- Fenetre de courbe (fermeture manuelle uniquement) ----------
+   Reutilise les classes de modale du coeur (.modal/.modal-card) pour la
+   coherence visuelle. Le fond ne ferme pas la fenetre au clic : seul le
+   bouton de fermeture le fait, comme demande.
+   Chart popup (manual close only). Reuses the core modal classes
+   (.modal/.modal-card) for visual consistency. The backdrop does not
+   close the window on click: only the close button does, as requested. */
+.pwc-chart-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 2px 18px 12px;
+}
+.pwc-chart-price {
+  font-family: var(--mono);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.pwc-chart-change {
+  font-family: var(--mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pwc-ranges {
+  display: flex;
+  gap: 6px;
+  padding: 0 18px 12px;
+}
+.pwc-range-btn {
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.pwc-range-btn:hover { color: var(--text); }
+.pwc-range-btn.pwc-range-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.pwc-chart-wrap {
+  padding: 0 18px 18px;
+  min-height: 200px;
+  position: relative;
+}
+.pwc-chart-wrap svg { width: 100%; height: 200px; display: block; }
+.pwc-chart-line { fill: none; stroke: var(--accent); stroke-width: 2; }
+.pwc-chart-fill { fill: var(--accent); opacity: 0.12; }
+.pwc-chart-axis { font-family: var(--mono); font-size: 10px; fill: var(--faint); }
+
+.pwc-chart-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 13px;
+  background: var(--tile);
+}
+.pwc-chart-status[hidden] { display: none; }

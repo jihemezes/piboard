@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PiBoard</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/vendor/gridstack/gridstack.min.css">
+<link rel="stylesheet" href="/vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-theme="dark">
+
+<main class="board">
+  <div class="grid-stack" id="grid"></div>
+  <p class="board-empty" id="boardEmpty" hidden>
+    <span data-i18n="board.empty">Your board is empty. Open the toolbar below and add your first tile.</span>
+  </p>
+</main>
+
+<!-- Tiroir lateral gauche / left side drawer -->
+<aside class="drawer" id="drawer">
+  <div class="drawer-inner">
+    <div class="grid-stack" id="drawerGrid"></div>
+    <p class="drawer-empty" id="drawerEmpty" hidden>
+      <span data-i18n="drawer.empty">Open the toolbar and add tiles while the drawer is open: they will live here.</span>
+    </p>
+  </div>
+  <button class="drawer-tab" id="drawerTab" aria-label="Drawer" title="PiBoard">
+    <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div class="drawer-resize" id="drawerResize" title="Resize"></div>
+</aside>
+
+<!-- Languette + barre d'outils / pull tab + toolbar -->
+<div class="dock" id="dock">
+  <button class="dock-tab" id="dockTab" aria-label="Toolbar" title="PiBoard">
+    <span class="dock-tab-dot"></span>
+  </button>
+  <div class="dock-bar" id="dockBar" hidden>
+    <button class="dock-btn" id="btnAdd" data-i18n-title="toolbar.add" title="Add a tile">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="dock-btn" id="btnEdit" data-i18n-title="toolbar.edit" title="Edit mode">
+      <svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0"/></svg>
+    </button>
+    <button class="dock-btn" id="btnSettings" data-i18n-title="toolbar.settings" title="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
+    </button>
+    <button class="dock-btn" id="btnHelp" data-i18n-title="toolbar.help" title="Help">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 0 1 4.9.8c0 1.7-2.4 2-2.4 3.5"/><path d="M12 17.2v.1"/></svg>
+    </button>
+    <button class="dock-btn" id="btnScreensaverNow" data-i18n-title="toolbar.screensaverNow" title="Start photo frame">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </button>
+    <span class="dock-sep"></span>
+    <button class="dock-btn" id="btnExit" data-i18n-title="toolbar.exit" title="Exit dashboard">
+      <svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M7 5.5a8 8 0 1 0 10 0"/></svg>
+    </button>
+    <button class="dock-btn" id="btnCollapse" data-i18n-title="toolbar.collapse" title="Hide toolbar">
+      <svg viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  </div>
+</div>
+
+<!-- Repli affiche quand le navigateur bloque window.close() (onglet non
+     ouvert par script -- restriction de securite universelle, aucune
+     page web ne peut la contourner).
+     Fallback shown when the browser blocks window.close() (tab not
+     opened by script -- universal security restriction, no web page can
+     bypass it). -->
+<!-- Economiseur d'ecran : calque plein ecran, mode noir ou diaporama.
+     Jamais affiche par defaut (hidden) ; app.js bascule "hidden" selon le
+     calendrier configure. Un clic/tap/touche n'importe ou dedans reveille
+     immediatement (voir wakeScreensaver() dans app.js).
+     Screensaver: full-screen overlay, black or slideshow mode. Never
+     shown by default (hidden); app.js toggles "hidden" based on the
+     configured schedule. A click/tap/key anywhere inside wakes it up
+     immediately (see wakeScreensaver() in app.js). -->
+<div class="screensaver" id="screensaverOverlay" hidden>
+  <div class="screensaver-slideshow" id="screensaverSlideshow"></div>
+</div>
+
+<!-- Menu "Quitter" : choix entre reinitialiser le tableau de bord ou
+     revenir au bureau de Raspberry Pi OS sans le relancer. S'ouvre sur le
+     bouton dock-bar "btnExit". "Exit" menu: choice between resetting the
+     dashboard or returning to the Raspberry Pi OS desktop without
+     relaunching it. Opened from the "btnExit" dock-bar button. -->
+<div class="modal" id="exitMenuModal" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 data-i18n="toolbar.exit">Exit dashboard</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="exit-menu">
+      <button type="button" class="exit-option" id="exitOptionReset">
+        <span class="exit-option-title" data-i18n="exit.reset.title">Reset the dashboard</span>
+        <span class="exit-option-desc" data-i18n="exit.reset.desc">Reloads PiBoard from scratch in this browser. Useful after a visual glitch or a stall, or once an update has been applied on the server.</span>
+      </button>
+      <button type="button" class="exit-option exit-option-warn" id="exitOptionDesktop">
+        <span class="exit-option-title" data-i18n="exit.desktop.title">Return to the desktop</span>
+        <span class="exit-option-desc" data-i18n="exit.desktop.desc">Closes PiBoard and shows the Raspberry Pi OS desktop underneath, without relaunching the dashboard. To bring it back: reopen Chromium on the dashboard's address yourself, or restart the Pi.</span>
+      </button>
+    </div>
+    <div class="modal-foot">
+      <div class="form-actions">
+        <button type="button" class="btn" data-close data-i18n="common.close">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal" id="exitFallback" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 data-i18n="toolbar.exit">Exit dashboard</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="modal-foot">
+      <p id="exitFallbackText" data-i18n="exit.desktop.fallback">You can close this tab now.</p>
+      <div class="form-actions">
+        <button type="button" class="btn" data-close data-i18n="common.close">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Catalogue de widgets / widget catalog -->
+<div class="modal" id="catalogModal" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 data-i18n="catalog.title">Add a tile</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="catalog" id="catalogList"></div>
+  </div>
+</div>
+
+<!-- Choix d'une configuration enregistree / saved configuration picker -->
+<div class="modal" id="configPickerModal" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="configPickerTitle">Configuration</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="catalog" id="configPickerList"></div>
+  </div>
+</div>
+
+<!-- Parametres globaux / global settings -->
+<div class="modal" id="settingsModal" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 data-i18n="settings.title">Settings</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="form">
+      <fieldset class="form-section">
+        <legend data-i18n="settings.section.general">General</legend>
+        <label class="field">
+          <span data-i18n="settings.lang">Language</span>
+          <select id="setLang">
+            <option value="en">English</option>
+            <option value="fr">Français</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="settings.theme">Theme</span>
+          <select id="setTheme">
+            <option value="auto" data-i18n="settings.theme.auto">Auto (day / night)</option>
+            <option value="dark" data-i18n="settings.theme.dark">Night</option>
+            <option value="light" data-i18n="settings.theme.light">Day</option>
+          </select>
+        </label>
+        <label class="field city-box">
+          <span data-i18n="settings.city">City (sunrise / sunset for the auto theme)</span>
+          <input type="text" id="setCity" autocomplete="off" data-i18n-placeholder="settings.city.placeholder" placeholder="Type a city name…">
+          <div class="city-suggest" id="citySuggest" hidden></div>
+        </label>
+        <p class="city-current" id="cityCurrent"></p>
+        <p class="hint" data-i18n="settings.city.hint">Pick a suggestion to validate the city. It is only used to compute sunrise and sunset.</p>
+        <label class="field">
+          <span data-i18n="settings.rows">Grid rows on screen</span>
+          <input type="number" id="setRows" min="4" max="16" step="1">
+        </label>
+      </fieldset>
+
+      <fieldset class="form-section">
+        <legend data-i18n="settings.colors">Colors</legend>
+        <div class="field">
+          <div class="color-grid">
+            <span></span>
+            <span class="cg-head" data-i18n="settings.colors.bg">Background</span>
+            <span class="cg-head" data-i18n="settings.colors.tile">Tiles</span>
+            <span class="cg-row" data-i18n="settings.theme.dark">Night</span>
+            <input type="color" id="setDarkBg">
+            <input type="color" id="setDarkTile">
+            <span class="cg-row" data-i18n="settings.theme.light">Day</span>
+            <input type="color" id="setLightBg">
+            <input type="color" id="setLightTile">
+          </div>
+          <button class="btn small" id="colorsReset" data-i18n="settings.colors.reset">Reset default colors</button>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section" id="secDesktopApp" hidden>
+        <legend data-i18n="settings.section.desktop">Desktop application</legend>
+        <label class="field checkbox">
+          <input type="checkbox" id="setAutoStart">
+          <span data-i18n="settings.autostart">Launch PiBoard when the session starts</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.autostart.hint">Opens the dashboard automatically when you log in to Windows. This section only appears in the desktop application.</small>
+      </fieldset>
+
+      <fieldset class="form-section">
+        <legend data-i18n="settings.section.touch">Touchscreen</legend>
+        <label class="field checkbox">
+          <input type="checkbox" id="setKeyboard">
+          <span data-i18n="settings.keyboard">Show an on-screen keyboard for text fields (touchscreens)</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.keyboard.hint">Follows the language above (French AZERTY / English QWERTY). Applies everywhere text can be typed — tile settings and the notes widget included.</small>
+        <label class="field checkbox">
+          <input type="checkbox" id="setTouch">
+          <span data-i18n="settings.touch">Touch mode: larger buttons, tabs and handles</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.touch.hint">Enlarges the toolbar buttons, the drawer and toolbar pull tabs, the tile icons and the resize handles, for fingers on a touchscreen.</small>
+      </fieldset>
+
+      <fieldset class="form-section">
+        <legend data-i18n="settings.section.screensaver">Screen saver</legend>
+        <label class="field checkbox">
+          <input type="checkbox" id="setSSEnabled">
+          <span data-i18n="ss.enabled">Enable the screen saver</span>
+        </label>
+        <small class="field-hint" data-i18n="ss.enabled.hint">During the time slots below, the screen goes fully black (or shows a photo slideshow), to save energy at night or when no one is around. A click, a tap, or any key press wakes it up instantly. This never turns the physical display off — a software overlay only, which is instant and always reliable to wake up.</small>
+
+        <div id="ssSlots" style="margin-top:10px"></div>
+
+        <label class="field" style="margin-top:10px">
+          <span data-i18n="ss.inactivityTimeout">Return to sleep after inactivity</span>
+          <select id="setSSInactivityTimeout"></select>
+        </label>
+        <small class="field-hint" data-i18n="ss.inactivityTimeout.hint">If the screen is woken up with a touch/click/key while still inside a time slot above, it goes back to sleep on its own after this long without any further action.</small>
+
+        <p class="hint" style="margin-top:14px" data-i18n="ss.slideshow.intro">Photos used by any slot set to "Slideshow":</p>
+        <label class="field">
+          <span data-i18n="ss.source">Photo source</span>
+          <select id="setSSSource">
+            <option value="upload" data-i18n="ss.source.uploaded">Uploaded (managed below)</option>
+            <option value="folder" data-i18n="ss.source.folder">Local folder (NAS / rclone mount)</option>
+            <option value="usb" data-i18n="ss.source.usb">USB key (plugged into the Pi)</option>
+            <option value="webdav" data-i18n="ss.source.webdav">WebDAV share</option>
+            <option value="urls" data-i18n="ss.source.urls">Image URLs (list)</option>
+          </select>
+        </label>
+        <label class="field" id="ssFolderField">
+          <span data-i18n="ss.folderPath">Local folder path</span>
+          <input type="text" id="setSSFolderPath">
+        </label>
+        <label class="field" id="ssWebdavUrlField">
+          <span data-i18n="ss.webdavUrl">WebDAV folder URL</span>
+          <input type="text" id="setSSWebdavUrl">
+        </label>
+        <label class="field" id="ssWebdavUserField">
+          <span data-i18n="ss.webdavUser">WebDAV username</span>
+          <input type="text" id="setSSWebdavUser">
+        </label>
+        <label class="field" id="ssWebdavPassField">
+          <span data-i18n="ss.webdavPass">WebDAV password</span>
+          <div class="field-password-wrap">
+            <input type="password" id="setSSWebdavPass" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">Show</button>
+          </div>
+        </label>
+        <label class="field field-wide" id="ssImagesField">
+          <span data-i18n="ss.images">Image URLs (one per line)</span>
+          <textarea id="setSSImages" rows="3"></textarea>
+        </label>
+        <label class="field" id="ssUploadedField">
+          <span data-i18n="ss.uploaded">Uploaded photos</span>
+          <div class="ss-media-list" id="ssMediaList"></div>
+          <p class="ss-media-empty" id="ssMediaEmpty" data-i18n="ss.uploaded.empty">No photos uploaded yet.</p>
+          <input type="file" id="ssFileInput" accept="image/*" multiple hidden>
+          <button type="button" class="btn small" id="ssUploadBtn" data-i18n="ss.uploaded.add">Add photos…</button>
+        </label>
+        <label class="field">
+          <span data-i18n="ss.interval">Change every (seconds)</span>
+          <input type="number" id="setSSInterval" min="3" max="600" step="1">
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="setSSShuffle">
+          <span data-i18n="ss.shuffle">Shuffle order</span>
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="setSSKenBurns">
+          <span data-i18n="ss.kenBurns">Slow zoom effect (Ken Burns)</span>
+        </label>
+        <label class="field">
+          <span data-i18n="ss.fitLandscape">Landscape photos</span>
+          <select id="setSSFitLandscape">
+            <option value="cover" data-i18n="ss.fit.cover">Fill screen (cropped)</option>
+            <option value="contain" data-i18n="ss.fit.contain">Show entire photo</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="ss.fitPortrait">Portrait photos</span>
+          <select id="setSSFitPortrait">
+            <option value="cover" data-i18n="ss.fit.cover">Fill screen (cropped)</option>
+            <option value="contain" data-i18n="ss.fit.contain">Show entire photo</option>
+          </select>
+        </label>
+        <small class="field-hint" data-i18n="ss.fitPortrait.hint">This is the setting that matters most for portrait photos coming out badly cropped: "Show entire photo" guarantees nothing is ever cut off.</small>
+        <label class="field" id="ssContainBgField">
+          <span data-i18n="ss.containBackground">Border style (when a photo is shown in full)</span>
+          <select id="setSSContainBg">
+            <option value="color" data-i18n="ss.containBackground.color">Solid color</option>
+            <option value="blur" data-i18n="ss.containBackground.blur">Blurred photo (auto)</option>
+          </select>
+        </label>
+        <label class="field" id="ssContainBgColorField">
+          <span data-i18n="ss.containBackgroundColor">Border color</span>
+          <input type="color" id="setSSContainBgColor">
+        </label>
+      </fieldset>
+
+      <div class="form-actions">
+        <button class="btn primary" id="settingsSave" data-i18n="settings.save">Save</button>
+      </div>
+      <p class="about">PiBoard <span id="appVersion">v1.0.0</span> — <a href="https://github.com/jihemezes/piboard" target="_blank" rel="noopener">GitHub</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- Aide du tableau de bord : sommaire (gauche, etroit) + contenu (droite,
+     large). Largeur fixe = celle deja definie pour les fenetres de
+     configuration a 3 colonnes (voir --help-width en CSS). Le contenu est
+     rempli dynamiquement par help-content.js + app.js (renderHelp()).
+     Dashboard help: table of contents (left, narrow) + content (right,
+     wide). Fixed width = the one already defined for 3-column config
+     windows (see --help-width in CSS). Content is filled dynamically by
+     help-content.js + app.js (renderHelp()). -->
+<div class="modal" id="helpModal" hidden>
+  <div class="modal-card help-card">
+    <header class="modal-head">
+      <h2 data-i18n="help.title">Help</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="help-body">
+      <nav class="help-nav" id="helpNav"></nav>
+      <div class="help-content" id="helpContent"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Parametres d'une tuile / tile settings -->
+<div class="modal" id="tileModal" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 id="tileModalTitle" data-i18n="tile.settings">Tile settings</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="form" id="tileForm"></div>
+    <div class="form-actions modal-foot">
+      <button class="btn danger" id="tileRemove" data-i18n="tile.remove">Remove tile</button>
+      <span class="field-hint" id="tileSaveConfigMsg"></span>
+      <button class="btn" id="tileSaveConfig" data-i18n="tile.saveConfig">Save this configuration</button>
+      <button class="btn primary" id="tileSave" data-i18n="settings.save">Save</button>
+    </div>
+  </div>
+</div>
+
+<!-- Clavier virtuel / on-screen keyboard -->
+<div class="vkb" id="vkb" hidden></div>
+
+<script src="/vendor/gridstack/gridstack-all.js"></script>
+<script src="/vendor/leaflet/leaflet.js"></script>
+<script src="i18n.js"></script>
+<script src="help-content.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

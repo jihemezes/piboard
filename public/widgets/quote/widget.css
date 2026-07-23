@@ -1,0 +1,35 @@
+.pw-quote {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3em;
+  padding: 8% 10%;
+  text-align: center;
+  overflow: hidden;
+}
+.pw-quote .pwq-text {
+  font-family: Georgia, "Times New Roman", serif;
+  font-style: italic;
+  line-height: 1.3;
+  color: var(--text);
+}
+.pw-quote .pwq-author {
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+  max-width: 100%;
+  /* Toujours visible EN ENTIER : plutot que de tronquer un nom long avec
+     des points de suspension (ancien comportement, illisible), l'auteur
+     peut revenir a la ligne. Combine a flex-shrink:0 ci-dessous, il ne
+     cede jamais sa place au texte de la citation et n'est jamais coupe.
+     Always FULLY visible: rather than truncating a long name with an
+     ellipsis (previous behavior, unreadable), the author can wrap onto a
+     second line. Combined with flex-shrink:0 below, it never yields its
+     space to the quote's text and is never cut off. */
+  overflow-wrap: break-word;
+  flex-shrink: 0;
+}
+.pw-quote .pwq-author::before { content: "— "; }

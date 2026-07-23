@@ -1,0 +1,64 @@
+{
+  "id": "countdown",
+  "version": "0.3.0",
+  "name": { "en": "Countdown", "fr": "Compte à rebours" },
+  "titleBar": true,
+  "description": {
+    "en": "Counts down to a fixed date, or acts as a start/pause timer for a set duration. Alerts when it ends with a full-screen flash and/or a chosen sound, lasting up to a minute (or stopped early), plus an optional notification webhook (SMS, Alexa, phone push...).",
+    "fr": "Décompte vers une date fixe, ou fonctionne comme un minuteur démarrable pour une durée donnée. Alerte à la fin avec un flash plein écran et/ou un son choisi, durant jusqu'à une minute (ou arrêtable avant), plus un webhook de notification optionnel (SMS, Alexa, push mobile…)."
+  },
+  "size": { "w": 3, "h": 2, "minW": 1, "minH": 1, "maxW": 6, "maxH": 4 },
+  "settings": [
+    { "key": "label", "type": "text", "default": "",
+      "label": { "en": "Occasion (optional)", "fr": "Occasion (optionnel)" } },
+    { "key": "mode", "type": "select", "default": "date",
+      "label": { "en": "Type", "fr": "Type" },
+      "options": [
+        { "value": "date", "label": { "en": "Countdown to a date", "fr": "Compte à rebours vers une date" } },
+        { "value": "duration", "label": { "en": "Timer (start / pause / reset)", "fr": "Minuteur (démarrer / pause / reset)" } }
+      ] },
+    { "key": "targetDateTime", "type": "datetime", "default": "",
+      "label": { "en": "Target date and time", "fr": "Date et heure cible" } },
+    { "key": "durationMinutes", "type": "number", "default": 10, "min": 1, "max": 1440, "step": 1,
+      "label": { "en": "Timer duration (minutes)", "fr": "Durée du minuteur (minutes)" } },
+    { "key": "showSeconds", "type": "checkbox", "default": true,
+      "label": { "en": "Show seconds", "fr": "Afficher les secondes" } },
+    { "key": "flashScreen", "type": "checkbox", "default": true,
+      "label": { "en": "Flash the whole screen when it ends", "fr": "Faire clignoter tout l'écran à la fin" } },
+    { "key": "playSound", "type": "checkbox", "default": true,
+      "label": { "en": "Play a sound when it ends (needs speakers on the screen)", "fr": "Jouer un son à la fin (nécessite des haut-parleurs sur l'écran)" } },
+    { "key": "soundChoice", "type": "select", "default": "beep-simple",
+      "label": { "en": "Sound", "fr": "Son" },
+      "hint": {
+        "en": "All sounds are synthesized on the fly (no audio files, works offline).",
+        "fr": "Tous les sons sont synthétisés à la volée (aucun fichier audio, fonctionne hors-ligne)."
+      },
+      "options": [
+        { "value": "beep-simple",       "label": { "en": "🔔 Simple beep", "fr": "🔔 Bip simple" } },
+        { "value": "beep-double",       "label": { "en": "🔔 Double beep", "fr": "🔔 Double bip" } },
+        { "value": "siren-police",      "label": { "en": "🚓 Police siren", "fr": "🚓 Sirène police" } },
+        { "value": "siren-firefighter", "label": { "en": "🚒 Firefighter siren", "fr": "🚒 Sirène pompiers" } },
+        { "value": "siren-fire-alarm",  "label": { "en": "🔥 Fire alarm klaxon", "fr": "🔥 Alarme incendie" } },
+        { "value": "siren-submarine",   "label": { "en": "🚨 Submarine dive klaxon", "fr": "🚨 Klaxon plongée sous-marine" } },
+        { "value": "bell-train",        "label": { "en": "🚆 Train crossing bell", "fr": "🚆 Cloche de passage à niveau" } },
+        { "value": "bell-door",         "label": { "en": "🔔 Doorbell (ding-dong)", "fr": "🔔 Sonnette d'entrée (ding-dong)" } },
+        { "value": "jingle",            "label": { "en": "🎵 Short jingle", "fr": "🎵 Jingle bref" } }
+      ] },
+    { "key": "alertDurationSeconds", "type": "number", "default": 60, "min": 5, "max": 300, "step": 5,
+      "label": { "en": "Alert duration (seconds, or stop it early)", "fr": "Durée de l'alerte (secondes, ou arrêtez-la avant)" },
+      "hint": {
+        "en": "The flash and sound keep going for this long once the countdown ends. While active, the \"Reset\" button becomes \"Stop\" — tap it to silence the alert immediately.",
+        "fr": "Le flash et le son continuent pendant cette durée une fois le compte à rebours terminé. Tant que l'alerte est active, le bouton « Réinitialiser » devient « Arrêter » — touchez-le pour la faire taire immédiatement."
+      } },
+    { "key": "notifyUrl", "type": "text", "default": "",
+      "label": { "en": "Notification webhook URL (optional, {message} = the text below)", "fr": "URL webhook de notification (optionnel, {message} = le texte ci-dessous)" } },
+    { "key": "notifyMethod", "type": "select", "default": "GET",
+      "label": { "en": "Webhook method", "fr": "Méthode du webhook" },
+      "options": [
+        { "value": "GET", "label": { "en": "GET", "fr": "GET" } },
+        { "value": "POST", "label": { "en": "POST (body = message)", "fr": "POST (corps = message)" } }
+      ] },
+    { "key": "notifyMessage", "type": "text", "default": "",
+      "label": { "en": "Notification message (optional)", "fr": "Message de la notification (optionnel)" } }
+  ]
+}

@@ -1,0 +1,24 @@
+# PiBoard - service serveur / server service
+[Unit]
+Description=PiBoard dashboard server
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@USER@
+WorkingDirectory=@APP_DIR@
+Environment=PIBOARD_PORT=@PORT@
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server/index.js
+Restart=on-failure
+RestartSec=5
+
+# Durcissement raisonnable / reasonable hardening
+NoNewPrivileges=true
+ProtectSystem=full
+ReadWritePaths=@APP_DIR@/data
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

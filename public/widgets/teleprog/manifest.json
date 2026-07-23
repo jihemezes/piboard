@@ -1,0 +1,181 @@
+{
+  "id": "teleprog",
+  "version": "0.1.0",
+  "name": { "en": "TV guide", "fr": "Programme TV" },
+  "description": {
+    "en": "A simplified French TV guide (DTT channels + Canal+). Switch between what's on now, tonight's prime time, and late night — right on the tile. Tap a program for its synopsis. Shows a 'new' badge when the source provides it, and a thumbnail when available. Turnkey via xmltvfr.fr (nothing to install), or point it at your own XMLTV file.",
+    "fr": "Un programme TV français simplifié (chaînes TNT + Canal+). Basculez entre « en ce moment », la 1re partie de soirée et la 2e partie — directement sur la tuile. Touchez une émission pour son synopsis. Affiche une pastille « inédit » quand la source la fournit, et une vignette si disponible. Clé en main via xmltvfr.fr (rien à installer), ou pointez votre propre fichier XMLTV."
+  },
+  "titleBar": true,
+  "size": { "w": 3, "h": 8, "minW": 2, "minH": 5, "maxW": 6, "maxH": 16 },
+  "settings": [
+    {
+      "key": "source",
+      "type": "select",
+      "default": "xmltvfr",
+      "label": { "en": "Data source", "fr": "Source des données" },
+      "hint": {
+        "en": "Turnkey uses xmltvfr.fr's free, no-signup French DTT guide (nothing to install). Custom XMLTV lets you point at your own XMLTV file/URL (e.g. from TVHeadend/Jellyfin). Website scraping is experimental and may need adjusting to a specific site.",
+        "fr": "« Clé en main » utilise le guide TNT français gratuit et sans inscription de xmltvfr.fr (rien à installer). « XMLTV personnalisé » pointe votre propre fichier/URL XMLTV (ex. depuis TVHeadend/Jellyfin). « Scraping de site » est expérimental et peut nécessiter un ajustement à un site précis."
+      },
+      "options": [
+        { "value": "xmltvfr", "label": { "en": "Turnkey (xmltvfr.fr — recommended)", "fr": "Clé en main (xmltvfr.fr — recommandé)" } },
+        { "value": "xmltv", "label": { "en": "Custom XMLTV file/URL", "fr": "Fichier/URL XMLTV personnalisé" } },
+        { "value": "scrape", "label": { "en": "Website scraping (experimental)", "fr": "Scraping de site (expérimental)" } }
+      ],
+      "group": { "en": "Data source", "fr": "Source des données" }
+    },
+    {
+      "key": "xmltvfrGuide",
+      "type": "select",
+      "default": "tnt",
+      "label": { "en": "xmltvfr.fr guide", "fr": "Guide xmltvfr.fr" },
+      "hint": {
+        "en": "Only used with the turnkey source. \"DTT\" is the lightest (all French DTT channels); \"France\" covers ~400 channels but is heavier to download.",
+        "fr": "Utilisé uniquement avec la source clé en main. « TNT » est le plus léger (toutes les chaînes TNT) ; « France » couvre ~400 chaînes mais est plus lourd à télécharger."
+      },
+      "options": [
+        { "value": "tnt", "label": { "en": "DTT channels only (light)", "fr": "Chaînes TNT uniquement (léger)" } },
+        { "value": "france", "label": { "en": "France (~400 channels, heavier)", "fr": "France (~400 chaînes, plus lourd)" } }
+      ],
+      "group": { "en": "Data source", "fr": "Source des données" }
+    },
+    {
+      "key": "xmltvUrl",
+      "type": "text",
+      "default": "",
+      "label": { "en": "Custom XMLTV URL or path", "fr": "URL ou chemin XMLTV personnalisé" },
+      "hint": {
+        "en": "Only used with the \"Custom XMLTV\" source. An http(s) URL (a .gz file is decompressed automatically) or a local file path on the Pi.",
+        "fr": "Utilisé uniquement avec la source « XMLTV personnalisé ». Une URL http(s) (un fichier .gz est décompressé automatiquement) ou un chemin de fichier local sur le Pi."
+      },
+      "group": { "en": "Data source", "fr": "Source des données" }
+    },
+    {
+      "key": "scrapeUrl",
+      "type": "text",
+      "default": "",
+      "label": { "en": "Scraping page URL (experimental)", "fr": "URL de la page à scraper (expérimental)" },
+      "hint": {
+        "en": "Only used with the \"Website scraping\" source. Fragile by nature: a site's HTML can change at any time. Prefer XMLTV for a permanent tile.",
+        "fr": "Utilisé uniquement avec la source « Scraping de site ». Fragile par nature : le HTML d'un site peut changer à tout moment. Préférez XMLTV pour une tuile permanente."
+      },
+      "group": { "en": "Data source", "fr": "Source des données" }
+    },
+    {
+      "key": "channels",
+      "type": "textarea",
+      "default": "TF1\nFrance 2\nFrance 3\nCanal+\nFrance 5\nM6\nArte\nC8\nW9\nTMC\nTFX\nNRJ 12\nFrance 4\nBFM TV\nCNews\nCStar\nGulli\nTF1 Séries Films\nL'Équipe\n6ter\nRMC Story\nRMC Découverte\nChérie 25\nLCI\nFranceinfo",
+      "label": { "en": "Channels (one per line, in display order)", "fr": "Chaînes (une par ligne, dans l'ordre d'affichage)" },
+      "hint": {
+        "en": "One channel per line. You can use readable names (e.g. \"France 2\") or exact XMLTV ids (e.g. \"France2.fr\"). Reorder the lines to reorder the tile. Remove lines you don't want.",
+        "fr": "Une chaîne par ligne. Vous pouvez utiliser des noms lisibles (ex. « France 2 ») ou les identifiants XMLTV exacts (ex. « France2.fr »). Réordonnez les lignes pour réordonner la tuile. Supprimez les lignes non voulues."
+      },
+      "group": { "en": "Channels", "fr": "Chaînes" }
+    },
+    {
+      "key": "defaultView",
+      "type": "select",
+      "default": "evening",
+      "label": { "en": "View on load", "fr": "Vue au démarrage" },
+      "hint": {
+        "en": "Which of the three views the tile shows initially. \"Tonight\" is recommended as the default: it stays accurate for hours, unlike \"On now\" which needs to change programs every so often. You can always switch on the tile itself.",
+        "fr": "Laquelle des trois vues la tuile affiche au départ. « Ce soir » est recommandée par défaut : elle reste juste pendant des heures, contrairement à « En ce moment » qui doit changer d'émission régulièrement. Vous pouvez toujours basculer sur la tuile elle-même."
+      },
+      "options": [
+        { "value": "now", "label": { "en": "On now", "fr": "En ce moment" } },
+        { "value": "evening", "label": { "en": "Tonight (prime time)", "fr": "Ce soir (1re partie)" } },
+        { "value": "late", "label": { "en": "Late night", "fr": "2e partie de soirée" } }
+      ],
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "eveningStart",
+      "type": "time",
+      "default": "21:00",
+      "label": { "en": "Prime-time starts at", "fr": "1re partie de soirée à" },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "lateStart",
+      "type": "time",
+      "default": "22:45",
+      "label": { "en": "Late night starts at", "fr": "2e partie de soirée à" },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "eveningMinDuration",
+      "type": "number",
+      "default": 45,
+      "min": 0,
+      "max": 180,
+      "step": 5,
+      "label": { "en": "Prime time: minimum duration (minutes)", "fr": "1re partie : durée minimale (minutes)" },
+      "hint": {
+        "en": "Ignores short segments (weather, trailers, an interstitial between two ad breaks) even if closer to the target hour, in favor of the longest show found nearby — some channels (TMC in particular) start their evening program as early as 8:20pm. Set to 0 to disable and just take the closest program regardless of length.",
+        "fr": "Ignore les cases courtes (météo, bandes-annonces, intercalaire entre deux pages de pub) même si elles sont plus proches de l'heure cible, au profit de la plus longue émission trouvée à proximité — certaines chaînes (TMC en particulier) démarrent leur programme du soir dès 20h20. Mettre à 0 pour désactiver et prendre simplement le programme le plus proche, quelle que soit sa durée."
+      },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "lateMinDuration",
+      "type": "number",
+      "default": 20,
+      "min": 0,
+      "max": 180,
+      "step": 5,
+      "label": { "en": "Late night: minimum duration (minutes)", "fr": "2e partie : durée minimale (minutes)" },
+      "hint": {
+        "en": "Same idea as above, for the late-night slot. Lower by default since late-night programs (debates, documentaries) tend to be shorter than prime time.",
+        "fr": "Même principe que ci-dessus, pour la 2e partie de soirée. Plus bas par défaut car les émissions de 2e partie (débats, documentaires) sont souvent plus courtes que la 1re partie."
+      },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "showThumbnails",
+      "type": "checkbox",
+      "default": true,
+      "label": { "en": "Show program thumbnails", "fr": "Afficher les vignettes des émissions" },
+      "hint": {
+        "en": "Turn off to save network on the Pi (thumbnails are fetched from the internet, one per program when available).",
+        "fr": "Désactivez pour économiser le réseau sur le Pi (les vignettes sont récupérées sur internet, une par émission quand disponible)."
+      },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "showCategory",
+      "type": "checkbox",
+      "default": true,
+      "label": { "en": "Show program category", "fr": "Afficher la catégorie de l'émission" },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 240,
+      "step": 5,
+      "label": { "en": "Refresh for \"Tonight\" / \"Late night\" (minutes)", "fr": "Rafraîchissement pour « Ce soir » / « 2e partie » (minutes)" },
+      "hint": {
+        "en": "How often those two views re-fetch the guide. The server also caches the source for 30 min, so very low values won't hit the source more often than that. The \"On now\" view has its own smart schedule — see below.",
+        "fr": "Fréquence à laquelle ces deux vues rechargent le guide. Le serveur met aussi la source en cache 30 min, donc des valeurs très basses ne solliciteront pas la source plus souvent que ça. La vue « En ce moment » a son propre calendrier intelligent — voir ci-dessous."
+      },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "refreshNowCeiling",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 30,
+      "step": 1,
+      "label": { "en": "\"On now\": refresh ceiling (minutes)", "fr": "« En ce moment » : plafond de rafraîchissement (minutes)" },
+      "hint": {
+        "en": "The \"On now\" view doesn't poll blindly: it reschedules itself right when the current program is expected to end, so it switches programs at (about) the right minute. This setting is only a safety-net ceiling, used when no end time is available from the source.",
+        "fr": "La vue « En ce moment » ne sonde pas à intervalle fixe : elle se reprogramme juste au moment où le programme en cours doit se terminer, pour changer d'émission (à peu près) à la bonne minute. Ce réglage n'est qu'un plafond de sécurité, utilisé quand la source ne fournit pas d'heure de fin."
+      },
+      "group": { "en": "Display", "fr": "Affichage" }
+    }
+  ]
+}

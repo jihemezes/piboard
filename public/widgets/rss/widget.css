@@ -1,0 +1,60 @@
+.pw-rss { height: 100%; display: flex; flex-direction: column; padding: 10px 14px; overflow: hidden; }
+.pw-rss .pwr-source {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 7px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Ascenseur : si le nombre d'articles choisi (reglage "Nombre max
+   d'articles") depasse ce qui tient dans la hauteur de la tuile, les
+   articles en trop restaient jusqu'ici invisibles (overflow: hidden),
+   sans aucun moyen d'y acceder. Le defilement (souris ou doigt sur un
+   ecran tactile) permet desormais de les atteindre tous.
+   Scrollbar: if the chosen number of articles ("Max items" setting)
+   exceeds what fits in the tile's height, the extra articles used to be
+   simply invisible (overflow: hidden), with no way to reach them.
+   Scrolling (mouse or finger on a touchscreen) now makes all of them
+   reachable. */
+.pw-rss ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+.pw-rss ul::-webkit-scrollbar { width: 7px; }
+.pw-rss ul::-webkit-scrollbar-track { background: transparent; }
+.pw-rss ul::-webkit-scrollbar-thumb {
+  background: var(--tile-edge);
+  border-radius: 4px;
+}
+.pw-rss ul::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+/* Mode rotation : un seul article a la fois, jamais de defilement necessaire.
+   Rotate mode: one article at a time, scrolling is never needed. */
+.pw-rss.pwr-rotate ul { overflow: hidden; }
+.pw-rss li {
+  padding: 6px 0;
+  border-bottom: 1px solid var(--tile-edge);
+  line-height: 1.4;
+}
+.pw-rss li:last-child { border-bottom: none; }
+/* Tailles relevees pour rester lisibles sur un petit ecran haute
+   resolution (ex. 10.1" en 1920x1200) ; le reglage "Taille du texte" de
+   la tuile permet d'agrandir encore au besoin.
+   Sizes raised to stay readable on a small high-resolution screen
+   (e.g. 10.1" at 1920x1200); the tile's "Text size" setting allows
+   growing further if needed. */
+.pw-rss .pwr-title { color: var(--text); font-size: 16px; }
+.pw-rss .pwr-meta { color: var(--faint); font-size: 12.5px; margin-top: 2px; }
+.pw-rss .pwr-err, .pw-rss .pwr-empty { color: var(--muted); font-size: 14px; margin: auto; }
+.pw-rss.pwr-rotate li { border: none; }
+.pw-rss.pwr-rotate .pwr-title { font-size: 21px; line-height: 1.45; }
+.pw-rss.pwr-rotate ul { display: flex; align-items: center; }

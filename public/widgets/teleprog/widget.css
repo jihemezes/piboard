@@ -1,0 +1,201 @@
+.pw-teleprog {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px 10px;
+  gap: 6px;
+  min-width: 0;
+}
+
+/* ---------- Onglets de vue / view tabs ---------- */
+.pw-teleprog .pwtp-tabs {
+  display: flex;
+  gap: 4px;
+  flex: 0 0 auto;
+}
+.pw-teleprog .pwtp-tab {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 4px;
+  font-size: 11.5px;
+  font-family: var(--font);
+  color: var(--muted);
+  background: transparent;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pw-teleprog .pwtp-tab-active {
+  color: #fff;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* ---------- Corps / body ---------- */
+.pw-teleprog .pwtp-body {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+.pw-teleprog .pwtp-msg {
+  font-size: 12.5px;
+  color: var(--muted);
+  padding: 12px 4px;
+  text-align: center;
+}
+.pw-teleprog .pwtp-err { color: #E0556F; }
+
+.pw-teleprog .pwtp-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* ---------- Ligne de programme / program row ---------- */
+.pw-teleprog .pwtp-row {
+  border: 1px solid transparent;
+  border-radius: 9px;
+  padding: 5px 6px;
+  cursor: pointer;
+}
+.pw-teleprog .pwtp-row:hover { background: var(--field-bg); }
+.pw-teleprog .pwtp-row-open {
+  background: var(--field-bg);
+  border-color: var(--tile-edge);
+}
+
+.pw-teleprog .pwtp-main {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.pw-teleprog .pwtp-thumb {
+  flex: 0 0 auto;
+  width: 46px;
+  height: 46px;
+  border-radius: 7px;
+  object-fit: cover;
+  background: var(--field-bg);
+}
+.pw-teleprog .pwtp-thumb-ph {
+  background:
+    linear-gradient(135deg, var(--tile-edge) 0%, transparent 60%),
+    var(--field-bg);
+  position: relative;
+}
+.pw-teleprog .pwtp-thumb-ph::after {
+  /* Petit pictogramme d'ecran, en placeholder / small screen glyph */
+  content: "";
+  position: absolute;
+  inset: 30%;
+  border: 1.5px solid var(--faint);
+  border-radius: 3px;
+}
+
+.pw-teleprog .pwtp-text {
+  flex: 1;
+  min-width: 0;
+}
+.pw-teleprog .pwtp-line1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6px;
+}
+.pw-teleprog .pwtp-chan {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pw-teleprog .pwtp-time {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.pw-teleprog .pwtp-title {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.25;
+  margin-top: 1px;
+}
+.pw-teleprog .pwtp-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.2;
+  margin-top: 1px;
+}
+.pw-teleprog .pwtp-meta {
+  display: flex;
+  gap: 6px;
+  margin-top: 2px;
+  flex-wrap: wrap;
+}
+.pw-teleprog .pwtp-cat {
+  font-size: 10px;
+  color: var(--muted);
+  border: 1px solid var(--tile-edge);
+  border-radius: 5px;
+  padding: 0 5px;
+  line-height: 1.5;
+}
+
+/* Pastille "inedit" -- affichee uniquement quand la source le confirme */
+.pw-teleprog .pwtp-new {
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 6px;
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+  background: #E0556F;
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+/* ---------- Synopsis (ligne depliee) / synopsis (expanded row) ---------- */
+.pw-teleprog .pwtp-synopsis {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--tile-edge);
+}
+.pw-teleprog .pwtp-synopsis p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.pw-teleprog .pwtp-nodesc { color: var(--muted); font-style: italic; }
+.pw-teleprog .pwtp-times {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+/* Ligne sans programme trouve pour cette chaine/vue */
+.pw-teleprog .pwtp-row-empty { opacity: 0.7; cursor: default; }
+.pw-teleprog .pwtp-row-empty:hover { background: transparent; }
+.pw-teleprog .pwtp-noprog {
+  font-size: 11.5px;
+  color: var(--faint);
+  font-style: italic;
+  margin-top: 1px;
+}
+
+/* ---------- Mode tactile : cibles agrandies / touch mode ---------- */
+body.touch .pw-teleprog .pwtp-tab { padding: 10px 6px; font-size: 13px; }
+body.touch .pw-teleprog .pwtp-row { padding: 8px; }
+body.touch .pw-teleprog .pwtp-thumb { width: 54px; height: 54px; }
+body.touch .pw-teleprog .pwtp-title { font-size: 14px; }

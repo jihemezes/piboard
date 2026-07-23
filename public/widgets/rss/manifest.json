@@ -1,0 +1,22 @@
+{
+  "id": "rss",
+  "version": "0.1.0",
+  "name": { "en": "RSS feed", "fr": "Flux RSS" },
+  "description": {
+    "en": "Latest headlines from an RSS or Atom feed, with automatic rotation.",
+    "fr": "Derniers titres d'un flux RSS ou Atom, avec rotation automatique."
+  },
+  "size": { "w": 4, "h": 3, "minW": 2, "minH": 2, "maxW": 12, "maxH": 8 },
+  "settings": [
+    { "key": "url", "type": "text", "default": "https://www.lemonde.fr/rss/une.xml",
+      "label": { "en": "Feed URL", "fr": "URL du flux" } },
+    { "key": "maxItems", "type": "number", "default": 6, "min": 1, "max": 20, "step": 1,
+      "label": { "en": "Items shown", "fr": "Nombre d'articles" } },
+    { "key": "showSource", "type": "checkbox", "default": true,
+      "label": { "en": "Show feed title", "fr": "Afficher le titre du flux" } },
+    { "key": "rotate", "type": "checkbox", "default": false,
+      "label": { "en": "Rotate one headline at a time", "fr": "Faire défiler un titre à la fois" } },
+    { "key": "refresh", "type": "number", "default": 10, "min": 2, "max": 120, "step": 1,
+      "label": { "en": "Refresh (minutes)", "fr": "Rafraîchissement (minutes)" } }
+  ]
+}

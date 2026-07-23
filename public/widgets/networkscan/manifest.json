@@ -1,0 +1,52 @@
+{
+  "id": "networkscan",
+  "version": "0.1.0",
+  "name": {
+    "en": "Network scan",
+    "fr": "Analyse réseau"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Scans the local network and lists active hosts (hostname — IP address).",
+    "fr": "Analyse le réseau local et liste les hôtes actifs (nom d'hôte — adresse IP)."
+  },
+  "size": {
+    "w": 4,
+    "h": 4,
+    "minW": 3,
+    "minH": 2,
+    "maxW": 8,
+    "maxH": 10
+  },
+  "settings": [
+    {
+      "key": "subnetOverride",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Subnet to scan (CIDR, optional)",
+        "fr": "Sous-réseau à analyser (CIDR, optionnel)"
+      },
+      "hint": {
+        "en": "Leave empty to auto-detect the Pi's own network. Example: 192.168.1.0/24. Limited to /22 (1024 addresses) at most, to keep scans reasonably fast.",
+        "fr": "Laissez vide pour détecter automatiquement le réseau du Pi. Exemple : 192.168.1.0/24. Limité à /22 (1024 adresses) au maximum, pour garder des analyses raisonnablement rapides."
+      }
+    },
+    {
+      "key": "refreshMinutes",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 180,
+      "step": 5,
+      "label": {
+        "en": "Auto-rescan every (minutes)",
+        "fr": "Réanalyser automatiquement toutes les (minutes)"
+      },
+      "hint": {
+        "en": "0 = manual only (use the \"Scan now\" button on the tile). A scan takes roughly 10–20 seconds depending on the network's size.",
+        "fr": "0 = analyse manuelle uniquement (bouton « Analyser maintenant » sur la tuile). Une analyse prend environ 10 à 20 secondes selon la taille du réseau."
+      }
+    }
+  ]
+}

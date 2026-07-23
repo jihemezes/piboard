@@ -1,0 +1,320 @@
+{
+  "id": "slideshow",
+  "version": "0.2.0",
+  "name": {
+    "en": "Slideshow",
+    "fr": "Diaporama"
+  },
+  "titleBar": false,
+  "description": {
+    "en": "Rotates through photos from an uploaded collection, a local/NAS folder, a WebDAV share, or a list of image URLs.",
+    "fr": "Fait défiler des photos issues d'une collection téléversée, d'un dossier local/NAS, d'un partage WebDAV, ou d'une liste d'URLs d'images."
+  },
+  "size": {
+    "w": 4,
+    "h": 3,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 12,
+    "maxH": 12
+  },
+  "settings": [
+    {
+      "key": "source",
+      "type": "select",
+      "default": "upload",
+      "label": {
+        "en": "Photo source",
+        "fr": "Source des photos"
+      },
+      "hint": {
+        "en": "Upload: manage photos directly from the tile (button on the tile) — no web server needed. Local folder: a NAS/SMB share mounted on the Pi, or a cloud folder synced with rclone. USB key: automatically shows photos from any USB drive currently plugged into the Pi — nothing to configure. WebDAV: a Nextcloud/ownCloud/NAS WebDAV share. Image URLs: the original method, one URL per line below.",
+        "fr": "Téléversement : gérez les photos directement depuis la tuile (bouton sur la tuile) — aucun serveur web requis. Dossier local : un partage NAS/SMB monté sur le Pi, ou un dossier cloud synchronisé avec rclone. Clé USB : affiche automatiquement les photos de toute clé USB actuellement branchée sur le Pi — rien à configurer. WebDAV : un partage Nextcloud/ownCloud/NAS. URLs d'images : la méthode d'origine, une URL par ligne ci-dessous."
+      },
+      "options": [
+        {
+          "value": "upload",
+          "label": {
+            "en": "Upload (managed from the tile)",
+            "fr": "Téléversement (géré depuis la tuile)"
+          }
+        },
+        {
+          "value": "folder",
+          "label": {
+            "en": "Local folder (NAS / rclone mount)",
+            "fr": "Dossier local (NAS / montage rclone)"
+          }
+        },
+        {
+          "value": "usb",
+          "label": {
+            "en": "USB key (plugged into the Pi)",
+            "fr": "Clé USB (branchée sur le Pi)"
+          }
+        },
+        {
+          "value": "webdav",
+          "label": {
+            "en": "WebDAV share",
+            "fr": "Partage WebDAV"
+          }
+        },
+        {
+          "value": "urls",
+          "label": {
+            "en": "Image URLs (list)",
+            "fr": "URLs d'images (liste)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "folderPath",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Local folder path (only used by \"Local folder\")",
+        "fr": "Chemin du dossier local (utilisé seulement par « Dossier local »)"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "webdavUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "WebDAV folder URL (only used by \"WebDAV share\")",
+        "fr": "URL du dossier WebDAV (utilisé seulement par « Partage WebDAV »)"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "webdavUser",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "WebDAV username",
+        "fr": "Identifiant WebDAV"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "webdavPass",
+      "type": "password",
+      "default": "",
+      "label": {
+        "en": "WebDAV password",
+        "fr": "Mot de passe WebDAV"
+      },
+      "hint": {
+        "en": "Stored and shown in plain text in this tile's settings, like the rest of PiBoard (no login, trusted LAN only). See the README for details and for rclone as a keyless alternative.",
+        "fr": "Stocké et affiché en clair dans les paramètres de cette tuile, comme le reste de PiBoard (pas d'authentification, réseau local de confiance uniquement). Voir le README pour le détail et pour rclone comme alternative sans identifiants."
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "images",
+      "type": "textarea",
+      "default": "",
+      "label": {
+        "en": "Image URLs, one per line (only used by \"Image URLs\")",
+        "fr": "URLs des images, une par ligne (utilisé seulement par « URLs d'images »)"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "refreshMinutes",
+      "type": "number",
+      "default": 15,
+      "min": 2,
+      "max": 180,
+      "step": 1,
+      "label": {
+        "en": "Re-check the folder/WebDAV/USB key every (minutes)",
+        "fr": "Revérifier le dossier/WebDAV/clé USB toutes les (minutes)"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "intervalSeconds",
+      "type": "number",
+      "default": 12,
+      "min": 3,
+      "max": 600,
+      "step": 1,
+      "label": {
+        "en": "Change every (seconds)",
+        "fr": "Changer toutes les (secondes)"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "fitLandscape",
+      "type": "select",
+      "default": "cover",
+      "label": {
+        "en": "Landscape photos",
+        "fr": "Photos au format paysage"
+      },
+      "hint": {
+        "en": "Orientation is detected automatically for each photo. Defaults are a sensible auto behavior (landscape fills the tile, portrait shows in full) — change either independently if you'd rather force one style everywhere.",
+        "fr": "Le format (paysage/portrait) est détecté automatiquement pour chaque photo. Les valeurs par défaut donnent un comportement automatique raisonnable (le paysage remplit la tuile, le portrait s'affiche en entier) — changez l'un ou l'autre indépendamment si vous préférez forcer un style partout."
+      },
+      "options": [
+        {
+          "value": "cover",
+          "label": {
+            "en": "Fill tile (cropped)",
+            "fr": "Remplir la tuile (recadré)"
+          }
+        },
+        {
+          "value": "contain",
+          "label": {
+            "en": "Show entire photo",
+            "fr": "Photo entière visible"
+          }
+        }
+      ],
+      "group": {
+        "en": "Framing",
+        "fr": "Cadrage"
+      }
+    },
+    {
+      "key": "fitPortrait",
+      "type": "select",
+      "default": "contain",
+      "label": {
+        "en": "Portrait photos",
+        "fr": "Photos au format portrait"
+      },
+      "hint": {
+        "en": "This is the setting that matters most for portrait photos coming out badly cropped: 'Show entire photo' guarantees nothing is ever cut off.",
+        "fr": "C'est le réglage qui compte le plus pour éviter des photos portrait mal recadrées : « Photo entière visible » garantit qu'aucune photo n'est jamais coupée."
+      },
+      "options": [
+        {
+          "value": "cover",
+          "label": {
+            "en": "Fill tile (cropped)",
+            "fr": "Remplir la tuile (recadré)"
+          }
+        },
+        {
+          "value": "contain",
+          "label": {
+            "en": "Show entire photo",
+            "fr": "Photo entière visible"
+          }
+        }
+      ],
+      "group": {
+        "en": "Framing",
+        "fr": "Cadrage"
+      }
+    },
+    {
+      "key": "containBackground",
+      "type": "select",
+      "default": "color",
+      "label": {
+        "en": "Border style (when a photo is shown in full)",
+        "fr": "Style de bordure (quand une photo est affichée en entier)"
+      },
+      "hint": {
+        "en": "Only applies to photos using 'Show entire photo' above — fills the empty space left and right (or top and bottom) of the photo.",
+        "fr": "S'applique uniquement aux photos en « Photo entière visible » ci-dessus — remplit l'espace vide à gauche/droite (ou en haut/bas) de la photo."
+      },
+      "options": [
+        {
+          "value": "color",
+          "label": {
+            "en": "Solid color",
+            "fr": "Couleur unie"
+          }
+        },
+        {
+          "value": "blur",
+          "label": {
+            "en": "Blurred photo (auto)",
+            "fr": "Photo floutée (auto)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Framing",
+        "fr": "Cadrage"
+      }
+    },
+    {
+      "key": "containBackgroundColor",
+      "type": "color",
+      "default": "#000000",
+      "label": {
+        "en": "Border color (only used by \"Solid color\")",
+        "fr": "Couleur de la bordure (utilisée seulement par « Couleur unie »)"
+      },
+      "group": {
+        "en": "Framing",
+        "fr": "Cadrage"
+      }
+    },
+    {
+      "key": "shuffle",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Shuffle order",
+        "fr": "Ordre aléatoire"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "kenBurns",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Slow zoom effect",
+        "fr": "Effet de zoom lent"
+      },
+      "hint": {
+        "en": "A stronger zoom is used for photos filling the tile, and a much lighter one for photos shown in full (so it never crops into the photo).",
+        "fr": "Un zoom plus marqué est utilisé pour les photos qui remplissent la tuile, et un zoom bien plus léger pour les photos affichées en entier (afin qu'il ne rogne jamais dans la photo)."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    }
+  ]
+}

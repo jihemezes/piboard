@@ -1,0 +1,42 @@
+.pw-commute {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6% 8%;
+  text-align: center;
+}
+.pw-commute .pwm-cols { display: flex; gap: 6%; width: 100%; justify-content: center; }
+/* Disposition empilee (un trajet par ligne) : adaptee aux tuiles hautes
+   ou etroites, surtout avec plusieurs trajets supplementaires.
+   Stacked layout (one trip per line): suited to tall or narrow tiles,
+   especially with several extra trips. */
+.pw-commute .pwm-cols.pwm-rows {
+  flex-direction: column;
+  gap: 4px;
+  overflow: hidden;
+}
+.pw-commute .pwm-rows .pwm-col {
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+}
+.pw-commute .pwm-rows .pwm-col.pwm-b { border-left: none; padding-left: 0; }
+.pw-commute .pwm-rows .pwm-dir {
+  flex: 1;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pw-commute .pwm-duration.pwm-fail { color: var(--faint); }
+.pw-commute .pwm-col { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.pw-commute .pwm-col.pwm-b { border-left: 1px solid var(--tile-edge); padding-left: 6%; }
+.pw-commute .pwm-dir { font-family: var(--mono); font-size: 11px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; }
+.pw-commute .pwm-duration { font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.pw-commute .pwm-distance { color: var(--faint); font-variant-numeric: tabular-nums; }
+.pw-commute .pwm-err { color: var(--muted); font-size: 14px; }

@@ -1,0 +1,53 @@
+{
+  "id": "system",
+  "version": "0.1.0",
+  "name": {
+    "en": "System status",
+    "fr": "État système"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "CPU, RAM, disk usage, temperature and uptime of the machine hosting PiBoard.",
+    "fr": "CPU, RAM, espace disque, température et disponibilité de la machine qui héberge PiBoard."
+  },
+  "size": {
+    "w": 3,
+    "h": 3,
+    "minW": 2,
+    "minH": 1,
+    "maxW": 6,
+    "maxH": 6
+  },
+  "settings": [
+    {
+      "key": "refreshSeconds",
+      "type": "number",
+      "default": 5,
+      "min": 2,
+      "max": 60,
+      "step": 1,
+      "label": {
+        "en": "Refresh (seconds)",
+        "fr": "Rafraîchissement (secondes)"
+      }
+    },
+    {
+      "key": "showHostname",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show hostname",
+        "fr": "Afficher le nom de machine"
+      }
+    },
+    {
+      "key": "showUptime",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show uptime",
+        "fr": "Afficher la disponibilité"
+      }
+    }
+  ]
+}

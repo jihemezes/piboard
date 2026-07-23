@@ -1,0 +1,18 @@
+{
+  "id": "webview",
+  "version": "0.1.0",
+  "name": { "en": "Web page", "fr": "Page web" },
+  "description": {
+    "en": "Embeds any web page (traffic map, home app, status page…). The site must allow iframe embedding.",
+    "fr": "Affiche n'importe quelle page web (carte de trafic, app domotique, page de statut…). Le site doit autoriser l'affichage en iframe."
+  },
+  "size": { "w": 6, "h": 4, "minW": 2, "minH": 2, "maxW": 12, "maxH": 16 },
+  "settings": [
+    { "key": "url", "type": "text", "default": "",
+      "label": { "en": "Page URL", "fr": "URL de la page" } },
+    { "key": "zoom", "type": "number", "default": 100, "min": 25, "max": 200, "step": 5,
+      "label": { "en": "Zoom (%)", "fr": "Zoom (%)" } },
+    { "key": "reload", "type": "number", "default": 0, "min": 0, "max": 1440, "step": 1,
+      "label": { "en": "Reload every (minutes, 0 = never)", "fr": "Recharger toutes les (minutes, 0 = jamais)" } }
+  ]
+}

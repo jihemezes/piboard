@@ -1,0 +1,123 @@
+/* Fond teinte selon la meteo : degrade discret par-dessus la couleur de tuile,
+   lisible dans les deux themes et avec des couleurs personnalisees.
+   Condition-tinted background: subtle gradient over the tile color, readable
+   in both themes and with custom colors. */
+.pw-weather {
+  height: 100%;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  padding: 6%;
+  text-align: center;
+  background: linear-gradient(168deg, var(--pww-tint, transparent) 0%, transparent 72%);
+}
+
+.pww-bg-sun       { --pww-tint: rgba(235, 178, 55, 0.24); }
+.pww-bg-sun-cloud { --pww-tint: rgba(228, 182, 88, 0.16); }
+.pww-bg-cloud     { --pww-tint: rgba(138, 152, 178, 0.18); }
+.pww-bg-fog       { --pww-tint: rgba(168, 172, 182, 0.20); }
+.pww-bg-drizzle   { --pww-tint: rgba(88, 142, 212, 0.16); }
+.pww-bg-rain      { --pww-tint: rgba(72, 132, 212, 0.22); }
+.pww-bg-snow      { --pww-tint: rgba(158, 200, 240, 0.24); }
+.pww-bg-storm     { --pww-tint: rgba(138, 96, 222, 0.22); }
+
+/* Mode photo : la vraie photo remplace le degrade de couleur en fond,
+   avec un voile sombre pour garder le texte lisible quel que soit le
+   theme courant (le texte passe en clair, force, dans ce mode).
+   Photo mode: a real photo replaces the color gradient background, with
+   a dark scrim so text stays legible regardless of the current theme
+   (text switches to a forced light color in this mode). */
+.pw-weather.pww-has-photo {
+  background-size: cover;
+  background-position: center;
+}
+.pw-weather.pww-has-photo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(10,12,18,0.35) 0%, rgba(10,12,18,0.15) 45%, rgba(10,12,18,0.78) 100%);
+  pointer-events: none;
+}
+.pw-weather.pww-has-photo .pww-cols,
+.pw-weather.pww-has-photo .pwv-credit {
+  position: relative;
+  z-index: 1;
+}
+.pw-weather.pww-has-photo .pww-city,
+.pw-weather.pww-has-photo .pww-day { color: rgba(255,255,255,0.85); }
+.pw-weather.pww-has-photo .pww-temp,
+.pw-weather.pww-has-photo .pww-extra { color: #fff; text-shadow: 0 1px 6px rgba(0,0,0,0.4); }
+.pw-weather.pww-has-photo .pww-icon {
+  color: #fff;
+  filter: drop-shadow(0 1px 4px rgba(0,0,0,0.45));
+}
+.pw-weather.pww-has-photo .pww-col.pww-tomorrow { border-color: rgba(255,255,255,0.25); }
+
+/* Attribution du photographe, requise par les licences Creative Commons.
+   Photographer attribution, required by Creative Commons licenses. */
+.pwv-credit {
+  font-size: 9.5px;
+  color: rgba(255,255,255,0.55);
+  text-align: right;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwv-credit a { color: inherit; text-decoration: none; }
+.pwv-credit a:hover { text-decoration: underline; }
+
+.pw-weather .pww-cols {
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  gap: 4%;
+  height: 100%;
+}
+/* Portrait : aujourd'hui et demain empiles verticalement plutot que
+   cote a cote. Landscape (par defaut) : cote a cote, comportement
+   historique. Portrait: today and tomorrow stacked vertically instead
+   of side by side. Landscape (default): side by side, historical
+   behavior. */
+.pw-weather .pww-cols.pww-stacked {
+  flex-direction: column;
+  gap: 2%;
+}
+.pw-weather .pww-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+}
+.pw-weather .pww-col.pww-tomorrow {
+  border-left: 1px solid var(--tile-edge);
+  padding-left: 4%;
+}
+.pw-weather .pww-cols.pww-stacked .pww-col.pww-tomorrow {
+  border-left: none;
+  border-top: 1px solid var(--tile-edge);
+  padding-left: 0;
+  padding-top: 2%;
+}
+
+.pw-weather .pww-day {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.pw-weather .pww-icon svg { width: 100%; height: 100%; }
+.pw-weather .pww-temp {
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.pw-weather .pww-city { color: var(--muted); }
+.pw-weather .pww-extra { color: var(--faint); font-variant-numeric: tabular-nums; }
+.pw-weather .pww-err { color: var(--muted); font-size: 14px; margin: auto; }

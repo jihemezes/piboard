@@ -1,0 +1,395 @@
+{
+  "id": "traffic",
+  "version": "0.1.0",
+  "name": {
+    "en": "Traffic map",
+    "fr": "Carte de trafic"
+  },
+  "titleBar": false,
+  "description": {
+    "en": "Live road traffic map (flow + incidents) via TomTom, with a smart refresh schedule to stay within the free API quota: fast during your commute windows, slower otherwise, and paused overnight.",
+    "fr": "Carte de trafic routier en direct (flux + incidents) via TomTom, avec un calendrier de rafraîchissement intelligent pour rester dans le quota gratuit de l'API : rapide pendant vos plages de trajet, plus lent le reste du temps, et en pause la nuit."
+  },
+  "size": {
+    "w": 6,
+    "h": 8,
+    "minW": 4,
+    "minH": 3,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "apiKey",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "TomTom API key",
+        "fr": "Clé API TomTom"
+      },
+      "hint": {
+        "en": "Free tier: 2500 requests/day. Get one at developer.tomtom.com. This tile's schedule is designed to comfortably stay under that limit — see the live counter on the tile and the README for the details.",
+        "fr": "Offre gratuite : 2500 requêtes/jour. À obtenir sur developer.tomtom.com. Le calendrier de cette tuile est conçu pour rester confortablement sous cette limite — voir le compteur en direct sur la tuile et le README pour le détail."
+      },
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "city",
+      "type": "text",
+      "default": "Toulouse",
+      "label": {
+        "en": "City",
+        "fr": "Ville"
+      },
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "zoom",
+      "type": "number",
+      "default": 13,
+      "min": 8,
+      "max": 18,
+      "step": 1,
+      "label": {
+        "en": "Zoom level",
+        "fr": "Niveau de zoom"
+      },
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "basemap",
+      "type": "select",
+      "default": "voyager",
+      "label": {
+        "en": "Base map",
+        "fr": "Fond de carte"
+      },
+      "options": [
+        {
+          "value": "voyager",
+          "label": {
+            "en": "Voyager (roads, colored)",
+            "fr": "Voyager (routier, coloré)"
+          }
+        },
+        {
+          "value": "dark",
+          "label": {
+            "en": "Dark",
+            "fr": "Sombre"
+          }
+        },
+        {
+          "value": "light",
+          "label": {
+            "en": "Light",
+            "fr": "Clair"
+          }
+        },
+        {
+          "value": "auto",
+          "label": {
+            "en": "Auto — follows PiBoard's theme",
+            "fr": "Auto — suit le thème de PiBoard"
+          }
+        }
+      ],
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "showFlow",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show traffic flow (colored roads)",
+        "fr": "Afficher le flux de circulation (routes colorées)"
+      },
+      "group": {
+        "en": "Traffic display",
+        "fr": "Affichage du trafic"
+      }
+    },
+    {
+      "key": "flowStyle",
+      "type": "select",
+      "default": "relative0",
+      "label": {
+        "en": "Flow coloring style",
+        "fr": "Style de coloration du flux"
+      },
+      "hint": {
+        "en": "Same styles as the TomTom traffic map: 'Relative' compares to the road's normal speed (recommended), 'Delay only' hides free-flowing roads entirely, 'Reduced sensitivity' shows major jams only.",
+        "fr": "Mêmes styles que la carte de trafic TomTom : « Relatif » compare à la vitesse normale de l'axe (recommandé), « Retard seul » masque complètement les axes fluides, « Sensibilité réduite » n'affiche que les gros bouchons."
+      },
+      "options": [
+        {
+          "value": "relative0",
+          "label": {
+            "en": "Relative — deviation from normal speed",
+            "fr": "Relatif — écart à la vitesse normale"
+          }
+        },
+        {
+          "value": "relative0-dark",
+          "label": {
+            "en": "Relative dark — for dark base map",
+            "fr": "Relatif sombre — pour fond sombre"
+          }
+        },
+        {
+          "value": "absolute",
+          "label": {
+            "en": "Absolute — actual speed",
+            "fr": "Absolu — vitesse réelle"
+          }
+        },
+        {
+          "value": "relative-delay",
+          "label": {
+            "en": "Delay only — hides free-flow",
+            "fr": "Retard seul — masque le fluide"
+          }
+        },
+        {
+          "value": "reduced-sensitivity",
+          "label": {
+            "en": "Reduced sensitivity — major jams only",
+            "fr": "Sensibilité réduite — gros bouchons seulement"
+          }
+        }
+      ],
+      "group": {
+        "en": "Traffic display",
+        "fr": "Affichage du trafic"
+      }
+    },
+    {
+      "key": "flowThickness",
+      "type": "number",
+      "default": 7,
+      "min": 1,
+      "max": 20,
+      "step": 1,
+      "label": {
+        "en": "Flow segment thickness",
+        "fr": "Épaisseur des tronçons de flux"
+      },
+      "group": {
+        "en": "Traffic display",
+        "fr": "Affichage du trafic"
+      }
+    },
+    {
+      "key": "showIncidents",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show incidents (accidents, roadworks)",
+        "fr": "Afficher les incidents (accidents, travaux)"
+      },
+      "group": {
+        "en": "Traffic display",
+        "fr": "Affichage du trafic"
+      }
+    },
+    {
+      "key": "incidentStyle",
+      "type": "select",
+      "default": "s1",
+      "label": {
+        "en": "Incident icon style",
+        "fr": "Style des icônes d'incidents"
+      },
+      "hint": {
+        "en": "How TomTom draws incidents on the map: from plain lines with no icons (s0) up to detailed icons with chevrons (s3). 'Night' is tuned for a dark base map.",
+        "fr": "Manière dont TomTom dessine les incidents sur la carte : de simples lignes sans icônes (s0) jusqu'aux icônes détaillées avec chevrons (s3). « Nuit » est adapté à un fond sombre."
+      },
+      "options": [
+        {
+          "value": "s0",
+          "label": {
+            "en": "s0 — lines only, no icons",
+            "fr": "s0 — lignes seules, sans icônes"
+          }
+        },
+        {
+          "value": "s1",
+          "label": {
+            "en": "s1 — subtle icons",
+            "fr": "s1 — icônes discrètes"
+          }
+        },
+        {
+          "value": "s2",
+          "label": {
+            "en": "s2 — medium icons",
+            "fr": "s2 — icônes moyennes"
+          }
+        },
+        {
+          "value": "s3",
+          "label": {
+            "en": "s3 — detailed icons (chevrons)",
+            "fr": "s3 — icônes détaillées (chevrons)"
+          }
+        },
+        {
+          "value": "night",
+          "label": {
+            "en": "night — for dark base map",
+            "fr": "nuit — pour fond sombre"
+          }
+        }
+      ],
+      "group": {
+        "en": "Traffic display",
+        "fr": "Affichage du trafic"
+      }
+    },
+    {
+      "key": "showJams",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show jams as clickable traces (with estimated delay)",
+        "fr": "Afficher les bouchons en tracés cliquables (avec retard estimé)"
+      },
+      "group": {
+        "en": "Traffic display",
+        "fr": "Affichage du trafic"
+      }
+    },
+    {
+      "key": "morningStart",
+      "type": "time",
+      "default": "07:00",
+      "label": {
+        "en": "Morning active window — start",
+        "fr": "Plage active du matin — début"
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    },
+    {
+      "key": "morningDurationMinutes",
+      "type": "number",
+      "default": 60,
+      "min": 0,
+      "max": 360,
+      "step": 5,
+      "label": {
+        "en": "Morning active window — duration (minutes, 0 = disabled)",
+        "fr": "Plage active du matin — durée (minutes, 0 = désactivée)"
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    },
+    {
+      "key": "afternoonStart",
+      "type": "time",
+      "default": "17:00",
+      "label": {
+        "en": "Afternoon active window — start",
+        "fr": "Plage active du soir — début"
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    },
+    {
+      "key": "afternoonDurationMinutes",
+      "type": "number",
+      "default": 120,
+      "min": 0,
+      "max": 360,
+      "step": 5,
+      "label": {
+        "en": "Afternoon active window — duration (minutes, 0 = disabled)",
+        "fr": "Plage active du soir — durée (minutes, 0 = désactivée)"
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    },
+    {
+      "key": "activeRefreshMinutes",
+      "type": "number",
+      "default": 2,
+      "min": 1,
+      "max": 30,
+      "step": 1,
+      "label": {
+        "en": "Refresh every (minutes) during active windows",
+        "fr": "Rafraîchissement (minutes) pendant les plages actives"
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    },
+    {
+      "key": "normalRefreshMinutes",
+      "type": "number",
+      "default": 15,
+      "min": 2,
+      "max": 120,
+      "step": 1,
+      "label": {
+        "en": "Refresh every (minutes) outside active windows",
+        "fr": "Rafraîchissement (minutes) hors plages actives"
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    },
+    {
+      "key": "quietStart",
+      "type": "time",
+      "default": "22:00",
+      "label": {
+        "en": "Quiet period — start (no refresh)",
+        "fr": "Plage silencieuse — début (aucun rafraîchissement)"
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    },
+    {
+      "key": "quietEnd",
+      "type": "time",
+      "default": "05:00",
+      "label": {
+        "en": "Quiet period — end",
+        "fr": "Plage silencieuse — fin"
+      },
+      "hint": {
+        "en": "During the quiet period the map keeps showing its last known state, with a small \"stale data\" indicator, and uses no API requests at all. Set start and end to the same time to disable the quiet period entirely.",
+        "fr": "Pendant la plage silencieuse, la carte garde son dernier état connu, avec un petit indicateur « donnée figée », sans consommer aucune requête. Mettez la même heure de début et de fin pour désactiver complètement la plage silencieuse."
+      },
+      "group": {
+        "en": "Refresh schedule",
+        "fr": "Rafraîchissement"
+      }
+    }
+  ]
+}

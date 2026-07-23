@@ -1,0 +1,133 @@
+{
+  "id": "standings",
+  "version": "0.2.0",
+  "name": {
+    "en": "League standings",
+    "fr": "Classement"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Current league table for football, rugby (Top 14), basketball, or any other ESPN-covered competition via its code.",
+    "fr": "Classement actuel de football, rugby (Top 14), basketball, ou toute autre compétition couverte par ESPN via son code."
+  },
+  "size": {
+    "w": 4,
+    "h": 4,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 12,
+    "maxH": 12
+  },
+  "settings": [
+    {
+      "key": "league",
+      "type": "select",
+      "default": "soccer:fra.1",
+      "label": {
+        "en": "Competition",
+        "fr": "Compétition"
+      },
+      "hint": {
+        "en": "Not in the list? Leave this as-is and fill in the custom code field below instead — it takes over automatically.",
+        "fr": "Pas dans la liste ? Laissez ce choix tel quel et remplissez plutôt le champ « code personnalisé » ci-dessous — il prend le relais automatiquement."
+      },
+      "options": [
+        {
+          "value": "soccer:fra.1",
+          "label": {
+            "en": "⚽ Ligue 1 (France)",
+            "fr": "⚽ Ligue 1 (France)"
+          }
+        },
+        {
+          "value": "soccer:eng.1",
+          "label": {
+            "en": "⚽ Premier League (England)",
+            "fr": "⚽ Premier League (Angleterre)"
+          }
+        },
+        {
+          "value": "soccer:esp.1",
+          "label": {
+            "en": "⚽ La Liga (Spain)",
+            "fr": "⚽ Liga (Espagne)"
+          }
+        },
+        {
+          "value": "soccer:ger.1",
+          "label": {
+            "en": "⚽ Bundesliga (Germany)",
+            "fr": "⚽ Bundesliga (Allemagne)"
+          }
+        },
+        {
+          "value": "soccer:ita.1",
+          "label": {
+            "en": "⚽ Serie A (Italy)",
+            "fr": "⚽ Serie A (Italie)"
+          }
+        },
+        {
+          "value": "rugby:270559",
+          "label": {
+            "en": "🏉 Top 14 (Rugby, France)",
+            "fr": "🏉 Top 14 (Rugby, France)"
+          }
+        },
+        {
+          "value": "basketball:nba",
+          "label": {
+            "en": "🏀 NBA",
+            "fr": "🏀 NBA"
+          }
+        }
+      ]
+    },
+    {
+      "key": "customLeague",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Custom ESPN code (sport:league) — overrides the list above",
+        "fr": "Code ESPN personnalisé (sport:ligue) — prend le pas sur la liste ci-dessus"
+      },
+      "hint": {
+        "en": "Example for the NFL: <code>football:nfl</code>. How to find any code: on espn.com, open the scoreboard page for that competition (e.g. espn.com/nfl/scoreboard), open your browser's DevTools → Network tab, reload, and look for a request to <code>site.api.espn.com/apis/site/v2/sports/&lt;sport&gt;/&lt;league&gt;/scoreboard</code> — the two segments after <code>/sports/</code> are the code to enter here, separated by a colon. Common ones: NFL → <code>football:nfl</code>, NHL → <code>hockey:nhl</code>, MLB → <code>baseball:mlb</code>, EuroLeague basketball → <code>basketball:euroleague-women</code> style codes vary, always verify via DevTools. Full write-up in the PiBoard README.",
+        "fr": "Exemple pour la NFL : <code>football:nfl</code>. Pour trouver un code : sur espn.com, ouvrez la page de classement de cette compétition (ex. espn.com/nfl/scoreboard), ouvrez les outils de développement du navigateur → onglet Réseau, rechargez la page, et repérez une requête vers <code>site.api.espn.com/apis/site/v2/sports/&lt;sport&gt;/&lt;league&gt;/scoreboard</code> — les deux segments après <code>/sports/</code> forment le code à saisir ici, séparés par deux-points. Quelques exemples : NFL → <code>football:nfl</code>, NHL → <code>hockey:nhl</code>, MLB → <code>baseball:mlb</code>. Le détail complet est dans le README de PiBoard."
+      }
+    },
+    {
+      "key": "maxRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 30,
+      "step": 1,
+      "label": {
+        "en": "Teams shown per group",
+        "fr": "Équipes affichées par groupe"
+      }
+    },
+    {
+      "key": "highlightTeam",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Highlight a team (optional, e.g. \"Toulouse\")",
+        "fr": "Mettre en valeur une équipe (optionnel, ex. « Toulouse »)"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 180,
+      "step": 5,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      }
+    }
+  ]
+}

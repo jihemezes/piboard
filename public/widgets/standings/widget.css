@@ -1,0 +1,56 @@
+.pw-standings {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  overflow: hidden;
+}
+.pw-standings .pws-group {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin: 6px 0 3px;
+}
+.pw-standings .pws-group:first-child { margin-top: 0; }
+.pw-standings table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+.pw-standings th {
+  font-size: 10.5px;
+  font-weight: 500;
+  color: var(--faint);
+  text-align: center;
+  padding: 2px 3px 4px;
+}
+.pw-standings th.pws-col-team { text-align: left; }
+/* Colonnes de statistiques (G, N, P, %V, Pts...) : largeur fixe et
+   etroite. Combine a table-layout:fixed, cela reserve le reste de la
+   largeur a la colonne du nom d'equipe, qui peut ainsi s'afficher en
+   entier meme avec une grande police -- au lieu que chaque colonne
+   prenne une part egale et rogne le nom.
+   Statistics columns (G, N, P, %V, Pts...): fixed, narrow width.
+   Combined with table-layout:fixed, this reserves the rest of the width
+   for the team-name column, which can then show in full even with a
+   large font -- instead of every column taking an equal share and
+   clipping the name. */
+.pw-standings th.pws-rank, .pw-standings td.pws-rank { width: 2.2em; }
+.pw-standings th.pws-stat, .pw-standings td.pws-stat { width: 3em; white-space: nowrap; }
+.pw-standings td {
+  font-size: 12.5px;
+  padding: 3px 3px;
+  text-align: center;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  border-top: 1px solid var(--tile-edge);
+}
+.pw-standings th.pws-col-team, .pw-standings td.pws-col-team {
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pw-standings td.pws-rank { color: var(--muted); }
+.pw-standings td.pws-pts { font-weight: 700; color: var(--accent); }
+.pw-standings tr.pws-highlight td { background: var(--field-bg); }
+.pw-standings tr.pws-highlight td.pws-col-team { font-weight: 700; color: var(--text); }
+.pw-standings .pws-err { margin: auto; color: var(--muted); font-size: 13px; text-align: center; }
