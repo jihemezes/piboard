@@ -1,4 +1,20 @@
+# Dependances et donnees / dependencies and data
 node_modules/
 data/
+
+# Sortie d'electron-builder : l'installeur pese plus de 100 Mo et est
+# publie sur GitHub Releases, jamais versionne.
+# electron-builder output: the installer weighs over 100 MB and is
+# published to GitHub Releases, never versioned.
+dist/
+
+# Archives de livraison (canal de mise a jour du Raspberry Pi)
+# Delivery archives (the Raspberry Pi's update channel)
+piboard-v*.zip
+
+# Dossiers temporaires crees par la suite de tests
+# Temporary folders created by the test suite
+tmp-test-*/
+
 *.log
 .DS_Store
