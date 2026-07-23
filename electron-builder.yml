@@ -76,13 +76,19 @@ win:
   target:
     - nsis
   icon: build/icon.ico
-  # Nom de l'editeur affiche par Windows. Sans certificat de signature
-  # de code, SmartScreen affichera malgre tout un avertissement au
-  # premier lancement de l'installeur : c'est attendu.
-  # Publisher name shown by Windows. Without a code-signing certificate,
-  # SmartScreen will still display a warning the first time the
-  # installer runs: this is expected.
-  publisherName: EZES Jean-Michel
+  # Remarque : le nom d'editeur affiche par Windows (publisherName) ne se
+  # regle qu'a travers signtoolOptions, et n'a d'effet qu'avec un
+  # certificat de signature de code configure (cscLink/cscKeyPassword).
+  # Sans certificat -- notre cas pour l'instant -- ce champ est sans
+  # objet ; Windows affichera "Editeur inconnu" et l'avertissement
+  # SmartScreen habituel jusqu'a la mise en place d'une signature.
+  #
+  # Note: the publisher name shown by Windows (publisherName) is only
+  # set through signtoolOptions, and only takes effect with a configured
+  # code-signing certificate (cscLink/cscKeyPassword). Without a
+  # certificate -- our case for now -- this field is moot; Windows will
+  # show "Unknown publisher" and the usual SmartScreen warning until
+  # signing is set up.
 
 nsis:
   # Installation PAR UTILISATEUR (%LOCALAPPDATA%\Programs\PiBoard) plutot
