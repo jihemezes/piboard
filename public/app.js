@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.7.4
+   Version 1.7.5
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2251,6 +2251,7 @@
       presentation: i18n.t("help.group.presentation"),
       drawer: i18n.t("help.group.drawer"),
       tiles: i18n.t("help.group.tiles"),
+      platform: i18n.t("help.group.platform"),
       credits: i18n.t("help.group.credits")
     };
 

@@ -56,6 +56,33 @@ Pour tester sans construire :
 npm run electron
 ```
 
+### Accéder au menu de l'application
+
+La barre de menu est **masquée par défaut** (fenêtre volontairement
+épurée) mais reste entièrement fonctionnelle. Pour la faire apparaître :
+
+> **Appuyez sur la touche `Alt`** (seule, sans la maintenir avec une
+> autre touche). La barre de menu « PiBoard » apparaît en haut de la
+> fenêtre. Un second appui sur `Alt`, ou un clic ailleurs dans la
+> fenêtre, la referme.
+
+Ce n'est pas intuitif — rien à l'écran n'indique que ce menu existe —
+mais c'est le seul point d'accès à plusieurs fonctions qui n'ont pas
+d'autre bouton dans l'interface :
+
+| Fonction | Où |
+|---|---|
+| Recharger le tableau de bord | Menu PiBoard → *Recharger / Reload* (`Ctrl+R`) |
+| Plein écran | Menu PiBoard → *Plein écran / Full screen* (`F11`) |
+| Zoom de l'interface | Menu PiBoard → *Zoom +* / *Zoom -* / *Zoom 100 %* |
+| Outils de développement | Menu PiBoard → *Outils de développement* (`F12`) |
+| **Rechercher une mise à jour** | Menu PiBoard → *Rechercher une mise à jour / Check for updates* |
+| Quitter | Menu PiBoard → *Quitter / Quit* (`Alt+F4`, fonctionne sans ouvrir le menu) |
+
+`Alt+F4` et les raccourcis clavier (`Ctrl+R`, `F11`, `F12`) fonctionnent
+directement, menu ouvert ou non — seul *Rechercher une mise à jour* n'a
+pas de raccourci et nécessite d'ouvrir le menu.
+
 ### Publier une version (mise à jour automatique)
 
 `electron-updater` lit un fichier `latest.yml` déposé dans la release
@@ -82,6 +109,40 @@ GitHub. C'est `electron-builder` qui le produit et le publie.
 Le numéro de version publié est celui de `package.json`. La comparaison
 est faite en semver : il doit donc être strictement supérieur au
 précédent pour qu'une mise à jour soit proposée.
+
+### Tester la détection de mise à jour
+
+Le test ne prouve quelque chose que s'il existe un **écart de version**
+entre ce qui est installé sur la machine et ce qui est publié sur
+GitHub. Sans écart, `electron-updater` répond simplement « à jour » —
+ce qui n'est pas un échec, mais un test qui ne démontre rien.
+
+1. **Vérifier la version actuellement installée** :
+
+   ```powershell
+   (Get-Item "$env:LOCALAPPDATA\Programs\PiBoard\PiBoard.exe").VersionInfo.ProductVersion
+   ```
+
+2. **Publier sur GitHub une version strictement supérieure** à celle-ci
+   (un simple bump de `package.json` suffit pour un test, pas besoin
+   d'un vrai correctif) — `npm run dist` puis `npm run publish`, puis
+   publier le brouillon sur GitHub comme ci-dessus.
+
+3. **Sur la machine dont la version installée est plus ancienne**,
+   ouvrir PiBoard, appuyer sur `Alt` pour révéler le menu, puis
+   *Rechercher une mise à jour*. Une fenêtre doit proposer le
+   téléchargement de la nouvelle version.
+
+4. **Accepter le téléchargement puis le redémarrage proposé** —
+   l'application se ferme et se relance automatiquement dans la nouvelle
+   version.
+
+5. **Reconfirmer** avec la commande de l'étape 1 : elle doit maintenant
+   afficher le nouveau numéro.
+
+Une vérification automatique et silencieuse a aussi lieu 8 secondes
+après chaque lancement (sans fenêtre si tout est à jour) — mais le menu
+manuel reste le moyen le plus fiable de déclencher un test volontaire.
 
 ### Points à connaître
 
@@ -165,6 +226,32 @@ To test without building:
 npm run electron
 ```
 
+### Accessing the application menu
+
+The menu bar is **hidden by default** (a deliberately clean window) but
+stays fully functional. To reveal it:
+
+> **Press the `Alt` key** (alone, not held with another key). The
+> "PiBoard" menu bar appears at the top of the window. Pressing `Alt`
+> again, or clicking elsewhere in the window, closes it.
+
+This isn't intuitive — nothing on screen hints that this menu exists —
+but it's the only entry point for several functions that have no other
+button in the interface:
+
+| Function | Where |
+|---|---|
+| Reload the dashboard | PiBoard menu → *Reload* (`Ctrl+R`) |
+| Full screen | PiBoard menu → *Full screen* (`F11`) |
+| Interface zoom | PiBoard menu → *Zoom +* / *Zoom -* / *Zoom 100%* |
+| Developer tools | PiBoard menu → *Developer tools* (`F12`) |
+| **Check for updates** | PiBoard menu → *Check for updates* |
+| Quit | PiBoard menu → *Quit* (`Alt+F4`, works without opening the menu) |
+
+`Alt+F4` and the keyboard shortcuts (`Ctrl+R`, `F11`, `F12`) work
+directly whether the menu is open or not — only *Check for updates* has
+no shortcut and requires opening the menu.
+
 ### Publishing a release (automatic updates)
 
 `electron-updater` reads a `latest.yml` file dropped into the GitHub
@@ -189,6 +276,38 @@ release. `electron-builder` is what produces and publishes it.
 The published version number is the one in `package.json`. Comparison is
 done in semver: it must therefore be strictly greater than the previous
 one for an update to be offered.
+
+### Testing update detection
+
+The test only proves something if there's a **version gap** between
+what's installed on the machine and what's published on GitHub. Without
+a gap, `electron-updater` simply reports "up to date" — which isn't a
+failure, but a test that demonstrates nothing.
+
+1. **Check the currently installed version**:
+
+   ```powershell
+   (Get-Item "$env:LOCALAPPDATA\Programs\PiBoard\PiBoard.exe").VersionInfo.ProductVersion
+   ```
+
+2. **Publish a strictly higher version** on GitHub than that one (a
+   simple `package.json` bump is enough for a test, no real fix
+   required) — `npm run dist` then `npm run publish`, then publish the
+   draft on GitHub as above.
+
+3. **On the machine whose installed version is older**, open PiBoard,
+   press `Alt` to reveal the menu, then *Check for updates*. A window
+   should offer to download the new version.
+
+4. **Accept the download, then the restart it offers** — the application
+   closes and relaunches automatically on the new version.
+
+5. **Re-check** with the command from step 1: it should now show the new
+   version number.
+
+An automatic, silent check also runs 8 seconds after each launch (no
+window if already up to date) — but the manual menu remains the most
+reliable way to trigger a deliberate test.
 
 ### Good to know
 

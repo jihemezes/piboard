@@ -719,6 +719,57 @@
       }
     },
 
+    /* ================= APPLICATION DE BUREAU WINDOWS / WINDOWS DESKTOP APP ================= */
+    {
+      id: "windows-app",
+      group: "platform",
+      title: { fr: "Application de bureau Windows", en: "Windows desktop app" },
+      sub: {
+        fr: "Le menu caché, et comment vérifier les mises à jour.",
+        en: "The hidden menu, and how to check for updates."
+      },
+      html: {
+        fr: `
+          <h4>Uniquement pertinent sur PC Windows</h4>
+          <p>Cette section ne concerne que l'installation de PiBoard en tant qu'application de bureau Windows (via l'installeur <code>.exe</code>). Sur Raspberry Pi, l'affichage est un navigateur en kiosque et rien de ce qui suit ne s'applique.</p>
+
+          <h4>Le menu caché</h4>
+          <p>La fenêtre est volontairement épurée : sa barre de menu est <b>masquée par défaut</b> et rien à l'écran n'indique qu'elle existe. Pour la faire apparaître, <b>appuyez sur la touche <code>Alt</code></b> (seule, sans la maintenir avec une autre touche). Un second appui, ou un clic ailleurs dans la fenêtre, la referme.</p>
+          <div class="help-opt"><span class="help-opt-name">Recharger</span><span class="help-opt-desc">Recharge le tableau de bord, comme le bouton de rafraîchissement de l'écran de veille — utile en cas d'affichage figé. Raccourci : Ctrl+R.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Plein écran</span><span class="help-opt-desc">Bascule entre fenêtre normale et plein écran. Raccourci : F11.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Zoom +/-/100 %</span><span class="help-opt-desc">Agrandit ou réduit l'ensemble de l'interface (différent du réglage « Taille du texte » propre à chaque tuile).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Outils de développement</span><span class="help-opt-desc">Ouvre la console du navigateur intégré, pour diagnostiquer un problème. Raccourci : F12.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rechercher une mise à jour</span><span class="help-opt-desc">Voir la section suivante. Aucun raccourci clavier : c'est le seul moyen d'y accéder.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Quitter</span><span class="help-opt-desc">Ferme l'application. Raccourci : Alt+F4, qui fonctionne directement sans avoir à ouvrir le menu.</span></div>
+
+          <h4>Mises à jour automatiques</h4>
+          <p>L'application vérifie silencieusement l'existence d'une nouvelle version quelques secondes après chaque démarrage — sans rien afficher si elle est déjà à jour. Une mise à jour trouvée propose son téléchargement, puis son installation (l'application se ferme et se relance automatiquement) — rien n'est jamais installé sans confirmation.</p>
+          <p>Pour vérifier manuellement à tout moment, ouvrez le menu (<code>Alt</code>) puis <b>Rechercher une mise à jour</b>.</p>
+
+          <h4>Emplacement des données</h4>
+          <p>Les réglages, la disposition des tuiles, les clés API et les photos téléversées sont stockés dans <code>%APPDATA%\\PiBoard</code>. Ce dossier est conservé lors d'une mise à jour ou d'une désinstallation — une réinstallation retrouve tout tel quel.</p>`,
+        en: `
+          <h4>Only relevant on a Windows PC</h4>
+          <p>This section only concerns PiBoard installed as a Windows desktop application (via the <code>.exe</code> installer). On Raspberry Pi, the display is a kiosk browser and none of the following applies.</p>
+
+          <h4>The hidden menu</h4>
+          <p>The window is deliberately clean: its menu bar is <b>hidden by default</b> and nothing on screen hints that it exists. To reveal it, <b>press the <code>Alt</code> key</b> (alone, not held with another key). Pressing it again, or clicking elsewhere in the window, closes it.</p>
+          <div class="help-opt"><span class="help-opt-name">Reload</span><span class="help-opt-desc">Reloads the dashboard, like the screensaver's refresh button — useful if the display gets stuck. Shortcut: Ctrl+R.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Full screen</span><span class="help-opt-desc">Toggles between a normal window and full screen. Shortcut: F11.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Zoom +/-/100%</span><span class="help-opt-desc">Enlarges or shrinks the whole interface (different from each tile's own "Text size" setting).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Developer tools</span><span class="help-opt-desc">Opens the built-in browser's console, to diagnose an issue. Shortcut: F12.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Check for updates</span><span class="help-opt-desc">See the next section. No keyboard shortcut: this is the only way to reach it.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Quit</span><span class="help-opt-desc">Closes the application. Shortcut: Alt+F4, which works directly without opening the menu.</span></div>
+
+          <h4>Automatic updates</h4>
+          <p>The application silently checks for a new version a few seconds after each launch — showing nothing if already up to date. A found update offers its download, then its installation (the app closes and relaunches automatically) — nothing is ever installed without confirmation.</p>
+          <p>To check manually at any time, open the menu (<code>Alt</code>) then <b>Check for updates</b>.</p>
+
+          <h4>Data location</h4>
+          <p>Settings, tile layout, API keys and uploaded photos are stored in <code>%APPDATA%\\PiBoard</code>. This folder is kept across an update or an uninstall — a reinstall finds everything back as it was.</p>`
+      }
+    },
+
     /* ================= REMERCIEMENTS / CREDITS ================= */
     {
       id: "credits",

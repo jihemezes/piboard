@@ -504,6 +504,22 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     await sleep(30);
   }
 
+  console.log("== Aide : nouveau groupe 'Application de bureau' (correctif v1.7.5) ==");
+  {
+    document.getElementById("btnHelp").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    assert("modale d'aide ouverte", document.getElementById("helpModal").hidden === false);
+    const nav = document.getElementById("helpNav");
+    const winItem = nav.querySelector('[data-help-id="windows-app"]');
+    assert("entree 'Application de bureau Windows' presente dans le sommaire", !!winItem);
+    winItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    const content = document.getElementById("helpContent").textContent;
+    assert("contenu mentionne la touche Alt pour reveler le menu", content.includes("Alt"));
+    assert("contenu mentionne 'Rechercher une mise a jour'", content.includes("Rechercher une mise à jour"));
+    document.getElementById("helpModal").hidden = true;
+  }
+
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));

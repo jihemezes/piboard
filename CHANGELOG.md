@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.7.5
+
+- **Nouvelle section d'aide « Application de bureau Windows »**,
+  accessible depuis le menu général du tableau de bord (bouton Aide de
+  la barre d'outils). Elle documente le menu masqué de l'application
+  Windows — révélé par un simple appui sur la touche `Alt`, sans aucune
+  indication visuelle de son existence — ainsi que ses fonctions
+  (recharger, plein écran, zoom, outils de développement, rechercher une
+  mise à jour, quitter), le fonctionnement des mises à jour automatiques,
+  et l'emplacement des données (`%APPDATA%\PiBoard`). Cette section
+  n'apparaît que dans le sommaire ; son contenu précise lui-même qu'elle
+  ne concerne que l'installation Windows, pas le Raspberry Pi.
+
+  Reprend, condensé pour un public utilisateur (sans les étapes de
+  build/publication réservées au mainteneur), le contenu déjà présent
+  dans `docs/WINDOWS.md`.
+
+---
+
+- **New "Windows desktop app" help section**, accessible from the
+  dashboard's general menu (the toolbar's Help button). It documents the
+  Windows application's hidden menu — revealed by simply pressing the
+  `Alt` key, with no visual hint of its existence — along with its
+  functions (reload, full screen, zoom, developer tools, check for
+  updates, quit), how automatic updates work, and where data is stored
+  (`%APPDATA%\PiBoard`). This section only appears in the table of
+  contents; its content itself notes that it only concerns the Windows
+  install, not the Raspberry Pi.
+
+  Reuses, condensed for an end-user audience (without the
+  build/publish steps reserved for the maintainer), the content already
+  present in `docs/WINDOWS.md`.
+
 ## 1.7.4
 
 - **Correctif : le guide « France (~400 chaînes) » n'affichait toujours

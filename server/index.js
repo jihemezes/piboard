@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - server/index.js
-   Version 1.7.4
+   Version 1.7.5
 
    Petit serveur Express :
      - sert le front (public/) et les bibliotheques vendorisees
