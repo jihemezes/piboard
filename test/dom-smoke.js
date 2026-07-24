@@ -109,6 +109,17 @@ const dom = new JSDOM(html, {
       if (u.includes("/api/widgets")) return json(catalog);
       if (u.includes("/api/layout")) return json(layout);
       if (u.includes("/api/state/")) return json({ key: "x", value: "note de test" });
+      if (u.includes("/api/tele-channels")) {
+        // Mock realiste : simule le fait que le guide "france" expose
+        // davantage de chaines que le guide "tnt" par defaut -- exactement
+        // le point verifie par le test de la tuile Programme TV plus bas
+        // (correctif v1.7.4).
+        const wantFrance = /[?&]guide=france\b/.test(u);
+        const list = wantFrance
+          ? [{ id: "TF1.fr", name: "TF1" }, { id: "France2.fr", name: "France 2" }, { id: "Extra1.fr", name: "Chaine supplementaire 1" }, { id: "Extra2.fr", name: "Chaine supplementaire 2" }]
+          : [{ id: "TF1.fr", name: "TF1" }, { id: "France2.fr", name: "France 2" }];
+        return json(list);
+      }
       if (u.includes("/api/tele-program")) {
         // Reponse mock : une chaine avec un programme inedit + une sans
         const viewMatch = u.match(/[?&]view=([^&]+)/);
@@ -418,6 +429,52 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     await sleep(60);
     assert("onglet 2e partie devient actif",
       tile.querySelector('.pwtp-tab[data-view="late"]').classList.contains("pwtp-tab-active"));
+
+    console.log("== Tuile Programme TV : parcourir les chaines disponibles (correctif v1.7.4) ==");
+    tile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    const tileForm = document.getElementById("tileForm");
+    const browseBtn = tileForm.querySelector(".field-browse-btn");
+    assert("bouton 'parcourir les chaines' present sur le champ channels", !!browseBtn);
+
+    // Guide TNT (defaut) : 2 chaines mockees
+    browseBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    let browseList = tileForm.querySelector(".field-browse-list");
+    assert("liste affichee apres clic (guide TNT)", browseList && !browseList.hidden);
+    assert("2 chaines proposees en guide TNT", browseList.querySelectorAll("button[data-idx]").length === 2);
+
+    // Reclic sur le bouton : la liste se referme (bascule)
+    browseBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("2e clic sur le bouton referme la liste", browseList.hidden === true);
+
+    // Passage au guide "France" (non enregistre) : la liste doit refleter
+    // ce choix NON SAUVEGARDE au prochain clic sur "parcourir" -- c'est le
+    // coeur du correctif (avant v1.7.4 la liste etait figee sur la TNT).
+    const guideSelect = tileForm.querySelector('[data-key="xmltvfrGuide"]');
+    if (guideSelect) {
+      guideSelect.value = "france";
+      guideSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+    }
+    browseBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    browseList = tileForm.querySelector(".field-browse-list");
+    assert("4 chaines proposees apres passage (non enregistre) au guide France",
+      browseList.querySelectorAll("button[data-idx]").length === 4);
+
+    // Clic sur une chaine -> ajoutee au textarea, puis marquee "deja ajoutee"
+    const channelsTextarea = tileForm.querySelector('textarea[data-key="channels"]');
+    const beforeLines = channelsTextarea.value.split("\n").filter(Boolean).length;
+    const extraBtn = Array.from(browseList.querySelectorAll("button[data-idx]"))
+      .find((b) => b.textContent.includes("Chaine supplementaire 1"));
+    assert("chaine supplementaire proposee dans la liste", !!extraBtn);
+    extraBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const afterLines = channelsTextarea.value.split("\n").filter(Boolean).length;
+    assert("la chaine cliquee est ajoutee au textarea (une ligne de plus)", afterLines === beforeLines + 1);
+    assert("le bouton de la chaine ajoutee est desactive", extraBtn.disabled === true);
+
+    document.getElementById("tileModal").hidden = true;
 
     // Nettoyage : retirer la tuile
     tile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));

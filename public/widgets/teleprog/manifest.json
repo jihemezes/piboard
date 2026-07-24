@@ -68,10 +68,18 @@
       "default": "TF1\nFrance 2\nFrance 3\nCanal+\nFrance 5\nM6\nArte\nC8\nW9\nTMC\nTFX\nNRJ 12\nFrance 4\nBFM TV\nCNews\nCStar\nGulli\nTF1 Séries Films\nL'Équipe\n6ter\nRMC Story\nRMC Découverte\nChérie 25\nLCI\nFranceinfo",
       "label": { "en": "Channels (one per line, in display order)", "fr": "Chaînes (une par ligne, dans l'ordre d'affichage)" },
       "hint": {
-        "en": "One channel per line. You can use readable names (e.g. \"France 2\") or exact XMLTV ids (e.g. \"France2.fr\"). Reorder the lines to reorder the tile. Remove lines you don't want.",
-        "fr": "Une chaîne par ligne. Vous pouvez utiliser des noms lisibles (ex. « France 2 ») ou les identifiants XMLTV exacts (ex. « France2.fr »). Réordonnez les lignes pour réordonner la tuile. Supprimez les lignes non voulues."
+        "en": "One channel per line. You can use readable names (e.g. \"France 2\") or exact XMLTV ids (e.g. \"France2.fr\"). Reorder the lines to reorder the tile. Remove lines you don't want. Switching to the \"France\" guide or a custom XMLTV source does NOT change this list by itself — use \"Browse available channels\" below to see and add what the newly selected source actually offers.",
+        "fr": "Une chaîne par ligne. Vous pouvez utiliser des noms lisibles (ex. « France 2 ») ou les identifiants XMLTV exacts (ex. « France2.fr »). Réordonnez les lignes pour réordonner la tuile. Supprimez les lignes non voulues. Passer au guide « France » ou à une source XMLTV personnalisée ne change PAS cette liste automatiquement — utilisez « Parcourir les chaînes disponibles » ci-dessous pour voir et ajouter ce que la source nouvellement sélectionnée propose réellement."
       },
-      "group": { "en": "Channels", "fr": "Chaînes" }
+      "group": { "en": "Channels", "fr": "Chaînes" },
+      "browseChannels": {
+        "endpoint": "/api/tele-channels",
+        "label": { "en": "Browse available channels", "fr": "Parcourir les chaînes disponibles" },
+        "hint": {
+          "en": "Lists the channels actually present in the currently selected source above (unsaved changes to \"Data source\" / \"xmltvfr.fr guide\" / URL are taken into account). Click a channel to add it to the list.",
+          "fr": "Liste les chaînes réellement présentes dans la source sélectionnée ci-dessus (les modifications non enregistrées de « Source des données » / « Guide xmltvfr.fr » / URL sont prises en compte). Cliquez sur une chaîne pour l'ajouter à la liste."
+        }
+      }
     },
     {
       "key": "defaultView",

@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - server/index.js
-   Version 1.7.3
+   Version 1.7.4
 
    Petit serveur Express :
      - sert le front (public/) et les bibliotheques vendorisees
@@ -279,6 +279,25 @@ app.get("/api/network-scan", async (req, res) => {
 
 /* ---------- Programme TV / TV guide (voir server/teleProgram.js) ---------- */
 
+/* Lecture/validation de la partie "source" de la config, commune aux
+   deux routes ci-dessous (/api/tele-program a besoin de tout ; /api/
+   tele-channels n'a besoin que de savoir OU charger la grille). Liste
+   blanche stricte -- voir la note de securite plus bas.
+   Reads/validates the "source" part of the config, shared by both
+   routes below (/api/tele-program needs all of it; /api/tele-channels
+   only needs to know WHERE to load the grid from). Strict whitelist --
+   see the security note below. */
+function teleProgramSourceConfig(q) {
+  const source = ["xmltvfr", "xmltv", "scrape"].includes(String(q.source)) ? String(q.source) : "xmltvfr";
+  return {
+    source,
+    xmltvfrGuide: q.guide === "france" ? "france" : "tnt",
+    xmltvUrl: source === "xmltv" ? String(q.xmltvUrl || "") : "",
+    scrapeAdapter: String(q.scrapeAdapter || "generic"),
+    scrapeUrl: source === "scrape" ? String(q.scrapeUrl || "") : ""
+  };
+}
+
 app.get("/api/tele-program", async (req, res) => {
   // La config vient des reglages de la tuile, transmis en query. On ne
   // fait confiance qu'a une liste blanche de champs, avec des valeurs
@@ -288,18 +307,12 @@ app.get("/api/tele-program", async (req, res) => {
   // a whitelist of fields, with constrained values -- nothing is passed
   // as-is to a shell or an arbitrary server-side URL.
   const q = req.query;
-  const source = ["xmltvfr", "xmltv", "scrape"].includes(String(q.source)) ? String(q.source) : "xmltvfr";
   const view = ["now", "evening", "late"].includes(String(q.view)) ? String(q.view) : "now";
   const channels = String(q.channels || "")
     .split(",").map((s) => s.trim()).filter(Boolean).slice(0, 60);
-  const config = {
-    source,
+  const config = Object.assign(teleProgramSourceConfig(q), {
     view,
     channels,
-    xmltvfrGuide: q.guide === "france" ? "france" : "tnt",
-    xmltvUrl: source === "xmltv" ? String(q.xmltvUrl || "") : "",
-    scrapeAdapter: String(q.scrapeAdapter || "generic"),
-    scrapeUrl: source === "scrape" ? String(q.scrapeUrl || "") : "",
     eveningStart: /^\d{1,2}:\d{2}$/.test(String(q.eveningStart)) ? String(q.eveningStart) : "21:00",
     lateStart: /^\d{1,2}:\d{2}$/.test(String(q.lateStart)) ? String(q.lateStart) : "22:45",
     // Bornes de la fenetre de demarrage acceptee pour la 1re partie de
@@ -316,7 +329,7 @@ app.get("/api/tele-program", async (req, res) => {
       ? Math.max(0, Math.min(180, Number(q.lateMinDuration))) : undefined,
     showThumbnails: q.thumbnails !== "0",
     ttlMs: 30 * 60 * 1000
-  };
+  });
   try {
     const result = await teleProgram.getView(config, {});
     res.json(result);
@@ -325,8 +338,51 @@ app.get("/api/tele-program", async (req, res) => {
   }
 });
 
-app.get("/api/tele-channels", (req, res) => {
-  res.json(teleProgram.DEFAULT_CHANNELS.map((c) => c.name));
+/* Liste des chaines REELLEMENT disponibles pour la source configuree --
+   utilisee par le bouton "Parcourir les chaines disponibles" du widget
+   Programme TV (voir fieldMarkup() / le gestionnaire ".field-browse-btn"
+   dans app.js). AVANT v1.7.4, cette route renvoyait toujours la meme
+   liste TNT figee (~28 chaines), quelle que soit la source configuree :
+   en choisissant le guide "France (~400 chaines)", rien ne permettait a
+   l'utilisateur de decouvrir puis d'ajouter les ~370 chaines
+   supplementaires a la liste de sa tuile -- il ne voyait donc toujours
+   que les chaines TNT presentes par defaut dans son champ "Chaines".
+   Desormais, la grille reellement configuree (TNT, France, XMLTV
+   personnalise ou scraping) est chargee -- via le meme cache que /api/
+   tele-program, donc sans cout reseau supplementaire au second appel --
+   et la liste effectivement presente dans cette grille est renvoyee.
+   Repli sur la liste TNT statique en cas d'echec (source injoignable,
+   guide non encore selectionne...) pour que le bouton reste utile meme
+   hors ligne ou pendant la configuration initiale.
+
+   List of channels ACTUALLY available for the configured source -- used
+   by the TV guide widget's "Browse available channels" button (see
+   fieldMarkup() / the ".field-browse-btn" handler in app.js). BEFORE
+   v1.7.4, this route always returned the same fixed DTT list
+   (~28 channels), whatever source was configured: picking the "France
+   (~400 channels)" guide gave the user no way to discover, then add,
+   the ~370 extra channels to their tile's list -- they kept seeing only
+   the DTT channels present by default in their "Channels" field.
+   The actually configured grid (DTT, France, custom XMLTV, or scraping)
+   is now loaded -- through the same cache as /api/tele-program, so no
+   extra network cost on the second call -- and the list truly present in
+   that grid is returned. Falls back to the static DTT list on failure
+   (unreachable source, guide not yet picked...) so the button stays
+   useful even offline or during initial setup. */
+app.get("/api/tele-channels", async (req, res) => {
+  const config = Object.assign(teleProgramSourceConfig(req.query), { ttlMs: 30 * 60 * 1000 });
+  try {
+    const grid = await teleProgram.loadGrid(config, {});
+    const list = Array.from(grid.channels.values())
+      .map((c) => ({ id: c.id, name: c.name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "fr"));
+    if (list.length) return res.json(list);
+    // Grille chargee mais vide (source atypique) : repli.
+    // Grid loaded but empty (unusual source): fall back.
+    throw new Error("grille vide");
+  } catch (e) {
+    res.json(teleProgram.DEFAULT_CHANNELS.map((c) => ({ id: c.aliases[0] || c.name, name: c.name })));
+  }
 });
 
 /* Proxy d'IMAGE (binaire) pour les vignettes de programme. Distinct de

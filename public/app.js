@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.7.3
+   Version 1.7.4
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1226,8 +1226,35 @@
         return `<label class="field checkbox"><input type="checkbox" data-key="${f.key}" ${v ? "checked" : ""}><span>${label}</span></label>${hint}`;
       case "number":
         return `<label class="field"><span>${label}</span><input type="number" data-key="${f.key}" value="${v}" ${f.min != null ? `min="${f.min}"` : ""} ${f.max != null ? `max="${f.max}"` : ""} ${f.step != null ? `step="${f.step}"` : ""}>${hint}</label>`;
-      case "textarea":
-        return `<label class="field field-wide"><span>${label}</span><textarea data-key="${f.key}" autocomplete="off" spellcheck="false">${v}</textarea>${hint}</label>`;
+      case "textarea": {
+        /* Bouton optionnel "parcourir" : disponible pour tout champ
+           textarea declarant "browseChannels" dans le manifest (voir
+           server/index.js: GET /api/tele-channels pour le premier
+           usage, widget Programme TV). Generique par construction --
+           un futur widget pourrait reutiliser le meme mecanisme avec
+           son propre point d'entree -- mais le gestionnaire de clic
+           (voir plus bas, ".field-browse-btn") lit pour l'instant des
+           noms de champs specifiques au Programme TV pour construire
+           la requete ; a generaliser le jour ou un second widget en a
+           besoin.
+           Optional "browse" button: available for any textarea field
+           declaring "browseChannels" in the manifest (see
+           server/index.js: GET /api/tele-channels for the first use,
+           TV guide widget). Generic by construction -- a future widget
+           could reuse the same mechanism with its own endpoint -- but
+           the click handler (see below, ".field-browse-btn") currently
+           reads TV-guide-specific field names to build the request; to
+           be generalized once a second widget needs it. */
+        const browse = f.browseChannels;
+        const browseUi = browse
+          ? `<div class="field-browse">
+               <button type="button" class="btn small field-browse-btn" data-endpoint="${browse.endpoint}">${i18n.fromManifest(browse.label)}</button>
+               ${browse.hint ? `<small class="field-hint">${i18n.fromManifest(browse.hint)}</small>` : ""}
+               <div class="field-browse-list" hidden></div>
+             </div>`
+          : "";
+        return `<label class="field field-wide"><span>${label}</span><textarea data-key="${f.key}" autocomplete="off" spellcheck="false">${v}</textarea>${hint}</label>${browseUi}`;
+      }
       case "datetime":
         return `<label class="field"><span>${label}</span><input type="datetime-local" data-key="${f.key}" value="${v}">${hint}</label>`;
       case "color":
@@ -2476,6 +2503,115 @@
       const reveal = input.type === "password";
       input.type = reveal ? "text" : "password";
       btn.textContent = i18n.t(reveal ? "field.password.hide" : "field.password.show");
+    });
+
+    /* Bouton "Parcourir les chaines disponibles" du champ "channels" du
+       widget Programme TV (voir fieldMarkup() : cas "textarea" /
+       "browseChannels"). Delegue sur document pour la meme raison que
+       le bouton mot de passe ci-dessus : le formulaire de tuile est
+       regenere a chaque ouverture.
+       Specifique au Programme TV pour l'instant : les noms de champs
+       lus ci-dessous (source/xmltvfrGuide/xmltvUrl/scrapeAdapter/
+       scrapeUrl) et le mappage vers le parametre "guide" attendu par
+       /api/tele-channels sont ceux de CE widget. Si un second widget
+       adopte un jour "browseChannels", generaliser via une regle de
+       correspondance portee par le manifest plutot que ces noms en dur.
+
+       "Browse available channels" button for the TV guide widget's
+       "channels" field (see fieldMarkup(): "textarea" /
+       "browseChannels" case). Delegated on document for the same reason
+       as the password button above: the tile form is regenerated on
+       every open.
+       TV-guide-specific for now: the field names read below
+       (source/xmltvfrGuide/xmltvUrl/scrapeAdapter/scrapeUrl) and the
+       mapping to the "guide" parameter expected by /api/tele-channels
+       belong to THIS widget. If a second widget ever adopts
+       "browseChannels", generalize through a manifest-carried mapping
+       rule instead of these hardcoded names. */
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".field-browse-btn");
+      if (!btn) return;
+      // ".form" et non "form" : #tileForm/#settingsForm sont des <div
+      // class="form">, pas de veritables balises <form> (l'app ne
+      // soumet jamais de formulaire HTML classique -- tout passe par
+      // fetch()). ".form" and not "form": #tileForm/#settingsForm are
+      // <div class="form">, not actual <form> tags (the app never
+      // submits a classic HTML form -- everything goes through
+      // fetch()).
+      const form = btn.closest(".form");
+      const textarea = form && form.querySelector('textarea[data-key="channels"]');
+      const listBox = btn.parentElement.querySelector(".field-browse-list");
+      if (!form || !textarea || !listBox) return;
+
+      const fieldValue = (key) => {
+        const el = form.querySelector(`[data-key="${key}"]`);
+        return el ? el.value : "";
+      };
+      const params = new URLSearchParams();
+      params.set("source", fieldValue("source") || "xmltvfr");
+      params.set("guide", fieldValue("xmltvfrGuide") === "france" ? "france" : "tnt");
+      if (fieldValue("xmltvUrl")) params.set("xmltvUrl", fieldValue("xmltvUrl"));
+      if (fieldValue("scrapeAdapter")) params.set("scrapeAdapter", fieldValue("scrapeAdapter"));
+      if (fieldValue("scrapeUrl")) params.set("scrapeUrl", fieldValue("scrapeUrl"));
+
+      const wasOpen = !listBox.hidden;
+      listBox.hidden = true;
+      if (wasOpen) return; // un 2e clic referme simplement la liste / a 2nd click just closes the list
+
+      btn.disabled = true;
+      const originalLabel = btn.textContent;
+      btn.textContent = i18n.t("field.browse.loading");
+      try {
+        const list = await fetch(`${btn.dataset.endpoint}?${params.toString()}`).then((r) => r.json());
+        if (!Array.isArray(list) || !list.length) {
+          listBox.innerHTML = `<div class="field-browse-empty">${i18n.t("field.browse.empty")}</div>`;
+        } else {
+          // Chaines deja presentes dans le textarea : pas reproposees en
+          // double, mais visuellement signalees (deja ajoutee).
+          // Channels already present in the textarea: not offered again
+          // as a duplicate, but visually flagged (already added).
+          const current = new Set(
+            textarea.value.split("\n").map((s) => s.trim().toLowerCase()).filter(Boolean)
+          );
+          listBox.innerHTML = list.map((c, idx) => {
+            const already = current.has(c.name.toLowerCase()) || current.has(String(c.id).toLowerCase());
+            return `<button type="button" data-idx="${idx}" ${already ? "disabled" : ""}>${c.name}${already ? ` <small>${i18n.t("field.browse.added")}</small>` : ""}</button>`;
+          }).join("");
+          listBox._items = list;
+        }
+        listBox.hidden = false;
+      } catch (err) {
+        listBox.innerHTML = `<div class="field-browse-empty">${i18n.t("field.browse.error")}</div>`;
+        listBox.hidden = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      const item = e.target.closest(".field-browse-list button[data-idx]");
+      if (!item) return;
+      const listBox = item.closest(".field-browse-list");
+      const form = item.closest(".form"); // voir la note ci-dessus / see the note above
+      const textarea = form && form.querySelector('textarea[data-key="channels"]');
+      if (!textarea || !listBox || !listBox._items) return;
+      const chosen = listBox._items[Number(item.dataset.idx)];
+      if (!chosen) return;
+      const lines = textarea.value.split("\n").map((s) => s.trim()).filter(Boolean);
+      lines.push(chosen.name);
+      textarea.value = lines.join("\n");
+      item.disabled = true;
+      item.innerHTML = `${chosen.name} <small>${i18n.t("field.browse.added")}</small>`;
+    });
+
+    // Clic ailleurs dans la modale : referme toute liste ouverte, sans
+    // fermer la modale elle-meme (comportement attendu d'un menu
+    // deroulant). Click elsewhere in the modal: closes any open list,
+    // without closing the modal itself (expected dropdown behaviour).
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".field-browse")) return;
+      document.querySelectorAll(".field-browse-list:not([hidden])").forEach((el) => { el.hidden = true; });
     });
 
     $("settingsSave").addEventListener("click", () => saveSettings().catch(console.error));

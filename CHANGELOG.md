@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.7.4
+
+- **Correctif : le guide « France (~400 chaînes) » n'affichait toujours
+  que les chaînes TNT** — la route qui alimente la nouvelle fonction
+  « Parcourir les chaînes disponibles » (voir ci-dessous) renvoyait
+  toujours la même liste statique d'une trentaine de chaînes TNT, quelle
+  que soit la source réellement configurée. Sélectionner le guide
+  « France » chargeait bien la grille complète côté serveur, mais rien
+  ne permettait de découvrir ni d'ajouter les ~370 chaînes
+  supplémentaires à la liste de la tuile.
+
+- **Nouveau : bouton « Parcourir les chaînes disponibles »** dans les
+  réglages du widget *Programme TV*, sous le champ « Chaînes ». Il liste
+  les chaînes réellement présentes dans la source actuellement
+  sélectionnée (source, guide xmltvfr.fr ou URL — y compris les
+  changements pas encore enregistrés), et un clic sur une chaîne l'ajoute
+  à la liste de la tuile. Les chaînes déjà présentes sont signalées et
+  non cliquables.
+
+---
+
+- **Fix: the "France (~400 channels)" guide still only showed DTT
+  channels** — the route powering the new "Browse available channels"
+  feature (see below) always returned the same static list of about
+  thirty DTT channels, whatever source was actually configured.
+  Selecting the "France" guide did load the full grid on the server
+  side, but nothing let the user discover or add the ~370 extra
+  channels to the tile's list.
+
+- **New: "Browse available channels" button** in the *TV guide*
+  widget's settings, below the "Channels" field. It lists the channels
+  actually present in the currently selected source (source, xmltvfr.fr
+  guide, or URL — including unsaved changes), and clicking a channel adds
+  it to the tile's list. Channels already present are flagged and not
+  clickable.
+
 ## 1.7.3
 
 - **Correctif : « Programme indisponible » avec le guide xmltvfr.fr
