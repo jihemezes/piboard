@@ -26,7 +26,7 @@ const layout = {
   ]
 };
 
-const settings = { lang: "fr", theme: "dark", latitude: 43.6, longitude: 1.44, gridRows: 8 };
+const settings = { lang: "fr", theme: "dark", latitude: 43.6, longitude: 1.44, gridRows: 8, multiColumnForms: true };
 const putCalls = [];
 /* Mock avec etat pour la bibliotheque de configurations enregistrees
    (server/tileConfigs.js), pour rejouer le parcours complet
@@ -343,6 +343,12 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(50);
     assert("parametres generaux ouverts", document.getElementById("settingsModal").hidden === false);
+    assert("case 'multi-colonnes' cochee par defaut (independamment du mode tactile)",
+      document.getElementById("setMultiColumnForms").checked === true);
+    assert("mise en colonnes active meme sans mode tactile (correctif v1.7.2) : data-cols pose sur le modal",
+      !!document.querySelector("#settingsModal .modal-card").dataset.cols);
+    assert("body sans classe 'touch' par defaut (mode tactile non lie a la mise en colonnes)",
+      !document.body.classList.contains("touch"));
     assert("case Ken Burns cochee par defaut (comportement historique)",
       document.getElementById("setSSKenBurns").checked === true);
     assert("case ordre aleatoire decochee par defaut",

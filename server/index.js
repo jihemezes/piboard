@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - server/index.js
-   Version 1.7.0
+   Version 1.7.3
 
    Petit serveur Express :
      - sert le front (public/) et les bibliotheques vendorisees
@@ -77,6 +77,7 @@ const DEFAULT_SETTINGS = {
   longitude: 2.35,
   gridRows: 8,           // hauteur logique de l'ecran en lignes / logical screen height in rows
   touchMode: false,      // interface tactile : cibles agrandies / touch UI: enlarged targets
+  multiColumnForms: true, // fenetres de reglages en plusieurs colonnes / settings windows in multiple columns
   colors: {
     dark: { bg: "#0B0E14", tile: "#141926" },
     light: { bg: "#EFEDE7", tile: "#FFFFFF" }
@@ -301,6 +302,14 @@ app.get("/api/tele-program", async (req, res) => {
     scrapeUrl: source === "scrape" ? String(q.scrapeUrl || "") : "",
     eveningStart: /^\d{1,2}:\d{2}$/.test(String(q.eveningStart)) ? String(q.eveningStart) : "21:00",
     lateStart: /^\d{1,2}:\d{2}$/.test(String(q.lateStart)) ? String(q.lateStart) : "22:45",
+    // Bornes de la fenetre de demarrage acceptee pour la 1re partie de
+    // soiree (v1.7.1) -- voir le commentaire de buildView() dans
+    // server/teleProgram.js pour le detail du raisonnement.
+    // Bounds of the accepted start window for prime time (v1.7.1) --
+    // see buildView()'s comment in server/teleProgram.js for the full
+    // reasoning.
+    eveningEarliestStart: /^\d{1,2}:\d{2}$/.test(String(q.eveningEarliestStart)) ? String(q.eveningEarliestStart) : "20:00",
+    eveningLatestStart: /^\d{1,2}:\d{2}$/.test(String(q.eveningLatestStart)) ? String(q.eveningLatestStart) : "21:30",
     eveningMinDurationMinutes: Number.isFinite(Number(q.eveningMinDuration)) && q.eveningMinDuration !== undefined
       ? Math.max(0, Math.min(180, Number(q.eveningMinDuration))) : undefined,
     lateMinDurationMinutes: Number.isFinite(Number(q.lateMinDuration)) && q.lateMinDuration !== undefined

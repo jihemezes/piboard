@@ -1,5 +1,131 @@
 # Changelog
 
+## 1.7.3
+
+- **Correctif : « Programme indisponible » avec le guide xmltvfr.fr
+  400 chaînes** — erreur `Entity expansion limit exceeded: 1002 > 1000`.
+  En cause : la protection anti-DoS par défaut de la bibliothèque de
+  parsing XML plafonne à 1000 le nombre total de substitutions
+  d'entités (`&amp;`, `&#233;`...) dans tout le document — un guide
+  volumineux (400 chaînes, plusieurs jours) en contient largement
+  davantage rien que via les caractères accentués du français dans les
+  titres et synopsis. Le seuil, pensé pour un document XML générique,
+  était bien trop bas pour un XMLTV de cette taille.
+
+  La protection n'est pas désactivée mais recalibrée : les réglages qui
+  gardent une vraie valeur défensive contre une charge malveillante
+  (nombre et imbrication d'entités personnalisées, qu'un XMLTV légitime
+  ne déclare jamais) restent stricts ; ceux qui plafonnaient à tort le
+  volume de texte ordinaire sont élevés à des valeurs larges mais
+  toujours finies.
+
+---
+
+- **Fix: "Program unavailable" with the xmltvfr.fr 400-channel guide**
+  — `Entity expansion limit exceeded: 1002 > 1000` error. Cause: the XML
+  parsing library's default anti-DoS protection caps the total number of
+  entity substitutions (`&amp;`, `&#233;`...) across the whole document
+  at 1000 — a large guide (400 channels, several days) legitimately
+  contains far more than that from French accented characters alone in
+  titles and synopses. The threshold, sized for a generic XML document,
+  was far too low for an XMLTV file of that size.
+
+  The protection isn't disabled but recalibrated: the settings that keep
+  genuine defensive value against a malicious payload (custom entity
+  count and nesting, which a legitimate XMLTV never declares) stay
+  strict; the ones that were wrongly capping ordinary text volume are
+  raised to large but still finite values.
+
+## 1.7.2
+
+- **Les fenêtres de réglages s'affichent désormais en plusieurs colonnes
+  par défaut, y compris hors mode tactile** — la répartition automatique
+  sur 2 ou 3 colonnes (déjà en place pour raccourcir le défilement des
+  fenêtres à nombreuses sections) était jusqu'ici réservée au mode
+  tactile. Elle est désormais active par défaut pour tout le monde,
+  souris comme doigt.
+
+  Un nouveau réglage **« Fenêtres de réglages en plusieurs colonnes »**
+  (Réglages généraux → activé par défaut) permet de revenir à une seule
+  colonne si préféré. Il est indépendant du mode tactile : on peut
+  garder les colonnes sans les cibles agrandies, ou l'inverse.
+
+  Côté CSS, les règles structurelles de la mise en colonnes (largeur du
+  modal selon le nombre de colonnes, grille des sections, bornage des
+  champs) ont été détachées de `body.touch`, qui ne conditionne plus que
+  le confort tactile proprement dit (cibles agrandies, espacement) —
+  sans changement de comportement en mode tactile.
+
+---
+
+- **Settings windows now display in multiple columns by default, even
+  outside touch mode** — the automatic 2- or 3-column layout (already in
+  place to shorten scrolling on windows with many sections) used to be
+  reserved for touch mode. It is now on by default for everyone, mouse
+  or finger alike.
+
+  A new **"Multi-column settings windows"** setting (General settings →
+  on by default) allows reverting to a single column if preferred. It is
+  independent from touch mode: columns can be kept without enlarged
+  targets, or the other way around.
+
+  On the CSS side, the structural rules for column layout (modal width
+  by column count, the section grid, field width bounding) were detached
+  from `body.touch`, which now only gates actual touch comfort (enlarged
+  targets, spacing) — with no behaviour change in touch mode itself.
+
+## 1.7.1
+
+- **Correctif : programmes de 2e partie de soirée affichés à tort dans
+  « Ce soir »** — le widget *Programme TV* pouvait retenir un programme
+  démarrant vers 22h dans l'onglet 1re partie de soirée s'il était plus
+  long que la vraie émission de 21h. En cause : la tolérance après
+  l'heure cible était fixée à 90 min (soit 22h30 pour une cible à 21h),
+  assez large pour laisser un programme de 2e partie entrer dans la
+  comparaison « le plus long l'emporte » et la gagner.
+
+  Deux nouveaux réglages plafonnent désormais la fenêtre de démarrage
+  acceptée par des heures absolues plutôt qu'une tolérance relative :
+  **« 1re partie : début au plus tard accepté »** (21h30 par défaut)
+  exclut tout programme démarrant après cette heure, quelle que soit sa
+  durée — c'est ce qui corrige le bug. **« 1re partie : début au plus
+  tôt accepté »** (20h00 par défaut) reste volontairement permissif
+  pour ne pas casser la détection des chaînes qui démarrent leur
+  programme principal en avance (TMC, généralement dès 20h20-20h30),
+  gérée depuis une version précédente — resserrer cette borne (par
+  exemple à 20h45) est possible mais exclurait alors ce type de chaîne.
+
+  Le seuil de durée minimale de la 1re partie passe de 45 à 30 minutes
+  par défaut : la fenêtre plafonnée filtre désormais la 2e partie de
+  soirée indépendamment de la durée, un seuil plus bas suffit donc à
+  écarter les intercalaires courts sans risque de reprendre un
+  programme de 2e partie.
+
+---
+
+- **Fix: second-part-evening programs wrongly shown in "Tonight"** —
+  the *TV guide* widget could pick a program starting around 10pm in the
+  prime-time tab if it happened to run longer than the real 9pm show. The
+  cause: the after-target tolerance was fixed at 90 min (i.e. 10:30pm for
+  a 9pm target), wide enough to let a second-part-evening program enter
+  the "longest wins" comparison and win it.
+
+  Two new settings now cap the accepted start window using absolute
+  times rather than a relative tolerance: **"Prime time: latest accepted
+  start"** (9:30pm by default) excludes any program starting after that
+  time, whatever its length — this is what fixes the bug. **"Prime time:
+  earliest accepted start"** (8:00pm by default) stays deliberately
+  permissive so it doesn't break detection of channels that start their
+  main show early (TMC, typically from 8:20-8:30pm), handled since an
+  earlier version — tightening this bound (e.g. to 8:45pm) is possible
+  but would then exclude that kind of channel.
+
+  Prime time's minimum-duration threshold drops from 45 to 30 minutes by
+  default: the capped window now filters out second-part-evening
+  programs independently of duration, so a lower threshold is enough to
+  discard short interstitials without risking picking up a second-part
+  program.
+
 ## 1.7.0
 
 - **Application de bureau Windows (Electron)** — PiBoard s'installe

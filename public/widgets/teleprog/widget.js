@@ -155,6 +155,8 @@
       if (s.source === "scrape" && s.scrapeUrl) p.set("scrapeUrl", s.scrapeUrl);
       if (s.eveningStart) p.set("eveningStart", s.eveningStart);
       if (s.lateStart) p.set("lateStart", s.lateStart);
+      if (s.eveningEarliestStart) p.set("eveningEarliestStart", s.eveningEarliestStart);
+      if (s.eveningLatestStart) p.set("eveningLatestStart", s.eveningLatestStart);
       if (s.eveningMinDuration != null && s.eveningMinDuration !== "") p.set("eveningMinDuration", s.eveningMinDuration);
       if (s.lateMinDuration != null && s.lateMinDuration !== "") p.set("lateMinDuration", s.lateMinDuration);
       if (s.showThumbnails === false) p.set("thumbnails", "0");

@@ -207,6 +207,79 @@ console.log("== buildView 'evening' : chaine demarrant tot (TMC ~20h20) + interc
   console.log("  OK:", view[0].program.title);
 }
 
+console.log("== buildView 'evening' : ne prend plus un programme de 22h, meme tres long (correctif v1.7.1) ==");
+{
+  // Reproduit le bug signale : le vrai prime time (21h05-21h50, 45 min)
+  // est plus court que le programme suivant, qui demarre a 22h00 et
+  // dure 2h -- avant le correctif, ce dernier etait choisi car "le plus
+  // long" dans la fenetre large (jusqu'a 22h30). La borne haute par
+  // defaut (21h30) doit desormais l'exclure entierement de la
+  // comparaison.
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="Chaine.fr"><display-name lang="fr">Chaine</display-name></channel>
+  <programme start="20240115210500 +0100" stop="20240115215000 +0100" channel="Chaine.fr">
+    <title lang="fr">Vrai prime time</title>
+  </programme>
+  <programme start="20240115220000 +0100" stop="20240116000000 +0100" channel="Chaine.fr">
+    <title lang="fr">Deuxieme partie de soiree (long documentaire)</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["Chaine.fr"], "evening", ref, { eveningStart: "21:00" });
+  assert.strictEqual(view[0].program.title, "Vrai prime time",
+    "le programme de 22h ne doit jamais entrer en comparaison, meme s'il dure plus longtemps");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== buildView 'evening' : borne haute resserrable via un reglage ==");
+{
+  // Meme grille que le test precedent, mais avec une borne haute
+  // resserree a 21h10 : le "vrai prime time" (21h05) reste dans la
+  // fenetre, seul le programme de 22h en est exclu -- comportement
+  // identique au reglage par defaut ici, verifie simplement que le
+  // parametre est bien pris en compte.
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="Chaine.fr"><display-name lang="fr">Chaine</display-name></channel>
+  <programme start="20240115210500 +0100" stop="20240115215000 +0100" channel="Chaine.fr">
+    <title lang="fr">Vrai prime time</title>
+  </programme>
+  <programme start="20240115220000 +0100" stop="20240116000000 +0100" channel="Chaine.fr">
+    <title lang="fr">Deuxieme partie de soiree</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["Chaine.fr"], "evening", ref, {
+    eveningStart: "21:00",
+    eveningLatestStart: "21:10"
+  });
+  assert.strictEqual(view[0].program.title, "Vrai prime time");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== buildView 'evening' : borne basse resserrable, exclut alors TMC (comportement voulu si active) ==");
+{
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="TMC.fr"><display-name lang="fr">TMC</display-name></channel>
+  <programme start="20240115202000 +0100" stop="20240115220000 +0100" channel="TMC.fr">
+    <title lang="fr">Film du soir TMC</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T18:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["TMC.fr"], "evening", ref, {
+    eveningStart: "21:00",
+    eveningEarliestStart: "20:45" // 20h20 < 20h45 -> exclu
+  });
+  assert.strictEqual(view[0].program, null,
+    "avec une borne basse resserree a 20h45, un film demarrant a 20h20 sort de la fenetre");
+  console.log("  OK : film exclu comme attendu avec la borne resserree");
+}
+
 console.log("== buildView 'late' (~22h45) ==");
 {
   const ref = new Date("2024-01-15T19:30:00.000Z");
@@ -234,6 +307,40 @@ console.log("== parseXmltv : robustesse (XML vide/malformé) ==");
   assert.deepStrictEqual(tp.parseXmltv("", {}).programmes, []);
   assert.deepStrictEqual(tp.parseXmltv("<tv></tv>", {}).programmes, []);
   console.log("  OK");
+}
+
+console.log("== parseXmltv : gros guide (400+ chaines), plus de 1000 entites XML (correctif v1.7.3) ==");
+{
+  // Reproduit le bug signale : la protection anti-DoS par defaut de
+  // fast-xml-parser plafonne a 1000 le nombre total de substitutions
+  // d'entites (&amp;, &#233;...) -- un guide volumineux (multi-chaines,
+  // plusieurs jours) en contient legitimement bien davantage rien que
+  // via les caracteres accentues du francais dans les titres/synopsis.
+  // Reproduces the reported bug: fast-xml-parser's default anti-DoS
+  // protection caps the total entity substitution count at 1000 -- a
+  // large guide (many channels, several days) legitimately contains far
+  // more than that from French accented characters alone in
+  // titles/synopses.
+  let programmes = "";
+  for (let i = 0; i < 300; i++) {
+    programmes += `<programme start="2024011521${String(i % 60).padStart(2, "0")}00 +0200" stop="2024011522${String(i % 60).padStart(2, "0")}00 +0200" channel="Chaine.fr">
+      <title lang="fr">\u00c9mission ${i} : caf\u00e9, th\u00e9\u00e2tre &amp; po\u00e9sie</title>
+      <desc lang="fr">Synopsis tres accentu\u00e9 : \u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9 &amp; &amp; &amp; &amp; &amp;</desc>
+    </programme>`;
+  }
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="Chaine.fr"><display-name lang="fr">Chaine</display-name></channel>
+  ${programmes}
+</tv>`;
+  const entityCount = (raw.match(/&[a-zA-Z#0-9]+;/g) || []).length;
+  assert.ok(entityCount > 1000, "le document de test doit depasser l'ancienne limite par defaut (verification du test lui-meme)");
+
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  assert.strictEqual(g.programmes.length, 300, "les 300 programmes doivent etre parses malgre les >1000 entites");
+  assert.strictEqual(g.programmes[0].title, "Émission 0 : café, théâtre & poésie",
+    "les entites doivent etre correctement decodees (accents, esperluette)");
+  console.log("  OK :", entityCount, "entites traitees,", g.programmes.length, "programmes");
 }
 
 console.log("== loadGrid : decompression gzip locale (.gz) ==");

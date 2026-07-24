@@ -1041,18 +1041,25 @@ body.touch.editing .ui-resizable-s::after {
    (>=1100px) on autorise 3 colonnes.
    Modal widened to fit 2 columns. On a large screen (>=1100px) we allow
    3 columns. */
-/* Largeur de la fenetre de configuration en mode tactile, adaptee au
-   nombre de colonnes reellement retenu par layoutFormColumns() (attribut
-   data-cols pose par le JS). Plus il y a de colonnes, plus la fenetre est
-   large et occupe l'ecran ; une seule colonne reste etroite et lisible.
-   Config window width in touch mode, adapted to the column count actually
-   chosen by layoutFormColumns() (data-cols attribute set by the JS). The
-   more columns, the wider the window; a single column stays narrow and
-   readable. */
+/* Largeur de la fenetre de configuration, adaptee au nombre de colonnes
+   reellement retenu par layoutFormColumns() (attribut data-cols pose par
+   le JS). Plus il y a de colonnes, plus la fenetre est large et occupe
+   l'ecran ; une seule colonne reste etroite et lisible. NON scope a
+   body.touch : la mise en colonnes est desormais active par defaut,
+   independamment du mode tactile (reglage "multiColumnForms", voir
+   layoutFormColumns() dans app.js) -- seul le confort tactile (cibles
+   agrandies) reste conditionne par ce mode.
+   Config window width, adapted to the column count actually chosen by
+   layoutFormColumns() (data-cols attribute set by the JS). The more
+   columns, the wider the window; a single column stays narrow and
+   readable. NOT scoped to body.touch: multi-column layout is now on by
+   default, independently of touch mode (the "multiColumnForms" setting,
+   see layoutFormColumns() in app.js) -- only touch comfort (enlarged
+   targets) stays gated behind that mode. */
+.modal-card[data-cols="1"] { width: min(620px, 96vw); }
+.modal-card[data-cols="2"] { width: min(1080px, 96vw); }
+.modal-card[data-cols="3"] { width: min(1600px, 96vw); }
 body.touch .modal-card { width: min(1000px, 96vw); }
-body.touch .modal-card[data-cols="1"] { width: min(620px, 96vw); }
-body.touch .modal-card[data-cols="2"] { width: min(1080px, 96vw); }
-body.touch .modal-card[data-cols="3"] { width: min(1600px, 96vw); }
 body.touch .modal-head { padding: 18px 24px; }
 body.touch .modal-head h2 { font-size: 22px; }
 body.touch .modal-close { width: 52px; height: 52px; font-size: 30px; border-radius: 12px; }
@@ -1092,37 +1099,59 @@ body.touch .form {
 /* Rangee de colonnes creee par layoutFormColumns() : les colonnes cote a
    cote. Les elements pleine largeur (actions, about) sont ajoutes APRES
    cette rangee, donc restent sous les colonnes sur toute la largeur.
+   Structurel, donc non scope a body.touch (voir plus haut).
    Column row created by layoutFormColumns(): columns side by side. The
    full-width elements (actions, about) are appended AFTER this row, so
-   they stay below the columns across the full width. */
-body.touch .form .form-cols-row {
+   they stay below the columns across the full width. Structural, hence
+   not scoped to body.touch (see above). */
+.form .form-cols-row {
   display: flex;
   align-items: flex-start;
   gap: 24px;
 }
-/* Chaque colonne est une pile verticale de sections. Each column is a
-   vertical stack of sections. */
-body.touch .form .form-col {
+/* Chaque colonne est une pile verticale de sections. Le "gap" remplace la
+   marge basse habituelle des sections (voir .form-col > .form-section
+   ci-dessous) pour un espacement uniforme.
+   Each column is a vertical stack of sections. The "gap" replaces
+   sections' usual bottom margin (see .form-col > .form-section below)
+   for uniform spacing. */
+.form .form-col {
   display: flex;
   flex-direction: column;
   gap: 16px;
   flex: 1 1 0;
   min-width: 0;
 }
-body.touch .form .form-section,
-body.touch .form .form-section-plain {
+.form-col > .form-section,
+.form-col > .form-section-plain {
   width: 100%;
   margin: 0;
   min-width: 0;
 }
-/* Les champs a l'interieur d'une section (cellule de grille possiblement
-   etroite) ne doivent jamais deborder : on borne leur largeur.
-   Fields inside a section (a possibly narrow grid cell) must never
-   overflow: we bound their width. */
-body.touch .form-section .field,
-body.touch .form-section .field input,
-body.touch .form-section .field select,
-body.touch .form-section .field textarea {
+/* Repli : un formulaire d'une seule section (donc jamais enveloppe dans
+   un .form-col, layoutFormColumns() n'optimisant qu'a partir de 2
+   sections) garde neanmoins ce style compact en mode tactile -- fidele
+   au comportement historique de ce mode.
+   Fallback: a single-section form (thus never wrapped in a .form-col,
+   since layoutFormColumns() only optimizes from 2 sections up) still
+   gets this compact styling in touch mode -- faithful to that mode's
+   historical behaviour. */
+body.touch .form-section,
+body.touch .form-section-plain {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+}
+/* Les champs a l'interieur d'une section ne doivent jamais deborder : on
+   borne leur largeur. Regle generale (toute section, colonnes ou non,
+   tactile ou non) : sans risque et evite un debordement si une colonne
+   est etroite. Fields inside a section must never overflow: we bound
+   their width. General rule (any section, columns or not, touch or
+   not): harmless, and prevents overflow when a column is narrow. */
+.form-section .field,
+.form-section .field input,
+.form-section .field select,
+.form-section .field textarea {
   max-width: 100%;
   box-sizing: border-box;
 }
@@ -1131,9 +1160,9 @@ body.touch .form-section .field textarea {
    les colonnes. The action row (Save/Remove) and "about" footer stay
    outside the column system: the JS keeps them full-width after the
    columns. */
+.form > .form-actions,
+.form > .about { width: 100%; }
 body.touch .form-actions { padding-top: 8px; width: 100%; }
-body.touch .form > .form-actions,
-body.touch .form > .about { width: 100%; }
 
 /* Champs plus grands (cible et lisibilite au doigt).
    Larger fields (finger target and readability). */

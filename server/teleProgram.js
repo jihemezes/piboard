@@ -191,7 +191,48 @@ function parseXmltv(xml, opts) {
     attributeNamePrefix: "@_",
     // Force certains elements a toujours etre des tableaux, pour un
     // traitement uniforme quel que soit leur nombre d'occurrences.
-    isArray: (name) => ["channel", "programme", "display-name", "title", "desc", "sub-title", "category", "icon"].includes(name)
+    isArray: (name) => ["channel", "programme", "display-name", "title", "desc", "sub-title", "category", "icon"].includes(name),
+    /* fast-xml-parser limite par defaut a 1000 le nombre total de
+       substitutions d'entites XML (&amp;, &#233;...), protection contre
+       les attaques par expansion exponentielle ("billion laughs"). Un
+       guide de 400 chaines sur plusieurs jours contient legitimement
+       bien plus de 1000 caracteres accentues encodes en entites dans
+       les titres/synopsis -- le seuil par defaut, pense pour un
+       document XML generique, est bien trop bas pour un XMLTV
+       volumineux et declenche l'erreur "Entity expansion limit
+       exceeded" sur du contenu parfaitement normal.
+       On ne desactive PAS la protection : on la recalibre. Les deux
+       reglages qui gardent une vraie valeur defensive sont resserres
+       (maxEntityCount, maxExpansionDepth) -- un fichier XMLTV legitime
+       ne declare jamais d'entites personnalisees (<!ENTITY> en DOCTYPE)
+       ni ne les imbrique, contrairement a une charge "billion laughs".
+       Les deux reglages qui bornaient a tort le volume de texte
+       ordinaire (maxTotalExpansions, maxExpandedLength) sont eleves a
+       des valeurs larges mais toujours finies.
+
+       fast-xml-parser defaults to a total limit of 1000 XML entity
+       substitutions (&amp;, &#233;...), a defence against exponential
+       expansion attacks ("billion laughs"). A 400-channel, multi-day
+       guide legitimately contains far more than 1000 accented
+       characters encoded as entities in titles/synopses -- the default
+       threshold, sized for a generic XML document, is far too low for
+       a large XMLTV file and trips the "Entity expansion limit
+       exceeded" error on perfectly normal content.
+       This does NOT disable the protection: it recalibrates it. The two
+       settings that keep genuine defensive value are tightened
+       (maxEntityCount, maxExpansionDepth) -- a legitimate XMLTV file
+       never declares custom entities (DOCTYPE <!ENTITY>) nor nests
+       them, unlike a "billion laughs" payload. The two settings that
+       were wrongly capping ordinary text volume (maxTotalExpansions,
+       maxExpandedLength) are raised to large but still finite values. */
+    processEntities: {
+      enabled: true,
+      maxEntityCount: 20,           // XMLTV n'a jamais d'entites personnalisees / XMLTV never has custom entities
+      maxExpansionDepth: 5,         // aucune imbrication legitime en XMLTV / no legitimate nesting in XMLTV
+      maxEntitySize: 100,           // une entite isolee ne fait que quelques caracteres / a single entity is only a few chars
+      maxTotalExpansions: 500000,   // large guide multi-chaines/multi-jours / large multi-channel multi-day guide
+      maxExpandedLength: 5000000    // marge generreuse (5 Mo de texte issu d'entites) / generous headroom (5 MB of entity-derived text)
+    }
   });
   const doc = parser.parse(xml);
   const tv = doc && doc.tv;
@@ -395,29 +436,98 @@ function programNearHour(programmes, channelId, targetDate, toleranceBeforeMin, 
    le programme correspondant a la vue, ou null si rien de pertinent.
    channelsOrder : tableau d'identifiants de chaine (source) dans
    l'ordre d'affichage souhaite. Pure. */
+/* Convertit une difference "borne - cible" en minutes, positive
+   uniquement (une borne du mauvais cote de la cible est ignoree au
+   profit du repli). Permet d'exprimer les tolerances de
+   programNearHour a partir d'heures ABSOLUES (ex. "21:30") plutot que
+   d'un nombre de minutes arbitraire, ce qui reste correct quel que
+   soit l'heure cible choisie par l'utilisateur.
+   Converts a "bound - target" difference to minutes, positive only (a
+   bound on the wrong side of the target is ignored in favor of the
+   fallback). Lets programNearHour's tolerances be expressed from
+   ABSOLUTE times (e.g. "21:30") rather than an arbitrary minute count,
+   which stays correct whatever target hour the user picks. */
+function minutesFromBound(targetHHMM, boundHHMM, fallbackMin) {
+  const t = hhmmToMinutes(targetHHMM);
+  const b = hhmmToMinutes(boundHHMM);
+  if (t == null || b == null) return fallbackMin;
+  const diff = Math.abs(b - t);
+  return diff > 0 ? diff : fallbackMin;
+}
+
 function buildView(programmes, channelsOrder, view, ref, opts) {
   const o = opts || {};
   const eveningStart = o.eveningStart || "21:00";
   const lateStart = o.lateStart || "22:45";
   // Duree minimale (minutes) pour qu'un programme soit considere comme
   // "la vraie emission" plutot qu'une case courte de transition.
-  // 1re partie : la plupart des programmes de prime time durent au
-  // moins 45 min (magazine, film, serie...). 2e partie : souvent plus
-  // courte (debat, documentaire), on met un seuil plus bas.
-  const eveningMinDuration = o.eveningMinDurationMinutes != null ? o.eveningMinDurationMinutes : 45;
+  // 1re partie : releve a 30 min par defaut (v1.7.1) -- la fenetre de
+  // demarrage plafonnee ci-dessous filtre desormais la 2e partie de
+  // soiree independamment de la duree, donc un seuil de duree plus bas
+  // suffit pour ecarter les intercalaires courts sans risquer de
+  // reprendre un programme de 2e partie.
+  // 2e partie : souvent plus courte (debat, documentaire), seuil plus
+  // bas.
+  // Minimum duration (minutes) for a program to count as "the real
+  // show" rather than a short transition slot.
+  // 1st part: raised to 30 min by default (v1.7.1) -- the capped start
+  // window below now filters out second-part-evening programs
+  // independently of duration, so a lower duration threshold is enough
+  // to discard short interstitials without risking picking up a
+  // second-part-evening program.
+  // 2nd part: often shorter (debate, documentary), lower threshold.
+  const eveningMinDuration = o.eveningMinDurationMinutes != null ? o.eveningMinDurationMinutes : 30;
   const lateMinDuration = o.lateMinDurationMinutes != null ? o.lateMinDurationMinutes : 20;
+
+  /* Bornes ABSOLUES de la fenetre de demarrage pour la 1re partie de
+     soiree. La borne haute (21h30 par defaut) est ce qui EMPECHE un
+     programme de 2e partie (souvent diffuse a partir de 22h) d'entrer
+     dans la comparaison, meme s'il est tres long -- c'est la correction
+     du bug signale (v1.7.1) : avant cette version, la tolerance
+     apres-cible etait fixee a 90 min (soit 22h30 pour une cible a 21h),
+     assez large pour laisser un programme de 22h l'emporter sur la
+     "plus longue duree" au sein de la fenetre.
+     La borne basse (20h00 par defaut) reste volontairement large : elle
+     preserve le comportement historique pour les chaines qui demarrent
+     leur programme principal tot (TMC, generalement des 20h20-20h30),
+     deja gere par la regle "le plus long l'emporte". Resserrer cette
+     borne (ex. a 20h45) est possible via le reglage correspondant, mais
+     exclurait alors ces chaines de la selection.
+
+     ABSOLUTE bounds of the start window for prime time. The upper bound
+     (9:30pm by default) is what PREVENTS a second-part-evening program
+     (usually airing from 10pm) from entering the comparison, even if
+     very long -- this is the fix for the reported bug (v1.7.1): before
+     this version, the after-target tolerance was fixed at 90 min (i.e.
+     10:30pm for a 9pm target), wide enough to let a 10pm program win
+     the "longest duration" comparison within the window.
+     The lower bound (8:00pm by default) stays deliberately wide: it
+     preserves the historical behaviour for channels that start their
+     main show early (TMC, typically from 8:20-8:30pm), already handled
+     by the "longest wins" rule. Tightening this bound (e.g. to 8:45pm)
+     is possible through the matching setting, but would then exclude
+     those channels from selection. */
+  const eveningEarliestStart = o.eveningEarliestStart || "20:00";
+  const eveningLatestStart = o.eveningLatestStart || "21:30";
+  const eveningToleranceBefore = minutesFromBound(eveningStart, eveningEarliestStart, 60);
+  const eveningToleranceAfter = minutesFromBound(eveningStart, eveningLatestStart, 30);
+
   const out = [];
   for (const channelId of channelsOrder) {
     let prog = null;
     if (view === "now") {
       prog = programAtInstant(programmes, channelId, ref);
     } else if (view === "evening") {
-      prog = programNearHour(programmes, channelId, targetDateForHour(ref, eveningStart), 60, 90, eveningMinDuration);
+      prog = programNearHour(
+        programmes, channelId, targetDateForHour(ref, eveningStart),
+        eveningToleranceBefore, eveningToleranceAfter, eveningMinDuration
+      );
     } else if (view === "late") {
       prog = programNearHour(programmes, channelId, targetDateForHour(ref, lateStart), 30, 120, lateMinDuration);
     }
     out.push({ channelId, program: prog });
   }
+
   return out;
 }
 
@@ -588,6 +698,8 @@ async function getView(config, deps) {
   const rows = buildView(grid.programmes, channelsOrder, view, ref, {
     eveningStart: config.eveningStart,
     lateStart: config.lateStart,
+    eveningEarliestStart: config.eveningEarliestStart,
+    eveningLatestStart: config.eveningLatestStart,
     eveningMinDurationMinutes: config.eveningMinDurationMinutes,
     lateMinDurationMinutes: config.lateMinDurationMinutes
   });

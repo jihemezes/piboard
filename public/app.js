@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.7.0
+   Version 1.7.3
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1002,8 +1002,10 @@
      manifest author controls the layout. */
   /* Calcule et applique la meilleure disposition en colonnes des sections
      d'un formulaire, une fois celui-ci rendu et visible (les hauteurs
-     reelles ne sont mesurables qu'a ce moment). Actif uniquement en mode
-     tactile ; sinon le formulaire reste en une colonne.
+     reelles ne sont mesurables qu'a ce moment). Actif des lors que le
+     reglage "multiColumnForms" est active (c'est le cas par defaut,
+     independamment du mode tactile -- voir settings.multiColumnForms) ;
+     sinon le formulaire reste en une colonne.
 
      Principe : on essaie 1, 2 puis 3 colonnes (dans la limite de ce que la
      largeur permet). Pour chaque nombre de colonnes, on range les sections
@@ -1017,7 +1019,9 @@
 
      Computes and applies the best column layout for a form's sections,
      once rendered and visible (real heights are only measurable then).
-     Active only in touch mode; otherwise the form stays single-column.
+     Active whenever the "multiColumnForms" setting is on (the default,
+     independently of touch mode -- see settings.multiColumnForms);
+     otherwise the form stays single-column.
      Approach: try 1, 2 then 3 columns (within what width allows). For
      each count, place sections in order, each into the currently shortest
      column (shortest-first, LPT-like); the form height is then the
@@ -1035,7 +1039,7 @@
     // (re)set it after a successful multi-column layout. This avoids
     // keeping a wide width on a simple widget opened afterwards.
     if (modalCardReset) delete modalCardReset.dataset.cols;
-    if (!document.body.classList.contains("touch")) return;
+    if (!settings.multiColumnForms) return;
 
     // Si le formulaire a deja ete dispose en colonnes lors d'une ouverture
     // precedente (cas du modal de reglages, dont le HTML est statique et
@@ -1570,6 +1574,7 @@
     $("setRows").value = settings.gridRows;
     $("setKeyboard").checked = !!settings.keyboardEnabled;
     $("setTouch").checked = !!settings.touchMode;
+    $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
     pendingCity = null;
     $("setCity").value = "";
     $("citySuggest").hidden = true;
@@ -1592,6 +1597,7 @@
       gridRows: Math.max(4, Math.min(16, Number($("setRows").value) || 8)),
       keyboardEnabled: $("setKeyboard").checked,
       touchMode: $("setTouch").checked,
+      multiColumnForms: $("setMultiColumnForms").checked,
       colors: {
         dark: { bg: $("setDarkBg").value, tile: $("setDarkTile").value },
         light: { bg: $("setLightBg").value, tile: $("setLightTile").value }

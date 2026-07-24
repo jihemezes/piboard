@@ -97,6 +97,28 @@
       "group": { "en": "Display", "fr": "Affichage" }
     },
     {
+      "key": "eveningEarliestStart",
+      "type": "time",
+      "default": "20:00",
+      "label": { "en": "Prime time: earliest accepted start", "fr": "1re partie : début au plus tôt accepté" },
+      "hint": {
+        "en": "No program starting before this time can be selected as prime time, however long it runs. Kept early by default (8pm) so channels that start their main show ahead of the target hour (TMC, typically from 8:20-8:30pm) are still detected correctly.",
+        "fr": "Aucun programme démarrant avant cette heure ne peut être retenu comme 1re partie de soirée, même s'il est très long. Volontairement tôt par défaut (20h) pour continuer à détecter correctement les chaînes qui démarrent leur émission principale avant l'heure cible (TMC, généralement dès 20h20-20h30)."
+      },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "eveningLatestStart",
+      "type": "time",
+      "default": "21:30",
+      "label": { "en": "Prime time: latest accepted start", "fr": "1re partie : début au plus tard accepté" },
+      "hint": {
+        "en": "No program starting after this time can be selected as prime time, however long it runs. This is what keeps a late-starting second-part-evening program (often from 10pm) from being wrongly picked just because it happens to be the longest show found near the target hour.",
+        "fr": "Aucun programme démarrant après cette heure ne peut être retenu comme 1re partie de soirée, même s'il est très long. C'est ce qui empêche une émission de 2e partie de soirée démarrant tard (souvent à partir de 22h) d'être choisie par erreur simplement parce qu'elle est la plus longue trouvée près de l'heure cible."
+      },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
       "key": "lateStart",
       "type": "time",
       "default": "22:45",
@@ -106,14 +128,14 @@
     {
       "key": "eveningMinDuration",
       "type": "number",
-      "default": 45,
+      "default": 30,
       "min": 0,
       "max": 180,
       "step": 5,
       "label": { "en": "Prime time: minimum duration (minutes)", "fr": "1re partie : durée minimale (minutes)" },
       "hint": {
-        "en": "Ignores short segments (weather, trailers, an interstitial between two ad breaks) even if closer to the target hour, in favor of the longest show found nearby — some channels (TMC in particular) start their evening program as early as 8:20pm. Set to 0 to disable and just take the closest program regardless of length.",
-        "fr": "Ignore les cases courtes (météo, bandes-annonces, intercalaire entre deux pages de pub) même si elles sont plus proches de l'heure cible, au profit de la plus longue émission trouvée à proximité — certaines chaînes (TMC en particulier) démarrent leur programme du soir dès 20h20. Mettre à 0 pour désactiver et prendre simplement le programme le plus proche, quelle que soit sa durée."
+        "en": "Ignores short segments (weather, trailers, an interstitial between two ad breaks) even if closer to the target hour, in favor of the longest show found within the accepted start window (see the two settings above). Set to 0 to disable and just take the closest program regardless of length.",
+        "fr": "Ignore les cases courtes (météo, bandes-annonces, intercalaire entre deux pages de pub) même si elles sont plus proches de l'heure cible, au profit de la plus longue émission trouvée dans la fenêtre de démarrage acceptée (voir les deux réglages ci-dessus). Mettre à 0 pour désactiver et prendre simplement le programme le plus proche, quelle que soit sa durée."
       },
       "group": { "en": "Display", "fr": "Affichage" }
     },
