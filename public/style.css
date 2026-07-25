@@ -396,8 +396,20 @@ body.editing .ui-resizable-s::after {
   overflow-y: auto;
   padding: 12px;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   gap: 10px;
+}
+
+/* Le catalogue s'est etoffe (plus d'une vingtaine de widgets) : une
+   fenetre plus large donne une vue d'ensemble sur 3-4 colonnes plutot
+   que de faire defiler une liste sur 1-2 colonnes. Reste responsive
+   (auto-fill) : redescend naturellement sur les ecrans etroits.
+   The catalog has grown (over twenty widgets now): a wider window gives
+   an overview across 3-4 columns rather than scrolling a 1-2 column
+   list. Stays responsive (auto-fill): naturally drops down on narrow
+   screens. */
+#catalogModal .modal-card {
+  width: min(1120px, 96vw);
 }
 
 .catalog-item {

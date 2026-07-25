@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.14.1
+
+- **Catalogue de widgets sur 3-4 colonnes.** La fenêtre d'ajout de tuile
+  s'élargit désormais pour donner une vue d'ensemble sur plusieurs
+  colonnes plutôt qu'une liste étroite à faire défiler — le catalogue
+  s'est étoffé (plus d'une vingtaine de widgets). Reste responsive :
+  redescend naturellement sur un écran plus étroit.
+- **Outillage de build Windows : nettoyage automatique avant publication.**
+  `npm run publish` et `npm run dist` effacent maintenant entièrement
+  `dist/` avant de reconstruire, pour éviter qu'un résidu d'un run
+  précédent ne se mélange à un nouveau (cause d'un bug rencontré : deux
+  brouillons de release GitHub pour la même version, chacun avec des
+  fichiers différents et incomplets). N'affecte que l'outillage de
+  build, pas l'application elle-même.
+
+---
+
+- **Widget catalog on 3-4 columns.** The add-tile window now widens to
+  give an overview across several columns rather than a narrow
+  scrolling list — the catalog has grown past twenty widgets. Stays
+  responsive: naturally drops down on a narrower screen.
+- **Windows build tooling: automatic cleanup before publishing.**
+  `npm run publish` and `npm run dist` now fully wipe `dist/` before
+  rebuilding, preventing leftovers from a previous run from mixing into
+  a new one (the cause of a bug encountered: two GitHub release drafts
+  for the same version, each with different, incomplete files). Only
+  affects the build tooling, not the app itself.
+
 ## 1.14.0
 
 - **Correctif *Radar météo*** : le bouton pause n'avait aucun effet sur
