@@ -12,7 +12,21 @@
 
   const SOURCES = {
     adsblol: (lat, lon, radiusNm) => `https://api.adsb.lol/v2/point/${lat}/${lon}/${radiusNm}`,
-    adsbfi: (lat, lon, radiusNm) => `https://opendata.adsb.fi/api/v2/lat/${lat}/lon/${lon}/dist/${radiusNm}`
+    // adsb.fi : l'ancien point d'acces "v2/lat/.../lon/.../dist/..." est
+    // officiellement deprecie et renvoie un format DIFFERENT des autres
+    // points d'acces v2 (sans le tableau "ac") -- source confirmee du
+    // bug "aucun avion affiche, sans erreur" : la reponse etait bien
+    // recue (200 OK), mais son format n'etait pas celui attendu.
+    // "v3/lat/.../lon/.../dist/..." est l'equivalent actuel, au format
+    // standard compatible ADSBExchange v2 (avec "ac").
+    // adsb.fi: the old "v2/lat/.../lon/.../dist/..." endpoint is
+    // officially deprecated and returns a DIFFERENT format from the
+    // other v2 endpoints (no "ac" array) -- confirmed source of the
+    // "no aircraft shown, no error" bug: the response WAS received
+    // (200 OK), but its shape wasn't the one expected. "v3/lat/.../
+    // lon/.../dist/..." is the current equivalent, in the standard
+    // ADSBExchange-v2-compatible format (with "ac").
+    adsbfi: (lat, lon, radiusNm) => `https://opendata.adsb.fi/api/v3/lat/${lat}/lon/${lon}/dist/${radiusNm}`
   };
   const SOURCE_CREDIT = {
     adsblol: '<a href="https://adsb.lol" target="_blank">adsb.lol</a>',
@@ -45,7 +59,15 @@
   }
 
   function toPlane(ac) {
-    if (typeof ac.lat !== "number" || typeof ac.lon !== "number") return null;
+    // Tolere lat/lon en nombre OU en chaine numerique -- certaines
+    // reponses serialisent ces champs differemment selon le point
+    // d'acces ou la version de l'API.
+    // Tolerates lat/lon as a number OR a numeric string -- some
+    // responses serialize these fields differently depending on the
+    // endpoint or API version.
+    const lat = typeof ac.lat === "number" ? ac.lat : Number(ac.lat);
+    const lon = typeof ac.lon === "number" ? ac.lon : Number(ac.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
     const onGround = ac.alt_baro === "ground";
     const alt = onGround ? null : Number(ac.alt_baro);
     const squawk = ac.squawk ? String(ac.squawk) : null;
@@ -53,7 +75,7 @@
     return {
       hex: ac.hex,
       callsign: (ac.flight || ac.r || ac.hex || "?").trim(),
-      lat: ac.lat, lon: ac.lon,
+      lat, lon,
       alt, onGround,
       track: Number.isFinite(Number(ac.track)) ? Number(ac.track) : 0,
       gs: Number.isFinite(Number(ac.gs)) ? Math.round(Number(ac.gs)) : null,
@@ -168,7 +190,22 @@
         if (!r.ok) throw new Error("adsb " + r.status);
         return r.json();
       });
-      return Array.isArray(data.ac) ? data.ac : [];
+      // Signale explicitement un format de reponse inattendu (par ex. si
+      // une source venait a changer son API) plutot que de retomber
+      // silencieusement sur "0 avion" -- c'est exactement ce qui s'est
+      // produit avec l'ancien point d'acces adsb.fi deprecie : la requete
+      // reussissait (200 OK) mais la reponse n'avait pas de tableau "ac",
+      // donnant 0 avion sans la moindre erreur visible.
+      // Explicitly flags an unexpected response shape (e.g. if a source
+      // were to change its API) rather than silently falling back to
+      // "0 aircraft" -- this is exactly what happened with the old,
+      // deprecated adsb.fi endpoint: the request succeeded (200 OK) but
+      // the response had no "ac" array, silently yielding 0 aircraft
+      // with no visible error at all.
+      if (!data || !Array.isArray(data.ac)) {
+        throw new Error("unexpected response shape (no 'ac' array)");
+      }
+      return data.ac;
     }
 
     arm() {

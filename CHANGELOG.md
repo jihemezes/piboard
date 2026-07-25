@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.14.2
+
+- **Radar météo : mode Prévision.** Deux onglets apparaissent désormais
+  directement sur la tuile dès que l'API fournit des images de
+  prévision : **Historique** (les 2 dernières heures observées) ou
+  **Prévision** (uniquement les images à court terme, extrapolées sur
+  ~30 minutes). Chaque onglet boucle sur ses propres images plutôt que
+  de mélanger passé et prévision dans une seule animation.
+- **Correctif *Avions en vue*** : la source **adsb.fi** utilisait un
+  point d'accès désormais officiellement déprécié qui renvoie un format
+  de réponse différent (sans le tableau attendu) — la requête réussissait
+  silencieusement, mais aucun avion n'en ressortait jamais. Corrigé en
+  passant sur l'équivalent actuel. Assoupli par ailleurs le traitement
+  de la latitude/longitude (accepte aussi bien un nombre qu'un texte
+  numérique), et un format de réponse inattendu déclenche désormais un
+  message d'erreur explicite plutôt qu'un silencieux « 0 avion ».
+
+---
+
+- **Weather Radar: Forecast mode.** Two tabs now appear right on the
+  tile whenever the API provides forecast frames: **History** (the last
+  2 observed hours) or **Forecast** (only the short-term frames,
+  extrapolated up to ~30 minutes). Each tab loops over its own frames
+  rather than mixing past and forecast into a single animation.
+- **Fix for *Planes Overhead***: the **adsb.fi** source used an endpoint
+  that is now officially deprecated and returns a different response
+  shape (missing the expected array) — the request silently succeeded,
+  but no aircraft ever came out of it. Fixed by switching to the current
+  equivalent. Also loosened latitude/longitude parsing (accepts a number
+  or a numeric string), and an unexpected response shape now triggers a
+  clear error message instead of a silent "0 aircraft".
+
 ## 1.14.1
 
 - **Catalogue de widgets sur 3-4 colonnes.** La fenêtre d'ajout de tuile

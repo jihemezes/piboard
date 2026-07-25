@@ -42,6 +42,7 @@
     async init() {
       const i18n = this.ctx.i18n;
       const showLegend = this.ctx.settings.showLegend !== false;
+      if (!this.viewMode) this.viewMode = "history"; // "history" | "forecast", reinitialise a chaque rechargement complet
       this.ctx.el.innerHTML = `
         <div class="pw-radar">
           <div class="pwrd-map"></div>
@@ -53,11 +54,17 @@
             </div>
           </div>
           <div class="pwrd-panel">
-            <span class="pwrd-time">${i18n.t("common.loading")}</span>
-            <div class="pwrd-controls">
-              <button type="button" class="pwrd-btn pwrd-prev">‹</button>
-              <button type="button" class="pwrd-btn pwrd-play">▶</button>
-              <button type="button" class="pwrd-btn pwrd-next">›</button>
+            <div class="pwrd-tabs" hidden>
+              <button type="button" class="pwrd-tab pwrd-tab-history" data-mode="history">${i18n.t("radar.tabHistory")}</button>
+              <button type="button" class="pwrd-tab pwrd-tab-forecast" data-mode="forecast">${i18n.t("radar.tabForecast")}</button>
+            </div>
+            <div class="pwrd-row">
+              <span class="pwrd-time">${i18n.t("common.loading")}</span>
+              <div class="pwrd-controls">
+                <button type="button" class="pwrd-btn pwrd-prev">‹</button>
+                <button type="button" class="pwrd-btn pwrd-play">▶</button>
+                <button type="button" class="pwrd-btn pwrd-next">›</button>
+              </div>
             </div>
           </div>
         </div>`;
@@ -65,6 +72,7 @@
       this.timeEl = this.ctx.el.querySelector(".pwrd-time");
       this.playBtn = this.ctx.el.querySelector(".pwrd-play");
       this.legendEl = this.ctx.el.querySelector(".pwrd-legend");
+      this.tabsEl = this.ctx.el.querySelector(".pwrd-tabs");
 
       const on = (sel, fn) => this.ctx.el.querySelector(sel).addEventListener("pointerup", (e) => {
         // pointerup plutot que click : sur ce navigateur kiosque tactile,
@@ -88,6 +96,13 @@
       on(".pwrd-prev", () => { this.stop(); this.showFrame(this.position - 1); });
       on(".pwrd-next", () => { this.stop(); this.showFrame(this.position + 1); });
       on(".pwrd-play", () => this.playStop());
+      this.ctx.el.querySelectorAll(".pwrd-tab").forEach((btn) => {
+        btn.addEventListener("pointerup", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.switchMode(btn.dataset.mode);
+        });
+      });
 
       try {
         this.coords = await this.geocode(this.ctx.settings.city || "Paris");
@@ -169,12 +184,68 @@
         this.clearLayerCache();
         this.frames = past.concat(nowcast);
         this.pastCount = past.length;
-        this.showFrame(past.length ? past.length - 1 : 0); // dernier releve observe / latest observed frame
+
+        // Les onglets Historique/Prevision ne sont utiles -- et donc
+        // affiches -- que s'il y a effectivement des images de prevision
+        // a montrer. The History/Forecast tabs are only useful -- and
+        // thus shown -- when there are actual forecast frames to show.
+        const hasForecast = this.pastCount > 0 && this.pastCount < this.frames.length;
+        if (this.tabsEl) this.tabsEl.hidden = !hasForecast;
+        if (!hasForecast) this.viewMode = "history";
+        this.updateTabHighlight();
+
+        const initial = this.initialPosition();
+        this.showFrame(initial);
         if (this.ctx.settings.autoplay !== false) this.play();
       } catch (e) {
         console.warn("[piboard/radar]", e);
         if (this.timeEl) this.timeEl.textContent = this.ctx.i18n.t("radar.error");
       }
+    }
+
+    // Position d'affichage initiale : "maintenant" (derniere image
+    // observee) pour l'historique -- le plus utile en arrivant sur la
+    // tuile -- ou la premiere image de prevision pour le mode prevision.
+    // Differe des bornes de rangeBounds(), qui ne servent qu'au calcul
+    // de la boucle (wrapPosition), pas au point de depart affiche.
+    // Initial display position: "now" (last observed frame) for
+    // history -- most useful when landing on the tile -- or the first
+    // forecast frame for forecast mode. Differs from rangeBounds()'s
+    // bounds, which only drive the loop's wraparound math, not the
+    // displayed starting point.
+    initialPosition() {
+      if (this.viewMode === "forecast" && this.pastCount < this.frames.length) return this.pastCount;
+      return Math.max(0, this.pastCount - 1);
+    }
+
+    // Bornes (indices dans this.frames) de la vue active. "Historique" =
+    // les images passees, se terminant sur la derniere observee ("maintenant").
+    // "Prevision" = uniquement les images de prevision ("nowcast"),
+    // typiquement 2 a 4 images RainViewer couvrant ~30 minutes.
+    // Bounds (indices into this.frames) of the active view. "History" =
+    // past frames, ending on the last observed one ("now"). "Forecast" =
+    // forecast ("nowcast") frames only, typically 2-4 RainViewer frames
+    // covering ~30 minutes.
+    rangeBounds() {
+      if (this.viewMode === "forecast" && this.pastCount < this.frames.length) {
+        return { start: this.pastCount, end: this.frames.length - 1 };
+      }
+      return { start: 0, end: Math.max(0, this.pastCount - 1) };
+    }
+
+    switchMode(mode) {
+      if (mode === this.viewMode) return;
+      this.viewMode = mode;
+      this.updateTabHighlight();
+      this.stop();
+      this.showFrame(this.initialPosition());
+      if (this.ctx.settings.autoplay !== false) this.play();
+    }
+
+    updateTabHighlight() {
+      this.ctx.el.querySelectorAll(".pwrd-tab").forEach((btn) => {
+        btn.classList.toggle("pwrd-tab-active", btn.dataset.mode === this.viewMode);
+      });
     }
 
     // 512px sur les ecrans haute densite pour un rendu net, 256px sinon.
@@ -195,9 +266,10 @@
     }
 
     wrapPosition(p) {
-      const n = this.frames.length;
-      if (!n) return 0;
-      return ((p % n) + n) % n;
+      const { start, end } = this.rangeBounds();
+      const n = end - start + 1;
+      if (n <= 0) return start;
+      return start + (((p - start) % n) + n) % n;
     }
 
     clearLayerCache() {
@@ -304,6 +376,10 @@
 
     onLangChanged() {
       if (this.frames.length) this.updateTimestamp(this.frames[this.position], this.position);
+      const historyBtn = this.ctx.el.querySelector(".pwrd-tab-history");
+      const forecastBtn = this.ctx.el.querySelector(".pwrd-tab-forecast");
+      if (historyBtn) historyBtn.textContent = this.ctx.i18n.t("radar.tabHistory");
+      if (forecastBtn) forecastBtn.textContent = this.ctx.i18n.t("radar.tabForecast");
     }
 
     destroy() {
