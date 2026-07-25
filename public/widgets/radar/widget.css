@@ -70,49 +70,23 @@
   bottom: 8px;
   z-index: 500;
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  align-items: center;
+  gap: 10px;
   background: var(--rd-panel-bg);
   color: #eef0f3;
   font-family: var(--mono);
   font-size: 12px;
-  padding: 6px 8px 6px 8px;
+  padding: 6px 8px 6px 12px;
   border-radius: 12px;
   border: 1px solid var(--rd-panel-border);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   box-shadow: 0 6px 24px rgba(0,0,0,0.35);
 }
-
-/* Bascule Historique / Prevision : n'apparait que si l'API a
-   effectivement renvoye des images de prevision (voir loadFrames()).
-   History / Forecast toggle: only appears when the API actually
-   returned forecast frames (see loadFrames()). */
-.pwrd-tabs { display: flex; gap: 4px; }
-.pwrd-tab {
-  flex: 1;
-  background: transparent;
-  color: #c3c8d1;
-  border: 1px solid var(--rd-panel-border);
-  border-radius: 7px;
-  padding: 3px 8px;
-  font-size: 10.5px;
-  font-family: var(--font);
-  cursor: pointer;
-  white-space: nowrap;
-}
-.pwrd-tab-active { background: var(--accent); border-color: var(--accent); color: #fff; }
-.pwrd-tab:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.pwrd-row { display: flex; align-items: center; gap: 10px; padding-left: 4px; }
 .pwrd-time {
   min-width: 3.8em;
   letter-spacing: 0.02em;
 }
-.pwrd-time.pwrd-forecast { color: #7cc4ff; }
 .pwrd-controls { display: flex; gap: 4px; }
 .pwrd-btn {
   background: rgba(255,255,255,0.08);

@@ -391,8 +391,9 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const radarManifest = catalog.find((m) => m.id === "radar");
     assert("widget radar present dans le catalogue", !!radarManifest);
     const keys = (radarManifest?.settings || []).map((s) => s.key);
-    assert("reglages radar : ville, zoom, fond de carte, opacite, prevision, lecture auto, vitesse, rafraichissement",
-      ["city", "zoom", "basemap", "opacity", "includeForecast", "autoplay", "animationSpeed", "refresh"].every((k) => keys.includes(k)));
+    assert("reglages radar : ville, zoom, fond de carte, opacite, legende, lecture auto, vitesse, rafraichissement",
+      ["city", "zoom", "basemap", "opacity", "showLegend", "autoplay", "animationSpeed", "refresh"].every((k) => keys.includes(k)));
+    assert("reglage includeForecast bien retire (RainViewer a supprime le nowcast gratuit)", !keys.includes("includeForecast"));
   }
 
   console.log("== Avions en vue : widget present, reglages exposes ==");

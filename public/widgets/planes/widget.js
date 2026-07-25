@@ -75,6 +75,14 @@
     return {
       hex: ac.hex,
       callsign: (ac.flight || ac.r || ac.hex || "?").trim(),
+      // Indicatif de vol brut, distinct de l'affichage ci-dessus : sert a
+      // la recherche du trajet (une immatriculation ou un hex ne
+      // correspond a aucune route dans la base adsbdb, seul un vrai
+      // indicatif de vol le peut).
+      // Raw flight callsign, distinct from the display value above: used
+      // for the route lookup (a registration or a hex won't match any
+      // route in the adsbdb database, only a real flight callsign can).
+      flight: ac.flight ? ac.flight.trim() : null,
       lat, lon,
       alt, onGround,
       track: Number.isFinite(Number(ac.track)) ? Number(ac.track) : 0,
@@ -315,8 +323,77 @@
             }).addTo(this.layerGroup);
           }
         }
-        L.marker([p.lat, p.lon], { icon: this.buildIcon(p) }).addTo(this.layerGroup);
+        const marker = L.marker([p.lat, p.lon], { icon: this.buildIcon(p) });
+        // Le clic sur un marqueur Leaflet (pas un bouton HTML pose
+        // par-dessus la carte) est deja gere correctement au toucher par
+        // Leaflet lui-meme -- pas besoin du correctif pointerup utilise
+        // ailleurs dans ce widget pour les boutons de survol.
+        // Clicking a Leaflet marker (not an HTML button laid over the
+        // map) is already handled correctly on touch by Leaflet itself
+        // -- no need for the pointerup fix used elsewhere in this
+        // widget for the overlay buttons.
+        marker.on("click", () => this.showRoute(p, marker));
+        marker.addTo(this.layerGroup);
       }
+    }
+
+    /* Recherche le trajet (ville de depart/arrivee) d'un avion au clic,
+       via adsbdb.com -- une base communautaire gratuite et sans cle qui
+       associe indicatifs de vol et trajets. L'ADS-B lui-meme ne transmet
+       jamais cette information (uniquement position/altitude/vitesse) :
+       elle doit venir d'une source tierce qui croise l'indicatif avec
+       une base de vols. Ne fonctionne donc que pour les vols commerciaux
+       / regualiers dotes d'un indicatif reconnu -- l'aviation generale,
+       prive ou une partie du militaire n'aura pas de resultat.
+       Looks up an aircraft's route (departure/arrival city) on click, via
+       adsbdb.com -- a free, keyless community database matching flight
+       callsigns to routes. ADS-B itself never transmits this information
+       (only position/altitude/speed): it has to come from a third-party
+       source that cross-references the callsign against a flight
+       database. Only works for commercial/scheduled flights with a
+       recognized callsign -- general aviation, private, or some military
+       flights will have no result. */
+    async showRoute(plane, marker) {
+      const i18n = this.ctx.i18n;
+      const popup = L.popup({ closeButton: true, maxWidth: 230, className: "pwp-popup-wrap" })
+        .setLatLng(marker.getLatLng())
+        .setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("common.loading")}</span>`))
+        .openOn(this.map);
+
+      if (!plane.flight) {
+        popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.noCallsign")}</span>`));
+        return;
+      }
+
+      try {
+        const url = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(plane.flight)}`;
+        const data = await fetch(this.ctx.api.proxyUrl(url)).then((r) => {
+          if (!r.ok) throw new Error("adsbdb " + r.status);
+          return r.json();
+        });
+        const route = data && data.response && data.response.flightroute;
+        if (!route || !route.origin || !route.destination) {
+          popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.noRoute")}</span>`));
+          return;
+        }
+        const originName = route.origin.municipality || route.origin.name;
+        const destName = route.destination.municipality || route.destination.name;
+        const airline = route.airline && route.airline.name ? `<div class="pwp-popup-airline">${route.airline.name}</div>` : "";
+        popup.setContent(this.routePopupHtml(plane, `
+          ${airline}
+          <div class="pwp-popup-route">
+            <span>${originName}</span>
+            <span class="pwp-popup-arrow">→</span>
+            <span>${destName}</span>
+          </div>`));
+      } catch (e) {
+        console.warn("[piboard/planes] route", e);
+        popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.routeError")}</span>`));
+      }
+    }
+
+    routePopupHtml(plane, bodyHtml) {
+      return `<div class="pwp-popup"><b>${plane.callsign}</b>${bodyHtml ? `<div class="pwp-popup-body">${bodyHtml}</div>` : ""}</div>`;
     }
 
     onSettingsChanged(settings) {

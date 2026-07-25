@@ -1,13 +1,13 @@
 {
   "id": "planes",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Planes Overhead",
     "fr": "Avions en vue"
   },
   "description": {
-    "en": "Live aircraft near a city on a real map, via a free, keyless community ADS-B network (adsb.lol or adsb.fi, your choice) — the same open flight-tracking data behind sites like adsb.lol's globe. Rotated plane icons with callsign and altitude, closest aircraft first, with an optional dashed trail showing each aircraft's recent path.",
-    "fr": "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé (adsb.lol ou adsb.fi, au choix) — les mêmes données ouvertes de suivi de vol que celles derrière des sites comme le globe d'adsb.lol. Icônes d'avions orientées avec indicatif et altitude, les plus proches en priorité, avec une traînée pointillée optionnelle montrant le trajet récent de chaque avion."
+    "en": "Live aircraft near a city on a real map, via a free, keyless community ADS-B network (adsb.lol or adsb.fi, your choice) — the same open flight-tracking data behind sites like adsb.lol's globe. Rotated plane icons with callsign and altitude, closest aircraft first, with an optional dashed trail showing each aircraft's recent path. Tap an aircraft to look up its departure and arrival city, when known.",
+    "fr": "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé (adsb.lol ou adsb.fi, au choix) — les mêmes données ouvertes de suivi de vol que celles derrière des sites comme le globe d'adsb.lol. Icônes d'avions orientées avec indicatif et altitude, les plus proches en priorité, avec une traînée pointillée optionnelle montrant le trajet récent de chaque avion. Touchez un avion pour rechercher sa ville de départ et d'arrivée, quand elle est connue."
   },
   "size": {
     "w": 6,

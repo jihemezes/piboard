@@ -1,12 +1,30 @@
 /* PiBoard widget: radar meteo / weather radar
-   Boucle radar de precipitations animee, via l'API gratuite et sans cle
-   Weather Maps de RainViewer, sur un fond de carte Leaflet identique a
-   celui du widget trafic (memes tuiles CARTO). Ville, zoom et fond de
-   carte independants de la tuile Meteo.
-   Animated precipitation radar loop, via RainViewer's free, keyless
-   Weather Maps API, over the same Leaflet base map as the traffic widget
-   (same CARTO tiles). City, zoom and base map independent from the
-   Weather tile. */
+   Boucle radar de precipitations animee (2 dernieres heures), via l'API
+   gratuite et sans cle Weather Maps de RainViewer, sur un fond de carte
+   Leaflet identique a celui des widgets trafic et avions. Ville, zoom et
+   fond de carte independants de la tuile Meteo.
+
+   Note (juillet 2026) : RainViewer a definitivement retire les images de
+   prevision ("nowcast") de son offre gratuite le 1er janvier 2026 (ainsi
+   que l'imagerie satellite et les schemas de couleurs autres que
+   "Universal Blue") -- seules les 2 dernieres heures observees restent
+   disponibles sans cle. Un mode Prevision avait ete ajoute ici avant que
+   ce changement ne soit remarque ; il a ete retire car il ne pouvait
+   plus jamais fonctionner (bouton en permanence desactive).
+   https://www.rainviewer.com/api/transition-faq.html
+
+   Animated precipitation radar loop (last 2 hours), via RainViewer's
+   free, keyless Weather Maps API, over the same Leaflet base map as the
+   traffic and planes widgets. City, zoom and base map independent from
+   the Weather tile.
+
+   Note (July 2026): RainViewer permanently removed forecast ("nowcast")
+   frames from its free tier on January 1, 2026 (along with satellite
+   imagery and color schemes other than "Universal Blue") -- only the
+   last 2 observed hours remain available without a key. A Forecast mode
+   was added here before this change was noticed; it was removed since it
+   could never work anymore (permanently disabled button).
+   https://www.rainviewer.com/api/transition-faq.html */
 (function () {
   "use strict";
 
@@ -29,7 +47,6 @@
       this.coords = null;
       this.host = null;
       this.frames = [];
-      this.pastCount = 0;
       this.layerCache = {};
       this.currentLayer = null;
       this.position = 0;
@@ -42,7 +59,6 @@
     async init() {
       const i18n = this.ctx.i18n;
       const showLegend = this.ctx.settings.showLegend !== false;
-      if (!this.viewMode) this.viewMode = "history"; // "history" | "forecast", reinitialise a chaque rechargement complet
       this.ctx.el.innerHTML = `
         <div class="pw-radar">
           <div class="pwrd-map"></div>
@@ -54,17 +70,11 @@
             </div>
           </div>
           <div class="pwrd-panel">
-            <div class="pwrd-tabs" hidden>
-              <button type="button" class="pwrd-tab pwrd-tab-history" data-mode="history">${i18n.t("radar.tabHistory")}</button>
-              <button type="button" class="pwrd-tab pwrd-tab-forecast" data-mode="forecast">${i18n.t("radar.tabForecast")}</button>
-            </div>
-            <div class="pwrd-row">
-              <span class="pwrd-time">${i18n.t("common.loading")}</span>
-              <div class="pwrd-controls">
-                <button type="button" class="pwrd-btn pwrd-prev">‹</button>
-                <button type="button" class="pwrd-btn pwrd-play">▶</button>
-                <button type="button" class="pwrd-btn pwrd-next">›</button>
-              </div>
+            <span class="pwrd-time">${i18n.t("common.loading")}</span>
+            <div class="pwrd-controls">
+              <button type="button" class="pwrd-btn pwrd-prev">‹</button>
+              <button type="button" class="pwrd-btn pwrd-play">▶</button>
+              <button type="button" class="pwrd-btn pwrd-next">›</button>
             </div>
           </div>
         </div>`;
@@ -72,7 +82,6 @@
       this.timeEl = this.ctx.el.querySelector(".pwrd-time");
       this.playBtn = this.ctx.el.querySelector(".pwrd-play");
       this.legendEl = this.ctx.el.querySelector(".pwrd-legend");
-      this.tabsEl = this.ctx.el.querySelector(".pwrd-tabs");
 
       const on = (sel, fn) => this.ctx.el.querySelector(sel).addEventListener("pointerup", (e) => {
         // pointerup plutot que click : sur ce navigateur kiosque tactile,
@@ -96,14 +105,6 @@
       on(".pwrd-prev", () => { this.stop(); this.showFrame(this.position - 1); });
       on(".pwrd-next", () => { this.stop(); this.showFrame(this.position + 1); });
       on(".pwrd-play", () => this.playStop());
-      this.ctx.el.querySelectorAll(".pwrd-tab").forEach((btn) => {
-        btn.addEventListener("pointerup", (e) => {
-          e.preventDefault();
-          e.stopPropagation();
-          if (btn.disabled) return;
-          this.switchMode(btn.dataset.mode);
-        });
-      });
 
       try {
         this.coords = await this.geocode(this.ctx.settings.city || "Paris");
@@ -129,10 +130,10 @@
       return { lat: r.latitude, lon: r.longitude, name: r.name };
     }
 
-    // Fonds de carte identiques au widget trafic, pour une identite
-    // visuelle coherente entre les deux tuiles cartographiques.
-    // Base maps identical to the traffic widget, for a consistent visual
-    // identity between the two map tiles.
+    // Fonds de carte identiques aux widgets trafic et avions, pour une
+    // identite visuelle coherente entre les tuiles cartographiques.
+    // Base maps identical to the traffic and planes widgets, for a
+    // consistent visual identity between the map tiles.
     basemapUrl() {
       const BASEMAPS = { dark: "dark_all", light: "light_all", voyager: "rastertiles/voyager" };
       let key = this.ctx.settings.basemap || "voyager";
@@ -179,91 +180,22 @@
       try {
         const data = await fetch(API_URL).then((r) => r.json());
         this.host = data.host;
+        // Uniquement les images passees : RainViewer a retire le
+        // "nowcast" (prevision) de son offre gratuite le 1er janvier
+        // 2026, voir la note en tete de fichier.
+        // Past frames only: RainViewer removed "nowcast" (forecast)
+        // frames from its free tier on January 1, 2026, see the note at
+        // the top of this file.
         const past = (data.radar && data.radar.past) || [];
-        const nowcast = this.ctx.settings.includeForecast !== false ? ((data.radar && data.radar.nowcast) || []) : [];
-        if (!past.length && !nowcast.length) throw new Error("no radar frames");
+        if (!past.length) throw new Error("no radar frames");
         this.clearLayerCache();
-        this.frames = past.concat(nowcast);
-        this.pastCount = past.length;
-
-        // Les onglets Historique/Prevision restent visibles des lors que
-        // le reglage "Inclure les images de prevision" est actif -- mais
-        // "Prevision" est desactive (grise) si l'API n'a, a cet instant
-        // precis, fourni aucune image de prevision. RainViewer ne
-        // garantit pas la disponibilite du nowcast (service best-effort) :
-        // mieux vaut le montrer clairement plutot que de faire
-        // disparaitre l'onglet sans explication, ce qui ressemble a un
-        // bouton qui ne fait rien.
-        // The History/Forecast tabs stay visible as long as the
-        // "Include forecast frames" setting is on -- but "Forecast" is
-        // disabled (greyed out) if the API provided no forecast frame
-        // at this exact moment. RainViewer doesn't guarantee nowcast
-        // availability (best-effort service): better to show this
-        // clearly than to make the tab vanish with no explanation,
-        // which looks like a button that does nothing.
-        const hasForecast = this.pastCount > 0 && this.pastCount < this.frames.length;
-        const wantsForecastTabs = this.ctx.settings.includeForecast !== false;
-        if (this.tabsEl) this.tabsEl.hidden = !wantsForecastTabs;
-        const forecastBtn = this.ctx.el.querySelector(".pwrd-tab-forecast");
-        if (forecastBtn) {
-          forecastBtn.disabled = !hasForecast;
-          forecastBtn.title = hasForecast ? "" : this.ctx.i18n.t("radar.noForecastNow");
-        }
-        if (!hasForecast) this.viewMode = "history"; // repli si la prevision n'est plus disponible / fallback if forecast is no longer available
-        this.updateTabHighlight();
-
-        const initial = this.initialPosition();
-        this.showFrame(initial);
+        this.frames = past;
+        this.showFrame(this.frames.length - 1); // dernier releve observe / latest observed frame
         if (this.ctx.settings.autoplay !== false) this.play();
       } catch (e) {
         console.warn("[piboard/radar]", e);
         if (this.timeEl) this.timeEl.textContent = this.ctx.i18n.t("radar.error");
       }
-    }
-
-    // Position d'affichage initiale : "maintenant" (derniere image
-    // observee) pour l'historique -- le plus utile en arrivant sur la
-    // tuile -- ou la premiere image de prevision pour le mode prevision.
-    // Differe des bornes de rangeBounds(), qui ne servent qu'au calcul
-    // de la boucle (wrapPosition), pas au point de depart affiche.
-    // Initial display position: "now" (last observed frame) for
-    // history -- most useful when landing on the tile -- or the first
-    // forecast frame for forecast mode. Differs from rangeBounds()'s
-    // bounds, which only drive the loop's wraparound math, not the
-    // displayed starting point.
-    initialPosition() {
-      if (this.viewMode === "forecast" && this.pastCount < this.frames.length) return this.pastCount;
-      return Math.max(0, this.pastCount - 1);
-    }
-
-    // Bornes (indices dans this.frames) de la vue active. "Historique" =
-    // les images passees, se terminant sur la derniere observee ("maintenant").
-    // "Prevision" = uniquement les images de prevision ("nowcast"),
-    // typiquement 2 a 4 images RainViewer couvrant ~30 minutes.
-    // Bounds (indices into this.frames) of the active view. "History" =
-    // past frames, ending on the last observed one ("now"). "Forecast" =
-    // forecast ("nowcast") frames only, typically 2-4 RainViewer frames
-    // covering ~30 minutes.
-    rangeBounds() {
-      if (this.viewMode === "forecast" && this.pastCount < this.frames.length) {
-        return { start: this.pastCount, end: this.frames.length - 1 };
-      }
-      return { start: 0, end: Math.max(0, this.pastCount - 1) };
-    }
-
-    switchMode(mode) {
-      if (mode === this.viewMode) return;
-      this.viewMode = mode;
-      this.updateTabHighlight();
-      this.stop();
-      this.showFrame(this.initialPosition());
-      if (this.ctx.settings.autoplay !== false) this.play();
-    }
-
-    updateTabHighlight() {
-      this.ctx.el.querySelectorAll(".pwrd-tab").forEach((btn) => {
-        btn.classList.toggle("pwrd-tab-active", btn.dataset.mode === this.viewMode);
-      });
     }
 
     // 512px sur les ecrans haute densite pour un rendu net, 256px sinon.
@@ -284,10 +216,9 @@
     }
 
     wrapPosition(p) {
-      const { start, end } = this.rangeBounds();
-      const n = end - start + 1;
-      if (n <= 0) return start;
-      return start + (((p - start) % n) + n) % n;
+      const n = this.frames.length;
+      if (!n) return 0;
+      return ((p % n) + n) % n;
     }
 
     clearLayerCache() {
@@ -309,7 +240,7 @@
       if (this.loadingFrame || !this.frames.length || !this.map) return;
       position = this.wrapPosition(position);
       const frame = this.frames[position];
-      this.updateTimestamp(frame, position);
+      this.updateTimestamp(frame);
       const oldLayer = this.currentLayer;
       const opacity = this.targetOpacity();
 
@@ -340,13 +271,10 @@
       return Math.max(200, Math.min(2000, Number(this.ctx.settings.animationSpeed) || 500));
     }
 
-    updateTimestamp(frame, position) {
+    updateTimestamp(frame) {
       if (!this.timeEl) return;
       const locale = this.ctx.i18n.t("clock.date.format");
-      const label = new Date(frame.time * 1000).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
-      const isForecast = position >= this.pastCount;
-      this.timeEl.textContent = (isForecast ? "→ " : "") + label;
-      this.timeEl.classList.toggle("pwrd-forecast", isForecast);
+      this.timeEl.textContent = new Date(frame.time * 1000).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
     }
 
     stop() {
@@ -388,16 +316,11 @@
       this.map.setZoom(Number(settings.zoom) || 6);
       if (this.currentLayer) this.currentLayer.setOpacity(this.targetOpacity());
       if (this.legendEl) this.legendEl.hidden = settings.showLegend === false;
-      if (settings.includeForecast !== old.includeForecast) this.loadFrames();
       this.arm();
     }
 
     onLangChanged() {
-      if (this.frames.length) this.updateTimestamp(this.frames[this.position], this.position);
-      const historyBtn = this.ctx.el.querySelector(".pwrd-tab-history");
-      const forecastBtn = this.ctx.el.querySelector(".pwrd-tab-forecast");
-      if (historyBtn) historyBtn.textContent = this.ctx.i18n.t("radar.tabHistory");
-      if (forecastBtn) forecastBtn.textContent = this.ctx.i18n.t("radar.tabForecast");
+      if (this.frames.length) this.updateTimestamp(this.frames[this.position]);
     }
 
     destroy() {

@@ -1,5 +1,67 @@
 # Changelog
 
+## 1.15.0
+
+- **Avions en vue : trajet au clic.** Toucher un avion ouvre désormais
+  une popup indiquant sa ville de départ et d'arrivée, recherchées via
+  adsbdb.com — une base communautaire gratuite et sans clé qui associe
+  indicatifs de vol et trajets (cette information n'est pas transmise
+  par l'ADS-B lui-même, elle vient obligatoirement d'une source tierce
+  qui croise l'indicatif avec une base de vols). Ne fonctionne donc que
+  pour les vols commerciaux/réguliers dotés d'un indicatif reconnu ;
+  l'aviation générale, privée, ou une partie du militaire n'aura pas de
+  résultat, et l'affichera clairement plutôt que de rester silencieux.
+- **Correctif : diagnostic amélioré pour la section « Nouveautés » de
+  l'aide.** Si le journal des versions ne charge pas, le message
+  d'erreur inclut désormais le détail (ex. code HTTP) pour un diagnostic
+  plus rapide. Note : si l'erreur affiche un code 404, cela signifie
+  généralement que le serveur PiBoard doit être redémarré après avoir
+  appliqué une mise à jour — les nouvelles routes serveur ne sont prises
+  en compte qu'au redémarrage, pas au simple remplacement des fichiers.
+
+---
+
+- **Planes Overhead: route on tap.** Tapping an aircraft now opens a
+  popup showing its departure and arrival city, looked up via
+  adsbdb.com — a free, keyless community database matching flight
+  callsigns to routes (this information isn't transmitted by ADS-B
+  itself, it necessarily comes from a third-party source cross-
+  referencing the callsign against a flight database). Only works for
+  commercial/scheduled flights with a recognized callsign; general
+  aviation, private, or some military flights will get no result, shown
+  clearly rather than staying silent.
+- **Fix: improved diagnostics for the Help "What's new" section.** If
+  the changelog fails to load, the error message now includes the
+  detail (e.g. HTTP status code) for faster diagnosis. Note: if the
+  error shows a 404, it usually means the PiBoard server needs to be
+  restarted after applying an update — new server routes only take
+  effect on restart, not on simply replacing the files.
+
+## 1.14.4
+
+- **Radar météo : retrait du mode Prévision.** Ce n'était pas un bug de
+  la tuile : RainViewer a **définitivement supprimé les images de
+  prévision (« nowcast ») de son API gratuite le 1ᵉʳ janvier 2026**, ne
+  conservant que les 2 dernières heures observées. Le mode Prévision
+  ajouté en v1.14.2/v1.14.3 ne pouvait donc plus jamais fonctionner : le
+  bouton restait en permanence désactivé (curseur « interdit », comme
+  signalé). Il a été proprement retiré — la tuile revient à un radar
+  historique simple, fidèle à ce que l'offre gratuite de RainViewer
+  permet réellement aujourd'hui. Une note l'explique désormais dans
+  l'aide intégrée.
+
+---
+
+- **Weather Radar: Forecast mode removed.** This wasn't a bug in the
+  tile: RainViewer **permanently removed forecast ("nowcast") frames
+  from its free API on January 1, 2026**, keeping only the last 2
+  observed hours. The Forecast mode added in v1.14.2/v1.14.3 could
+  therefore never work anymore: the button stayed permanently disabled
+  (a "not-allowed" cursor, as reported). It has been cleanly removed —
+  the tile is back to a simple history radar, matching what RainViewer's
+  free tier actually offers today. A note now explains this in the
+  built-in help.
+
 ## 1.14.3
 
 - **Radar météo** : quand aucune image de prévision n'est disponible sur

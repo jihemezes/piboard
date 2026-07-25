@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.14.3
+   Version 1.15.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2363,7 +2363,16 @@
           if (helpActiveId === "changelog") {
             const err = document.createElement("p");
             err.className = "help-sub";
-            err.textContent = i18n.t("help.changelogError");
+            // Le detail (ex. "status 404") aide a diagnostiquer sans
+            // ouvrir les outils de developpement -- un 404 signifie
+            // typiquement que le serveur n'a pas ete redemarre depuis la
+            // mise a jour qui a ajoute cette route.
+            // The detail (e.g. "status 404") helps diagnose without
+            // opening devtools -- a 404 typically means the server
+            // hasn't been restarted since the update that added this
+            // route.
+            const detail = (e && e.message) ? ` (${e.message})` : "";
+            err.textContent = i18n.t("help.changelogError") + detail;
             content.appendChild(err);
           }
         });

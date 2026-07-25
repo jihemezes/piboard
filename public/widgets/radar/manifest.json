@@ -1,13 +1,13 @@
 {
   "id": "radar",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "name": {
     "en": "Weather Radar",
     "fr": "Radar météo"
   },
   "description": {
-    "en": "Animated precipitation radar loop over a real map, powered by RainViewer's free, keyless Weather Maps API. Two tabs right on the tile: History (last 2 hours) or Forecast (the short-term nowcast only, when available). Independent city, zoom and base map from the Weather tile. Play/pause and step controls, like the official RainViewer app.",
-    "fr": "Boucle radar de précipitations animée sur une vraie carte, via l'API gratuite et sans clé Weather Maps de RainViewer. Deux onglets directement sur la tuile : Historique (2 dernières heures) ou Prévision (uniquement le « nowcast » à court terme, quand disponible). Ville, zoom et fond de carte indépendants de la tuile Météo. Contrôles lecture/pause et image par image, comme l'application officielle RainViewer."
+    "en": "Animated precipitation radar loop (last 2 hours) over a real map, powered by RainViewer's free, keyless Weather Maps API. Independent city, zoom and base map from the Weather tile. Play/pause and step controls, like the official RainViewer app.",
+    "fr": "Boucle radar de précipitations animée (2 dernières heures) sur une vraie carte, via l'API gratuite et sans clé Weather Maps de RainViewer. Ville, zoom et fond de carte indépendants de la tuile Météo. Contrôles lecture/pause et image par image, comme l'application officielle RainViewer."
   },
   "size": {
     "w": 6,
@@ -85,20 +85,6 @@
       "hint": {
         "en": "A small reference bar explaining the radar colors, from light (blue) to extreme (pink) precipitation.",
         "fr": "Une petite barre de référence expliquant les couleurs du radar, du léger (bleu) à l'extrême (rose)."
-      },
-      "group": { "en": "Radar", "fr": "Radar" }
-    },
-    {
-      "key": "includeForecast",
-      "type": "checkbox",
-      "default": true,
-      "label": {
-        "en": "Include short-term forecast frames",
-        "fr": "Inclure les images de prévision à court terme"
-      },
-      "hint": {
-        "en": "Fetches RainViewer's nowcast frames (extrapolated, up to ~30 minutes ahead), which then become browsable in a dedicated Forecast tab right on the tile, marked with an arrow.",
-        "fr": "Récupère les images de prévision (« nowcast ») de RainViewer, extrapolées jusqu'à ~30 minutes, consultables ensuite dans un onglet Prévision dédié directement sur la tuile, marquées d'une flèche."
       },
       "group": { "en": "Radar", "fr": "Radar" }
     },
