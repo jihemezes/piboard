@@ -12,6 +12,16 @@
 
   const API_URL = "https://api.rainviewer.com/public/weather-maps.json";
 
+  // Repere pour la legende, d'apres l'echelle officielle "Universal Blue"
+  // de RainViewer (seul schema disponible sur l'API gratuite -- c'est
+  // celui utilise par l'URL des tuiles ci-dessous, suffixe "/2/1_1.png").
+  // Simplifiee a 5 couleurs representatives pour un coup d'oeil rapide.
+  // Reference for the legend, from RainViewer's official "Universal
+  // Blue" scale (the only scheme available on the free API -- it's the
+  // one used by the tile URL below, "/2/1_1.png" suffix). Simplified to
+  // 5 representative colors for a quick glance.
+  const LEGEND_COLORS = ["#7fbfff", "#005588", "#ffee00", "#ff4400", "#ffaaff"];
+
   class RadarWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -30,11 +40,20 @@
     }
 
     async init() {
+      const i18n = this.ctx.i18n;
+      const showLegend = this.ctx.settings.showLegend !== false;
       this.ctx.el.innerHTML = `
         <div class="pw-radar">
           <div class="pwrd-map"></div>
+          <div class="pwrd-legend" ${showLegend ? "" : "hidden"}>
+            <div class="pwrd-legend-bar" style="background:linear-gradient(to right, ${LEGEND_COLORS.join(",")})"></div>
+            <div class="pwrd-legend-labels">
+              <span>${i18n.t("radar.legend.light")}</span>
+              <span>${i18n.t("radar.legend.extreme")}</span>
+            </div>
+          </div>
           <div class="pwrd-panel">
-            <span class="pwrd-time">${this.ctx.i18n.t("common.loading")}</span>
+            <span class="pwrd-time">${i18n.t("common.loading")}</span>
             <div class="pwrd-controls">
               <button type="button" class="pwrd-btn pwrd-prev">‹</button>
               <button type="button" class="pwrd-btn pwrd-play">▶</button>
@@ -45,8 +64,24 @@
       this.mapEl = this.ctx.el.querySelector(".pwrd-map");
       this.timeEl = this.ctx.el.querySelector(".pwrd-time");
       this.playBtn = this.ctx.el.querySelector(".pwrd-play");
+      this.legendEl = this.ctx.el.querySelector(".pwrd-legend");
 
-      const on = (sel, fn) => this.ctx.el.querySelector(sel).addEventListener("click", (e) => {
+      const on = (sel, fn) => this.ctx.el.querySelector(sel).addEventListener("pointerup", (e) => {
+        // pointerup plutot que click : sur ce navigateur kiosque tactile,
+        // le gestionnaire tactile de la carte Leaflet (qui couvre toute
+        // la tuile) "consomme" la sequence touchstart/touchend avant
+        // qu'un evenement "click" ne soit synthetise -- le bouton
+        // semblait alors ne rien faire (a la souris, ca marchait,
+        // d'ou le bug passe inapercu en test). Meme correctif que le
+        // widget Trafic.
+        // pointerup rather than click: on this touchscreen kiosk
+        // browser, the Leaflet map's touch handler (which covers the
+        // whole tile) "consumes" the touchstart/touchend sequence
+        // before a "click" event gets synthesized -- the button then
+        // appeared to do nothing (it worked with a mouse, which is why
+        // the bug went unnoticed in testing). Same fix as the Traffic
+        // widget.
+        e.preventDefault();
         e.stopPropagation(); // sinon rouvre les reglages en mode edition / else reopens settings in edit mode
         fn();
       });
@@ -262,6 +297,7 @@
       }
       this.map.setZoom(Number(settings.zoom) || 6);
       if (this.currentLayer) this.currentLayer.setOpacity(this.targetOpacity());
+      if (this.legendEl) this.legendEl.hidden = settings.showLegend === false;
       if (settings.includeForecast !== old.includeForecast) this.loadFrames();
       this.arm();
     }

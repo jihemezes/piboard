@@ -154,8 +154,8 @@
       group: "tiles",
       title: { fr: "Horloge", en: "Clock" },
       sub: {
-        fr: "Horloge digitale ou analogique avec la date du jour, et un fond jour/nuit optionnel qui suit le thème solaire du tableau.",
-        en: "Digital or analog clock with today's date, and an optional day/night background that follows the board's sun-based theme."
+        fr: "Horloge digitale ou analogique avec la date du jour, le saint du jour en option, et un fond jour/nuit optionnel qui suit le thème solaire du tableau.",
+        en: "Digital or analog clock with today's date, an optional French name day, and an optional day/night background that follows the board's sun-based theme."
       },
       html: {
         fr: `
@@ -163,11 +163,14 @@
           <h4>Objectif</h4>
           <p>Afficher l'heure et la date de façon lisible de loin, avec deux styles au choix selon vos goûts ou l'ambiance de la pièce.</p>
           <h4>Possibilités</h4>
-          <p>En mode digital, l'heure occupe l'espace disponible et se recalcule automatiquement à chaque redimensionnement de la tuile. Sur une tuile large et basse, placez la date à côté de l'heure plutôt qu'en dessous pour mieux exploiter la largeur. Le fond jour/nuit optionnel donne un repère visuel supplémentaire (par exemple un dégradé sombre la nuit), en suivant automatiquement le même thème solaire que le reste du tableau.</p>
+          <p>En mode digital, l'heure occupe l'espace disponible et se recalcule automatiquement à chaque redimensionnement de la tuile. Sur une tuile large et basse, placez la date à côté de l'heure plutôt qu'en dessous pour mieux exploiter la largeur. Le format de la date va du complet (jour de semaine inclus) au court (JJ/MM/AAAA), utile pour libérer de la place sur une petite tuile. Le saint du jour, une tradition française, s'ajoute en option à côté de la date (uniquement quand la langue de l'interface est le français) — sa disposition (en dessous ou côte à côte) bascule automatiquement sur « côte à côte » si la tuile est trop basse pour une 2e ligne, afin de ne jamais faire déborder la tuile. Le fond jour/nuit optionnel donne un repère visuel supplémentaire (par exemple un dégradé sombre la nuit), en suivant automatiquement le même thème solaire que le reste du tableau.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Affichage</span><span class="help-opt-desc">Digitale (chiffres) ou analogique (aiguilles).</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher les secondes</span><span class="help-opt-desc">Ajoute le décompte des secondes.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher la date</span><span class="help-opt-desc">Ajoute la date du jour sous ou à côté de l'heure.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Format de la date</span><span class="help-opt-desc">Complet, long (sans le jour de semaine), moyen (abrégé), ou court (JJ/MM/AAAA).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher le saint du jour</span><span class="help-opt-desc">Tradition française, visible seulement en français.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Disposition du saint du jour</span><span class="help-opt-desc">En dessous de la date, ou côte à côte — bascule automatiquement sur « côte à côte » si la tuile est trop basse.</span></div>
           <div class="help-opt"><span class="help-opt-name">Disposition heure et date</span><span class="help-opt-desc">Uniquement en mode digital avec la date affichée : sous l'heure, ou côte à côte (mieux adapté aux tuiles larges et basses).</span></div>
           <div class="help-opt"><span class="help-opt-name">Fond jour/nuit</span><span class="help-opt-desc">Bascule automatiquement avec le thème du tableau. Tant qu'il est activé, il prend le pas sur la couleur personnalisée définie dans la section Apparence de la tuile.</span></div>
           <div class="help-opt"><span class="help-opt-name">Couleur de jour / de nuit</span><span class="help-opt-desc">Les deux couleurs du fond jour/nuit, si celui-ci est activé.</span></div>`,
@@ -176,14 +179,61 @@
           <h4>Goal</h4>
           <p>Show the time and date legibly from a distance, with two styles to choose from depending on your taste or the room's mood.</p>
           <h4>Possibilities</h4>
-          <p>In digital mode, the time fills the available space and automatically recalculates on every tile resize. On a wide, short tile, place the date next to the time rather than below it to make better use of the width. The optional day/night background gives an extra visual cue (e.g. a dark gradient at night), automatically following the same solar theme as the rest of the board.</p>
+          <p>In digital mode, the time fills the available space and automatically recalculates on every tile resize. On a wide, short tile, place the date next to the time rather than below it to make better use of the width. The date format ranges from full (weekday included) to short (MM/DD/YYYY), handy for freeing up room on a small tile. The name day, a French tradition, can be added next to the date (only when the interface language is French) — its arrangement (below or side by side) automatically switches to "side by side" when the tile is too short for a 2nd line, so it never overflows the tile. The optional day/night background gives an extra visual cue (e.g. a dark gradient at night), automatically following the same solar theme as the rest of the board.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Display</span><span class="help-opt-desc">Digital (numbers) or analog (hands).</span></div>
           <div class="help-opt"><span class="help-opt-name">Show seconds</span><span class="help-opt-desc">Adds the seconds count.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show date</span><span class="help-opt-desc">Adds today's date below or next to the time.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Date format</span><span class="help-opt-desc">Full, long (no weekday), medium (abbreviated), or short (MM/DD/YYYY).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show name day</span><span class="help-opt-desc">French tradition, only shown in French.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Name day arrangement</span><span class="help-opt-desc">Below the date, or side by side — automatically switches to "side by side" when the tile is too short.</span></div>
           <div class="help-opt"><span class="help-opt-name">Time and date arrangement</span><span class="help-opt-desc">Digital mode with date shown only: below the time, or side by side (better suited to wide, short tiles).</span></div>
           <div class="help-opt"><span class="help-opt-name">Day/night background</span><span class="help-opt-desc">Automatically switches with the board's theme. While enabled, it takes precedence over the custom color set in the tile's Appearance section.</span></div>
           <div class="help-opt"><span class="help-opt-name">Day / night color</span><span class="help-opt-desc">The two colors of the day/night background, if enabled.</span></div>`
+      }
+    },
+
+    {
+      id: "calendar",
+      group: "tiles",
+      title: { fr: "Agenda", en: "Calendar" },
+      sub: {
+        fr: "Fusionne plusieurs calendriers iCal (.ics) en une seule tuile, chacun dans sa propre couleur — Google Agenda, iCloud/iPhone, Nextcloud, Outlook, ou tout calendrier avec un lien ICS public.",
+        en: "Merges several iCal (.ics) calendars into a single tile, each in its own color — Google Calendar, iCloud/iPhone, Nextcloud, Outlook, or any calendar with a public ICS link."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 4×4 par défaut, de 2×2 à 8×8</span>
+          <h4>Objectif</h4>
+          <p>Voir d'un coup d'œil les prochains événements de toute la famille, sans ouvrir une application de calendrier.</p>
+          <h4>Possibilités</h4>
+          <p>Chaque ligne du champ « Calendriers » est une source ICS distincte, fusionnée avec les autres et distinguée par une couleur attribuée automatiquement dans l'ordre des lignes ; une légende apparaît en bas de la tuile dès que plusieurs calendriers sont configurés. Deux vues restent accessibles en un geste directement sur la tuile (onglets), sans passer par les réglages : la liste des prochains événements groupés par jour, ou une grille de la semaine façon calendrier mural avec la colonne du jour mise en évidence. Les événements récurrents sont gérés (quotidien, hebdomadaire, mensuel — y compris « 2e lundi du mois » —, annuel), de même que les occurrences uniques déplacées ou annulées.</p>
+          <h4>Ajouter un calendrier iPhone / iCloud</h4>
+          <p>Dans l'app Calendrier : appuyez sur un calendrier → <b>Partager le calendrier</b> → <b>Calendrier public</b> → <b>Copier le lien</b>. Le lien commence par <code>webcal://</code> : PiBoard le convertit automatiquement, collez-le tel quel.</p>
+          <p>Pour <b>Google Agenda</b> : réglages du calendrier → « Intégrer l'agenda » → « Adresse secrète au format iCal ». Pour <b>Nextcloud</b> ou <b>Outlook</b> : utilisez leur lien de partage public/ICS du calendrier.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Calendriers</span><span class="help-opt-desc">Un lien ICS par ligne, avec un libellé optionnel après un <code>|</code> (ex. <code>https://exemple.com/famille.ics|Famille</code>).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Vue par défaut</span><span class="help-opt-desc">Liste ou grille semaine — les deux restent accessibles en un geste sur la tuile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Vue liste : jours à venir</span><span class="help-opt-desc">Fenêtre de la vue liste, en jours.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher les événements toute la journée</span><span class="help-opt-desc">Anniversaires, jours fériés, etc.</span></div>
+          <div class="help-opt"><span class="help-opt-name">La semaine commence le lundi</span><span class="help-opt-desc">Sinon, dimanche.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux relectures des calendriers.</span></div>`,
+        en: `
+          <span class="help-size">Size: 4×4 by default, from 2×2 to 8×8</span>
+          <h4>Goal</h4>
+          <p>See the whole family's upcoming events at a glance, without opening a calendar app.</p>
+          <h4>Possibilities</h4>
+          <p>Each line in the "Calendars" field is a separate ICS source, merged with the others and told apart by a color assigned automatically in line order; a legend appears at the bottom of the tile once more than one calendar is configured. Two views stay one tap away right on the tile (tabs), no need to open settings: an upcoming-events list grouped by day, or a week grid in a wall-calendar style with today's column highlighted. Recurring events are handled (daily, weekly, monthly — including "2nd Monday of the month" —, yearly), as well as single moved or cancelled occurrences.</p>
+          <h4>Adding an iPhone / iCloud calendar</h4>
+          <p>In the Calendar app: tap a calendar → <b>Share Calendar</b> → <b>Public Calendar</b> → <b>Copy Link</b>. The link starts with <code>webcal://</code>: PiBoard converts it automatically, paste it as is.</p>
+          <p>For <b>Google Calendar</b>: calendar settings → "Integrate calendar" → "Secret address in iCal format". For <b>Nextcloud</b> or <b>Outlook</b>: use their calendar's public/ICS sharing link.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Calendars</span><span class="help-opt-desc">One ICS link per line, with an optional label after a <code>|</code> (e.g. <code>https://example.com/family.ics|Family</code>).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Default view</span><span class="help-opt-desc">List or week grid — both stay one tap away on the tile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">List view: days ahead</span><span class="help-opt-desc">The list view's window, in days.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show all-day events</span><span class="help-opt-desc">Birthdays, public holidays, etc.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Week starts on Monday</span><span class="help-opt-desc">Otherwise, Sunday.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two calendar reads.</span></div>`
       }
     },
 
@@ -374,8 +424,8 @@
       group: "tiles",
       title: { fr: "Flux RSS", en: "RSS feed" },
       sub: {
-        fr: "Derniers titres d'un flux RSS ou Atom, avec rotation automatique.",
-        en: "Latest headlines from an RSS or Atom feed, with automatic rotation."
+        fr: "Derniers titres d'un flux RSS ou Atom, avec rotation automatique. Les articles pourvus d'un lien s'ouvrent dans une popup de lecture.",
+        en: "Latest headlines from an RSS or Atom feed, with automatic rotation. Articles with a link open in a reading popup."
       },
       html: {
         fr: `
@@ -383,7 +433,7 @@
           <h4>Objectif</h4>
           <p>Suivre l'actualité d'un site (presse généraliste, blog, journal local…) directement sur le tableau, sans jamais avoir à ouvrir un navigateur.</p>
           <h4>Possibilités</h4>
-          <p>Fonctionne avec n'importe quel flux RSS ou Atom classique — la plupart des sites d'actualité en proposent un, parfois affiché comme un lien orange discret en bas de page. Si le nombre d'articles configuré dépasse la place disponible sur la tuile, la liste devient défilante (au doigt ou à la souris) plutôt que de couper les derniers titres. Le mode rotation affiche un article à la fois en plein cadre, en alternance automatique — plus lisible de loin pour un flux qu'on veut simplement voir défiler passivement.</p>
+          <p>Fonctionne avec n'importe quel flux RSS ou Atom classique — la plupart des sites d'actualité en proposent un, parfois affiché comme un lien orange discret en bas de page. Si le nombre d'articles configuré dépasse la place disponible sur la tuile, la liste devient défilante (au doigt ou à la souris) plutôt que de couper les derniers titres. Le mode rotation affiche un article à la fois en plein cadre, en alternance automatique — plus lisible de loin pour un flux qu'on veut simplement voir défiler passivement. Un article pourvu d'un lien dans le flux (repéré automatiquement) est cliquable : le toucher ouvre une popup affichant le contenu fourni par le flux lui-même (titre, source, date, texte de l'article), sans quitter le tableau ni ouvrir de navigateur. Les articles sans lien restent de simples lignes de texte.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">URL du flux</span><span class="help-opt-desc">L'adresse du fichier RSS/Atom (souvent en <code>.xml</code>).</span></div>
           <div class="help-opt"><span class="help-opt-name">Nombre max d'articles</span><span class="help-opt-desc">Combien de titres afficher au maximum.</span></div>
@@ -395,7 +445,7 @@
           <h4>Goal</h4>
           <p>Follow a site's news (general press, blog, local paper…) directly on the board, without ever needing to open a browser.</p>
           <h4>Possibilities</h4>
-          <p>Works with any standard RSS or Atom feed — most news sites offer one, sometimes shown as a discreet orange link at the bottom of the page. If the configured number of articles exceeds the tile's available space, the list becomes scrollable (finger or mouse) instead of cutting off the latest headlines. Rotation mode shows one article at a time full-frame, alternating automatically — more readable from a distance for a feed you just want to watch passively scroll by.</p>
+          <p>Works with any standard RSS or Atom feed — most news sites offer one, sometimes shown as a discreet orange link at the bottom of the page. If the configured number of articles exceeds the tile's available space, the list becomes scrollable (finger or mouse) instead of cutting off the latest headlines. Rotation mode shows one article at a time full-frame, alternating automatically — more readable from a distance for a feed you just want to watch passively scroll by. An article with a link in the feed (detected automatically) is clickable: tapping it opens a popup showing the content the feed itself provides (title, source, date, article text), without leaving the board or opening a browser. Articles without a link stay plain text lines.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Feed URL</span><span class="help-opt-desc">The RSS/Atom file's address (often ending in <code>.xml</code>).</span></div>
           <div class="help-opt"><span class="help-opt-name">Max items</span><span class="help-opt-desc">How many headlines to show at most.</span></div>
@@ -648,12 +698,54 @@
     },
 
     {
+      id: "planes",
+      group: "tiles",
+      title: { fr: "Avions en vue", en: "Planes Overhead" },
+      sub: {
+        fr: "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé — adsb.lol ou adsb.fi, au choix.",
+        en: "Live aircraft near a city on a real map, via a free, keyless community ADS-B network — adsb.lol or adsb.fi, your choice."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 6×6 par défaut, de 3×3 à 12×16</span>
+          <h4>Objectif</h4>
+          <p>Identifier l'avion qui passe au-dessus de chez vous, avec les mêmes données ouvertes de suivi de vol que des sites comme le globe d'adsb.lol.</p>
+          <h4>Possibilités</h4>
+          <p>La carte se centre sur la ville choisie, indépendamment des tuiles Météo et Radar météo, avec le même choix de fond de carte que la tuile Trafic. Chaque avion est une icône orientée selon son cap réel, avec une étiquette indicatif + altitude (format aviation : niveau de vol FLxxx au-dessus de 10 000 ft, pieds en dessous, « Sol » pour un appareil au sol). Les avions en squawk d'urgence (7500/7600/7700) sont mis en évidence en rouge. Le nombre d'avions est plafonné et trié par proximité (les plus proches d'abord), pour rester lisible même en zone à fort trafic. Deux réseaux communautaires équivalents sont proposés (adsb.lol et adsb.fi, même format de données) : si l'un a un trou de couverture ou une panne près de chez vous, essayez l'autre.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Centre de la carte.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Réseau ADS-B</span><span class="help-opt-desc">adsb.lol ou adsb.fi.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rayon de recherche</span><span class="help-opt-desc">En milles nautiques, autour de la ville choisie.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Zoom initial</span><span class="help-opt-desc">Ajustable ensuite librement à l'écran.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fond de carte</span><span class="help-opt-desc">Voyager, sombre, clair, ou automatique selon le thème du tableau.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher indicatif et altitude</span><span class="help-opt-desc">Étiquette sous chaque avion.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Nombre max d'avions</span><span class="help-opt-desc">Les plus proches du centre sont affichés en priorité.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en secondes entre deux mises à jour des positions.</span></div>`,
+        en: `
+          <span class="help-size">Size: 6×6 by default, from 3×3 to 12×16</span>
+          <h4>Goal</h4>
+          <p>Identify the plane flying over your house, with the same open flight-tracking data as sites like adsb.lol's globe.</p>
+          <h4>Possibilities</h4>
+          <p>The map centers on the chosen city, independent from the Weather and Weather Radar tiles, with the same choice of base map as the Traffic tile. Each aircraft is an icon oriented by its actual heading, with a callsign + altitude label (aviation-style: flight level FLxxx above 10,000 ft, feet below that, "Ground" for an aircraft on the ground). Aircraft squawking an emergency code (7500/7600/7700) are highlighted in red. Aircraft count is capped and sorted by proximity (closest first), to stay legible even in high-traffic areas. Two equivalent community networks are offered (adsb.lol and adsb.fi, same data format): if one has a coverage gap or an outage near you, try the other.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Map center.</span></div>
+          <div class="help-opt"><span class="help-opt-name">ADS-B network</span><span class="help-opt-desc">adsb.lol or adsb.fi.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Search radius</span><span class="help-opt-desc">In nautical miles, around the chosen city.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Initial zoom</span><span class="help-opt-desc">Freely adjustable afterwards on screen.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Base map</span><span class="help-opt-desc">Voyager, dark, light, or automatic following the board's theme.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show callsign and altitude labels</span><span class="help-opt-desc">Label under each aircraft.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Max aircraft shown</span><span class="help-opt-desc">Those closest to the center are shown first.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in seconds between two position updates.</span></div>`
+      }
+    },
+
+    {
       id: "weather",
       group: "tiles",
       title: { fr: "Météo", en: "Weather" },
       sub: {
-        fr: "Météo actuelle avec un choix de modèles météo nationaux, une vraie photo de fond selon les conditions, et la prévision du lendemain disposée automatiquement selon la forme de la tuile.",
-        en: "Current weather with a choice of national weather models, a real photo background matching conditions, and tomorrow's forecast laid out automatically to fit the tile's shape."
+        fr: "Météo actuelle avec un choix de modèles météo nationaux, une vraie photo de fond selon les conditions, le saint du jour en option, et la prévision du lendemain disposée automatiquement selon la forme de la tuile.",
+        en: "Current weather with a choice of national weather models, a real photo background matching conditions, an optional French name day, and tomorrow's forecast laid out automatically to fit the tile's shape."
       },
       html: {
         fr: `
@@ -661,13 +753,14 @@
           <h4>Objectif</h4>
           <p>La météo actuelle et celle du lendemain d'un simple coup d'œil, avec une vraie photo illustrant les conditions plutôt qu'une simple icône.</p>
           <h4>Possibilités</h4>
-          <p>Toutes les sources (sauf « Personnalisé ») passent par l'API gratuite et sans clé d'Open-Meteo, qui agrège plusieurs modèles météorologiques nationaux. Par défaut, « Meilleure correspondance » choisit automatiquement le meilleur modèle pour votre lieu — un bon choix pour la plupart des usages. Si les prévisions vous semblent régulièrement décalées, un modèle national précis (Météo-France pour la France, DWD pour l'Allemagne, etc.) fait parfois mieux localement que le choix automatique. La disposition de la prévision du lendemain s'adapte automatiquement à la forme de la tuile : côte à côte sur une tuile large, empilée sur une tuile haute, ou masquée sur une tuile presque carrée pour laisser plus de place à la météo du jour. L'option « Personnalisé » permet de brancher votre propre source (une instance Open-Meteo auto-hébergée, ou un petit proxy que vous écrivez pour reformater les données d'un autre fournisseur météo).</p>
+          <p>Toutes les sources (sauf « Personnalisé ») passent par l'API gratuite et sans clé d'Open-Meteo, qui agrège plusieurs modèles météorologiques nationaux. Par défaut, « Meilleure correspondance » choisit automatiquement le meilleur modèle pour votre lieu — un bon choix pour la plupart des usages. Si les prévisions vous semblent régulièrement décalées, un modèle national précis (Météo-France pour la France, DWD pour l'Allemagne, etc.) fait parfois mieux localement que le choix automatique. La disposition de la prévision du lendemain s'adapte automatiquement à la forme de la tuile : côte à côte sur une tuile large, empilée sur une tuile haute, ou masquée sur une tuile presque carrée pour laisser plus de place à la météo du jour. Le saint du jour, une tradition française, peut s'ajouter sous la météo du jour et, si la prévision du lendemain est affichée, sous celle-ci également. L'option « Personnalisé » permet de brancher votre propre source (une instance Open-Meteo auto-hébergée, ou un petit proxy que vous écrivez pour reformater les données d'un autre fournisseur météo).</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Lieu pour lequel afficher la météo.</span></div>
           <div class="help-opt"><span class="help-opt-name">Modèle météo / source</span><span class="help-opt-desc">Meilleure correspondance (automatique), ou un modèle national précis (Météo-France, ECMWF, DWD, MET Norway, NOAA), ou personnalisé.</span></div>
           <div class="help-opt"><span class="help-opt-name">URL de prévision personnalisée</span><span class="help-opt-desc">Utilisée seulement par « Personnalisé ». Utilisez <code>{lat}</code> et <code>{lon}</code> comme espaces réservés ; la réponse doit respecter le format JSON exact d'Open-Meteo.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher la prévision du lendemain</span><span class="help-opt-desc">La disposition s'adapte automatiquement à la forme de la tuile.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher le vent</span><span class="help-opt-desc">Ajoute la vitesse du vent.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher le saint du jour</span><span class="help-opt-desc">Tradition française, visible seulement en français. Inclut le saint du lendemain si sa prévision est affichée.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour.</span></div>
           <div class="help-opt"><span class="help-opt-name">Utiliser une photo de fond</span><span class="help-opt-desc">Une vraie photo correspondant aux conditions actuelles (repli sur un fond de couleur si aucune photo n'est disponible).</span></div>`,
         en: `
@@ -675,15 +768,94 @@
           <h4>Goal</h4>
           <p>Today's and tomorrow's weather at a glance, with a real photo illustrating conditions rather than a plain icon.</p>
           <h4>Possibilities</h4>
-          <p>Every source (except "Custom") goes through Open-Meteo's free, keyless API, which aggregates several national weather models. By default, "Best match" automatically picks the best model for your location — a good choice for most uses. If forecasts consistently seem off, a precise national model (Météo-France for France, DWD for Germany, etc.) sometimes does better locally than the automatic choice. Tomorrow's forecast layout automatically adapts to the tile's shape: side by side on a wide tile, stacked on a tall one, or hidden on a near-square tile to leave more room for today's weather. The "Custom" option lets you plug in your own source (a self-hosted Open-Meteo instance, or a small proxy you write to reformat data from another weather provider).</p>
+          <p>Every source (except "Custom") goes through Open-Meteo's free, keyless API, which aggregates several national weather models. By default, "Best match" automatically picks the best model for your location — a good choice for most uses. If forecasts consistently seem off, a precise national model (Météo-France for France, DWD for Germany, etc.) sometimes does better locally than the automatic choice. Tomorrow's forecast layout automatically adapts to the tile's shape: side by side on a wide tile, stacked on a tall one, or hidden on a near-square tile to leave more room for today's weather. The name day, a French tradition, can be added below today's weather and, if tomorrow's forecast is shown, below that one too. The "Custom" option lets you plug in your own source (a self-hosted Open-Meteo instance, or a small proxy you write to reformat data from another weather provider).</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Location to show weather for.</span></div>
           <div class="help-opt"><span class="help-opt-name">Weather model / source</span><span class="help-opt-desc">Best match (automatic), or a precise national model (Météo-France, ECMWF, DWD, MET Norway, NOAA), or custom.</span></div>
           <div class="help-opt"><span class="help-opt-name">Custom forecast URL</span><span class="help-opt-desc">Used only by "Custom". Use <code>{lat}</code> and <code>{lon}</code> as placeholders; the response must match Open-Meteo's exact JSON format.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show tomorrow's forecast</span><span class="help-opt-desc">The layout automatically adapts to the tile's shape.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show wind</span><span class="help-opt-desc">Adds wind speed.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show name day</span><span class="help-opt-desc">French tradition, only shown in French. Includes tomorrow's name day if its forecast is shown.</span></div>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two updates.</span></div>
           <div class="help-opt"><span class="help-opt-name">Use a photo background</span><span class="help-opt-desc">A real photo matching current conditions (falls back to a color background if no photo is available).</span></div>`
+      }
+    },
+
+    {
+      id: "airquality",
+      group: "tiles",
+      title: { fr: "Qualité de l'air", en: "Air Quality" },
+      sub: {
+        fr: "Indice de qualité de l'air européen et niveaux de pollens, via l'API gratuite et sans clé Open-Meteo, basée sur les prévisions CAMS Europe.",
+        en: "European Air Quality Index and pollen levels, via Open-Meteo's free, keyless API, based on the CAMS Europe forecast."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 3×2 par défaut, de 2×2 à 6×5</span>
+          <h4>Objectif</h4>
+          <p>Un coup d'œil rapide sur la pollution de l'air et les pollens, utile pour ajuster une sortie ou l'aération du logement — sans se substituer à un avis médical.</p>
+          <h4>Possibilités</h4>
+          <p>L'indice de qualité de l'air européen (EAQI) résume cinq polluants (PM2.5, PM10, NO₂, O₃, SO₂) en un seul niveau, du « Bon » à l'« Extrêmement mauvais ». Deux affichages : compact (l'indice global, le polluant qui tire l'indice vers le haut, et le pollen dominant en saison) ou détaillé (le détail chiffré de chaque polluant et de chaque pollen actuellement en saison). Les pollens ne sont disponibles que pour l'Europe et seulement pour les espèces actuellement en saison ; l'échelle de niveau (nul/faible/modéré/élevé) est volontairement simplifiée pour un coup d'œil rapide.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Lieu pour lequel afficher la qualité de l'air.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Affichage</span><span class="help-opt-desc">Compact (indice + polluant/pollen dominant) ou détaillé (détail complet).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher les niveaux de pollens</span><span class="help-opt-desc">Bouleau, graminées, ambroisie, aulne, armoise, olivier — les espèces hors saison sont simplement omises.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour.</span></div>`,
+        en: `
+          <span class="help-size">Size: 3×2 by default, from 2×2 to 6×5</span>
+          <h4>Goal</h4>
+          <p>A quick glance at air pollution and pollen, useful for planning an outing or ventilating the home — not a substitute for medical advice.</p>
+          <h4>Possibilities</h4>
+          <p>The European Air Quality Index (EAQI) summarizes five pollutants (PM2.5, PM10, NO₂, O₃, SO₂) into a single level, from "Good" to "Extremely poor". Two displays: compact (the overall index, the pollutant driving it up, and the dominant pollen in season) or detailed (the numeric breakdown of every pollutant and every currently in-season pollen). Pollen data is only available for Europe and only for species currently in season; the level scale (none/low/moderate/high) is deliberately simplified for a quick glance.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Location to show air quality for.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Display</span><span class="help-opt-desc">Compact (index + dominant pollutant/pollen) or detailed (full breakdown).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show pollen levels</span><span class="help-opt-desc">Birch, grass, ragweed, alder, mugwort, olive — out-of-season species are simply omitted.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two updates.</span></div>`
+      }
+    },
+
+    {
+      id: "radar",
+      group: "tiles",
+      title: { fr: "Radar météo", en: "Weather Radar" },
+      sub: {
+        fr: "Boucle radar de précipitations animée sur une vraie carte, via l'API gratuite et sans clé Weather Maps de RainViewer.",
+        en: "Animated precipitation radar loop over a real map, via RainViewer's free, keyless Weather Maps API."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 6×6 par défaut, de 3×3 à 12×16</span>
+          <h4>Objectif</h4>
+          <p>Voir la pluie arriver (ou s'éloigner) sur une vraie carte, avec un historique des 2 dernières heures et une courte prévision.</p>
+          <h4>Possibilités</h4>
+          <p>La carte se centre sur la ville choisie, indépendamment de la tuile Météo, avec le même choix de fond de carte que les tuiles Trafic et Avions en vue. Les contrôles lecture/pause et image par image restent accessibles directement sur la tuile ; chaque image est préchargée et mise en cache pour une animation fluide, sans rechargement à chaque boucle. La légende (optionnelle) rappelle que les couleurs vont du bleu clair (précipitations légères) au rose (extrême), d'après l'échelle « Universal Blue » de RainViewer — la seule disponible sur l'offre gratuite.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Centre de la carte, indépendant de la tuile Météo.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Zoom initial</span><span class="help-opt-desc">Ajustable ensuite librement à l'écran.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fond de carte</span><span class="help-opt-desc">Voyager, sombre, clair, ou automatique selon le thème du tableau.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Opacité du radar</span><span class="help-opt-desc">Transparence de la couche de précipitations sur le fond de carte.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la légende des couleurs</span><span class="help-opt-desc">Petite barre de référence, du léger (bleu) à l'extrême (rose).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Inclure les images de prévision</span><span class="help-opt-desc">Ajoute les images « nowcast » de RainViewer (jusqu'à ~30 minutes), marquées d'une flèche.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Lecture automatique de la boucle</span><span class="help-opt-desc">Démarre l'animation dès le chargement.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Délai entre images</span><span class="help-opt-desc">Vitesse de l'animation, en millisecondes.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">RainViewer publie une nouvelle image toutes les ~10 minutes.</span></div>`,
+        en: `
+          <span class="help-size">Size: 6×6 by default, from 3×3 to 12×16</span>
+          <h4>Goal</h4>
+          <p>Watch rain arrive (or move away) on a real map, with a 2-hour history and a short forecast.</p>
+          <h4>Possibilities</h4>
+          <p>The map centers on the chosen city, independent from the Weather tile, with the same choice of base map as the Traffic and Planes Overhead tiles. Play/pause and step controls stay right on the tile; each frame is preloaded and cached for a smooth animation, with no reloading on every loop. The optional legend is a reminder that colors range from light blue (light precipitation) to pink (extreme), based on RainViewer's "Universal Blue" scale — the only one available on the free tier.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Map center, independent from the Weather tile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Initial zoom</span><span class="help-opt-desc">Freely adjustable afterwards on screen.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Base map</span><span class="help-opt-desc">Voyager, dark, light, or automatic following the board's theme.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Radar opacity</span><span class="help-opt-desc">Transparency of the precipitation layer over the base map.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show color legend</span><span class="help-opt-desc">Small reference bar, from light (blue) to extreme (pink).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Include forecast frames</span><span class="help-opt-desc">Adds RainViewer's "nowcast" frames (up to ~30 minutes), marked with an arrow.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Autoplay the loop</span><span class="help-opt-desc">Starts the animation as soon as it loads.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Frame delay</span><span class="help-opt-desc">Animation speed, in milliseconds.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">RainViewer publishes a new frame roughly every 10 minutes.</span></div>`
       }
     },
 
@@ -784,14 +956,16 @@
           <p>PiBoard s'appuie sur plusieurs services et projets tiers, la plupart gratuits et sans clé API. Un grand merci à leurs équipes.</p>
 
           <div class="help-credit"><span class="help-opt-name">TomTom</span> — <a href="https://www.tomtom.com" target="_blank">tomtom.com</a><br><span class="help-opt-desc">Données de trafic (flux et incidents) de la tuile Carte de trafic.</span></div>
-          <div class="help-credit"><span class="help-opt-name">CARTO</span> — <a href="https://carto.com" target="_blank">carto.com</a><br><span class="help-opt-desc">Fonds de carte (Voyager, clair, sombre) de la tuile Carte de trafic.</span></div>
+          <div class="help-credit"><span class="help-opt-name">CARTO</span> — <a href="https://carto.com" target="_blank">carto.com</a><br><span class="help-opt-desc">Fonds de carte (Voyager, clair, sombre) des tuiles Carte de trafic, Radar météo et Avions en vue.</span></div>
           <div class="help-credit"><span class="help-opt-name">OpenStreetMap</span> — <a href="https://www.openstreetmap.org" target="_blank">openstreetmap.org</a><br><span class="help-opt-desc">Données cartographiques sous-jacentes des fonds de carte CARTO, et service de géocodage (Nominatim) utilisé par la tuile Trajet domicile-travail pour convertir une adresse en coordonnées.</span></div>
           <div class="help-credit"><span class="help-opt-name">Project OSRM</span> — <a href="https://project-osrm.org" target="_blank">project-osrm.org</a><br><span class="help-opt-desc">Calcul d'itinéraires et de temps de trajet pour la tuile Trajet domicile-travail.</span></div>
-          <div class="help-credit"><span class="help-opt-name">Open-Meteo</span> — <a href="https://open-meteo.com" target="_blank">open-meteo.com</a><br><span class="help-opt-desc">Prévisions météo (agrégeant plusieurs modèles nationaux : Météo-France, ECMWF, DWD, MET Norway, NOAA) de la tuile Météo, et service de recherche de ville utilisé par plusieurs tuiles.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Open-Meteo</span> — <a href="https://open-meteo.com" target="_blank">open-meteo.com</a><br><span class="help-opt-desc">Prévisions météo (agrégeant plusieurs modèles nationaux), qualité de l'air et pollens (basés sur les prévisions CAMS Europe), et service de recherche de ville utilisé par plusieurs tuiles.</span></div>
+          <div class="help-credit"><span class="help-opt-name">RainViewer</span> — <a href="https://www.rainviewer.com" target="_blank">rainviewer.com</a><br><span class="help-opt-desc">Boucle radar de précipitations animée de la tuile Radar météo.</span></div>
+          <div class="help-credit"><span class="help-opt-name">adsb.lol / adsb.fi</span> — <a href="https://adsb.lol" target="_blank">adsb.lol</a> · <a href="https://adsb.fi" target="_blank">adsb.fi</a><br><span class="help-opt-desc">Réseaux ADS-B communautaires de la tuile Avions en vue (au choix dans ses réglages).</span></div>
           <div class="help-credit"><span class="help-opt-name">Openverse</span> — <a href="https://openverse.org" target="_blank">openverse.org</a><br><span class="help-opt-desc">Photos de fond sous licence libre de la tuile Météo, avec crédit du photographe affiché sur la tuile quand disponible.</span></div>
           <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Cours et courbes de prix de la tuile Cours de cryptos.</span></div>
           <div class="help-credit"><span class="help-opt-name">ESPN</span> — <a href="https://www.espn.com" target="_blank">espn.com</a><br><span class="help-opt-desc">Scores en direct et classements des tuiles Scores sportifs et Classement.</span></div>
-          <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Bibliothèque de cartographie interactive utilisée par la tuile Carte de trafic.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Bibliothèque de cartographie interactive utilisée par les tuiles Carte de trafic, Radar météo et Avions en vue.</span></div>
           <div class="help-credit"><span class="help-opt-name">GridStack.js</span> — <a href="https://gridstackjs.com" target="_blank">gridstackjs.com</a><br><span class="help-opt-desc">Bibliothèque de grille qui permet de déplacer et redimensionner les tuiles du tableau.</span></div>
 
           <p style="margin-top:20px">Les flux RSS, dossiers de photos, pages web intégrées et webhooks de notification sont fournis par vous-même — PiBoard ne recommande ni n'héberge aucun contenu de ce type.</p>`,
@@ -799,17 +973,38 @@
           <p>PiBoard relies on several third-party services and projects, most of them free and keyless. A big thank-you to their teams.</p>
 
           <div class="help-credit"><span class="help-opt-name">TomTom</span> — <a href="https://www.tomtom.com" target="_blank">tomtom.com</a><br><span class="help-opt-desc">Traffic data (flow and incidents) for the Traffic map tile.</span></div>
-          <div class="help-credit"><span class="help-opt-name">CARTO</span> — <a href="https://carto.com" target="_blank">carto.com</a><br><span class="help-opt-desc">Base maps (Voyager, light, dark) for the Traffic map tile.</span></div>
+          <div class="help-credit"><span class="help-opt-name">CARTO</span> — <a href="https://carto.com" target="_blank">carto.com</a><br><span class="help-opt-desc">Base maps (Voyager, light, dark) for the Traffic map, Weather Radar and Planes Overhead tiles.</span></div>
           <div class="help-credit"><span class="help-opt-name">OpenStreetMap</span> — <a href="https://www.openstreetmap.org" target="_blank">openstreetmap.org</a><br><span class="help-opt-desc">Underlying map data for the CARTO base maps, and the geocoding service (Nominatim) used by the Commute time tile to turn an address into coordinates.</span></div>
           <div class="help-credit"><span class="help-opt-name">Project OSRM</span> — <a href="https://project-osrm.org" target="_blank">project-osrm.org</a><br><span class="help-opt-desc">Route and travel-time computation for the Commute time tile.</span></div>
-          <div class="help-credit"><span class="help-opt-name">Open-Meteo</span> — <a href="https://open-meteo.com" target="_blank">open-meteo.com</a><br><span class="help-opt-desc">Weather forecasts (aggregating several national models: Météo-France, ECMWF, DWD, MET Norway, NOAA) for the Weather tile, and the city search service used by several tiles.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Open-Meteo</span> — <a href="https://open-meteo.com" target="_blank">open-meteo.com</a><br><span class="help-opt-desc">Weather forecasts (aggregating several national models), air quality and pollen (based on the CAMS Europe forecast), and the city search service used by several tiles.</span></div>
+          <div class="help-credit"><span class="help-opt-name">RainViewer</span> — <a href="https://www.rainviewer.com" target="_blank">rainviewer.com</a><br><span class="help-opt-desc">Animated precipitation radar loop for the Weather Radar tile.</span></div>
+          <div class="help-credit"><span class="help-opt-name">adsb.lol / adsb.fi</span> — <a href="https://adsb.lol" target="_blank">adsb.lol</a> · <a href="https://adsb.fi" target="_blank">adsb.fi</a><br><span class="help-opt-desc">Community ADS-B networks for the Planes Overhead tile (your choice in its settings).</span></div>
           <div class="help-credit"><span class="help-opt-name">Openverse</span> — <a href="https://openverse.org" target="_blank">openverse.org</a><br><span class="help-opt-desc">Openly-licensed background photos for the Weather tile, with the photographer credited on the tile when available.</span></div>
           <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Prices and price charts for the Crypto prices tile.</span></div>
           <div class="help-credit"><span class="help-opt-name">ESPN</span> — <a href="https://www.espn.com" target="_blank">espn.com</a><br><span class="help-opt-desc">Live scores and standings for the Live sports scores and League standings tiles.</span></div>
-          <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Interactive mapping library used by the Traffic map tile.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Interactive mapping library used by the Traffic map, Weather Radar and Planes Overhead tiles.</span></div>
           <div class="help-credit"><span class="help-opt-name">GridStack.js</span> — <a href="https://gridstackjs.com" target="_blank">gridstackjs.com</a><br><span class="help-opt-desc">Grid library that lets board tiles be dragged and resized.</span></div>
 
           <p style="margin-top:20px">RSS feeds, photo folders, embedded web pages and notification webhooks are provided by you — PiBoard neither recommends nor hosts any content of that kind.</p>`
+      }
+    },
+
+    /* Contenu rempli dynamiquement par app.js (showHelpSection()) au
+       moment de l'ouverture, via GET /api/changelog -- ce placeholder
+       n'est affiche que le temps du chargement. Dynamically filled by
+       app.js (showHelpSection()) when opened, via GET /api/changelog --
+       this placeholder is only shown while loading. */
+    {
+      id: "changelog",
+      group: "credits",
+      title: { fr: "Nouveautés", en: "What's new" },
+      sub: {
+        fr: "L'historique des versions de PiBoard, directement depuis le tableau.",
+        en: "PiBoard's version history, right from the board."
+      },
+      html: {
+        fr: `<p class="help-sub">Chargement…</p>`,
+        en: `<p class="help-sub">Loading…</p>`
       }
     },
 

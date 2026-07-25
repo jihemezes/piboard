@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.14.0
+
+- **Correctif *Radar météo*** : le bouton pause n'avait aucun effet sur
+  un écran tactile — la carte Leaflet interceptait le geste avant qu'un
+  `click` ne se déclenche (même cause déjà corrigée sur le widget
+  Trafic). Les boutons écoutent désormais `pointerup`, comme Trafic.
+- **Radar météo** : vitesse d'animation par défaut ralentie (500 ms →
+  900 ms entre les images).
+- **Nouveau réglage *Radar météo* : légende des couleurs** (activée par
+  défaut, désactivable) — une petite barre de référence du léger (bleu)
+  à l'extrême (rose), d'après l'échelle officielle « Universal Blue » de
+  RainViewer.
+- **Correctif *Avions en vue*** : « Données avions indisponibles »
+  s'affichait systématiquement, quelle que soit la source choisie — les
+  API adsb.lol et adsb.fi ne renvoient pas les en-têtes nécessaires à un
+  appel direct depuis le navigateur. Les requêtes passent désormais par
+  le proxy du serveur, comme déjà pour l'Agenda et le flux RSS.
+- **Aide** : les widgets *Qualité de l'air*, *Agenda*, *Radar météo* et
+  *Avions en vue*, absents jusqu'ici, ont chacun leur fiche complète ;
+  les fiches *Horloge*, *Météo* et *Flux RSS* ont été mises à jour pour
+  refléter leurs options ajoutées récemment (saint du jour, format de
+  date, articles cliquables) ; la liste des remerciements inclut
+  désormais RainViewer et adsb.lol/adsb.fi.
+- **Nouveau dans l'Aide : section *Nouveautés*** — l'historique complet
+  des versions (ce fichier), consultable directement depuis le tableau,
+  filtré automatiquement dans la langue de l'interface.
+
+---
+
+- **Fix for *Weather Radar***: the pause button had no effect on a
+  touchscreen — the Leaflet map intercepted the gesture before a
+  `click` could fire (the same cause already fixed on the Traffic
+  widget). The buttons now listen for `pointerup`, like Traffic.
+- **Weather Radar**: default animation speed slowed down (500ms →
+  900ms between frames).
+- **New *Weather Radar* setting: color legend** (on by default,
+  toggleable) — a small reference bar from light (blue) to extreme
+  (pink), based on RainViewer's official "Universal Blue" scale.
+- **Fix for *Planes Overhead***: "Aircraft data unavailable" showed up
+  no matter which source was picked — the adsb.lol and adsb.fi APIs
+  don't return the headers a direct browser call needs. Requests now go
+  through the server's proxy, as the Calendar and RSS tiles already do.
+- **Help**: the *Air Quality*, *Calendar*, *Weather Radar* and *Planes
+  Overhead* widgets, missing until now, each get a full entry; the
+  *Clock*, *Weather* and *RSS feed* entries were updated to reflect
+  their recently added options (name day, date format, clickable
+  articles); the credits list now includes RainViewer and
+  adsb.lol/adsb.fi.
+- **New in Help: a *What's new* section** — the full version history
+  (this file), readable directly from the board, automatically filtered
+  to the interface's language.
+
 ## 1.13.0
 
 - **Flux RSS : articles cliquables avec popup de lecture.** Un article

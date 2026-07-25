@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.13.0
+   Version 1.14.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2274,6 +2274,54 @@
     $("helpModal").hidden = false;
   }
 
+  let changelogRaw = null; // mis en cache apres le premier chargement / cached after first load
+
+  /* Convertisseur markdown-lite pour le changelog : titres ##, listes a
+     puces (a plat, sans imbrication -- suffisant pour une lecture
+     rapide), gras, code en ligne, et separateurs ---. Meme esprit que le
+     rendu du bloc-notes (widgets/notes/widget.js), en plus simple.
+     Markdown-lite converter for the changelog: ## headings, bullet
+     lists (flat, no nesting -- enough for a quick read), bold, inline
+     code, and --- separators. Same spirit as the Notes widget's
+     rendering (widgets/notes/widget.js), simpler. */
+  function mdLiteToHtml(md) {
+    const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const inline = (s) => esc(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    let html = "", inList = false;
+    const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+    for (const line of md.split("\n")) {
+      if (/^#{1,2}\s+/.test(line)) { closeList(); html += `<h4>${inline(line.replace(/^#{1,2}\s+/, ""))}</h4>`; continue; }
+      const li = line.match(/^\s*-\s+(.*)$/);
+      if (li) { if (!inList) { html += "<ul>"; inList = true; } html += `<li>${inline(li[1])}</li>`; continue; }
+      if (line.trim() === "") { closeList(); continue; }
+      closeList();
+      html += `<p>${inline(line)}</p>`;
+    }
+    closeList();
+    return html;
+  }
+
+  /* Chaque version du CHANGELOG.md est bilingue, separee par une ligne
+     "---" (voir CHANGELOG.md) : n'affiche que le bloc correspondant a la
+     langue active plutot que le doublon FR+EN complet.
+     Each CHANGELOG.md version is bilingual, split by a "---" line (see
+     CHANGELOG.md): shows only the block matching the active language
+     rather than the full FR+EN duplicate. */
+  function renderChangelog(raw, lang) {
+    const versions = raw.replace(/\r\n/g, "\n").split(/\n(?=## )/).map((part) => {
+      const m = part.match(/^##\s+(\S+)\s*\n([\s\S]*)$/);
+      return m ? { version: m[1], body: m[2] } : null;
+    }).filter(Boolean);
+    if (!versions.length) return `<p class="help-sub">${i18n.t("help.changelogEmpty")}</p>`;
+    return versions.map(({ version, body }) => {
+      const halves = body.split(/\n-{3,}\n/);
+      const chosen = halves.length >= 2 ? (lang === "fr" ? halves[0] : halves[1]) : body;
+      return `<h4 class="help-changelog-version">v${version}</h4>` + mdLiteToHtml(chosen.trim());
+    }).join("");
+  }
+
   function showHelpSection(id) {
     const sections = window.PIBOARD_HELP || [];
     const sec = sections.find((s) => s.id === id);
@@ -2290,6 +2338,37 @@
       (sec.sub ? `<p class="help-sub">${i18n.fromManifest(sec.sub)}</p>` : "") +
       i18n.fromManifest(sec.html);
     content.scrollTop = 0;
+
+    if (id === "changelog") {
+      const renderNow = () => {
+        // La section a pu changer pendant le chargement reseau / the
+        // section may have changed during the network load.
+        if (helpActiveId !== "changelog") return;
+        const zone = document.createElement("div");
+        zone.className = "help-changelog";
+        zone.innerHTML = renderChangelog(changelogRaw, i18n.lang);
+        content.appendChild(zone);
+      };
+      if (changelogRaw) {
+        renderNow();
+      } else {
+        fetch("/api/changelog").then((r) => {
+          if (!r.ok) throw new Error("status " + r.status);
+          return r.text();
+        }).then((text) => {
+          changelogRaw = text;
+          renderNow();
+        }).catch((e) => {
+          console.warn("[piboard] changelog indisponible:", e);
+          if (helpActiveId === "changelog") {
+            const err = document.createElement("p");
+            err.className = "help-sub";
+            err.textContent = i18n.t("help.changelogError");
+            content.appendChild(err);
+          }
+        });
+      }
+    }
   }
 
   function applySettings() {

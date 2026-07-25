@@ -1,6 +1,6 @@
 {
   "id": "radar",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Weather Radar",
     "fr": "Radar météo"
@@ -75,6 +75,20 @@
       "group": { "en": "Radar", "fr": "Radar" }
     },
     {
+      "key": "showLegend",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show color legend",
+        "fr": "Afficher la légende des couleurs"
+      },
+      "hint": {
+        "en": "A small reference bar explaining the radar colors, from light (blue) to extreme (pink) precipitation.",
+        "fr": "Une petite barre de référence expliquant les couleurs du radar, du léger (bleu) à l'extrême (rose)."
+      },
+      "group": { "en": "Radar", "fr": "Radar" }
+    },
+    {
       "key": "includeForecast",
       "type": "checkbox",
       "default": true,
@@ -101,7 +115,7 @@
     {
       "key": "animationSpeed",
       "type": "number",
-      "default": 500,
+      "default": 900,
       "min": 200,
       "max": 2000,
       "step": 100,

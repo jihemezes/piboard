@@ -488,6 +488,25 @@ app.get("/api/version", (req, res) => {
   res.json({ version: APP_VERSION });
 });
 
+// Sert le contenu brut de CHANGELOG.md (a la racine du projet, pas dans
+// public/ donc pas accessible via le middleware statique) pour que
+// l'aide integree puisse afficher les nouveautes sans quitter le
+// tableau. Lecture a chaque appel plutot que mise en cache au demarrage
+// : le fichier peut changer suite a une mise a jour sans redemarrer le
+// serveur. Serves CHANGELOG.md's raw content (at the project root, not
+// in public/ so not reachable via the static middleware) so the
+// built-in help can show what's new without leaving the board. Read on
+// every call rather than cached at startup: the file can change after
+// an update without restarting the server.
+app.get("/api/changelog", (req, res) => {
+  try {
+    const text = fs.readFileSync(path.join(__dirname, "..", "CHANGELOG.md"), "utf8");
+    res.set("Content-Type", "text/plain; charset=utf-8").send(text);
+  } catch (e) {
+    res.status(404).json({ error: "changelog not found" });
+  }
+});
+
 app.get("/api/settings", (req, res) => {
   res.json(Object.assign({}, DEFAULT_SETTINGS, store.read("settings", {})));
 });

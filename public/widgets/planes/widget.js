@@ -150,7 +150,21 @@
       const radius = Math.max(5, Math.min(250, Number(s.radius) || 25));
       const build = SOURCES[s.source] || SOURCES.adsblol;
       const url = build(this.coords.lat, this.coords.lon, radius);
-      const data = await fetch(url, { cache: "no-store" }).then((r) => {
+      // Passe par le proxy generique du serveur (deja utilise par RSS et
+      // Agenda) : ni adsb.lol ni adsb.fi ne semblent renvoyer les en-tetes
+      // CORS necessaires a un fetch() direct depuis le navigateur -- sans
+      // ce detour, la requete echoue silencieusement quelle que soit la
+      // source choisie. Le parametre "_=" evite un resultat mis en cache
+      // par le navigateur (memes raisons que RSS/Trafic).
+      // Goes through the server's generic proxy (already used by RSS and
+      // Calendar): neither adsb.lol nor adsb.fi appear to return the CORS
+      // headers a direct browser fetch() needs -- without this detour,
+      // the request silently fails regardless of the chosen source. The
+      // "_=" parameter avoids a browser-cached result (same reasoning as
+      // RSS/Traffic).
+      const proxied = this.ctx.api.proxyUrl(url);
+      const sep = proxied.includes("?") ? "&" : "?";
+      const data = await fetch(proxied + sep + "_=" + Date.now(), { cache: "no-store" }).then((r) => {
         if (!r.ok) throw new Error("adsb " + r.status);
         return r.json();
       });

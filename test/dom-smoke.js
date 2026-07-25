@@ -50,6 +50,21 @@ const RSS_FEED_XML = `<?xml version="1.0"?>
 </channel>
 </rss>`;
 
+const CHANGELOG_FIXTURE = `# Changelog
+
+## 9.9.9
+
+- **Fonctionnalite test FR** -- description courte.
+
+---
+
+- **Test feature EN** -- short description.
+
+## 9.9.8
+
+- Version simple sans separation bilingue.
+`;
+
 const layout = {
   version: 1,
   tiles: [
@@ -170,6 +185,9 @@ const dom = new JSDOM(html, {
             { channelId: "France2.fr", channelName: "France 2", channelIcon: null, program: null }
           ]
         });
+      }
+      if (u.includes("/api/changelog")) {
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(CHANGELOG_FIXTURE) });
       }
       if (u.includes("/data/saints-fr.json")) {
         // Cles du jour et du lendemain calculees dynamiquement (le test
@@ -723,6 +741,24 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const content = document.getElementById("helpContent").textContent;
     assert("contenu mentionne la touche Alt pour reveler le menu", content.includes("Alt"));
     assert("contenu mentionne 'Rechercher une mise a jour'", content.includes("Rechercher une mise à jour"));
+
+    console.log("== Aide : les widgets recemment ajoutes y figurent ==");
+    ["airquality", "calendar", "radar", "planes"].forEach((id) => {
+      assert(`entree '${id}' presente dans le sommaire de l'aide`, !!nav.querySelector(`[data-help-id="${id}"]`));
+    });
+
+    console.log("== Aide : section Nouveautes (changelog) ==");
+    const changelogItem = nav.querySelector('[data-help-id="changelog"]');
+    assert("entree 'Nouveautes' presente dans le sommaire", !!changelogItem);
+    changelogItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (!document.getElementById("helpContent").querySelector(".help-changelog") && tries++ < 60) await sleep(50);
+    const changelogText = document.getElementById("helpContent").textContent;
+    assert("changelog : les deux versions de test apparaissent", changelogText.includes("9.9.9") && changelogText.includes("9.9.8"));
+    assert("changelog : bloc francais affiche (langue active = fr)", changelogText.includes("Fonctionnalite test FR"));
+    assert("changelog : bloc anglais NON affiche (filtre par langue)", !changelogText.includes("Test feature EN"));
+    assert("changelog : version sans separation bilingue affichee integralement", changelogText.includes("Version simple sans separation bilingue"));
+
     document.getElementById("helpModal").hidden = true;
   }
 

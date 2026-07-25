@@ -1333,12 +1333,20 @@ body.touch .pwt-boost-menu button { padding: 14px 16px; font-size: 17px; min-hei
   font-family: var(--mono);
   font-size: 11.5px;
   color: var(--muted);
-  background: var(--field-bg);
   border: 1px solid var(--tile-edge);
   border-radius: 6px;
-  padding: 3px 9px;
+  padding: 2px 8px;
   margin-bottom: 16px;
 }
+.help-changelog-version {
+  font-size: 16px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: var(--text) !important;
+  padding-top: 14px;
+  border-top: 1px solid var(--tile-edge);
+}
+.help-changelog-version:first-child { padding-top: 0; border-top: none; margin-top: 0 !important; }
 /* Liste des options d'une tuile : nom en avant, description en dessous
    A tile's option list: name upfront, description below */
 .help-opt { margin-bottom: 14px; }

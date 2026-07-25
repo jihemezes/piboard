@@ -119,3 +119,39 @@
   padding: 16px;
   background: #1a1c20;
 }
+
+/* Legende (optionnelle) : barre de couleurs simplifiee, du bleu clair
+   (precipitations legeres) au rose (extreme), d'apres l'echelle
+   "Universal Blue" de RainViewer. Positionnee en haut a gauche pour ne
+   pas se superposer aux controles de lecture (bas gauche) ni au zoom
+   (haut droite). Legend (optional): simplified color bar, from light
+   blue (light precipitation) to pink (extreme), based on RainViewer's
+   "Universal Blue" scale. Positioned top-left to avoid overlapping the
+   playback controls (bottom-left) or the zoom control (top-right). */
+.pwrd-legend {
+  position: absolute;
+  left: 8px;
+  top: 8px;
+  z-index: 500;
+  background: var(--rd-panel-bg);
+  color: #eef0f3;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--rd-panel-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+.pwrd-legend-bar {
+  width: 110px;
+  height: 7px;
+  border-radius: 4px;
+}
+.pwrd-legend-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #c3c8d1;
+  margin-top: 3px;
+  letter-spacing: 0.02em;
+}
