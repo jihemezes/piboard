@@ -7,6 +7,63 @@
     return el ? el.textContent.trim() : "";
   }
 
+  // Lien "article" : RSS <link>texte</link>, ou Atom <link href="..."/>
+  // (rel="alternate" prefere s'il y en a plusieurs, ex. "self" pour le
+  // flux lui-meme). Article link: RSS <link>text</link>, or Atom
+  // <link href="..."/> (rel="alternate" preferred when several are
+  // present, e.g. "self" for the feed itself).
+  function linkOf(node) {
+    const links = [...node.querySelectorAll("link")];
+    const rssLink = links.find((l) => !l.getAttribute("href") && l.textContent.trim());
+    if (rssLink) return rssLink.textContent.trim();
+    const alt = links.find((l) => (l.getAttribute("rel") || "alternate") === "alternate" && l.getAttribute("href"));
+    if (alt) return alt.getAttribute("href");
+    const any = links.find((l) => l.getAttribute("href"));
+    return any ? any.getAttribute("href") : "";
+  }
+
+  // Contenu le plus riche disponible : content:encoded (RSS, souvent le
+  // HTML complet de l'article) > content (Atom) > description (RSS) >
+  // summary (Atom, un simple resume).
+  // Richest content available: content:encoded (RSS, often the article's
+  // full HTML) > content (Atom) > description (RSS) > summary (Atom, a
+  // plain summary).
+  function contentOf(node) {
+    const encoded = node.getElementsByTagName("content:encoded")[0];
+    if (encoded && encoded.textContent.trim()) return encoded.textContent;
+    const content = node.querySelector("content");
+    if (content && content.textContent.trim()) return content.textContent;
+    const description = node.querySelector("description");
+    if (description && description.textContent.trim()) return description.textContent;
+    const summary = node.querySelector("summary");
+    return summary ? summary.textContent : "";
+  }
+
+  // Nettoyage minimal avant affichage en popup : retire scripts/styles/
+  // cadres embarques et gestionnaires d'evenements, et neutralise les
+  // liens (le contenu est fait pour etre LU, pas pour naviguer -- evite
+  // le piege d'un onglet ouvert qu'on ne peut plus fermer sur un kiosque
+  // tactile sans clavier, meme raison que l'attribution des widgets
+  // Trafic/Radar/Avions).
+  // Minimal cleanup before showing in the popup: strips embedded
+  // scripts/styles/frames and event handlers, and neutralizes links
+  // (the content is meant to be READ, not navigated -- avoids the trap
+  // of an unclosable tab on a keyboard-less touch kiosk, same reasoning
+  // as the Traffic/Radar/Planes widgets' attribution). */
+  function sanitizeHtml(html) {
+    const doc = new DOMParser().parseFromString(html || "", "text/html");
+    doc.querySelectorAll("script,style,iframe,object,embed,form,link,meta").forEach((n) => n.remove());
+    doc.querySelectorAll("*").forEach((el) => {
+      [...el.attributes].forEach((attr) => {
+        const name = attr.name.toLowerCase();
+        if (name.startsWith("on")) el.removeAttribute(attr.name);
+        if ((name === "href" || name === "src") && /^\s*javascript:/i.test(attr.value)) el.removeAttribute(attr.name);
+      });
+    });
+    doc.querySelectorAll("a").forEach((a) => { a.removeAttribute("href"); a.removeAttribute("target"); });
+    return doc.body.innerHTML;
+  }
+
   function parseFeed(xmlText) {
     const doc = new DOMParser().parseFromString(xmlText, "text/xml");
     if (doc.querySelector("parsererror")) throw new Error("invalid xml");
@@ -14,7 +71,9 @@
     // RSS 2.0
     let items = [...doc.querySelectorAll("channel > item")].map((it) => ({
       title: textOf(it, "title"),
-      date: textOf(it, "pubDate")
+      date: textOf(it, "pubDate"),
+      link: linkOf(it),
+      content: contentOf(it)
     }));
     let source = textOf(doc, "channel > title");
 
@@ -22,7 +81,9 @@
     if (!items.length) {
       items = [...doc.querySelectorAll("feed > entry")].map((it) => ({
         title: textOf(it, "title"),
-        date: textOf(it, "updated") || textOf(it, "published")
+        date: textOf(it, "updated") || textOf(it, "published"),
+        link: linkOf(it),
+        content: contentOf(it)
       }));
       source = source || textOf(doc, "feed > title");
     }
@@ -44,10 +105,24 @@
       this.rotateTimer = null;
       this.feed = null;
       this.cursor = 0;
+      this.currentItems = []; // items effectivement rendus (sous-ensemble ou rotation) / actually rendered items (subset or rotation)
+      this.modal = null;
     }
 
     async init() {
       this.ctx.el.innerHTML = `<div class="pw-rss"><div class="pwr-err">${this.ctx.i18n.t("common.loading")}</div></div>`;
+      // Delegation : un seul ecouteur, pose une fois, survit aux
+      // re-rendus de render() (rotation, rafraichissement, changement de
+      // langue) qui remplacent entierement le innerHTML.
+      // Delegation: a single listener, set once, survives render()'s
+      // re-renders (rotation, refresh, language change) which fully
+      // replace the innerHTML.
+      this.ctx.el.addEventListener("click", (e) => {
+        const li = e.target.closest(".pwr-item[data-link='1']");
+        if (!li) return;
+        e.stopPropagation(); // sinon rouvre les reglages en mode edition / else reopens settings in edit mode
+        this.openArticle(Number(li.dataset.idx));
+      });
       await this.refresh();
       this.arm();
     }
@@ -111,13 +186,14 @@
       const items = s.rotate
         ? [this.feed.items[this.cursor % this.feed.items.length]]
         : this.feed.items.slice(0, Math.max(1, Number(s.maxItems) || 6));
+      this.currentItems = items;
 
       this.ctx.el.innerHTML = `
         <div class="pw-rss ${s.rotate ? "pwr-rotate" : ""}">
           <div class="pwr-source" ${s.showSource ? "" : "hidden"}>${this.feed.source || ""}</div>
           <ul>
-            ${items.map((it) => `
-              <li>
+            ${items.map((it, idx) => `
+              <li class="pwr-item ${it.link ? "pwr-clickable" : ""}" data-idx="${idx}" data-link="${it.link ? "1" : ""}">
                 <div class="pwr-title">${it.title}</div>
                 <div class="pwr-meta">${niceDate(it.date, lang)}</div>
               </li>`).join("")}
@@ -132,9 +208,64 @@
       }
     }
 
+    /* Cree la fenetre de lecture une seule fois (reutilisee ensuite) et
+       l'ajoute a document.body pour echapper au cadre de la tuile.
+       Fermeture par le bouton, la touche Echap, OU un clic sur le fond
+       (contrairement a la fenetre de courbe du widget Crypto : ici pas
+       de sous-navigation interne a proteger d'un clic accidentel).
+       Creates the reading popup once (reused afterwards) and appends it
+       to document.body to escape the tile's clipped frame. Closes via
+       the button, the Escape key, OR a backdrop click (unlike the
+       Crypto widget's chart popup: no internal sub-navigation to
+       protect from an accidental click here). */
+    ensureModal() {
+      if (this.modal) return this.modal;
+      const i18n = this.ctx.i18n;
+      const wrap = document.createElement("div");
+      wrap.className = "modal";
+      wrap.hidden = true;
+      wrap.innerHTML = `
+        <div class="modal-card pwr-modal-card">
+          <header class="modal-head">
+            <h2 class="pwr-modal-title"></h2>
+            <button type="button" class="modal-close" data-close aria-label="${i18n.t("common.close")}">&times;</button>
+          </header>
+          <div class="pwr-modal-meta"></div>
+          <div class="pwr-modal-body"></div>
+        </div>`;
+      document.body.appendChild(wrap);
+
+      wrap.addEventListener("click", (e) => {
+        if (e.target === wrap || e.target.hasAttribute("data-close")) wrap.hidden = true;
+      });
+      this._escHandler = (e) => { if (e.key === "Escape" && !wrap.hidden) wrap.hidden = true; };
+      document.addEventListener("keydown", this._escHandler);
+
+      this.modal = wrap;
+      return wrap;
+    }
+
+    openArticle(idx) {
+      const it = this.currentItems[idx];
+      if (!it || !it.link) return;
+      const modal = this.ensureModal();
+      const lang = this.ctx.i18n.lang;
+      modal.querySelector(".pwr-modal-title").textContent = it.title;
+      const metaParts = [this.feed && this.feed.source, niceDate(it.date, lang)].filter(Boolean);
+      modal.querySelector(".pwr-modal-meta").textContent = metaParts.join(" · ");
+      const body = modal.querySelector(".pwr-modal-body");
+      const html = sanitizeHtml(it.content);
+      body.innerHTML = html.trim() ? html : `<p class="pwr-modal-empty">${this.ctx.i18n.t("rss.noContent")}</p>`;
+      modal.hidden = false;
+    }
+
     destroy() {
       clearInterval(this.timer);
       clearInterval(this.rotateTimer);
+      if (this.modal) {
+        this.modal.remove();
+        if (this._escHandler) document.removeEventListener("keydown", this._escHandler);
+      }
     }
   }
 

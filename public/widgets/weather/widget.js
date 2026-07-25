@@ -199,19 +199,6 @@
       const s = this.ctx.settings;
       const { cur, day, today, name, photo, lang } = d;
 
-      // Saint du jour : tradition francaise, non affichee si la langue de
-      // l'interface est l'anglais meme si le reglage est actif.
-      // Nameday: French tradition, not shown when the interface language
-      // is English even if the setting is on.
-      let saintLine = "";
-      if (s.showSaint && lang === "fr" && this.saints) {
-        const now = new Date();
-        const mm = String(now.getMonth() + 1).padStart(2, "0");
-        const dd = String(now.getDate()).padStart(2, "0");
-        const saint = this.saints[mm + "-" + dd];
-        if (saint) saintLine = `<div class="pww-saint">${saint}</div>`;
-      }
-
       // Carre : uniquement la meteo du jour, quel que soit le reglage
       // "afficher demain". Portrait : demain empile sous aujourd'hui.
       // Paysage : cote a cote (comportement historique).
@@ -220,6 +207,30 @@
       // (historical behavior).
       const wantsTomorrow = !!s.showTomorrow && this.layoutMode !== "square"
         && day.weather_code && day.weather_code.length > 1;
+
+      // Saint du jour (et du lendemain, si la prevision de demain est
+      // affichee) : tradition francaise, non affichee si la langue de
+      // l'interface est l'anglais meme si le reglage est actif.
+      // Name day for today (and for tomorrow, if tomorrow's forecast is
+      // shown): French tradition, not shown when the interface language
+      // is English even if the setting is on.
+      let saintLine = "";
+      let tomorrowSaintLine = "";
+      if (s.showSaint && lang === "fr" && this.saints) {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const saint = this.saints[mm + "-" + dd];
+        if (saint) saintLine = `<div class="pww-saint">${saint}</div>`;
+
+        if (wantsTomorrow) {
+          const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+          const tmm = String(tomorrow.getMonth() + 1).padStart(2, "0");
+          const tdd = String(tomorrow.getDate()).padStart(2, "0");
+          const tomorrowSaint = this.saints[tmm + "-" + tdd];
+          if (tomorrowSaint) tomorrowSaintLine = `<div class="pww-saint">${tomorrowSaint}</div>`;
+        }
+      }
 
       const wind = s.showWind
         ? ` · ${this.ctx.i18n.t("weather.wind")} ${Math.round(cur.wind_speed_10m)} km/h` : "";
@@ -243,6 +254,7 @@
             <div class="pww-icon">${iconSvg(tom.icon)}</div>
             <div class="pww-temp pww-temp-range">${Math.round(day.temperature_2m_min[1])}° / ${Math.round(day.temperature_2m_max[1])}°</div>
             <div class="pww-city">${tom.label}</div>
+            ${tomorrowSaintLine}
           </div>`;
       }
 

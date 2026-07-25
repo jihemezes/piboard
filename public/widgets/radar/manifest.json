@@ -1,0 +1,132 @@
+{
+  "id": "radar",
+  "version": "0.1.0",
+  "name": {
+    "en": "Weather Radar",
+    "fr": "Radar météo"
+  },
+  "description": {
+    "en": "Animated precipitation radar loop (last 2 hours, plus a short-term forecast) over a real map, powered by RainViewer's free, keyless Weather Maps API. Independent city, zoom and base map from the Weather tile. Play/pause and step controls, like the official RainViewer app.",
+    "fr": "Boucle radar de précipitations animée (2 dernières heures, plus une courte prévision) sur une vraie carte, via l'API gratuite et sans clé Weather Maps de RainViewer. Ville, zoom et fond de carte indépendants de la tuile Météo. Contrôles lecture/pause et image par image, comme l'application officielle RainViewer."
+  },
+  "size": {
+    "w": 6,
+    "h": 6,
+    "minW": 3,
+    "minH": 3,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "city",
+      "type": "text",
+      "default": "Toulouse",
+      "label": {
+        "en": "City",
+        "fr": "Ville"
+      },
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "zoom",
+      "type": "number",
+      "default": 6,
+      "min": 3,
+      "max": 10,
+      "step": 1,
+      "label": {
+        "en": "Initial zoom",
+        "fr": "Zoom initial"
+      },
+      "hint": {
+        "en": "The map can still be freely panned and zoomed afterwards; this only sets the starting view.",
+        "fr": "La carte reste ensuite librement déplaçable et zoomable ; ceci ne fixe que la vue de départ."
+      },
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "basemap",
+      "type": "select",
+      "default": "voyager",
+      "label": {
+        "en": "Base map",
+        "fr": "Fond de carte"
+      },
+      "options": [
+        { "value": "voyager", "label": { "en": "Voyager (roads, colored)", "fr": "Voyager (routier, coloré)" } },
+        { "value": "dark", "label": { "en": "Dark", "fr": "Sombre" } },
+        { "value": "light", "label": { "en": "Light", "fr": "Clair" } },
+        { "value": "auto", "label": { "en": "Auto — follows PiBoard's theme", "fr": "Auto — suit le thème de PiBoard" } }
+      ],
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "opacity",
+      "type": "number",
+      "default": 75,
+      "min": 20,
+      "max": 100,
+      "step": 5,
+      "label": {
+        "en": "Radar opacity (%)",
+        "fr": "Opacité du radar (%)"
+      },
+      "group": { "en": "Radar", "fr": "Radar" }
+    },
+    {
+      "key": "includeForecast",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Include short-term forecast frames",
+        "fr": "Inclure les images de prévision à court terme"
+      },
+      "hint": {
+        "en": "Adds RainViewer's nowcast frames (extrapolated, up to ~30 minutes ahead) after the observed frames in the loop, marked with an arrow.",
+        "fr": "Ajoute les images de prévision (« nowcast ») de RainViewer, extrapolées jusqu'à ~30 minutes, à la suite des images observées dans la boucle, marquées d'une flèche."
+      },
+      "group": { "en": "Radar", "fr": "Radar" }
+    },
+    {
+      "key": "autoplay",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Autoplay the loop",
+        "fr": "Lecture automatique de la boucle"
+      },
+      "group": { "en": "Radar", "fr": "Radar" }
+    },
+    {
+      "key": "animationSpeed",
+      "type": "number",
+      "default": 500,
+      "min": 200,
+      "max": 2000,
+      "step": 100,
+      "label": {
+        "en": "Frame delay (ms)",
+        "fr": "Délai entre images (ms)"
+      },
+      "group": { "en": "Radar", "fr": "Radar" }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 10,
+      "min": 5,
+      "max": 60,
+      "step": 5,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      },
+      "hint": {
+        "en": "RainViewer publishes a new radar frame roughly every 10 minutes.",
+        "fr": "RainViewer publie une nouvelle image radar environ toutes les 10 minutes."
+      },
+      "group": { "en": "Radar", "fr": "Radar" }
+    }
+  ]
+}

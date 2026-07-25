@@ -1,0 +1,121 @@
+.pw-radar {
+  height: 100%;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #1a1c20;
+  --rd-panel-bg: rgba(20, 22, 27, 0.90);
+  --rd-panel-border: rgba(255, 255, 255, 0.10);
+}
+.pw-radar .pwrd-map {
+  position: absolute;
+  inset: 0;
+}
+.pw-radar .leaflet-container {
+  background: #1a1c20;
+  font-family: var(--font);
+}
+
+/* Attribution requise (OpenStreetMap/CARTO + RainViewer) : minuscule et
+   discrete, liens non cliquables sur un kiosque tactile sans clavier
+   (memes raisons que le widget trafic : un tap accidentel ouvrirait une
+   page qu'on ne peut plus fermer).
+   Required attribution (OpenStreetMap/CARTO + RainViewer): tiny and
+   unobtrusive, links non-clickable on a keyboard-less touch kiosk (same
+   reasoning as the traffic widget: an accidental tap would open a page
+   that can't be closed anymore). */
+.pw-radar .leaflet-control-attribution {
+  background: rgba(10,12,18,0.55) !important;
+  color: rgba(255,255,255,0.6) !important;
+  font-size: 9px !important;
+  padding: 1px 5px !important;
+  border-radius: 4px 0 0 0;
+}
+.pw-radar .leaflet-control-attribution a {
+  color: rgba(255,255,255,0.6) !important;
+  text-decoration: none !important;
+  pointer-events: none !important;
+  cursor: default !important;
+}
+.pw-radar .leaflet-control-zoom {
+  border: none !important;
+  margin: 8px !important;
+}
+.pw-radar .leaflet-control-zoom a {
+  background: rgba(10,12,18,0.68) !important;
+  color: #fff !important;
+  border: 1px solid rgba(255,255,255,0.2) !important;
+  width: 32px !important;
+  height: 32px !important;
+  line-height: 32px !important;
+}
+
+/* Correctif tactile identique au widget trafic : la carte Leaflet
+   installe ses propres gestionnaires tactiles sur tout le conteneur,
+   qui interceptent le tap avant qu'il n'atteigne les boutons flottants
+   sans ce touch-action. Same touch fix as the traffic widget: the
+   Leaflet map installs its own touch handlers on the whole container,
+   which intercept the tap before it reaches the floating buttons
+   without this touch-action. */
+.pw-radar .pwrd-panel,
+.pw-radar .pwrd-panel button {
+  touch-action: manipulation;
+  z-index: 1001;
+  pointer-events: auto;
+}
+
+.pwrd-panel {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--rd-panel-bg);
+  color: #eef0f3;
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--rd-panel-border);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+.pwrd-time {
+  min-width: 3.8em;
+  letter-spacing: 0.02em;
+}
+.pwrd-time.pwrd-forecast { color: #7cc4ff; }
+.pwrd-controls { display: flex; gap: 4px; }
+.pwrd-btn {
+  background: rgba(255,255,255,0.08);
+  color: #eef0f3;
+  border: 1px solid var(--rd-panel-border);
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  font-size: 14px;
+  font-family: var(--font);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pwrd-btn:hover { background: rgba(255,255,255,0.16); }
+.pwrd-play { background: var(--accent); border-color: var(--accent); }
+.pwrd-play:hover { filter: brightness(1.1); }
+
+.pwrd-err {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9aa1ab;
+  font-size: 13px;
+  text-align: center;
+  padding: 16px;
+  background: #1a1c20;
+}

@@ -17,13 +17,49 @@ const catalog = fs.readdirSync(path.join(PUB, "widgets"), { withFileTypes: true 
     return m;
   });
 
+/* Fixtures ICS pour la tuile Agenda, construites par rapport a
+   aujourd'hui pour que le test reste fiable quel que soit le jour
+   d'execution. ICS fixtures for the Calendar tile, built relative to
+   today so the test stays reliable regardless of which day it runs. */
+function pad2(n) { return String(n).padStart(2, "0"); }
+function icsDateOnly(d) { return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`; }
+function icsDateTime(d) {
+  return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+}
+const AQ_TODAY = new Date();
+const AQ_IN2DAYS = new Date(AQ_TODAY.getFullYear(), AQ_TODAY.getMonth(), AQ_TODAY.getDate() + 2, 14, 0, 0);
+const AQ_IN2DAYS_END = new Date(AQ_IN2DAYS.getTime() + 3600000);
+const FAMILY_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:fam1@test\r\nDTSTART;VALUE=DATE:${icsDateOnly(AQ_TODAY)}\r\nSUMMARY:Anniversaire Lea\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+const WORK_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:work1@test\r\nDTSTART:${icsDateTime(AQ_IN2DAYS)}\r\nDTEND:${icsDateTime(AQ_IN2DAYS_END)}\r\nSUMMARY:Reunion equipe\r\nLOCATION:Salle B\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+
+const RSS_FEED_XML = `<?xml version="1.0"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+<title>Flux Test</title>
+<item>
+<title>Article avec lien</title>
+<link>https://example.test/article1</link>
+<pubDate>Mon, 20 Jul 2026 10:00:00 GMT</pubDate>
+<content:encoded><![CDATA[<p>Contenu <b>riche</b> de l'article.</p><script>window.__pwnedRss = true;</script><a href="https://example.test/other" onclick="window.__pwnedRss = true;">lien interne</a>]]></content:encoded>
+</item>
+<item>
+<title>Article sans lien</title>
+<pubDate>Mon, 20 Jul 2026 09:00:00 GMT</pubDate>
+<description>Pas de lien ici.</description>
+</item>
+</channel>
+</rss>`;
+
 const layout = {
   version: 1,
   tiles: [
     { id: "t-a", widget: "clock", x: 0, y: 0, w: 3, h: 2, settings: { mode: "digital", showDate: true, showSaint: true } },
     { id: "t-b", widget: "webview", x: 3, y: 0, w: 6, h: 4, settings: { url: "http://example.local/", zoom: 100, reload: 0 } },
     { id: "t-c", widget: "notes", x: 0, y: 2, w: 3, h: 3, settings: {} },
-    { id: "t-d", widget: "weather", x: 6, y: 0, w: 3, h: 2, settings: { city: "Toulouse", showSaint: true, usePhotos: false } }
+    { id: "t-d", widget: "weather", x: 6, y: 0, w: 3, h: 2, settings: { city: "Toulouse", showSaint: true, showTomorrow: true, usePhotos: false } },
+    { id: "t-e", widget: "airquality", x: 9, y: 0, w: 3, h: 2, settings: { city: "Toulouse", displayMode: "detailed", showPollen: true } },
+    { id: "t-f", widget: "calendar", x: 0, y: 5, w: 4, h: 4, settings: { calendars: "https://cal.test/family.ics|Famille\nhttps://cal.test/work.ics|Travail" } },
+    { id: "t-g", widget: "rss", x: 4, y: 5, w: 4, h: 3, settings: { url: "https://feed.test/rss.xml", maxItems: 6, showSource: true } }
   ]
 };
 
@@ -136,14 +172,36 @@ const dom = new JSDOM(html, {
         });
       }
       if (u.includes("/data/saints-fr.json")) {
-        // Cle du jour calculee dynamiquement (le test peut tourner
-        // n'importe quel jour de l'annee).
-        // Today's key computed dynamically (the test can run on any
-        // day of the year).
+        // Cles du jour et du lendemain calculees dynamiquement (le test
+        // peut tourner n'importe quel jour de l'annee).
+        // Today's and tomorrow's keys computed dynamically (the test can
+        // run on any day of the year).
         const now = new Date();
         const mm = String(now.getMonth() + 1).padStart(2, "0");
         const dd = String(now.getDate()).padStart(2, "0");
-        return json({ [mm + "-" + dd]: "Testine" });
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const tmm = String(tomorrow.getMonth() + 1).padStart(2, "0");
+        const tdd = String(tomorrow.getDate()).padStart(2, "0");
+        return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
+      }
+      if (u.includes("/api/proxy") && u.includes("feed.test")) {
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(RSS_FEED_XML) });
+      }
+      if (u.includes("/api/proxy") && (u.includes("family.ics") || u.includes("work.ics"))) {
+        const target = decodeURIComponent((u.split("url=")[1] || "").split("&")[0]);
+        const text = target.includes("family.ics") ? FAMILY_ICS : WORK_ICS;
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(text) });
+      }
+      if (u.includes("air-quality-api.open-meteo.com")) {
+        return json({
+          current: {
+            european_aqi: 42, european_aqi_pm2_5: 42, european_aqi_pm10: 20,
+            european_aqi_nitrogen_dioxide: 10, european_aqi_ozone: 30, european_aqi_sulphur_dioxide: 5,
+            pm2_5: 18, pm10: 22, nitrogen_dioxide: 15, ozone: 60, sulphur_dioxide: 3,
+            birch_pollen: 25, grass_pollen: null, ragweed_pollen: null,
+            alder_pollen: null, mugwort_pollen: null, olive_pollen: null
+          }
+        });
       }
       if (u.includes("geocoding-api.open-meteo.com")) {
         return json({ results: [{ latitude: 43.6, longitude: 1.44, name: "Toulouse" }] });
@@ -206,10 +264,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 4 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 7 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("4 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 4);
+  assert("7 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 7);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -224,9 +282,122 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   tries = 0;
   while (!document.querySelector(".pwc-saint") && tries++ < 60) await sleep(50);
   assert("horloge : saint du jour affiche sous la date", (document.querySelector(".pwc-saint")?.textContent || "") === "Testine");
+  assert("horloge : disposition par defaut du saint = en dessous (pas de classe inline)", !document.querySelector(".pwc-saint.pwc-saint-inline"));
+  {
+    const clockManifest = catalog.find((m) => m.id === "clock");
+    const keys = (clockManifest?.settings || []).map((s) => s.key);
+    assert("reglages horloge : format de date et disposition du saint exposes", ["dateFormat", "saintLayout"].every((k) => keys.includes(k)));
+    const dateFormatSetting = clockManifest.settings.find((s) => s.key === "dateFormat");
+    assert("format de date : 4 options (full/long/medium/short)",
+      (dateFormatSetting?.options || []).map((o) => o.value).sort().join(",") === "full,long,medium,short");
+  }
   tries = 0;
   while (!document.querySelector(".pww-saint") && tries++ < 60) await sleep(50);
-  assert("meteo : saint du jour affiche", (document.querySelector(".pww-saint")?.textContent || "") === "Testine");
+  const wSaints = [...document.querySelectorAll(".pww-saint")].map((el) => el.textContent);
+  assert("meteo : saint du jour affiche (colonne aujourd'hui)", wSaints.includes("Testine"));
+  // Note : jsdom ne fait pas de vraie mise en page (clientWidth/Height
+  // toujours 0), donc la tuile est systematiquement detectee "carree"
+  // (computeLayoutMode) et la prevision de demain -- donc son saint --
+  // n'y apparait jamais, quel que soit le reglage. Ce chemin (saint du
+  // lendemain quand la prevision est affichee) est verifie separement,
+  // hors DOM. Note: jsdom does no real layout (clientWidth/Height always
+  // 0), so the tile is always detected as "square" (computeLayoutMode)
+  // and tomorrow's forecast -- and so its name day -- never appears
+  // here, regardless of the setting. This path (tomorrow's name day
+  // when the forecast is shown) is verified separately, outside the DOM.
+
+  console.log("== Qualite de l'air : indice, polluant et pollen dominants ==");
+  tries = 0;
+  while (!document.querySelector(".pw-airquality .paq-value") && tries++ < 60) await sleep(50);
+  assert("indice europeen affiche (42)", (document.querySelector(".pw-airquality .paq-value")?.textContent || "").trim() === "42");
+  assert("niveau 'Degrade' affiche (FR, palier 40-60)", (document.querySelector(".pw-airquality .paq-level")?.textContent || "").includes("Dégradé"));
+  assert("mode detaille : 5 puces polluants + 1 puce pollen (bouleau en saison)", document.querySelectorAll(".pw-airquality .paq-chip").length === 6);
+  assert("pollen hors saison NON affiche (un pollen actif)", !document.querySelector(".pw-airquality .paq-outofseason"));
+  const chipTexts = [...document.querySelectorAll(".pw-airquality .paq-chip")].map((c) => c.textContent);
+  assert("puce PM2.5 avec sa valeur brute (18)", chipTexts.some((t) => t.includes("PM2.5") && t.includes("18")));
+  assert("puce pollen Bouleau au niveau modere", chipTexts.some((t) => t.includes("Bouleau") && t.includes("modéré")));
+
+  console.log("== Agenda : fusion de calendriers, couleurs, vues liste/semaine ==");
+  tries = 0;
+  while (!document.querySelector(".pw-calendar .pwc-item") && tries++ < 80) await sleep(50);
+  const listItemTexts = [...document.querySelectorAll(".pw-calendar .pwc-item")].map((el) => el.textContent);
+  assert("vue liste par defaut : evenement toute la journee (calendrier Famille) affiche", listItemTexts.some((t) => t.includes("Anniversaire Lea")));
+  assert("vue liste : evenement chronometre avec lieu (calendrier Travail) affiche", listItemTexts.some((t) => t.includes("Reunion equipe") && t.includes("Salle B")));
+  const legendText = document.querySelector(".pw-calendar .pwc-legend")?.textContent || "";
+  assert("legende : les deux calendriers apparaissent avec leur libelle", legendText.includes("Famille") && legendText.includes("Travail"));
+
+  const weekTab = [...document.querySelectorAll(".pw-calendar .pwc-tab")].find((b) => b.dataset.view === "week");
+  weekTab.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(50);
+  assert("bascule vers la vue semaine : grille de 7 colonnes affichee", document.querySelectorAll(".pw-calendar .pwc-wk-col").length === 7);
+  assert("vue semaine : la colonne d'aujourd'hui est mise en evidence", !!document.querySelector(".pw-calendar .pwc-wk-today"));
+  assert("vue semaine : l'evenement toute la journee (aujourd'hui) apparait dans sa colonne", (document.querySelector(".pw-calendar .pwc-wk-today")?.textContent || "").includes("Anniversaire Lea"));
+
+  console.log("== Radar meteo : widget present, reglages exposes ==");
+  // Comme la tuile Trafic (egalement basee sur Leaflet), le rendu carte
+  // reel n'est pas simule ici (Leaflet + tuiles distantes hors de portee
+  // du DOM jsdom) : on verifie la presence au catalogue et la forme des
+  // reglages.
+  // Like the Traffic tile (also Leaflet-based), the actual map rendering
+  // isn't simulated here (Leaflet + remote tiles are out of jsdom's
+  // reach): we check catalog presence and the settings shape.
+  {
+    const radarManifest = catalog.find((m) => m.id === "radar");
+    assert("widget radar present dans le catalogue", !!radarManifest);
+    const keys = (radarManifest?.settings || []).map((s) => s.key);
+    assert("reglages radar : ville, zoom, fond de carte, opacite, prevision, lecture auto, vitesse, rafraichissement",
+      ["city", "zoom", "basemap", "opacity", "includeForecast", "autoplay", "animationSpeed", "refresh"].every((k) => keys.includes(k)));
+  }
+
+  console.log("== Avions en vue : widget present, reglages exposes ==");
+  // Meme raisonnement que Radar/Trafic : pas de montage carte Leaflet
+  // reel dans jsdom, on verifie le catalogue et la forme des reglages.
+  // Same reasoning as Radar/Traffic: no real Leaflet map mounting in
+  // jsdom, we check the catalog and the settings shape.
+  {
+    const planesManifest = catalog.find((m) => m.id === "planes");
+    assert("widget planes present dans le catalogue", !!planesManifest);
+    const keys = (planesManifest?.settings || []).map((s) => s.key);
+    assert("reglages avions : ville, reseau ADS-B, rayon, zoom, fond de carte, etiquettes, max, rafraichissement",
+      ["city", "source", "radius", "zoom", "basemap", "showLabels", "maxPlanes", "refresh"].every((k) => keys.includes(k)));
+    const sourceSetting = planesManifest.settings.find((s) => s.key === "source");
+    assert("reseau ADS-B : choix entre adsb.lol et adsb.fi expose dans les reglages",
+      (sourceSetting?.options || []).map((o) => o.value).sort().join(",") === "adsbfi,adsblol");
+  }
+
+  console.log("== Flux RSS : article cliquable, popup de lecture nettoyee ==");
+  tries = 0;
+  while (!document.querySelector(".pw-rss .pwr-item") && tries++ < 60) await sleep(50);
+  const rssItems = [...document.querySelectorAll(".pw-rss .pwr-item")];
+  assert("2 articles affiches", rssItems.length === 2);
+  const linkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article avec lien");
+  const unlinkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article sans lien");
+  assert("article avec lien marque cliquable", linkedItem?.classList.contains("pwr-clickable"));
+  assert("article sans lien NON marque cliquable", !unlinkedItem?.classList.contains("pwr-clickable"));
+
+  assert("popup pas encore creee avant tout clic (creation paresseuse)", !document.querySelector(".pwr-modal-card"));
+
+  unlinkedItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
+  assert("clic sur un article sans lien : aucune popup n'est creee", !document.querySelector(".pwr-modal-card"));
+
+  linkedItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
+  const rssModal = document.querySelector(".pwr-modal-card")?.closest(".modal");
+  assert("clic sur un article avec lien : popup ouverte", rssModal && rssModal.hidden === false);
+  assert("popup : titre de l'article affiche", document.querySelector(".pwr-modal-title")?.textContent === "Article avec lien");
+  assert("popup : source et date affichees dans le meta", (document.querySelector(".pwr-modal-meta")?.textContent || "").includes("Flux Test"));
+  const rssBody = document.querySelector(".pwr-modal-body");
+  assert("popup : contenu HTML riche affiche (gras conserve)", rssBody?.innerHTML.includes("<b>riche</b>"));
+  assert("popup : script embarque retire (non execute)", !window.__pwnedRss);
+  assert("popup : balise <script> absente du HTML injecte", !rssBody?.innerHTML.includes("<script"));
+  assert("popup : gestionnaire onclick retire du lien interne", !rssBody?.innerHTML.includes("onclick"));
+  assert("popup : href retire du lien interne (contenu fait pour etre lu, pas navigue)", !rssBody?.querySelector("a")?.getAttribute("href"));
+  assert("popup : texte du lien interne conserve", rssBody?.textContent.includes("lien interne"));
+
+  rssModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
+  assert("popup refermee par le bouton", rssModal.hidden === true);
 
   console.log("== Languette -> barre d'outils ==");
   document.getElementById("dockTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -272,7 +443,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (5 au total)", document.querySelectorAll(".grid-stack-item").length === 5);
+  assert("tuile ajoutee (8 au total)", document.querySelectorAll(".grid-stack-item").length === 8);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {

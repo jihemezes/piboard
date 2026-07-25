@@ -1,5 +1,243 @@
 # Changelog
 
+## 1.13.0
+
+- **Flux RSS : articles cliquables avec popup de lecture.** Un article
+  est désormais cliquable dès que le flux fournit un lien à son sujet
+  (détecté automatiquement, RSS comme Atom) ; un tap ouvre une fenêtre
+  popup affichant le titre, la source, la date, et le contenu de
+  l'article tel que fourni par le flux (`content:encoded` en priorité
+  s'il est présent, sinon la description). Les articles sans lien
+  restent de simples lignes de texte, non interactives.
+  - Le contenu est nettoyé avant affichage (scripts, styles, cadres et
+    gestionnaires d'événements embarqués retirés) ;
+  - Les liens à l'intérieur du contenu sont neutralisés (texte conservé,
+    navigation désactivée) — même logique que l'attribution des tuiles
+    cartographiques : éviter le piège d'un onglet ouvert qu'on ne peut
+    plus fermer sur un kiosque tactile sans clavier ;
+  - Fermeture par le bouton, la touche Échap, ou un clic sur le fond.
+
+---
+
+- **RSS feed: clickable articles with a reading popup.** An article is
+  now clickable as soon as the feed provides a link for it (detected
+  automatically, RSS as well as Atom); tapping it opens a popup showing
+  the title, source, date, and the article's content as provided by the
+  feed (`content:encoded` preferred when present, falling back to the
+  description). Articles without a link stay plain, non-interactive
+  text lines.
+  - Content is cleaned up before display (embedded scripts, styles,
+    frames and event handlers are stripped);
+  - Links inside the content are neutralized (text kept, navigation
+    disabled) — same reasoning as the map tiles' attribution: avoiding
+    the trap of an unclosable tab on a keyboard-less touch kiosk;
+  - Closes via the button, the Escape key, or a backdrop click.
+
+## 1.12.1
+
+- **Correctif : débordement du saint du jour sur les petites tuiles *Horloge*.**
+  Sur les tuiles très basses, la 2e ligne du saint du jour pouvait faire
+  déborder le contenu de la tuile. La disposition bascule désormais
+  automatiquement sur un affichage côte à côte avec la date quand la
+  tuile est trop basse pour une 2e ligne, ou quand la disposition
+  heure/date est déjà « côte à côte » — le saint du jour ne peut plus
+  jamais faire déborder la tuile.
+- **Nouveau réglage *Horloge* : disposition du saint du jour**,
+  « En dessous de la date » (comportement historique) ou
+  « Côte à côte avec la date », au choix.
+- **Nouveau réglage *Horloge* : format de la date** — complet (comme
+  avant), long (sans le jour de la semaine), moyen (abrégé), ou court
+  (numérique JJ/MM/AAAA) — pour libérer de la place sur les petites
+  tuiles.
+- **Correctif *Météo*** : quand la prévision du lendemain est affichée,
+  le saint du jour du lendemain apparaît désormais aussi (si l'option
+  est active), sous la colonne « Demain ».
+
+---
+
+- **Fix: name day overflow on small *Clock* tiles.** On very short
+  tiles, the name day's 2nd line could overflow the tile's content. The
+  layout now automatically falls back to a side-by-side display with
+  the date when the tile is too short for a 2nd line, or when the time/
+  date arrangement is already "side by side" — the name day can no
+  longer overflow the tile.
+- **New *Clock* setting: name day arrangement**, "Below the date"
+  (historical behavior) or "Side by side with the date", your choice.
+- **New *Clock* setting: date format** — full (as before), long (no
+  weekday), medium (abbreviated), or short (numeric MM/DD/YYYY) — to
+  free up room on small tiles.
+- ***Weather* fix**: when tomorrow's forecast is shown, tomorrow's name
+  day now also appears (if the setting is on), under the "Tomorrow"
+  column.
+
+## 1.12.0
+
+- **Nouveau widget : *Avions en vue*** — avions en vol en temps réel
+  autour d'une ville, sur une vraie carte, via un réseau ADS-B
+  communautaire gratuit et sans clé — **adsb.lol** ou **adsb.fi**, au
+  choix dans les réglages de la tuile (mêmes données, même format,
+  utile en cas de trou de couverture sur l'un des deux). Ville, rayon de
+  recherche, zoom et fond de carte indépendants — mêmes fonds de carte
+  que les tuiles Trafic et Radar météo, pour une identité visuelle
+  cohérente entre les tuiles cartographiques.
+  - Icônes d'avion orientées selon leur cap réel, avec étiquette
+    indicatif + altitude (format aviation : niveau de vol FLxxx au-dessus
+    de 10 000 ft, pieds en dessous, « Sol » pour un appareil au sol) ;
+  - Les avions en squawk d'urgence (7500/7600/7700) sont mis en évidence
+    en rouge ;
+  - Nombre d'avions plafonné et trié par proximité (les plus proches
+    d'abord), pour rester lisible même en zone à fort trafic ;
+  - Réglages : ville, réseau ADS-B, rayon de recherche, zoom initial,
+    fond de carte, affichage des étiquettes, nombre max d'avions,
+    fréquence de rafraîchissement.
+
+---
+
+- **New widget: *Planes Overhead*** — live aircraft around a city, on a
+  real map, via a free, keyless community ADS-B network — **adsb.lol**
+  or **adsb.fi**, your choice in the tile's settings (same data, same
+  format, handy if one has a coverage gap near you). Independent city,
+  search radius, zoom and base map — same base maps as the Traffic and
+  Weather Radar tiles, for a consistent visual identity between the map
+  tiles.
+  - Plane icons oriented by actual heading, with a callsign + altitude
+    label (aviation-style: flight level FLxxx above 10,000 ft, feet
+    below that, "Ground" for an aircraft on the ground);
+  - Aircraft squawking an emergency code (7500/7600/7700) are
+    highlighted in red;
+  - Aircraft count capped and sorted by proximity (closest first), to
+    stay legible even in high-traffic areas;
+  - Settings: city, ADS-B network, search radius, initial zoom, base
+    map, label visibility, max aircraft shown, refresh interval.
+
+## 1.11.0
+
+- **Nouveau widget : *Radar météo*** — boucle radar de précipitations
+  animée (2 dernières heures, plus une courte prévision optionnelle) sur
+  une vraie carte, via l'API gratuite et sans clé Weather Maps de
+  RainViewer. Ville, zoom et fond de carte indépendants de la tuile
+  Météo — mêmes fonds de carte (Voyager/Sombre/Clair/Auto) que la tuile
+  Trafic, pour une identité visuelle cohérente entre les tuiles
+  cartographiques.
+  - Contrôles lecture/pause et image par image directement sur la tuile,
+    horodatage de l'image affichée (marquée d'une flèche pour les images
+    de prévision) ;
+  - Chaque image radar est préchargée et mise en cache pour une
+    animation fluide (pas de rechargement à chaque boucle) ;
+  - Réglages : ville, zoom initial, fond de carte, opacité du radar,
+    inclusion des images de prévision à court terme, lecture automatique,
+    délai entre images, fréquence de rafraîchissement (RainViewer publie
+    une nouvelle image toutes les ~10 minutes) ;
+  - Attribution « Weather data by RainViewer » affichée sur la carte,
+    comme l'exigent leurs conditions d'usage gratuites.
+
+---
+
+- **New widget: *Weather Radar*** — animated precipitation radar loop
+  (last 2 hours, plus an optional short-term forecast) over a real map,
+  via RainViewer's free, keyless Weather Maps API. City, zoom and base
+  map independent from the Weather tile — same base maps
+  (Voyager/Dark/Light/Auto) as the Traffic tile, for a consistent visual
+  identity between the map tiles.
+  - Play/pause and step controls right on the tile, with a timestamp for
+    the displayed frame (marked with an arrow for forecast frames);
+  - Each radar frame is preloaded and cached for a smooth animation (no
+    reloading on every loop);
+  - Settings: city, initial zoom, base map, radar opacity, whether to
+    include short-term forecast frames, autoplay, frame delay, refresh
+    interval (RainViewer publishes a new frame roughly every 10 minutes);
+  - "Weather data by RainViewer" attribution shown on the map, as
+    required by their free terms of use.
+
+## 1.10.0
+
+- **Nouveau widget : *Agenda*** — un ou plusieurs calendriers iCal (.ics)
+  fusionnés dans une seule tuile, chacun dans sa propre couleur assignée
+  automatiquement. Compatible Google Agenda, iCloud/iPhone (lien
+  `webcal://` de partage public, converti automatiquement), Nextcloud,
+  Outlook, ou tout autre calendrier exposant un lien ICS public.
+  - Deux vues, basculables directement sur la tuile (onglets) : **liste**
+    des prochains événements groupés par jour (« Aujourd'hui »,
+    « Demain », puis par date), ou **grille semaine** façon calendrier
+    mural avec la colonne du jour mise en évidence ;
+  - Gère les **événements récurrents** (RRULE : quotidien, hebdomadaire
+    avec jours précis, mensuel — y compris « 2e lundi du mois » —, et
+    annuel, avec intervalle/nombre d'occurrences/date de fin) ainsi que
+    les **occurrences uniques déplacées ou annulées** (RECURRENCE-ID) ;
+  - Légende des calendriers affichée en bas de tuile dès que plusieurs
+    calendriers sont configurés ;
+  - Réglages : liste des calendriers (un lien par ligne, avec libellé
+    optionnel), vue par défaut, fenêtre de la vue liste (jours à venir),
+    affichage des événements toute la journée, premier jour de la
+    semaine, fréquence de rafraîchissement.
+
+  Parseur ICS et moteur de récurrence écrits en JavaScript pur (aucune
+  dépendance externe), passant par le proxy générique déjà utilisé par
+  la tuile RSS pour éviter tout problème de CORS.
+
+---
+
+- **New widget: *Calendar*** — one or several iCal (.ics) calendars
+  merged into a single tile, each automatically assigned its own color.
+  Works with Google Calendar, iCloud/iPhone (public share `webcal://`
+  link, converted automatically), Nextcloud, Outlook, or any other
+  calendar exposing a public ICS link.
+  - Two views, switchable right on the tile (tabs): an **upcoming list**
+    grouped by day ("Today", "Tomorrow", then by date), or a **week
+    grid** in a wall-calendar style with today's column highlighted;
+  - Handles **recurring events** (RRULE: daily, weekly with specific
+    days, monthly — including "2nd Monday of the month" — and yearly,
+    with interval/occurrence count/end date) as well as **single moved
+    or cancelled occurrences** (RECURRENCE-ID);
+  - A calendar legend is shown at the bottom of the tile once more than
+    one calendar is configured;
+  - Settings: calendar list (one link per line, with an optional label),
+    default view, the list view's window (days ahead), whether to show
+    all-day events, first day of the week, refresh interval.
+
+  ICS parser and recurrence engine written in plain JavaScript (no
+  external dependency), going through the generic proxy already used by
+  the RSS tile to avoid any CORS issue.
+
+## 1.9.0
+
+- **Nouveau widget : *Qualité de l'air*** — indice de qualité de l'air
+  européen (EAQI) et niveaux de pollens (bouleau, graminées, ambroisie,
+  aulne, armoise, olivier), via l'API gratuite et sans clé d'Open-Meteo,
+  basée sur les prévisions CAMS Europe. Deux affichages au choix :
+  - **Compact** : un badge coloré avec l'indice global, le polluant
+    dominant (celui qui tire l'indice vers le haut) et, si activé, le
+    pollen dominant actuellement en saison ;
+  - **Détaillé** : le même badge, plus le détail chiffré de chaque
+    polluant (PM2.5, PM10, NO₂, O₃, SO₂) et de chaque pollen en saison,
+    sous forme de puces colorées.
+
+  Les pollens ne sont disponibles que pour l'Europe et seulement pour les
+  espèces actuellement en saison — l'échelle de niveau (nul/faible/
+  modéré/élevé) est volontairement simplifiée pour un coup d'œil rapide,
+  pas un usage médical. Réutilise le même géocodage gratuit que la tuile
+  météo. Attribution CAMS/Open-Meteo affichée sur la tuile, comme requis
+  par leurs conditions d'usage.
+
+---
+
+- **New widget: *Air Quality*** — European Air Quality Index (EAQI) and
+  pollen levels (birch, grass, ragweed, alder, mugwort, olive), via
+  Open-Meteo's free, keyless API, based on the CAMS Europe forecast. Two
+  display modes:
+  - **Compact**: a colored badge with the overall index, the dominant
+    pollutant (the one driving the index up), and, if enabled, the
+    dominant pollen currently in season;
+  - **Detailed**: the same badge, plus the numeric breakdown of every
+    pollutant (PM2.5, PM10, NO₂, O₃, SO₂) and every in-season pollen, as
+    colored chips.
+
+  Pollen data is only available for Europe and only for species
+  currently in season — the level scale (none/low/moderate/high) is
+  deliberately simplified for a quick glance, not medical use. Reuses the
+  same free geocoding as the weather tile. CAMS/Open-Meteo attribution is
+  shown on the tile, as required by their terms of use.
+
 ## 1.8.0
 
 - **Nouveau : « Saint du jour » dans les tuiles *Horloge* et *Météo***. Un

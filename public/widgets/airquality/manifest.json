@@ -1,0 +1,81 @@
+{
+  "id": "airquality",
+  "version": "0.1.0",
+  "name": {
+    "en": "Air Quality",
+    "fr": "Qualité de l'air"
+  },
+  "description": {
+    "en": "European Air Quality Index and pollen levels (birch, grass, ragweed, alder, mugwort, olive) from Open-Meteo's free, keyless Air Quality API — based on the CAMS European air quality forecast. Compact (index + dominant pollutant/pollen) or detailed (full pollutant and pollen breakdown) display, your choice.",
+    "fr": "Indice de qualité de l'air européen et niveaux de pollens (bouleau, graminées, ambroisie, aulne, armoise, olivier) via l'API gratuite et sans clé Air Quality d'Open-Meteo — basée sur les prévisions CAMS pour l'Europe. Affichage compact (indice + polluant/pollen dominant) ou détaillé (détail complet des polluants et pollens), au choix."
+  },
+  "size": {
+    "w": 3,
+    "h": 2,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 6,
+    "maxH": 5
+  },
+  "settings": [
+    {
+      "key": "city",
+      "type": "text",
+      "default": "Toulouse",
+      "label": {
+        "en": "City",
+        "fr": "Ville"
+      }
+    },
+    {
+      "key": "displayMode",
+      "type": "select",
+      "default": "compact",
+      "label": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "options": [
+        {
+          "value": "compact",
+          "label": {
+            "en": "Compact (index + dominant pollutant/pollen)",
+            "fr": "Compact (indice + polluant/pollen dominant)"
+          }
+        },
+        {
+          "value": "detailed",
+          "label": {
+            "en": "Detailed (full breakdown)",
+            "fr": "Détaillé (détail complet)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "showPollen",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show pollen levels",
+        "fr": "Afficher les niveaux de pollens"
+      },
+      "hint": {
+        "en": "Pollen forecasts are only available for Europe, and only for the plant types currently in season (others are simply omitted). Levels shown here are an approximate, simplified scale for a quick glance \u2014 not a medical reference.",
+        "fr": "Les pr\u00e9visions de pollens ne sont disponibles que pour l'Europe, et seulement pour les esp\u00e8ces actuellement en saison (les autres sont simplement omises). Les niveaux affich\u00e9s ici sont une \u00e9chelle simplifi\u00e9e et approximative pour un coup d'\u0153il rapide \u2014 pas une r\u00e9f\u00e9rence m\u00e9dicale."
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 30,
+      "min": 10,
+      "max": 180,
+      "step": 10,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      }
+    }
+  ]
+}

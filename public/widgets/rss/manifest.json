@@ -1,10 +1,10 @@
 {
   "id": "rss",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": { "en": "RSS feed", "fr": "Flux RSS" },
   "description": {
-    "en": "Latest headlines from an RSS or Atom feed, with automatic rotation.",
-    "fr": "Derniers titres d'un flux RSS ou Atom, avec rotation automatique."
+    "en": "Latest headlines from an RSS or Atom feed, with automatic rotation. Articles with a link open in a popup showing the feed's own article content, without leaving the board.",
+    "fr": "Derniers titres d'un flux RSS ou Atom, avec rotation automatique. Les articles pourvus d'un lien s'ouvrent dans une popup affichant le contenu fourni par le flux, sans quitter le tableau."
   },
   "size": { "w": 4, "h": 3, "minW": 2, "minH": 2, "maxW": 12, "maxH": 8 },
   "settings": [

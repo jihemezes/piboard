@@ -1,6 +1,6 @@
 {
   "id": "clock",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "Clock",
     "fr": "Horloge"
@@ -62,6 +62,25 @@
       }
     },
     {
+      "key": "dateFormat",
+      "type": "select",
+      "default": "full",
+      "label": {
+        "en": "Date format",
+        "fr": "Format de la date"
+      },
+      "hint": {
+        "en": "Shorter formats free up room on small tiles.",
+        "fr": "Les formats plus courts libèrent de la place sur les petites tuiles."
+      },
+      "options": [
+        { "value": "full", "label": { "en": "Full — Friday, July 25, 2026", "fr": "Complet — vendredi 25 juillet 2026" } },
+        { "value": "long", "label": { "en": "Long — July 25, 2026", "fr": "Long — 25 juillet 2026" } },
+        { "value": "medium", "label": { "en": "Medium — Fri, Jul 25", "fr": "Moyen — ven. 25 juil." } },
+        { "value": "short", "label": { "en": "Short — 07/25/2026", "fr": "Court — 25/07/2026" } }
+      ]
+    },
+    {
       "key": "showSaint",
       "type": "checkbox",
       "default": false,
@@ -73,6 +92,23 @@
         "en": "Adds the French \"fête du jour\" next to the date (e.g. \"Sainte Christine\"). Only shown when the date is displayed and the interface language is French \u2014 this calendar is a French cultural tradition without an English equivalent.",
         "fr": "Ajoute la f\u00eate du jour \u00e0 c\u00f4t\u00e9 de la date (ex. \u00ab\u00a0Sainte Christine\u00a0\u00bb). Visible seulement quand la date est affich\u00e9e et que la langue de l'interface est le fran\u00e7ais \u2014 ce calendrier est une tradition culturelle fran\u00e7aise sans \u00e9quivalent anglophone."
       }
+    },
+    {
+      "key": "saintLayout",
+      "type": "select",
+      "default": "below",
+      "label": {
+        "en": "Name day arrangement",
+        "fr": "Disposition du saint du jour"
+      },
+      "hint": {
+        "en": "\"Below\" automatically switches to \"Side by side\" on tiles too short for a 2nd line, or when the time/date arrangement below is already \"Side by side\" \u2014 the name day is never allowed to overflow the tile.",
+        "fr": "\u00ab\u00a0En dessous\u00a0\u00bb bascule automatiquement sur \u00ab\u00a0C\u00f4t\u00e9 \u00e0 c\u00f4t\u00e9\u00a0\u00bb sur les tuiles trop basses pour une 2e ligne, ou quand la disposition heure/date ci-dessous est d\u00e9j\u00e0 \u00ab\u00a0C\u00f4t\u00e9 \u00e0 c\u00f4t\u00e9\u00a0\u00bb \u2014 le saint du jour ne d\u00e9borde jamais de la tuile."
+      },
+      "options": [
+        { "value": "below", "label": { "en": "Below the date", "fr": "En dessous de la date" } },
+        { "value": "inline", "label": { "en": "Side by side with the date", "fr": "Côte à côte avec la date" } }
+      ]
     },
     {
       "key": "layout",

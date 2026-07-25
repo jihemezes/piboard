@@ -2,6 +2,19 @@
 (function () {
   "use strict";
 
+  // Options Intl selon le format de date choisi. "full" reproduit le
+  // comportement historique (seul format avant cette option).
+  // Intl options for the chosen date format. "full" reproduces the
+  // historical behavior (the only format before this setting existed).
+  function dateFormatOptions(key) {
+    switch (key) {
+      case "long": return { day: "numeric", month: "long", year: "numeric" };
+      case "medium": return { weekday: "short", day: "numeric", month: "short" };
+      case "short": return { day: "2-digit", month: "2-digit", year: "numeric" };
+      default: return { weekday: "long", day: "numeric", month: "long", year: "numeric" };
+    }
+  }
+
   class ClockWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -192,28 +205,38 @@
 
       const dateEl = el.querySelector(".pwc-date");
       if (dateEl && s.showDate) {
-        const dateStr = now.toLocaleDateString(locale, {
-          weekday: "long", day: "numeric", month: "long", year: "numeric"
-        });
+        const dateStr = now.toLocaleDateString(locale, dateFormatOptions(s.dateFormat));
 
-        // Le saint du jour est une tradition francaise : non affiche si la
-        // langue de l'interface est l'anglais, meme si le reglage est actif.
-        // La disposition "cote a cote" (digitale) est deja tendue sur une
-        // seule ligne : on n'y ajoute pas de deuxieme ligne pour eviter tout
-        // debordement.
-        // The nameday is a French tradition: not shown when the interface
-        // language is English, even if the setting is on. The digital
-        // "side by side" layout is already tight on one line: no second
-        // line is added there to avoid overflow.
-        const canShowHere = !(s.mode !== "analog" && s.layout === "row");
         const mm = String(now.getMonth() + 1).padStart(2, "0");
         const dd = String(now.getDate()).padStart(2, "0");
-        const saint = s.showSaint && this.ctx.i18n.lang === "fr" && canShowHere && this.saints
+        const saint = s.showSaint && this.ctx.i18n.lang === "fr" && this.saints
           ? this.saints[mm + "-" + dd] : null;
 
-        dateEl.innerHTML = saint
-          ? `${dateStr}<br><span class="pwc-saint">${saint}</span>`
-          : dateStr;
+        if (!saint) {
+          dateEl.innerHTML = dateStr;
+        } else {
+          // "En dessous" (2e ligne) a besoin de hauteur : bascule
+          // automatiquement sur "cote a cote" (une seule ligne, apres un
+          // point median) si la tuile est trop basse pour une 2e ligne,
+          // ou si la disposition heure/date est deja "cote a cote" (une
+          // seule ligne par principe) -- le saint du jour ne doit jamais
+          // faire deborder la tuile, quel que soit le reglage choisi.
+          // "Below" (2nd line) needs vertical room: automatically falls
+          // back to "side by side" (single line, after a middot) when the
+          // tile is too short for a 2nd line, or when the time/date
+          // arrangement is already "side by side" (single line by
+          // design) -- the name day must never overflow the tile,
+          // whatever setting is chosen.
+          const box = el.querySelector(".pw-clock");
+          const rowLayout = s.mode !== "analog" && s.layout === "row";
+          const boxH = box ? box.clientHeight : 0;
+          const fitsBelow = boxH === 0 || boxH >= 90; // 0 = pas encore mesure (1er rendu) / not yet measured (first render)
+          const wantsBelow = s.saintLayout !== "inline" && !rowLayout && fitsBelow;
+
+          dateEl.innerHTML = wantsBelow
+            ? `${dateStr}<br><span class="pwc-saint">${saint}</span>`
+            : `${dateStr} <span class="pwc-saint pwc-saint-inline">· ${saint}</span>`;
+        }
       }
 
       if (s.mode === "analog") {

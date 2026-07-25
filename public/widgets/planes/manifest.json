@@ -1,0 +1,108 @@
+{
+  "id": "planes",
+  "version": "0.1.0",
+  "name": {
+    "en": "Planes Overhead",
+    "fr": "Avions en vue"
+  },
+  "description": {
+    "en": "Live aircraft near a city on a real map, via a free, keyless community ADS-B network (adsb.lol or adsb.fi, your choice) — the same open flight-tracking data behind sites like adsb.lol's globe. Rotated plane icons with callsign and altitude, closest aircraft first.",
+    "fr": "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé (adsb.lol ou adsb.fi, au choix) — les mêmes données ouvertes de suivi de vol que celles derrière des sites comme le globe d'adsb.lol. Icônes d'avions orientées avec indicatif et altitude, les plus proches en priorité."
+  },
+  "size": {
+    "w": 6,
+    "h": 6,
+    "minW": 3,
+    "minH": 3,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "city",
+      "type": "text",
+      "default": "Toulouse",
+      "label": { "en": "City", "fr": "Ville" },
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "source",
+      "type": "select",
+      "default": "adsblol",
+      "label": { "en": "ADS-B network", "fr": "Réseau ADS-B" },
+      "hint": {
+        "en": "Both are free, keyless, community-run networks aggregating volunteer receivers, with the same data format. If one has a coverage gap or an outage near you, try the other.",
+        "fr": "Les deux sont des réseaux communautaires gratuits et sans clé, alimentés par des récepteurs bénévoles, avec le même format de données. En cas de trou de couverture ou de panne près de chez vous, essayez l'autre."
+      },
+      "options": [
+        { "value": "adsblol", "label": { "en": "adsb.lol", "fr": "adsb.lol" } },
+        { "value": "adsbfi", "label": { "en": "adsb.fi", "fr": "adsb.fi" } }
+      ],
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "radius",
+      "type": "number",
+      "default": 25,
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "label": { "en": "Search radius (nautical miles)", "fr": "Rayon de recherche (milles nautiques)" },
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "zoom",
+      "type": "number",
+      "default": 9,
+      "min": 5,
+      "max": 12,
+      "step": 1,
+      "label": { "en": "Initial zoom", "fr": "Zoom initial" },
+      "hint": {
+        "en": "The map can still be freely panned and zoomed afterwards; this only sets the starting view.",
+        "fr": "La carte reste ensuite librement déplaçable et zoomable ; ceci ne fixe que la vue de départ."
+      },
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "basemap",
+      "type": "select",
+      "default": "voyager",
+      "label": { "en": "Base map", "fr": "Fond de carte" },
+      "options": [
+        { "value": "voyager", "label": { "en": "Voyager (roads, colored)", "fr": "Voyager (routier, coloré)" } },
+        { "value": "dark", "label": { "en": "Dark", "fr": "Sombre" } },
+        { "value": "light", "label": { "en": "Light", "fr": "Clair" } },
+        { "value": "auto", "label": { "en": "Auto — follows PiBoard's theme", "fr": "Auto — suit le thème de PiBoard" } }
+      ],
+      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+    },
+    {
+      "key": "showLabels",
+      "type": "checkbox",
+      "default": true,
+      "label": { "en": "Show callsign and altitude labels", "fr": "Afficher indicatif et altitude" },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "maxPlanes",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "label": { "en": "Max aircraft shown (closest first)", "fr": "Nombre max d'avions (les plus proches d'abord)" },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 20,
+      "min": 15,
+      "max": 120,
+      "step": 5,
+      "label": { "en": "Refresh (seconds)", "fr": "Rafraîchissement (secondes)" },
+      "group": { "en": "Display", "fr": "Affichage" }
+    }
+  ]
+}
