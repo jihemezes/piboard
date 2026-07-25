@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.14.3
+
+- **Radar météo** : quand aucune image de prévision n'est disponible sur
+  l'instant (RainViewer est un service assuré au mieux, sans garantie de
+  disponibilité), l'onglet **Prévision** reste désormais visible mais
+  grisé avec une info-bulle explicative — au lieu de disparaître
+  silencieusement, ce qui pouvait donner l'impression que le réglage
+  n'avait aucun effet.
+- **Nouveau réglage *Avions en vue* : traînées de vol** (désactivé par
+  défaut) — une fine ligne pointillée derrière chaque avion, montrant
+  son trajet récent. Se construit progressivement à partir du
+  chargement de la tuile ; l'historique d'un avion est oublié dès qu'il
+  sort du rayon ou du nombre maximum affiché.
+- **Scores sportifs** : pour un match à venir programmé un autre jour
+  que le jour même, l'affichage alterne désormais automatiquement entre
+  l'heure et la date (format jj/mm) toutes les quelques secondes — plus
+  d'ambiguïté sur le jour d'une rencontre à venir. Un match du jour même
+  continue d'afficher seulement l'heure.
+
+---
+
+- **Weather Radar**: when no forecast frame is available at the moment
+  (RainViewer is a best-effort service, with no availability
+  guarantee), the **Forecast** tab now stays visible but greyed out
+  with an explanatory tooltip — instead of silently disappearing, which
+  could make the setting look like it had no effect.
+- **New *Planes Overhead* setting: flight trails** (off by default) — a
+  thin dashed line behind each aircraft, showing its recent path.
+  Builds up progressively from when the tile loads; an aircraft's
+  history is forgotten as soon as it falls outside the radius or the
+  displayed maximum.
+- **Sports scores**: for an upcoming match scheduled on another day,
+  the display now automatically alternates between the time and the
+  date (DD/MM format) every few seconds — no more ambiguity about which
+  day an upcoming match falls on. A match happening today still shows
+  only the time.
+
 ## 1.14.2
 
 - **Radar météo : mode Prévision.** Deux onglets apparaissent désormais

@@ -100,6 +100,7 @@
         btn.addEventListener("pointerup", (e) => {
           e.preventDefault();
           e.stopPropagation();
+          if (btn.disabled) return;
           this.switchMode(btn.dataset.mode);
         });
       });
@@ -185,13 +186,30 @@
         this.frames = past.concat(nowcast);
         this.pastCount = past.length;
 
-        // Les onglets Historique/Prevision ne sont utiles -- et donc
-        // affiches -- que s'il y a effectivement des images de prevision
-        // a montrer. The History/Forecast tabs are only useful -- and
-        // thus shown -- when there are actual forecast frames to show.
+        // Les onglets Historique/Prevision restent visibles des lors que
+        // le reglage "Inclure les images de prevision" est actif -- mais
+        // "Prevision" est desactive (grise) si l'API n'a, a cet instant
+        // precis, fourni aucune image de prevision. RainViewer ne
+        // garantit pas la disponibilite du nowcast (service best-effort) :
+        // mieux vaut le montrer clairement plutot que de faire
+        // disparaitre l'onglet sans explication, ce qui ressemble a un
+        // bouton qui ne fait rien.
+        // The History/Forecast tabs stay visible as long as the
+        // "Include forecast frames" setting is on -- but "Forecast" is
+        // disabled (greyed out) if the API provided no forecast frame
+        // at this exact moment. RainViewer doesn't guarantee nowcast
+        // availability (best-effort service): better to show this
+        // clearly than to make the tab vanish with no explanation,
+        // which looks like a button that does nothing.
         const hasForecast = this.pastCount > 0 && this.pastCount < this.frames.length;
-        if (this.tabsEl) this.tabsEl.hidden = !hasForecast;
-        if (!hasForecast) this.viewMode = "history";
+        const wantsForecastTabs = this.ctx.settings.includeForecast !== false;
+        if (this.tabsEl) this.tabsEl.hidden = !wantsForecastTabs;
+        const forecastBtn = this.ctx.el.querySelector(".pwrd-tab-forecast");
+        if (forecastBtn) {
+          forecastBtn.disabled = !hasForecast;
+          forecastBtn.title = hasForecast ? "" : this.ctx.i18n.t("radar.noForecastNow");
+        }
+        if (!hasForecast) this.viewMode = "history"; // repli si la prevision n'est plus disponible / fallback if forecast is no longer available
         this.updateTabHighlight();
 
         const initial = this.initialPosition();

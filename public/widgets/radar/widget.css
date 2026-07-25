@@ -102,6 +102,10 @@
   white-space: nowrap;
 }
 .pwrd-tab-active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pwrd-tab:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .pwrd-row { display: flex; align-items: center; gap: 10px; padding-left: 4px; }
 .pwrd-time {

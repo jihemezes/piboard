@@ -65,6 +65,30 @@ const CHANGELOG_FIXTURE = `# Changelog
 - Version simple sans separation bilingue.
 `;
 
+const SPORT_TODAY = new Date(); SPORT_TODAY.setHours(12, 0, 0, 0);
+const SPORT_TOMORROW = new Date(SPORT_TODAY.getTime() + 86400000);
+function espnEvent(id, state, date, home, away, homeScore, away2Score, shortDetail) {
+  return {
+    id,
+    date: date.toISOString(),
+    status: { type: { state, shortDetail: shortDetail || "" } },
+    competitions: [{
+      competitors: [
+        { homeAway: "home", team: { displayName: home }, score: String(homeScore) },
+        { homeAway: "away", team: { displayName: away }, score: String(away2Score) }
+      ]
+    }]
+  };
+}
+const ESPN_SCOREBOARD_FIXTURE = {
+  events: [
+    espnEvent("1", "pre", SPORT_TODAY, "Equipe Aujourdhui A", "Equipe Aujourdhui B", 0, 0),
+    espnEvent("2", "pre", SPORT_TOMORROW, "Equipe Demain A", "Equipe Demain B", 0, 0),
+    espnEvent("3", "in", SPORT_TODAY, "Equipe Live A", "Equipe Live B", 1, 0, "45'"),
+    espnEvent("4", "post", SPORT_TODAY, "Equipe Finie A", "Equipe Finie B", 2, 1)
+  ]
+};
+
 const layout = {
   version: 1,
   tiles: [
@@ -74,7 +98,8 @@ const layout = {
     { id: "t-d", widget: "weather", x: 6, y: 0, w: 3, h: 2, settings: { city: "Toulouse", showSaint: true, showTomorrow: true, usePhotos: false } },
     { id: "t-e", widget: "airquality", x: 9, y: 0, w: 3, h: 2, settings: { city: "Toulouse", displayMode: "detailed", showPollen: true } },
     { id: "t-f", widget: "calendar", x: 0, y: 5, w: 4, h: 4, settings: { calendars: "https://cal.test/family.ics|Famille\nhttps://cal.test/work.ics|Travail" } },
-    { id: "t-g", widget: "rss", x: 4, y: 5, w: 4, h: 3, settings: { url: "https://feed.test/rss.xml", maxItems: 6, showSource: true } }
+    { id: "t-g", widget: "rss", x: 4, y: 5, w: 4, h: 3, settings: { url: "https://feed.test/rss.xml", maxItems: 6, showSource: true } },
+    { id: "t-h", widget: "sportscore", x: 8, y: 5, w: 4, h: 3, settings: { league: "soccer:fifa.world", maxItems: 5 } }
   ]
 };
 
@@ -202,6 +227,9 @@ const dom = new JSDOM(html, {
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
       }
+      if (u.includes("/api/proxy") && u.includes("site.api.espn.com") && u.includes("scoreboard")) {
+        return json(ESPN_SCOREBOARD_FIXTURE);
+      }
       if (u.includes("/api/proxy") && u.includes("feed.test")) {
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(RSS_FEED_XML) });
       }
@@ -282,10 +310,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 7 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 8 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("7 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 7);
+  assert("8 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 8);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -376,8 +404,8 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const planesManifest = catalog.find((m) => m.id === "planes");
     assert("widget planes present dans le catalogue", !!planesManifest);
     const keys = (planesManifest?.settings || []).map((s) => s.key);
-    assert("reglages avions : ville, reseau ADS-B, rayon, zoom, fond de carte, etiquettes, max, rafraichissement",
-      ["city", "source", "radius", "zoom", "basemap", "showLabels", "maxPlanes", "refresh"].every((k) => keys.includes(k)));
+    assert("reglages avions : ville, reseau ADS-B, rayon, zoom, fond de carte, etiquettes, trainees, max, rafraichissement",
+      ["city", "source", "radius", "zoom", "basemap", "showLabels", "showTrails", "maxPlanes", "refresh"].every((k) => keys.includes(k)));
     const sourceSetting = planesManifest.settings.find((s) => s.key === "source");
     assert("reseau ADS-B : choix entre adsb.lol et adsb.fi expose dans les reglages",
       (sourceSetting?.options || []).map((o) => o.value).sort().join(",") === "adsbfi,adsblol");
@@ -416,6 +444,32 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   rssModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(20);
   assert("popup refermee par le bouton", rssModal.hidden === true);
+
+  console.log("== Scores sportifs : alternance heure/date pour un match a venir hors aujourd'hui ==");
+  tries = 0;
+  while (document.querySelectorAll(".pw-sport li").length < 4 && tries++ < 60) await sleep(50);
+  const sportRows = [...document.querySelectorAll(".pw-sport li")];
+  assert("4 evenements affiches", sportRows.length === 4);
+
+  const rowFor = (name) => sportRows.find((li) => li.textContent.includes(name));
+  const todayRow = rowFor("Equipe Aujourdhui A");
+  const tomorrowRow = rowFor("Equipe Demain A");
+  const liveRow = rowFor("Equipe Live A");
+  const finalRow = rowFor("Equipe Finie A");
+
+  assert("match du jour : heure simple, pas de bascule heure/date", !todayRow.querySelector(".pws-status-date"));
+  assert("match live : mention en direct affichee", !!liveRow.querySelector(".pws-live"));
+  assert("match termine : score final affiche", finalRow.textContent.includes("2") && finalRow.textContent.includes("1"));
+
+  const timeEl = tomorrowRow.querySelector(".pws-status-time");
+  const dateEl = tomorrowRow.querySelector(".pws-status-date");
+  assert("match a venir un autre jour : heure ET date jj/mm presentes dans le DOM", !!timeEl && !!dateEl);
+  assert("etat initial : heure visible, date cachee", timeEl.hidden === false && dateEl.hidden === true);
+  const expectedDDMM = String(SPORT_TOMORROW.getDate()).padStart(2, "0") + "/" + String(SPORT_TOMORROW.getMonth() + 1).padStart(2, "0");
+  assert("date au format jj/mm correct", dateEl.textContent === expectedDDMM);
+
+  await sleep(3100); // laisse le temps a la premiere bascule (toutes les 3s) / lets the first toggle happen (every 3s)
+  assert("apres bascule : date visible, heure cachee", dateEl.hidden === false && timeEl.hidden === true);
 
   console.log("== Languette -> barre d'outils ==");
   document.getElementById("dockTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -461,7 +515,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (8 au total)", document.querySelectorAll(".grid-stack-item").length === 8);
+  assert("tuile ajoutee (9 au total)", document.querySelectorAll(".grid-stack-item").length === 9);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {

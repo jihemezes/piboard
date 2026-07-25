@@ -84,6 +84,12 @@
     };
   }
 
+  // Couleur partagee entre l'icone et la trainee d'un avion.
+  // Color shared between an aircraft's icon and its trail.
+  function planeColor(plane) {
+    return plane.emergency ? "#E5384B" : plane.onGround ? "#8A98B2" : "#4C8DFF";
+  }
+
   class PlanesWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -91,6 +97,7 @@
       this.layerGroup = null;
       this.coords = null;
       this.timer = null;
+      this.trails = new Map(); // hex -> [[lat,lon], ...], historique recent / recent history
     }
 
     async init() {
@@ -224,6 +231,7 @@
         planes.sort((a, b) => a.dst - b.dst);
         const max = Math.max(5, Math.min(200, Number(this.ctx.settings.maxPlanes) || 30));
         const shown = planes.slice(0, max);
+        this.updateTrails(shown);
         this.updateMarkers(shown);
         this.updateCount(shown.length, planes.length);
       } catch (e) {
@@ -240,6 +248,30 @@
         : label;
     }
 
+    // Historique de position (en option, reglage "showTrails") : chaque
+    // rafraichissement ajoute la position courante de chaque avion
+    // affiche a son historique, plafonne pour ne pas accumuler
+    // indefiniment. Les avions qui sortent du rayon/plafond affiche
+    // perdent leur historique (pas de "fantome" pour un avion qu'on ne
+    // suit plus). Position history (optional, "showTrails" setting):
+    // every refresh appends each shown aircraft's current position to
+    // its history, capped so it doesn't accumulate forever. Aircraft
+    // that fall out of the radius/display cap lose their history (no
+    // "ghost" trail for a plane we're no longer tracking).
+    updateTrails(planes) {
+      const seen = new Set();
+      for (const p of planes) {
+        seen.add(p.hex);
+        const path = this.trails.get(p.hex) || [];
+        path.push([p.lat, p.lon]);
+        if (path.length > 15) path.shift();
+        this.trails.set(p.hex, path);
+      }
+      for (const hex of [...this.trails.keys()]) {
+        if (!seen.has(hex)) this.trails.delete(hex);
+      }
+    }
+
     // Icone rotative (silhouette d'avion, orientee selon le cap) + une
     // etiquette non tournee (indicatif + altitude), reconstruite a
     // chaque rafraichissement -- plus simple et tout aussi lisible qu'un
@@ -250,7 +282,7 @@
     // -- simpler and just as legible as tracking individual markers,
     // given the refresh cadence (seconds, not milliseconds).
     buildIcon(plane) {
-      const color = plane.emergency ? "#E5384B" : plane.onGround ? "#8A98B2" : "#4C8DFF";
+      const color = planeColor(plane);
       const label = this.ctx.settings.showLabels !== false
         ? `<div class="pwp-label">${plane.callsign}<br>${formatAlt(plane, this.ctx.i18n)}</div>`
         : "";
@@ -269,7 +301,20 @@
     updateMarkers(planes) {
       if (!this.layerGroup) return;
       this.layerGroup.clearLayers();
+      const showTrails = this.ctx.settings.showTrails === true;
       for (const p of planes) {
+        if (showTrails) {
+          const path = this.trails.get(p.hex);
+          if (path && path.length > 1) {
+            // Fine ligne pointillee : discrete, ne doit pas dominer la
+            // carte quand beaucoup d'avions sont affiches.
+            // Thin dashed line: discreet, shouldn't dominate the map
+            // when many aircraft are shown.
+            L.polyline(path, {
+              color: planeColor(p), weight: 1.5, opacity: 0.55, dashArray: "1,6", lineCap: "round"
+            }).addTo(this.layerGroup);
+          }
+        }
         L.marker([p.lat, p.lon], { icon: this.buildIcon(p) }).addTo(this.layerGroup);
       }
     }

@@ -1,13 +1,13 @@
 {
   "id": "planes",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "name": {
     "en": "Planes Overhead",
     "fr": "Avions en vue"
   },
   "description": {
-    "en": "Live aircraft near a city on a real map, via a free, keyless community ADS-B network (adsb.lol or adsb.fi, your choice) — the same open flight-tracking data behind sites like adsb.lol's globe. Rotated plane icons with callsign and altitude, closest aircraft first.",
-    "fr": "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé (adsb.lol ou adsb.fi, au choix) — les mêmes données ouvertes de suivi de vol que celles derrière des sites comme le globe d'adsb.lol. Icônes d'avions orientées avec indicatif et altitude, les plus proches en priorité."
+    "en": "Live aircraft near a city on a real map, via a free, keyless community ADS-B network (adsb.lol or adsb.fi, your choice) — the same open flight-tracking data behind sites like adsb.lol's globe. Rotated plane icons with callsign and altitude, closest aircraft first, with an optional dashed trail showing each aircraft's recent path.",
+    "fr": "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé (adsb.lol ou adsb.fi, au choix) — les mêmes données ouvertes de suivi de vol que celles derrière des sites comme le globe d'adsb.lol. Icônes d'avions orientées avec indicatif et altitude, les plus proches en priorité, avec une traînée pointillée optionnelle montrant le trajet récent de chaque avion."
   },
   "size": {
     "w": 6,
@@ -82,6 +82,17 @@
       "type": "checkbox",
       "default": true,
       "label": { "en": "Show callsign and altitude labels", "fr": "Afficher indicatif et altitude" },
+      "group": { "en": "Display", "fr": "Affichage" }
+    },
+    {
+      "key": "showTrails",
+      "type": "checkbox",
+      "default": false,
+      "label": { "en": "Show flight trails", "fr": "Afficher les traînées" },
+      "hint": {
+        "en": "A thin dashed line behind each aircraft, showing its recent path. Builds up from when the tile loads — there's no historical track to draw from at first.",
+        "fr": "Une fine ligne pointillée derrière chaque avion, montrant son trajet récent. Se construit à partir du chargement de la tuile — il n'y a pas d'historique à tracer au tout début."
+      },
       "group": { "en": "Display", "fr": "Affichage" }
     },
     {

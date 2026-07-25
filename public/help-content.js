@@ -500,8 +500,8 @@
       group: "tiles",
       title: { fr: "Scores sportifs en direct", en: "Live sports scores" },
       sub: {
-        fr: "Scores en direct et à venir de football, de rugby (Top 14), ou de toute autre compétition couverte par ESPN via son code.",
-        en: "Live and upcoming scores for football, rugby (Top 14), or any other ESPN-covered competition via its code."
+        fr: "Scores en direct et à venir de football, de rugby (Top 14), ou de toute autre compétition couverte par ESPN via son code. Pour un match à venir qui n'est pas aujourd'hui, l'heure et la date alternent automatiquement.",
+        en: "Live and upcoming scores for football, rugby (Top 14), or any other ESPN-covered competition via its code. For an upcoming match that isn't today, the time and date alternate automatically."
       },
       html: {
         fr: `
@@ -509,7 +509,7 @@
           <h4>Objectif</h4>
           <p>Suivre les scores d'une compétition sans allumer la télévision, en direct pendant les matchs et pour les rencontres à venir.</p>
           <h4>Possibilités</h4>
-          <p>Une sélection de compétitions courantes (Coupe du monde, Ligue des champions, principaux championnats de football européens, Top 14) est proposée directement dans la liste. Pour toute autre compétition suivie par ESPN — un championnat américain par exemple — un code personnalisé permet de cibler n'importe quelle ligue (voir la méthode de recherche du code dans les options du widget Classement, identique ici). Le filtre par équipe permet de ne garder que les matchs d'un club précis, pratique pour une tuile compacte dédiée à votre équipe favorite plutôt qu'à toute la compétition.</p>
+          <p>Une sélection de compétitions courantes (Coupe du monde, Ligue des champions, principaux championnats de football européens, Top 14) est proposée directement dans la liste. Pour toute autre compétition suivie par ESPN — un championnat américain par exemple — un code personnalisé permet de cibler n'importe quelle ligue (voir la méthode de recherche du code dans les options du widget Classement, identique ici). Le filtre par équipe permet de ne garder que les matchs d'un club précis, pratique pour une tuile compacte dédiée à votre équipe favorite plutôt qu'à toute la compétition. Pour un match à venir programmé un autre jour, l'heure et la date (jj/mm) alternent automatiquement toutes les quelques secondes — pour un match du jour même, seule l'heure est affichée, la date étant déjà évidente.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Compétition</span><span class="help-opt-desc">Liste des compétitions courantes préconfigurées.</span></div>
           <div class="help-opt"><span class="help-opt-name">Code ESPN personnalisé</span><span class="help-opt-desc">Prend le pas sur la liste ci-dessus pour cibler n'importe quelle compétition couverte par ESPN (format <code>sport:ligue</code>, ex. <code>football:nfl</code>).</span></div>
@@ -521,7 +521,7 @@
           <h4>Goal</h4>
           <p>Follow a competition's scores without turning on the TV, live during matches and for upcoming fixtures.</p>
           <h4>Possibilities</h4>
-          <p>A selection of common competitions (World Cup, Champions League, major European football leagues, Top 14) is offered directly in the list. For any other ESPN-covered competition — an American league for instance — a custom code lets you target any league (see the code lookup method in the League standings widget's options, identical here). The team filter lets you keep only a specific club's matches, handy for a compact tile dedicated to your favorite team rather than the whole competition.</p>
+          <p>A selection of common competitions (World Cup, Champions League, major European football leagues, Top 14) is offered directly in the list. For any other ESPN-covered competition — an American league for instance — a custom code lets you target any league (see the code lookup method in the League standings widget's options, identical here). The team filter lets you keep only a specific club's matches, handy for a compact tile dedicated to your favorite team rather than the whole competition. For an upcoming match scheduled on another day, the time and date (DD/MM) alternate automatically every few seconds — for a match happening today, only the time is shown, since the date is already obvious.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Competition</span><span class="help-opt-desc">List of preconfigured common competitions.</span></div>
           <div class="help-opt"><span class="help-opt-name">Custom ESPN code</span><span class="help-opt-desc">Takes precedence over the list above to target any ESPN-covered competition (format <code>sport:league</code>, e.g. <code>football:nfl</code>).</span></div>
@@ -711,7 +711,7 @@
           <h4>Objectif</h4>
           <p>Identifier l'avion qui passe au-dessus de chez vous, avec les mêmes données ouvertes de suivi de vol que des sites comme le globe d'adsb.lol.</p>
           <h4>Possibilités</h4>
-          <p>La carte se centre sur la ville choisie, indépendamment des tuiles Météo et Radar météo, avec le même choix de fond de carte que la tuile Trafic. Chaque avion est une icône orientée selon son cap réel, avec une étiquette indicatif + altitude (format aviation : niveau de vol FLxxx au-dessus de 10 000 ft, pieds en dessous, « Sol » pour un appareil au sol). Les avions en squawk d'urgence (7500/7600/7700) sont mis en évidence en rouge. Le nombre d'avions est plafonné et trié par proximité (les plus proches d'abord), pour rester lisible même en zone à fort trafic. Deux réseaux communautaires équivalents sont proposés (adsb.lol et adsb.fi, même format de données) : si l'un a un trou de couverture ou une panne près de chez vous, essayez l'autre.</p>
+          <p>La carte se centre sur la ville choisie, indépendamment des tuiles Météo et Radar météo, avec le même choix de fond de carte que la tuile Trafic. Chaque avion est une icône orientée selon son cap réel, avec une étiquette indicatif + altitude (format aviation : niveau de vol FLxxx au-dessus de 10 000 ft, pieds en dessous, « Sol » pour un appareil au sol), et en option une fine traînée pointillée montrant son trajet récent (se construit progressivement à partir du chargement de la tuile). Les avions en squawk d'urgence (7500/7600/7700) sont mis en évidence en rouge. Le nombre d'avions est plafonné et trié par proximité (les plus proches d'abord), pour rester lisible même en zone à fort trafic. Deux réseaux communautaires équivalents sont proposés (adsb.lol et adsb.fi, même format de données) : si l'un a un trou de couverture ou une panne près de chez vous, essayez l'autre.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Centre de la carte.</span></div>
           <div class="help-opt"><span class="help-opt-name">Réseau ADS-B</span><span class="help-opt-desc">adsb.lol ou adsb.fi.</span></div>
@@ -719,6 +719,7 @@
           <div class="help-opt"><span class="help-opt-name">Zoom initial</span><span class="help-opt-desc">Ajustable ensuite librement à l'écran.</span></div>
           <div class="help-opt"><span class="help-opt-name">Fond de carte</span><span class="help-opt-desc">Voyager, sombre, clair, ou automatique selon le thème du tableau.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher indicatif et altitude</span><span class="help-opt-desc">Étiquette sous chaque avion.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher les traînées</span><span class="help-opt-desc">Fine ligne pointillée derrière chaque avion. Se construit à partir du chargement de la tuile, pas d'historique disponible avant.</span></div>
           <div class="help-opt"><span class="help-opt-name">Nombre max d'avions</span><span class="help-opt-desc">Les plus proches du centre sont affichés en priorité.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en secondes entre deux mises à jour des positions.</span></div>`,
         en: `
@@ -726,7 +727,7 @@
           <h4>Goal</h4>
           <p>Identify the plane flying over your house, with the same open flight-tracking data as sites like adsb.lol's globe.</p>
           <h4>Possibilities</h4>
-          <p>The map centers on the chosen city, independent from the Weather and Weather Radar tiles, with the same choice of base map as the Traffic tile. Each aircraft is an icon oriented by its actual heading, with a callsign + altitude label (aviation-style: flight level FLxxx above 10,000 ft, feet below that, "Ground" for an aircraft on the ground). Aircraft squawking an emergency code (7500/7600/7700) are highlighted in red. Aircraft count is capped and sorted by proximity (closest first), to stay legible even in high-traffic areas. Two equivalent community networks are offered (adsb.lol and adsb.fi, same data format): if one has a coverage gap or an outage near you, try the other.</p>
+          <p>The map centers on the chosen city, independent from the Weather and Weather Radar tiles, with the same choice of base map as the Traffic tile. Each aircraft is an icon oriented by its actual heading, with a callsign + altitude label (aviation-style: flight level FLxxx above 10,000 ft, feet below that, "Ground" for an aircraft on the ground), and optionally a thin dashed trail showing its recent path (builds up progressively from when the tile loads). Aircraft squawking an emergency code (7500/7600/7700) are highlighted in red. Aircraft count is capped and sorted by proximity (closest first), to stay legible even in high-traffic areas. Two equivalent community networks are offered (adsb.lol and adsb.fi, same data format): if one has a coverage gap or an outage near you, try the other.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Map center.</span></div>
           <div class="help-opt"><span class="help-opt-name">ADS-B network</span><span class="help-opt-desc">adsb.lol or adsb.fi.</span></div>
@@ -734,6 +735,7 @@
           <div class="help-opt"><span class="help-opt-name">Initial zoom</span><span class="help-opt-desc">Freely adjustable afterwards on screen.</span></div>
           <div class="help-opt"><span class="help-opt-name">Base map</span><span class="help-opt-desc">Voyager, dark, light, or automatic following the board's theme.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show callsign and altitude labels</span><span class="help-opt-desc">Label under each aircraft.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show flight trails</span><span class="help-opt-desc">Thin dashed line behind each aircraft. Builds up from when the tile loads, no history available before that.</span></div>
           <div class="help-opt"><span class="help-opt-name">Max aircraft shown</span><span class="help-opt-desc">Those closest to the center are shown first.</span></div>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in seconds between two position updates.</span></div>`
       }

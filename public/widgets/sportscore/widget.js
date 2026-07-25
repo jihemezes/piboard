@@ -13,16 +13,44 @@
     return d.toLocaleTimeString(lang === "fr" ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" });
   }
 
+  // Format jj/mm fixe, independant de la langue -- demande explicitement
+  // dans ce format par l'utilisateur, plutot que de suivre l'ordre
+  // jour/mois habituel de la locale (qui inverserait en jj/mm vs mm/jj
+  // selon la langue de l'interface).
+  // Fixed DD/MM format, independent of language -- explicitly requested
+  // in this format by the user, rather than following the locale's
+  // usual day/month order (which would flip between DD/MM and MM/DD
+  // depending on the interface language).
+  function dateDDMM(iso) {
+    const d = new Date(iso);
+    return String(d.getDate()).padStart(2, "0") + "/" + String(d.getMonth() + 1).padStart(2, "0");
+  }
+
+  function isSameDay(iso, ref) {
+    const d = new Date(iso);
+    return d.getFullYear() === ref.getFullYear() && d.getMonth() === ref.getMonth() && d.getDate() === ref.getDate();
+  }
+
   class SportScoreWidget {
     constructor(ctx) {
       this.ctx = ctx;
       this.timer = null;
+      this.blinkTimer = null;
+      this.showingDate = false; // etat courant de l'alternance heure/date
     }
 
     async init() {
       this.ctx.el.innerHTML = `<div class="pw-sport"><div class="pws-err">${this.ctx.i18n.t("common.loading")}</div></div>`;
       await this.refresh();
       this.arm();
+      clearInterval(this.blinkTimer);
+      // Alternance heure/date pour les matchs a venir qui ne sont pas
+      // aujourd'hui (voir refresh()) : un simple bascule d'affichage,
+      // independant du cycle de rafraichissement des donnees.
+      // Time/date alternation for upcoming matches that aren't today
+      // (see refresh()): a simple display toggle, independent from the
+      // data refresh cycle.
+      this.blinkTimer = setInterval(() => this.toggleDateBlink(), 3000);
     }
 
     arm() {
@@ -70,6 +98,7 @@
           return;
         }
 
+        const now = new Date();
         const rows = events.map((ev) => {
           const comp = ev.competitions[0];
           const state = ev.status.type.state; // pre | in | post
@@ -84,8 +113,17 @@
             statusHtml = `<span class="pws-live">${ev.status.type.shortDetail || this.ctx.i18n.t("sport.live")}</span>`;
           } else if (state === "post") {
             statusHtml = this.ctx.i18n.t("sport.final");
-          } else {
+          } else if (isSameDay(ev.date, now)) {
             statusHtml = localTime(ev.date, lang);
+          } else {
+            // Match a venir un autre jour : alterne heure et date (jj/mm)
+            // via toggleDateBlink(), plutot que d'afficher les deux a la
+            // fois ou de ne montrer que l'heure (ambigu sans le jour).
+            // Upcoming match on another day: alternates time and date
+            // (DD/MM) via toggleDateBlink(), rather than showing both at
+            // once or only the time (ambiguous without the day).
+            statusHtml = `<span class="pws-status-time">${localTime(ev.date, lang)}</span>`
+              + `<span class="pws-status-date" hidden>${dateDDMM(ev.date)}</span>`;
           }
 
           return `
@@ -111,8 +149,16 @@
       }
     }
 
+    toggleDateBlink() {
+      this.showingDate = !this.showingDate;
+      const el = this.ctx.el;
+      el.querySelectorAll(".pws-status-time").forEach((n) => { n.hidden = this.showingDate; });
+      el.querySelectorAll(".pws-status-date").forEach((n) => { n.hidden = !this.showingDate; });
+    }
+
     destroy() {
       clearInterval(this.timer);
+      clearInterval(this.blinkTimer);
     }
   }
 
