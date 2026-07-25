@@ -20,9 +20,10 @@ const catalog = fs.readdirSync(path.join(PUB, "widgets"), { withFileTypes: true 
 const layout = {
   version: 1,
   tiles: [
-    { id: "t-a", widget: "clock", x: 0, y: 0, w: 3, h: 2, settings: { mode: "digital", showDate: true } },
+    { id: "t-a", widget: "clock", x: 0, y: 0, w: 3, h: 2, settings: { mode: "digital", showDate: true, showSaint: true } },
     { id: "t-b", widget: "webview", x: 3, y: 0, w: 6, h: 4, settings: { url: "http://example.local/", zoom: 100, reload: 0 } },
-    { id: "t-c", widget: "notes", x: 0, y: 2, w: 3, h: 3, settings: {} }
+    { id: "t-c", widget: "notes", x: 0, y: 2, w: 3, h: 3, settings: {} },
+    { id: "t-d", widget: "weather", x: 6, y: 0, w: 3, h: 2, settings: { city: "Toulouse", showSaint: true, usePhotos: false } }
   ]
 };
 
@@ -134,6 +135,28 @@ const dom = new JSDOM(html, {
           ]
         });
       }
+      if (u.includes("/data/saints-fr.json")) {
+        // Cle du jour calculee dynamiquement (le test peut tourner
+        // n'importe quel jour de l'annee).
+        // Today's key computed dynamically (the test can run on any
+        // day of the year).
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        return json({ [mm + "-" + dd]: "Testine" });
+      }
+      if (u.includes("geocoding-api.open-meteo.com")) {
+        return json({ results: [{ latitude: 43.6, longitude: 1.44, name: "Toulouse" }] });
+      }
+      if (u.includes("api.open-meteo.com/v1/forecast")) {
+        return json({
+          current: { temperature_2m: 21, weather_code: 0, wind_speed_10m: 12 },
+          daily: { temperature_2m_min: [10, 11], temperature_2m_max: [22, 23], weather_code: [0, 1] }
+        });
+      }
+      if (u.includes("/api/weather-photo/")) {
+        return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({}) });
+      }
       if (u.includes("open-meteo")) return json({ results: [] });
       if (u.includes("/api/proxy") && u.includes("standings")) {
         // Mock ESPN realiste : pas de colonne "D" (comme le rugby),
@@ -183,15 +206,27 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 3 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 4 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("3 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 3);
+  assert("4 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 4);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
   assert("i18n FR appliquee", document.documentElement.lang === "fr");
   assert("grille statique au depart (verrouillee)", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));
+
+  console.log("== Saint du jour (Horloge + Meteo) ==");
+  // Le fetch du calendrier des saints est asynchrone (charge apres le
+  // premier rendu) : on attend qu'il se propage avant de verifier.
+  // Fetching the nameday calendar is asynchronous (loaded after the
+  // first render): wait for it to propagate before checking.
+  tries = 0;
+  while (!document.querySelector(".pwc-saint") && tries++ < 60) await sleep(50);
+  assert("horloge : saint du jour affiche sous la date", (document.querySelector(".pwc-saint")?.textContent || "") === "Testine");
+  tries = 0;
+  while (!document.querySelector(".pww-saint") && tries++ < 60) await sleep(50);
+  assert("meteo : saint du jour affiche", (document.querySelector(".pww-saint")?.textContent || "") === "Testine");
 
   console.log("== Languette -> barre d'outils ==");
   document.getElementById("dockTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -237,7 +272,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (4 au total)", document.querySelectorAll(".grid-stack-item").length === 4);
+  assert("tuile ajoutee (5 au total)", document.querySelectorAll(".grid-stack-item").length === 5);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {

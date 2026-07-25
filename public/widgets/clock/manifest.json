@@ -1,13 +1,13 @@
 {
   "id": "clock",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Clock",
     "fr": "Horloge"
   },
   "description": {
-    "en": "Digital or analog clock with today's date, and an optional day/night background that follows the board's sun-based theme.",
-    "fr": "Horloge digitale ou analogique avec la date du jour, et un fond jour/nuit optionnel qui suit le thème solaire du tableau."
+    "en": "Digital or analog clock with today's date, an optional French nameday, and an optional day/night background that follows the board's sun-based theme.",
+    "fr": "Horloge digitale ou analogique avec la date du jour, le saint du jour en option, et un fond jour/nuit optionnel qui suit le thème solaire du tableau."
   },
   "size": {
     "w": 3,
@@ -59,6 +59,19 @@
       "label": {
         "en": "Show date",
         "fr": "Afficher la date"
+      }
+    },
+    {
+      "key": "showSaint",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show name day (French tradition)",
+        "fr": "Afficher le saint du jour"
+      },
+      "hint": {
+        "en": "Adds the French \"fête du jour\" next to the date (e.g. \"Sainte Christine\"). Only shown when the date is displayed and the interface language is French \u2014 this calendar is a French cultural tradition without an English equivalent.",
+        "fr": "Ajoute la f\u00eate du jour \u00e0 c\u00f4t\u00e9 de la date (ex. \u00ab\u00a0Sainte Christine\u00a0\u00bb). Visible seulement quand la date est affich\u00e9e et que la langue de l'interface est le fran\u00e7ais \u2014 ce calendrier est une tradition culturelle fran\u00e7aise sans \u00e9quivalent anglophone."
       }
     },
     {

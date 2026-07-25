@@ -120,4 +120,6 @@
 }
 .pw-weather .pww-city { color: var(--muted); }
 .pw-weather .pww-extra { color: var(--faint); font-variant-numeric: tabular-nums; }
+.pw-weather .pww-saint { color: var(--faint); font-style: italic; opacity: 0.85; margin-top: 1px; }
+.pw-weather.pww-has-photo .pww-saint { color: rgba(255,255,255,0.75); }
 .pw-weather .pww-err { color: var(--muted); font-size: 14px; margin: auto; }

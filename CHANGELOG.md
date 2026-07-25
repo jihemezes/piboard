@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.8.0
+
+- **Nouveau : « Saint du jour » dans les tuiles *Horloge* et *Météo***. Un
+  réglage optionnel (désactivé par défaut) ajoute la fête du jour
+  traditionnelle française — par exemple « Sainte Christine » — à côté de
+  la date. Dans la tuile *Horloge*, elle apparaît sous la date lorsque
+  celle-ci est affichée (sauf en disposition « côte à côte », déjà tendue
+  sur une seule ligne). Dans la tuile *Météo*, elle apparaît sous la
+  fourchette de température, y compris en mode photo de fond.
+
+  Le calendrier (366 entrées, un prénom par jour) est une nouvelle
+  ressource statique (`public/data/saints-fr.json`), chargée une seule
+  fois et partagée entre les deux tuiles pour éviter une double requête.
+  Cette fête est une tradition propre à la France : le réglage n'a d'effet
+  que lorsque la langue de l'interface est le français, quel que soit son
+  état pour l'anglais.
+
+---
+
+- **New: "Name day" in the *Clock* and *Weather* tiles**. An optional
+  setting (off by default) adds the traditional French "fête du jour" —
+  e.g. "Sainte Christine" — next to the date. In the *Clock* tile, it
+  appears below the date when the date is shown (except in the "side by
+  side" layout, already tight on one line). In the *Weather* tile, it
+  appears below the temperature range, including in photo-background
+  mode.
+
+  The calendar (366 entries, one name per day) is a new static resource
+  (`public/data/saints-fr.json`), fetched once and shared between both
+  tiles to avoid a duplicate request. This nameday tradition is specific
+  to France: the setting only has an effect when the interface language
+  is French, regardless of its state for English.
+
 ## 1.7.5
 
 - **Nouvelle section d'aide « Application de bureau Windows »**,

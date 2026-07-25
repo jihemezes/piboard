@@ -44,6 +44,7 @@
       this.coords = null;
       this.lastData = null;   // derniere reponse API, pour re-mettre en page sans refetch
       this.layoutMode = "landscape"; // "landscape" | "portrait" | "square"
+      this.saints = null;     // calendrier des saints, charge une fois (cache sur window.PiBoard)
     }
 
     async init() {
@@ -56,8 +57,27 @@
       // without a network request thanks to the cached data.
       this.observer = new ResizeObserver(() => this.handleResize());
       this.observer.observe(this.ctx.el);
+      this.loadSaints(); // en parallele, ne doit pas retarder l'affichage meteo
       await this.refresh();
       this.arm();
+    }
+
+    /* Charge le calendrier des prenoms (fete du jour), partage avec le
+       widget horloge via un cache sur window.PiBoard pour eviter une
+       double requete si les deux widgets sont presents.
+       Loads the nameday calendar (saint of the day), shared with the
+       clock widget via a cache on window.PiBoard to avoid a duplicate
+       request when both widgets are present. */
+    async loadSaints() {
+      try {
+        if (!window.PiBoard._saintsPromise) {
+          window.PiBoard._saintsPromise = fetch("/data/saints-fr.json").then((r) => r.json());
+        }
+        this.saints = await window.PiBoard._saintsPromise;
+        if (this.lastData) this.renderMarkup(); // peut arriver apres le premier rendu
+      } catch (e) {
+        this.saints = {};
+      }
     }
 
     /* Determine la forme de la tuile a partir de ses dimensions REELLES en
@@ -177,7 +197,20 @@
       if (!d) return;
       const el = this.ctx.el;
       const s = this.ctx.settings;
-      const { cur, day, today, name, photo } = d;
+      const { cur, day, today, name, photo, lang } = d;
+
+      // Saint du jour : tradition francaise, non affichee si la langue de
+      // l'interface est l'anglais meme si le reglage est actif.
+      // Nameday: French tradition, not shown when the interface language
+      // is English even if the setting is on.
+      let saintLine = "";
+      if (s.showSaint && lang === "fr" && this.saints) {
+        const now = new Date();
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const saint = this.saints[mm + "-" + dd];
+        if (saint) saintLine = `<div class="pww-saint">${saint}</div>`;
+      }
 
       // Carre : uniquement la meteo du jour, quel que soit le reglage
       // "afficher demain". Portrait : demain empile sous aujourd'hui.
@@ -198,6 +231,7 @@
           <div class="pww-temp">${Math.round(cur.temperature_2m)}°</div>
           <div class="pww-city">${name} — ${today.label}</div>
           <div class="pww-extra">${Math.round(day.temperature_2m_min[0])}° / ${Math.round(day.temperature_2m_max[0])}°${wind}</div>
+          ${saintLine}
         </div>`;
 
       let tomorrowCol = "";
@@ -263,6 +297,9 @@
       });
       el.querySelectorAll(".pww-extra").forEach((n) => {
         n.style.fontSize = Math.max(9, Math.floor(blockH * 0.08 * k)) + "px";
+      });
+      el.querySelectorAll(".pww-saint").forEach((n) => {
+        n.style.fontSize = Math.max(9, Math.floor(blockH * 0.075 * k)) + "px";
       });
     }
 

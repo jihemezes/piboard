@@ -1,13 +1,13 @@
 {
   "id": "weather",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "name": {
     "en": "Weather",
     "fr": "Météo"
   },
   "description": {
-    "en": "Current weather with a choice of national weather models (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, or your own custom source), a real photo background matching conditions, and tomorrow's forecast laid out automatically to fit the tile's shape.",
-    "fr": "Météo actuelle avec un choix de modèles météo nationaux (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, ou votre propre source personnalisée), une vraie photo de fond selon les conditions, et la prévision du lendemain disposée automatiquement selon la forme de la tuile."
+    "en": "Current weather with a choice of national weather models (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, or your own custom source), a real photo background matching conditions, tomorrow's forecast laid out automatically to fit the tile's shape, and an optional French nameday.",
+    "fr": "Météo actuelle avec un choix de modèles météo nationaux (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, ou votre propre source personnalisée), une vraie photo de fond selon les conditions, la prévision du lendemain disposée automatiquement selon la forme de la tuile, et le saint du jour en option."
   },
   "size": {
     "w": 3,
@@ -124,6 +124,19 @@
       "label": {
         "en": "Show wind",
         "fr": "Afficher le vent"
+      }
+    },
+    {
+      "key": "showSaint",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show name day (French tradition)",
+        "fr": "Afficher le saint du jour"
+      },
+      "hint": {
+        "en": "Adds the French \"f\u00eate du jour\" below the temperature (e.g. \"Sainte Christine\"). Only shown when the interface language is French \u2014 this calendar is a French cultural tradition without an English equivalent.",
+        "fr": "Ajoute la f\u00eate du jour sous la temp\u00e9rature (ex. \u00ab\u00a0Sainte Christine\u00a0\u00bb). Visible seulement quand la langue de l'interface est le fran\u00e7ais \u2014 ce calendrier est une tradition culturelle fran\u00e7aise sans \u00e9quivalent anglophone."
       }
     },
     {

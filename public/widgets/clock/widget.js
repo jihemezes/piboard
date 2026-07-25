@@ -7,14 +7,34 @@
       this.ctx = ctx;
       this.timer = null;
       this.appliedBgKey = null; // evite de reecrire le style si rien n'a change
+      this.saints = null; // calendrier des saints, charge une fois (mis en cache sur window.PiBoard)
     }
 
     init() {
       this.render();
       this.tick();
+      this.loadSaints();
       this.timer = setInterval(() => this.tick(), 500);
       this.observer = new ResizeObserver(() => this.fit());
       this.observer.observe(this.ctx.el);
+    }
+
+    /* Charge le calendrier des prenoms (fete du jour), partage entre les
+       widgets horloge et meteo via un cache sur window.PiBoard pour eviter
+       une double requete si les deux sont presents sur le tableau.
+       Loads the nameday calendar (saint of the day), shared between the
+       clock and weather widgets via a cache on window.PiBoard to avoid a
+       duplicate request when both are present on the board. */
+    async loadSaints() {
+      try {
+        if (!window.PiBoard._saintsPromise) {
+          window.PiBoard._saintsPromise = fetch("/data/saints-fr.json").then((r) => r.json());
+        }
+        this.saints = await window.PiBoard._saintsPromise;
+        this.tick(); // le saint peut arriver apres le premier rendu / may arrive after first render
+      } catch (e) {
+        this.saints = {};
+      }
     }
 
     onSettingsChanged(settings) {
@@ -172,9 +192,28 @@
 
       const dateEl = el.querySelector(".pwc-date");
       if (dateEl && s.showDate) {
-        dateEl.textContent = now.toLocaleDateString(locale, {
+        const dateStr = now.toLocaleDateString(locale, {
           weekday: "long", day: "numeric", month: "long", year: "numeric"
         });
+
+        // Le saint du jour est une tradition francaise : non affiche si la
+        // langue de l'interface est l'anglais, meme si le reglage est actif.
+        // La disposition "cote a cote" (digitale) est deja tendue sur une
+        // seule ligne : on n'y ajoute pas de deuxieme ligne pour eviter tout
+        // debordement.
+        // The nameday is a French tradition: not shown when the interface
+        // language is English, even if the setting is on. The digital
+        // "side by side" layout is already tight on one line: no second
+        // line is added there to avoid overflow.
+        const canShowHere = !(s.mode !== "analog" && s.layout === "row");
+        const mm = String(now.getMonth() + 1).padStart(2, "0");
+        const dd = String(now.getDate()).padStart(2, "0");
+        const saint = s.showSaint && this.ctx.i18n.lang === "fr" && canShowHere && this.saints
+          ? this.saints[mm + "-" + dd] : null;
+
+        dateEl.innerHTML = saint
+          ? `${dateStr}<br><span class="pwc-saint">${saint}</span>`
+          : dateStr;
       }
 
       if (s.mode === "analog") {
