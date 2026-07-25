@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.15.1
+
+- **Correctif (réel, cette fois) : section « Nouveautés » en 404 sur
+  l'application Windows.** La cause n'était pas un serveur non
+  redémarré : `electron-builder.yml` excluait **tous** les fichiers
+  `.md` de l'application empaquetée, y compris `CHANGELOG.md` — pourtant
+  nécessaire au runtime depuis la v1.14.0 (servi par la route
+  `GET /api/changelog`). Le fichier était donc simplement absent de
+  l'installation, quel que soit le nombre de réinstallations. `CHANGELOG.md`
+  est désormais explicitement réinclus dans l'empaquetage Windows ; les
+  autres fichiers `.md` (README, docs) restent exclus comme prévu.
+  **Ce correctif prend effet à la prochaine publication Windows**
+  (`npm run publish`) — il ne concerne pas le Raspberry Pi, dont le
+  système de mise à jour par ZIP a toujours inclus ce fichier.
+
+---
+
+- **Fix (the real one, this time): "What's new" section 404 on the
+  Windows app.** The cause wasn't an unrestarted server:
+  `electron-builder.yml` excluded **all** `.md` files from the packaged
+  application, including `CHANGELOG.md` — which has been needed at
+  runtime since v1.14.0 (served by the `GET /api/changelog` route). The
+  file was therefore simply absent from the install, no matter how many
+  times it was reinstalled. `CHANGELOG.md` is now explicitly re-included
+  in the Windows packaging; other `.md` files (README, docs) remain
+  excluded as intended. **This fix takes effect on the next Windows
+  publish** (`npm run publish`) — it doesn't concern the Raspberry Pi,
+  whose ZIP update system has always included this file.
+
 ## 1.15.0
 
 - **Avions en vue : trajet au clic.** Toucher un avion ouvre désormais

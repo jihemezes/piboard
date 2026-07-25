@@ -47,6 +47,21 @@ files:
   - "!data/**"
   - "!dist/**"
   - "!**/*.md"
+  # CHANGELOG.md fait exception : servi au runtime par la route
+  # GET /api/changelog (section "Nouveautes" de l'aide integree), ce
+  # n'est pas de la documentation de developpement comme README.md ou
+  # docs/*.md -- son exclusion ci-dessus causait un 404 systematique sur
+  # cette section, meme apres reinstallation complete. Les motifs sont
+  # values dans l'ordre (comme .gitignore) : ce motif plus specifique,
+  # place apres l'exclusion generale, la contredit pour ce seul fichier.
+  # CHANGELOG.md is the exception: served at runtime by the
+  # GET /api/changelog route (the built-in help's "What's new" section),
+  # this isn't developer documentation like README.md or docs/*.md --
+  # excluding it above caused a systematic 404 on that section, even
+  # after a full reinstall. Patterns are evaluated in order (like
+  # .gitignore): this more specific pattern, placed after the general
+  # exclusion, overrides it for this one file.
+  - "CHANGELOG.md"
 
 # ARCHIVE ASAR DESACTIVEE, VOLONTAIREMENT.
 # PiBoard sert son interface avec express.static, qui lit les fichiers
