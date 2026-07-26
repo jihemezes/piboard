@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.19.1
+
+- **Correctif *application Windows*** : plantage au lancement avec
+  « Cannot find module '@mozilla/readability' ». Cause : `npm install`
+  n'avait pas été relancé avant `npm run publish` après la v1.19.0, donc
+  les nouvelles dépendances (`@mozilla/readability`, `jsdom`) n'étaient
+  tout simplement pas présentes dans `node_modules` au moment de
+  l'empaquetage — `electron-builder.yml` était correct, c'est
+  l'installation locale qui manquait. `npm install` s'exécute désormais
+  **automatiquement** avant tout `npm run dist` ou `npm run publish` :
+  ce type d'oubli ne peut plus se reproduire, quelle que soit la
+  dépendance ajoutée à l'avenir. Ne concerne que l'outillage de build,
+  pas le Raspberry Pi.
+
+---
+
+- **Fix for the *Windows app***: crashed on launch with "Cannot find
+  module '@mozilla/readability'". Cause: `npm install` hadn't been
+  re-run before `npm run publish` after v1.19.0, so the new dependencies
+  (`@mozilla/readability`, `jsdom`) simply weren't present in
+  `node_modules` at packaging time — `electron-builder.yml` was correct,
+  the local install was missing. `npm install` now runs **automatically**
+  before any `npm run dist` or `npm run publish`: this kind of oversight
+  can no longer happen, whichever dependency gets added in the future.
+  Only concerns the build tooling, not the Raspberry Pi.
+
 ## 1.19.0
 
 - **Flux RSS : véritable mode lecture.** La popup ouverte au clic sur un
