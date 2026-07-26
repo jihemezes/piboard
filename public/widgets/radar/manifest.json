@@ -1,13 +1,13 @@
 {
   "id": "radar",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "name": {
     "en": "Weather Radar",
     "fr": "Radar météo"
   },
   "description": {
-    "en": "Animated precipitation radar loop (last 2 hours) over a real map, powered by RainViewer's free, keyless Weather Maps API. Independent city, zoom and base map from the Weather tile. Play/pause and step controls, like the official RainViewer app.",
-    "fr": "Boucle radar de précipitations animée (2 dernières heures) sur une vraie carte, via l'API gratuite et sans clé Weather Maps de RainViewer. Ville, zoom et fond de carte indépendants de la tuile Météo. Contrôles lecture/pause et image par image, comme l'application officielle RainViewer."
+    "en": "Animated precipitation radar loop (last 2 hours) over a real map, powered by RainViewer's free, keyless Weather Maps API. An optional wind layer overlays a grid of arrows showing the current wind — direction and strength — that follows the displayed area as you zoom. Independent city, zoom and base map from the Weather tile. Play/pause and step controls, like the official RainViewer app.",
+    "fr": "Boucle radar de précipitations animée (2 dernières heures) sur une vraie carte, via l'API gratuite et sans clé Weather Maps de RainViewer. Une couche vent optionnelle superpose une grille de flèches montrant le vent actuel — direction et force — qui suit la zone affichée quand on zoome. Ville, zoom et fond de carte indépendants de la tuile Météo. Contrôles lecture/pause et image par image, comme l'application officielle RainViewer."
   },
   "size": {
     "w": 6,
@@ -26,7 +26,10 @@
         "en": "City",
         "fr": "Ville"
       },
-      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
     },
     {
       "key": "zoom",
@@ -43,7 +46,10 @@
         "en": "The map can still be freely panned and zoomed afterwards; this only sets the starting view.",
         "fr": "La carte reste ensuite librement déplaçable et zoomable ; ceci ne fixe que la vue de départ."
       },
-      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
     },
     {
       "key": "basemap",
@@ -54,12 +60,39 @@
         "fr": "Fond de carte"
       },
       "options": [
-        { "value": "voyager", "label": { "en": "Voyager (roads, colored)", "fr": "Voyager (routier, coloré)" } },
-        { "value": "dark", "label": { "en": "Dark", "fr": "Sombre" } },
-        { "value": "light", "label": { "en": "Light", "fr": "Clair" } },
-        { "value": "auto", "label": { "en": "Auto — follows PiBoard's theme", "fr": "Auto — suit le thème de PiBoard" } }
+        {
+          "value": "voyager",
+          "label": {
+            "en": "Voyager (roads, colored)",
+            "fr": "Voyager (routier, coloré)"
+          }
+        },
+        {
+          "value": "dark",
+          "label": {
+            "en": "Dark",
+            "fr": "Sombre"
+          }
+        },
+        {
+          "value": "light",
+          "label": {
+            "en": "Light",
+            "fr": "Clair"
+          }
+        },
+        {
+          "value": "auto",
+          "label": {
+            "en": "Auto — follows PiBoard's theme",
+            "fr": "Auto — suit le thème de PiBoard"
+          }
+        }
       ],
-      "group": { "en": "Location & map", "fr": "Emplacement & carte" }
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
     },
     {
       "key": "opacity",
@@ -72,7 +105,10 @@
         "en": "Radar opacity (%)",
         "fr": "Opacité du radar (%)"
       },
-      "group": { "en": "Radar", "fr": "Radar" }
+      "group": {
+        "en": "Radar",
+        "fr": "Radar"
+      }
     },
     {
       "key": "showLegend",
@@ -86,7 +122,93 @@
         "en": "A small reference bar explaining the radar colors, from light (blue) to extreme (pink) precipitation.",
         "fr": "Une petite barre de référence expliquant les couleurs du radar, du léger (bleu) à l'extrême (rose)."
       },
-      "group": { "en": "Radar", "fr": "Radar" }
+      "group": {
+        "en": "Radar",
+        "fr": "Radar"
+      }
+    },
+    {
+      "key": "showWind",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show wind arrows",
+        "fr": "Afficher les flèches de vent"
+      },
+      "hint": {
+        "en": "A grid of arrows over the map showing the current wind, each pointing where the wind is blowing TO, colored by strength. The grid follows the displayed area: zooming in tightens it onto the zone you're looking at.",
+        "fr": "Une grille de flèches sur la carte montrant le vent actuel, chacune pointant VERS OÙ souffle le vent, colorée selon sa force. La grille suit la zone affichée : zoomer la resserre sur ce que vous regardez."
+      },
+      "group": {
+        "en": "Wind",
+        "fr": "Vent"
+      }
+    },
+    {
+      "key": "windDensity",
+      "type": "select",
+      "default": "medium",
+      "label": {
+        "en": "Arrow density",
+        "fr": "Densité des flèches"
+      },
+      "options": [
+        {
+          "value": "low",
+          "label": {
+            "en": "Low (fewer, clearer)",
+            "fr": "Faible (moins nombreuses, plus lisibles)"
+          }
+        },
+        {
+          "value": "medium",
+          "label": {
+            "en": "Medium",
+            "fr": "Moyenne"
+          }
+        },
+        {
+          "value": "high",
+          "label": {
+            "en": "High (more detail)",
+            "fr": "Élevée (plus de détail)"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Each arrow is one point queried from the weather service. A denser grid gives more detail but asks the free service for more — medium is a good balance on a typical tile.",
+        "fr": "Chaque flèche correspond à un point interrogé auprès du service météo. Une grille plus dense donne plus de détail mais sollicite davantage le service gratuit — « moyenne » est un bon compromis sur une tuile classique."
+      },
+      "group": {
+        "en": "Wind",
+        "fr": "Vent"
+      }
+    },
+    {
+      "key": "showWindLabels",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show wind speed (km/h) under each arrow",
+        "fr": "Afficher la vitesse (km/h) sous chaque flèche"
+      },
+      "group": {
+        "en": "Wind",
+        "fr": "Vent"
+      }
+    },
+    {
+      "key": "showWindLegend",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the wind color legend",
+        "fr": "Afficher la légende des couleurs du vent"
+      },
+      "group": {
+        "en": "Wind",
+        "fr": "Vent"
+      }
     },
     {
       "key": "autoplay",
@@ -96,7 +218,10 @@
         "en": "Autoplay the loop",
         "fr": "Lecture automatique de la boucle"
       },
-      "group": { "en": "Radar", "fr": "Radar" }
+      "group": {
+        "en": "Radar",
+        "fr": "Radar"
+      }
     },
     {
       "key": "animationSpeed",
@@ -109,7 +234,10 @@
         "en": "Frame delay (ms)",
         "fr": "Délai entre images (ms)"
       },
-      "group": { "en": "Radar", "fr": "Radar" }
+      "group": {
+        "en": "Radar",
+        "fr": "Radar"
+      }
     },
     {
       "key": "refresh",
@@ -126,7 +254,10 @@
         "en": "RainViewer publishes a new radar frame roughly every 10 minutes.",
         "fr": "RainViewer publie une nouvelle image radar environ toutes les 10 minutes."
       },
-      "group": { "en": "Radar", "fr": "Radar" }
+      "group": {
+        "en": "Radar",
+        "fr": "Radar"
+      }
     }
   ]
 }

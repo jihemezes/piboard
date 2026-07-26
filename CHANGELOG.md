@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.23.0
+
+- **Radar météo : couche vent optionnelle.** Une grille de flèches peut
+  désormais se superposer à la carte pour montrer le vent en cours
+  (désactivée par défaut) :
+  - Chaque flèche pointe **vers où souffle le vent** — et non d'où il
+    vient, contrairement à la convention météo brute, qui prête
+    régulièrement à confusion sur une carte ;
+  - Sa **couleur indique la force**, d'après les paliers de l'échelle de
+    Beaufort : du vert (calme) au violet (tempête), avec sa **propre
+    légende** distincte de celle de la pluie pour éviter toute confusion
+    entre les deux couches ;
+  - La grille **suit la zone affichée** : elle se recalcule à chaque
+    zoom ou déplacement, de sorte que zoomer resserre naturellement les
+    flèches sur ce que vous regardez ;
+  - **Densité réglable** (faible / moyenne / élevée), la grille
+    s'adaptant en plus à la forme de la tuile ;
+  - **Vitesse en km/h** affichable sous chaque flèche, en option.
+
+  Toutes les positions de la grille sont demandées en **une seule
+  requête** à Open-Meteo (déjà utilisé par les tuiles Météo et Qualité
+  de l'air), plutôt qu'une par point.
+
+---
+
+- **Weather Radar: optional wind layer.** A grid of arrows can now
+  overlay the map to show the current wind (off by default):
+  - Each arrow points **where the wind is blowing to** — not where it
+    comes from, unlike the raw meteorological convention, which is a
+    regular source of confusion on a map;
+  - Its **color shows the strength**, following the Beaufort scale's
+    thresholds: from green (calm) to purple (storm), with its **own
+    legend**, distinct from the rain one to avoid confusing the two
+    layers;
+  - The grid **follows the displayed area**: it is recomputed on every
+    zoom or pan, so zooming in naturally tightens the arrows onto what
+    you're looking at;
+  - **Adjustable density** (low / medium / high), with the grid also
+    adapting to the tile's shape;
+  - **Speed in km/h** can optionally be shown under each arrow.
+
+  All grid positions are requested in **a single call** to Open-Meteo
+  (already used by the Weather and Air Quality tiles), rather than one
+  per point.
+
 ## 1.22.0
 
 - **Nouvelle tuile : Sports mécaniques** — le programme complet des

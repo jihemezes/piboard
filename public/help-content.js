@@ -880,6 +880,7 @@
           <p>Voir la pluie arriver (ou s'éloigner) sur une vraie carte, avec un historique des 2 dernières heures.</p>
           <h4>Possibilités</h4>
           <p>La carte se centre sur la ville choisie, indépendamment de la tuile Météo, avec le même choix de fond de carte que les tuiles Trafic et Avions en vue. Les contrôles lecture/pause et image par image restent accessibles directement sur la tuile ; chaque image est préchargée et mise en cache pour une animation fluide, sans rechargement à chaque boucle. La légende (optionnelle) rappelle que les couleurs vont du bleu clair (précipitations légères) au rose (extrême), d'après l'échelle « Universal Blue » de RainViewer — la seule disponible sur l'offre gratuite.</p>
+          <p>Une <b>couche vent</b> optionnelle superpose une grille de flèches montrant le vent actuel. Chaque flèche pointe <b>vers où souffle le vent</b> (et non d'où il vient, contrairement à la convention météo brute) et sa couleur indique sa force, d'après les paliers de l'échelle de Beaufort — du vert (calme) au violet (tempête), avec sa propre légende pour ne pas la confondre avec celle de la pluie. La grille se recalcule sur la zone affichée à chaque zoom ou déplacement : zoomer resserre naturellement les flèches sur ce que vous regardez. Toutes les positions sont demandées en une seule requête à Open-Meteo, et la densité est réglable — chaque flèche étant un point interrogé, une grille plus dense sollicite davantage le service gratuit.</p>
           <p style="margin-top:12px"><i>RainViewer a définitivement retiré les images de prévision (« nowcast ») de son offre gratuite au 1ᵉʳ janvier 2026 — seul l'historique des 2 dernières heures reste disponible sans clé. C'est pour cette raison qu'il n'y a pas de mode prévision ici.</i></p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Centre de la carte, indépendant de la tuile Météo.</span></div>
@@ -887,6 +888,10 @@
           <div class="help-opt"><span class="help-opt-name">Fond de carte</span><span class="help-opt-desc">Voyager, sombre, clair, ou automatique selon le thème du tableau.</span></div>
           <div class="help-opt"><span class="help-opt-name">Opacité du radar</span><span class="help-opt-desc">Transparence de la couche de précipitations sur le fond de carte.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher la légende des couleurs</span><span class="help-opt-desc">Petite barre de référence, du léger (bleu) à l'extrême (rose).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher les flèches de vent</span><span class="help-opt-desc">Active la couche vent (désactivée par défaut).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Densité des flèches</span><span class="help-opt-desc">Faible, moyenne ou élevée. La grille s'adapte aussi à la forme de la tuile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la vitesse sous chaque flèche</span><span class="help-opt-desc">En km/h. Utile sur une tuile large, vite chargé sur une petite.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la légende du vent</span><span class="help-opt-desc">Barre de référence du calme (vert) à la tempête (violet).</span></div>
           <div class="help-opt"><span class="help-opt-name">Lecture automatique de la boucle</span><span class="help-opt-desc">Démarre l'animation dès le chargement.</span></div>
           <div class="help-opt"><span class="help-opt-name">Délai entre images</span><span class="help-opt-desc">Vitesse de l'animation, en millisecondes.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">RainViewer publie une nouvelle image toutes les ~10 minutes.</span></div>`,
@@ -896,6 +901,7 @@
           <p>Watch rain arrive (or move away) on a real map, with a 2-hour history.</p>
           <h4>Possibilities</h4>
           <p>The map centers on the chosen city, independent from the Weather tile, with the same choice of base map as the Traffic and Planes Overhead tiles. Play/pause and step controls stay right on the tile; each frame is preloaded and cached for a smooth animation, with no reloading on every loop. The optional legend is a reminder that colors range from light blue (light precipitation) to pink (extreme), based on RainViewer's "Universal Blue" scale — the only one available on the free tier.</p>
+          <p>An optional <b>wind layer</b> overlays a grid of arrows showing the current wind. Each arrow points <b>where the wind is blowing to</b> (not where it comes from, unlike the raw meteorological convention) and its color shows the strength, following the Beaufort scale's thresholds — from green (calm) to purple (storm), with its own legend so it can't be confused with the rain one. The grid is recomputed over the displayed area on every zoom or pan: zooming in naturally tightens the arrows onto what you're looking at. Every position is requested in a single call to Open-Meteo, and the density is adjustable — since each arrow is one queried point, a denser grid asks more of the free service.</p>
           <p style="margin-top:12px"><i>RainViewer permanently removed forecast ("nowcast") frames from its free tier on January 1, 2026 — only the last 2 observed hours remain available without a key. That's why there's no forecast mode here.</i></p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Map center, independent from the Weather tile.</span></div>
@@ -903,6 +909,10 @@
           <div class="help-opt"><span class="help-opt-name">Base map</span><span class="help-opt-desc">Voyager, dark, light, or automatic following the board's theme.</span></div>
           <div class="help-opt"><span class="help-opt-name">Radar opacity</span><span class="help-opt-desc">Transparency of the precipitation layer over the base map.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show color legend</span><span class="help-opt-desc">Small reference bar, from light (blue) to extreme (pink).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show wind arrows</span><span class="help-opt-desc">Turns the wind layer on (off by default).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Arrow density</span><span class="help-opt-desc">Low, medium or high. The grid also adapts to the tile's shape.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show speed under each arrow</span><span class="help-opt-desc">In km/h. Handy on a wide tile, quickly cluttered on a small one.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show the wind legend</span><span class="help-opt-desc">Reference bar from calm (green) to storm (purple).</span></div>
           <div class="help-opt"><span class="help-opt-name">Autoplay the loop</span><span class="help-opt-desc">Starts the animation as soon as it loads.</span></div>
           <div class="help-opt"><span class="help-opt-name">Frame delay</span><span class="help-opt-desc">Animation speed, in milliseconds.</span></div>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">RainViewer publishes a new frame roughly every 10 minutes.</span></div>`

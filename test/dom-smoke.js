@@ -767,6 +767,13 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("reglages radar : ville, zoom, fond de carte, opacite, legende, lecture auto, vitesse, rafraichissement",
       ["city", "zoom", "basemap", "opacity", "showLegend", "autoplay", "animationSpeed", "refresh"].every((k) => keys.includes(k)));
     assert("reglage includeForecast bien retire (RainViewer a supprime le nowcast gratuit)", !keys.includes("includeForecast"));
+    assert("reglages vent exposes : activation, densite, etiquettes, legende",
+      ["showWind", "windDensity", "showWindLabels", "showWindLegend"].every((k) => keys.includes(k)));
+    const windSetting = (radarManifest?.settings || []).find((x) => x.key === "showWind");
+    assert("couche vent desactivee par defaut (option, pas impose)", windSetting && windSetting.default === false);
+    const densitySetting = (radarManifest?.settings || []).find((x) => x.key === "windDensity");
+    assert("trois densites de grille proposees",
+      densitySetting && (densitySetting.options || []).map((o) => o.value).sort().join(",") === "high,low,medium");
   }
 
   console.log("== Avions en vue : widget present, reglages exposes ==");

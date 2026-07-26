@@ -40,6 +40,29 @@
   // 5 representative colors for a quick glance.
   const LEGEND_COLORS = ["#7fbfff", "#005588", "#ffee00", "#ff4400", "#ffaaff"];
 
+  /* Echelle de force du vent, calee sur les paliers de l'echelle de
+     Beaufort (vitesse en km/h a 10 m du sol, comme la donnee renvoyee
+     par Open-Meteo). Palette volontairement differente de celle de la
+     pluie ci-dessus : les deux couches se superposent sur la meme carte,
+     elles ne doivent pas pouvoir etre confondues.
+     Wind strength scale, aligned with the Beaufort scale's thresholds
+     (speed in km/h at 10 m above ground, as returned by Open-Meteo).
+     Palette deliberately different from the rain one above: both layers
+     overlay the same map, they must not be confusable. */
+  const WIND_STEPS = [
+    { max: 11, color: "#8FD3C1" }, // 0-2 Bft : calme a legere brise / calm to light breeze
+    { max: 28, color: "#4CAF50" }, // 3-4 Bft : petite a jolie brise / gentle to moderate breeze
+    { max: 49, color: "#F4C430" }, // 5-6 Bft : bonne a forte brise / fresh to strong breeze
+    { max: 74, color: "#FF7A33" }, // 7-8 Bft : grand frais a coup de vent / near gale to gale
+    { max: 102, color: "#E5384B" }, // 9-10 Bft : fort coup de vent a tempete / strong gale to storm
+    { max: Infinity, color: "#8E24AA" } // 11+ Bft : violente tempete, ouragan / violent storm, hurricane
+  ];
+  const WIND_COLORS = WIND_STEPS.map((s) => s.color);
+  function windColor(kmh) {
+    const step = WIND_STEPS.find((s) => kmh <= s.max);
+    return (step || WIND_STEPS[WIND_STEPS.length - 1]).color;
+  }
+
   class RadarWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -54,19 +77,32 @@
       this.playTimer = null;
       this.loadingFrame = false;
       this.refreshTimer = null;
+      this.windLayer = null;
+      this.windMoveTimer = null;
     }
 
     async init() {
       const i18n = this.ctx.i18n;
-      const showLegend = this.ctx.settings.showLegend !== false;
+      const s = this.ctx.settings;
+      const showLegend = s.showLegend !== false;
+      const showWindLegend = s.showWind === true && s.showWindLegend !== false;
       this.ctx.el.innerHTML = `
         <div class="pw-radar">
           <div class="pwrd-map"></div>
           <div class="pwrd-legend" ${showLegend ? "" : "hidden"}>
+            <div class="pwrd-legend-title">${i18n.t("radar.legend.rain")}</div>
             <div class="pwrd-legend-bar" style="background:linear-gradient(to right, ${LEGEND_COLORS.join(",")})"></div>
             <div class="pwrd-legend-labels">
               <span>${i18n.t("radar.legend.light")}</span>
               <span>${i18n.t("radar.legend.extreme")}</span>
+            </div>
+          </div>
+          <div class="pwrd-legend pwrd-legend-wind" ${showWindLegend ? "" : "hidden"}>
+            <div class="pwrd-legend-title">${i18n.t("radar.legend.wind")}</div>
+            <div class="pwrd-legend-bar" style="background:linear-gradient(to right, ${WIND_COLORS.join(",")})"></div>
+            <div class="pwrd-legend-labels">
+              <span>${i18n.t("radar.legend.windCalm")}</span>
+              <span>${i18n.t("radar.legend.windStorm")}</span>
             </div>
           </div>
           <div class="pwrd-panel">
@@ -82,6 +118,7 @@
       this.timeEl = this.ctx.el.querySelector(".pwrd-time");
       this.playBtn = this.ctx.el.querySelector(".pwrd-play");
       this.legendEl = this.ctx.el.querySelector(".pwrd-legend");
+      this.windLegendEl = this.ctx.el.querySelector(".pwrd-legend-wind");
 
       const on = (sel, fn) => this.ctx.el.querySelector(sel).addEventListener("pointerup", (e) => {
         // pointerup plutot que click : sur ce navigateur kiosque tactile,
@@ -115,6 +152,7 @@
       }
       this.buildMap();
       await this.loadFrames();
+      this.loadWind(); // en parallele : ne doit pas retarder l'affichage du radar / in parallel: mustn't delay the radar display
       this.arm();
     }
 
@@ -178,6 +216,25 @@
       // the button if they want to.
       this.map.on("zoomstart movestart", () => this.stop());
 
+      /* La couche vent est recalculee a chaque changement de vue : la
+         grille de fleches est construite a partir des limites affichees,
+         donc zoomer resserre naturellement la grille sur la zone
+         regardee (c'est le comportement attendu -- des fleches figees
+         sur une zone qu'on ne regarde plus n'auraient aucun interet).
+         Attendu 700 ms apres la fin du geste pour ne pas declencher un
+         appel a chaque cran de zoom intermediaire.
+         The wind layer is recomputed on every view change: the arrow
+         grid is built from the displayed bounds, so zooming in naturally
+         tightens the grid onto the area being looked at (that's the
+         expected behaviour -- arrows frozen on an area no longer in view
+         would be useless). Waits 700ms after the gesture ends so an
+         intermediate zoom step doesn't fire its own request. */
+      this.windLayer = L.layerGroup().addTo(this.map);
+      this.map.on("moveend zoomend", () => {
+        clearTimeout(this.windMoveTimer);
+        this.windMoveTimer = setTimeout(() => this.loadWind(), 700);
+      });
+
       // Piege classique de Leaflet : conteneur pas encore a sa taille
       // finale (mise en page Gridstack pas totalement retombee).
       // Classic Leaflet pitfall: container not at its final size yet
@@ -186,6 +243,102 @@
       if (this.observer) this.observer.disconnect();
       this.observer = new ResizeObserver(() => { if (this.map) this.map.invalidateSize(); });
       this.observer.observe(this.ctx.el);
+    }
+
+    /* Grille de fleches de vent couvrant la zone affichee. Toutes les
+       positions partent en UNE seule requete (Open-Meteo accepte des
+       listes de coordonnees separees par des virgules) plutot qu'en une
+       requete par point : indispensable pour rester raisonnable vis-a-vis
+       du service gratuit.
+       Convention meteorologique importante : "wind_direction_10m" est la
+       direction d'ou vient le vent. La fleche, elle, pointe vers ou il
+       va -- c'est ce qu'on attend en regardant une carte -- d'ou le +180.
+       Grid of wind arrows covering the displayed area. Every position is
+       fetched in ONE request (Open-Meteo accepts comma-separated
+       coordinate lists) rather than one request per point: essential to
+       stay reasonable towards the free service.
+       Important meteorological convention: "wind_direction_10m" is the
+       direction the wind comes FROM. The arrow points where it's going
+       TO -- what you expect when looking at a map -- hence the +180. */
+    windGridSize() {
+      const DENSITIES = { low: 6, medium: 12, high: 24 };
+      const target = DENSITIES[this.ctx.settings.windDensity] || DENSITIES.medium;
+      const w = this.mapEl ? this.mapEl.clientWidth || 1 : 1;
+      const h = this.mapEl ? this.mapEl.clientHeight || 1 : 1;
+      // Repartit le nombre de points voulu selon la forme de la tuile,
+      // pour des fleches a peu pres regulierement espacees plutot
+      // qu'ecrasees sur une tuile large ou etroite.
+      // Spreads the desired point count according to the tile's shape,
+      // for roughly evenly spaced arrows rather than squashed ones on a
+      // wide or narrow tile.
+      const cols = Math.max(2, Math.min(8, Math.round(Math.sqrt(target * (w / h)))));
+      const rows = Math.max(2, Math.min(8, Math.ceil(target / cols)));
+      return { cols, rows };
+    }
+
+    async loadWind() {
+      if (!this.map || !this.windLayer) return;
+      if (this.ctx.settings.showWind !== true) { this.windLayer.clearLayers(); return; }
+      const { cols, rows } = this.windGridSize();
+      const b = this.map.getBounds();
+      const latSpan = b.getNorth() - b.getSouth();
+      const lonSpan = b.getEast() - b.getWest();
+      const lats = [];
+      const lons = [];
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          // Centre de chaque cellule, pour que les fleches ne collent ni
+          // aux bords ni aux coins de la carte.
+          // Center of each cell, so arrows sit neither on the edges nor
+          // in the corners of the map.
+          lats.push((b.getSouth() + latSpan * (r + 0.5) / rows).toFixed(4));
+          lons.push((b.getWest() + lonSpan * (c + 0.5) / cols).toFixed(4));
+        }
+      }
+      try {
+        const url = "https://api.open-meteo.com/v1/forecast"
+          + `?latitude=${lats.join(",")}&longitude=${lons.join(",")}`
+          + "&current=wind_speed_10m,wind_direction_10m&timezone=auto";
+        const data = await fetch(url).then((r) => {
+          if (!r.ok) throw new Error("open-meteo " + r.status);
+          return r.json();
+        });
+        // Reponse : un tableau en multi-coordonnees, un objet simple si
+        // une seule position -- normalise pour traiter les deux.
+        // Response: an array for multiple coordinates, a plain object for
+        // a single position -- normalized to handle both.
+        const list = Array.isArray(data) ? data : [data];
+        this.renderWind(list);
+      } catch (e) {
+        console.warn("[piboard/radar] wind", e);
+        this.windLayer.clearLayers();
+      }
+    }
+
+    renderWind(list) {
+      if (!this.windLayer) return;
+      this.windLayer.clearLayers();
+      const showLabels = this.ctx.settings.showWindLabels === true;
+      for (const p of list) {
+        const cur = p && p.current;
+        if (!cur || !Number.isFinite(Number(cur.wind_speed_10m))) continue;
+        const speed = Math.round(Number(cur.wind_speed_10m));
+        const from = Number(cur.wind_direction_10m) || 0;
+        const color = windColor(speed);
+        const html = `
+          <div class="pwrd-wind">
+            <div class="pwrd-wind-arrow" style="transform:rotate(${(from + 180) % 360}deg)">
+              <svg viewBox="0 0 24 24" fill="${color}" stroke="rgba(0,0,0,0.55)" stroke-width="1">
+                <path d="M12 2 L18 20 L12 16 L6 20 Z"/>
+              </svg>
+            </div>
+            ${showLabels ? `<div class="pwrd-wind-label">${speed}</div>` : ""}
+          </div>`;
+        L.marker([p.latitude, p.longitude], {
+          icon: L.divIcon({ html, className: "pwrd-wind-icon", iconSize: [30, 30], iconAnchor: [15, 15] }),
+          interactive: false // purement informatif : ne doit pas intercepter les gestes sur la carte / purely informative: mustn't intercept map gestures
+        }).addTo(this.windLayer);
+      }
     }
 
     async loadFrames() {
@@ -323,7 +476,10 @@
     arm() {
       clearInterval(this.refreshTimer);
       const minutes = Math.max(5, Number(this.ctx.settings.refresh) || 10);
-      this.refreshTimer = setInterval(() => this.loadFrames(), minutes * 60000);
+      this.refreshTimer = setInterval(() => {
+        this.loadFrames();
+        this.loadWind();
+      }, minutes * 60000);
     }
 
     onSettingsChanged(settings) {
@@ -343,6 +499,10 @@
       this.map.setZoom(Number(settings.zoom) || 6);
       if (this.currentLayer) this.currentLayer.setOpacity(this.targetOpacity());
       if (this.legendEl) this.legendEl.hidden = settings.showLegend === false;
+      if (this.windLegendEl) {
+        this.windLegendEl.hidden = !(settings.showWind === true && settings.showWindLegend !== false);
+      }
+      this.loadWind(); // reprend showWind / densite / etiquettes / picks up showWind / density / labels
       this.arm();
     }
 
@@ -353,6 +513,7 @@
     destroy() {
       this.stop();
       clearInterval(this.refreshTimer);
+      clearTimeout(this.windMoveTimer);
       if (this.observer) this.observer.disconnect();
       if (this.map) this.map.remove();
     }
