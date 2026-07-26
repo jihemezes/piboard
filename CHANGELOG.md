@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.24.1
+
+- **Correctif *Horloge*** : en mode analogique avec disposition cadran
+  à gauche / texte à droite (v1.24.0), la taille du texte restait
+  calculée sur un pourcentage fixe de la hauteur — trop conservatrice,
+  elle laissait beaucoup d'espace inutilisé à droite du cadran sur une
+  tuile large. Remplacée par une recherche dichotomique (le même
+  principe que l'heure en mode digital) qui agrandit le texte jusqu'à
+  la limite réelle de largeur ou de hauteur disponible, remplissant
+  effectivement la colonne de texte.
+
+---
+
+- **Fix for *Clock***: in analog mode with the face-left/text-right
+  layout (v1.24.0), the text size was still computed from a fixed
+  percentage of the height — too conservative, it left a lot of unused
+  space to the right of the face on a wide tile. Replaced with a binary
+  search (the same approach as the time in digital mode) that grows the
+  text up to the actual available width or height limit, genuinely
+  filling the text column.
+
 ## 1.24.0
 
 - **Correctif *Horloge* : mode analogique trop petit.** Avec la date

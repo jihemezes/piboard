@@ -185,9 +185,9 @@
         // face fills the whole frame as before.
         const svg = box.querySelector("svg");
         const row = box.classList.contains("pwc-analog-row");
+        const side = row ? Math.max(20, Math.min(box.clientHeight, box.clientWidth * 0.62)) : 0;
         if (svg) {
           if (row) {
-            const side = Math.max(20, Math.min(box.clientHeight, box.clientWidth * 0.62));
             svg.style.width = side + "px";
             svg.style.height = side + "px";
           } else {
@@ -195,11 +195,39 @@
             svg.style.height = "";
           }
         }
-        // Le cadran SVG s'adapte deja tout seul (viewBox) ; seule la date
-        // a besoin d'une taille de police calculee.
-        // The SVG face already scales itself (viewBox); only the date
-        // needs a computed font size.
-        if (dateEl) dateEl.style.fontSize = Math.max(11, Math.floor(box.clientHeight * 0.09)) + "px";
+        // Le cadran SVG s'adapte deja tout seul (viewBox) ; la date, elle,
+        // a besoin d'une taille de police calculee. En disposition cote a
+        // cote, un pourcentage fixe de la hauteur laissait la colonne de
+        // texte trop petite par rapport a l'espace reellement disponible
+        // a droite du cadran (large sur une tuile large) -- recherche
+        // dichotomique a la place, comme pour l'heure en mode digital :
+        // agrandit le texte jusqu'a la limite de largeur OU de hauteur
+        // disponible, ce qui remplit vraiment la colonne.
+        // The SVG face already scales itself (viewBox); the date, though,
+        // needs a computed font size. In the side-by-side layout, a fixed
+        // percentage of the height left the text column too small
+        // compared to the space actually available to the right of the
+        // face (generous on a wide tile) -- binary search instead, like
+        // for the time in digital mode: grows the text up to the
+        // available width OR height limit, which actually fills the
+        // column.
+        if (dateEl) {
+          if (row) {
+            const gap = box.clientWidth * 0.06; // doit correspondre au "gap" du CSS .pwc-analog-row / must match the CSS .pwc-analog-row "gap"
+            const availW = Math.max(30, box.clientWidth - side - gap);
+            const availH = Math.max(20, box.clientHeight);
+            let lo = 10, hi = Math.max(14, Math.floor(availH * 0.45));
+            for (let i = 0; i < 7; i++) {
+              const mid = Math.floor((lo + hi + 1) / 2);
+              dateEl.style.fontSize = mid + "px";
+              const fits = dateEl.scrollWidth <= availW && dateEl.scrollHeight <= availH;
+              if (fits) lo = mid; else hi = mid - 1;
+            }
+            dateEl.style.fontSize = lo + "px";
+          } else {
+            dateEl.style.fontSize = Math.max(11, Math.floor(box.clientHeight * 0.09)) + "px";
+          }
+        }
         return;
       }
 
