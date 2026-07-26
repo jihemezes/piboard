@@ -1,14 +1,14 @@
 {
   "id": "commute",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "Commute time",
     "fr": "Trajet domicile-travail"
   },
   "titleBar": true,
   "description": {
-    "en": "Live driving times between two addresses via TomTom's Routing API (same key as the Traffic tile), with real traffic conditions, a comparison against the usual time for that day and hour, a colored alert for heavy delays, and a suggested departure time when a desired arrival time is set. Plus up to 5 extra trips to named destinations, each with the same treatment.",
-    "fr": "Temps de trajet en voiture en direct entre deux adresses via l'API Routing de TomTom (même clé que la tuile Trafic), avec trafic réel, comparaison au temps habituel pour ce jour et cette heure, alerte colorée en cas de fort retard, et heure de départ conseillée quand une heure d'arrivée souhaitée est renseignée. Plus jusqu'à 5 trajets supplémentaires vers des destinations nommées, avec le même traitement."
+    "en": "Live driving times between two addresses via TomTom's Routing API (same key as the Traffic tile), with real traffic conditions, a comparison against the usual time for that day and hour, a colored alert for heavy delays, and a suggested departure time when a desired arrival time is set. Plus up to 5 extra trips to named destinations, each with the same treatment. Address fields validate live as you type, confirming the resolved address so you know it was understood correctly before saving.",
+    "fr": "Temps de trajet en voiture en direct entre deux adresses via l'API Routing de TomTom (même clé que la tuile Trafic), avec trafic réel, comparaison au temps habituel pour ce jour et cette heure, alerte colorée en cas de fort retard, et heure de départ conseillée quand une heure d'arrivée souhaitée est renseignée. Plus jusqu'à 5 trajets supplémentaires vers des destinations nommées, avec le même traitement. Les champs d'adresse se valident en direct pendant la saisie, confirmant l'adresse résolue afin de savoir qu'elle a bien été comprise avant d'enregistrer."
   },
   "size": {
     "w": 3,
@@ -21,7 +21,7 @@
   "settings": [
     {
       "key": "home",
-      "type": "text",
+      "type": "address",
       "default": "",
       "label": {
         "en": "Address A (e.g. home)",
@@ -34,7 +34,7 @@
     },
     {
       "key": "work",
-      "type": "text",
+      "type": "address",
       "default": "",
       "label": {
         "en": "Address B (e.g. work)",
@@ -47,7 +47,7 @@
     },
     {
       "key": "apiKey",
-      "type": "text",
+      "type": "password",
       "default": "",
       "label": {
         "en": "TomTom API key",
@@ -180,7 +180,7 @@
     },
     {
       "key": "trip1Address",
-      "type": "text",
+      "type": "address",
       "default": "",
       "label": {
         "en": "Extra trip 1 — destination address",
@@ -227,7 +227,7 @@
     },
     {
       "key": "trip2Address",
-      "type": "text",
+      "type": "address",
       "default": "",
       "label": {
         "en": "Extra trip 2 — destination address",
@@ -270,7 +270,7 @@
     },
     {
       "key": "trip3Address",
-      "type": "text",
+      "type": "address",
       "default": "",
       "label": {
         "en": "Extra trip 3 — destination address",
@@ -313,7 +313,7 @@
     },
     {
       "key": "trip4Address",
-      "type": "text",
+      "type": "address",
       "default": "",
       "label": {
         "en": "Extra trip 4 — destination address",
@@ -356,7 +356,7 @@
     },
     {
       "key": "trip5Address",
-      "type": "text",
+      "type": "address",
       "default": "",
       "label": {
         "en": "Extra trip 5 — destination address",

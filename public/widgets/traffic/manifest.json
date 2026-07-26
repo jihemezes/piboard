@@ -1,6 +1,6 @@
 {
   "id": "traffic",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "name": {
     "en": "Traffic map",
     "fr": "Carte de trafic"
@@ -21,7 +21,7 @@
   "settings": [
     {
       "key": "apiKey",
-      "type": "text",
+      "type": "password",
       "default": "",
       "label": {
         "en": "TomTom API key",

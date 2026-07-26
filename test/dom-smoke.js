@@ -299,7 +299,12 @@ const dom = new JSDOM(html, {
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
       }
       if (u.includes("/api/proxy") && u.includes("nominatim.openstreetmap.org")) {
-        return json([{ lat: "43.6", lon: "1.44" }]);
+        // Un marqueur distinct simule une adresse introuvable, pour tester
+        // les deux issues de la validation en direct (voir app.js).
+        // A distinct marker simulates an address that can't be found, to
+        // test both outcomes of the live validation (see app.js).
+        if (u.includes("Nullepart")) return json([]);
+        return json([{ lat: "43.6", lon: "1.44", display_name: "12 Rue de Paris, 31000 Toulouse, France" }]);
       }
       if (u.includes("/api/proxy") && u.includes("api.tomtom.com")) {
         return json({ routes: [{ summary: TOMTOM_ROUTE_SUMMARY }] });
@@ -528,6 +533,49 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   const commuteQuota = document.querySelector(".pw-commute .pwm-quota");
   assert("compteur de quota TomTom affiche et non vide", commuteQuota && !commuteQuota.hidden && /\d+ \/ 2500/.test(commuteQuota.textContent));
   assert("compteur de quota incremente d'au moins 3 (un appel par trajet calcule)", COMMUTE_QUOTA_COUNT >= 3);
+
+  console.log("== Trajet domicile-travail : validation d'adresse en direct dans les reglages ==");
+  {
+    const commuteTileEl = document.querySelector('[data-tile-id="t-i"]');
+    assert("tuile trajet localisee dans la grille", !!commuteTileEl);
+    commuteTileEl.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("modale de reglages ouverte", document.getElementById("tileModal").hidden === false);
+
+    const homeInput = document.querySelector('#tileForm [data-key="home"]');
+    assert("champ adresse 'home' present et de type texte (validation en plus, pas a la place)", !!homeInput && homeInput.type === "text");
+    assert("case a cocher/texte : c'est bien un champ 'address' (classe dediee)", homeInput.classList.contains("field-address-input"));
+    const homeStatus = homeInput.parentElement.querySelector(".field-address-status");
+    assert("zone de statut presente et cachee avant toute saisie", !!homeStatus && homeStatus.hidden === true);
+
+    // Adresse valide : doit afficher une confirmation avec le nom complet
+    // resolu par Nominatim (voir le mock). Valid address: should show a
+    // confirmation with the full name resolved by Nominatim (see mock).
+    homeInput.value = "12 Rue de Paris, Toulouse";
+    homeInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("statut passe en 'verification' immediatement (avant le debounce)", homeStatus.classList.contains("field-address-checking"));
+    await sleep(700); // au-dela du debounce de 600ms / beyond the 600ms debounce
+    assert("adresse valide : confirmation affichee avec le nom complet", homeStatus.classList.contains("field-address-ok") && homeStatus.textContent.includes("31000 Toulouse"));
+
+    // Adresse introuvable (marqueur de mock "Nullepart") : message clair.
+    // Address not found (mock marker "Nullepart"): clear message.
+    homeInput.value = "Nullepart";
+    homeInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    await sleep(700);
+    assert("adresse introuvable : message d'echec affiche", homeStatus.classList.contains("field-address-fail") && homeStatus.textContent.includes("introuvable"));
+
+    // Saisie trop courte : la zone de statut redisparait plutot que
+    // d'afficher un resultat pour une requete trop vague.
+    // Too-short input: the status area hides again rather than showing
+    // a result for an overly vague query.
+    homeInput.value = "1";
+    homeInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("saisie trop courte : zone de statut cachee de nouveau", homeStatus.hidden === true);
+
+    document.getElementById("tileModal").querySelector(".modal-close")
+      .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+  }
 
   console.log("== Qualite de l'air : indice, polluant et pollen dominants ==");
   tries = 0;

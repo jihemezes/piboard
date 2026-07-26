@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.20.0
+
+- **Trajet domicile-travail : validation d'adresse en direct.** Les
+  champs Adresse A/B et les 5 adresses de trajets supplémentaires se
+  vérifient désormais pendant la saisie (recherche automatique après une
+  courte pause) : une confirmation verte affiche l'adresse complète
+  telle que comprise (ex. « ✓ 12 Rue de Paris, 31000 Toulouse, France »),
+  ou un message rouge si elle est introuvable. Fini le doute qui menait
+  à un « Itinéraire indisponible » bien plus tard sans savoir si le
+  problème venait de l'adresse elle-même. Ce nouveau type de champ
+  (« address ») est générique et pourra être réutilisé par un futur
+  widget.
+
+---
+
+- **Commute time: live address validation.** The Address A/B fields and
+  the 5 extra-trip addresses now validate as you type (automatic search
+  after a short pause): a green confirmation shows the full address as
+  understood (e.g. "✓ 12 Rue de Paris, 31000 Toulouse, France"), or a red
+  message if it can't be found. No more wondering about a much-later
+  "Route unavailable" message without knowing whether the address itself
+  was the problem. This new field type ("address") is generic and can be
+  reused by a future widget.
+
+## 1.19.2
+
+- **Correctif : clé API TomTom masquée par défaut** dans les réglages
+  des tuiles *Trajet domicile-travail* et *Trafic* — champ mot de passe
+  avec bouton « Afficher »/« Masquer », au lieu d'un texte en clair
+  visible par-dessus l'épaule de quiconque ouvre les réglages.
+
+---
+
+- **Fix: TomTom API key hidden by default** in the *Commute time* and
+  *Traffic* tile settings — a password-style field with a
+  Show/Hide button, instead of plain text visible to anyone glancing
+  over your shoulder while the settings are open.
+
 ## 1.19.1
 
 - **Correctif *application Windows*** : plantage au lancement avec
