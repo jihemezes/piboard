@@ -166,10 +166,10 @@
         if (!this.coords) this.coords = await this.geocode(s.city || "Paris");
         const { lat, lon, name } = this.coords;
         const provider = s.provider || "best_match";
-        let url;
+        let mainUrl;
         if (provider === "custom") {
           if (!s.customUrl) throw new Error(this.ctx.i18n.t("weather.noCustomUrl"));
-          url = s.customUrl.replace(/\{lat\}/g, lat).replace(/\{lon\}/g, lon);
+          mainUrl = s.customUrl.replace(/\{lat\}/g, lat).replace(/\{lon\}/g, lon);
         } else {
           // Toutes les options (sauf "custom") passent par l'API Open-Meteo,
           // sans cle : le parametre "models" choisit juste le modele
@@ -179,30 +179,56 @@
           // API: the "models" parameter just picks the underlying national
           // model. "best_match" (historical behavior) omits the parameter
           // and lets Open-Meteo choose automatically.
-          url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+          mainUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
             + `&current=temperature_2m,weather_code,wind_speed_10m,wind_gusts_10m`
-            + `&hourly=temperature_2m,precipitation_probability,uv_index`
-            + `&daily=temperature_2m_min,temperature_2m_max,weather_code,sunrise,sunset,`
-            + `uv_index_max,wind_gusts_10m_max,precipitation_probability_max`
-            + `&minutely_15=precipitation`
-            + `&forecast_days=7&timezone=auto`
+            + `&daily=temperature_2m_min,temperature_2m_max,weather_code`
+            + `&forecast_days=2&timezone=auto`
             + (provider !== "best_match" ? `&models=${encodeURIComponent(provider)}` : "");
         }
-        const data = await fetch(url).then((r) => r.json());
+
+        // Requete "etendue" (bande 24h, previsions 7 jours, UV, pluie
+        // imminente) : TOUJOURS en "Meilleure correspondance", jamais
+        // restreinte au modele choisi ci-dessus. Certains modeles
+        // nationaux uniques ont un horizon de prevision plus court que 7
+        // jours (ex. Meteo-France ~4 jours, MET Norway ~2,5 jours) ou ne
+        // fournissent pas l'UV/le minutely_15 -- les y restreindre
+        // produisait des jours a 0°, un indice UV invisible, et une
+        // pluie imminente jamais detectee. Independante du fournisseur
+        // "Personnalise" egalement : fonctionne meme si sa reponse ne
+        // contient pas ces blocs.
+        // "Extended" request (24h strip, 7-day forecast, UV, imminent
+        // rain): ALWAYS "Best match", never restricted to the model
+        // chosen above. Some single national models have a forecast
+        // horizon shorter than 7 days (e.g. Météo-France ~4 days, MET
+        // Norway ~2.5 days) or don't provide UV/minutely_15 -- restricting
+        // them to that model produced 0° days, an invisible UV index, and
+        // imminent rain that was never detected. Independent from the
+        // "Custom" provider too: works even if its response lacks these
+        // blocks.
+        const extUrl = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}`
+          + `&hourly=temperature_2m,precipitation_probability,weather_code,uv_index`
+          + `&daily=temperature_2m_min,temperature_2m_max,weather_code,sunrise,sunset,`
+          + `uv_index_max,wind_gusts_10m_max,precipitation_probability_max`
+          + `&minutely_15=precipitation`
+          + `&forecast_days=7&timezone=auto`;
+
+        const [data, extData] = await Promise.all([
+          fetch(mainUrl).then((r) => r.json()),
+          fetch(extUrl).then((r) => r.json()).catch((e) => { console.warn("[piboard/weather] extended", e); return null; })
+        ]);
         if (data.error) throw new Error(data.reason || "provider error");
         const cur = data.current;
         const day = data.daily;
-        const hourly = data.hourly || null;
-        const minutely = data.minutely_15 || null;
+        const dayExt = extData && !extData.error ? extData.daily : null;
+        const hourly = extData && !extData.error ? extData.hourly : null;
+        const minutely = extData && !extData.error ? extData.minutely_15 : null;
         const today = describe(cur.weather_code, lang);
 
         // Index de l'heure courante dans le tableau hourly.time (pour la
         // bande horaire 24h de la modal, qui doit commencer maintenant et
-        // non a minuit). Absent si le fournisseur "Personnalise" ne
-        // renvoie pas de bloc "hourly".
+        // non a minuit).
         // Index of the current hour in hourly.time (for the modal's 24h
-        // strip, which should start now rather than at midnight). Absent
-        // if the "Custom" provider doesn't return an "hourly" block.
+        // strip, which should start now rather than at midnight).
         let nowHourIdx = 0;
         if (hourly && hourly.time && hourly.time.length) {
           const nowIso = new Date().toISOString().slice(0, 13);
@@ -256,7 +282,7 @@
           }
         }
 
-        this.lastData = { cur, day, hourly, minutely, nowHourIdx, rainSoonMinutes, today, name, lang, photo };
+        this.lastData = { cur, day, dayExt, hourly, minutely, nowHourIdx, rainSoonMinutes, today, name, lang, photo };
         this.layoutMode = this.computeLayoutMode();
         this.renderMarkup();
       } catch (e) {
@@ -436,6 +462,16 @@
       const i18n = this.ctx.i18n;
       const lang = i18n.lang;
       const locale = i18n.t("clock.date.format");
+      // Les statistiques etendues (UV, lever/coucher, previsions 7 jours,
+      // bande horaire) viennent TOUJOURS de "dayExt"/"hourly" (requete
+      // "Meilleure correspondance" independante, voir refresh()) --
+      // jamais de "day" (2 jours, respecte le modele choisi par
+      // l'utilisateur pour la tuile compacte).
+      // Extended stats (UV, sunrise/sunset, 7-day forecast, hourly strip)
+      // ALWAYS come from "dayExt"/"hourly" (independent "Best match"
+      // request, see refresh()) -- never from "day" (2 days, respects
+      // the model the user picked for the compact tile).
+      const dayExt = d.dayExt;
 
       const rainBanner = d.rainSoonMinutes
         ? `<div class="pww-modal-rainsoon">🌧 ${i18n.t("weather.rainSoon").replace("{n}", d.rainSoonMinutes)}</div>`
@@ -446,43 +482,54 @@
         : "";
 
       let uvStat = "";
-      if (d.day.uv_index_max && d.day.uv_index_max[0] !== null && d.day.uv_index_max[0] !== undefined) {
-        const band = uvBand(d.day.uv_index_max[0]);
-        uvStat = `<div class="pww-modal-stat"><span class="pww-modal-stat-label">UV</span><span class="pww-modal-stat-value" style="color:${band.color}">${Math.round(d.day.uv_index_max[0])} · ${i18n.t("weather.uv." + band.key)}</span></div>`;
+      if (dayExt && dayExt.uv_index_max && dayExt.uv_index_max[0] !== null && dayExt.uv_index_max[0] !== undefined) {
+        const band = uvBand(dayExt.uv_index_max[0]);
+        uvStat = `<div class="pww-modal-stat"><span class="pww-modal-stat-label">UV</span><span class="pww-modal-stat-value" style="color:${band.color}">${Math.round(dayExt.uv_index_max[0])} · ${i18n.t("weather.uv." + band.key)}</span></div>`;
       }
 
-      const sunStat = d.day.sunrise && d.day.sunrise[0]
-        ? `<div class="pww-modal-stat"><span class="pww-modal-stat-label">${i18n.t("weather.sunTimes")}</span><span class="pww-modal-stat-value">${fmtTime(d.day.sunrise[0], locale)} – ${fmtTime(d.day.sunset[0], locale)}</span></div>`
+      const sunStat = dayExt && dayExt.sunrise && dayExt.sunrise[0]
+        ? `<div class="pww-modal-stat"><span class="pww-modal-stat-label">${i18n.t("weather.sunTimes")}</span><span class="pww-modal-stat-value">${fmtTime(dayExt.sunrise[0], locale)} – ${fmtTime(dayExt.sunset[0], locale)}</span></div>`
         : "";
 
+      // Bande horaire 24h : pavés agrandis avec icone meteo (d'apres le
+      // code WMO horaire), temperature, et probabilite de pluie.
+      // 24h strip: enlarged cards with a weather icon (from the hourly
+      // WMO code), temperature, and rain probability.
       let hourlyStrip = "";
       if (d.hourly && d.hourly.time && d.hourly.time.length) {
         const end = Math.min(d.nowHourIdx + 24, d.hourly.time.length);
         const items = [];
         for (let i = d.nowHourIdx; i < end; i++) {
           const pop = d.hourly.precipitation_probability ? d.hourly.precipitation_probability[i] : null;
+          const hDesc = d.hourly.weather_code ? describe(d.hourly.weather_code[i], lang) : null;
           items.push(`
             <div class="pww-hour">
               <div class="pww-hour-time">${fmtHour(d.hourly.time[i], locale)}</div>
+              ${hDesc ? `<div class="pww-hour-icon">${iconSvg(hDesc.icon)}</div>` : ""}
               <div class="pww-hour-temp">${Math.round(d.hourly.temperature_2m[i])}°</div>
-              ${pop !== null ? `<div class="pww-hour-pop" style="opacity:${Math.max(0.3, pop / 100)}">${Math.round(pop)}%</div>` : ""}
+              ${pop !== null ? `<div class="pww-hour-pop" style="opacity:${Math.max(0.3, pop / 100)}">💧${Math.round(pop)}%</div>` : ""}
             </div>`);
         }
         hourlyStrip = `<div class="pww-section-title">${i18n.t("weather.next24h")}</div><div class="pww-hourly-strip">${items.join("")}</div>`;
       }
 
+      // Previsions 7 jours en colonnes (une par jour) plutot qu'en
+      // lignes -- vue d'ensemble de la semaine plus naturelle a lire.
+      // 7-day forecast in columns (one per day) rather than rows -- a
+      // more natural week-at-a-glance layout.
       let dailyList = "";
-      if (d.day.time && d.day.time.length) {
-        const items = d.day.time.map((iso, i) => {
-          const desc = describe(d.day.weather_code[i], lang);
+      if (dayExt && dayExt.time && dayExt.time.length) {
+        const items = dayExt.time.map((iso, i) => {
+          const desc = describe(dayExt.weather_code[i], lang);
           const dayLabel = i === 0 ? i18n.t("weather.today") : fmtDay(iso, locale);
-          const pop = d.day.precipitation_probability_max ? d.day.precipitation_probability_max[i] : null;
+          const pop = dayExt.precipitation_probability_max ? dayExt.precipitation_probability_max[i] : null;
           return `
-            <div class="pww-day-row">
+            <div class="pww-day-col">
               <div class="pww-day-name">${dayLabel}</div>
               <div class="pww-day-icon">${iconSvg(desc.icon)}</div>
+              <div class="pww-day-range">${Math.round(dayExt.temperature_2m_max[i])}°</div>
+              <div class="pww-day-range pww-day-min">${Math.round(dayExt.temperature_2m_min[i])}°</div>
               <div class="pww-day-pop">${pop !== null && pop !== undefined ? "💧" + Math.round(pop) + "%" : ""}</div>
-              <div class="pww-day-range">${Math.round(d.day.temperature_2m_min[i])}° / ${Math.round(d.day.temperature_2m_max[i])}°</div>
             </div>`;
         }).join("");
         dailyList = `<div class="pww-section-title">${i18n.t("weather.next7days")}</div><div class="pww-daily-list">${items}</div>`;

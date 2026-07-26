@@ -243,6 +243,10 @@
       "commute.min": "min",
       "commute.missing": "Set both addresses in the tile settings.",
       "commute.error": "Route unavailable",
+      "commute.noApiKey": "Add your TomTom API key in the tile settings.",
+      "commute.leaveBy": "Leave by",
+      "commute.quota": "TomTom:",
+      "commute.onTime": "on time",
 
       "standings.error": "Standings unavailable",
 
@@ -519,6 +523,10 @@
       "commute.min": "min",
       "commute.missing": "Renseignez les deux adresses dans les paramètres de la tuile.",
       "commute.error": "Itinéraire indisponible",
+      "commute.noApiKey": "Ajoutez votre clé API TomTom dans les paramètres de la tuile.",
+      "commute.leaveBy": "Partir avant",
+      "commute.quota": "TomTom :",
+      "commute.onTime": "à l'heure",
 
       "standings.error": "Classement indisponible",
 

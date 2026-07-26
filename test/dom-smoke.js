@@ -109,6 +109,7 @@ const WEATHER_SUNSET_ISO = `${WEATHER_DAILY_TIMES[0]}T20:45`;
 const WEATHER_HOURLY_TIMES = [...Array(30)].map((_, i) => isoHour(new Date(WEATHER_NOW.getTime() + i * 3600000)));
 const WEATHER_HOURLY_TEMPS = WEATHER_HOURLY_TIMES.map((_, i) => 18 + (i % 6));
 const WEATHER_HOURLY_POP = WEATHER_HOURLY_TIMES.map((_, i) => (i * 7) % 100);
+const WEATHER_HOURLY_CODES = WEATHER_HOURLY_TIMES.map((_, i) => [0, 2, 61, 71][i % 4]);
 let mCursor = new Date(WEATHER_NOW);
 mCursor.setMinutes(Math.floor(mCursor.getMinutes() / 15) * 15, 0, 0);
 const WEATHER_MINUTELY_TIMES = [...Array(8)].map(() => { const t = iso15(mCursor); mCursor = new Date(mCursor.getTime() + 15 * 60000); return t; });
@@ -124,6 +125,25 @@ function fmtHourFr(d) {
   return truncated.toLocaleTimeString("fr-FR", { hour: "2-digit" });
 }
 
+/* Fixture TomTom Routing (widget Trajet domicile-travail) : un retard de
+   10 min pile sur le seuil "modere" par defaut, pour verifier la
+   coloration, et une heure de depart conseillee quand arriveAt est
+   demande. TomTom Routing fixture (Commute time widget): a 10 min delay,
+   exactly on the default "moderate" threshold, to check the coloring,
+   and a suggested departure time when arriveAt is requested. */
+const TOMTOM_ROUTE_SUMMARY = {
+  lengthInMeters: 15300, travelTimeInSeconds: 1500, trafficDelayInSeconds: 600,
+  noTrafficTravelTimeInSeconds: 1100, historicTrafficTravelTimeInSeconds: 900,
+  departureTime: "2026-07-26T07:12:00Z"
+};
+// Meme mecanisme que fmtClock() dans le widget : evite tout desaccord
+// entre le fuseau horaire de la machine de test et une heure ecrite en
+// dur dans l'assertion. Same mechanism as the widget's fmtClock():
+// avoids any mismatch between the test machine's timezone and a
+// hardcoded time in the assertion.
+const TOMTOM_LEAVE_BY_TEXT = new Date(TOMTOM_ROUTE_SUMMARY.departureTime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+let COMMUTE_QUOTA_COUNT = 0;
+
 const layout = {
   version: 1,
   tiles: [
@@ -134,7 +154,13 @@ const layout = {
     { id: "t-e", widget: "airquality", x: 9, y: 0, w: 3, h: 2, settings: { city: "Toulouse", displayMode: "detailed", showPollen: false, showPollenDetailed: true } },
     { id: "t-f", widget: "calendar", x: 0, y: 5, w: 4, h: 4, settings: { calendars: "https://cal.test/family.ics|Famille\nhttps://cal.test/work.ics|Travail" } },
     { id: "t-g", widget: "rss", x: 4, y: 5, w: 4, h: 3, settings: { url: "https://feed.test/rss.xml", maxItems: 6, showSource: true } },
-    { id: "t-h", widget: "sportscore", x: 8, y: 5, w: 4, h: 3, settings: { league: "soccer:fifa.world", maxItems: 5 } }
+    { id: "t-h", widget: "sportscore", x: 8, y: 5, w: 4, h: 3, settings: { league: "soccer:fifa.world", maxItems: 5 } },
+    { id: "t-i", widget: "commute", x: 0, y: 8, w: 4, h: 3, settings: {
+      home: "12 Rue de Paris, Toulouse", work: "5 Avenue de Bordeaux, Toulouse",
+      apiKey: "FAKEKEY", direction: "both", arriveWorkBy: "08:30",
+      trip1Label: "Grand-mère", trip1Address: "1 Place du Capitole, Toulouse", trip1ArriveBy: "08:45",
+      alertModerate: 10, alertHeavy: 20
+    } }
   ]
 };
 
@@ -262,6 +288,19 @@ const dom = new JSDOM(html, {
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
       }
+      if (u.includes("/api/proxy") && u.includes("nominatim.openstreetmap.org")) {
+        return json([{ lat: "43.6", lon: "1.44" }]);
+      }
+      if (u.includes("/api/proxy") && u.includes("api.tomtom.com")) {
+        return json({ routes: [{ summary: TOMTOM_ROUTE_SUMMARY }] });
+      }
+      if (u.includes("/api/traffic-quota/")) {
+        if (method === "POST") {
+          const body = opts && opts.body ? JSON.parse(opts.body) : {};
+          COMMUTE_QUOTA_COUNT += Number(body.count) || 0;
+        }
+        return json({ date: "2026-07-26", count: COMMUTE_QUOTA_COUNT });
+      }
       if (u.includes("/api/proxy") && u.includes("site.api.espn.com") && u.includes("scoreboard")) {
         return json(ESPN_SCOREBOARD_FIXTURE);
       }
@@ -287,9 +326,16 @@ const dom = new JSDOM(html, {
       if (u.includes("geocoding-api.open-meteo.com")) {
         return json({ results: [{ latitude: 43.6, longitude: 1.44, name: "Toulouse" }] });
       }
-      if (u.includes("api.open-meteo.com/v1/forecast")) {
+      // Deux requetes distinctes desormais (voir refresh() dans le
+      // widget) : la principale (aujourd'hui/demain, respecte le modele
+      // choisi) n'a pas de parametre "hourly", l'etendue (7 jours, UV,
+      // bande horaire, minutely_15, toujours "Meilleure correspondance")
+      // si. Two distinct requests now (see refresh() in the widget): the
+      // main one (today/tomorrow, respects the chosen model) has no
+      // "hourly" parameter, the extended one (7 days, UV, hourly strip,
+      // minutely_15, always "Best match") does.
+      if (u.includes("api.open-meteo.com/v1/forecast") && u.includes("hourly=")) {
         return json({
-          current: { temperature_2m: 21, weather_code: 0, wind_speed_10m: 12, wind_gusts_10m: 27 },
           daily: {
             time: WEATHER_DAILY_TIMES,
             temperature_2m_min: [10, 11, 9, 12, 8, 13, 11],
@@ -301,8 +347,14 @@ const dom = new JSDOM(html, {
             wind_gusts_10m_max: [35],
             precipitation_probability_max: [10, 80, 40, 5, 60, 15, 20]
           },
-          hourly: { time: WEATHER_HOURLY_TIMES, temperature_2m: WEATHER_HOURLY_TEMPS, precipitation_probability: WEATHER_HOURLY_POP },
+          hourly: { time: WEATHER_HOURLY_TIMES, temperature_2m: WEATHER_HOURLY_TEMPS, precipitation_probability: WEATHER_HOURLY_POP, weather_code: WEATHER_HOURLY_CODES },
           minutely_15: { time: WEATHER_MINUTELY_TIMES, precipitation: WEATHER_MINUTELY_PRECIP }
+        });
+      }
+      if (u.includes("api.open-meteo.com/v1/forecast")) {
+        return json({
+          current: { temperature_2m: 21, weather_code: 0, wind_speed_10m: 12, wind_gusts_10m: 27 },
+          daily: { temperature_2m_min: [10, 11], temperature_2m_max: [22, 23], weather_code: [0, 1] }
         });
       }
       if (u.includes("/api/weather-photo/")) {
@@ -357,10 +409,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 8 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 9 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("8 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 8);
+  assert("9 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 9);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -419,12 +471,42 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   assert("modal : lever et coucher du soleil affiches", (document.querySelector(".pww-modal-stats")?.textContent || "").includes("07:02") && (document.querySelector(".pww-modal-stats")?.textContent || "").includes("20:45"));
   assert("modal : bande horaire 24h presente (24 heures)", document.querySelectorAll(".pww-hourly-strip .pww-hour").length === 24);
   assert("modal : bande horaire commence a l'heure courante (pas minuit)", document.querySelector(".pww-hour-time")?.textContent === fmtHourFr(WEATHER_NOW));
-  assert("modal : previsions 7 jours presentes (7 lignes)", document.querySelectorAll(".pww-daily-list .pww-day-row").length === 7);
+  assert("modal : previsions 7 jours presentes (7 colonnes)", document.querySelectorAll(".pww-daily-list .pww-day-col").length === 7);
+  assert("modal : icone meteo presente sur les pastilles horaires 24h", !!document.querySelector(".pww-hourly-strip .pww-hour-icon"));
+  assert("modal : aucune temperature suspecte a 0deg sur les 7 jours (correctif modele a horizon court)",
+    ![...document.querySelectorAll(".pww-day-col .pww-day-range")].some((n) => n.textContent.trim() === "0°"));
   assert("modal : probabilite de pluie du jour le plus pluvieux affichee (80%)", (document.querySelector(".pww-daily-list")?.textContent || "").includes("💧80%"));
 
   weatherModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(20);
   assert("modal meteo refermee par le bouton", weatherModal.hidden === true);
+
+  console.log("== Trajet domicile-travail : TomTom Routing, retard colore, depart conseille ==");
+  tries = 0;
+  while (document.querySelectorAll(".pw-commute .pwm-col").length < 3 && tries++ < 80) await sleep(50);
+  const commuteCols = [...document.querySelectorAll(".pw-commute .pwm-col")];
+  assert("3 trajets affiches (A→B, B→A, trajet supplementaire)", commuteCols.length === 3);
+
+  const colAtoB = commuteCols.find((c) => c.querySelector(".pwm-dir")?.textContent === "A → B");
+  const colBtoA = commuteCols.find((c) => c.querySelector(".pwm-dir")?.textContent === "B → A");
+  const colTrip = commuteCols.find((c) => c.querySelector(".pwm-dir")?.textContent === "Grand-mère");
+  assert("les 3 trajets sont bien identifies par leur libelle", !!colAtoB && !!colBtoA && !!colTrip);
+
+  assert("duree affichee (25 min, temps reel TomTom avec trafic)", (colAtoB?.textContent || "").includes("25 min"));
+  assert("distance affichee (15.3 km)", (colAtoB?.textContent || "").includes("15.3 km"));
+  assert("retard colore affiche (+10 min, pile sur le seuil modere)", (colAtoB?.textContent || "").includes("+10 min"));
+  assert("classe de couleur 'modere' appliquee au retard", !!colAtoB?.querySelector(".pwm-delay-moderate"));
+
+  assert("heure de depart conseillee affichee pour A→B (heure d'arrivee renseignee)",
+    (colAtoB?.textContent || "").includes(TOMTOM_LEAVE_BY_TEXT));
+  assert("PAS d'heure de depart conseillee pour B→A (aucune heure d'arrivee renseignee)",
+    !colBtoA?.querySelector(".pwm-leaveby"));
+  assert("heure de depart conseillee affichee pour le trajet supplementaire (sa propre heure d'arrivee)",
+    (colTrip?.textContent || "").includes(TOMTOM_LEAVE_BY_TEXT));
+
+  const commuteQuota = document.querySelector(".pw-commute .pwm-quota");
+  assert("compteur de quota TomTom affiche et non vide", commuteQuota && !commuteQuota.hidden && /\d+ \/ 2500/.test(commuteQuota.textContent));
+  assert("compteur de quota incremente d'au moins 3 (un appel par trajet calcule)", COMMUTE_QUOTA_COUNT >= 3);
 
   console.log("== Qualite de l'air : indice, polluant et pollen dominants ==");
   tries = 0;
@@ -592,7 +674,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (9 au total)", document.querySelectorAll(".grid-stack-item").length === 9);
+  assert("tuile ajoutee (10 au total)", document.querySelectorAll(".grid-stack-item").length === 10);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {

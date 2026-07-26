@@ -166,6 +166,18 @@
       this.baseLayer = L.tileLayer(this.basemapUrl(), { subdomains: "abcd", maxZoom: 19 }).addTo(this.map);
       L.control.zoom({ position: "topright" }).addTo(this.map);
 
+      // Met la lecture en pause pendant qu'on zoome ou qu'on deplace la
+      // carte : au-dela du correctif ci-dessus (once() plutot que on()),
+      // regarder le radar changer d'image PENDANT qu'on essaie de zoomer
+      // sur une zone precise est de toute facon plus genant qu'utile.
+      // L'utilisateur relance la lecture au besoin avec le bouton.
+      // Pauses playback while zooming or panning the map: beyond the fix
+      // above (once() rather than on()), watching the radar change
+      // frames WHILE trying to zoom into a specific area is more
+      // distracting than useful anyway. The user resumes playback with
+      // the button if they want to.
+      this.map.on("zoomstart movestart", () => this.stop());
+
       // Piege classique de Leaflet : conteneur pas encore a sa taille
       // finale (mise en page Gridstack pas totalement retombee).
       // Classic Leaflet pitfall: container not at its final size yet
@@ -255,7 +267,22 @@
 
       this.loadingFrame = true;
       const layer = this.createRadarLayer(frame);
-      layer.on("load", () => {
+      // once() et non on() : GridLayer emet "load" a CHAQUE rechargement
+      // de ses tuiles, pas seulement au premier -- y compris apres un
+      // zoom ou un deplacement de la carte. Comme les calques en cache
+      // restent tous montes en permanence (juste rendus invisibles via
+      // l'opacite), un simple on() laissait cet ecouteur se redeclencher
+      // a chaque zoom pour CHAQUE calque en cache, empilant autant de
+      // planifications concurrentes de la boucle de lecture -- d'ou une
+      // animation qui s'emballait des qu'on zoomait/dezoomait.
+      // once(), not on(): GridLayer fires "load" on EVERY tile reload,
+      // not just the first one -- including after a map zoom or pan.
+      // Since cached layers all stay permanently mounted (just made
+      // invisible via opacity), a plain on() let this listener refire on
+      // every zoom for EVERY cached layer, stacking that many concurrent
+      // playback-loop schedulings -- which is why the animation would go
+      // haywire as soon as you zoomed in or out.
+      layer.once("load", () => {
         layer.setOpacity(opacity);
         if (oldLayer) oldLayer.setOpacity(0);
         this.layerCache[position] = layer;

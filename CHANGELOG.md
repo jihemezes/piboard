@@ -1,5 +1,113 @@
 # Changelog
 
+## 1.18.1
+
+- **Correctif *Météo* : cause commune trouvée pour trois anomalies dans
+  la vue détaillée** — les 3 derniers jours de la prévision 7 jours à
+  0°, l'indice UV invisible, et la pluie imminente jamais détectée.
+  Cause : quand un modèle météo national précis est choisi (au lieu de
+  « Meilleure correspondance »), la requête unique restreignait *toutes*
+  les données à ce modèle — or certains modèles uniques ont un horizon
+  de prévision plus court que 7 jours (ex. Météo-France ~4 jours) ou ne
+  fournissent pas l'indice UV / les données à 15 minutes. La vue
+  détaillée (24h, 7 jours, UV, pluie imminente) passe désormais
+  **toujours** par « Meilleure correspondance », indépendamment du
+  modèle choisi pour la météo du jour même — corrige les trois
+  anomalies définitivement, quel que soit le modèle sélectionné.
+- **Prévisions 7 jours en colonnes** plutôt qu'en lignes, pour une vue
+  d'ensemble de la semaine plus naturelle à lire.
+- **Pavés des 24 prochaines heures agrandis**, avec une **icône météo**
+  par heure (soleil, nuageux, pluie, neige, orage…), en plus de la
+  température et de la probabilité de pluie.
+
+---
+
+- **Fix for *Weather*: common cause found for three detailed-view
+  glitches** — the last 3 days of the 7-day forecast showing 0°, an
+  invisible UV index, and imminent rain never being detected. Cause:
+  when a precise national weather model is chosen (instead of "Best
+  match"), the single request restricted *all* data to that model — but
+  some single models have a forecast horizon shorter than 7 days (e.g.
+  Météo-France ~4 days) or don't provide the UV index / 15-minute data.
+  The detailed view (24h, 7-day, UV, imminent rain) now **always** goes
+  through "Best match", independent from the model chosen for today's
+  own weather — fixes all three glitches for good, whichever model is
+  selected.
+- **7-day forecast in columns** rather than rows, for a more natural
+  week-at-a-glance layout.
+- **Enlarged next-24-hours cards**, with a **weather icon** per hour
+  (sun, cloudy, rain, snow, storm…), alongside the temperature and rain
+  probability.
+
+## 1.18.0
+
+- **Trajet domicile-travail : passage à l'API Routing de TomTom**
+  (même clé que la tuile Trafic), remplaçant le serveur de démonstration
+  OSRM. Pour le trajet principal (A→B et/ou B→A) **et** chacun des 5
+  trajets supplémentaires :
+  - **Temps de trajet avec trafic réel**, plus précis qu'une estimation
+    théorique ;
+  - **Comparaison au temps habituel** pour ce jour et cette heure (ex.
+    « 25 min (+10 min) »), avec **alerte colorée** — vert à l'heure,
+    orange retard modéré, rouge fort retard (seuils réglables) ;
+  - **Heure de départ conseillée**, calculée avec le trafic *prévu*,
+    quand une heure d'arrivée souhaitée est renseignée pour ce trajet
+    (nouveaux réglages, un par trajet — laissez vide pour simplement
+    afficher le temps en direct, maintenant).
+
+  Le géocodage des adresses reste gratuit (OpenStreetMap Nominatim) ;
+  seul le calcul d'itinéraire passe désormais par TomTom. Un compteur de
+  quota quotidien apparaît sur la tuile, comme pour la tuile Trafic —
+  les deux partagent le même quota de compte (2500 requêtes/jour en
+  offre gratuite). Le rafraîchissement minimum est relevé à 10 minutes
+  (au lieu de 5), chaque cycle pouvant désormais déclencher plusieurs
+  requêtes TomTom.
+
+---
+
+- **Commute time: switched to TomTom's Routing API** (same key as the
+  Traffic tile), replacing the OSRM demo server. For the main route
+  (A→B and/or B→A) **and** each of the 5 extra trips:
+  - **Travel time with real traffic**, more accurate than a theoretical
+    estimate;
+  - **Comparison to the usual time** for that day and hour (e.g. "25 min
+    (+10 min)"), with a **colored alert** — green on time, orange
+    moderate delay, red heavy delay (adjustable thresholds);
+  - **Suggested departure time**, computed with *predicted* traffic,
+    when a desired arrival time is set for that trip (new settings, one
+    per trip — leave empty to just show the live time, right now).
+
+  Address geocoding stays free (OpenStreetMap Nominatim); only route
+  computation now goes through TomTom. A daily quota counter appears on
+  the tile, like on the Traffic tile — both share the same account
+  quota (2500 requests/day on the free tier). The minimum refresh
+  interval is raised to 10 minutes (from 5), since each cycle can now
+  trigger several TomTom requests.
+
+## 1.17.1
+
+- **Correctif *Radar météo*** : zoomer ou déplacer la carte pendant la
+  lecture de la boucle rendait l'animation erratique (changements
+  d'image rapides et désordonnés). Cause : chaque image mise en cache
+  restant montée en permanence (juste rendue invisible), son événement
+  de chargement Leaflet se redéclenchait à chaque zoom/déplacement — et
+  chacun de ces déclenchements relançait sa propre planification de la
+  boucle de lecture, empilant des dizaines de minuteries concurrentes.
+  Corrigé pour ne réagir qu'au tout premier chargement de chaque image,
+  comme prévu à l'origine. La lecture se met par ailleurs
+  automatiquement en pause pendant qu'on zoome ou déplace la carte.
+
+---
+
+- **Fix for *Weather Radar***: zooming or panning the map during loop
+  playback made the animation erratic (fast, disordered frame changes).
+  Cause: each cached frame staying permanently mounted (just made
+  invisible), its Leaflet load event would refire on every zoom/pan —
+  and each of those refires re-triggered its own playback-loop
+  scheduling, stacking dozens of concurrent timers. Fixed to only react
+  to each frame's very first load, as originally intended. Playback also
+  now automatically pauses while zooming or panning the map.
+
 ## 1.17.0
 
 - **Météo : vue détaillée au clic.** La tuile Météo garde son apparence

@@ -198,56 +198,70 @@
   margin: 18px 0 8px;
 }
 
-/* Bande horaire 24h : defilement horizontal, une carte par heure.
-   24h strip: horizontal scroll, one card per hour. */
+/* Bande horaire 24h : defilement horizontal, une carte par heure --
+   agrandie et avec icone meteo (temperature, icone, probabilite de
+   pluie). 24h strip: horizontal scroll, one card per hour -- enlarged
+   and with a weather icon (temperature, icon, rain probability). */
 .pww-hourly-strip {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   overflow-x: auto;
   padding-bottom: 4px;
 }
 .pww-hour {
   flex: 0 0 auto;
-  width: 44px;
+  width: 64px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  padding: 12px 0;
+  border-radius: 10px;
+  background: var(--field-bg);
+}
+.pww-hour-time { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.pww-hour-icon { width: 30px; height: 30px; color: var(--text); }
+.pww-hour-icon svg { width: 100%; height: 100%; }
+.pww-hour-temp { font-family: var(--mono); font-size: 17px; font-weight: 700; color: var(--text); }
+.pww-hour-pop { font-family: var(--mono); font-size: 11px; color: #4C8DFF; }
+
+/* Previsions 7 jours en colonnes (une par jour) plutot qu'en lignes.
+   7-day forecast in columns (one per day) rather than rows. */
+.pww-daily-list {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 6px;
+}
+.pww-day-col {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 8px 0;
-  border-radius: 8px;
+  padding: 10px 2px;
+  border-radius: 10px;
   background: var(--field-bg);
+  min-width: 0;
 }
-.pww-hour-time { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-.pww-hour-temp { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); }
-.pww-hour-pop { font-family: var(--mono); font-size: 10px; color: #4C8DFF; }
-
-/* Previsions 7 jours : une ligne par jour.
-   7-day forecast: one row per day. */
-.pww-daily-list { display: flex; flex-direction: column; gap: 2px; }
-.pww-day-row {
-  display: grid;
-  grid-template-columns: 64px 28px 1fr auto;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 4px;
-  border-bottom: 1px solid var(--tile-edge);
-}
-.pww-day-row:last-child { border-bottom: none; }
 .pww-day-name {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 11px;
   color: var(--text);
   text-transform: capitalize;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
-.pww-day-icon { width: 24px; height: 24px; color: var(--muted); }
+.pww-day-icon { width: 26px; height: 26px; color: var(--muted); margin: 2px 0; }
 .pww-day-icon svg { width: 100%; height: 100%; }
-.pww-day-pop { font-family: var(--mono); font-size: 11.5px; color: #4C8DFF; text-align: right; }
+.pww-day-pop { font-family: var(--mono); font-size: 10px; color: #4C8DFF; }
 .pww-day-range {
   font-family: var(--mono);
-  font-size: 12.5px;
+  font-size: 13px;
+  font-weight: 700;
   color: var(--text);
   font-variant-numeric: tabular-nums;
-  text-align: right;
   white-space: nowrap;
 }
+.pww-day-range.pww-day-min { font-size: 11.5px; font-weight: 400; color: var(--faint); }
 .pww-modal-credit { margin-top: 14px; text-align: left; color: var(--faint); }

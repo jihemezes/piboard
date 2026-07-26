@@ -1,10 +1,17 @@
 /* PiBoard widget: commute / trajet domicile-travail
-   Geocodage des adresses via Nominatim (OpenStreetMap) et calcul
-   d'itineraire via le serveur de demonstration OSRM, tous deux sans
-   cle API. Les deux adresses ne sont geocodees qu'une fois (mises en
-   cache) ; seul l'itineraire est recalcule a chaque rafraichissement.
-   Geocodes addresses through Nominatim (OpenStreetMap) and computes the
-   route through the OSRM demo server, both keyless. Addresses are
+   Geocodage des adresses via Nominatim (OpenStreetMap, gratuit, sans
+   cle -- inchange) et calcul d'itineraire via l'API Routing de TomTom
+   (meme cle que le widget Trafic), pour un temps de trajet integrant le
+   trafic reel, une comparaison au temps habituel, et une heure de
+   depart conseillee quand une heure d'arrivee souhaitee est renseignee.
+   Les adresses ne sont geocodees qu'une fois (mises en cache) ; seul
+   l'itineraire est recalcule a chaque rafraichissement.
+
+   Geocodes addresses through Nominatim (OpenStreetMap, free, keyless --
+   unchanged) and computes routes through TomTom's Routing API (same key
+   as the Traffic widget), for a travel time that accounts for real
+   traffic, a comparison against the usual time, and a suggested
+   departure time when a desired arrival time is set. Addresses are
    geocoded only once (cached); only the route is recomputed on refresh. */
 (function () {
   "use strict";
@@ -12,6 +19,30 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;")
       .replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  // Prochaine occurrence (aujourd'hui, ou demain si deja passee) d'une
+  // heure "HH:MM", au format ISO8601 avec decalage local -- format exige
+  // par le parametre "arriveAt" de l'API TomTom.
+  // Next occurrence (today, or tomorrow if already past) of an "HH:MM"
+  // time, in ISO8601 format with local offset -- the format TomTom's
+  // "arriveAt" parameter requires.
+  function nextArriveAtIso(hhmm) {
+    if (!hhmm || !/^\d{1,2}:\d{2}$/.test(hhmm)) return null;
+    const [h, m] = hhmm.split(":").map(Number);
+    const now = new Date();
+    let d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m, 0);
+    if (d <= now) d = new Date(d.getTime() + 86400000); // demain si deja passee / tomorrow if already past
+    const pad = (n) => String(n).padStart(2, "0");
+    const offMin = -d.getTimezoneOffset();
+    const sign = offMin >= 0 ? "+" : "-";
+    const offH = pad(Math.floor(Math.abs(offMin) / 60));
+    const offM = pad(Math.abs(offMin) % 60);
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00${sign}${offH}:${offM}`;
+  }
+
+  function fmtClock(iso, locale) {
+    return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   }
 
   class CommuteWidget {
@@ -24,17 +55,26 @@
       // is geocoded only once as long as it doesn't change.
       this.coords = {};
       this.geocodedFor = {};
+      this.quotaCount = 0;
     }
 
     async init() {
       this.ctx.el.innerHTML = `<div class="pw-commute"><div class="pwm-err">${this.ctx.i18n.t("common.loading")}</div></div>`;
+      this.loadQuota(); // en parallele, ne doit pas retarder l'affichage / in parallel, mustn't delay display
       await this.refresh();
       this.arm();
     }
 
     arm() {
       clearInterval(this.timer);
-      const minutes = Math.max(5, Number(this.ctx.settings.refresh) || 10);
+      // Plancher releve a 10 min (au lieu de 5) : chaque rafraichissement
+      // peut desormais declencher jusqu'a 7 appels TomTom (2 sens du
+      // trajet principal + 5 trajets supplementaires), qui partagent le
+      // meme quota gratuit que la tuile Trafic.
+      // Floor raised to 10 min (from 5): each refresh can now trigger up
+      // to 7 TomTom calls (2 directions of the main route + 5 extra
+      // trips), which share the same free quota as the Traffic tile.
+      const minutes = Math.max(10, Number(this.ctx.settings.refresh) || 15);
       this.timer = setInterval(() => this.refresh(), minutes * 60000);
     }
 
@@ -62,53 +102,161 @@
       return c;
     }
 
-    async route(from, to) {
-      const url = `https://router.project-osrm.org/route/v1/driving/${from.lon},${from.lat};${to.lon},${to.lat}?overview=false`;
-      const data = await fetch(this.ctx.api.proxyUrl(url)).then((r) => r.json());
+    /* Itineraire via l'API Routing de TomTom, avec trafic reel. Le champ
+       "historicTrafficTravelTimeInSeconds" (temps typique pour ce jour
+       et cette heure, hors incident ponctuel) sert de reference pour la
+       comparaison "temps habituel" -- plus parlant que le temps sans
+       aucun trafic (noTrafficTravelTimeInSeconds), qui est un ideal
+       theorique rarement atteint en pratique. Si une heure d'arrivee
+       souhaitee est fournie, TomTom calcule directement le trajet en
+       tenant compte du trafic PREVU a ce moment futur, et renvoie
+       l'heure de depart correspondante (champ "departureTime").
+       Route via TomTom's Routing API, with real traffic.
+       "historicTrafficTravelTimeInSeconds" (typical time for this day
+       and hour, excluding one-off incidents) is used as the "usual
+       time" baseline -- more meaningful than the zero-traffic time
+       (noTrafficTravelTimeInSeconds), which is a theoretical ideal
+       rarely reached in practice. If a desired arrival time is given,
+       TomTom directly computes the trip accounting for PREDICTED
+       traffic at that future moment, and returns the matching departure
+       time (the "departureTime" field). */
+    async routeTomTom(from, to, arriveBy) {
+      const apiKey = this.ctx.settings.apiKey;
+      if (!apiKey) throw new Error(this.ctx.i18n.t("commute.noApiKey"));
+      const arriveAtIso = nextArriveAtIso(arriveBy);
+      let url = `https://api.tomtom.com/routing/1/calculateRoute/${from.lat},${from.lon}:${to.lat},${to.lon}/json`
+        + `?key=${encodeURIComponent(apiKey)}&traffic=true&computeTravelTimeFor=all`;
+      if (arriveAtIso) url += `&arriveAt=${encodeURIComponent(arriveAtIso)}`;
+      const data = await fetch(this.ctx.api.proxyUrl(url)).then((r) => {
+        if (!r.ok) throw new Error("tomtom " + r.status);
+        return r.json();
+      });
+      this.bumpQuota(1);
+      if (data.detailedError) throw new Error(data.detailedError.message || "tomtom error");
       if (!data.routes || !data.routes.length) throw new Error("no route");
-      return { durationMin: Math.round(data.routes[0].duration / 60), distanceKm: Math.round(data.routes[0].distance / 100) / 10 };
+      const sum = data.routes[0].summary;
+      const usualSec = sum.historicTrafficTravelTimeInSeconds !== undefined && sum.historicTrafficTravelTimeInSeconds !== null
+        ? sum.historicTrafficTravelTimeInSeconds : sum.noTrafficTravelTimeInSeconds;
+      const delayMin = (usualSec !== undefined && usualSec !== null)
+        ? Math.round((sum.travelTimeInSeconds - usualSec) / 60) : null;
+      return {
+        durationMin: Math.round(sum.travelTimeInSeconds / 60),
+        distanceKm: Math.round(sum.lengthInMeters / 100) / 10,
+        delayMin,
+        departureTime: arriveAtIso ? sum.departureTime : null
+      };
+    }
+
+    /* Compteur quotidien de requetes TomTom, partage avec le widget
+       Trafic via la meme route serveur (deja generique, indexee par
+       tuile) -- ce compteur reste propre a CETTE tuile, il ne se combine
+       pas avec celui d'une eventuelle tuile Trafic separee, mais donne
+       une vision claire de ce que cette tuile-ci consomme.
+       Daily TomTom request counter, shared with the Traffic widget
+       through the same server route (already generic, keyed per tile)
+       -- this counter stays specific to THIS tile, it doesn't combine
+       with a separate Traffic tile's, but gives a clear picture of what
+       this tile alone consumes. */
+    async loadQuota() {
+      try {
+        const q = await fetch("/api/traffic-quota/" + this.ctx.instanceId).then((r) => r.json());
+        this.quotaCount = q.count;
+        this.updateQuotaBadge();
+      } catch (e) { /* discret : pas d'erreur bloquante pour un simple compteur / silent: not a blocking error for a mere counter */ }
+    }
+
+    bumpQuota(n) {
+      fetch("/api/traffic-quota/" + this.ctx.instanceId, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: n })
+      }).then((r) => r.json()).then((q) => {
+        this.quotaCount = q.count;
+        this.updateQuotaBadge();
+      }).catch(() => {});
+    }
+
+    updateQuotaBadge() {
+      if (!this.quotaBadge) return;
+      this.quotaBadge.hidden = false;
+      this.quotaBadge.textContent = this.ctx.i18n.t("commute.quota") + " " + this.quotaCount + " / 2500";
+      this.quotaBadge.classList.toggle("pwm-quota-warn", this.quotaCount > 2000);
+    }
+
+    // Seuils d'alerte (en minutes de retard par rapport au temps
+    // habituel) : au-dela du seuil "fort", rouge ; au-dela du seuil
+    // "modere", orange ; en avance ou dans les temps, vert.
+    // Alert thresholds (in minutes of delay versus the usual time):
+    // beyond the "heavy" threshold, red; beyond the "moderate"
+    // threshold, orange; early or on time, green.
+    delayClass(delayMin) {
+      if (delayMin === null || delayMin === undefined) return "";
+      const s = this.ctx.settings;
+      const moderate = Math.max(1, Number(s.alertModerate) || 10);
+      const heavy = Math.max(moderate + 1, Number(s.alertHeavy) || 20);
+      if (delayMin >= heavy) return "pwm-delay-heavy";
+      if (delayMin >= moderate) return "pwm-delay-moderate";
+      return "pwm-delay-good";
+    }
+
+    formatDelay(delayMin) {
+      if (delayMin === null || delayMin === undefined) return "";
+      const i18n = this.ctx.i18n;
+      if (Math.abs(delayMin) < 1) return ` <span class="pwm-delay pwm-delay-good">(${i18n.t("commute.onTime")})</span>`;
+      const sign = delayMin > 0 ? "+" : "−";
+      return ` <span class="pwm-delay ${this.delayClass(delayMin)}">(${sign}${Math.abs(delayMin)} ${i18n.t("commute.min")})</span>`;
     }
 
     async refresh() {
       const el = this.ctx.el;
       const s = this.ctx.settings;
       const i18n = this.ctx.i18n;
+      const locale = i18n.t("clock.date.format");
       try {
         if (!s.home || !s.work) {
           el.innerHTML = `<div class="pw-commute"><div class="pwm-err">${i18n.t("commute.missing")}</div></div>`;
           return;
         }
+        if (!s.apiKey) {
+          el.innerHTML = `<div class="pw-commute"><div class="pwm-err">${i18n.t("commute.noApiKey")}</div></div>`;
+          return;
+        }
         const home = await this.ensureCoords("home", s.home);
         const work = await this.ensureCoords("work", s.work);
 
-        const cols = [];
+        // Definit chaque trajet a calculer -- trajet principal (un ou
+        // deux sens) puis trajets supplementaires -- chacun avec sa
+        // propre heure d'arrivee souhaitee optionnelle.
+        // Defines each route to compute -- main route (one or both
+        // directions) then extra trips -- each with its own optional
+        // desired arrival time.
+        const defs = [];
         if (s.direction === "toWork" || s.direction === "both") {
-          const r = await this.route(home, work);
-          cols.push({ label: "A → B", ...r });
+          defs.push({ label: "A → B", from: home, to: work, arriveBy: s.arriveWorkBy });
         }
         if (s.direction === "toHome" || s.direction === "both") {
-          const r = await this.route(work, home);
-          cols.push({ label: "B → A", ...r });
+          defs.push({ label: "B → A", from: work, to: home, arriveBy: s.arriveHomeBy });
         }
-
-        // Trajets supplementaires : depuis l'adresse A (domicile) vers
-        // chaque destination nommee. Un emplacement sans nom OU sans
-        // adresse est simplement ignore ; un echec de calcul sur un
-        // trajet n'empeche pas l'affichage des autres.
-        // Extra trips: from address A (home) to each named destination.
-        // A slot missing its name OR address is simply skipped; a failed
-        // computation on one trip doesn't prevent showing the others.
         for (let i = 1; i <= 5; i++) {
           const label = (s["trip" + i + "Label"] || "").trim();
           const address = (s["trip" + i + "Address"] || "").trim();
           if (!label || !address) continue;
+          defs.push({ label, from: home, toAddress: address, toKey: "trip" + i, arriveBy: s["trip" + i + "ArriveBy"] });
+        }
+
+        // Un echec sur un trajet (adresse introuvable, erreur TomTom...)
+        // n'empeche pas l'affichage des autres.
+        // A failure on one trip (address not found, TomTom error...)
+        // doesn't prevent showing the others.
+        const cols = [];
+        for (const def of defs) {
           try {
-            const dest = await this.ensureCoords("trip" + i, address);
-            const r = await this.route(home, dest);
-            cols.push({ label, ...r });
+            const to = def.to || await this.ensureCoords(def.toKey, def.toAddress);
+            const r = await this.routeTomTom(def.from, to, def.arriveBy);
+            cols.push({ label: def.label, ...r });
           } catch (e) {
-            console.warn("[piboard/commute] trip" + i, e);
-            cols.push({ label, error: true });
+            console.warn("[piboard/commute]", def.label, e);
+            cols.push({ label: def.label, error: true });
           }
         }
 
@@ -122,12 +270,19 @@
             ${showLabels ? `<div class="pwm-dir">${escapeHtml(c.label)}</div>` : ""}
             ${c.error
               ? `<div class="pwm-duration pwm-fail">—</div>`
-              : `<div class="pwm-duration">${c.durationMin} ${i18n.t("commute.min")}</div>
-                 <div class="pwm-distance">${c.distanceKm} km</div>`}
+              : `<div class="pwm-duration">${c.durationMin} ${i18n.t("commute.min")}${this.formatDelay(c.delayMin)}</div>
+                 <div class="pwm-distance">${c.distanceKm} km</div>
+                 ${c.departureTime ? `<div class="pwm-leaveby">${i18n.t("commute.leaveBy")} ${fmtClock(c.departureTime, locale)}</div>` : ""}`}
           </div>`).join("");
 
         const rows = s.layout === "rows";
-        el.innerHTML = `<div class="pw-commute"><div class="pwm-cols ${rows ? "pwm-rows" : ""}">${colHtml}</div></div>`;
+        el.innerHTML = `
+          <div class="pw-commute">
+            <div class="pwm-cols ${rows ? "pwm-rows" : ""}">${colHtml}</div>
+            <div class="pwm-quota" hidden></div>
+          </div>`;
+        this.quotaBadge = el.querySelector(".pwm-quota");
+        this.updateQuotaBadge();
         this.fit();
       } catch (e) {
         console.warn("[piboard/commute]", e);

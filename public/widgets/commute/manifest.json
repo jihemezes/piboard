@@ -1,14 +1,14 @@
 {
   "id": "commute",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Commute time",
     "fr": "Trajet domicile-travail"
   },
   "titleBar": true,
   "description": {
-    "en": "Live driving times between two addresses, plus up to 5 extra trips to named destinations (OpenStreetMap geocoding + OSRM routing, no API key).",
-    "fr": "Temps de trajet en voiture en direct entre deux adresses, plus jusqu'à 5 trajets supplémentaires vers des destinations nommées (géocodage OpenStreetMap + itinéraire OSRM, sans clé API)."
+    "en": "Live driving times between two addresses via TomTom's Routing API (same key as the Traffic tile), with real traffic conditions, a comparison against the usual time for that day and hour, a colored alert for heavy delays, and a suggested departure time when a desired arrival time is set. Plus up to 5 extra trips to named destinations, each with the same treatment.",
+    "fr": "Temps de trajet en voiture en direct entre deux adresses via l'API Routing de TomTom (même clé que la tuile Trafic), avec trafic réel, comparaison au temps habituel pour ce jour et cette heure, alerte colorée en cas de fort retard, et heure de départ conseillée quand une heure d'arrivée souhaitée est renseignée. Plus jusqu'à 5 trajets supplémentaires vers des destinations nommées, avec le même traitement."
   },
   "size": {
     "w": 3,
@@ -46,6 +46,23 @@
       }
     },
     {
+      "key": "apiKey",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "TomTom API key",
+        "fr": "Clé API TomTom"
+      },
+      "hint": {
+        "en": "Same free key as the Traffic tile (developer.tomtom.com, 2500 requests/day). This tile has its own daily counter (shown on the tile) — if you also use the Traffic tile, both draw from the same account quota.",
+        "fr": "Même clé gratuite que la tuile Trafic (developer.tomtom.com, 2500 requêtes/jour). Cette tuile a son propre compteur quotidien (affiché sur la tuile) — si vous utilisez aussi la tuile Trafic, les deux puisent dans le même quota de compte."
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
       "key": "direction",
       "type": "select",
       "default": "toWork",
@@ -76,6 +93,40 @@
           }
         }
       ],
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "arriveWorkBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Desired arrival time, A → B",
+        "fr": "Heure d'arrivée souhaitée, A → B"
+      },
+      "hint": {
+        "en": "Optional. When set, shows a suggested departure time based on predicted traffic for that arrival. Leave empty to just show the live travel time for right now.",
+        "fr": "Optionnel. Une fois renseignée, affiche une heure de départ conseillée d'après le trafic prévu pour cette arrivée. Laissez vide pour afficher simplement le temps de trajet en direct, maintenant."
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "arriveHomeBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Desired arrival time, B → A",
+        "fr": "Heure d'arrivée souhaitée, B → A"
+      },
+      "hint": {
+        "en": "Optional. When set, shows a suggested departure time based on predicted traffic for that arrival. Leave empty to just show the live travel time for right now.",
+        "fr": "Optionnel. Une fois renseignée, affiche une heure de départ conseillée d'après le trafic prévu pour cette arrivée. Laissez vide pour afficher simplement le temps de trajet en direct, maintenant."
+      },
       "group": {
         "en": "Main route",
         "fr": "Trajet principal"
@@ -145,6 +196,23 @@
       }
     },
     {
+      "key": "trip1ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 1 — desired arrival time",
+        "fr": "Trajet supplémentaire 1 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
       "key": "trip2Label",
       "type": "text",
       "default": "",
@@ -164,6 +232,23 @@
       "label": {
         "en": "Extra trip 2 — destination address",
         "fr": "Trajet supplémentaire 2 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip2ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 2 — desired arrival time",
+        "fr": "Trajet supplémentaire 2 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
       },
       "group": {
         "en": "Extra trips",
@@ -197,6 +282,23 @@
       }
     },
     {
+      "key": "trip3ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 3 — desired arrival time",
+        "fr": "Trajet supplémentaire 3 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
       "key": "trip4Label",
       "type": "text",
       "default": "",
@@ -216,6 +318,23 @@
       "label": {
         "en": "Extra trip 4 — destination address",
         "fr": "Trajet supplémentaire 4 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip4ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 4 — desired arrival time",
+        "fr": "Trajet supplémentaire 4 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
       },
       "group": {
         "en": "Extra trips",
@@ -249,10 +368,67 @@
       }
     },
     {
-      "key": "refresh",
+      "key": "trip5ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 5 — desired arrival time",
+        "fr": "Trajet supplémentaire 5 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "alertModerate",
       "type": "number",
       "default": 10,
-      "min": 5,
+      "min": 1,
+      "max": 120,
+      "step": 1,
+      "label": {
+        "en": "Moderate delay threshold (minutes)",
+        "fr": "Seuil de retard modéré (minutes)"
+      },
+      "hint": {
+        "en": "Delay versus the usual time, beyond which the duration turns orange.",
+        "fr": "Retard par rapport au temps habituel, au-delà duquel la durée passe à l'orange."
+      },
+      "group": {
+        "en": "Alert thresholds",
+        "fr": "Seuils d'alerte"
+      }
+    },
+    {
+      "key": "alertHeavy",
+      "type": "number",
+      "default": 20,
+      "min": 2,
+      "max": 180,
+      "step": 1,
+      "label": {
+        "en": "Heavy delay threshold (minutes)",
+        "fr": "Seuil de retard fort (minutes)"
+      },
+      "hint": {
+        "en": "Delay versus the usual time, beyond which the duration turns red.",
+        "fr": "Retard par rapport au temps habituel, au-delà duquel la durée passe au rouge."
+      },
+      "group": {
+        "en": "Alert thresholds",
+        "fr": "Seuils d'alerte"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 15,
+      "min": 10,
       "max": 60,
       "step": 5,
       "label": {
@@ -262,6 +438,10 @@
       "group": {
         "en": "Display",
         "fr": "Affichage"
+      },
+      "hint": {
+        "en": "Each refresh can trigger several TomTom requests (one per active route). This tile shares the same daily quota as the Traffic tile.",
+        "fr": "Chaque rafraîchissement peut déclencher plusieurs requêtes TomTom (une par trajet actif). Cette tuile partage le même quota quotidien que la tuile Trafic."
       }
     }
   ]

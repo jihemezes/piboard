@@ -40,3 +40,37 @@
 .pw-commute .pwm-duration { font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
 .pw-commute .pwm-distance { color: var(--faint); font-variant-numeric: tabular-nums; }
 .pw-commute .pwm-err { color: var(--muted); font-size: 14px; }
+
+/* Retard colore par rapport au temps habituel (voir delayClass() dans
+   widget.js) : vert a l'heure/en avance, orange retard modere, rouge
+   retard fort. Colored delay versus the usual time (see delayClass() in
+   widget.js): green on time/early, orange moderate delay, red heavy
+   delay. */
+.pwm-delay { font-weight: 700; font-size: 0.75em; }
+.pwm-delay.pwm-delay-good { color: #4CAF50; }
+.pwm-delay.pwm-delay-moderate { color: #F4A623; }
+.pwm-delay.pwm-delay-heavy { color: #E5384B; }
+
+/* Heure de depart conseillee, calculee par TomTom pour l'heure
+   d'arrivee souhaitee (voir routeTomTom() dans widget.js).
+   Suggested departure time, computed by TomTom for the desired arrival
+   time (see routeTomTom() in widget.js). */
+.pwm-leaveby {
+  font-family: var(--mono);
+  font-size: 0.7em;
+  color: var(--accent);
+  margin-top: 1px;
+}
+
+/* Compteur quotidien de requetes TomTom (voir loadQuota()/bumpQuota()
+   dans widget.js), meme principe que celui de la tuile Trafic.
+   Daily TomTom request counter (see loadQuota()/bumpQuota() in
+   widget.js), same idea as the Traffic tile's. */
+.pwm-quota {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--faint);
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+.pwm-quota.pwm-quota-warn { color: #E5384B; }
