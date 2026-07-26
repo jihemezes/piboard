@@ -192,7 +192,7 @@
       }).join("");
 
       let pollenSection = "";
-      if (s.showPollen !== false) {
+      if (s.showPollenDetailed !== false) {
         if (d.activePollens.length) {
           const pchips = d.activePollens.map((p) => {
             const name = i18n.t("airquality.pollen." + p.key.replace("_pollen", ""));

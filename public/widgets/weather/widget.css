@@ -123,3 +123,131 @@
 .pw-weather .pww-saint { color: var(--faint); font-style: italic; opacity: 0.85; margin-top: 1px; }
 .pw-weather.pww-has-photo .pww-saint { color: rgba(255,255,255,0.75); }
 .pw-weather .pww-err { color: var(--muted); font-size: 14px; margin: auto; }
+
+/* Ligne "pluie dans ~X min" : seulement affichee quand la pluie est
+   effectivement imminente (voir widget.js). Couleur distincte pour
+   attirer l'oeil sans etre alarmante.
+   "Rain in ~X min" line: only shown when rain is actually imminent (see
+   widget.js). Distinct color to catch the eye without being alarming. */
+.pw-weather .pww-rainsoon {
+  color: #4C8DFF;
+  font-weight: 600;
+  margin-top: 1px;
+}
+.pw-weather.pww-has-photo .pww-rainsoon { color: #8fc2ff; }
+
+/* Toute la tuile est cliquable pour ouvrir le detail (voir
+   openDetails() dans widget.js) -- pas de changement visuel appuye, la
+   tuile ne doit pas avoir l'air d'un bouton pour autant.
+   The whole tile is clickable to open the detail (see openDetails() in
+   widget.js) -- no heavy-handed visual change, the tile shouldn't look
+   like a button either way. */
+.pw-weather.pww-clickable { cursor: pointer; }
+
+/* ---------- Modal detaillee / detailed modal ---------- */
+.pww-modal-card { width: min(760px, 96vw); }
+.pww-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 18px 20px;
+}
+.pww-modal-rainsoon {
+  background: color-mix(in srgb, #4C8DFF 16%, transparent);
+  border: 1px solid color-mix(in srgb, #4C8DFF 40%, transparent);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 14px;
+  font-weight: 600;
+}
+.pww-modal-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.pww-modal-stat {
+  flex: 1;
+  min-width: 130px;
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pww-modal-stat-label {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+.pww-modal-stat-value {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.pww-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin: 18px 0 8px;
+}
+
+/* Bande horaire 24h : defilement horizontal, une carte par heure.
+   24h strip: horizontal scroll, one card per hour. */
+.pww-hourly-strip {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+}
+.pww-hour {
+  flex: 0 0 auto;
+  width: 44px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 0;
+  border-radius: 8px;
+  background: var(--field-bg);
+}
+.pww-hour-time { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.pww-hour-temp { font-family: var(--mono); font-size: 13px; font-weight: 700; color: var(--text); }
+.pww-hour-pop { font-family: var(--mono); font-size: 10px; color: #4C8DFF; }
+
+/* Previsions 7 jours : une ligne par jour.
+   7-day forecast: one row per day. */
+.pww-daily-list { display: flex; flex-direction: column; gap: 2px; }
+.pww-day-row {
+  display: grid;
+  grid-template-columns: 64px 28px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pww-day-row:last-child { border-bottom: none; }
+.pww-day-name {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.pww-day-icon { width: 24px; height: 24px; color: var(--muted); }
+.pww-day-icon svg { width: 100%; height: 100%; }
+.pww-day-pop { font-family: var(--mono); font-size: 11.5px; color: #4C8DFF; text-align: right; }
+.pww-day-range {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+.pww-modal-credit { margin-top: 14px; text-align: left; color: var(--faint); }

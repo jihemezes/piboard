@@ -1,5 +1,69 @@
 # Changelog
 
+## 1.17.0
+
+- **Météo : vue détaillée au clic.** La tuile Météo garde son apparence
+  compacte habituelle, mais devient cliquable — un tap ouvre une modal
+  avec :
+  - la **bande horaire des 24 prochaines heures** (température et
+    probabilité de pluie, heure par heure, démarrant maintenant et non
+    à minuit) ;
+  - les **prévisions sur 7 jours** (icône, min/max, probabilité de
+    pluie) ;
+  - l'**indice UV** du jour, avec sa bande qualitative (Faible à
+    Extrême, selon les recommandations de l'OMS) ;
+  - les **rafales de vent** actuelles ;
+  - l'**heure de lever et de coucher du soleil**.
+
+  Chaque section se dégrade proprement si une donnée manque (pertinent
+  pour la source « Personnalisé »).
+- **Nouveau : ligne « pluie dans ~X min »** sur la tuile compacte,
+  affichée automatiquement — et uniquement — quand de la pluie est
+  détectée dans l'heure qui vient (via les données `minutely_15`
+  d'Open-Meteo). Reprise en bannière dans la vue détaillée. Reste
+  invisible le reste du temps, comme demandé.
+
+---
+
+- **Weather: detailed view on tap.** The Weather tile keeps its usual
+  compact look, but is now tappable — a tap opens a modal with:
+  - the **next 24 hours strip** (temperature and rain chance, hour by
+    hour, starting now rather than at midnight);
+  - the **7-day forecast** (icon, min/max, rain chance);
+  - today's **UV index**, with its qualitative band (Low to Extreme,
+    per WHO guidelines);
+  - current **wind gusts**;
+  - **sunrise and sunset** time.
+
+  Each section degrades gracefully if a piece of data is missing
+  (relevant for the "Custom" source).
+- **New: "rain in ~X min" line** on the compact tile, shown
+  automatically — and only — when rain is detected within the coming
+  hour (via Open-Meteo's `minutely_15` data). Echoed as a banner in the
+  detailed view. Stays invisible the rest of the time, as requested.
+
+## 1.16.0
+
+- **Qualité de l'air : réglages pollens indépendants par affichage.**
+  Deux réglages distincts remplacent l'ancien réglage unique
+  « Afficher les niveaux de pollens » : « Afficher le pollen dominant »
+  (mode compact) et « Afficher le détail des pollens » (mode détaillé),
+  chacun activable/désactivable indépendamment de l'autre.
+  **⚠️ Si vous aviez désactivé les pollens** sur cette tuile, vérifiez
+  vos réglages après mise à jour : votre choix s'applique désormais au
+  mode compact uniquement (par défaut, le mode détaillé reste activé).
+
+---
+
+- **Air Quality: independent pollen settings per display.** Two
+  separate settings replace the former single "Show pollen levels"
+  setting: "Show dominant pollen" (compact display) and "Show pollen
+  breakdown" (detailed display), each toggleable independently from the
+  other.
+  **⚠️ If you had turned pollen off** on this tile, check your settings
+  after updating: your choice now only applies to the compact display
+  (the detailed display defaults to staying on).
+
 ## 1.15.1
 
 - **Correctif (réel, cette fois) : section « Nouveautés » en 404 sur

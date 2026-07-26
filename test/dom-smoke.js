@@ -89,6 +89,41 @@ const ESPN_SCOREBOARD_FIXTURE = {
   ]
 };
 
+/* Fixtures meteo pour la modal detaillee, construites par rapport a
+   maintenant (comme les autres fixtures) : heure courante pour la bande
+   horaire 24h, et un creneau de pluie 30-45 min dans le futur pour
+   tester la detection "pluie imminente".
+   Weather fixtures for the detailed modal, built relative to now (like
+   the other fixtures): current hour for the 24h strip, and a rain slot
+   30-45 min in the future to test "rain imminent" detection. */
+function pad2(n) { return String(n).padStart(2, "0"); }
+function isoHour(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:00`; }
+function iso15(d) { return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}T${pad2(d.getHours())}:${pad2(d.getMinutes())}`; }
+const WEATHER_NOW = new Date();
+const WEATHER_DAILY_TIMES = [...Array(7)].map((_, i) => {
+  const d = new Date(WEATHER_NOW.getFullYear(), WEATHER_NOW.getMonth(), WEATHER_NOW.getDate() + i);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+});
+const WEATHER_SUNRISE_ISO = `${WEATHER_DAILY_TIMES[0]}T07:02`;
+const WEATHER_SUNSET_ISO = `${WEATHER_DAILY_TIMES[0]}T20:45`;
+const WEATHER_HOURLY_TIMES = [...Array(30)].map((_, i) => isoHour(new Date(WEATHER_NOW.getTime() + i * 3600000)));
+const WEATHER_HOURLY_TEMPS = WEATHER_HOURLY_TIMES.map((_, i) => 18 + (i % 6));
+const WEATHER_HOURLY_POP = WEATHER_HOURLY_TIMES.map((_, i) => (i * 7) % 100);
+let mCursor = new Date(WEATHER_NOW);
+mCursor.setMinutes(Math.floor(mCursor.getMinutes() / 15) * 15, 0, 0);
+const WEATHER_MINUTELY_TIMES = [...Array(8)].map(() => { const t = iso15(mCursor); mCursor = new Date(mCursor.getTime() + 15 * 60000); return t; });
+const WEATHER_MINUTELY_PRECIP = WEATHER_MINUTELY_TIMES.map((_, i) => (i >= 2 ? 0.5 : 0)); // pluie a partir du 3e creneau (~30-45 min) / rain from the 3rd slot onward (~30-45 min)
+// Replique exactement fmtHour() du widget (qui parse une chaine
+// "...THH:00", perdant les minutes) pour comparer la 1ere carte de la
+// bande horaire a l'heure courante tronquee.
+// Exactly replicates the widget's fmtHour() (which parses a "...THH:00"
+// string, losing the minutes) to compare the strip's first card against
+// the current hour truncated.
+function fmtHourFr(d) {
+  const truncated = new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), 0, 0);
+  return truncated.toLocaleTimeString("fr-FR", { hour: "2-digit" });
+}
+
 const layout = {
   version: 1,
   tiles: [
@@ -96,7 +131,7 @@ const layout = {
     { id: "t-b", widget: "webview", x: 3, y: 0, w: 6, h: 4, settings: { url: "http://example.local/", zoom: 100, reload: 0 } },
     { id: "t-c", widget: "notes", x: 0, y: 2, w: 3, h: 3, settings: {} },
     { id: "t-d", widget: "weather", x: 6, y: 0, w: 3, h: 2, settings: { city: "Toulouse", showSaint: true, showTomorrow: true, usePhotos: false } },
-    { id: "t-e", widget: "airquality", x: 9, y: 0, w: 3, h: 2, settings: { city: "Toulouse", displayMode: "detailed", showPollen: true } },
+    { id: "t-e", widget: "airquality", x: 9, y: 0, w: 3, h: 2, settings: { city: "Toulouse", displayMode: "detailed", showPollen: false, showPollenDetailed: true } },
     { id: "t-f", widget: "calendar", x: 0, y: 5, w: 4, h: 4, settings: { calendars: "https://cal.test/family.ics|Famille\nhttps://cal.test/work.ics|Travail" } },
     { id: "t-g", widget: "rss", x: 4, y: 5, w: 4, h: 3, settings: { url: "https://feed.test/rss.xml", maxItems: 6, showSource: true } },
     { id: "t-h", widget: "sportscore", x: 8, y: 5, w: 4, h: 3, settings: { league: "soccer:fifa.world", maxItems: 5 } }
@@ -254,8 +289,20 @@ const dom = new JSDOM(html, {
       }
       if (u.includes("api.open-meteo.com/v1/forecast")) {
         return json({
-          current: { temperature_2m: 21, weather_code: 0, wind_speed_10m: 12 },
-          daily: { temperature_2m_min: [10, 11], temperature_2m_max: [22, 23], weather_code: [0, 1] }
+          current: { temperature_2m: 21, weather_code: 0, wind_speed_10m: 12, wind_gusts_10m: 27 },
+          daily: {
+            time: WEATHER_DAILY_TIMES,
+            temperature_2m_min: [10, 11, 9, 12, 8, 13, 11],
+            temperature_2m_max: [22, 23, 20, 24, 19, 25, 22],
+            weather_code: [0, 1, 61, 2, 3, 0, 1],
+            sunrise: [WEATHER_SUNRISE_ISO],
+            sunset: [WEATHER_SUNSET_ISO],
+            uv_index_max: [7.2],
+            wind_gusts_10m_max: [35],
+            precipitation_probability_max: [10, 80, 40, 5, 60, 15, 20]
+          },
+          hourly: { time: WEATHER_HOURLY_TIMES, temperature_2m: WEATHER_HOURLY_TEMPS, precipitation_probability: WEATHER_HOURLY_POP },
+          minutely_15: { time: WEATHER_MINUTELY_TIMES, precipitation: WEATHER_MINUTELY_PRECIP }
         });
       }
       if (u.includes("/api/weather-photo/")) {
@@ -352,6 +399,33 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   // here, regardless of the setting. This path (tomorrow's name day
   // when the forecast is shown) is verified separately, outside the DOM.
 
+  console.log("== Meteo : pluie imminente sur la tuile compacte ==");
+  tries = 0;
+  while (!document.querySelector(".pw-weather .pww-rainsoon") && tries++ < 60) await sleep(50);
+  const rainSoonText = document.querySelector(".pw-weather .pww-rainsoon")?.textContent || "";
+  assert("ligne 'pluie dans ~X min' affichee (fenetre de pluie deterministe a 30-45 min)",
+    /Pluie dans ~(15|30|45|60) min/.test(rainSoonText));
+
+  console.log("== Meteo : clic sur la tuile -> modal detaillee (24h, 7 jours, UV, rafales, lever/coucher) ==");
+  const weatherTile = document.querySelector(".pw-weather.pww-clickable");
+  assert("tuile meteo marquee cliquable", !!weatherTile);
+  weatherTile.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
+  const weatherModal = document.querySelector(".pww-modal-card")?.closest(".modal");
+  assert("modal ouverte au clic", weatherModal && weatherModal.hidden === false);
+  assert("modal : rappel pluie imminente repris en banniere", /Pluie dans ~(15|30|45|60) min/.test(document.querySelector(".pww-modal-rainsoon")?.textContent || ""));
+  assert("modal : rafales affichees (27 km/h)", (document.querySelector(".pww-modal-stats")?.textContent || "").includes("27 km/h"));
+  assert("modal : indice UV affiche avec sa bande (7.2 -> tres eleve)", (document.querySelector(".pww-modal-stats")?.textContent || "").includes("Très élevé"));
+  assert("modal : lever et coucher du soleil affiches", (document.querySelector(".pww-modal-stats")?.textContent || "").includes("07:02") && (document.querySelector(".pww-modal-stats")?.textContent || "").includes("20:45"));
+  assert("modal : bande horaire 24h presente (24 heures)", document.querySelectorAll(".pww-hourly-strip .pww-hour").length === 24);
+  assert("modal : bande horaire commence a l'heure courante (pas minuit)", document.querySelector(".pww-hour-time")?.textContent === fmtHourFr(WEATHER_NOW));
+  assert("modal : previsions 7 jours presentes (7 lignes)", document.querySelectorAll(".pww-daily-list .pww-day-row").length === 7);
+  assert("modal : probabilite de pluie du jour le plus pluvieux affichee (80%)", (document.querySelector(".pww-daily-list")?.textContent || "").includes("💧80%"));
+
+  weatherModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
+  assert("modal meteo refermee par le bouton", weatherModal.hidden === true);
+
   console.log("== Qualite de l'air : indice, polluant et pollen dominants ==");
   tries = 0;
   while (!document.querySelector(".pw-airquality .paq-value") && tries++ < 60) await sleep(50);
@@ -362,6 +436,8 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   const chipTexts = [...document.querySelectorAll(".pw-airquality .paq-chip")].map((c) => c.textContent);
   assert("puce PM2.5 avec sa valeur brute (18)", chipTexts.some((t) => t.includes("PM2.5") && t.includes("18")));
   assert("puce pollen Bouleau au niveau modere", chipTexts.some((t) => t.includes("Bouleau") && t.includes("modéré")));
+  assert("showPollen (compact, desactive) sans effet en mode detaille : pollens toujours visibles via showPollenDetailed",
+    document.querySelectorAll(".pw-airquality .paq-chip").length === 6);
 
   console.log("== Agenda : fusion de calendriers, couleurs, vues liste/semaine ==");
   tries = 0;

@@ -1,13 +1,13 @@
 {
   "id": "weather",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "name": {
     "en": "Weather",
     "fr": "Météo"
   },
   "description": {
-    "en": "Current weather with a choice of national weather models (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, or your own custom source), a real photo background matching conditions, tomorrow's forecast laid out automatically to fit the tile's shape, and an optional French nameday.",
-    "fr": "Météo actuelle avec un choix de modèles météo nationaux (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, ou votre propre source personnalisée), une vraie photo de fond selon les conditions, la prévision du lendemain disposée automatiquement selon la forme de la tuile, et le saint du jour en option."
+    "en": "Current weather with a choice of national weather models (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, or your own custom source), a real photo background matching conditions, tomorrow's forecast laid out automatically to fit the tile's shape, and an optional French nameday. A \"rain in ~15 min\" line appears on the tile when rain is imminent. Tap the tile for a detailed view: next 24 hours (temperature + rain chance), 7-day forecast, UV index, wind gusts, and sunrise/sunset.",
+    "fr": "Météo actuelle avec un choix de modèles météo nationaux (Open-Meteo, Météo-France, ECMWF, DWD, MET Norway, NOAA, ou votre propre source personnalisée), une vraie photo de fond selon les conditions, la prévision du lendemain disposée automatiquement selon la forme de la tuile, et le saint du jour en option. Une ligne « pluie dans ~15 min » apparaît sur la tuile quand la pluie est imminente. Touchez la tuile pour une vue détaillée : 24 prochaines heures (température + probabilité de pluie), prévisions sur 7 jours, indice UV, rafales de vent, et lever/coucher du soleil."
   },
   "size": {
     "w": 3,
