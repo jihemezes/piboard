@@ -110,3 +110,20 @@
 }
 .pwr-modal-body ul, .pwr-modal-body ol { margin: 0 0 0.8em; padding-left: 1.4em; }
 .pwr-modal-empty { color: var(--muted); font-style: italic; }
+.pwr-modal-loading { color: var(--muted); font-style: italic; }
+.pwr-modal-figure {
+  margin: 0 0 14px;
+}
+.pwr-modal-figure img {
+  width: 100%;
+  max-height: 280px;
+  object-fit: cover;
+  border-radius: 10px;
+  display: block;
+}
+.pwr-modal-figure figcaption {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 4px;
+  line-height: 1.3;
+}

@@ -2,9 +2,40 @@
 (function () {
   "use strict";
 
+  function escapeHtml(s) {
+    return String(s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function escapeAttr(s) {
+    return escapeHtml(s).replace(/"/g, "&quot;");
+  }
+
   function textOf(node, tag) {
     const el = node.querySelector(tag);
     return el ? el.textContent.trim() : "";
+  }
+
+  // Illustration fournie par le flux lui-meme (extension RSS Media :
+  // <media:content>/<media:thumbnail>, avec legende et credit photo en
+  // enfants) -- affichee dans la popup independamment du texte utilise
+  // (extrait de la page ou resume du flux), le flux l'a deja preparee
+  // pour un lecteur RSS.
+  // Illustration provided by the feed itself (RSS Media extension:
+  // <media:content>/<media:thumbnail>, with caption and photo credit as
+  // children) -- shown in the popup independently from whichever text
+  // is used (page extract or feed summary), the feed already prepared
+  // it for an RSS reader.
+  function imageOf(node) {
+    const media = node.getElementsByTagName("media:content")[0] || node.getElementsByTagName("media:thumbnail")[0];
+    if (!media) return null;
+    const url = media.getAttribute("url");
+    if (!url || !/^https?:\/\//i.test(url)) return null;
+    const descEl = media.getElementsByTagName("media:description")[0];
+    const creditEl = media.getElementsByTagName("media:credit")[0];
+    return {
+      url,
+      caption: descEl ? descEl.textContent.trim() : "",
+      credit: creditEl ? creditEl.textContent.trim() : ""
+    };
   }
 
   // Lien "article" : RSS <link>texte</link>, ou Atom <link href="..."/>
@@ -73,7 +104,8 @@
       title: textOf(it, "title"),
       date: textOf(it, "pubDate"),
       link: linkOf(it),
-      content: contentOf(it)
+      content: contentOf(it),
+      image: imageOf(it)
     }));
     let source = textOf(doc, "channel > title");
 
@@ -83,7 +115,8 @@
         title: textOf(it, "title"),
         date: textOf(it, "updated") || textOf(it, "published"),
         link: linkOf(it),
-        content: contentOf(it)
+        content: contentOf(it),
+        image: imageOf(it)
       }));
       source = source || textOf(doc, "feed > title");
     }
@@ -107,6 +140,7 @@
       this.cursor = 0;
       this.currentItems = []; // items effectivement rendus (sous-ensemble ou rotation) / actually rendered items (subset or rotation)
       this.modal = null;
+      this.openToken = 0; // ignore une extraction qui repond apres qu'un autre article a ete ouvert / ignores an extraction that answers after another article was opened
     }
 
     async init() {
@@ -245,18 +279,77 @@
       return wrap;
     }
 
-    openArticle(idx) {
+    /* Illustration fournie par le flux (voir imageOf()), affichee au-dessus
+       du texte quel qu'en soit la source. Image provided by the feed
+       (see imageOf()), shown above the text whichever source it comes
+       from. */
+    figureHtml(image) {
+      if (!image || !image.url) return "";
+      const caption = [image.caption, image.credit].filter(Boolean).join(" — ");
+      return `<figure class="pwr-modal-figure">
+        <img src="${escapeAttr(image.url)}" alt="">
+        ${caption ? `<figcaption>${escapeHtml(caption)}</figcaption>` : ""}
+      </figure>`;
+    }
+
+    async openArticle(idx) {
       const it = this.currentItems[idx];
       if (!it || !it.link) return;
+      const token = ++this.openToken;
+      const i18n = this.ctx.i18n;
+      const lang = i18n.lang;
       const modal = this.ensureModal();
-      const lang = this.ctx.i18n.lang;
+      const figureHtml = this.figureHtml(it.image);
+
       modal.querySelector(".pwr-modal-title").textContent = it.title;
-      const metaParts = [this.feed && this.feed.source, niceDate(it.date, lang)].filter(Boolean);
-      modal.querySelector(".pwr-modal-meta").textContent = metaParts.join(" · ");
-      const body = modal.querySelector(".pwr-modal-body");
-      const html = sanitizeHtml(it.content);
-      body.innerHTML = html.trim() ? html : `<p class="pwr-modal-empty">${this.ctx.i18n.t("rss.noContent")}</p>`;
+      const metaEl = modal.querySelector(".pwr-modal-meta");
+      metaEl.textContent = [this.feed && this.feed.source, niceDate(it.date, lang)].filter(Boolean).join(" · ");
+      const bodyEl = modal.querySelector(".pwr-modal-body");
+      bodyEl.innerHTML = figureHtml + `<p class="pwr-modal-loading">${i18n.t("common.loading")}</p>`;
       modal.hidden = false;
+
+      // Tente de recuperer le texte complet de la page liee (mode
+      // lecture, comme le mode lecture d'un navigateur -- voir
+      // server/articleExtract.js) : bien plus complet que la description
+      // du flux, qui n'est souvent qu'un court resume. Se rabat
+      // silencieusement sur le contenu du flux en cas d'echec (page
+      // injoignable, paywall, contenu juge trop pauvre...).
+      // Attempts to fetch the linked page's full text (reader mode, like
+      // a browser's reader mode -- see server/articleExtract.js): much
+      // more complete than the feed's description, which is often just
+      // a short summary. Silently falls back to the feed's own content
+      // on failure (unreachable page, paywall, content judged too
+      // thin...).
+      let html = null;
+      let extraMeta = "";
+      try {
+        const res = await fetch("/api/article-extract?url=" + encodeURIComponent(it.link));
+        if (res.ok) {
+          const article = await res.json();
+          if (article && article.content) {
+            html = sanitizeHtml(article.content);
+            if (article.byline) extraMeta = article.byline;
+            else if (article.siteName) extraMeta = article.siteName;
+          }
+        }
+      } catch (e) {
+        console.warn("[piboard/rss] extract", e);
+      }
+
+      // Une autre ouverture a eu lieu entre-temps (l'utilisateur a
+      // clique un autre article, ou ferme puis rouvert) : n'ecrase pas
+      // ce qui est affiche maintenant. Another opening happened in the
+      // meantime (the user clicked a different article, or closed and
+      // reopened): don't overwrite what's currently shown.
+      if (token !== this.openToken) return;
+
+      if (!html) {
+        const fallback = sanitizeHtml(it.content);
+        html = fallback.trim() ? fallback : `<p class="pwr-modal-empty">${i18n.t("rss.noContent")}</p>`;
+      } else if (extraMeta) {
+        metaEl.textContent = [this.feed && this.feed.source, extraMeta, niceDate(it.date, lang)].filter(Boolean).join(" · ");
+      }
+      bodyEl.innerHTML = figureHtml + html;
     }
 
     destroy() {

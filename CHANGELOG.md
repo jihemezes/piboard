@@ -1,5 +1,58 @@
 # Changelog
 
+## 1.19.0
+
+- **Flux RSS : véritable mode lecture.** La popup ouverte au clic sur un
+  article n'affiche plus seulement le résumé du flux (souvent très
+  court, voire quasi vide selon les sites) : elle tente désormais de
+  récupérer le **texte complet de l'article directement depuis la page
+  liée**, via **Mozilla Readability** — la même bibliothèque que le
+  mode lecture de Firefox — qui isole le texte de l'article et écarte
+  publicités, menus, colonnes « à lire aussi » et pied de page.
+  - **L'illustration fournie par le flux** (`<media:content>`, avec
+    légende et crédit photo quand disponibles) est affichée en tête de
+    popup, quelle que soit la source du texte ;
+  - **Repli automatique et silencieux** sur le résumé du flux si la page
+    n'est pas accessible (paywall, blocage) ou si le texte récupéré est
+    jugé trop pauvre pour être utile ;
+  - Le nettoyage (scripts, gestionnaires d'événements, liens neutralisés)
+    s'applique désormais aussi bien au texte extrait qu'au contenu brut
+    du flux ;
+  - Usage strictement à la demande — un appel serveur par clic sur un
+    article, jamais de récupération en masse ni de mise en cache
+    persistante : l'équivalent fonctionnel du mode lecture d'un
+    navigateur pour la consultation personnelle d'un lien déjà choisi.
+
+  **Nouvelles dépendances serveur** : `@mozilla/readability` et `jsdom`
+  (ce dernier passé de dépendance de test à dépendance de production).
+  **Un `npm install` est nécessaire après cette mise à jour.**
+
+---
+
+- **RSS feed: genuine reader mode.** The popup opened when tapping an
+  article no longer just shows the feed's summary (often very short, or
+  nearly empty depending on the site): it now attempts to fetch the
+  **full article text directly from the linked page**, via **Mozilla
+  Readability** — the same library behind Firefox's reader mode — which
+  isolates the article text and discards ads, menus, "related articles"
+  sections and footers.
+  - **The feed's own illustration** (`<media:content>`, with caption and
+    photo credit when available) is shown at the top of the popup,
+    whichever text source is used;
+  - **Automatic, silent fallback** to the feed's summary if the page
+    isn't reachable (paywall, blocking) or the fetched text is judged
+    too thin to be useful;
+  - Cleanup (scripts, event handlers, neutralized links) now applies to
+    the extracted text as well as the feed's raw content;
+  - Strictly on-demand usage — one server call per tap on an article,
+    never bulk fetching or persistent caching: the functional equivalent
+    of a browser's reader mode for personal reading of an already-chosen
+    link.
+
+  **New server dependencies**: `@mozilla/readability` and `jsdom` (the
+  latter moved from a test dependency to a production one). **An
+  `npm install` is required after this update.**
+
 ## 1.18.1
 
 - **Correctif *Météo* : cause commune trouvée pour trois anomalies dans

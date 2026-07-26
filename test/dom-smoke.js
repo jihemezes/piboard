@@ -33,7 +33,7 @@ const FAMILY_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:fam1@test\r\nDTSTART;
 const WORK_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:work1@test\r\nDTSTART:${icsDateTime(AQ_IN2DAYS)}\r\nDTEND:${icsDateTime(AQ_IN2DAYS_END)}\r\nSUMMARY:Reunion equipe\r\nLOCATION:Salle B\r\nEND:VEVENT\r\nEND:VCALENDAR`;
 
 const RSS_FEED_XML = `<?xml version="1.0"?>
-<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
 <channel>
 <title>Flux Test</title>
 <item>
@@ -41,11 +41,21 @@ const RSS_FEED_XML = `<?xml version="1.0"?>
 <link>https://example.test/article1</link>
 <pubDate>Mon, 20 Jul 2026 10:00:00 GMT</pubDate>
 <content:encoded><![CDATA[<p>Contenu <b>riche</b> de l'article.</p><script>window.__pwnedRss = true;</script><a href="https://example.test/other" onclick="window.__pwnedRss = true;">lien interne</a>]]></content:encoded>
+<media:content url="https://example.test/photo.jpg">
+<media:description>Legende de la photo</media:description>
+<media:credit>Photographe Test</media:credit>
+</media:content>
 </item>
 <item>
 <title>Article sans lien</title>
 <pubDate>Mon, 20 Jul 2026 09:00:00 GMT</pubDate>
 <description>Pas de lien ici.</description>
+</item>
+<item>
+<title>Article extraction echouee</title>
+<link>https://example.test/article-noextract</link>
+<pubDate>Mon, 20 Jul 2026 08:00:00 GMT</pubDate>
+<description>Resume du flux, utilise en repli.</description>
 </item>
 </channel>
 </rss>`;
@@ -303,6 +313,17 @@ const dom = new JSDOM(html, {
       }
       if (u.includes("/api/proxy") && u.includes("site.api.espn.com") && u.includes("scoreboard")) {
         return json(ESPN_SCOREBOARD_FIXTURE);
+      }
+      if (u.includes("/api/article-extract") && u.includes("article1")) {
+        return json({
+          title: "Article avec lien",
+          byline: "Par Notre Testeur",
+          siteName: "Flux Test",
+          content: `<p>Texte complet <b>extrait</b> de la page liee, bien plus long et detaille que le simple resume fourni par le flux RSS lui-meme.</p><script>window.__pwnedExtract = true;</script><a href="https://example.test/other" onclick="window.__pwnedExtract = true;">lien extrait</a>`
+        });
+      }
+      if (u.includes("/api/article-extract") && u.includes("article-noextract")) {
+        return Promise.resolve({ ok: false, status: 502, json: () => Promise.resolve({ error: "no readable content" }) });
       }
       if (u.includes("/api/proxy") && u.includes("feed.test")) {
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(RSS_FEED_XML) });
@@ -574,9 +595,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   tries = 0;
   while (!document.querySelector(".pw-rss .pwr-item") && tries++ < 60) await sleep(50);
   const rssItems = [...document.querySelectorAll(".pw-rss .pwr-item")];
-  assert("2 articles affiches", rssItems.length === 2);
+  assert("3 articles affiches", rssItems.length === 3);
   const linkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article avec lien");
   const unlinkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article sans lien");
+  const noExtractItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article extraction echouee");
   assert("article avec lien marque cliquable", linkedItem?.classList.contains("pwr-clickable"));
   assert("article sans lien NON marque cliquable", !unlinkedItem?.classList.contains("pwr-clickable"));
 
@@ -591,18 +613,46 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   const rssModal = document.querySelector(".pwr-modal-card")?.closest(".modal");
   assert("clic sur un article avec lien : popup ouverte", rssModal && rssModal.hidden === false);
   assert("popup : titre de l'article affiche", document.querySelector(".pwr-modal-title")?.textContent === "Article avec lien");
-  assert("popup : source et date affichees dans le meta", (document.querySelector(".pwr-modal-meta")?.textContent || "").includes("Flux Test"));
+
+  // L'extraction du texte complet de la page liee reussit pour cet
+  // article (voir le mock) : attendre qu'elle remplace le message de
+  // chargement, comme le fait le vrai widget de facon asynchrone.
+  // Full-page text extraction succeeds for this article (see the mock):
+  // wait for it to replace the loading message, just like the real
+  // widget does asynchronously.
+  tries = 0;
+  while ((document.querySelector(".pwr-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
   const rssBody = document.querySelector(".pwr-modal-body");
-  assert("popup : contenu HTML riche affiche (gras conserve)", rssBody?.innerHTML.includes("<b>riche</b>"));
-  assert("popup : script embarque retire (non execute)", !window.__pwnedRss);
-  assert("popup : balise <script> absente du HTML injecte", !rssBody?.innerHTML.includes("<script"));
-  assert("popup : gestionnaire onclick retire du lien interne", !rssBody?.innerHTML.includes("onclick"));
-  assert("popup : href retire du lien interne (contenu fait pour etre lu, pas navigue)", !rssBody?.querySelector("a")?.getAttribute("href"));
-  assert("popup : texte du lien interne conserve", rssBody?.textContent.includes("lien interne"));
+  assert("popup : texte EXTRAIT de la page preferee au resume du flux", rssBody?.textContent.includes("Texte complet"));
+  assert("popup : gras conserve dans le texte extrait", rssBody?.innerHTML.includes("<b>extrait</b>"));
+  assert("popup : auteur (byline) de l'extraction affiche dans le meta", (document.querySelector(".pwr-modal-meta")?.textContent || "").includes("Par Notre Testeur"));
+  assert("popup : script du texte extrait retire (non execute)", !window.__pwnedExtract);
+  assert("popup : balise <script> absente du texte extrait injecte", !rssBody?.innerHTML.includes("<script"));
+  assert("popup : gestionnaire onclick retire du lien du texte extrait", !rssBody?.innerHTML.includes("onclick"));
+  assert("popup : href retire du lien du texte extrait (fait pour etre lu, pas navigue)", !rssBody?.querySelector("a")?.getAttribute("href"));
+  assert("popup : texte du lien extrait conserve", rssBody?.textContent.includes("lien extrait"));
+
+  // Illustration fournie par le flux (media:content), affichee
+  // independamment de la source du texte (extrait ici).
+  // Feed-provided illustration (media:content), shown independently
+  // from the text source (extracted here).
+  const rssFigure = document.querySelector(".pwr-modal-figure");
+  assert("popup : illustration du flux affichee (media:content)", !!rssFigure?.querySelector("img[src='https://example.test/photo.jpg']"));
+  assert("popup : legende et credit de l'illustration affiches", (rssFigure?.textContent || "").includes("Legende de la photo") && (rssFigure?.textContent || "").includes("Photographe Test"));
 
   rssModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(20);
   assert("popup refermee par le bouton", rssModal.hidden === true);
+
+  console.log("== Flux RSS : repli sur le resume du flux si l'extraction echoue ==");
+  noExtractItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  tries = 0;
+  while ((document.querySelector(".pwr-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
+  assert("popup : repli sur le resume du flux (Resume du flux, utilise en repli)",
+    (document.querySelector(".pwr-modal-body")?.textContent || "").includes("Resume du flux, utilise en repli"));
+  document.querySelector(".pwr-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
+    ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
 
   console.log("== Scores sportifs : alternance heure/date pour un match a venir hors aujourd'hui ==");
   tries = 0;

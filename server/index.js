@@ -45,6 +45,7 @@ const networkScan = require("./networkScan");
 const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
+const articleExtract = require("./articleExtract");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -878,6 +879,21 @@ app.get("/api/proxy", async (req, res) => {
     res.send(body);
   } catch (e) {
     res.status(502).json({ error: "upstream fetch failed", detail: String(e.message || e) });
+  }
+});
+
+/* ---------- Extraction d'article (widget RSS, mode lecture) ----------
+   Voir server/articleExtract.js pour le detail et les precautions
+   (usage a la demande uniquement, pas de mise en cache persistante).
+   See server/articleExtract.js for details and precautions (on-demand
+   use only, no persistent caching). */
+app.get("/api/article-extract", async (req, res) => {
+  const target = String(req.query.url || "");
+  try {
+    const article = await articleExtract.extractArticle(target);
+    res.json(article);
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
   }
 });
 
