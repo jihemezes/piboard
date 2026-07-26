@@ -1,13 +1,13 @@
 {
   "id": "clock",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "name": {
     "en": "Clock",
     "fr": "Horloge"
   },
   "description": {
-    "en": "Digital or analog clock with today's date, an optional French nameday, and an optional day/night background that follows the board's sun-based theme.",
-    "fr": "Horloge digitale ou analogique avec la date du jour, le saint du jour en option, et un fond jour/nuit optionnel qui suit le thème solaire du tableau."
+    "en": "Digital or analog clock with today's date (in analog mode, the face sits on the left and the text on the right when the date is shown, so the face keeps the tile's full height), an optional French nameday, and an optional day/night background that follows the board's sun-based theme.",
+    "fr": "Horloge digitale ou analogique avec la date du jour (en mode analogique, le cadran se cale à gauche et le texte à droite quand la date est affichée, pour que le cadran garde toute la hauteur de la tuile), le saint du jour en option, et un fond jour/nuit optionnel qui suit le thème solaire du tableau."
   },
   "size": {
     "w": 3,
@@ -74,10 +74,34 @@
         "fr": "Les formats plus courts libèrent de la place sur les petites tuiles."
       },
       "options": [
-        { "value": "full", "label": { "en": "Full — Friday, July 25, 2026", "fr": "Complet — vendredi 25 juillet 2026" } },
-        { "value": "long", "label": { "en": "Long — July 25, 2026", "fr": "Long — 25 juillet 2026" } },
-        { "value": "medium", "label": { "en": "Medium — Fri, Jul 25", "fr": "Moyen — ven. 25 juil." } },
-        { "value": "short", "label": { "en": "Short — 07/25/2026", "fr": "Court — 25/07/2026" } }
+        {
+          "value": "full",
+          "label": {
+            "en": "Full — Friday, July 25, 2026",
+            "fr": "Complet — vendredi 25 juillet 2026"
+          }
+        },
+        {
+          "value": "long",
+          "label": {
+            "en": "Long — July 25, 2026",
+            "fr": "Long — 25 juillet 2026"
+          }
+        },
+        {
+          "value": "medium",
+          "label": {
+            "en": "Medium — Fri, Jul 25",
+            "fr": "Moyen — ven. 25 juil."
+          }
+        },
+        {
+          "value": "short",
+          "label": {
+            "en": "Short — 07/25/2026",
+            "fr": "Court — 25/07/2026"
+          }
+        }
       ]
     },
     {
@@ -89,8 +113,8 @@
         "fr": "Afficher le saint du jour"
       },
       "hint": {
-        "en": "Adds the French \"fête du jour\" next to the date (e.g. \"Sainte Christine\"). Only shown when the date is displayed and the interface language is French \u2014 this calendar is a French cultural tradition without an English equivalent.",
-        "fr": "Ajoute la f\u00eate du jour \u00e0 c\u00f4t\u00e9 de la date (ex. \u00ab\u00a0Sainte Christine\u00a0\u00bb). Visible seulement quand la date est affich\u00e9e et que la langue de l'interface est le fran\u00e7ais \u2014 ce calendrier est une tradition culturelle fran\u00e7aise sans \u00e9quivalent anglophone."
+        "en": "Adds the French \"fête du jour\" next to the date (e.g. \"Sainte Christine\"). Only shown when the date is displayed and the interface language is French — this calendar is a French cultural tradition without an English equivalent.",
+        "fr": "Ajoute la fête du jour à côté de la date (ex. « Sainte Christine »). Visible seulement quand la date est affichée et que la langue de l'interface est le français — ce calendrier est une tradition culturelle française sans équivalent anglophone."
       }
     },
     {
@@ -102,12 +126,24 @@
         "fr": "Disposition du saint du jour"
       },
       "hint": {
-        "en": "\"Below\" automatically switches to \"Side by side\" on tiles too short for a 2nd line, or when the time/date arrangement below is already \"Side by side\" \u2014 the name day is never allowed to overflow the tile.",
-        "fr": "\u00ab\u00a0En dessous\u00a0\u00bb bascule automatiquement sur \u00ab\u00a0C\u00f4t\u00e9 \u00e0 c\u00f4t\u00e9\u00a0\u00bb sur les tuiles trop basses pour une 2e ligne, ou quand la disposition heure/date ci-dessous est d\u00e9j\u00e0 \u00ab\u00a0C\u00f4t\u00e9 \u00e0 c\u00f4t\u00e9\u00a0\u00bb \u2014 le saint du jour ne d\u00e9borde jamais de la tuile."
+        "en": "\"Below\" automatically switches to \"Side by side\" on tiles too short for a 2nd line, or when the time/date arrangement below is already \"Side by side\" — the name day is never allowed to overflow the tile.",
+        "fr": "« En dessous » bascule automatiquement sur « Côté à côté » sur les tuiles trop basses pour une 2e ligne, ou quand la disposition heure/date ci-dessous est déjà « Côté à côté » — le saint du jour ne déborde jamais de la tuile."
       },
       "options": [
-        { "value": "below", "label": { "en": "Below the date", "fr": "En dessous de la date" } },
-        { "value": "inline", "label": { "en": "Side by side with the date", "fr": "Côte à côte avec la date" } }
+        {
+          "value": "below",
+          "label": {
+            "en": "Below the date",
+            "fr": "En dessous de la date"
+          }
+        },
+        {
+          "value": "inline",
+          "label": {
+            "en": "Side by side with the date",
+            "fr": "Côte à côte avec la date"
+          }
+        }
       ]
     },
     {

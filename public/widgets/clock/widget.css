@@ -65,3 +65,24 @@
 .pw-clock .pwa-hand { stroke: var(--text); stroke-linecap: round; }
 .pw-clock .pwa-sec { stroke: var(--accent); stroke-width: 1.5; }
 .pw-clock .pwa-pin { fill: var(--accent); }
+
+/* Mode analogique avec date affichee : cadran a gauche, texte a droite,
+   plutot qu'empiles verticalement -- le cadran beneficie alors de toute
+   la hauteur de la tuile au lieu de se la partager avec le texte
+   en dessous, qui l'ecrasait sur les tuiles de forme courante.
+   Analog mode with the date shown: face on the left, text on the
+   right, rather than stacked vertically -- the face then gets the
+   tile's full height instead of sharing it with the text below, which
+   used to squeeze it on typically-shaped tiles. */
+.pw-clock.pwc-analog-row {
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6%;
+}
+.pw-clock.pwc-analog-row svg { flex: none; width: auto; }
+.pw-clock.pwc-analog-row .pwc-date {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+}

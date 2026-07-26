@@ -917,6 +917,8 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   await sleep(700);
   assert("modale refermee", document.getElementById("tileModal").hidden === true);
   assert("horloge passee en analogique", !!dragItem.querySelector(".pwa-face"));
+  assert("disposition cote a cote appliquee (date toujours affichee depuis la config initiale)",
+    !!dragItem.querySelector(".pw-clock.pwc-analog-row"));
   assert("layout sauvegarde (PUT recu)", putCalls.some((c) => c.url.includes("/api/layout")));
 
   console.log("== Catalogue ==");

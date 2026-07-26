@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.24.0
+
+- **Correctif *Horloge* : mode analogique trop petit.** Avec la date
+  affichée, le cadran et le texte étaient empilés verticalement — le
+  cadran devait alors se partager la hauteur de la tuile avec le texte
+  en dessous, ce qui l'écrasait sur la plupart des formes de tuile
+  courantes. Le cadran se cale désormais **à gauche** et le texte
+  (date, saint du jour) **à droite** dès que la date est affichée : le
+  cadran garde toute la hauteur disponible, sans changement si la date
+  est masquée (il occupe alors tout le cadre comme avant).
+
+---
+
+- **Fix for *Clock*: analog mode too small.** With the date shown, the
+  face and the text used to be stacked vertically — the face then had
+  to share the tile's height with the text below it, which squeezed it
+  on most common tile shapes. The face now sits **on the left** and the
+  text (date, name day) **on the right** as soon as the date is shown:
+  the face keeps the full available height, with no change when the
+  date is hidden (it then fills the whole frame as before).
+
 ## 1.23.0
 
 - **Radar météo : couche vent optionnelle.** Une grille de flèches peut

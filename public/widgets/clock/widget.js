@@ -62,8 +62,20 @@
     render() {
       const s = this.ctx.settings;
       if (s.mode === "analog") {
+        // Cote a cote (cadran a gauche, texte a droite) uniquement si la
+        // date est affichee : sans elle, rien ne justifie de reserver de
+        // la place a droite, le cadran occupe alors tout le cadre comme
+        // avant. Corrige le probleme du cadran ecrase verticalement par
+        // le texte en dessous (empilement), en lui laissant toute la
+        // hauteur disponible.
+        // Side by side (face on the left, text on the right) only when
+        // the date is shown: without it, nothing justifies reserving
+        // room on the right, the face then fills the whole frame as
+        // before. Fixes the face being vertically squeezed by the text
+        // below it (stacking), by giving it the full available height.
+        const analogRow = s.showDate;
         this.ctx.el.innerHTML = `
-          <div class="pw-clock">
+          <div class="pw-clock ${analogRow ? "pwc-analog-row" : ""}">
             <svg viewBox="0 0 100 100">
               <circle class="pwa-face" cx="50" cy="50" r="46"/>
               ${[...Array(12)].map((_, i) => {
@@ -156,6 +168,33 @@
       const dateEl = box.querySelector(".pwc-date");
 
       if (this.ctx.settings.mode === "analog") {
+        // Cadran carre dont la taille exacte est calculee ici plutot que
+        // laissee a l'aspect-ratio implicite du SVG en CSS : garantit un
+        // carre net dans les deux dispositions, plutot qu'un rendu
+        // deforme si les limites CSS (largeur ET hauteur) entrent en
+        // conflit. Cote a cote : la plus petite des deux limites parmi
+        // la hauteur totale et une fraction de la largeur (pour laisser
+        // de la place au texte a droite). Empile (pas de date) : le
+        // cadran occupe tout le cadre comme avant.
+        // Square face whose exact size is computed here rather than left
+        // to the SVG's implicit CSS aspect-ratio: guarantees a clean
+        // square in both layouts, rather than a distorted render if the
+        // CSS constraints (width AND height) conflict. Side by side: the
+        // smaller of the total height and a fraction of the width (to
+        // leave room for the text on the right). Stacked (no date): the
+        // face fills the whole frame as before.
+        const svg = box.querySelector("svg");
+        const row = box.classList.contains("pwc-analog-row");
+        if (svg) {
+          if (row) {
+            const side = Math.max(20, Math.min(box.clientHeight, box.clientWidth * 0.62));
+            svg.style.width = side + "px";
+            svg.style.height = side + "px";
+          } else {
+            svg.style.width = "";
+            svg.style.height = "";
+          }
+        }
         // Le cadran SVG s'adapte deja tout seul (viewBox) ; seule la date
         // a besoin d'une taille de police calculee.
         // The SVG face already scales itself (viewBox); only the date
