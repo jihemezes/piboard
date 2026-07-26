@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.20.0
+   Version 1.21.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1263,20 +1263,26 @@
         return `<label class="field"><span>${label}</span><input type="time" data-key="${f.key}" value="${v}">${hint}</label>`;
       case "password":
         return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div>${hint}</label>`;
-      /* Champ adresse avec validation en direct (voir le gestionnaire
-         "input" delegue plus bas, ".field-address-input") : recherche
-         Nominatim debouncee des la saisie, avec confirmation visuelle
-         trouve/introuvable -- pour eviter le doute qui menait a un
-         message "Itineraire indisponible" bien plus tard, sans savoir
-         si la cause etait l'adresse elle-meme. Address field with live
-         validation (see the delegated "input" handler further below,
-         ".field-address-input"): debounced Nominatim search as you
-         type, with a visual found/not-found confirmation -- to remove
-         the doubt that led to a much later "Route unavailable" message,
-         without knowing whether the address itself was the cause.
-       */
+      /* Champ adresse avec suggestions cliquables (voir les gestionnaires
+         delegues plus bas, ".field-address-input"/".field-address-suggest") :
+         recherche Nominatim debouncee des la saisie, resultats affiches
+         en liste -- cliquer une suggestion remplit le champ avec
+         l'adresse complete telle que comprise. Meme principe que la
+         recherche de ville des reglages generaux (voir initCitySearch()),
+         plus fiable qu'une simple confirmation textuelle : plus besoin de
+         taper une adresse parfaitement formee, ni de deviner si ce qui a
+         ete compris correspond a ce qui etait vise.
+         Address field with clickable suggestions (see the delegated
+         handlers further below, ".field-address-input"/
+         ".field-address-suggest"): debounced Nominatim search as you
+         type, results shown as a list -- clicking a suggestion fills the
+         field with the full address as understood. Same idea as the
+         general settings' city search (see initCitySearch()), more
+         reliable than a plain text confirmation: no need to type a
+         perfectly-formed address, or guess whether what got understood
+         matches what was meant. */
       case "address":
-        return `<label class="field"><span>${label}</span><input type="text" data-key="${f.key}" class="field-address-input" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><div class="field-address-status" hidden></div>${hint}</label>`;
+        return `<label class="field field-address-wrap"><span>${label}</span><input type="text" data-key="${f.key}" class="field-address-input" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><div class="field-address-suggest" hidden></div>${hint}</label>`;
       default:
         // autocomplete="off" : evite que Chromium propose une suggestion
         // au-dessus du champ, ce qui sur ecran tactile intercepte le
@@ -2608,53 +2614,70 @@
       btn.textContent = i18n.t(reveal ? "field.password.hide" : "field.password.show");
     });
 
-    /* Validation en direct des champs "address" (voir fieldMarkup() :
-       cas "address") : recherche Nominatim debouncee 600ms apres la
-       derniere frappe, avec confirmation visuelle. Delegue sur document
-       pour la meme raison que les gestionnaires ci-dessus : le
-       formulaire de tuile est regenere a chaque ouverture. Le debounce
-       est stocke sur l'element lui-meme (pas de fuite entre plusieurs
-       champs adresse dans le meme formulaire, ex. domicile + travail +
-       jusqu'a 5 trajets supplementaires du widget Trajet).
-       Live validation for "address" fields (see fieldMarkup(): "address"
-       case): debounced Nominatim search 600ms after the last keystroke,
-       with a visual confirmation. Delegated on document for the same
-       reason as the handlers above: the tile form is regenerated on
-       every open. The debounce is stored on the element itself (no
+    /* Suggestions cliquables pour les champs "address" (voir
+       fieldMarkup() : cas "address") : recherche Nominatim debouncee
+       400ms apres la derniere frappe, resultats affiches en liste --
+       cliquer une suggestion remplit le champ avec l'adresse complete.
+       Delegue sur document pour la meme raison que les gestionnaires
+       ci-dessus : le formulaire de tuile est regenere a chaque ouverture.
+       Le debounce est stocke sur l'element lui-meme (pas de fuite entre
+       plusieurs champs adresse dans le meme formulaire, ex. domicile +
+       travail + jusqu'a 5 trajets supplementaires du widget Trajet).
+       Clickable suggestions for "address" fields (see fieldMarkup():
+       "address" case): debounced Nominatim search 400ms after the last
+       keystroke, results shown as a list -- clicking a suggestion fills
+       the field with the full address. Delegated on document for the
+       same reason as the handlers above: the tile form is regenerated
+       on every open. The debounce is stored on the element itself (no
        leakage between several address fields in the same form, e.g.
        home + work + up to 5 extra trips in the Commute widget). */
     document.addEventListener("input", (e) => {
       const input = e.target.closest(".field-address-input");
       if (!input) return;
-      const status = input.parentElement.querySelector(".field-address-status");
-      if (!status) return;
+      const list = input.parentElement.querySelector(".field-address-suggest");
+      if (!list) return;
       clearTimeout(input._addrTimer);
       const q = input.value.trim();
-      if (q.length < 3) { status.hidden = true; return; }
-      status.hidden = false;
-      status.className = "field-address-status field-address-checking";
-      status.textContent = i18n.t("field.address.checking");
+      if (q.length < 3) { list.hidden = true; return; }
       input._addrTimer = setTimeout(async () => {
-        const queried = q;
         try {
-          const url = "https://nominatim.openstreetmap.org/search?format=json&limit=1&q=" + encodeURIComponent(queried);
+          const url = "https://nominatim.openstreetmap.org/search?format=json&limit=5&q=" + encodeURIComponent(q);
           const data = await fetch("/api/proxy?url=" + encodeURIComponent(url)).then((r) => r.json());
           // La saisie a change entre-temps : reponse perimee, on l'ignore.
           // The input changed in the meantime: stale response, ignored.
-          if (input.value.trim() !== queried) return;
-          if (Array.isArray(data) && data.length && data[0].display_name) {
-            status.className = "field-address-status field-address-ok";
-            status.textContent = "✓ " + data[0].display_name;
-          } else {
-            status.className = "field-address-status field-address-fail";
-            status.textContent = i18n.t("field.address.notfound");
-          }
+          if (input.value.trim() !== q) return;
+          const results = Array.isArray(data) ? data.filter((r) => r.display_name) : [];
+          list.innerHTML = results.length
+            ? results.map((r, idx) => `<button type="button" data-idx="${idx}">${escapeHtmlAttr(r.display_name)}</button>`).join("")
+            : `<button type="button" disabled>${i18n.t("field.address.notfound")}</button>`;
+          list._results = results;
+          list.hidden = false;
         } catch (err) {
-          if (input.value.trim() !== queried) return;
-          status.className = "field-address-status field-address-fail";
-          status.textContent = i18n.t("field.address.error");
+          list.hidden = true;
         }
-      }, 600);
+      }, 400);
+    });
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".field-address-suggest button[data-idx]");
+      if (!btn) return;
+      const list = btn.closest(".field-address-suggest");
+      const input = list.previousElementSibling;
+      if (!input || !list._results) return;
+      const r = list._results[Number(btn.dataset.idx)];
+      if (!r) return;
+      input.value = r.display_name;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      list.hidden = true;
+    });
+
+    // Clic ailleurs qu'un champ adresse : referme toute liste de
+    // suggestions ouverte, sans fermer la modale elle-meme. Click
+    // elsewhere than an address field: closes any open suggestion list,
+    // without closing the modal itself.
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".field-address-wrap")) return;
+      document.querySelectorAll(".field-address-suggest:not([hidden])").forEach((el) => { el.hidden = true; });
     });
 
     /* Bouton "Parcourir les chaines disponibles" du champ "channels" du

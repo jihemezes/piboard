@@ -524,18 +524,42 @@ body.editing .ui-resizable-s::after {
 .field-password-wrap input[type="text"] { flex: 1; width: auto; }
 .field-password-wrap .field-password-toggle { flex: none; white-space: nowrap; }
 
-/* Validation en direct des champs adresse (voir fieldMarkup() cas
-   "address" et le gestionnaire "input" delegue dans app.js).
-   Live validation for address fields (see fieldMarkup()'s "address"
-   case and the delegated "input" handler in app.js). */
-.field-address-status {
-  font-size: 12px;
-  margin-top: 4px;
-  line-height: 1.3;
+/* Suggestions d'adresse cliquables (voir fieldMarkup() cas "address" et
+   les gestionnaires delegues dans app.js) : meme famille visuelle que
+   .city-suggest, en position absolue sous le champ concerne.
+   Clickable address suggestions (see fieldMarkup()'s "address" case and
+   the delegated handlers in app.js): same visual family as
+   .city-suggest, absolutely positioned under the relevant field. */
+.field-address-wrap { position: relative; }
+.field-address-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 2px;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
 }
-.field-address-status.field-address-checking { color: var(--muted); font-style: italic; }
-.field-address-status.field-address-ok { color: #4CAF50; }
-.field-address-status.field-address-fail { color: #E5384B; }
+.field-address-suggest button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.field-address-suggest button:last-child { border-bottom: none; }
+.field-address-suggest button:hover:not(:disabled) { background: var(--field-bg); }
+.field-address-suggest button:disabled { color: var(--muted); cursor: default; }
 
 .field.checkbox { display: flex; align-items: center; gap: 9px; }
 .field.checkbox > span { margin: 0; }

@@ -1,14 +1,14 @@
 {
   "id": "commute",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "name": {
     "en": "Commute time",
     "fr": "Trajet domicile-travail"
   },
   "titleBar": true,
   "description": {
-    "en": "Live driving times between two addresses via TomTom's Routing API (same key as the Traffic tile), with real traffic conditions, a comparison against the usual time for that day and hour, a colored alert for heavy delays, and a suggested departure time when a desired arrival time is set. Plus up to 5 extra trips to named destinations, each with the same treatment. Address fields validate live as you type, confirming the resolved address so you know it was understood correctly before saving.",
-    "fr": "Temps de trajet en voiture en direct entre deux adresses via l'API Routing de TomTom (même clé que la tuile Trafic), avec trafic réel, comparaison au temps habituel pour ce jour et cette heure, alerte colorée en cas de fort retard, et heure de départ conseillée quand une heure d'arrivée souhaitée est renseignée. Plus jusqu'à 5 trajets supplémentaires vers des destinations nommées, avec le même traitement. Les champs d'adresse se valident en direct pendant la saisie, confirmant l'adresse résolue afin de savoir qu'elle a bien été comprise avant d'enregistrer."
+    "en": "Live driving times between two addresses via TomTom's Routing API (same key as the Traffic tile), with real traffic conditions, a comparison against the usual time for that day and hour, a colored alert for heavy delays, and a suggested departure time when a desired arrival time is set. Plus up to 5 extra trips to named destinations, each with the same treatment. Address fields offer clickable suggestions as you type, so you can confirm the right address was understood before saving.",
+    "fr": "Temps de trajet en voiture en direct entre deux adresses via l'API Routing de TomTom (même clé que la tuile Trafic), avec trafic réel, comparaison au temps habituel pour ce jour et cette heure, alerte colorée en cas de fort retard, et heure de départ conseillée quand une heure d'arrivée souhaitée est renseignée. Plus jusqu'à 5 trajets supplémentaires vers des destinations nommées, avec le même traitement. Les champs d'adresse proposent des suggestions cliquables pendant la saisie, pour confirmer que la bonne adresse a été comprise avant d'enregistrer."
   },
   "size": {
     "w": 3,

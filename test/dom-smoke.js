@@ -534,7 +534,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   assert("compteur de quota TomTom affiche et non vide", commuteQuota && !commuteQuota.hidden && /\d+ \/ 2500/.test(commuteQuota.textContent));
   assert("compteur de quota incremente d'au moins 3 (un appel par trajet calcule)", COMMUTE_QUOTA_COUNT >= 3);
 
-  console.log("== Trajet domicile-travail : validation d'adresse en direct dans les reglages ==");
+  console.log("== Trajet domicile-travail : suggestions d'adresse cliquables dans les reglages ==");
   {
     const commuteTileEl = document.querySelector('[data-tile-id="t-i"]');
     assert("tuile trajet localisee dans la grille", !!commuteTileEl);
@@ -543,34 +543,52 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("modale de reglages ouverte", document.getElementById("tileModal").hidden === false);
 
     const homeInput = document.querySelector('#tileForm [data-key="home"]');
-    assert("champ adresse 'home' present et de type texte (validation en plus, pas a la place)", !!homeInput && homeInput.type === "text");
-    assert("case a cocher/texte : c'est bien un champ 'address' (classe dediee)", homeInput.classList.contains("field-address-input"));
-    const homeStatus = homeInput.parentElement.querySelector(".field-address-status");
-    assert("zone de statut presente et cachee avant toute saisie", !!homeStatus && homeStatus.hidden === true);
+    assert("champ adresse 'home' present et de type texte", !!homeInput && homeInput.type === "text");
+    assert("c'est bien un champ 'address' (classe dediee)", homeInput.classList.contains("field-address-input"));
+    const homeList = homeInput.parentElement.querySelector(".field-address-suggest");
+    assert("liste de suggestions presente et cachee avant toute saisie", !!homeList && homeList.hidden === true);
 
-    // Adresse valide : doit afficher une confirmation avec le nom complet
-    // resolu par Nominatim (voir le mock). Valid address: should show a
-    // confirmation with the full name resolved by Nominatim (see mock).
+    // Adresse valide : la liste doit proposer la suggestion resolue par
+    // Nominatim (voir le mock), cliquable. Valid address: the list
+    // should offer the suggestion resolved by Nominatim (see mock),
+    // clickable.
     homeInput.value = "12 Rue de Paris, Toulouse";
     homeInput.dispatchEvent(new window.Event("input", { bubbles: true }));
-    assert("statut passe en 'verification' immediatement (avant le debounce)", homeStatus.classList.contains("field-address-checking"));
-    await sleep(700); // au-dela du debounce de 600ms / beyond the 600ms debounce
-    assert("adresse valide : confirmation affichee avec le nom complet", homeStatus.classList.contains("field-address-ok") && homeStatus.textContent.includes("31000 Toulouse"));
+    await sleep(500); // au-dela du debounce de 400ms / beyond the 400ms debounce
+    assert("suggestion affichee avec le nom complet resolu", homeList.textContent.includes("31000 Toulouse") && !homeList.hidden);
+    const suggestBtn = homeList.querySelector("button[data-idx]");
+    assert("suggestion presentee comme un bouton cliquable (pas juste un texte)", !!suggestBtn && !suggestBtn.disabled);
 
-    // Adresse introuvable (marqueur de mock "Nullepart") : message clair.
-    // Address not found (mock marker "Nullepart"): clear message.
+    suggestBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("clic sur la suggestion : le champ est rempli avec l'adresse complete", homeInput.value.includes("31000 Toulouse"));
+    assert("clic sur la suggestion : la liste se referme", homeList.hidden === true);
+
+    // Adresse introuvable (marqueur de mock "Nullepart") : la liste
+    // affiche un message clair, non cliquable. Address not found (mock
+    // marker "Nullepart"): the list shows a clear, non-clickable message.
     homeInput.value = "Nullepart";
     homeInput.dispatchEvent(new window.Event("input", { bubbles: true }));
-    await sleep(700);
-    assert("adresse introuvable : message d'echec affiche", homeStatus.classList.contains("field-address-fail") && homeStatus.textContent.includes("introuvable"));
+    await sleep(500);
+    const noneBtn = homeList.querySelector("button:disabled");
+    assert("adresse introuvable : message present et non cliquable", !homeList.hidden && !!noneBtn && noneBtn.textContent.includes("Aucune adresse"));
 
-    // Saisie trop courte : la zone de statut redisparait plutot que
-    // d'afficher un resultat pour une requete trop vague.
-    // Too-short input: the status area hides again rather than showing
-    // a result for an overly vague query.
+    // Saisie trop courte : la liste redisparait plutot que d'afficher un
+    // resultat pour une requete trop vague. Too-short input: the list
+    // hides again rather than showing a result for an overly vague query.
     homeInput.value = "1";
     homeInput.dispatchEvent(new window.Event("input", { bubbles: true }));
-    assert("saisie trop courte : zone de statut cachee de nouveau", homeStatus.hidden === true);
+    assert("saisie trop courte : liste cachee de nouveau", homeList.hidden === true);
+
+    // Clic ailleurs dans la modale : referme une liste ouverte sans
+    // fermer la modale. Click elsewhere in the modal: closes an open
+    // list without closing the modal.
+    homeInput.value = "12 Rue de Paris, Toulouse";
+    homeInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    await sleep(500);
+    assert("liste ouverte avant le clic exterieur", homeList.hidden === false);
+    document.getElementById("tileModalTitle").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("clic hors du champ adresse : liste refermee", homeList.hidden === true);
+    assert("clic hors du champ adresse : modale de reglages toujours ouverte", document.getElementById("tileModal").hidden === false);
 
     document.getElementById("tileModal").querySelector(".modal-close")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));

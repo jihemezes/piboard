@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.21.0
+
+- **Trajet domicile-travail : suggestions d'adresse cliquables**,
+  remplaçant la simple validation textuelle de la v1.20.0 — plus simple
+  et plus fiable. En tapant dans un champ Adresse A/B ou une adresse de
+  trajet supplémentaire, une liste de suggestions apparaît (recherche
+  après une courte pause, même principe que la recherche de ville des
+  paramètres généraux) ; cliquer une suggestion remplit directement le
+  champ avec l'adresse complète telle que comprise. Plus besoin de
+  taper une adresse parfaitement formée à l'avance.
+
+---
+
+- **Commute time: clickable address suggestions**, replacing the plain
+  text validation from v1.20.0 — simpler and more reliable. Typing into
+  an Address A/B field or an extra trip's address now shows a
+  suggestion list (searches after a short pause, same idea as the
+  general settings' city search); clicking a suggestion fills the field
+  directly with the full address as understood. No need to type a
+  perfectly-formed address ahead of time.
+
 ## 1.20.0
 
 - **Trajet domicile-travail : validation d'adresse en direct.** Les
