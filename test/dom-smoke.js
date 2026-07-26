@@ -154,6 +154,80 @@ const TOMTOM_ROUTE_SUMMARY = {
 const TOMTOM_LEAVE_BY_TEXT = new Date(TOMTOM_ROUTE_SUMMARY.departureTime).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
 let COMMUTE_QUOTA_COUNT = 0;
 
+/* Fixtures sports mecaniques, construites par rapport a maintenant pour
+   que les etats (passee / en cours / a venir) soient deterministes :
+   EL1 il y a 3 h (passee), EL2 il y a 30 min (en cours, fenetre d'1 h),
+   EL3 dans 2 h (prochaine), qualifs dans 4 h, course demain.
+   Motorsport fixtures, built relative to now so the states (past /
+   live / upcoming) are deterministic: FP1 3h ago (past), FP2 30min ago
+   (live, 1h window), FP3 in 2h (next), qualifying in 4h, race tomorrow. */
+const MS_NOW = Date.now();
+const MS_OFFSETS = { fp1: -3 * 3600000, fp2: -30 * 60000, fp3: 2 * 3600000, quali: 4 * 3600000, race: 26 * 3600000 };
+function ergastParts(ms) {
+  const iso = new Date(ms).toISOString();
+  return { date: iso.slice(0, 10), time: iso.slice(11, 19) + "Z" };
+}
+const F1_SEASON_FIXTURE = {
+  MRData: {
+    RaceTable: {
+      Races: [
+        // Manche deja terminee : sert a verifier que le widget passe bien
+        // a la manche courante. Already-finished round: checks the widget
+        // does move on to the current one.
+        {
+          season: "2026", round: "1", raceName: "Grand Prix Termine",
+          Circuit: { circuitName: "Circuit Passe", Location: { locality: "Nulleville" } },
+          ...ergastParts(MS_NOW - 30 * 86400000)
+        },
+        {
+          season: "2026", round: "2", raceName: "Grand Prix de Test",
+          Circuit: { circuitName: "Circuit de Test", Location: { locality: "Testville" } },
+          FirstPractice: ergastParts(MS_NOW + MS_OFFSETS.fp1),
+          SecondPractice: ergastParts(MS_NOW + MS_OFFSETS.fp2),
+          ThirdPractice: ergastParts(MS_NOW + MS_OFFSETS.fp3),
+          Qualifying: ergastParts(MS_NOW + MS_OFFSETS.quali),
+          ...ergastParts(MS_NOW + MS_OFFSETS.race)
+        },
+        {
+          season: "2026", round: "3", raceName: "Grand Prix Suivant",
+          Circuit: { circuitName: "Circuit Futur", Location: { locality: "Futureville" } },
+          ...ergastParts(MS_NOW + 14 * 86400000)
+        }
+      ]
+    }
+  }
+};
+function motogpBroadcast(shortname, name, ms, acronym, categoryName) {
+  return {
+    shortname, name, type: "SESSION",
+    date_start: new Date(ms).toISOString(),
+    category: { acronym, name: categoryName }
+  };
+}
+const MOTOGP_SEASON_FIXTURE = [
+  {
+    sponsored_name: "Grand Prix Moto de Test", sequence: 4,
+    circuit: { name: "Circuit Moto de Test", city: "Motoville" },
+    date_start: new Date(MS_NOW + MS_OFFSETS.fp1).toISOString(),
+    date_end: new Date(MS_NOW + MS_OFFSETS.race).toISOString(),
+    broadcasts: [
+      motogpBroadcast("FP1", "Free Practice Nr. 1", MS_NOW + MS_OFFSETS.fp1, "MGP", "MotoGP"),
+      motogpBroadcast("FP2", "Free Practice Nr. 2", MS_NOW + MS_OFFSETS.fp2, "MGP", "MotoGP"),
+      motogpBroadcast("Q2", "Qualifying Nr. 2", MS_NOW + MS_OFFSETS.quali, "MGP", "MotoGP"),
+      motogpBroadcast("SPR", "Tissot Sprint", MS_NOW + MS_OFFSETS.quali + 3600000, "MGP", "MotoGP"),
+      motogpBroadcast("RAC", "Race", MS_NOW + MS_OFFSETS.race, "MGP", "MotoGP"),
+      // Categorie Moto3 : ne doit PAS apparaitre avec le reglage par
+      // defaut (MotoGP uniquement). Moto3 class: must NOT appear with
+      // the default setting (MotoGP only).
+      motogpBroadcast("RAC", "Race", MS_NOW + MS_OFFSETS.race - 7200000, "MT3", "Moto3"),
+      // Rendez-vous presse : jamais une seance de piste, doit etre
+      // ecarte quel que soit le reglage. Press event: never a track
+      // session, must be filtered out whatever the setting.
+      { shortname: "SHOW", name: "GearUP", type: "MEDIA", date_start: new Date(MS_NOW).toISOString(), category: { acronym: "MGP", name: "MotoGP" } }
+    ]
+  }
+];
+
 const layout = {
   version: 1,
   tiles: [
@@ -170,7 +244,9 @@ const layout = {
       apiKey: "FAKEKEY", direction: "both", arriveWorkBy: "08:30",
       trip1Label: "Grand-mère", trip1Address: "1 Place du Capitole, Toulouse", trip1ArriveBy: "08:45",
       alertModerate: 10, alertHeavy: 20
-    } }
+    } },
+    { id: "t-j", widget: "motorsport", x: 4, y: 8, w: 4, h: 4, settings: { series: "f1", mode: "next" } },
+    { id: "t-k", widget: "motorsport", x: 8, y: 8, w: 4, h: 4, settings: { series: "motogp", mode: "next" } }
   ]
 };
 
@@ -297,6 +373,12 @@ const dom = new JSDOM(html, {
         const tmm = String(tomorrow.getMonth() + 1).padStart(2, "0");
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
+      }
+      if (u.includes("/api/proxy") && u.includes("jolpi.ca")) {
+        return json(F1_SEASON_FIXTURE);
+      }
+      if (u.includes("/api/proxy") && u.includes("motogp.pulselive.com")) {
+        return json(MOTOGP_SEASON_FIXTURE);
       }
       if (u.includes("/api/proxy") && u.includes("nominatim.openstreetmap.org")) {
         // Un marqueur distinct simule une adresse introuvable, pour tester
@@ -435,10 +517,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 9 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 11 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("9 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 9);
+  assert("11 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 11);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -506,6 +588,52 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   weatherModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(20);
   assert("modal meteo refermee par le bouton", weatherModal.hidden === true);
+
+  console.log("== Sports mecaniques : programme des seances (F1 via Jolpica) ==");
+  tries = 0;
+  while (!document.querySelector('[data-tile-id="t-j"] .pwms-session') && tries++ < 80) await sleep(50);
+  const f1Tile = document.querySelector('[data-tile-id="t-j"]');
+  assert("manche courante affichee (la manche deja terminee est passee)",
+    (f1Tile.querySelector(".pwms-event")?.textContent || "") === "Grand Prix de Test");
+  assert("circuit affiche sous le nom de l'evenement",
+    (f1Tile.querySelector(".pwms-circuit")?.textContent || "").includes("Circuit de Test"));
+
+  const f1Sessions = [...f1Tile.querySelectorAll(".pwms-session")];
+  assert("5 seances affichees (EL1, EL2, EL3, qualifs, course)", f1Sessions.length === 5);
+  const labelOf = (n) => n.querySelector(".pwms-label")?.textContent || "";
+  assert("libelles francais des essais libres (EL1/EL2/EL3)",
+    labelOf(f1Sessions[0]) === "EL1" && labelOf(f1Sessions[2]) === "EL3");
+  assert("qualifications et course presentes et dans l'ordre chronologique",
+    labelOf(f1Sessions[3]) === "Qualifications" && labelOf(f1Sessions[4]) === "Course");
+
+  assert("EL1 (il y a 3 h) marquee comme passee", f1Sessions[0].classList.contains("pwms-past"));
+  assert("EL2 (il y a 30 min) marquee comme en cours", f1Sessions[1].classList.contains("pwms-live"));
+  assert("EL3 (dans 2 h) marquee comme prochaine seance", f1Sessions[2].classList.contains("pwms-next"));
+  assert("course identifiee comme telle (couleur dediee)", f1Sessions[4].classList.contains("pwms-kind-race"));
+  assert("essais libres identifies comme tels", f1Sessions[0].classList.contains("pwms-kind-practice"));
+  assert("regroupement par jour : au moins deux jours (course le lendemain)",
+    f1Tile.querySelectorAll(".pwms-day").length >= 2);
+  assert("attribution de la source F1 affichee", (f1Tile.textContent || "").includes("Jolpica"));
+
+  console.log("== Sports mecaniques : programme MotoGP (flux public motogp.com) ==");
+  const mgpTile = document.querySelector('[data-tile-id="t-k"]');
+  tries = 0;
+  while (!mgpTile.querySelector(".pwms-session") && tries++ < 80) await sleep(50);
+  assert("evenement MotoGP affiche",
+    (mgpTile.querySelector(".pwms-event")?.textContent || "") === "Grand Prix Moto de Test");
+  const mgpSessions = [...mgpTile.querySelectorAll(".pwms-session")];
+  assert("5 seances MotoGP affichees (Moto3 et rendez-vous presse ecartes)", mgpSessions.length === 5);
+  const mgpLabels = mgpSessions.map(labelOf);
+  assert("codes MotoGP traduits (FP1 -> EL1)", mgpLabels[0] === "EL1");
+  assert("sprint et course traduits", mgpLabels.includes("Sprint") && mgpLabels.includes("Course"));
+  assert("rendez-vous presse (type MEDIA) jamais affiche", !(mgpTile.textContent || "").includes("GearUP"));
+  assert("categorie Moto3 ecartee par defaut (MotoGP uniquement)",
+    !(mgpTile.textContent || "").includes("Moto3"));
+  assert("sprint identifie comme tel (couleur dediee)",
+    mgpSessions.some((n) => n.classList.contains("pwms-kind-sprint")));
+  assert("qualification identifiee comme telle",
+    mgpSessions.some((n) => n.classList.contains("pwms-kind-qualifying")));
+  assert("attribution de la source MotoGP affichee", (mgpTile.textContent || "").includes("motogp.com"));
 
   console.log("== Trajet domicile-travail : TomTom Routing, retard colore, depart conseille ==");
   tries = 0;
@@ -790,7 +918,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (10 au total)", document.querySelectorAll(".grid-stack-item").length === 10);
+  assert("tuile ajoutee (12 au total)", document.querySelectorAll(".grid-stack-item").length === 12);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {

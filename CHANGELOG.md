@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.22.0
+
+- **Nouvelle tuile : Sports mécaniques** — le programme complet des
+  séances d'un week-end de **Formule 1** ou de **MotoGP** : essais
+  libres, qualifications, course sprint et course, chacun avec son jour
+  et son heure locale (convertie automatiquement depuis le fuseau du
+  circuit).
+  - Les séances **terminées** restent visibles mais estompées, la
+    séance **en cours** est signalée par une pastille clignotante, et la
+    **prochaine à venir** est mise en avant — le tout se rafraîchit tout
+    seul chaque minute, sans nouvel appel réseau ;
+  - Code couleur par type : essais (gris), qualifications (orange),
+    sprint (violet), course (rouge) ;
+  - Un mode **calendrier** liste plutôt les prochaines manches de la
+    saison avec leurs dates ;
+  - Pour le MotoGP, les catégories Moto2, Moto3 et MotoE peuvent être
+    ajoutées au programme (réglage dédié) ;
+  - Une manche en cours reste affichée jusqu'à sa course du dimanche,
+    plutôt que de sauter à la suivante dès le samedi soir.
+
+  Données F1 via **Jolpica-F1** (gratuit, sans clé — le successeur
+  communautaire de l'API Ergast, retirée fin 2024) et MotoGP via le
+  **flux public de motogp.com**. Ce dernier n'étant pas documenté
+  officiellement, il peut changer sans préavis : la tuile se replie
+  alors proprement sur un message d'indisponibilité, comme les autres.
+
+---
+
+- **New tile: Motorsport schedule** — the full session timetable for a
+  **Formula 1** or **MotoGP** race weekend: free practice, qualifying,
+  sprint and race, each with its day and local start time (converted
+  automatically from the circuit's timezone).
+  - **Finished** sessions stay visible but dimmed, the **ongoing**
+    session gets a pulsing dot, and the **next one up** is highlighted —
+    all of it refreshing on its own every minute, with no new network
+    call;
+  - Color code per type: practice (grey), qualifying (orange), sprint
+    (purple), race (red);
+  - A **calendar** mode lists the season's upcoming rounds with their
+    dates instead;
+  - For MotoGP, the Moto2, Moto3 and MotoE classes can be added to the
+    timetable (dedicated setting);
+  - An ongoing round stays displayed through its Sunday race, rather
+    than jumping to the next one from Saturday evening.
+
+  F1 data via **Jolpica-F1** (free, keyless — the community successor to
+  the Ergast API, retired end of 2024) and MotoGP via **motogp.com's
+  public feed**. The latter isn't officially documented, so it may
+  change without notice: the tile then degrades cleanly to an
+  "unavailable" message, like the others.
+
 ## 1.21.0
 
 - **Trajet domicile-travail : suggestions d'adresse cliquables**,

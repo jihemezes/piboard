@@ -538,6 +538,46 @@
     },
 
     {
+      id: "motorsport",
+      group: "tiles",
+      title: { fr: "Sports mécaniques", en: "Motorsport schedule" },
+      sub: {
+        fr: "Programme complet des séances d'un week-end de Formule 1 ou de MotoGP : essais libres, qualifications, course sprint et course, avec le jour et l'heure locale de chacune.",
+        en: "Full session timetable for a Formula 1 or MotoGP race weekend: free practice, qualifying, sprint and race, each with its day and local start time."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 4×4 par défaut, de 2×2 à 8×10</span>
+          <h4>Objectif</h4>
+          <p>Savoir quand regarder, sans avoir à chercher les horaires du week-end de course quelque part sur le web — et voir d'un coup d'œil ce qui vient de se passer, ce qui est en cours, et ce qui arrive.</p>
+          <h4>Possibilités</h4>
+          <p>Le mode par défaut affiche la <b>prochaine manche</b> avec l'intégralité de son programme, regroupé par jour : essais libres, qualifications, course sprint et course, chacun à son heure locale (convertie automatiquement depuis le fuseau du circuit). Les séances déjà terminées restent visibles mais estompées, la séance en cours est signalée par une pastille clignotante, et la prochaine à venir est mise en avant — le tout se rafraîchit tout seul chaque minute, sans nouvel appel réseau. Un code couleur distingue les essais (gris), les qualifications (orange), le sprint (violet) et la course (rouge). Le mode <b>calendrier</b> liste plutôt les prochaines manches de la saison avec leurs dates, pratique pour anticiper. Une manche en cours reste affichée jusqu'à sa course du dimanche, plutôt que de sauter à la suivante dès le samedi soir.</p>
+          <p>Pour le MotoGP, les catégories Moto2, Moto3 et MotoE peuvent être ajoutées au programme — attention, cela le rend nettement plus long, à réserver à une tuile haute.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Championnat</span><span class="help-opt-desc">Formule 1 ou MotoGP. Pour suivre les deux, ajoutez simplement deux tuiles.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Affichage</span><span class="help-opt-desc">Programme détaillé de la prochaine manche, ou calendrier des prochaines manches.</span></div>
+          <div class="help-opt"><span class="help-opt-name">MotoGP : catégories affichées</span><span class="help-opt-desc">MotoGP seul, ou toutes les catégories du week-end.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Masquer les séances terminées</span><span class="help-opt-desc">Utile sur une petite tuile pour ne garder que ce qui reste à venir.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Nombre de manches affichées</span><span class="help-opt-desc">En mode calendrier uniquement.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Un programme change rarement : un intervalle long suffit largement.</span></div>`,
+        en: `
+          <span class="help-size">Size: 4×4 by default, from 2×2 to 8×10</span>
+          <h4>Goal</h4>
+          <p>Know when to watch, without hunting down the race weekend's timings somewhere on the web — and see at a glance what just happened, what's on now, and what's coming.</p>
+          <h4>Possibilities</h4>
+          <p>The default mode shows the <b>next round</b> with its full timetable, grouped by day: free practice, qualifying, sprint and race, each at its local time (converted automatically from the circuit's timezone). Finished sessions stay visible but dimmed, the ongoing session gets a pulsing dot, and the next one up is highlighted — all of it refreshing on its own every minute, with no new network call. A color code tells practice (grey), qualifying (orange), sprint (purple) and race (red) apart. The <b>calendar</b> mode lists the season's upcoming rounds with their dates instead, handy for planning ahead. An ongoing round stays displayed through its Sunday race, rather than jumping to the next one from Saturday evening.</p>
+          <p>For MotoGP, the Moto2, Moto3 and MotoE classes can be added to the timetable — note this makes it considerably longer, best kept for a tall tile.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Championship</span><span class="help-opt-desc">Formula 1 or MotoGP. To follow both, simply add two tiles.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Display</span><span class="help-opt-desc">Detailed timetable of the next round, or calendar of upcoming rounds.</span></div>
+          <div class="help-opt"><span class="help-opt-name">MotoGP: classes shown</span><span class="help-opt-desc">MotoGP alone, or every class of the weekend.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Hide finished sessions</span><span class="help-opt-desc">Useful on a small tile to keep only what's still ahead.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rounds shown</span><span class="help-opt-desc">Calendar mode only.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">A timetable rarely changes: a long interval is plenty.</span></div>`
+      }
+    },
+
+    {
       id: "standings",
       group: "tiles",
       title: { fr: "Classement", en: "League standings" },
@@ -976,6 +1016,8 @@
           <div class="help-credit"><span class="help-opt-name">Openverse</span> — <a href="https://openverse.org" target="_blank">openverse.org</a><br><span class="help-opt-desc">Photos de fond sous licence libre de la tuile Météo, avec crédit du photographe affiché sur la tuile quand disponible.</span></div>
           <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Cours et courbes de prix de la tuile Cours de cryptos.</span></div>
           <div class="help-credit"><span class="help-opt-name">ESPN</span> — <a href="https://www.espn.com" target="_blank">espn.com</a><br><span class="help-opt-desc">Scores en direct et classements des tuiles Scores sportifs et Classement.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Jolpica-F1</span> — <a href="https://api.jolpi.ca" target="_blank">jolpi.ca</a><br><span class="help-opt-desc">Calendrier et horaires des séances de Formule 1 de la tuile Sports mécaniques. Successeur communautaire de l'API Ergast, retirée fin 2024.</span></div>
+          <div class="help-credit"><span class="help-opt-name">MotoGP</span> — <a href="https://www.motogp.com" target="_blank">motogp.com</a><br><span class="help-opt-desc">Calendrier et horaires des séances MotoGP de la tuile Sports mécaniques, via le flux public du site officiel.</span></div>
           <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Bibliothèque de cartographie interactive utilisée par les tuiles Carte de trafic, Radar météo et Avions en vue.</span></div>
           <div class="help-credit"><span class="help-opt-name">Mozilla Readability</span> — <a href="https://github.com/mozilla/readability" target="_blank">github.com/mozilla/readability</a><br><span class="help-opt-desc">Extraction du texte lisible d'un article (mode lecture, la même bibliothèque que le mode lecture de Firefox) pour la tuile Flux RSS.</span></div>
           <div class="help-credit"><span class="help-opt-name">GridStack.js</span> — <a href="https://gridstackjs.com" target="_blank">gridstackjs.com</a><br><span class="help-opt-desc">Bibliothèque de grille qui permet de déplacer et redimensionner les tuiles du tableau.</span></div>
@@ -995,6 +1037,8 @@
           <div class="help-credit"><span class="help-opt-name">Openverse</span> — <a href="https://openverse.org" target="_blank">openverse.org</a><br><span class="help-opt-desc">Openly-licensed background photos for the Weather tile, with the photographer credited on the tile when available.</span></div>
           <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Prices and price charts for the Crypto prices tile.</span></div>
           <div class="help-credit"><span class="help-opt-name">ESPN</span> — <a href="https://www.espn.com" target="_blank">espn.com</a><br><span class="help-opt-desc">Live scores and standings for the Live sports scores and League standings tiles.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Jolpica-F1</span> — <a href="https://api.jolpi.ca" target="_blank">jolpi.ca</a><br><span class="help-opt-desc">Formula 1 calendar and session times for the Motorsport schedule tile. Community successor to the Ergast API, retired at the end of 2024.</span></div>
+          <div class="help-credit"><span class="help-opt-name">MotoGP</span> — <a href="https://www.motogp.com" target="_blank">motogp.com</a><br><span class="help-opt-desc">MotoGP calendar and session times for the Motorsport schedule tile, via the official site's public feed.</span></div>
           <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Interactive mapping library used by the Traffic map, Weather Radar and Planes Overhead tiles.</span></div>
           <div class="help-credit"><span class="help-opt-name">Mozilla Readability</span> — <a href="https://github.com/mozilla/readability" target="_blank">github.com/mozilla/readability</a><br><span class="help-opt-desc">Readable-text extraction (reader mode, the same library behind Firefox's reader mode) for the RSS feed tile.</span></div>
           <div class="help-credit"><span class="help-opt-name">GridStack.js</span> — <a href="https://gridstackjs.com" target="_blank">gridstackjs.com</a><br><span class="help-opt-desc">Grid library that lets board tiles be dragged and resized.</span></div>
