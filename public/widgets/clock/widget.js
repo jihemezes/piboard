@@ -327,8 +327,24 @@
             ? `${hh}:${mm}<small>:${ss}</small>`
             : `${hh}:${mm}`;
         }
-        this.fit();
       }
+      // Appele dans tous les cas, apres la mise a jour du texte ci-dessus :
+      // render() appelle deja fit() une fois, mais a ce moment-la
+      // ".pwc-date" est encore vide (son contenu n'est ecrit qu'ici, dans
+      // tick()) -- la taille de police calculee sur du vide "tenait"
+      // trivialement, puis debordait des que le vrai texte (date, saint
+      // du jour) etait insere sans nouveau calcul. Egalement necessaire
+      // quand le saint arrive apres coup (loadSaints() est asynchrone) ou
+      // que la longueur du texte change (langue, jour de semaine...).
+      // Called in both cases, after the text update above: render()
+      // already calls fit() once, but at that point ".pwc-date" is still
+      // empty (its content is only written here, in tick()) -- the font
+      // size computed against emptiness trivially "fit", then overflowed
+      // as soon as the real text (date, name day) was inserted with no
+      // new calculation. Also needed when the name day arrives later
+      // (loadSaints() is asynchronous) or when the text's length changes
+      // (language, weekday...).
+      this.fit();
     }
 
     destroy() {

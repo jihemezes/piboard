@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.24.2
+
+- **Correctif *Horloge*** : en mode analogique avec texte affiché, la
+  date et le saint du jour débordaient de la tuile (texte coupé en haut
+  et en bas). Cause : la taille de police n'était calculée qu'une seule
+  fois, au tout premier affichage — à ce moment précis, la case texte
+  est encore vide (son contenu n'est écrit que juste après), donc
+  n'importe quelle taille « tenait » sans déborder. Une fois le vrai
+  texte inséré, plus aucun recalcul n'avait lieu, laissant une taille
+  bien trop grande pour le contenu réel. Le recalcul se fait désormais
+  systématiquement après l'insertion du texte — y compris quand le
+  saint du jour arrive un peu plus tard (chargement asynchrone) ou que
+  la longueur du texte change.
+
+---
+
+- **Fix for *Clock***: in analog mode with text shown, the date and
+  name day overflowed the tile (text clipped at the top and bottom).
+  Cause: the font size was only computed once, at the very first
+  render — at that exact moment, the text box is still empty (its
+  content is only written right after), so any size "fit" without
+  overflowing. Once the real text was inserted, no recalculation ever
+  happened again, leaving a size far too large for the actual content.
+  The recalculation now systematically happens after the text is
+  inserted — including when the name day arrives a bit later
+  (asynchronous loading) or when the text's length changes.
+
 ## 1.24.1
 
 - **Correctif *Horloge*** : en mode analogique avec disposition cadran
