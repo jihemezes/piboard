@@ -228,6 +228,12 @@ const MOTOGP_SEASON_FIXTURE = [
   }
 ];
 
+/* Planification par tuile : un jour de la semaine qui n'est jamais celui
+   du jour ou tourne le test, pour obtenir une tuile a coup sur hors
+   plage. Per-tile scheduling: a weekday that is never the day the test
+   runs on, to reliably get an out-of-window tile. */
+const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"][(new Date().getDay() + 1) % 7];
+
 const layout = {
   version: 1,
   tiles: [
@@ -246,7 +252,19 @@ const layout = {
       alertModerate: 10, alertHeavy: 20
     } },
     { id: "t-j", widget: "motorsport", x: 4, y: 8, w: 4, h: 4, settings: { series: "f1", mode: "next" } },
-    { id: "t-k", widget: "motorsport", x: 8, y: 8, w: 4, h: 4, settings: { series: "motogp", mode: "next" } }
+    { id: "t-k", widget: "motorsport", x: 8, y: 8, w: 4, h: 4, settings: { series: "motogp", mode: "next" } },
+    // Planifiee sur un jour qui n'est JAMAIS aujourd'hui : toujours hors
+    // plage, quelle que soit l'heure a laquelle tourne le test.
+    // Scheduled on a day that is NEVER today: always out of window,
+    // whatever time the test runs at.
+    { id: "t-l", widget: "notes", x: 0, y: 12, w: 3, h: 2, settings: {
+      _schedEnabled: true, [SCHED_OTHER_DAY_KEY]: true
+    } },
+    // Planifiee mais active en permanence (aucun jour coche = tous les
+    // jours) : verifie qu'une planification active ne casse rien.
+    // Scheduled but permanently active (no day ticked = every day):
+    // checks an active schedule breaks nothing.
+    { id: "t-m", widget: "notes", x: 3, y: 12, w: 3, h: 2, settings: { _schedEnabled: true } }
   ]
 };
 
@@ -517,10 +535,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 11 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 13 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("11 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 11);
+  assert("13 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 13);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -927,7 +945,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (12 au total)", document.querySelectorAll(".grid-stack-item").length === 12);
+  assert("tuile ajoutee (14 au total)", document.querySelectorAll(".grid-stack-item").length === 14);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -1226,6 +1244,40 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("changelog : version sans separation bilingue affichee integralement", changelogText.includes("Version simple sans separation bilingue"));
 
     document.getElementById("helpModal").hidden = true;
+  }
+
+  console.log("== Planification par tuile : mise en pause hors plage ==");
+  {
+    const pausedTile = document.querySelector('[data-tile-id="t-l"]');
+    const activeTile = document.querySelector('[data-tile-id="t-m"]');
+    assert("la tuile hors plage est toujours presente dans la grille (pas de trou)", !!pausedTile);
+    const pausedBody = pausedTile.querySelector(".tile-body");
+    assert("la tuile hors plage porte la classe 'en pause'", pausedBody.classList.contains("tile-paused"));
+    assert("message 'En pause' affiche", (pausedBody.textContent || "").includes("En pause"));
+    assert("resume de la plage affiche sous le message",
+      !!pausedBody.querySelector(".tile-paused-hint") && pausedBody.querySelector(".tile-paused-hint").textContent.trim().length > 0);
+    assert("le widget n'a PAS ete monte (pas de contenu de la tuile Notes)", !pausedBody.querySelector(".pw-notes"));
+
+    assert("la tuile planifiee mais dans sa plage est bien montee normalement",
+      !!activeTile && !!activeTile.querySelector(".pw-notes"));
+    assert("la tuile dans sa plage ne porte pas la classe 'en pause'",
+      !activeTile.querySelector(".tile-body").classList.contains("tile-paused"));
+
+    // La planification doit rester configurable depuis la tuile en pause :
+    // sans cela, impossible de la reactiver. The schedule must stay
+    // configurable from the paused tile: otherwise there'd be no way to
+    // re-enable it.
+    pausedTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("reglages accessibles depuis une tuile en pause", document.getElementById("tileModal").hidden === false);
+    assert("section Planification presente dans les reglages",
+      (document.getElementById("tileForm").textContent || "").includes("Planification"));
+    assert("case d'activation de la planification cochee et 7 cases de jours",
+      document.querySelector('#tileForm [data-key="_schedEnabled"]')?.checked === true
+      && document.querySelectorAll("#tileForm .sched-day input").length === 7);
+    document.getElementById("tileModal").querySelector(".modal-close")
+      .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
   }
 
   console.log("== Sortie du mode edition ==");

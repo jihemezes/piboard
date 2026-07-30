@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.25.0
+   Version 1.26.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -62,6 +62,7 @@
   let editing = false;
   let saveTimer = null;
   let themeTimer = null;
+  let scheduleTicker = null;        // reevalue la planification des tuiles / re-evaluates tile scheduling
 
   /* ---------- Registre public des widgets / public widget registry ---------- */
 
@@ -749,7 +750,6 @@
     });
     el.dataset.tileId = conf.id;
 
-    const body = el.querySelector(".tile-body");
     const record = { conf, manifest, instance: null, el, zone };
     tiles.set(conf.id, record);
     applyTitleBar(record);
@@ -765,31 +765,170 @@
       removeTile(conf.id);
     });
 
-    const Klass = widgetClasses.get(conf.widget);
+    // Demarre le widget, ou le laisse d'emblee en pause si sa
+    // planification l'exclut a cet instant (voir syncTileSchedule).
+    // Starts the widget, or leaves it paused from the outset if its
+    // schedule excludes it right now (see syncTileSchedule).
+    syncTileSchedule(record);
+  }
+
+  /* ---------- Planification par tuile / per-tile scheduling ----------
+     Une tuile hors de sa plage n'est PAS masquee (la disposition ne bouge
+     jamais) : elle reste en place avec un message "En pause", et son
+     widget est reellement DETRUIT. C'est le vrai interet de la
+     fonctionnalite : un widget detruit arrete ses minuteries et ses
+     appels reseau -- la tuile Trajet cesse par exemple de consommer le
+     quota TomTom la nuit et le week-end.
+     A tile outside its window is NOT hidden (the layout never moves): it
+     stays in place with a "Paused" message, and its widget is actually
+     DESTROYED. That's the real point of the feature: a destroyed widget
+     stops its timers and network calls -- the Commute tile, for
+     instance, stops eating the TomTom quota at night and on weekends. */
+
+  // Indexees par Date.getDay() (0 = dimanche) / indexed by Date.getDay()
+  // (0 = Sunday).
+  const SCHED_DAY_KEYS = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"];
+  // Ordre d'affichage : semaine d'abord, dimanche en dernier (usage
+  // francais/europeen). Display order: week first, Sunday last
+  // (French/European convention).
+  const SCHED_DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+  function schedDayLabels() {
+    const locale = i18n.t("clock.date.format");
+    // 7 janvier 2024 etait un dimanche : donne les 7 noms dans l'ordre de
+    // getDay(). January 7, 2024 was a Sunday: yields the 7 names in
+    // getDay() order.
+    return [...Array(7)].map((_, i) =>
+      new Date(2024, 0, 7 + i).toLocaleDateString(locale, { weekday: "short" }));
+  }
+
+  function parseHHMM(v) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || ""));
+    if (!m) return null;
+    const h = Number(m[1]), mi = Number(m[2]);
+    if (h > 23 || mi > 59) return null;
+    return h * 60 + mi;
+  }
+
+  /* Vraie si la tuile doit tourner maintenant. Sans planification active,
+     toujours vraie -- une tuile existante ne change donc pas de
+     comportement.
+     True if the tile should be running now. With no active schedule,
+     always true -- an existing tile therefore doesn't change behavior. */
+  function isWithinSchedule(s, now) {
+    if (!s || s._schedEnabled !== true) return true;
+    const days = SCHED_DAY_KEYS.map((k) => !!s[k]);
+    // Aucun jour coche = tous les jours, plutot qu'une tuile
+    // definitivement en pause (qui aurait tout l'air d'un bug).
+    // No day checked = every day, rather than a permanently paused tile
+    // (which would look exactly like a bug).
+    const anyDay = days.some(Boolean);
+    const dayOk = (d) => !anyDay || days[d];
+
+    const from = parseHHMM(s._schedFrom);
+    const to = parseHHMM(s._schedTo);
+    // Plage horaire incomplete ou degeneree : on ne filtre que sur les
+    // jours. Incomplete or degenerate time window: filter on days only.
+    if (from == null || to == null || from === to) return dayOk(now.getDay());
+
+    const mins = now.getHours() * 60 + now.getMinutes();
+    if (from < to) return dayOk(now.getDay()) && mins >= from && mins < to;
+
+    // Plage a cheval sur minuit (ex. 22:00 -> 06:00) : le jour coche
+    // designe le jour ou la plage COMMENCE, donc un samedi 2 h releve du
+    // vendredi soir. Window crossing midnight (e.g. 22:00 -> 06:00): the
+    // checked day refers to the day the window STARTS on, so Saturday
+    // 2am belongs to Friday evening.
+    if (mins >= from) return dayOk(now.getDay());
+    if (mins < to) return dayOk((now.getDay() + 6) % 7);
+    return false;
+  }
+
+  // Resume lisible de la plage, affiche sous le message "En pause".
+  // Readable summary of the window, shown under the "Paused" message.
+  function scheduleSummary(s) {
+    const labels = schedDayLabels();
+    const days = SCHED_DAY_KEYS.map((k) => !!s[k]);
+    const chosen = SCHED_DAY_ORDER.filter((d) => days[d]);
+    const dayPart = (chosen.length === 0 || chosen.length === 7)
+      ? i18n.t("tile.schedule.everyDay")
+      : chosen.map((d) => labels[d]).join(", ");
+    const from = parseHHMM(s._schedFrom), to = parseHHMM(s._schedTo);
+    const timePart = (from == null || to == null || from === to)
+      ? "" : ` · ${s._schedFrom}–${s._schedTo}`;
+    return dayPart + timePart;
+  }
+
+  function destroyInstance(rec) {
+    if (!rec.instance) return;
+    try { rec.instance.destroy && rec.instance.destroy(); } catch (e) { /* noop */ }
+    rec.instance = null;
+  }
+
+  function startWidget(rec) {
+    const body = rec.el.querySelector(".tile-body");
+    if (!body) return;
+    const Klass = widgetClasses.get(rec.conf.widget);
     if (!Klass) {
       body.innerHTML = `<div class="tile-error">${i18n.t("tile.error")}</div>`;
       return;
     }
+    body.classList.remove("tile-paused");
+    body.innerHTML = "";
     try {
       const instance = new Klass({
         el: body,
-        settings: Object.assign({}, defaultsFor(manifest), conf.settings || {}),
-        instanceId: conf.id,
-        manifest,
+        settings: Object.assign({}, defaultsFor(rec.manifest), rec.conf.settings || {}),
+        instanceId: rec.conf.id,
+        manifest: rec.manifest,
         api: widgetApi,
         i18n
       });
-      record.instance = instance;
+      rec.instance = instance;
       // init peut etre lent (reseau) : on ne bloque pas les autres tuiles
       // init may be slow (network): don't block the other tiles
       Promise.resolve(instance.init()).catch((e) => {
-        console.error("[piboard] widget init failed:", conf.widget, e);
+        console.error("[piboard] widget init failed:", rec.conf.widget, e);
         body.innerHTML = `<div class="tile-error">${i18n.t("tile.error")}</div>`;
       });
     } catch (e) {
-      console.error("[piboard] widget init failed:", conf.widget, e);
+      console.error("[piboard] widget init failed:", rec.conf.widget, e);
       body.innerHTML = `<div class="tile-error">${i18n.t("tile.error")}</div>`;
     }
+  }
+
+  function pauseWidget(rec) {
+    destroyInstance(rec);
+    const body = rec.el.querySelector(".tile-body");
+    if (!body) return;
+    body.classList.add("tile-paused");
+    body.innerHTML = `
+      <div class="tile-paused-msg">
+        <div class="tile-paused-title">${i18n.t("tile.paused")}</div>
+        <div class="tile-paused-hint">${escapeHtmlAttr(scheduleSummary(rec.conf.settings || {}))}</div>
+      </div>`;
+  }
+
+  /* Applique la planification a une tuile. N'agit qu'aux transitions (ou
+     au tout premier appel) pour ne pas relancer un widget a chaque tick.
+     Applies the schedule to a tile. Only acts on transitions (or on the
+     very first call) so a widget isn't restarted on every tick. */
+  function syncTileSchedule(rec) {
+    const paused = !isWithinSchedule(rec.conf.settings || {}, new Date());
+    if (rec.paused === paused && (paused || rec.instance)) return;
+    rec.paused = paused;
+    if (paused) pauseWidget(rec); else startWidget(rec);
+  }
+
+  function startScheduleTicker() {
+    clearInterval(scheduleTicker);
+    // Toutes les 30 s : assez reactif pour une plage a la minute pres,
+    // sans cout notable (une comparaison de dates par tuile).
+    // Every 30s: responsive enough for a minute-accurate window, at no
+    // notable cost (one date comparison per tile).
+    scheduleTicker = setInterval(() => {
+      for (const [, rec] of tiles) syncTileSchedule(rec);
+    }, 30000);
   }
 
   function defaultsFor(manifest) {
@@ -821,6 +960,7 @@
     drawerGrid.batchUpdate(false);
     $("boardEmpty").hidden = layout.tiles.length > 0;
     $("drawerEmpty").hidden = (drawer.tiles || []).length > 0;
+    startScheduleTicker();
   }
 
   function serializeZone(sourceGrid, zone) {
@@ -1337,6 +1477,34 @@
           <span>${i18n.t("tile.color")}</span>
           <input type="color" data-key="_bgColor" value="${currentTileColorHex(rec)}">
         </label>
+      </fieldset>
+      <fieldset class="form-section">
+        <legend>${i18n.t("tile.schedule")}</legend>
+        <label class="field checkbox">
+          <input type="checkbox" data-key="_schedEnabled" ${s._schedEnabled ? "checked" : ""}>
+          <span>${i18n.t("tile.schedule.enable")}</span>
+        </label>
+        <small class="field-hint">${i18n.t("tile.schedule.enable.hint")}</small>
+        <div class="field">
+          <span>${i18n.t("tile.schedule.days")}</span>
+          <div class="sched-days">
+            ${SCHED_DAY_ORDER.map((d) => `
+              <label class="sched-day">
+                <input type="checkbox" data-key="${SCHED_DAY_KEYS[d]}" ${s[SCHED_DAY_KEYS[d]] ? "checked" : ""}>
+                <span>${schedDayLabels()[d]}</span>
+              </label>`).join("")}
+          </div>
+          <small class="field-hint">${i18n.t("tile.schedule.days.hint")}</small>
+        </div>
+        <label class="field">
+          <span>${i18n.t("tile.schedule.from")}</span>
+          <input type="time" data-key="_schedFrom" value="${String(s._schedFrom || "")}">
+        </label>
+        <label class="field">
+          <span>${i18n.t("tile.schedule.to")}</span>
+          <input type="time" data-key="_schedTo" value="${String(s._schedTo || "")}">
+          <small class="field-hint">${i18n.t("tile.schedule.time.hint")}</small>
+        </label>
       </fieldset>`;
     form.innerHTML = fieldsBySection(fields, s) + universal;
     $("tileSaveConfigMsg").textContent = "";
@@ -1367,20 +1535,29 @@
     applyTileColor(rec);
     applyTextScale(rec);
     scheduleSave();
+
+    // La planification a pu changer : une tuile peut devoir passer en
+    // pause (ou en sortir) immediatement, sans attendre le prochain tick.
+    // Scheduling may have changed: a tile may need to pause (or resume)
+    // immediately, without waiting for the next tick.
+    const shouldPause = !isWithinSchedule(rec.conf.settings, new Date());
+    if (shouldPause !== !!rec.paused) {
+      rec.paused = shouldPause;
+      if (shouldPause) pauseWidget(rec); else startWidget(rec);
+      return; // le widget vient d'etre (re)cree avec les nouveaux reglages / the widget was just (re)created with the new settings
+    }
+    if (shouldPause) {
+      pauseWidget(rec); // rafraichit le resume de la plage affiche / refreshes the displayed window summary
+      return;
+    }
+
     const merged = Object.assign({}, defaultsFor(rec.manifest), rec.conf.settings);
     if (rec.instance && rec.instance.onSettingsChanged) {
       rec.instance.onSettingsChanged(merged);
-    } else if (rec.instance) {
+    } else {
       // Remontage complet / full remount
-      try { rec.instance.destroy && rec.instance.destroy(); } catch (e) { /* noop */ }
-      rec.el.querySelector(".tile-body").innerHTML = "";
-      const Klass = widgetClasses.get(rec.conf.widget);
-      rec.instance = new Klass({
-        el: rec.el.querySelector(".tile-body"),
-        settings: merged, instanceId: rec.conf.id,
-        manifest: rec.manifest, api: widgetApi, i18n
-      });
-      rec.instance.init();
+      destroyInstance(rec);
+      startWidget(rec);
     }
   }
 

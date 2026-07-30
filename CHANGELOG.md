@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.26.0
+
+- **Nouveau : planification par tuile.** Chaque tuile dispose désormais
+  d'une section **Planification** dans ses réglages, permettant de ne
+  l'activer que certains jours et à certaines heures — par exemple le
+  trajet domicile-travail uniquement du lundi au vendredi entre 7 h et
+  9 h, ou la météo du week-end le samedi et le dimanche.
+  - Hors de sa plage, la tuile **garde exactement sa place** dans la
+    grille (aucune autre tuile ne bouge) et affiche « En pause » avec un
+    rappel de sa plage ;
+  - Surtout, son widget est **réellement arrêté** : plus aucune
+    minuterie ni appel réseau. C'est le principal intérêt pour les
+    tuiles soumises à un quota — la tuile Trajet cesse par exemple de
+    consommer le quota TomTom la nuit et le week-end ;
+  - Les réglages d'une tuile en pause **restent accessibles**, pour
+    pouvoir la réactiver ;
+  - **Désactivée par défaut** : les tuiles existantes ne changent pas de
+    comportement ;
+  - Aucun jour coché = tous les jours ; plage horaire facultative ; les
+    plages à cheval sur minuit (ex. 22:00 → 06:00) sont gérées, le jour
+    coché désignant alors celui où la plage démarre.
+
+---
+
+- **New: per-tile scheduling.** Every tile now has a **Scheduling**
+  section in its settings, letting you make it active only on certain
+  days and at certain times — for instance the commute tile only Monday
+  to Friday between 7am and 9am, or the weekend weather on Saturday and
+  Sunday.
+  - Outside its window, the tile **keeps exactly its spot** in the grid
+    (no other tile moves) and shows "Paused" with a reminder of its
+    window;
+  - Above all, its widget is **actually stopped**: no more timers or
+    network calls. That's the main benefit for tiles subject to a quota
+    — the Commute tile, for example, stops eating the TomTom quota at
+    night and on weekends;
+  - A paused tile's settings **stay accessible**, so it can be
+    re-enabled;
+  - **Off by default**: existing tiles don't change behavior;
+  - No day ticked = every day; the time window is optional; windows
+    crossing midnight (e.g. 22:00 → 06:00) are handled, the ticked day
+    then being the one the window starts on.
+
 ## 1.25.0
 
 - **Agenda : renforcement défensif du parseur ICS.** Suite à un
