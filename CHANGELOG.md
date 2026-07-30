@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.25.0
+
+- **Agenda : renforcement défensif du parseur ICS.** Suite à un
+  signalement (finalement dû à un réglage côté utilisateur, pas au
+  widget), quelques lacunes réelles ont été corrigées au passage :
+  - Support de la propriété **`DURATION`** comme alternative à
+    `DTEND` (RFC5545 autorise les deux) ;
+  - Retrait automatique d'un éventuel **BOM UTF-8** en tête de fichier
+    (laissé par certains exports, dont des flux publiés par iCloud),
+    qui pouvait perturber la lecture de la toute première propriété ;
+  - **Diagnostic plus détaillé** dans la console quand un calendrier
+    répond correctement mais qu'aucun événement n'en ressort — distingue
+    désormais un flux réellement vide d'une réponse qui n'est pas de
+    l'ICS du tout (utile pour un futur signalement).
+
+---
+
+- **Calendar: defensive hardening of the ICS parser.** Following a
+  report (which turned out to be a user-side setting, not the widget),
+  a few real gaps were fixed along the way:
+  - Support for the **`DURATION`** property as an alternative to
+    `DTEND` (RFC5545 allows either);
+  - Automatic stripping of a possible **UTF-8 BOM** at the start of the
+    file (left by some exports, including feeds published by iCloud),
+    which could disrupt reading the very first property;
+  - **More detailed diagnostics** in the console when a calendar
+    responds correctly but no event comes out of it — now tells a
+    genuinely empty feed apart from a response that isn't ICS at all
+    (useful for a future report).
+
 ## 1.24.2
 
 - **Correctif *Horloge*** : en mode analogique avec texte affiché, la

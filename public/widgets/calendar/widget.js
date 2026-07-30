@@ -22,7 +22,14 @@
   // Unfolds lines per RFC5545: a continuation line starts with a space
   // or tab and must be joined back onto the previous one.
   function unfoldLines(text) {
-    const raw = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+    // Certains exports (dont des flux publies par iCloud) laissent un BOM
+    // UTF-8 en tete de fichier -- invisible a l'oeil, mais qui s'accroche
+    // au tout premier nom de propriete et peut le faire echouer.
+    // Some exports (including feeds published by iCloud) leave a UTF-8
+    // BOM at the start of the file -- invisible to the eye, but it
+    // sticks to the very first property name and can make it fail.
+    const clean = text.charCodeAt(0) === 0xFEFF ? text.slice(1) : text;
+    const raw = clean.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
     const lines = [];
     for (const line of raw) {
       if ((line.startsWith(" ") || line.startsWith("\t")) && lines.length) {
@@ -78,6 +85,19 @@
     return { date, allDay: false };
   }
 
+  // Duree au format ISO8601 utilise par RFC5545 (ex. "PT1H30M", "P1D") :
+  // alternative a DTEND, parfois utilisee a la place. Duration in the
+  // ISO8601 format used by RFC5545 (e.g. "PT1H30M", "P1D"): an
+  // alternative to DTEND, sometimes used instead.
+  function parseIcsDuration(value) {
+    const m = String(value || "").match(/^([+-])?P(?:(\d+)W)?(?:(\d+)D)?(?:T(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?)?$/);
+    if (!m) return null;
+    const sign = m[1] === "-" ? -1 : 1;
+    const [, , w, d, h, mi, se] = m;
+    const ms = ((+w || 0) * 7 * 86400 + (+d || 0) * 86400 + (+h || 0) * 3600 + (+mi || 0) * 60 + (+se || 0)) * 1000;
+    return sign * ms;
+  }
+
   function parseRRule(value) {
     const rule = {};
     for (const p of value.split(";")) {
@@ -112,6 +132,7 @@
         case "STATUS": cur.status = line.value.toUpperCase(); break;
         case "DTSTART": cur.dtstart = parseIcsDate(line.value, line.params); break;
         case "DTEND": cur.dtend = parseIcsDate(line.value, line.params); break;
+        case "DURATION": cur.duration = parseIcsDuration(line.value); break;
         case "RRULE": cur.rrule = parseRRule(line.value); break;
         case "RECURRENCE-ID": cur.recurrenceId = parseIcsDate(line.value, line.params); break;
         case "EXDATE": {
@@ -227,16 +248,30 @@
   // Expands an event (recurring or not) into concrete occurrences within
   // the [rangeStart, rangeEnd) window. 3000-iteration safety cap so a
   // malformed rule can never hang the widget.
+  // Duree d'un evenement (ou d'un override) : DTEND si present, sinon
+  // DURATION (RFC5545 autorise l'un ou l'autre, jamais les deux a la
+  // fois), sinon le defaut standard selon qu'il s'agit d'un evenement
+  // "toute la journee" ou non. Centralise les 3 endroits qui en avaient
+  // besoin pour eviter toute divergence entre eux.
+  // An event's (or an override's) duration: DTEND if present, otherwise
+  // DURATION (RFC5545 allows either, never both at once), otherwise the
+  // standard default depending on whether it's an "all-day" event or
+  // not. Centralizes the 3 spots that needed this to avoid any drift
+  // between them.
+  function durationOf(ev) {
+    if (ev.dtend) return ev.dtend.date.getTime() - ev.dtstart.date.getTime();
+    if (ev.duration != null) return ev.duration;
+    return ev.dtstart.allDay ? 86400000 : 0;
+  }
+
   function expandOccurrences(ev, rangeStart, rangeEnd) {
-    // Sans DTEND, un evenement "toute la journee" dure par defaut 1 jour
-    // (comportement standard RFC5545) ; un evenement normal dure 0
-    // (instantane, cas rare mais valide).
-    // Without DTEND, an "all-day" event defaults to a 1-day duration
-    // (standard RFC5545 behavior); a timed event defaults to 0 (instant,
-    // a rare but valid case).
-    const duration = ev.dtend
-      ? (ev.dtend.date.getTime() - ev.dtstart.date.getTime())
-      : (ev.dtstart.allDay ? 86400000 : 0);
+    // Sans DTEND ni DURATION, un evenement "toute la journee" dure par
+    // defaut 1 jour (comportement standard RFC5545) ; un evenement
+    // normal dure 0 (instantane, cas rare mais valide).
+    // Without DTEND or DURATION, an "all-day" event defaults to a 1-day
+    // duration (standard RFC5545 behavior); a timed event defaults to 0
+    // (instant, a rare but valid case).
+    const duration = durationOf(ev);
     const out = [];
     if (!ev.rrule) {
       const start = ev.dtstart.date;
@@ -283,9 +318,7 @@
         const ov = overrides.find((o) => o.recurrenceId && o.recurrenceId.date.getTime() === occ.start.getTime());
         if (ov) {
           if (ov.status === "CANCELLED") continue;
-          const ovDuration = ov.dtend
-            ? (ov.dtend.date.getTime() - ov.dtstart.date.getTime())
-            : (ov.dtstart.allDay ? 86400000 : 0);
+          const ovDuration = durationOf(ov);
           out.push({
             start: ov.dtstart.date, end: new Date(ov.dtstart.date.getTime() + ovDuration),
             allDay: ov.dtstart.allDay, summary: ov.summary || occ.summary, location: ov.location,
@@ -307,9 +340,7 @@
         const alreadyIncluded = out.some((o) => o.uid === ov.uid && o.start.getTime() === ov.dtstart.date.getTime());
         if (alreadyIncluded) continue;
         const start = ov.dtstart.date;
-        const ovDuration = ov.dtend
-          ? (ov.dtend.date.getTime() - ov.dtstart.date.getTime())
-          : (ov.dtstart.allDay ? 86400000 : 0);
+        const ovDuration = durationOf(ov);
         const end = new Date(start.getTime() + ovDuration);
         if (start < rangeEnd && end >= rangeStart) {
           out.push({ start, end, allDay: ov.dtstart.allDay, summary: ov.summary, location: ov.location, uid: ov.uid, source: ov.source });
@@ -407,7 +438,27 @@
           if (!r.ok) throw new Error("proxy " + r.status);
           return r.text();
         });
-        return parseIcs(text, cal);
+        const events = parseIcs(text, cal);
+        // Diagnostic si la requete reussit mais qu'aucun evenement n'en
+        // ressort : distingue un flux reellement vide d'une reponse qui
+        // n'est pas de l'ICS du tout (page de connexion, erreur HTML...),
+        // ce que le simple succes de la requete ne permet pas de voir.
+        // Diagnostics if the request succeeds but no event comes out of
+        // it: tells a genuinely empty feed apart from a response that
+        // isn't ICS at all (login page, HTML error...), which the mere
+        // success of the request doesn't reveal.
+        if (!events.length) {
+          const looksLikeIcs = /BEGIN:VCALENDAR/i.test(text);
+          const veventCount = (text.match(/BEGIN:VEVENT/gi) || []).length;
+          console.warn(
+            "[piboard/calendar] 0 evenement retenu pour", cal.url,
+            "| reponse recue :", text.length, "caracteres",
+            "| ressemble a de l'ICS (BEGIN:VCALENDAR present) :", looksLikeIcs,
+            "| blocs BEGIN:VEVENT trouves :", veventCount,
+            veventCount > 0 ? "(donc des evenements existent mais ont ete ecartes -- DTSTART manquant/illisible pour chacun ?)" : "(aucun evenement dans le flux lui-meme, ou reponse non-ICS)"
+          );
+        }
+        return events;
       } catch (e) {
         console.warn("[piboard/calendar]", cal.url, e);
         this.errors.push(cal);
