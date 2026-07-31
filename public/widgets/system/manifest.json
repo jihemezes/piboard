@@ -10,6 +10,10 @@
     "en": "CPU, RAM, disk usage, temperature and uptime of the machine hosting PiBoard.",
     "fr": "CPU, RAM, espace disque, température et disponibilité de la machine qui héberge PiBoard."
   },
+  "tagline": {
+    "en": "Health status of the machine hosting PiBoard.",
+    "fr": "État de santé de la machine qui héberge PiBoard."
+  },
   "size": {
     "w": 3,
     "h": 3,

@@ -124,3 +124,4 @@
 .pwp-popup-route { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pwp-popup-arrow { color: var(--accent); font-weight: 700; }
 .pwp-popup-muted { color: #9aa1ab; font-style: italic; font-size: 11.5px; }
+.pwp-popup-heading { color: #9aa1ab; font-size: 10.5px; margin-top: 6px; font-family: var(--mono); }

@@ -9,6 +9,10 @@
     "en": "Latest headlines from an RSS or Atom feed, with automatic rotation. Articles with a link open in a popup showing the full article text extracted from the linked page (reader mode, like a browser's — no ads or navigation clutter), the feed's own illustration when provided, falling back to the feed's own summary if extraction fails.",
     "fr": "Derniers titres d'un flux RSS ou Atom, avec rotation automatique. Les articles pourvus d'un lien s'ouvrent dans une popup affichant le texte complet de l'article extrait de la page liée (mode lecture, comme celui d'un navigateur — sans publicités ni menus), l'illustration fournie par le flux quand elle existe, avec repli sur le résumé du flux si l'extraction échoue."
   },
+  "tagline": {
+    "en": "Latest headlines from an RSS or Atom feed.",
+    "fr": "Derniers titres d'un flux RSS ou Atom."
+  },
   "size": {
     "w": 4,
     "h": 3,

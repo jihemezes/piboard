@@ -9,6 +9,10 @@
     "en": "Animated precipitation radar loop (last 2 hours) over a real map, powered by RainViewer's free, keyless Weather Maps API. An optional wind layer overlays a grid of arrows showing the current wind — direction and strength — that follows the displayed area as you zoom. Independent city, zoom and base map from the Weather tile. Play/pause and step controls, like the official RainViewer app.",
     "fr": "Boucle radar de précipitations animée (2 dernières heures) sur une vraie carte, via l'API gratuite et sans clé Weather Maps de RainViewer. Une couche vent optionnelle superpose une grille de flèches montrant le vent actuel — direction et force — qui suit la zone affichée quand on zoome. Ville, zoom et fond de carte indépendants de la tuile Météo. Contrôles lecture/pause et image par image, comme l'application officielle RainViewer."
   },
+  "tagline": {
+    "en": "Animated precipitation radar, with optional wind.",
+    "fr": "Radar de précipitations animé, avec vent en option."
+  },
   "size": {
     "w": 6,
     "h": 6,

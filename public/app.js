@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.26.0
+   Version 1.27.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1611,22 +1611,93 @@
     const list = $("catalogList");
     list.innerHTML = "";
     for (const m of catalog) {
+      const wrap = document.createElement("div");
+      wrap.className = "catalog-item-wrap";
       const btn = document.createElement("button");
       btn.className = "catalog-item";
+      // Intitule court, focalise sur la fonction premiere de la tuile
+      // (voir "tagline" dans chaque manifeste) -- la description
+      // complete, plus longue, reste accessible via l'icone info au
+      // survol/tap plutot que d'etre affichee en permanence dans la
+      // liste, ce qui produisait des paves de texte demesures.
+      // Short blurb, focused on the tile's primary function (see
+      // "tagline" in each manifest) -- the full, longer description
+      // stays available via the info icon on hover/tap rather than
+      // being permanently shown in the list, which produced oversized
+      // text blocks.
+      const tagline = m.tagline ? i18n.fromManifest(m.tagline) : i18n.fromManifest(m.description);
       btn.innerHTML = `
         <img src="widgets/${m.dir}/icon.svg" alt="">
         <span>
           <span class="ci-name">${i18n.fromManifest(m.name)}</span><br>
-          <span class="ci-desc">${i18n.fromManifest(m.description)}</span>
+          <span class="ci-desc">${tagline}</span>
         </span>`;
       btn.addEventListener("click", () => {
         $("catalogModal").hidden = true;
         if (!editing) toggleEdit(true);
         addTile(m.id);
       });
-      list.appendChild(btn);
+      wrap.appendChild(btn);
+
+      if (m.tagline) {
+        // Bouton separe (pas imbrique dans btn, un <button> ne peut pas
+        // en contenir un autre) positionne par-dessus, dans le coin.
+        // Separate button (not nested inside btn, a <button> can't
+        // contain another one) positioned on top, in the corner.
+        const info = document.createElement("button");
+        info.type = "button";
+        info.className = "ci-info";
+        info.setAttribute("aria-label", i18n.t("catalog.moreInfo"));
+        info.textContent = "ⓘ";
+        info.addEventListener("mouseenter", () => showCatalogTooltip(info, i18n.fromManifest(m.description)));
+        info.addEventListener("mouseleave", hideCatalogTooltip);
+        info.addEventListener("click", (e) => {
+          e.stopPropagation();
+          catalogTooltipEl && !catalogTooltipEl.hidden
+            ? hideCatalogTooltip()
+            : showCatalogTooltip(info, i18n.fromManifest(m.description));
+        });
+        wrap.appendChild(info);
+      }
+
+      list.appendChild(wrap);
     }
     $("catalogModal").hidden = false;
+  }
+
+  /* Info-bulle partagee (une seule instance reutilisee, plutot qu'une par
+     tuile) pour la description complete d'un widget -- positionnee en
+     "fixed" a partir des coordonnees reelles du bouton info, pour ne
+     jamais se faire rogner par le defilement du catalogue.
+     Shared tooltip (a single reused instance, rather than one per tile)
+     for a widget's full description -- "fixed" positioned from the info
+     button's real coordinates, so it never gets clipped by the
+     catalog's scrolling. */
+  let catalogTooltipEl = null;
+  function showCatalogTooltip(triggerEl, text) {
+    if (!catalogTooltipEl) {
+      catalogTooltipEl = document.createElement("div");
+      catalogTooltipEl.className = "ci-tooltip";
+      catalogTooltipEl.hidden = true;
+      document.body.appendChild(catalogTooltipEl);
+    }
+    catalogTooltipEl.textContent = text;
+    catalogTooltipEl.hidden = false;
+    const r = triggerEl.getBoundingClientRect();
+    // Mesure une fois affichee (dimensions encore inconnues avant) pour
+    // la garder dans l'ecran, en la faisant plutot passer au-dessus si
+    // elle deborderait en bas. Measured once shown (dimensions unknown
+    // before that) to keep it on screen, flipping it above instead if it
+    // would overflow at the bottom.
+    const tw = catalogTooltipEl.offsetWidth, th = catalogTooltipEl.offsetHeight;
+    let left = Math.min(Math.max(8, r.left), window.innerWidth - tw - 8);
+    let top = r.bottom + 6;
+    if (top + th > window.innerHeight - 8) top = r.top - th - 6;
+    catalogTooltipEl.style.left = left + "px";
+    catalogTooltipEl.style.top = top + "px";
+  }
+  function hideCatalogTooltip() {
+    if (catalogTooltipEl) catalogTooltipEl.hidden = true;
   }
 
   /* ---------- Selecteur de configuration enregistree / saved config picker ----------
@@ -2988,9 +3059,15 @@
         if (e.target === modal || e.target.hasAttribute("data-close")) {
           modal.hidden = true;
           vkb.hide();
+          hideCatalogTooltip(); // vit hors de la modale (position fixed) : ne se referme pas toute seule / lives outside the modal (fixed position): doesn't close on its own
         }
       });
     });
+    // Le defilement de la liste rend la position "fixed" de l'info-bulle
+    // perimee : on la referme plutot que de la laisser flotter au mauvais
+    // endroit. Scrolling the list makes the tooltip's "fixed" position
+    // stale: closing it rather than letting it float in the wrong place.
+    $("catalogList").addEventListener("scroll", hideCatalogTooltip, { passive: true });
 
     /* Curseur / cursor */
     ["mousemove", "mousedown", "keydown", "touchstart"].forEach((evt) =>

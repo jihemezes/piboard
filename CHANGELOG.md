@@ -1,5 +1,66 @@
 # Changelog
 
+## 1.27.0
+
+- **Correctif : catalogue de widgets trop dense.** Les descriptions
+  affichées dans la liste d'ajout de tuile étaient parfois très longues
+  (jusqu'à 770 caractères pour la tuile Météo), produisant des pavés de
+  texte démesurés. Chaque widget affiche désormais un **intitulé court**,
+  focalisé sur sa fonction première. La description complète reste
+  accessible via une petite icône **ⓘ** dans le coin de chaque tuile du
+  catalogue, au survol (souris) comme au tap (tactile).
+
+---
+
+- **Fix: widget catalog too dense.** Descriptions shown in the
+  add-a-tile list were sometimes very long (up to 770 characters for the
+  Weather tile), producing oversized text blocks. Every widget now shows
+  a **short blurb**, focused on its primary function. The full
+  description stays available via a small **ⓘ** icon in the corner of
+  each catalog tile, on hover (mouse) as well as tap (touch).
+
+## 1.26.1
+
+- **Correctif *Avions en vue* : « recherche de trajet indisponible »
+  affiché à tort pour la plupart des avions.** adsbdb.com répond par un
+  404 — documenté comme volontaire — pour un indicatif qu'elle ne
+  connaît simplement pas (vol privé, aviation générale, ou absent de sa
+  base), ce qui concerne une bonne partie des avions. Ce 404 était
+  jusqu'ici traité comme une vraie erreur ; il affiche désormais
+  clairement « trajet inconnu », réservant le message d'indisponibilité
+  aux échecs réels (réseau, serveur).
+- **Sur l'orientation des avions** : vérification faite, le calcul de
+  rotation est mathématiquement correct (icône dessinée nez en haut +
+  rotation CSS horaire = convention de cap boussole standard), et
+  `track` est bien le champ ADS-B approprié. La flèche pointe vers le
+  **cap réel actuel** de l'avion, pas vers sa destination finale — ces
+  deux caps peuvent différer nettement juste après un décollage ou
+  pendant un guidage du contrôle aérien. Deux améliorations tout de
+  même : un avion sans cap transmis à l'instant de la requête affiche
+  désormais une icône neutre (un rond) plutôt que de pointer par défaut
+  vers le nord ; le cap brut est rappelé dans la popup de trajet, pour
+  vérification indépendante de l'icône.
+
+---
+
+- **Fix for *Planes Overhead*: "route lookup unavailable" wrongly shown
+  for most aircraft.** adsbdb.com responds with a 404 — documented as
+  intentional — for a callsign it simply doesn't know (private flight,
+  general aviation, or missing from its database), which covers a good
+  share of aircraft. This 404 used to be treated as a genuine error; it
+  now clearly shows "route unknown", reserving the unavailable message
+  for actual failures (network, server).
+- **On aircraft orientation**: checked and confirmed, the rotation math
+  is correct (icon drawn nose-up + clockwise CSS rotation = standard
+  compass bearing convention), and `track` is the right ADS-B field.
+  The arrow points to the aircraft's **current actual heading**, not its
+  final destination — the two can differ noticeably just after takeoff
+  or while being vectored by air traffic control. Two improvements
+  regardless: an aircraft with no heading transmitted at request time
+  now shows a neutral icon (a plain circle) rather than defaulting to
+  north; the raw heading is recalled in the route popup, for
+  verification independent from the icon.
+
 ## 1.26.0
 
 - **Nouveau : planification par tuile.** Chaque tuile dispose désormais

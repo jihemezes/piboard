@@ -943,6 +943,39 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("catalogue ouvert avec " + catalog.length + " widgets",
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
+
+  {
+    const weatherIdx = catalog.findIndex((m) => m.id === "weather");
+    const weatherItem = document.querySelectorAll("#catalogList .catalog-item-wrap")[weatherIdx];
+    const desc = weatherItem.querySelector(".ci-desc").textContent;
+    assert("description affichee dans la liste : courte (intitule, pas le texte complet)", desc.length < 100);
+    assert("l'intitule court evoque bien la fonction premiere (meteo)", /météo|weather/i.test(desc));
+
+    const infoBtn = weatherItem.querySelector(".ci-info");
+    assert("icone info presente pour un widget avec intitule", !!infoBtn);
+    assert("aucune info-bulle affichee avant survol", !document.querySelector(".ci-tooltip:not([hidden])"));
+
+    infoBtn.dispatchEvent(new window.MouseEvent("mouseenter", { bubbles: true }));
+    const tooltip = document.querySelector(".ci-tooltip");
+    assert("info-bulle affichee au survol", !!tooltip && tooltip.hidden === false);
+    assert("info-bulle : texte nettement plus long que l'intitule (vraie description complete)",
+      tooltip.textContent.length > desc.length * 2);
+    assert("info-bulle positionnee (coordonnees calculees)", tooltip.style.left !== "" && tooltip.style.top !== "");
+
+    infoBtn.dispatchEvent(new window.MouseEvent("mouseleave", { bubbles: true }));
+    assert("info-bulle refermee en quittant le survol", tooltip.hidden === true);
+
+    // Le clic sur l'icone info ne doit pas ajouter la tuile (bouton
+    // separe, hors du bouton principal). Clicking the info icon must not
+    // add the tile (separate button, outside the main one).
+    const tilesBefore = document.querySelectorAll(".grid-stack-item").length;
+    infoBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("info-bulle affichee au clic/tap egalement (pas seulement au survol, pour le tactile)", tooltip.hidden === false);
+    assert("clic sur l'icone info : la tuile n'est PAS ajoutee", document.querySelectorAll(".grid-stack-item").length === tilesBefore);
+    infoBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true })); // referme (bascule) / closes (toggles)
+    assert("second clic sur l'icone info : l'info-bulle se referme (bascule)", tooltip.hidden === true);
+  }
+
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
   assert("tuile ajoutee (14 au total)", document.querySelectorAll(".grid-stack-item").length === 14);

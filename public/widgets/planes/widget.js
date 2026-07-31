@@ -85,6 +85,15 @@
       flight: ac.flight ? ac.flight.trim() : null,
       lat, lon,
       alt, onGround,
+      // hasHeading distingue "cap reellement nul (plein nord)" d'un cap
+      // absent de la donnee source -- l'ancien code retombait sur 0 dans
+      // les deux cas, ce qui affichait a tort un avion "plein nord" alors
+      // que sa direction etait en realite inconnue.
+      // hasHeading tells "genuinely zero heading (due north)" apart from
+      // a heading missing from the source data -- the old code fell back
+      // to 0 in both cases, which wrongly showed an aircraft as "due
+      // north" when its direction was actually unknown.
+      hasHeading: Number.isFinite(Number(ac.track)),
       track: Number.isFinite(Number(ac.track)) ? Number(ac.track) : 0,
       gs: Number.isFinite(Number(ac.gs)) ? Math.round(Number(ac.gs)) : null,
       dst: Number.isFinite(Number(ac.dst)) ? Number(ac.dst) : null,
@@ -294,12 +303,22 @@
       const label = this.ctx.settings.showLabels !== false
         ? `<div class="pwp-label">${plane.callsign}<br>${formatAlt(plane, this.ctx.i18n)}</div>`
         : "";
+      // Cap inconnu : icone non orientee (ronde) plutot que la silhouette
+      // tournee, qui laissait croire a tort a un cap plein nord par
+      // defaut. Unknown heading: a non-directional (round) icon rather
+      // than the rotated silhouette, which wrongly implied a due-north
+      // heading by default.
+      const glyph = plane.hasHeading
+        ? `<svg viewBox="0 0 24 24" fill="${color}">
+             <path d="M12 2 L14 9 L22 13 L14 14.5 L14 19 L17.5 21 L17.5 22.5 L12 21 L6.5 22.5 L6.5 21 L10 19 L10 14.5 L2 13 L10 9 Z"/>
+           </svg>`
+        : `<svg viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="2">
+             <circle cx="12" cy="12" r="6"/>
+           </svg>`;
       const html = `
         <div class="pwp-marker">
-          <div class="pwp-glyph" style="transform:rotate(${plane.track}deg)">
-            <svg viewBox="0 0 24 24" fill="${color}">
-              <path d="M12 2 L14 9 L22 13 L14 14.5 L14 19 L17.5 21 L17.5 22.5 L12 21 L6.5 22.5 L6.5 21 L10 19 L10 14.5 L2 13 L10 9 Z"/>
-            </svg>
+          <div class="pwp-glyph" style="transform:rotate(${plane.hasHeading ? plane.track : 0}deg)">
+            ${glyph}
           </div>
           ${label}
         </div>`;
@@ -367,10 +386,26 @@
 
       try {
         const url = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(plane.flight)}`;
-        const data = await fetch(this.ctx.api.proxyUrl(url)).then((r) => {
-          if (!r.ok) throw new Error("adsbdb " + r.status);
-          return r.json();
-        });
+        const res = await fetch(this.ctx.api.proxyUrl(url));
+        // adsbdb repond par un 404 -- documente comme volontaire -- pour
+        // un indicatif qu'elle ne connait pas simplement (voir son
+        // README) : un vol prive, general, ou tout simplement absent de
+        // sa base. Ce n'est PAS une panne, juste une absence de donnee ;
+        // le confondre avec une vraie erreur reseau/serveur affichait a
+        // tort "recherche indisponible" pour la tres grande majorite des
+        // avions qui n'ont simplement pas de trajet connu.
+        // adsbdb responds with a 404 -- documented as intentional -- for
+        // a callsign it simply doesn't know (see its README): a private,
+        // general aviation, or simply undocumented flight. This is NOT a
+        // failure, just missing data; conflating it with a genuine
+        // network/server error wrongly showed "lookup unavailable" for
+        // the vast majority of aircraft that simply have no known route.
+        if (res.status === 404) {
+          popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.noRoute")}</span>`));
+          return;
+        }
+        if (!res.ok) throw new Error("adsbdb " + res.status);
+        const data = await res.json();
         const route = data && data.response && data.response.flightroute;
         if (!route || !route.origin || !route.destination) {
           popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.noRoute")}</span>`));
@@ -385,11 +420,25 @@
             <span>${originName}</span>
             <span class="pwp-popup-arrow">→</span>
             <span>${destName}</span>
-          </div>`));
+          </div>
+          ${this.headingLine(plane)}`));
       } catch (e) {
         console.warn("[piboard/planes] route", e);
-        popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.routeError")}</span>`));
+        popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.routeError")}</span>${this.headingLine(plane)}`));
       }
+    }
+
+    /* Rappelle le cap brut renvoye par la source ADS-B, en petit sous le
+       trajet -- verification directe et independante de l'icone tournee
+       sur la carte, plutot que d'avoir a se fier uniquement au rendu
+       visuel pour juger si une orientation semble correcte.
+       Recalls the raw heading reported by the ADS-B source, small below
+       the route -- a direct, independent check against the rotated map
+       icon, rather than having to rely solely on the visual render to
+       judge whether an orientation looks right. */
+    headingLine(plane) {
+      if (!plane.hasHeading) return "";
+      return `<div class="pwp-popup-heading">${this.ctx.i18n.t("planes.heading")} ${Math.round(plane.track)}°</div>`;
     }
 
     routePopupHtml(plane, bodyHtml) {

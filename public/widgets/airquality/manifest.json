@@ -9,6 +9,10 @@
     "en": "European Air Quality Index and pollen levels (birch, grass, ragweed, alder, mugwort, olive) from Open-Meteo's free, keyless Air Quality API — based on the CAMS European air quality forecast. Compact (index + dominant pollutant/pollen) or detailed (full pollutant and pollen breakdown) display, your choice — pollen visibility is set independently for each.",
     "fr": "Indice de qualité de l'air européen et niveaux de pollens (bouleau, graminées, ambroisie, aulne, armoise, olivier) via l'API gratuite et sans clé Air Quality d'Open-Meteo — basée sur les prévisions CAMS pour l'Europe. Affichage compact (indice + polluant/pollen dominant) ou détaillé (détail complet des polluants et pollens), au choix — la visibilité des pollens se règle indépendamment pour chacun."
   },
+  "tagline": {
+    "en": "Real-time air quality index and pollen levels.",
+    "fr": "Indice de qualité de l'air et pollens en temps réel."
+  },
   "size": {
     "w": 3,
     "h": 2,
@@ -74,8 +78,8 @@
         "fr": "Afficher le détail des pollens (affichage détaillé)"
       },
       "hint": {
-        "en": "Applies only to the detailed display, independently from the compact display's setting above. Pollen forecasts are only available for Europe, and only for the plant types currently in season (others are simply omitted). Levels shown here are an approximate, simplified scale for a quick glance \u2014 not a medical reference.",
-        "fr": "S'applique uniquement à l'affichage détaillé, indépendamment du réglage de l'affichage compact ci-dessus. Les prévisions de pollens ne sont disponibles que pour l'Europe, et seulement pour les espèces actuellement en saison (les autres sont simplement omises). Les niveaux affichés ici sont une échelle simplifiée et approximative pour un coup d'œil rapide \u2014 pas une référence médicale."
+        "en": "Applies only to the detailed display, independently from the compact display's setting above. Pollen forecasts are only available for Europe, and only for the plant types currently in season (others are simply omitted). Levels shown here are an approximate, simplified scale for a quick glance — not a medical reference.",
+        "fr": "S'applique uniquement à l'affichage détaillé, indépendamment du réglage de l'affichage compact ci-dessus. Les prévisions de pollens ne sont disponibles que pour l'Europe, et seulement pour les espèces actuellement en saison (les autres sont simplement omises). Les niveaux affichés ici sont une échelle simplifiée et approximative pour un coup d'œil rapide — pas une référence médicale."
       }
     },
     {

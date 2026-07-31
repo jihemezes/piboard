@@ -10,6 +10,10 @@
     "en": "Live driving times between two addresses via TomTom's Routing API (same key as the Traffic tile), with real traffic conditions, a comparison against the usual time for that day and hour, a colored alert for heavy delays, and a suggested departure time when a desired arrival time is set. Plus up to 5 extra trips to named destinations, each with the same treatment. Address fields offer clickable suggestions as you type, so you can confirm the right address was understood before saving.",
     "fr": "Temps de trajet en voiture en direct entre deux adresses via l'API Routing de TomTom (même clé que la tuile Trafic), avec trafic réel, comparaison au temps habituel pour ce jour et cette heure, alerte colorée en cas de fort retard, et heure de départ conseillée quand une heure d'arrivée souhaitée est renseignée. Plus jusqu'à 5 trajets supplémentaires vers des destinations nommées, avec le même traitement. Les champs d'adresse proposent des suggestions cliquables pendant la saisie, pour confirmer que la bonne adresse a été comprise avant d'enregistrer."
   },
+  "tagline": {
+    "en": "Live travel time between two addresses, with real traffic.",
+    "fr": "Temps de trajet en direct entre deux adresses, avec trafic réel."
+  },
   "size": {
     "w": 3,
     "h": 2,

@@ -31,6 +31,7 @@
       "exit.desktop.desc": "Closes PiBoard and shows the Raspberry Pi OS desktop underneath, without relaunching the dashboard. To bring it back: reopen Chromium on the dashboard's address yourself, or restart the Pi.",
       "exit.desktop.fallback": "The Raspberry Pi OS desktop is now showing on the Pi. From a remote browser, the tab can't be closed automatically (a universal security rule) — you can close it yourself now.",
       "catalog.title": "Add a tile",
+      "catalog.moreInfo": "More information",
 
       "configPicker.title": "Configuration for",
       "configPicker.blank": "New (blank) configuration",
@@ -189,6 +190,7 @@
       "motorsport.allDone": "This round is over",
       "planes.noCallsign": "No flight callsign available for this aircraft.",
       "planes.noRoute": "Route unknown (not in the community database).",
+      "planes.heading": "Live heading (ground track):",
       "planes.routeError": "Route lookup unavailable.",
       "rss.error": "Feed unavailable",
       "rss.empty": "No item in this feed.",
@@ -329,6 +331,7 @@
       "exit.desktop.desc": "Ferme PiBoard et affiche le bureau de Raspberry Pi OS en dessous, sans relancer le tableau de bord. Pour le retrouver : rouvrez vous-même Chromium sur l'adresse du tableau de bord, ou redémarrez le Pi.",
       "exit.desktop.fallback": "Le bureau de Raspberry Pi OS s'affiche maintenant sur le Pi. Depuis un navigateur distant, l'onglet ne peut pas être fermé automatiquement (règle de sécurité universelle) — vous pouvez le fermer vous-même maintenant.",
       "catalog.title": "Ajouter une tuile",
+      "catalog.moreInfo": "Plus d'informations",
 
       "configPicker.title": "Configuration pour",
       "configPicker.blank": "Nouvelle configuration (vierge)",
@@ -487,6 +490,7 @@
       "motorsport.allDone": "Cette manche est terminée",
       "planes.noCallsign": "Aucun indicatif de vol disponible pour cet avion.",
       "planes.noRoute": "Trajet inconnu (absent de la base communautaire).",
+      "planes.heading": "Cap réel (route sol) :",
       "planes.routeError": "Recherche du trajet indisponible.",
       "rss.error": "Flux indisponible",
       "rss.empty": "Aucun élément dans ce flux.",

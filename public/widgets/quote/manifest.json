@@ -10,6 +10,10 @@
     "en": "A rotating quote from a bundled offline collection — no internet required.",
     "fr": "Une citation issue d'une collection embarquée hors-ligne — aucune connexion requise."
   },
+  "tagline": {
+    "en": "An inspiring quote, refreshed regularly.",
+    "fr": "Une citation inspirante, renouvelée régulièrement."
+  },
   "size": {
     "w": 3,
     "h": 1,

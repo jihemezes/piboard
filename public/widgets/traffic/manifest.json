@@ -10,6 +10,10 @@
     "en": "Live road traffic map (flow + incidents) via TomTom, with a smart refresh schedule to stay within the free API quota: fast during your commute windows, slower otherwise, and paused overnight.",
     "fr": "Carte de trafic routier en direct (flux + incidents) via TomTom, avec un calendrier de rafraîchissement intelligent pour rester dans le quota gratuit de l'API : rapide pendant vos plages de trajet, plus lent le reste du temps, et en pause la nuit."
   },
+  "tagline": {
+    "en": "Live road traffic map.",
+    "fr": "Carte de trafic routier en direct."
+  },
   "size": {
     "w": 6,
     "h": 8,

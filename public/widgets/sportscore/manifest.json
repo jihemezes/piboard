@@ -10,6 +10,10 @@
     "en": "Live and upcoming scores for football, rugby (Top 14), or any other ESPN-covered competition via its code. For an upcoming match that isn't today, the time and date (DD/MM) alternate automatically.",
     "fr": "Scores en direct et à venir de football, de rugby (Top 14), ou de toute autre compétition couverte par ESPN via son code. Pour un match à venir qui n'est pas aujourd'hui, l'heure et la date (jj/mm) alternent automatiquement."
   },
+  "tagline": {
+    "en": "Live and upcoming scores for your teams.",
+    "fr": "Scores en direct et à venir de vos équipes."
+  },
   "size": {
     "w": 4,
     "h": 3,

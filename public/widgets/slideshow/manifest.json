@@ -10,6 +10,10 @@
     "en": "Rotates through photos from an uploaded collection, a local/NAS folder, a WebDAV share, or a list of image URLs.",
     "fr": "Fait défiler des photos issues d'une collection téléversée, d'un dossier local/NAS, d'un partage WebDAV, ou d'une liste d'URLs d'images."
   },
+  "tagline": {
+    "en": "Slideshow of your favorite photos.",
+    "fr": "Diaporama de vos photos favorites."
+  },
   "size": {
     "w": 4,
     "h": 3,

@@ -10,6 +10,10 @@
     "en": "Live prices and 24h change for a few coins, powered by CoinGecko (no API key). Tap a coin to see its price chart (24h / 7d / 30d / 1y).",
     "fr": "Cours en direct et variation 24h de quelques cryptomonnaies, via CoinGecko (sans clé API). Touchez une crypto pour voir sa courbe (24h / 7j / 30j / 1an)."
   },
+  "tagline": {
+    "en": "Live prices of your favorite cryptocurrencies.",
+    "fr": "Cours en direct de vos cryptomonnaies favorites."
+  },
   "size": {
     "w": 3,
     "h": 2,

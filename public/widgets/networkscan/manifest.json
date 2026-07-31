@@ -10,6 +10,10 @@
     "en": "Scans the local network and lists active hosts (hostname — IP address).",
     "fr": "Analyse le réseau local et liste les hôtes actifs (nom d'hôte — adresse IP)."
   },
+  "tagline": {
+    "en": "List of active devices on the local network.",
+    "fr": "Liste des appareils actifs sur le réseau local."
+  },
   "size": {
     "w": 4,
     "h": 4,

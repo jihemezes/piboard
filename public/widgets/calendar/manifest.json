@@ -6,8 +6,12 @@
     "fr": "Agenda"
   },
   "description": {
-    "en": "One or several iCal (.ics) calendars merged into a single tile, each shown in its own color \u2014 Google Calendar, iCloud/iPhone, Nextcloud, Outlook, or any other calendar that can produce a public ICS link. Two views (upcoming list, or a week-at-a-glance grid), switchable right on the tile. Handles recurring events (RRULE) and moved/modified single occurrences.",
-    "fr": "Un ou plusieurs calendriers iCal (.ics) fusionn\u00e9s dans une seule tuile, chacun affich\u00e9 dans sa propre couleur \u2014 Google Agenda, iCloud/iPhone, Nextcloud, Outlook, ou tout autre calendrier capable de produire un lien ICS public. Deux vues (liste des prochains \u00e9v\u00e9nements, ou grille de la semaine), au choix directement sur la tuile. G\u00e8re les \u00e9v\u00e9nements r\u00e9currents (RRULE) et les occurrences uniques d\u00e9plac\u00e9es/modifi\u00e9es."
+    "en": "One or several iCal (.ics) calendars merged into a single tile, each shown in its own color — Google Calendar, iCloud/iPhone, Nextcloud, Outlook, or any other calendar that can produce a public ICS link. Two views (upcoming list, or a week-at-a-glance grid), switchable right on the tile. Handles recurring events (RRULE) and moved/modified single occurrences.",
+    "fr": "Un ou plusieurs calendriers iCal (.ics) fusionnés dans une seule tuile, chacun affiché dans sa propre couleur — Google Agenda, iCloud/iPhone, Nextcloud, Outlook, ou tout autre calendrier capable de produire un lien ICS public. Deux vues (liste des prochains événements, ou grille de la semaine), au choix directement sur la tuile. Gère les événements récurrents (RRULE) et les occurrences uniques déplacées/modifiées."
+  },
+  "tagline": {
+    "en": "Your upcoming events, from one or more iCal calendars.",
+    "fr": "Vos événements à venir, depuis un ou plusieurs calendriers iCal."
   },
   "size": {
     "w": 4,
@@ -27,8 +31,8 @@
         "fr": "Calendriers (un lien ICS par ligne)"
       },
       "hint": {
-        "en": "One calendar per line. Add an optional label after a <code>|</code>, e.g. <code>https://example.com/family.ics|Family</code> \u2014 otherwise a generic name is used. Each calendar gets its own color automatically, assigned in line order. <br><br><b>iPhone / iCloud:</b> in the Calendar app, tap a calendar \u2192 <i>Share Calendar</i> \u2192 <i>Public Calendar</i> \u2192 <i>Copy Link</i> (starts with <code>webcal://</code>, handled automatically). <br><b>Google Calendar:</b> calendar Settings \u2192 <i>Integrate calendar</i> \u2192 <i>Secret address in iCal format</i>. <br><b>Nextcloud / Outlook:</b> use their calendar's public/ICS sharing link.",
-        "fr": "Un calendrier par ligne. Ajoutez un libell\u00e9 optionnel apr\u00e8s un <code>|</code>, ex. <code>https://exemple.com/famille.ics|Famille</code> \u2014 sinon un nom g\u00e9n\u00e9rique est utilis\u00e9. Chaque calendrier re\u00e7oit automatiquement sa propre couleur, dans l'ordre des lignes. <br><br><b>iPhone / iCloud :</b> dans l'app Calendrier, appuyez sur un calendrier \u2192 <i>Partager le calendrier</i> \u2192 <i>Calendrier public</i> \u2192 <i>Copier le lien</i> (commence par <code>webcal://</code>, converti automatiquement). <br><b>Google Agenda :</b> param\u00e8tres du calendrier \u2192 <i>Int\u00e9grer l'agenda</i> \u2192 <i>Adresse secr\u00e8te au format iCal</i>. <br><b>Nextcloud / Outlook :</b> utilisez leur lien de partage public/ICS du calendrier."
+        "en": "One calendar per line. Add an optional label after a <code>|</code>, e.g. <code>https://example.com/family.ics|Family</code> — otherwise a generic name is used. Each calendar gets its own color automatically, assigned in line order. <br><br><b>iPhone / iCloud:</b> in the Calendar app, tap a calendar → <i>Share Calendar</i> → <i>Public Calendar</i> → <i>Copy Link</i> (starts with <code>webcal://</code>, handled automatically). <br><b>Google Calendar:</b> calendar Settings → <i>Integrate calendar</i> → <i>Secret address in iCal format</i>. <br><b>Nextcloud / Outlook:</b> use their calendar's public/ICS sharing link.",
+        "fr": "Un calendrier par ligne. Ajoutez un libellé optionnel après un <code>|</code>, ex. <code>https://exemple.com/famille.ics|Famille</code> — sinon un nom générique est utilisé. Chaque calendrier reçoit automatiquement sa propre couleur, dans l'ordre des lignes. <br><br><b>iPhone / iCloud :</b> dans l'app Calendrier, appuyez sur un calendrier → <i>Partager le calendrier</i> → <i>Calendrier public</i> → <i>Copier le lien</i> (commence par <code>webcal://</code>, converti automatiquement). <br><b>Google Agenda :</b> paramètres du calendrier → <i>Intégrer l'agenda</i> → <i>Adresse secrète au format iCal</i>. <br><b>Nextcloud / Outlook :</b> utilisez leur lien de partage public/ICS du calendrier."
       }
     },
     {
@@ -40,12 +44,24 @@
         "fr": "Vue par défaut"
       },
       "hint": {
-        "en": "Both views stay one tap away on the tile itself \u2014 this only picks which one shows first.",
-        "fr": "Les deux vues restent accessibles en un geste directement sur la tuile \u2014 ceci choisit seulement laquelle s'affiche en premier."
+        "en": "Both views stay one tap away on the tile itself — this only picks which one shows first.",
+        "fr": "Les deux vues restent accessibles en un geste directement sur la tuile — ceci choisit seulement laquelle s'affiche en premier."
       },
       "options": [
-        { "value": "list", "label": { "en": "Upcoming events (list)", "fr": "Prochains événements (liste)" } },
-        { "value": "week", "label": { "en": "Week grid", "fr": "Grille semaine" } }
+        {
+          "value": "list",
+          "label": {
+            "en": "Upcoming events (list)",
+            "fr": "Prochains événements (liste)"
+          }
+        },
+        {
+          "value": "week",
+          "label": {
+            "en": "Week grid",
+            "fr": "Grille semaine"
+          }
+        }
       ]
     },
     {

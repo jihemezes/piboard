@@ -9,6 +9,10 @@
     "en": "Digital or analog clock with today's date (in analog mode, the face sits on the left and the text on the right when the date is shown, so the face keeps the tile's full height), an optional French nameday, and an optional day/night background that follows the board's sun-based theme.",
     "fr": "Horloge digitale ou analogique avec la date du jour (en mode analogique, le cadran se cale à gauche et le texte à droite quand la date est affichée, pour que le cadran garde toute la hauteur de la tuile), le saint du jour en option, et un fond jour/nuit optionnel qui suit le thème solaire du tableau."
   },
+  "tagline": {
+    "en": "Digital or analog clock, with today's date.",
+    "fr": "Horloge digitale ou analogique, avec la date du jour."
+  },
   "size": {
     "w": 3,
     "h": 2,
