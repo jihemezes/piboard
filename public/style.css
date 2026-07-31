@@ -621,6 +621,14 @@ body.editing .ui-resizable-s::after {
 .field-password-wrap input[type="text"] { flex: 1; width: auto; }
 .field-password-wrap .field-password-toggle { flex: none; white-space: nowrap; }
 
+/* Etat d'un champ "secret" (voir fieldMarkup() cas "secret" dans
+   app.js) : indique si une valeur est enregistree, sans jamais
+   l'afficher. State of a "secret" field (see fieldMarkup()'s "secret"
+   case in app.js): says whether a value is stored, without ever showing
+   it. */
+.field-secret-status { display: block; margin-top: 3px; }
+.field-secret-status.field-secret-ok { color: #4CAF50; }
+
 /* Suggestions d'adresse cliquables (voir fieldMarkup() cas "address" et
    les gestionnaires delegues dans app.js) : meme famille visuelle que
    .city-suggest, en position absolue sous le champ concerne.

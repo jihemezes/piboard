@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.27.0
+   Version 1.28.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1112,6 +1112,12 @@
         .catch((e) => console.warn("[piboard] configuration non conservee:", e));
     }
     try { rec.instance && rec.instance.destroy && rec.instance.destroy(); } catch (e) { /* noop */ }
+    // Efface aussi le secret eventuel de cette tuile : un mot de passe de
+    // boite mail n'a aucune raison de survivre a la tuile qui l'utilisait.
+    // Also clears this tile's secret, if any: a mailbox password has no
+    // reason to outlive the tile that used it.
+    fetch("/api/tile-secrets/" + encodeURIComponent(tileId), { method: "DELETE" })
+      .catch((e) => console.warn("[piboard] secret non efface:", e));
     (rec.zone === "drawer" ? drawerGrid : grid).removeWidget(rec.el);
     tiles.delete(tileId);
     let boardCount = 0, drawerCount = 0;
@@ -1403,6 +1409,25 @@
         return `<label class="field"><span>${label}</span><input type="time" data-key="${f.key}" value="${v}">${hint}</label>`;
       case "password":
         return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div>${hint}</label>`;
+      /* Champ "secret" : contrairement a "password" ci-dessus, la valeur
+         n'est JAMAIS conservee dans les reglages de la tuile (donc jamais
+         dans layout.json, ni dans une configuration exportable). Elle est
+         envoyee au coffre chiffre du serveur (voir server/tileSecrets.js)
+         et n'en redescend jamais : le champ reste donc vide a la
+         reouverture, avec une mention indiquant qu'un secret est deja
+         enregistre. A reserver aux vrais secrets (mot de passe de boite
+         mail...) -- "password" suffit pour une cle d'API qu'on accepte de
+         voir figurer dans les reglages.
+         "secret" field: unlike "password" above, the value is NEVER kept
+         in the tile's settings (so never in layout.json, nor in an
+         exportable config). It is sent to the server's encrypted vault
+         (see server/tileSecrets.js) and never comes back down: the field
+         is therefore empty on reopening, with a note saying a secret is
+         already stored. Reserved for genuine secrets (mailbox
+         password...) -- "password" is enough for an API key one accepts
+         seeing in the settings. */
+      case "secret":
+        return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-secret-key="${f.key}" value="" autocomplete="off" spellcheck="false" placeholder="${i18n.t("field.secret.placeholder")}"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div><small class="field-hint field-secret-status" data-secret-status="${f.key}"></small>${hint}</label>`;
       /* Champ adresse avec suggestions cliquables (voir les gestionnaires
          delegues plus bas, ".field-address-input"/".field-address-suggest") :
          recherche Nominatim debouncee des la saisie, resultats affiches
@@ -1507,6 +1532,11 @@
         </label>
       </fieldset>`;
     form.innerHTML = fieldsBySection(fields, s) + universal;
+    // Etat de chaque secret ("enregistre" / "non defini") : demande au
+    // serveur, jamais devine depuis les reglages -- ils ne le contiennent
+    // pas. Each secret's state ("stored" / "not set"): asked of the
+    // server, never guessed from the settings -- they don't contain it.
+    fields.filter((f) => f.type === "secret").forEach((f) => refreshSecretStatus(tileId, f.key));
     $("tileSaveConfigMsg").textContent = "";
     $("tileSaveConfigMsg").classList.remove("field-hint-error");
     $("tileModal").hidden = false;
@@ -1527,6 +1557,44 @@
       else values[key] = input.value;
     });
     return values;
+  }
+
+  /* Envoie les champs "secret" renseignes au coffre du serveur, puis vide
+     le champ : la valeur ne doit ni rester a l'ecran, ni rejoindre les
+     reglages de la tuile (voir le cas "secret" de fieldMarkup()). Un
+     champ laisse vide ne touche a rien -- c'est ce qui permet de rouvrir
+     les reglages pour changer autre chose sans effacer le mot de passe
+     deja enregistre.
+     Sends filled-in "secret" fields to the server's vault, then clears
+     the field: the value must neither stay on screen nor join the tile's
+     settings (see fieldMarkup()'s "secret" case). A field left empty
+     touches nothing -- which is what lets you reopen the settings to
+     change something else without wiping the already-stored password. */
+  function pushTileSecrets(tileId) {
+    const inputs = $("tileForm").querySelectorAll("[data-secret-key]");
+    const jobs = [];
+    inputs.forEach((input) => {
+      if (input.value === "") return;
+      const key = input.dataset.secretKey;
+      jobs.push(
+        apiPut(`/api/tile-secrets/${encodeURIComponent(tileId)}/${encodeURIComponent(key)}`, { value: input.value })
+          .then(() => { input.value = ""; refreshSecretStatus(tileId, key); })
+          .catch((e) => console.warn("[piboard] secret non enregistre:", e))
+      );
+    });
+    return Promise.all(jobs);
+  }
+
+  function refreshSecretStatus(tileId, key) {
+    const el = $("tileForm").querySelector(`[data-secret-status="${key}"]`);
+    if (!el) return;
+    fetch(`/api/tile-secrets/${encodeURIComponent(tileId)}/${encodeURIComponent(key)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        el.textContent = i18n.t(d.configured ? "field.secret.set" : "field.secret.unset");
+        el.classList.toggle("field-secret-ok", !!d.configured);
+      })
+      .catch(() => { el.textContent = ""; });
   }
 
   function applyTileFormValues(rec, values) {
@@ -1564,7 +1632,16 @@
   function saveTileSettings() {
     const rec = tiles.get(tileModalTarget);
     if (!rec) return;
-    applyTileFormValues(rec, collectTileFormValues());
+    const tileId = tileModalTarget;
+    // Les secrets partent au coffre AVANT de relancer le widget : sans
+    // cela, sa toute premiere requete tomberait sur un coffre encore
+    // vide et afficherait une erreur d'identifiants a tort.
+    // Secrets go to the vault BEFORE restarting the widget: otherwise
+    // its very first request would hit a still-empty vault and wrongly
+    // show a credentials error.
+    pushTileSecrets(tileId).then(() => {
+      applyTileFormValues(rec, collectTileFormValues());
+    });
     $("tileModal").hidden = true;
     vkb.hide();
   }

@@ -46,6 +46,8 @@ const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
 const articleExtract = require("./articleExtract");
+const tileSecrets = require("./tileSecrets");
+const mailbox = require("./mailbox");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -893,6 +895,62 @@ app.get("/api/article-extract", async (req, res) => {
     const article = await articleExtract.extractArticle(target);
     res.json(article);
   } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+/* ---------- Secrets de tuile / tile secrets ----------
+   Voir server/tileSecrets.js. Une valeur sensible s'ECRIT et s'EFFACE,
+   mais ne se RELIT jamais : aucune route ne renvoie un secret, seulement
+   sa presence. Un secret qui a transite une fois vers le serveur ne
+   redescend plus jamais vers le navigateur.
+   See server/tileSecrets.js. A sensitive value can be WRITTEN and
+   CLEARED, but never READ BACK: no route returns a secret, only whether
+   one is set. A secret that went up to the server never comes back down
+   to the browser. */
+app.get("/api/tile-secrets/:tileId/:key", (req, res) => {
+  res.json({ configured: tileSecrets.has(req.params.tileId, req.params.key) });
+});
+
+app.put("/api/tile-secrets/:tileId/:key", (req, res) => {
+  const value = req.body && typeof req.body.value === "string" ? req.body.value : "";
+  tileSecrets.set(req.params.tileId, req.params.key, value);
+  res.json({ configured: tileSecrets.has(req.params.tileId, req.params.key) });
+});
+
+app.delete("/api/tile-secrets/:tileId", (req, res) => {
+  tileSecrets.clearTile(req.params.tileId);
+  res.json({ ok: true });
+});
+
+/* ---------- Boite aux lettres / mailbox ----------
+   Voir server/mailbox.js : lecture STRICTEMENT seule, rien n'est stocke.
+   La configuration non sensible (serveur, identifiant, dossier) arrive
+   du client a chaque appel ; seul le mot de passe vient du coffre.
+   See server/mailbox.js: STRICTLY read-only, nothing is stored. The
+   non-sensitive configuration (server, user, folder) comes from the
+   client on each call; only the password comes from the vault. */
+function mailConfigFrom(req) {
+  return {
+    host: req.query.host, port: req.query.port, user: req.query.user,
+    folder: req.query.folder, limit: req.query.limit
+  };
+}
+
+app.get("/api/mail/:tileId/list", async (req, res) => {
+  try {
+    res.json(await mailbox.listHeaders(req.params.tileId, mailConfigFrom(req)));
+  } catch (e) {
+    console.warn("[piboard] mail list:", e.message);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/mail/:tileId/message", async (req, res) => {
+  try {
+    res.json(await mailbox.getMessage(req.params.tileId, mailConfigFrom(req), req.query.uid));
+  } catch (e) {
+    console.warn("[piboard] mail message:", e.message);
     res.status(502).json({ error: String(e.message || e) });
   }
 });

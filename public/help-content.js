@@ -474,6 +474,60 @@
     },
 
     {
+      id: "mailbox",
+      group: "tiles",
+      title: { fr: "Courriel", en: "Mailbox" },
+      sub: {
+        fr: "Les derniers messages d'une boîte IMAP — objet, expéditeur, date — et la lecture au clic, comme la tuile Flux RSS.",
+        en: "The latest messages from an IMAP mailbox — subject, sender, date — and reading on tap, like the RSS feed tile."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 4×4 par défaut, de 2×2 à 8×10</span>
+          <h4>Objectif</h4>
+          <p>Voir d'un coup d'œil ce qui est arrivé dans une boîte aux lettres, sans sortir son téléphone — et pouvoir lire un message directement sur le tableau si l'objet donne envie.</p>
+          <h4>Possibilités</h4>
+          <p>La tuile n'affiche que l'essentiel : objet, expéditeur et date, les non-lus signalés par une pastille et un objet en gras. Toucher un message ouvre une popup de lecture, exactement comme pour un article de flux RSS. Vous choisissez combien de messages afficher, quel dossier surveiller (la boîte de réception par défaut), et pouvez n'afficher que les non-lus.</p>
+          <p><b>Rien n'est stocké sur le PiBoard.</b> Chaque affichage ouvre une connexion au serveur, lit ce qu'il faut, et referme — aucun message, aucune pièce jointe n'est écrit sur le disque. L'accès est aussi <b>strictement en lecture seule</b> : consulter un message ici ne le marque jamais comme lu sur votre téléphone ou votre ordinateur, et n'en déplace ni n'en supprime aucun.</p>
+          <p>Le contenu des messages est <b>désinfecté avant affichage</b> : les scripts sont retirés, les liens rendus non cliquables (un lien d'hameçonnage ne peut pas être touché par mégarde sur un écran tactile), et les images distantes remplacées par une mention — leur chargement confirmerait sinon à l'expéditeur que le message a été ouvert.</p>
+          <h4>Compatibilité</h4>
+          <p>Fonctionne avec free.fr, Orange, OVH, SFR, La Poste, et tout serveur IMAP standard. Pour <b>Gmail, Yahoo et iCloud</b>, il faut créer un « mot de passe d'application » dans les réglages de sécurité du compte — leur mot de passe principal est refusé par ces fournisseurs.</p>
+          <p><b>Les comptes Outlook.com et Hotmail personnels ne fonctionnent pas.</b> Microsoft y a définitivement désactivé l'authentification par mot de passe, et n'y propose pas de mot de passe d'application (contrairement aux comptes professionnels). Seul le protocole OAuth2 permettrait de s'y connecter — il n'est pas encore pris en charge.</p>
+          <h4>À propos du mot de passe</h4>
+          <p>Il est conservé <b>chiffré, dans un fichier distinct des réglages de la tuile</b> : il ne se retrouve donc jamais dans une sauvegarde de disposition, une configuration enregistrée réutilisable, ou un partage de configuration. Le champ reste vide à la réouverture des réglages (une mention indique qu'un mot de passe est enregistré) et le serveur ne le renvoie jamais au navigateur. Supprimer la tuile efface aussi le mot de passe.</p>
+          <p>Soyons clairs sur les limites : la clé de chiffrement vit sur le même Pi que le coffre. Quelqu'un ayant un accès complet à la machine peut donc tout déchiffrer — la protection porte sur les fuites courantes (sauvegarde copiée ailleurs, fichier partagé par erreur), pas sur un accès physique ou administrateur. C'est aussi pourquoi un mot de passe d'application est préférable quand c'est possible : il se révoque tout seul, sans toucher au compte principal.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Fournisseur</span><span class="help-opt-desc">Un raccourci qui remplit l'adresse du serveur. Laissez vide et saisissez l'adresse pour tout autre fournisseur.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Serveur IMAP / Port</span><span class="help-opt-desc">Le serveur de courrier <i>entrant</i> (pas le SMTP, qui ne sert qu'à envoyer). Port 993 pour une connexion chiffrée, le cas normal.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Identifiant / Mot de passe</span><span class="help-opt-desc">Généralement l'adresse électronique complète, et le mot de passe (ou mot de passe d'application) associé.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Dossier</span><span class="help-opt-desc">INBOX pour la boîte de réception, ou tout autre nom de dossier.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Nombre de messages / Afficher l'expéditeur / Non lus uniquement</span><span class="help-opt-desc">La densité d'affichage de la liste.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle entre deux relevés. Chacun ouvre une brève connexion au serveur.</span></div>`,
+        en: `
+          <span class="help-size">Size: 4×4 by default, from 2×2 to 8×10</span>
+          <h4>Goal</h4>
+          <p>See at a glance what has landed in a mailbox, without pulling out your phone — and read a message straight from the board if the subject looks worth it.</p>
+          <h4>Possibilities</h4>
+          <p>The tile shows only the essentials: subject, sender and date, with unread messages marked by a dot and a bold subject. Tapping a message opens a reading popup, exactly like an RSS feed article. You choose how many messages to show, which folder to watch (the inbox by default), and can show unread messages only.</p>
+          <p><b>Nothing is stored on the PiBoard.</b> Each display opens a connection to the server, reads what's needed, and closes — no message or attachment is ever written to disk. Access is also <b>strictly read-only</b>: reading a message here never marks it as read on your phone or computer, and never moves or deletes anything.</p>
+          <p>Message content is <b>sanitized before display</b>: scripts are removed, links made non-clickable (a phishing link can't be tapped by mistake on a touchscreen), and remote images replaced by a note — loading them would otherwise confirm to the sender that the message was opened.</p>
+          <h4>Compatibility</h4>
+          <p>Works with free.fr, Orange, OVH, SFR, La Poste, and any standard IMAP server. For <b>Gmail, Yahoo and iCloud</b>, you need to create an "app password" in the account's security settings — those providers reject the main account password.</p>
+          <p><b>Personal Outlook.com and Hotmail accounts do not work.</b> Microsoft has permanently disabled password authentication there, and offers no app password for them (unlike work accounts). Only the OAuth2 protocol would allow connecting — it isn't supported yet.</p>
+          <h4>About the password</h4>
+          <p>It is kept <b>encrypted, in a file separate from the tile settings</b>: it therefore never ends up in a layout backup, a saved reusable configuration, or a shared config. The field stays empty when reopening the settings (a note says a password is stored) and the server never sends it back to the browser. Removing the tile also erases the password.</p>
+          <p>To be clear about the limits: the encryption key lives on the same Pi as the vault. Anyone with full access to the machine can therefore decrypt everything — the protection covers common leaks (a backup copied elsewhere, a file shared by mistake), not physical or administrator access. That's also why an app password is preferable when possible: it can be revoked on its own, without touching the main account.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Provider</span><span class="help-opt-desc">A shortcut that fills in the server address. Leave empty and type the address for any other provider.</span></div>
+          <div class="help-opt"><span class="help-opt-name">IMAP server / Port</span><span class="help-opt-desc">The <i>incoming</i> mail server (not the SMTP one, which only sends). Port 993 for an encrypted connection, the normal case.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Username / Password</span><span class="help-opt-desc">Usually the full email address, and the matching password (or app password).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Folder</span><span class="help-opt-desc">INBOX for the inbox, or any other folder name.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Messages shown / Show sender / Unread only</span><span class="help-opt-desc">The list's display density.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval between two checks. Each opens a brief connection to the server.</span></div>`
+      }
+    },
+
+    {
       id: "slideshow",
       group: "tiles",
       title: { fr: "Diaporama", en: "Slideshow" },

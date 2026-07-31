@@ -1,5 +1,69 @@
 # Changelog
 
+## 1.28.0
+
+- **Nouvelle tuile : Courriel.** Affiche les derniers messages d'une
+  boîte aux lettres IMAP — objet, expéditeur, date, non-lus en gras — et
+  ouvre le message dans une popup au clic, sur le même principe que la
+  tuile Flux RSS. Nombre de messages, dossier surveillé et affichage des
+  seuls non-lus sont réglables.
+  - **Rien n'est stocké sur le PiBoard** : chaque affichage ouvre une
+    connexion, lit, et referme ;
+  - **Strictement en lecture seule** : consulter un message ici ne le
+    marque jamais comme lu sur votre téléphone ou ordinateur ;
+  - **Contenu désinfecté** avant affichage : scripts retirés, liens
+    rendus non cliquables (pas d'hameçonnage touché par mégarde sur un
+    écran tactile), images distantes remplacées par une mention — leur
+    chargement confirmerait sinon à l'expéditeur que le message a été
+    ouvert.
+- **Nouveau mécanisme : champs « secret ».** Contrairement aux champs
+  mot de passe existants, leur valeur n'est **jamais** conservée dans
+  les réglages de la tuile : elle part dans un coffre chiffré côté
+  serveur, dans un fichier distinct, et n'en redescend jamais. Un mot de
+  passe de boîte mail ne peut donc pas se retrouver dans une sauvegarde
+  de disposition ni dans une configuration partagée. Supprimer la tuile
+  efface le secret associé.
+- **Compatibilité** : free.fr, Orange, OVH, SFR, La Poste et tout
+  serveur IMAP standard. Gmail, Yahoo et iCloud nécessitent un « mot de
+  passe d'application ». **Les comptes Outlook.com/Hotmail personnels ne
+  sont pas pris en charge** : Microsoft y a définitivement désactivé
+  l'authentification par mot de passe et n'y propose aucun mot de passe
+  d'application — seul OAuth2 fonctionnerait, il n'est pas encore
+  implémenté.
+
+  **Nouvelles dépendances serveur** : `imapflow` et `mailparser` (toutes
+  deux sous licence MIT). **Un `npm install` est nécessaire après cette
+  mise à jour.**
+
+---
+
+- **New tile: Mailbox.** Shows an IMAP mailbox's latest messages —
+  subject, sender, date, unread in bold — and opens a message in a popup
+  on tap, on the same principle as the RSS feed tile. Message count,
+  watched folder and unread-only display are configurable.
+  - **Nothing is stored on the PiBoard**: each display opens a
+    connection, reads, and closes;
+  - **Strictly read-only**: reading a message here never marks it as
+    read on your phone or computer;
+  - **Sanitized content** before display: scripts removed, links made
+    non-clickable (no phishing tapped by mistake on a touchscreen),
+    remote images replaced by a note — loading them would otherwise
+    confirm to the sender that the message was opened.
+- **New mechanism: "secret" fields.** Unlike the existing password
+  fields, their value is **never** kept in the tile's settings: it goes
+  to an encrypted server-side vault, in a separate file, and never comes
+  back down. A mailbox password therefore can't end up in a layout
+  backup or a shared configuration. Removing the tile erases its secret.
+- **Compatibility**: free.fr, Orange, OVH, SFR, La Poste and any
+  standard IMAP server. Gmail, Yahoo and iCloud require an "app
+  password". **Personal Outlook.com/Hotmail accounts are not
+  supported**: Microsoft has permanently disabled password
+  authentication there and offers no app password — only OAuth2 would
+  work, and it isn't implemented yet.
+
+  **New server dependencies**: `imapflow` and `mailparser` (both
+  MIT-licensed). **An `npm install` is required after this update.**
+
 ## 1.27.0
 
 - **Correctif : catalogue de widgets trop dense.** Les descriptions

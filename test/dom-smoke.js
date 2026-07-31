@@ -234,6 +234,35 @@ const MOTOGP_SEASON_FIXTURE = [
    runs on, to reliably get an out-of-window tile. */
 const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"][(new Date().getDay() + 1) % 7];
 
+/* Fixtures Courriel : la liste ne porte que des en-tetes (jamais de
+   corps), et le message contient volontairement du HTML hostile
+   representatif d'un vrai courriel indesirable -- script, gestionnaire
+   d'evenement, pixel espion, lien d'hameconnage -- pour verifier la
+   desinfection. Mailbox fixtures: the list carries headers only (never
+   bodies), and the message deliberately contains hostile HTML typical
+   of a real spam email -- script, event handler, tracking pixel,
+   phishing link -- to check the sanitizing. */
+const MAIL_LIST_FIXTURE = {
+  unseen: 1,
+  total: 42,
+  messages: [
+    { uid: 101, subject: "Facture de juillet", from: "Compta SARL", fromAddress: "compta@exemple.fr", date: new Date().toISOString(), seen: false },
+    { uid: 100, subject: "Re: reunion de lundi", from: "Claire", fromAddress: "claire@exemple.fr", date: new Date(Date.now() - 86400000).toISOString(), seen: true },
+    { uid: 99, subject: "", from: "Sans Objet", fromAddress: "vide@exemple.fr", date: new Date(Date.now() - 172800000).toISOString(), seen: true }
+  ]
+};
+const MAIL_MESSAGE_FIXTURE = {
+  subject: "Facture de juillet",
+  from: "Compta SARL <compta@exemple.fr>",
+  date: new Date().toISOString(),
+  html: '<p>Bonjour, voici votre <b>facture</b>.</p>'
+    + '<script>window.__pwnedMail = true;</script>'
+    + '<img src="https://tracker.exemple.fr/pixel.gif" alt="pixel espion">'
+    + '<a href="https://hameconnage.test/login" onclick="window.__pwnedMail = true;">Cliquez ici</a>',
+  text: "Bonjour, voici votre facture.",
+  attachments: [{ filename: "facture-juillet.pdf", size: 12345 }]
+};
+
 const layout = {
   version: 1,
   tiles: [
@@ -264,7 +293,10 @@ const layout = {
     // jours) : verifie qu'une planification active ne casse rien.
     // Scheduled but permanently active (no day ticked = every day):
     // checks an active schedule breaks nothing.
-    { id: "t-m", widget: "notes", x: 3, y: 12, w: 3, h: 2, settings: { _schedEnabled: true } }
+    { id: "t-m", widget: "notes", x: 3, y: 12, w: 3, h: 2, settings: { _schedEnabled: true } },
+    { id: "t-n", widget: "mailbox", x: 6, y: 12, w: 4, h: 3, settings: {
+      host: "imap.test.fr", port: 993, user: "moi@test.fr", folder: "INBOX", limit: 5, showSender: true
+    } }
   ]
 };
 
@@ -391,6 +423,15 @@ const dom = new JSDOM(html, {
         const tmm = String(tomorrow.getMonth() + 1).padStart(2, "0");
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
+      }
+      if (u.includes("/api/mail/") && u.includes("/list")) {
+        return json(MAIL_LIST_FIXTURE);
+      }
+      if (u.includes("/api/mail/") && u.includes("/message")) {
+        return json(MAIL_MESSAGE_FIXTURE);
+      }
+      if (u.includes("/api/tile-secrets/")) {
+        return json({ configured: true });
       }
       if (u.includes("/api/proxy") && u.includes("jolpi.ca")) {
         return json(F1_SEASON_FIXTURE);
@@ -535,10 +576,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 13 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 14 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("13 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 13);
+  assert("14 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 14);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -978,7 +1019,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (14 au total)", document.querySelectorAll(".grid-stack-item").length === 14);
+  assert("tuile ajoutee (15 au total)", document.querySelectorAll(".grid-stack-item").length === 15);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -1311,6 +1352,50 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.getElementById("tileModal").querySelector(".modal-close")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(20);
+  }
+
+  console.log("== Courriel : liste des objets et lecture au clic ==");
+  {
+    const mailTile = document.querySelector('[data-tile-id="t-n"]');
+    tries = 0;
+    while (!mailTile.querySelector(".pwmb-item") && tries++ < 80) await sleep(50);
+    const items = [...mailTile.querySelectorAll(".pwmb-item")];
+    assert("3 messages affiches", items.length === 3);
+    assert("objet du message affiche", (items[0].textContent || "").includes("Facture de juillet"));
+    assert("expediteur affiche", (items[0].textContent || "").includes("Compta SARL"));
+    assert("message non lu marque comme tel", items[0].classList.contains("pwmb-unread"));
+    assert("message lu NON marque comme non lu", !items[1].classList.contains("pwmb-unread"));
+    assert("message sans objet : mention de repli affichee", (items[2].textContent || "").includes("sans objet"));
+    assert("le corps des messages n'est PAS charge dans la liste",
+      !(mailTile.textContent || "").includes("Bonjour, voici votre"));
+
+    assert("aucune popup avant clic", !document.querySelector(".pwmb-modal-card"));
+    items[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while ((document.querySelector(".pwmb-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
+    const mailModal = document.querySelector(".pwmb-modal-card")?.closest(".modal");
+    assert("popup de lecture ouverte au clic", mailModal && mailModal.hidden === false);
+    assert("popup : objet affiche en titre", document.querySelector(".pwmb-modal-title")?.textContent === "Facture de juillet");
+    assert("popup : expediteur affiche dans le meta", (document.querySelector(".pwmb-modal-meta")?.textContent || "").includes("Compta SARL"));
+
+    const mailBody = document.querySelector(".pwmb-modal-body");
+    assert("popup : contenu du message affiche", (mailBody.textContent || "").includes("Bonjour, voici votre"));
+    assert("popup : mise en forme conservee (gras)", mailBody.innerHTML.includes("<b>facture</b>"));
+    assert("popup : piece jointe listee", (mailBody.textContent || "").includes("facture-juillet.pdf"));
+
+    console.log("== Courriel : desinfection du HTML hostile ==");
+    assert("script du courriel non execute", !window.__pwnedMail);
+    assert("balise <script> absente du HTML injecte", !mailBody.innerHTML.includes("<script"));
+    assert("gestionnaire onclick retire", !mailBody.innerHTML.includes("onclick"));
+    assert("lien d'hameconnage neutralise (href retire)", !mailBody.querySelector("a")?.getAttribute("href"));
+    assert("texte du lien conserve malgre tout", (mailBody.textContent || "").includes("Cliquez ici"));
+    assert("pixel espion retire : aucune balise <img> restante", !mailBody.querySelector("img"));
+    assert("image retiree remplacee par une mention visible", !!mailBody.querySelector(".pwmb-img-removed"));
+    assert("l'URL du traqueur n'apparait nulle part", !mailBody.innerHTML.includes("tracker.exemple.fr"));
+
+    mailModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("popup refermee par le bouton", mailModal.hidden === true);
   }
 
   console.log("== Sortie du mode edition ==");
