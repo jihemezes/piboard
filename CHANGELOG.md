@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.30.0
+
+- **Avions en vue : compas en surimpression.** Une rose des vents fixe
+  (nord toujours en haut, comme la carte elle-même) permet de comparer
+  directement l'orientation d'une icône d'avion à un point cardinal
+  réel — pratique pour vérifier d'un coup d'œil qu'un cap affiché
+  semble cohérent.
+  - **Affichage optionnel**, activé par défaut, avec sa propre case à
+    cocher pour le masquer entièrement ;
+  - **Position réglable** parmi les 4 coins de la carte, en bas à
+    droite par défaut ;
+  - **Opacité réglable** de 10 à 100 %, pour rester discret sans gêner
+    la lecture de la carte en dessous.
+
+  Correctif au passage : un piège classique de JavaScript (`0 || 70`
+  retombe à tort sur 70, `0` étant une valeur « fausse ») aurait empêché
+  de choisir l'opacité minimale — repéré et corrigé avant livraison.
+
+---
+
+- **Planes Overhead: compass overlay.** A fixed compass rose (north
+  always up, like the map itself) lets you compare an aircraft icon's
+  orientation directly against a real cardinal direction — handy to
+  check at a glance that a displayed heading looks right.
+  - **Optional display**, on by default, with its own checkbox to hide
+    it entirely;
+  - **Adjustable position** among the map's 4 corners, bottom right by
+    default;
+  - **Adjustable opacity** from 10 to 100%, to stay discreet without
+    hindering the map underneath.
+
+  Fixed along the way: a classic JavaScript pitfall (`0 || 70` wrongly
+  falls back to 70, `0` being a "falsy" value) would have prevented
+  picking the minimum opacity — caught and fixed before shipping.
+
 ## 1.29.1
 
 - **Courriel : les images « ne marchaient pas » — en réalité, tout

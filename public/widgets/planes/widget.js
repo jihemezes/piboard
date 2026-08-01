@@ -117,10 +117,45 @@
       this.trails = new Map(); // hex -> [[lat,lon], ...], historique recent / recent history
     }
 
+    // Opacite du compas (0-100 dans les reglages -> 0-1 en CSS), avec une
+    // borne basse : a 0, le compas deviendrait invisible sans pour autant
+    // etre "masque" (la case a cocher dediee sert a ca), ce qui semblerait
+    // casse plutot que transparent. Compass opacity (0-100 in settings ->
+    // 0-1 in CSS), with a floor: at 0, the compass would become invisible
+    // without actually being "hidden" (the dedicated checkbox does that),
+    // which would look broken rather than transparent.
+    compassOpacityValue() {
+      const raw = Number(this.ctx.settings.compassOpacity);
+      // Number.isFinite plutot que "|| 70" : 0 est une valeur falsy en
+      // JS, donc "0 || 70" retomberait a tort sur 70 des qu'un
+      // utilisateur choisit l'opacite minimale. Number.isFinite rather
+      // than "|| 70": 0 is a falsy value in JS, so "0 || 70" would
+      // wrongly fall back to 70 as soon as a user picks the minimum
+      // opacity.
+      const pct = Number.isFinite(raw) ? raw : 70;
+      return Math.max(0.1, Math.min(1, pct / 100));
+    }
+
     async init() {
+      const s = this.ctx.settings;
       this.ctx.el.innerHTML = `
         <div class="pw-planes">
           <div class="pwp-map"></div>
+          <div class="pwp-compass pwp-compass-${s.compassPosition || "br"}" style="opacity:${this.compassOpacityValue()}" ${s.showCompass === false ? "hidden" : ""}>
+            <svg viewBox="0 0 100 100">
+              <circle class="pwpc-ring" cx="50" cy="50" r="46"/>
+              ${[...Array(12)].map((_, i) => {
+                const a = (i * 30) * Math.PI / 180;
+                const major = i % 3 === 0;
+                const r1 = major ? 36 : 40;
+                return `<line class="pwpc-tick ${major ? "pwpc-tick-major" : ""}" x1="${50 + r1 * Math.sin(a)}" y1="${50 - r1 * Math.cos(a)}" x2="${50 + 44 * Math.sin(a)}" y2="${50 - 44 * Math.cos(a)}"/>`;
+              }).join("")}
+              <text class="pwpc-label pwpc-n" x="50" y="16" text-anchor="middle">${this.ctx.i18n.t("planes.compass.n")}</text>
+              <text class="pwpc-label" x="84" y="54" text-anchor="middle">${this.ctx.i18n.t("planes.compass.e")}</text>
+              <text class="pwpc-label" x="50" y="90" text-anchor="middle">${this.ctx.i18n.t("planes.compass.s")}</text>
+              <text class="pwpc-label" x="16" y="54" text-anchor="middle">${this.ctx.i18n.t("planes.compass.w")}</text>
+            </svg>
+          </div>
           <div class="pwp-panel">
             <span class="pwp-count">${this.ctx.i18n.t("common.loading")}</span>
           </div>
@@ -456,6 +491,12 @@
         return;
       }
       this.map.setZoom(Number(settings.zoom) || 9);
+      const compassEl = this.ctx.el.querySelector(".pwp-compass");
+      if (compassEl) {
+        compassEl.hidden = settings.showCompass === false;
+        compassEl.className = "pwp-compass pwp-compass-" + (settings.compassPosition || "br");
+        compassEl.style.opacity = this.compassOpacityValue();
+      }
       this.lastRefreshForced = true;
       this.refresh();
       this.arm();

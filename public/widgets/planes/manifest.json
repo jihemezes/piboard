@@ -1,13 +1,13 @@
 {
   "id": "planes",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "name": {
     "en": "Planes Overhead",
     "fr": "Avions en vue"
   },
   "description": {
-    "en": "Live aircraft near a city on a real map, via a free, keyless community ADS-B network (adsb.lol or adsb.fi, your choice) — the same open flight-tracking data behind sites like adsb.lol's globe. Rotated plane icons with callsign and altitude, closest aircraft first, with an optional dashed trail showing each aircraft's recent path. Tap an aircraft to look up its departure and arrival city, when known.",
-    "fr": "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé (adsb.lol ou adsb.fi, au choix) — les mêmes données ouvertes de suivi de vol que celles derrière des sites comme le globe d'adsb.lol. Icônes d'avions orientées avec indicatif et altitude, les plus proches en priorité, avec une traînée pointillée optionnelle montrant le trajet récent de chaque avion. Touchez un avion pour rechercher sa ville de départ et d'arrivée, quand elle est connue."
+    "en": "Live aircraft near a city on a real map, via a free, keyless community ADS-B network (adsb.lol or adsb.fi, your choice) — the same open flight-tracking data behind sites like adsb.lol's globe. Rotated plane icons with callsign and altitude, closest aircraft first, with an optional dashed trail showing each aircraft's recent path. Tap an aircraft to look up its departure and arrival city, when known. An optional compass overlay (position and opacity adjustable) lets you compare an aircraft icon's heading directly against a real cardinal direction.",
+    "fr": "Avions en vol en temps réel près d'une ville sur une vraie carte, via un réseau ADS-B communautaire gratuit et sans clé (adsb.lol ou adsb.fi, au choix) — les mêmes données ouvertes de suivi de vol que celles derrière des sites comme le globe d'adsb.lol. Icônes d'avions orientées avec indicatif et altitude, les plus proches en priorité, avec une traînée pointillée optionnelle montrant le trajet récent de chaque avion. Touchez un avion pour rechercher sa ville de départ et d'arrivée, quand elle est connue. Un compas en surimpression optionnel (position et opacité réglables) permet de comparer directement le cap d'un avion à un point cardinal réel."
   },
   "tagline": {
     "en": "Live aircraft in flight around a city.",
@@ -145,6 +145,82 @@
       "group": {
         "en": "Location & map",
         "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "showCompass",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show a compass overlay",
+        "fr": "Afficher un compas en surimpression"
+      },
+      "hint": {
+        "en": "A fixed north-up compass rose over the map, to compare an aircraft's icon orientation directly against a real compass direction.",
+        "fr": "Une rose des vents fixe, nord en haut, superposée à la carte, pour comparer directement l'orientation d'une icône d'avion à un point cardinal réel."
+      },
+      "group": {
+        "en": "Compass",
+        "fr": "Compas"
+      }
+    },
+    {
+      "key": "compassPosition",
+      "type": "select",
+      "default": "br",
+      "label": {
+        "en": "Position",
+        "fr": "Position"
+      },
+      "options": [
+        {
+          "value": "tl",
+          "label": {
+            "en": "Top left",
+            "fr": "En haut à gauche"
+          }
+        },
+        {
+          "value": "tr",
+          "label": {
+            "en": "Top right",
+            "fr": "En haut à droite"
+          }
+        },
+        {
+          "value": "bl",
+          "label": {
+            "en": "Bottom left",
+            "fr": "En bas à gauche"
+          }
+        },
+        {
+          "value": "br",
+          "label": {
+            "en": "Bottom right (default)",
+            "fr": "En bas à droite (par défaut)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Compass",
+        "fr": "Compas"
+      }
+    },
+    {
+      "key": "compassOpacity",
+      "type": "number",
+      "default": 70,
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "label": {
+        "en": "Opacity (%)",
+        "fr": "Opacité (%)"
+      },
+      "group": {
+        "en": "Compass",
+        "fr": "Compas"
       }
     },
     {

@@ -847,8 +847,13 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const planesManifest = catalog.find((m) => m.id === "planes");
     assert("widget planes present dans le catalogue", !!planesManifest);
     const keys = (planesManifest?.settings || []).map((s) => s.key);
-    assert("reglages avions : ville, reseau ADS-B, rayon, zoom, fond de carte, etiquettes, trainees, max, rafraichissement",
-      ["city", "source", "radius", "zoom", "basemap", "showLabels", "showTrails", "maxPlanes", "refresh"].every((k) => keys.includes(k)));
+    assert("reglages avions : ville, reseau ADS-B, rayon, zoom, fond de carte, etiquettes, trainees, max, rafraichissement, compas",
+      ["city", "source", "radius", "zoom", "basemap", "showLabels", "showTrails", "maxPlanes", "refresh",
+        "showCompass", "compassPosition", "compassOpacity"].every((k) => keys.includes(k)));
+    const compassPosSetting = planesManifest.settings.find((s) => s.key === "compassPosition");
+    assert("position par defaut du compas : bas-droite", compassPosSetting && compassPosSetting.default === "br");
+    assert("compas affiche par defaut",
+      planesManifest.settings.find((s) => s.key === "showCompass")?.default === true);
     const sourceSetting = planesManifest.settings.find((s) => s.key === "source");
     assert("reseau ADS-B : choix entre adsb.lol et adsb.fi expose dans les reglages",
       (sourceSetting?.options || []).map((o) => o.value).sort().join(",") === "adsbfi,adsblol");
