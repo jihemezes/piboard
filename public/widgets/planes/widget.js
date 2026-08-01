@@ -150,10 +150,14 @@
                 const r1 = major ? 36 : 40;
                 return `<line class="pwpc-tick ${major ? "pwpc-tick-major" : ""}" x1="${50 + r1 * Math.sin(a)}" y1="${50 - r1 * Math.cos(a)}" x2="${50 + 44 * Math.sin(a)}" y2="${50 - 44 * Math.cos(a)}"/>`;
               }).join("")}
-              <text class="pwpc-label pwpc-n" x="50" y="16" text-anchor="middle">${this.ctx.i18n.t("planes.compass.n")}</text>
-              <text class="pwpc-label" x="84" y="54" text-anchor="middle">${this.ctx.i18n.t("planes.compass.e")}</text>
-              <text class="pwpc-label" x="50" y="90" text-anchor="middle">${this.ctx.i18n.t("planes.compass.s")}</text>
-              <text class="pwpc-label" x="16" y="54" text-anchor="middle">${this.ctx.i18n.t("planes.compass.w")}</text>
+              <text class="pwpc-label pwpc-n" x="50" y="15" text-anchor="middle">${this.ctx.i18n.t("planes.compass.n")}</text>
+              <text class="pwpc-degree pwpc-degree-n" x="50" y="25" text-anchor="middle">0°</text>
+              <text class="pwpc-label" x="86" y="53" text-anchor="middle">${this.ctx.i18n.t("planes.compass.e")}</text>
+              <text class="pwpc-degree" x="86" y="63" text-anchor="middle">90°</text>
+              <text class="pwpc-label" x="50" y="92" text-anchor="middle">${this.ctx.i18n.t("planes.compass.s")}</text>
+              <text class="pwpc-degree" x="50" y="80" text-anchor="middle">180°</text>
+              <text class="pwpc-label" x="14" y="53" text-anchor="middle">${this.ctx.i18n.t("planes.compass.w")}</text>
+              <text class="pwpc-degree" x="14" y="63" text-anchor="middle">270°</text>
             </svg>
           </div>
           <div class="pwp-panel">

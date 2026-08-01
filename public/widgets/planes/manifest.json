@@ -1,6 +1,6 @@
 {
   "id": "planes",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "name": {
     "en": "Planes Overhead",
     "fr": "Avions en vue"
@@ -157,7 +157,7 @@
       },
       "hint": {
         "en": "A fixed north-up compass rose over the map, to compare an aircraft's icon orientation directly against a real compass direction.",
-        "fr": "Une rose des vents fixe, nord en haut, superposée à la carte, pour comparer directement l'orientation d'une icône d'avion à un point cardinal réel."
+        "fr": "Une rose des vents fixe, nord en haut, superposée à la carte, pour comparer directement l'orientation d'une icône d'avion à un point cardinal réel, avec les degrés rappelés sur les 4 axes majeurs (0°/90°/180°/270°)."
       },
       "group": {
         "en": "Compass",

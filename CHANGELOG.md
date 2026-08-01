@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.30.1
+
+- **Avions : compas agrandi (64→88px) et degrés rappelés** sur les 4
+  axes majeurs (0°/90°/180°/270°), sous chaque point cardinal — plus
+  lisible, et plus facile de situer un cap intermédiaire d'un coup
+  d'œil.
+
+---
+
+- **Planes: compass enlarged (64→88px) and degrees recalled** on the 4
+  major axes (0°/90°/180°/270°), below each cardinal point — more
+  legible, and easier to place an intermediate heading at a glance.
+
 ## 1.30.0
 
 - **Avions en vue : compas en surimpression.** Une rose des vents fixe
