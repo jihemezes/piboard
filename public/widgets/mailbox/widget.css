@@ -102,7 +102,28 @@
 }
 .pwmb-modal-body table { max-width: 100%; }
 .pwmb-modal-body p { margin: 0 0 0.8em; }
-.pwmb-modal-body a { color: var(--accent); text-decoration: underline; cursor: default; }
+/* Liens cliquables (voir sanitizeHtml dans widget.js) : ils s'ouvrent a
+   l'exterieur, la cible reelle etant affichee juste apres pour pouvoir
+   la verifier avant de toucher. Clickable links (see sanitizeHtml in
+   widget.js): they open externally, with the real target shown right
+   after so it can be checked before tapping. */
+.pwmb-modal-body a, .pwmb-modal-body a.pwmb-link {
+  color: var(--accent);
+  text-decoration: underline;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+/* Un lien dont le protocole a ete juge non sur garde son texte mais
+   perd sa navigation : le curseur doit le dire. A link whose protocol
+   was deemed unsafe keeps its text but loses its navigation: the cursor
+   should say so. */
+.pwmb-modal-body a:not([href]) { color: var(--muted); cursor: default; text-decoration: none; }
+.pwmb-link-host {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+  white-space: nowrap;
+}
 .pwmb-plain {
   white-space: pre-wrap;
   font-family: inherit;

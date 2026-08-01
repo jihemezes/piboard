@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.28.1
+
+- **Correctif *Courriel* : le choix d'un fournisseur ne remplissait pas
+  le serveur IMAP**, contrairement à ce que l'aide annonçait — le
+  mécanisme n'avait tout simplement pas été implémenté. Nouveau
+  mécanisme générique (une option de liste peut désormais pré-remplir
+  d'autres champs, via une propriété `fills` du manifeste), utilisable
+  par un futur widget.
+- **Les liens et boutons d'un courriel ouvert sont désormais
+  cliquables**, contrairement à la version précédente qui les
+  neutralisait entièrement. Ils s'ouvrent dans le navigateur (protection
+  `noopener`/`noreferrer`), et le **domaine réel de destination est
+  affiché juste après le lien** — un courriel d'hameçonnage affiche
+  souvent un texte trompeur tout en pointant ailleurs, voir la vraie
+  destination avant de toucher permet de le repérer. Seuls les liens
+  web et de messagerie fonctionnent ; un lien `javascript:` reste
+  neutralisé, son texte restant lisible.
+- **Correctif de suite de tests** : une vérification temporelle
+  (alternance heure/date de la tuile Scores sportifs) était devenue
+  instable — la suite ayant grossi au fil des sessions, le délai avant
+  d'atteindre cette vérification pouvait désormais dépasser le cycle de
+  bascule testé. Remplacée par une vérification aller-retour, robuste
+  quelle que soit la phase de départ.
+
+---
+
+- **Fix for *Mailbox*: picking a provider didn't fill in the IMAP
+  server**, despite what the help said — the mechanism simply hadn't
+  been implemented. New generic mechanism (a select option can now
+  pre-fill other fields, via a manifest `fills` property), reusable by a
+  future widget.
+- **Links and buttons in an opened email are now clickable**, unlike
+  the previous version which fully neutralized them. They open in the
+  browser (`noopener`/`noreferrer` protection), and the **real
+  destination domain is shown right after the link** — a phishing email
+  often shows misleading text while pointing elsewhere, seeing the true
+  destination before tapping helps spot it. Only web and mail links
+  work; a `javascript:` link stays neutralized, its text still readable.
+- **Test suite fix**: a timing-based check (the Sports scores tile's
+  time/date alternation) had become flaky — as the suite grew across
+  sessions, the delay before reaching that check could now exceed the
+  toggle cycle being tested. Replaced with a round-trip check, robust
+  regardless of the starting phase.
+
 ## 1.28.0
 
 - **Nouvelle tuile : Courriel.** Affiche les derniers messages d'une

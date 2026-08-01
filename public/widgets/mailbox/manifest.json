@@ -1,6 +1,6 @@
 {
   "id": "mailbox",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Mailbox",
     "fr": "Courriel"
@@ -32,32 +32,127 @@
         "fr": "Fournisseur"
       },
       "options": [
-        { "value": "", "label": { "en": "— Choose to fill in the server —", "fr": "— Choisir pour remplir le serveur —" } },
-        { "value": "imap.free.fr", "label": { "en": "Free (free.fr)", "fr": "Free (free.fr)" } },
-        { "value": "imap.orange.fr", "label": { "en": "Orange", "fr": "Orange" } },
-        { "value": "ssl0.ovh.net", "label": { "en": "OVH", "fr": "OVH" } },
-        { "value": "imap.gmail.com", "label": { "en": "Gmail (app password required)", "fr": "Gmail (mot de passe d'application requis)" } },
-        { "value": "imap.mail.yahoo.com", "label": { "en": "Yahoo (app password required)", "fr": "Yahoo (mot de passe d'application requis)" } },
-        { "value": "imap.mail.me.com", "label": { "en": "iCloud (app password required)", "fr": "iCloud (mot de passe d'application requis)" } },
-        { "value": "imap.laposte.net", "label": { "en": "La Poste", "fr": "La Poste" } },
-        { "value": "imap.sfr.fr", "label": { "en": "SFR", "fr": "SFR" } }
+        {
+          "value": "",
+          "label": {
+            "en": "— Choose to fill in the server —",
+            "fr": "— Choisir pour remplir le serveur —"
+          }
+        },
+        {
+          "value": "imap.free.fr",
+          "label": {
+            "en": "Free (free.fr)",
+            "fr": "Free (free.fr)"
+          },
+          "fills": {
+            "host": "imap.free.fr",
+            "port": 993
+          }
+        },
+        {
+          "value": "imap.orange.fr",
+          "label": {
+            "en": "Orange",
+            "fr": "Orange"
+          },
+          "fills": {
+            "host": "imap.orange.fr",
+            "port": 993
+          }
+        },
+        {
+          "value": "ssl0.ovh.net",
+          "label": {
+            "en": "OVH",
+            "fr": "OVH"
+          },
+          "fills": {
+            "host": "ssl0.ovh.net",
+            "port": 993
+          }
+        },
+        {
+          "value": "imap.gmail.com",
+          "label": {
+            "en": "Gmail (app password required)",
+            "fr": "Gmail (mot de passe d'application requis)"
+          },
+          "fills": {
+            "host": "imap.gmail.com",
+            "port": 993
+          }
+        },
+        {
+          "value": "imap.mail.yahoo.com",
+          "label": {
+            "en": "Yahoo (app password required)",
+            "fr": "Yahoo (mot de passe d'application requis)"
+          },
+          "fills": {
+            "host": "imap.mail.yahoo.com",
+            "port": 993
+          }
+        },
+        {
+          "value": "imap.mail.me.com",
+          "label": {
+            "en": "iCloud (app password required)",
+            "fr": "iCloud (mot de passe d'application requis)"
+          },
+          "fills": {
+            "host": "imap.mail.me.com",
+            "port": 993
+          }
+        },
+        {
+          "value": "imap.laposte.net",
+          "label": {
+            "en": "La Poste",
+            "fr": "La Poste"
+          },
+          "fills": {
+            "host": "imap.laposte.net",
+            "port": 993
+          }
+        },
+        {
+          "value": "imap.sfr.fr",
+          "label": {
+            "en": "SFR",
+            "fr": "SFR"
+          },
+          "fills": {
+            "host": "imap.sfr.fr",
+            "port": 993
+          }
+        }
       ],
       "hint": {
         "en": "A shortcut that fills in the server address below. Pick nothing and type the address directly for any other provider.",
         "fr": "Un raccourci qui remplit l'adresse du serveur ci-dessous. Ne choisissez rien et saisissez l'adresse directement pour tout autre fournisseur."
       },
-      "group": { "en": "Connection", "fr": "Connexion" }
+      "group": {
+        "en": "Connection",
+        "fr": "Connexion"
+      }
     },
     {
       "key": "host",
       "type": "text",
       "default": "",
-      "label": { "en": "IMAP server", "fr": "Serveur IMAP" },
+      "label": {
+        "en": "IMAP server",
+        "fr": "Serveur IMAP"
+      },
       "hint": {
         "en": "For example imap.free.fr. This is the incoming mail server — not the SMTP one, which only sends.",
         "fr": "Par exemple imap.free.fr. C'est le serveur de courrier entrant — pas le SMTP, qui ne sert qu'à envoyer."
       },
-      "group": { "en": "Connection", "fr": "Connexion" }
+      "group": {
+        "en": "Connection",
+        "fr": "Connexion"
+      }
     },
     {
       "key": "port",
@@ -66,45 +161,69 @@
       "min": 1,
       "max": 65535,
       "step": 1,
-      "label": { "en": "Port", "fr": "Port" },
+      "label": {
+        "en": "Port",
+        "fr": "Port"
+      },
       "hint": {
         "en": "993 for a TLS-encrypted connection (the normal case). 143 only if your provider requires it.",
         "fr": "993 pour une connexion chiffrée TLS (le cas normal). 143 uniquement si votre fournisseur l'exige."
       },
-      "group": { "en": "Connection", "fr": "Connexion" }
+      "group": {
+        "en": "Connection",
+        "fr": "Connexion"
+      }
     },
     {
       "key": "user",
       "type": "text",
       "default": "",
-      "label": { "en": "Username", "fr": "Identifiant" },
+      "label": {
+        "en": "Username",
+        "fr": "Identifiant"
+      },
       "hint": {
         "en": "Usually your full email address.",
         "fr": "Généralement votre adresse électronique complète."
       },
-      "group": { "en": "Connection", "fr": "Connexion" }
+      "group": {
+        "en": "Connection",
+        "fr": "Connexion"
+      }
     },
     {
       "key": "imapPassword",
       "type": "secret",
       "default": "",
-      "label": { "en": "Password", "fr": "Mot de passe" },
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe"
+      },
       "hint": {
         "en": "Stored encrypted on the PiBoard, in a file separate from the tile settings — it therefore never ends up in a layout backup or a shared configuration. Prefer an app password when your provider offers one (Gmail, Yahoo, iCloud): it can be revoked on its own, without changing your main account password.",
         "fr": "Conservé chiffré sur le PiBoard, dans un fichier distinct des réglages de la tuile — il ne se retrouve donc jamais dans une sauvegarde de disposition ou une configuration partagée. Préférez un mot de passe d'application quand votre fournisseur en propose (Gmail, Yahoo, iCloud) : il se révoque seul, sans changer le mot de passe principal de votre compte."
       },
-      "group": { "en": "Connection", "fr": "Connexion" }
+      "group": {
+        "en": "Connection",
+        "fr": "Connexion"
+      }
     },
     {
       "key": "folder",
       "type": "text",
       "default": "INBOX",
-      "label": { "en": "Folder", "fr": "Dossier" },
+      "label": {
+        "en": "Folder",
+        "fr": "Dossier"
+      },
       "hint": {
         "en": "INBOX for the inbox. Any other folder name works if you'd rather watch a specific one.",
         "fr": "INBOX pour la boîte de réception. Tout autre nom de dossier fonctionne si vous préférez en surveiller un en particulier."
       },
-      "group": { "en": "Display", "fr": "Affichage" }
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
     },
     {
       "key": "limit",
@@ -113,22 +232,40 @@
       "min": 1,
       "max": 25,
       "step": 1,
-      "label": { "en": "Messages shown", "fr": "Nombre de messages affichés" },
-      "group": { "en": "Display", "fr": "Affichage" }
+      "label": {
+        "en": "Messages shown",
+        "fr": "Nombre de messages affichés"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
     },
     {
       "key": "showSender",
       "type": "checkbox",
       "default": true,
-      "label": { "en": "Show the sender", "fr": "Afficher l'expéditeur" },
-      "group": { "en": "Display", "fr": "Affichage" }
+      "label": {
+        "en": "Show the sender",
+        "fr": "Afficher l'expéditeur"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
     },
     {
       "key": "unreadOnly",
       "type": "checkbox",
       "default": false,
-      "label": { "en": "Unread messages only", "fr": "Messages non lus uniquement" },
-      "group": { "en": "Display", "fr": "Affichage" }
+      "label": {
+        "en": "Unread messages only",
+        "fr": "Messages non lus uniquement"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
     },
     {
       "key": "refresh",
@@ -137,12 +274,18 @@
       "min": 2,
       "max": 120,
       "step": 1,
-      "label": { "en": "Refresh (minutes)", "fr": "Rafraîchissement (minutes)" },
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      },
       "hint": {
         "en": "Each refresh opens a brief connection to the server. Every 10 minutes is plenty for a glanceable display.",
         "fr": "Chaque rafraîchissement ouvre une brève connexion au serveur. Toutes les 10 minutes suffit largement pour un affichage d'un coup d'œil."
       },
-      "group": { "en": "Display", "fr": "Affichage" }
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
     }
   ]
 }

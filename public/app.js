@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.28.0
+   Version 1.28.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1532,6 +1532,33 @@
         </label>
       </fieldset>`;
     form.innerHTML = fieldsBySection(fields, s) + universal;
+
+    /* Une option de liste peut pre-remplir d'autres champs du formulaire
+       via sa propriete "fills" du manifeste (ex. choisir un fournisseur
+       de courriel renseigne le serveur IMAP et son port). Ne remplace
+       que les champs concernes, et seulement au choix explicite d'une
+       option -- jamais a l'ouverture, pour ne pas ecraser une
+       configuration manuelle deja en place.
+       A select option can pre-fill other form fields via its manifest
+       "fills" property (e.g. picking a mail provider fills in the IMAP
+       server and its port). Only replaces the fields concerned, and only
+       on an explicit option choice -- never on opening, so an existing
+       manual configuration is not overwritten. */
+    fields.filter((f) => f.type === "select" && (f.options || []).some((o) => o.fills)).forEach((f) => {
+      const sel = form.querySelector(`select[data-key="${f.key}"]`);
+      if (!sel) return;
+      sel.addEventListener("change", () => {
+        const opt = (f.options || []).find((o) => String(o.value) === sel.value);
+        if (!opt || !opt.fills) return;
+        for (const [key, value] of Object.entries(opt.fills)) {
+          const target = form.querySelector(`[data-key="${key}"]`);
+          if (!target) continue;
+          if (target.type === "checkbox") target.checked = !!value;
+          else target.value = value;
+        }
+      });
+    });
+
     // Etat de chaque secret ("enregistre" / "non defini") : demande au
     // serveur, jamais devine depuis les reglages -- ils ne le contiennent
     // pas. Each secret's state ("stored" / "not set"): asked of the

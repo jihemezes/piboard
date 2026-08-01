@@ -258,7 +258,8 @@ const MAIL_MESSAGE_FIXTURE = {
   html: '<p>Bonjour, voici votre <b>facture</b>.</p>'
     + '<script>window.__pwnedMail = true;</script>'
     + '<img src="https://tracker.exemple.fr/pixel.gif" alt="pixel espion">'
-    + '<a href="https://hameconnage.test/login" onclick="window.__pwnedMail = true;">Cliquez ici</a>',
+    + '<a href="https://hameconnage.test/login" onclick="window.__pwnedMail = true;">Cliquez ici</a>'
+    + '<a href="javascript:window.__pwnedMail = true">Lien piege</a>',
   text: "Bonjour, voici votre facture.",
   attachments: [{ filename: "facture-juillet.pdf", size: 12345 }]
 };
@@ -933,12 +934,28 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   const timeEl = tomorrowRow.querySelector(".pws-status-time");
   const dateEl = tomorrowRow.querySelector(".pws-status-date");
   assert("match a venir un autre jour : heure ET date jj/mm presentes dans le DOM", !!timeEl && !!dateEl);
-  assert("etat initial : heure visible, date cachee", timeEl.hidden === false && dateEl.hidden === true);
+  // Etat initial NON suppose ici : la bascule (toutes les 3s) demarre au
+  // montage de la tuile, tres tot dans le demarrage -- avec une suite de
+  // tests longue, le temps ecoule avant d'arriver ici peut deja
+  // depasser un cycle complet, rendant une phase de depart fixe fragile.
+  // On observe simplement l'etat courant, puis on verifie qu'il bascule
+  // bien vers l'oppose apres un cycle -- une verification aller-retour,
+  // robuste quelle que soit la phase de depart.
+  // Starting state NOT assumed here: the toggle (every 3s) starts at the
+  // tile's mount, very early in boot -- with a long test suite, the time
+  // elapsed before reaching this point can already exceed a full cycle,
+  // making a fixed starting phase fragile. Instead, the current state is
+  // observed, then checked to flip to the opposite one after a cycle --
+  // a round-trip check, robust regardless of the starting phase.
+  assert("etat coherent au depart : exactement l'un des deux visible, pas les deux ni aucun",
+    timeEl.hidden !== dateEl.hidden);
+  const dateWasHidden = dateEl.hidden;
   const expectedDDMM = String(SPORT_TOMORROW.getDate()).padStart(2, "0") + "/" + String(SPORT_TOMORROW.getMonth() + 1).padStart(2, "0");
   assert("date au format jj/mm correct", dateEl.textContent === expectedDDMM);
 
-  await sleep(3100); // laisse le temps a la premiere bascule (toutes les 3s) / lets the first toggle happen (every 3s)
-  assert("apres bascule : date visible, heure cachee", dateEl.hidden === false && timeEl.hidden === true);
+  await sleep(3100); // laisse le temps a une bascule complete (toutes les 3s) / lets a full toggle happen (every 3s)
+  assert("apres un cycle : la visibilite heure/date a bien bascule vers l'oppose",
+    dateEl.hidden === !dateWasHidden && timeEl.hidden === dateWasHidden);
 
   console.log("== Languette -> barre d'outils ==");
   document.getElementById("dockTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -1387,15 +1404,50 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("script du courriel non execute", !window.__pwnedMail);
     assert("balise <script> absente du HTML injecte", !mailBody.innerHTML.includes("<script"));
     assert("gestionnaire onclick retire", !mailBody.innerHTML.includes("onclick"));
-    assert("lien d'hameconnage neutralise (href retire)", !mailBody.querySelector("a")?.getAttribute("href"));
-    assert("texte du lien conserve malgre tout", (mailBody.textContent || "").includes("Cliquez ici"));
     assert("pixel espion retire : aucune balise <img> restante", !mailBody.querySelector("img"));
     assert("image retiree remplacee par une mention visible", !!mailBody.querySelector(".pwmb-img-removed"));
     assert("l'URL du traqueur n'apparait nulle part", !mailBody.innerHTML.includes("tracker.exemple.fr"));
 
+    console.log("== Courriel : liens cliquables mais assainis ==");
+    const safeLink = [...mailBody.querySelectorAll("a")].find((a) => (a.textContent || "").includes("Cliquez ici"));
+    assert("lien http conserve et cliquable (href present)", !!safeLink?.getAttribute("href"));
+    assert("lien ouvert a l'exterieur (target=_blank)", safeLink?.getAttribute("target") === "_blank");
+    assert("lien protege : rel noopener (pas de main sur la page du tableau)",
+      (safeLink?.getAttribute("rel") || "").includes("noopener"));
+    assert("domaine reel de destination affiche a cote du lien",
+      (mailBody.textContent || "").includes("hameconnage.test"));
+
+    const jsLink = [...mailBody.querySelectorAll("a")].find((a) => (a.textContent || "").includes("Lien piege"));
+    assert("lien javascript: neutralise (href retire)", jsLink && !jsLink.getAttribute("href"));
+    assert("texte du lien piege conserve malgre tout", (mailBody.textContent || "").includes("Lien piege"));
+
     mailModal.querySelector(".modal-close[data-close]")?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(20);
     assert("popup refermee par le bouton", mailModal.hidden === true);
+
+    console.log("== Courriel : le choix d'un fournisseur remplit le serveur ==");
+    mailTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const presetSel = document.querySelector('#tileForm [data-key="preset"]');
+    const hostInput = document.querySelector('#tileForm [data-key="host"]');
+    const portInput = document.querySelector('#tileForm [data-key="port"]');
+    assert("liste des fournisseurs et champ serveur presents", !!presetSel && !!hostInput);
+    assert("serveur initial inchange avant tout choix", hostInput.value === "imap.test.fr");
+
+    presetSel.value = "imap.free.fr";
+    presetSel.dispatchEvent(new window.Event("change", { bubbles: true }));
+    assert("choix d'un fournisseur : serveur IMAP rempli automatiquement", hostInput.value === "imap.free.fr");
+    assert("choix d'un fournisseur : port rempli automatiquement", String(portInput.value) === "993");
+
+    // L'option vide ne doit rien ecraser : elle n'a pas de "fills".
+    // The empty option must overwrite nothing: it has no "fills".
+    presetSel.value = "";
+    presetSel.dispatchEvent(new window.Event("change", { bubbles: true }));
+    assert("option vide : le serveur deja rempli n'est pas efface", hostInput.value === "imap.free.fr");
+
+    document.getElementById("tileModal").querySelector(".modal-close")
+      .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
   }
 
   console.log("== Sortie du mode edition ==");

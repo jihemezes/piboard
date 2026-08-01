@@ -26,21 +26,34 @@
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  /* Desinfection identique a celle de la tuile RSS : un courriel est du
-     contenu distant non fiable, souvent bien plus hostile qu'un flux RSS
-     (hameconnage, pixels espions, scripts). Sont retires : scripts et
-     cadres, gestionnaires d'evenements, liens cliquables (le contenu est
-     fait pour etre LU sur un tableau mural, pas navigue -- et surtout
-     pas un lien d'hameconnage touche par megarde), et les images
-     distantes, dont le chargement confirmerait a l'expediteur que le
-     message a ete ouvert.
-     Same sanitizing as the RSS tile's: an email is untrusted remote
-     content, often far more hostile than an RSS feed (phishing, tracking
-     pixels, scripts). Removed: scripts and frames, event handlers,
-     clickable links (the content is meant to be READ on a wall display,
-     not navigated -- and certainly not a phishing link tapped by
-     mistake), and remote images, whose loading would confirm to the
-     sender that the message was opened. */
+  /* Desinfection avant affichage : un courriel est du contenu distant non
+     fiable, souvent bien plus hostile qu'un flux RSS (hameconnage, pixels
+     espions, scripts). Sont retires : scripts et cadres, gestionnaires
+     d'evenements, et les images distantes -- dont le chargement
+     confirmerait a l'expediteur que le message a ete ouvert.
+
+     Les liens, eux, restent CLIQUABLES, mais assainis : seuls http(s) et
+     mailto passent (un "javascript:" ou un "data:" est retire), ils
+     s'ouvrent a l'exterieur sans donner la main sur la page du tableau
+     (noopener), et le domaine reel est affiche a cote du texte. Ce
+     dernier point compte : un lien d'hameconnage affiche volontiers
+     "www.votre-banque.fr" tout en pointant ailleurs -- montrer la
+     destination permet de le voir avant de toucher, sans empecher les
+     liens legitimes de fonctionner.
+
+     Sanitizing before display: an email is untrusted remote content,
+     often far more hostile than an RSS feed (phishing, tracking pixels,
+     scripts). Removed: scripts and frames, event handlers, and remote
+     images -- whose loading would confirm to the sender that the message
+     was opened.
+
+     Links, however, stay CLICKABLE, but sanitized: only http(s) and
+     mailto get through (a "javascript:" or "data:" is stripped), they
+     open externally without handing over control of the board's page
+     (noopener), and the real domain is shown next to the text. That last
+     point matters: a phishing link happily displays "www.your-bank.com"
+     while pointing elsewhere -- showing the destination lets you see it
+     before tapping, without stopping legitimate links from working. */
   function sanitizeHtml(html) {
     if (!html) return "";
     const doc = new DOMParser().parseFromString(String(html), "text/html");
@@ -48,12 +61,36 @@
     doc.querySelectorAll("*").forEach((el) => {
       [...el.attributes].forEach((a) => {
         if (/^on/i.test(a.name)) el.removeAttribute(a.name);
-        if (a.name === "href" && /^\s*javascript:/i.test(a.value)) el.removeAttribute(a.name);
       });
     });
-    // Liens neutralises : le texte reste, la navigation disparait.
-    // Links neutralized: the text stays, the navigation goes.
-    doc.querySelectorAll("a[href]").forEach((a) => a.removeAttribute("href"));
+
+    doc.querySelectorAll("a[href]").forEach((a) => {
+      const href = a.getAttribute("href") || "";
+      let url = null;
+      try { url = new URL(href, "https://invalid.example"); } catch (e) { url = null; }
+      const safe = url && /^(https?|mailto):$/i.test(url.protocol) && !/^\s*javascript:/i.test(href);
+      if (!safe) {
+        // Protocole non sur : le texte reste, la navigation disparait.
+        // Unsafe protocol: the text stays, the navigation goes.
+        a.removeAttribute("href");
+        return;
+      }
+      a.setAttribute("target", "_blank");
+      // noopener : sans cela, la page ouverte peut manipuler celle du
+      // tableau via window.opener. noreferrer : evite d'annoncer d'ou
+      // vient le clic. noopener: without it, the opened page can
+      // manipulate the board's page via window.opener. noreferrer:
+      // avoids announcing where the click came from.
+      a.setAttribute("rel", "noopener noreferrer");
+      a.classList.add("pwmb-link");
+      if (url.protocol.toLowerCase() !== "mailto:") {
+        const badge = doc.createElement("span");
+        badge.className = "pwmb-link-host";
+        badge.textContent = " ↗ " + url.hostname;
+        a.after(badge);
+      }
+    });
+
     // Images distantes remplacees par une mention : evite les pixels
     // espions. Remote images replaced by a note: avoids tracking pixels.
     doc.querySelectorAll("img").forEach((img) => {
