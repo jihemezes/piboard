@@ -125,26 +125,17 @@ async function getMessage(tileId, cfg, uid) {
     const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
     if (!msg || !msg.source) throw new Error("message not found");
     const parsed = await simpleParser(msg.source);
-    // Les images integrees au message (logo, signature...) sont
-    // referencees dans le HTML par "cid:xxx", un identifiant interne au
-    // message -- jamais une URL joignable par le navigateur. mailparser
-    // les livre a part, dans les pieces jointes portant un "cid". Sans
-    // cette conversion en donnee integree (data URI), elles resteraient
-    // cassees meme une fois les images distantes autorisees cote client.
-    // Images embedded in the message (logo, signature...) are referenced
-    // in the HTML by "cid:xxx", an id internal to the message -- never a
-    // URL the browser can reach. mailparser delivers them separately, as
-    // attachments carrying a "cid". Without this conversion into inline
-    // data (a data URI), they'd stay broken even once remote images are
-    // allowed client-side.
-    let html = parsed.html || null;
-    if (html) {
-      for (const att of parsed.attachments || []) {
-        if (!att.cid || !att.content) continue;
-        const dataUri = `data:${att.contentType || "application/octet-stream"};base64,${att.content.toString("base64")}`;
-        html = html.split(`cid:${att.cid}`).join(dataUri);
-      }
-    }
+    // NB : mailparser convertit deja de lui-meme les images integrees
+    // ("cid:xxx", logo, signature...) en donnees base64 directement dans
+    // parsed.html -- verifie directement plutot que suppose. Rien a
+    // faire ici pour elles ; parsed.attachments les liste quand meme,
+    // avec un champ "cid", d'ou le filtre plus bas pour ne pas les
+    // compter comme de vraies pieces jointes.
+    // NB: mailparser already converts embedded images ("cid:xxx", logo,
+    // signature...) into base64 data directly within parsed.html --
+    // checked directly rather than assumed. Nothing to do here for them;
+    // parsed.attachments still lists them, with a "cid" field, hence the
+    // filter below so they aren't counted as genuine attachments.
     return {
       subject: parsed.subject || "",
       from: parsed.from ? parsed.from.text : "",
@@ -154,7 +145,7 @@ async function getMessage(tileId, cfg, uid) {
       // tuile RSS -- un seul endroit a auditer plutot que deux.
       // The HTML is sanitized client-side, with the same function as the
       // RSS tile -- a single place to audit rather than two.
-      html,
+      html: parsed.html || null,
       text: parsed.text || "",
       attachments: (parsed.attachments || [])
         // Une image de signature integree n'est pas vraiment une "piece

@@ -368,24 +368,61 @@
         // meantime: don't overwrite what's currently shown.
         if (token !== this.openToken) return;
 
-        let html = data.html
-          ? sanitizeHtml(data.html, { allowLinks: this.ctx.settings.allowLinks !== false, allowImages: this.ctx.settings.showImages === true })
-          : "";
-        if (!html.trim()) {
-          // Repli sur la version texte, en preservant les sauts de ligne
-          // que le HTML aurait rendus. Falls back to the plain-text
-          // version, preserving the line breaks HTML would have rendered.
-          html = `<pre class="pwmb-plain">${escapeHtml(data.text || "")}</pre>`;
-        }
-        const att = (data.attachments || []).length
+        // Le HTML brut est garde de cote (pas dans le DOM) pour permettre
+        // au bouton "Afficher les images" de re-desinfecter a la demande,
+        // sans nouvelle requete au serveur. The raw HTML is kept aside
+        // (not in the DOM) so the "Show images" button can re-sanitize on
+        // demand, without a new server request.
+        this._rawHtml = data.html || "";
+        this._rawText = data.text || "";
+        this._rawAttachmentsHtml = (data.attachments || []).length
           ? `<div class="pwmb-attachments">📎 ${data.attachments.map((a) => escapeHtml(a.filename)).join(", ")}</div>`
           : "";
-        body.innerHTML = html + att;
+        this.renderMessageBody(body, false);
       } catch (e) {
         console.warn("[piboard/mailbox] message", e);
         if (token !== this.openToken) return;
         body.innerHTML = `<p class="pwmb-loading">${i18n.t("mailbox.readError")}</p>`;
       }
+    }
+
+    /* Rend le corps d'un message deja recupere, en re-desinfectant le
+       HTML brut conserve dans this._rawHtml -- appele une premiere fois
+       a l'ouverture, puis a nouveau si l'utilisateur touche "Afficher
+       les images" (forceImages true, uniquement pour cette lecture, sans
+       toucher au reglage general). Quand des images distantes ont ete
+       masquees par le reglage (pas forceImages), une banniere discrete
+       propose de les afficher en un geste -- le reglage general reste le
+       bon endroit pour un choix permanent, mais ne doit pas etre la seule
+       facon de decouvrir que l'option existe.
+       Renders an already-fetched message's body, re-sanitizing the raw
+       HTML kept in this._rawHtml -- called once when opening, then again
+       if the user taps "Show images" (forceImages true, only for this
+       reading, without touching the general setting). When remote images
+       were hidden by the setting (not forceImages), a discreet banner
+       offers to show them in one tap -- the general setting remains the
+       right place for a permanent choice, but shouldn't be the only way
+       to discover the option exists. */
+    renderMessageBody(body, forceImages) {
+      const i18n = this.ctx.i18n;
+      const opts = {
+        allowLinks: this.ctx.settings.allowLinks !== false,
+        allowImages: forceImages || this.ctx.settings.showImages === true
+      };
+      let html = this._rawHtml ? sanitizeHtml(this._rawHtml, opts) : "";
+      if (!html.trim()) {
+        // Repli sur la version texte, en preservant les sauts de ligne
+        // que le HTML aurait rendus. Falls back to the plain-text
+        // version, preserving the line breaks HTML would have rendered.
+        html = `<pre class="pwmb-plain">${escapeHtml(this._rawText || "")}</pre>`;
+      }
+      const hiddenImages = !opts.allowImages && /pwmb-img-removed/.test(html);
+      const banner = hiddenImages
+        ? `<button type="button" class="pwmb-show-images">🖼 ${i18n.t("mailbox.showImagesNow")}</button>`
+        : "";
+      body.innerHTML = banner + html + this._rawAttachmentsHtml;
+      const btn = body.querySelector(".pwmb-show-images");
+      if (btn) btn.addEventListener("click", () => this.renderMessageBody(body, true));
     }
 
     destroy() {

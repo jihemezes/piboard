@@ -1499,6 +1499,50 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     await sleep(20);
   }
 
+  console.log("== Courriel : bouton 'Afficher les images' directement dans le message ==");
+  {
+    // Remet la tuile sur ses reglages par defaut (images masquees) avant
+    // de tester la banniere -- le bloc precedent les avait modifies.
+    // Resets the tile to its default settings (images hidden) before
+    // testing the banner -- the previous block changed them.
+    const mailTile = document.querySelector('[data-tile-id="t-n"]');
+    mailTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    document.querySelector('#tileForm [data-key="allowLinks"]').checked = true;
+    document.querySelector('#tileForm [data-key="showImages"]').checked = false;
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+
+    tries = 0;
+    while (!mailTile.querySelector(".pwmb-item") && tries++ < 80) await sleep(50);
+    mailTile.querySelector(".pwmb-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while ((document.querySelector(".pwmb-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
+    const body3 = document.querySelector(".pwmb-modal-body");
+
+    assert("reglage par defaut : image toujours masquee", !!body3.querySelector(".pwmb-img-removed"));
+    const showImagesBtn = body3.querySelector(".pwmb-show-images");
+    assert("bouton 'Afficher les images' propose directement dans le message", !!showImagesBtn);
+
+    showImagesBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("clic sur le bouton : l'image distante s'affiche immediatement",
+      !!body3.querySelector('img[src="https://tracker.exemple.fr/pixel.gif"]'));
+    assert("le bouton disparait une fois les images affichees", !body3.querySelector(".pwmb-show-images"));
+
+    const mailboxSettingsAfter = document.querySelector('[data-tile-id="t-n"]');
+    mailboxSettingsAfter.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("le reglage general 'Afficher les images distantes' n'a PAS ete modifie par le bouton du message",
+      document.querySelector('#tileForm [data-key="showImages"]').checked === false);
+    document.getElementById("tileModal").querySelector(".modal-close")
+      .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+
+    document.querySelector(".pwmb-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
+      ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+  }
+
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));

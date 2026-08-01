@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.29.1
+
+- **Courriel : les images « ne marchaient pas » — en réalité, tout
+  fonctionnait, mais le réglage était introuvable.** Après
+  vérification directe du comportement réel de `mailparser` (pas
+  supposé), confirmé que les images intégrées (logo, signature) sont
+  déjà converties automatiquement — le code ajouté en v1.29.0 pour ça
+  était sans effet, retiré. Le vrai souci : la case « Afficher les
+  images distantes », désactivée par défaut, n'était visible que dans
+  les réglages de la tuile, sans aucun indice au moment de lire un
+  message masqué.
+- **Nouveau : bouton « Afficher les images de ce message »**,
+  directement dans le message ouvert quand des images ont été
+  masquées — même principe que Gmail, Outlook ou Apple Mail. Un tap
+  suffit pour les voir ponctuellement, sans toucher au réglage
+  général (qui reste désactivé par défaut pour les prochains
+  messages).
+
+---
+
+- **Mailbox: images "didn't work" — they actually did, but the setting
+  was undiscoverable.** After directly checking (not assuming)
+  `mailparser`'s real behavior, confirmed embedded images (logo,
+  signature) are already converted automatically — the code added in
+  v1.29.0 for this had no effect, removed. The real issue: the "Show
+  remote images" setting, off by default, was only visible in the
+  tile's settings, with no hint at the moment of reading a message with
+  hidden images.
+- **New: "Show images in this message" button**, right in the opened
+  message when images were hidden — same idea as Gmail, Outlook or
+  Apple Mail. One tap is enough to see them for that message, without
+  touching the general setting (which stays off by default for future
+  messages).
+
 ## 1.29.0
 
 - **Courriel : bouton « Recharger »** sur la tuile — relance un relevé

@@ -176,3 +176,24 @@
   color: var(--muted);
   font-size: 12px;
 }
+
+/* Bouton "Afficher les images", propose directement dans le message
+   quand des images distantes ont ete masquees -- voir renderMessageBody()
+   dans widget.js. Ne touche pas au reglage general, seulement a cette
+   lecture. "Show images" button, offered directly in the message when
+   remote images were hidden -- see renderMessageBody() in widget.js.
+   Doesn't touch the general setting, only this reading. */
+.pwmb-show-images {
+  display: block;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 8px 12px;
+  border: 1px dashed var(--tile-edge);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 12.5px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwmb-show-images:hover { border-color: var(--accent); color: var(--accent); }
