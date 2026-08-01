@@ -125,6 +125,26 @@ async function getMessage(tileId, cfg, uid) {
     const msg = await client.fetchOne(String(uid), { source: true }, { uid: true });
     if (!msg || !msg.source) throw new Error("message not found");
     const parsed = await simpleParser(msg.source);
+    // Les images integrees au message (logo, signature...) sont
+    // referencees dans le HTML par "cid:xxx", un identifiant interne au
+    // message -- jamais une URL joignable par le navigateur. mailparser
+    // les livre a part, dans les pieces jointes portant un "cid". Sans
+    // cette conversion en donnee integree (data URI), elles resteraient
+    // cassees meme une fois les images distantes autorisees cote client.
+    // Images embedded in the message (logo, signature...) are referenced
+    // in the HTML by "cid:xxx", an id internal to the message -- never a
+    // URL the browser can reach. mailparser delivers them separately, as
+    // attachments carrying a "cid". Without this conversion into inline
+    // data (a data URI), they'd stay broken even once remote images are
+    // allowed client-side.
+    let html = parsed.html || null;
+    if (html) {
+      for (const att of parsed.attachments || []) {
+        if (!att.cid || !att.content) continue;
+        const dataUri = `data:${att.contentType || "application/octet-stream"};base64,${att.content.toString("base64")}`;
+        html = html.split(`cid:${att.cid}`).join(dataUri);
+      }
+    }
     return {
       subject: parsed.subject || "",
       from: parsed.from ? parsed.from.text : "",
@@ -134,12 +154,19 @@ async function getMessage(tileId, cfg, uid) {
       // tuile RSS -- un seul endroit a auditer plutot que deux.
       // The HTML is sanitized client-side, with the same function as the
       // RSS tile -- a single place to audit rather than two.
-      html: parsed.html || null,
+      html,
       text: parsed.text || "",
-      attachments: (parsed.attachments || []).map((a) => ({
-        filename: a.filename || "",
-        size: a.size || 0
-      }))
+      attachments: (parsed.attachments || [])
+        // Une image de signature integree n'est pas vraiment une "piece
+        // jointe" du point de vue de l'utilisateur : deja affichee dans
+        // le corps (ou remplacee par sa mention), elle ne doit pas
+        // s'ajouter en double a la liste des pieces jointes.
+        // An embedded signature image isn't really an "attachment" from
+        // the user's point of view: already shown in the body (or
+        // replaced by its placeholder), it shouldn't also be listed as
+        // an attachment.
+        .filter((a) => !a.cid)
+        .map((a) => ({ filename: a.filename || "", size: a.size || 0 }))
     };
   } finally {
     if (lock) lock.release();

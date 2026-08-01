@@ -5,6 +5,33 @@
   overflow: hidden;
 }
 
+/* En-tete avec le bouton recharger, presente sur tous les etats
+   (liste, vide, erreur) sauf le tout premier chargement -- voir
+   renderMessage()/render() dans widget.js. Header with the reload
+   button, present on every state (list, empty, error) except the very
+   first load -- see renderMessage()/render() in widget.js. */
+.pwmb-head {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: flex-end;
+  padding: 4px 8px 0;
+}
+.pwmb-reload {
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--field-bg);
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwmb-reload:hover { background: var(--tile-edge); color: var(--text); }
+.pwmb-reload-spin { animation: pwmb-spin 0.8s linear infinite; }
+@keyframes pwmb-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
 .pwmb-list {
   list-style: none;
   margin: 0;

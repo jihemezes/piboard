@@ -242,6 +242,7 @@ const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed",
    bodies), and the message deliberately contains hostile HTML typical
    of a real spam email -- script, event handler, tracking pixel,
    phishing link -- to check the sanitizing. */
+let MAIL_LIST_CALLS = 0;
 const MAIL_LIST_FIXTURE = {
   unseen: 1,
   total: 42,
@@ -426,6 +427,7 @@ const dom = new JSDOM(html, {
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
       }
       if (u.includes("/api/mail/") && u.includes("/list")) {
+        MAIL_LIST_CALLS++;
         return json(MAIL_LIST_FIXTURE);
       }
       if (u.includes("/api/mail/") && u.includes("/message")) {
@@ -1386,8 +1388,22 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("le corps des messages n'est PAS charge dans la liste",
       !(mailTile.textContent || "").includes("Bonjour, voici votre"));
 
+    console.log("== Courriel : bouton recharger ==");
+    const callsBeforeReload = MAIL_LIST_CALLS;
+    const reloadBtn = mailTile.querySelector(".pwmb-reload");
+    assert("bouton recharger present sur la liste", !!reloadBtn);
+    reloadBtn.dispatchEvent(new window.MouseEvent("pointerup", { bubbles: true }));
+    tries = 0;
+    while (MAIL_LIST_CALLS === callsBeforeReload && tries++ < 60) await sleep(50);
+    assert("clic sur recharger : un nouveau releve est declenche", MAIL_LIST_CALLS > callsBeforeReload);
+    // Le DOM a ete remplace par le re-rendu : reprendre une reference
+    // fraiche plutot que "items", perimee. The DOM was replaced by the
+    // re-render: grab a fresh reference rather than "items", now stale.
+    const itemsAfterReload = [...mailTile.querySelectorAll(".pwmb-item")];
+    assert("la liste reste affichee apres rechargement", itemsAfterReload.length === 3);
+
     assert("aucune popup avant clic", !document.querySelector(".pwmb-modal-card"));
-    items[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    itemsAfterReload[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     tries = 0;
     while ((document.querySelector(".pwmb-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
     const mailModal = document.querySelector(".pwmb-modal-card")?.closest(".modal");
@@ -1447,6 +1463,39 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
     document.getElementById("tileModal").querySelector(".modal-close")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+  }
+
+  console.log("== Courriel : reglages Liens cliquables et Afficher les images ==");
+  {
+    const mailTile = document.querySelector('[data-tile-id="t-n"]');
+    mailTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const allowLinksBox = document.querySelector('#tileForm [data-key="allowLinks"]');
+    const showImagesBox = document.querySelector('#tileForm [data-key="showImages"]');
+    assert("case 'Liens cliquables' presente et cochee par defaut", !!allowLinksBox && allowLinksBox.checked === true);
+    assert("case 'Afficher les images' presente et decochee par defaut", !!showImagesBox && showImagesBox.checked === false);
+
+    allowLinksBox.checked = false;
+    showImagesBox.checked = true;
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+
+    const mailTile2 = document.querySelector('[data-tile-id="t-n"]');
+    tries = 0;
+    while (!mailTile2.querySelector(".pwmb-item") && tries++ < 80) await sleep(50);
+    mailTile2.querySelector(".pwmb-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while ((document.querySelector(".pwmb-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
+    const body2 = document.querySelector(".pwmb-modal-body");
+
+    assert("liens desactives : plus aucun href dans le message", !body2.querySelector("a[href]"));
+    assert("liens desactives : le texte du lien reste lisible", (body2.textContent || "").includes("Cliquez ici"));
+    assert("images activees : l'image distante s'affiche desormais", !!body2.querySelector('img[src="https://tracker.exemple.fr/pixel.gif"]'));
+    assert("images activees : plus de mention de repli pour cette image", !body2.querySelector(".pwmb-img-removed"));
+
+    document.querySelector(".pwmb-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
+      ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(20);
   }
 

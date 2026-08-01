@@ -28,34 +28,41 @@
 
   /* Desinfection avant affichage : un courriel est du contenu distant non
      fiable, souvent bien plus hostile qu'un flux RSS (hameconnage, pixels
-     espions, scripts). Sont retires : scripts et cadres, gestionnaires
-     d'evenements, et les images distantes -- dont le chargement
-     confirmerait a l'expediteur que le message a ete ouvert.
+     espions, scripts). Scripts, cadres et gestionnaires d'evenements sont
+     TOUJOURS retires, sans option -- rien a y gagner a les autoriser.
 
-     Les liens, eux, restent CLIQUABLES, mais assainis : seuls http(s) et
-     mailto passent (un "javascript:" ou un "data:" est retire), ils
-     s'ouvrent a l'exterieur sans donner la main sur la page du tableau
-     (noopener), et le domaine reel est affiche a cote du texte. Ce
-     dernier point compte : un lien d'hameconnage affiche volontiers
-     "www.votre-banque.fr" tout en pointant ailleurs -- montrer la
-     destination permet de le voir avant de toucher, sans empecher les
-     liens legitimes de fonctionner.
+     Liens et images, eux, sont regles par options (voir les cases
+     "Liens cliquables" et "Afficher les images" des reglages) : chacun
+     comporte un vrai compromis securite/confort, donc chacun se choisit
+     plutot que d'etre impose.
+     - Liens : desactives par defaut serait plus prudent, mais casserait
+       l'usage courant (suivre un lien legitime) -- actives par defaut,
+       avec le domaine reel affiche a cote pour reperer une destination
+       trompeuse avant de toucher.
+     - Images distantes : desactivees par defaut, un simple pixel de 1x1
+       suffisant a confirmer a l'expediteur que le message a ete ouvert
+       (c'est d'ailleurs le principe des pixels espions).
 
      Sanitizing before display: an email is untrusted remote content,
      often far more hostile than an RSS feed (phishing, tracking pixels,
-     scripts). Removed: scripts and frames, event handlers, and remote
-     images -- whose loading would confirm to the sender that the message
-     was opened.
+     scripts). Scripts, frames and event handlers are ALWAYS removed, no
+     option -- there's nothing to gain by allowing them.
 
-     Links, however, stay CLICKABLE, but sanitized: only http(s) and
-     mailto get through (a "javascript:" or "data:" is stripped), they
-     open externally without handing over control of the board's page
-     (noopener), and the real domain is shown next to the text. That last
-     point matters: a phishing link happily displays "www.your-bank.com"
-     while pointing elsewhere -- showing the destination lets you see it
-     before tapping, without stopping legitimate links from working. */
-  function sanitizeHtml(html) {
+     Links and images, though, are governed by options (see the
+     "Clickable links" and "Show images" settings): each involves a real
+     security/convenience trade-off, so each is a choice rather than
+     something imposed.
+     - Links: off by default would be safer, but would break everyday use
+       (following a legitimate link) -- on by default, with the real
+       domain shown alongside to spot a misleading destination before
+       tapping.
+     - Remote images: off by default, a single 1x1 pixel being enough to
+       confirm to the sender that the message was opened (that's the
+       whole point of a tracking pixel). */
+  function sanitizeHtml(html, opts) {
     if (!html) return "";
+    const allowLinks = !opts || opts.allowLinks !== false;
+    const allowImages = !!(opts && opts.allowImages);
     const doc = new DOMParser().parseFromString(String(html), "text/html");
     doc.querySelectorAll("script,style,iframe,object,embed,form,link,meta,base").forEach((n) => n.remove());
     doc.querySelectorAll("*").forEach((el) => {
@@ -68,10 +75,12 @@
       const href = a.getAttribute("href") || "";
       let url = null;
       try { url = new URL(href, "https://invalid.example"); } catch (e) { url = null; }
-      const safe = url && /^(https?|mailto):$/i.test(url.protocol) && !/^\s*javascript:/i.test(href);
+      const safe = allowLinks && url && /^(https?|mailto):$/i.test(url.protocol) && !/^\s*javascript:/i.test(href);
       if (!safe) {
-        // Protocole non sur : le texte reste, la navigation disparait.
-        // Unsafe protocol: the text stays, the navigation goes.
+        // Liens desactives dans les reglages, ou protocole non sur : le
+        // texte reste, la navigation disparait. Links turned off in
+        // settings, or unsafe protocol: the text stays, the navigation
+        // goes.
         a.removeAttribute("href");
         return;
       }
@@ -91,9 +100,31 @@
       }
     });
 
-    // Images distantes remplacees par une mention : evite les pixels
-    // espions. Remote images replaced by a note: avoids tracking pixels.
     doc.querySelectorAll("img").forEach((img) => {
+      const src = img.getAttribute("src") || "";
+      // Une image deja integree au message ("data:", voir la conversion
+      // cote serveur des images cid: dans mailbox.js) ne charge rien
+      // depuis l'exterieur : aucun risque de pixel espion, elle
+      // s'affiche donc toujours, independamment du reglage. Seule une
+      // image vraiment DISTANTE (http/https) declenche une requete
+      // reseau capable de confirmer l'ouverture du message a
+      // l'expediteur -- c'est elle seule que le reglage gouverne.
+      // An image already embedded in the message ("data:", see the
+      // server-side cid: conversion in mailbox.js) loads nothing from
+      // the outside: no tracking-pixel risk, so it's always shown,
+      // regardless of the setting. Only a genuinely REMOTE image
+      // (http/https) triggers a network request able to confirm the
+      // message was opened to the sender -- that's the only kind the
+      // setting governs.
+      const embedded = /^data:/i.test(src);
+      if (embedded || allowImages) {
+        img.removeAttribute("onerror");
+        img.loading = "lazy";
+        return;
+      }
+      // Images distantes remplacees par une mention : evite les pixels
+      // espions. Remote images replaced by a note: avoids tracking
+      // pixels.
       const alt = img.getAttribute("alt");
       const span = doc.createElement("span");
       span.className = "pwmb-img-removed";
@@ -126,6 +157,29 @@
       this.messages = [];
       this.modal = null;
       this.openToken = 0; // ignore une reponse arrivee apres l'ouverture d'un autre message / ignores a response arriving after another message was opened
+    }
+
+    // Etat simple (chargement, erreur, liste vide) avec bouton recharger
+    // en option -- inutile pendant le tout premier chargement ou tant
+    // que la configuration est incomplete (rien a recharger), utile des
+    // qu'une tentative a eu lieu. Simple state (loading, error, empty
+    // list) with an optional reload button -- pointless during the very
+    // first load or while the configuration is incomplete (nothing to
+    // reload), useful once an attempt has happened.
+    renderMessage(msg, showReload) {
+      const i18n = this.ctx.i18n;
+      this.ctx.el.innerHTML = `
+        <div class="pw-mailbox">
+          ${showReload ? `<div class="pwmb-head"><button type="button" class="pwmb-reload" aria-label="${i18n.t("mailbox.reload")}" title="${i18n.t("mailbox.reload")}">⟳</button></div>` : ""}
+          <div class="pwmb-msg">${msg}</div>
+        </div>`;
+      if (showReload) {
+        this.ctx.el.querySelector(".pwmb-reload").addEventListener("pointerup", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.reloadNow();
+        });
+      }
     }
 
     async init() {
@@ -165,7 +219,7 @@
       const s = this.ctx.settings;
       const i18n = this.ctx.i18n;
       if (!s.host || !s.user) {
-        this.ctx.el.innerHTML = `<div class="pw-mailbox"><div class="pwmb-msg">${i18n.t("mailbox.needConfig")}</div></div>`;
+        this.renderMessage(i18n.t("mailbox.needConfig"), false);
         return;
       }
       try {
@@ -184,7 +238,7 @@
         // very different actions for the user.
         const msg = /no password|authenticat|login|credential/i.test(String(e.message))
           ? i18n.t("mailbox.authError") : i18n.t("mailbox.error");
-        this.ctx.el.innerHTML = `<div class="pw-mailbox"><div class="pwmb-msg">${msg}</div></div>`;
+        this.renderMessage(msg, true);
       }
     }
 
@@ -196,7 +250,7 @@
       if (s.unreadOnly) list = list.filter((m) => !m.seen);
 
       if (!list.length) {
-        this.ctx.el.innerHTML = `<div class="pw-mailbox"><div class="pwmb-msg">${i18n.t(s.unreadOnly ? "mailbox.noUnread" : "mailbox.empty")}</div></div>`;
+        this.renderMessage(i18n.t(s.unreadOnly ? "mailbox.noUnread" : "mailbox.empty"), true);
         return;
       }
 
@@ -211,8 +265,26 @@
 
       this.ctx.el.innerHTML = `
         <div class="pw-mailbox">
+          <div class="pwmb-head">
+            <button type="button" class="pwmb-reload" aria-label="${i18n.t("mailbox.reload")}" title="${i18n.t("mailbox.reload")}">⟳</button>
+          </div>
           <ul class="pwmb-list">${rows}</ul>
         </div>`;
+
+      // pointerup, pas click : ce bouton est cense fonctionner meme sur
+      // une tuile ou un widget cousin utilise Leaflet (comportement
+      // tactile deja rencontre ailleurs dans le projet) -- coherence
+      // avant tout, meme si ce widget-ci n'a pas de carte.
+      // pointerup, not click: this button is meant to behave
+      // consistently with sibling widgets that use Leaflet (a touch
+      // quirk already met elsewhere in the project) -- consistency
+      // above all, even though this widget itself has no map.
+      const reloadBtn = this.ctx.el.querySelector(".pwmb-reload");
+      reloadBtn.addEventListener("pointerup", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        this.reloadNow();
+      });
 
       // Ecouteur delegue : survit au re-rendu complet ci-dessus, et evite
       // un ecouteur par ligne. Delegated listener: survives the full
@@ -223,6 +295,30 @@
         e.stopPropagation();
         this.openMessage(list[Number(li.dataset.idx)]);
       });
+    }
+
+    /* Relance un releve immediatement, sans attendre le prochain
+       rafraichissement automatique -- et reinitialise le minuteur pour
+       que le prochain releve automatique ne survienne pas presque tout
+       de suite apres celui-ci. Un discret retour visuel (icone qui
+       tourne) confirme que quelque chose se passe, une connexion IMAP
+       n'etant jamais instantanee.
+       Triggers an immediate check without waiting for the next automatic
+       refresh -- and resets the timer so the next automatic check
+       doesn't land right after this one. A subtle visual cue (spinning
+       icon) confirms something is happening, since an IMAP connection is
+       never instant. */
+    async reloadNow() {
+      const btn = this.ctx.el.querySelector(".pwmb-reload");
+      if (btn) btn.classList.add("pwmb-reload-spin");
+      await this.refresh();
+      this.arm();
+      // this.ctx.el a ete entierement remplace par refresh()->render() :
+      // reprendre une reference fraiche plutot que "btn", perimee.
+      // this.ctx.el was entirely replaced by refresh()->render(): grab a
+      // fresh reference rather than "btn", now stale.
+      const freshBtn = this.ctx.el.querySelector(".pwmb-reload");
+      if (freshBtn) freshBtn.classList.remove("pwmb-reload-spin");
     }
 
     ensureModal() {
@@ -272,7 +368,9 @@
         // meantime: don't overwrite what's currently shown.
         if (token !== this.openToken) return;
 
-        let html = data.html ? sanitizeHtml(data.html) : "";
+        let html = data.html
+          ? sanitizeHtml(data.html, { allowLinks: this.ctx.settings.allowLinks !== false, allowImages: this.ctx.settings.showImages === true })
+          : "";
         if (!html.trim()) {
           // Repli sur la version texte, en preservant les sauts de ligne
           // que le HTML aurait rendus. Falls back to the plain-text

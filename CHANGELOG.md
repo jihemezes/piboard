@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.29.0
+
+- **Courriel : bouton « Recharger »** sur la tuile — relance un relevé
+  immédiatement, sans attendre le prochain rafraîchissement
+  automatique. Présent sur la liste comme sur les états vide/erreur,
+  avec une icône qui tourne pendant le chargement.
+- **Courriel : liens cliquables réglables**, pour des raisons de
+  sécurité — nouvelle case « Liens cliquables » (activée par défaut,
+  comportement inchangé). Une fois désactivée, les liens s'affichent en
+  texte simple, non cliquable.
+- **Correctif *Courriel* : les images n'apparaissaient jamais**, y
+  compris une fois « Afficher les images distantes » activé. Cause :
+  les images **intégrées** au message (logo, signature — le cas le plus
+  courant) sont référencées en interne par un identifiant `cid:`, jamais
+  chargeable tel quel par un navigateur ; sans conversion, elles
+  restaient cassées quel que soit le réglage. Elles sont désormais
+  résolues côté serveur en données intégrées, et s'affichent
+  **toujours** — ne chargeant rien depuis l'extérieur, elles ne posent
+  aucun risque de traçage. Seules les images vraiment **distantes**
+  restent soumises au réglage « Afficher les images distantes »
+  (désactivé par défaut, un pixel de 1×1 suffisant à confirmer
+  l'ouverture du message à l'expéditeur).
+
+---
+
+- **Mailbox: "Reload" button** on the tile — triggers an immediate
+  check, without waiting for the next automatic refresh. Present on the
+  list as well as the empty/error states, with a spinning icon during
+  loading.
+- **Mailbox: configurable clickable links**, for security reasons — new
+  "Clickable links" setting (on by default, unchanged behavior). Once
+  turned off, links display as plain, non-clickable text.
+- **Fix for *Mailbox*: images never showed up**, even with "Show remote
+  images" turned on. Cause: images **embedded** in the message (a logo,
+  a signature — the most common case) are referenced internally by a
+  `cid:` identifier, never loadable as-is by a browser; without
+  conversion, they stayed broken regardless of the setting. They are now
+  resolved server-side into embedded data, and **always** show — loading
+  nothing from the outside, they pose no tracking risk. Only genuinely
+  **remote** images stay governed by the "Show remote images" setting
+  (off by default, a single 1×1 pixel being enough to confirm the
+  message was opened to the sender).
+
 ## 1.28.1
 
 - **Correctif *Courriel* : le choix d'un fournisseur ne remplissait pas

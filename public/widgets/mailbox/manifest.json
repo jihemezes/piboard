@@ -1,6 +1,6 @@
 {
   "id": "mailbox",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Mailbox",
     "fr": "Courriel"
@@ -265,6 +265,40 @@
       "group": {
         "en": "Display",
         "fr": "Affichage"
+      }
+    },
+    {
+      "key": "allowLinks",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Clickable links",
+        "fr": "Liens cliquables"
+      },
+      "hint": {
+        "en": "When on, links open in the browser and show their real destination domain next to the text — useful to catch a phishing link showing misleading text. Turn off to display links as plain, non-clickable text instead.",
+        "fr": "Une fois activé, les liens s'ouvrent dans le navigateur et affichent leur vrai domaine de destination à côté du texte — utile pour repérer un lien d'hameçonnage au texte trompeur. Désactivez pour afficher les liens en texte simple, non cliquable."
+      },
+      "group": {
+        "en": "Message reading",
+        "fr": "Lecture des messages"
+      }
+    },
+    {
+      "key": "showImages",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show remote images",
+        "fr": "Afficher les images distantes"
+      },
+      "hint": {
+        "en": "Off by default: a single 1×1 remote image is enough to confirm to the sender that the message was opened (that's exactly how a tracking pixel works). Images already embedded in the message (a logo, a signature) always show, regardless of this setting — they load nothing from the outside.",
+        "fr": "Désactivé par défaut : une simple image distante de 1×1 suffit à confirmer à l'expéditeur que le message a été ouvert (c'est exactement le principe d'un pixel espion). Les images déjà intégrées au message (un logo, une signature) s'affichent toujours, quel que soit ce réglage — elles ne chargent rien depuis l'extérieur."
+      },
+      "group": {
+        "en": "Message reading",
+        "fr": "Lecture des messages"
       }
     },
     {
