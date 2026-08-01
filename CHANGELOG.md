@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.32.0
+
+- **Astronomie : nouvelle section « Prochaine éclipse ».** La prochaine
+  éclipse solaire ou lunaire **réellement visible** depuis la ville
+  configurée — pas simplement en cours quelque part sur Terre :
+  - Éclipse solaire : circonstances locales calculées directement pour
+    la position exacte (une éclipse solaire ne concerne que l'endroit
+    précis où l'ombre de la Lune touche le sol) ;
+  - Éclipse lunaire : vérifie que la Lune est bien au-dessus de
+    l'horizon à votre position au moment du maximum, en cherchant
+    l'événement suivant sinon — une éclipse lunaire est visible depuis
+    la moitié nocturne de la Terre, pas depuis n'importe où ;
+  - Type (partielle, annulaire, totale…), pourcentage d'obscuration,
+    date et heure du maximum, et un **compte à rebours compact et
+    discret** (en jours, ou en heures le jour même).
+
+  Comme la phase de lune et les planètes, **calculée directement sur le
+  PiBoard**, sans appel réseau.
+- **Quatre sections désormais**, chacune avec sa propre case pour
+  l'afficher ou non (Lune, ISS, Planètes, Éclipse).
+
+---
+
+- **Astronomy: new "Next eclipse" section.** The next solar or lunar
+  eclipse **actually visible** from the configured city — not merely
+  happening somewhere on Earth:
+  - Solar eclipse: local circumstances computed directly for the exact
+    position (a solar eclipse only concerns the exact spot where the
+    Moon's shadow touches the ground);
+  - Lunar eclipse: checks the Moon is actually above the horizon at
+    your location at the moment of the peak, searching the next event
+    otherwise — a lunar eclipse is visible from the night half of
+    Earth, not from just anywhere;
+  - Type (partial, annular, total…), obscuration percentage, date and
+    time of the peak, and a **compact, discreet countdown** (in days,
+    or in hours on the day itself).
+
+  Like moon phase and planets, **computed directly on the PiBoard**,
+  with no network call.
+- **Four sections now**, each with its own checkbox to show it or not
+  (Moon, ISS, Planets, Eclipse).
+
 ## 1.31.0
 
 - **Nouvelle tuile : Astronomie.** Trois sections indépendamment

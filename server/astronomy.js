@@ -112,4 +112,56 @@ function visiblePlanets(lat, lon, elevationM, includeOuter, now) {
   });
 }
 
-module.exports = { moonPhase, visiblePlanets };
+/* Prochaine eclipse -- solaire ou lunaire, celle qui arrive en premier
+   -- reellement VISIBLE depuis la position donnee, pas simplement
+   "en cours quelque part sur Terre".
+
+   Solaire : SearchLocalSolarEclipse calcule directement les
+   circonstances locales (l'eclipse solaire ne concerne par nature que
+   l'endroit ou l'ombre de la Lune touche terre, donc uniquement en plein
+   jour a cet endroit).
+
+   Lunaire : SearchLunarEclipse ne renvoie qu'un evenement GLOBAL (visible
+   depuis a peu pres la moitie de la Terre, cote nuit) ; il faut verifier
+   soi-meme que la Lune est au-dessus de l'horizon au moment du pic pour
+   cette position precise, et chercher l'evenement suivant sinon.
+
+   Next eclipse -- solar or lunar, whichever comes first -- actually
+   VISIBLE from the given position, not merely "happening somewhere on
+   Earth".
+
+   Solar: SearchLocalSolarEclipse directly computes local circumstances
+   (a solar eclipse by nature only concerns wherever the Moon's shadow
+   touches the ground, so only during daytime at that spot).
+
+   Lunar: SearchLunarEclipse only returns a GLOBAL event (visible from
+   roughly half of Earth, the night side); the Moon's altitude at peak
+   time must be checked for this exact position, searching the next
+   event otherwise. */
+function nextEclipse(lat, lon, elevationM, now) {
+  const observer = new Astronomy.Observer(lat, lon, elevationM || 0);
+
+  const solar = Astronomy.SearchLocalSolarEclipse(now, observer);
+
+  let lunar = null;
+  let ev = Astronomy.SearchLunarEclipse(now);
+  // Une eclipse lunaire visible depuis un point donne n'arrive que ~1 a 2
+  // fois par an en moyenne ; 12 essais couvre large tout en restant
+  // instantane a calculer. A lunar eclipse visible from a given point
+  // only happens ~1-2 times a year on average; 12 tries covers this with
+  // room to spare while staying instant to compute.
+  for (let i = 0; i < 12 && !lunar; i++) {
+    const eq = Astronomy.Equator(Astronomy.Body.Moon, ev.peak, observer, true, true);
+    const hor = Astronomy.Horizon(ev.peak, observer, eq.ra, eq.dec, "normal");
+    if (hor.altitude > 0) lunar = { ev, altitude: hor.altitude };
+    else ev = Astronomy.NextLunarEclipse(ev.peak);
+  }
+
+  const solarPick = { type: "solar", kind: solar.kind, peakTime: solar.peak.time.date, altitude: solar.peak.altitude, obscuration: solar.obscuration };
+  const lunarPick = lunar ? { type: "lunar", kind: lunar.ev.kind, peakTime: lunar.ev.peak.date, altitude: lunar.altitude, obscuration: lunar.ev.obscuration } : null;
+
+  if (!lunarPick) return solarPick;
+  return solarPick.peakTime < lunarPick.peakTime ? solarPick : lunarPick;
+}
+
+module.exports = { moonPhase, visiblePlanets, nextEclipse };

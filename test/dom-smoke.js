@@ -272,6 +272,12 @@ const ASTRO_ISS_FIXTURE = {
   ]
 };
 
+const ASTRO_ECLIPSE_FIXTURE = {
+  type: "solar", kind: "partial",
+  peakTime: new Date(Date.now() + 12 * 86400000).toISOString(),
+  altitude: 25.4, obscuration: 0.87
+};
+
 const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"][(new Date().getDay() + 1) % 7];
 
 /* Fixtures Courriel : la liste ne porte que des en-tetes (jamais de
@@ -466,6 +472,9 @@ const dom = new JSDOM(html, {
         const tmm = String(tomorrow.getMonth() + 1).padStart(2, "0");
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
+      }
+      if (u.includes("/api/astronomy/eclipse")) {
+        return json(ASTRO_ECLIPSE_FIXTURE);
       }
       if (u.includes("/api/astronomy/moon")) {
         return json(ASTRO_MOON_FIXTURE);
@@ -1611,6 +1620,13 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("icone de lune (svg) presente", !!astroTile.querySelector(".pwa-moon-icon svg"));
     assert("chemin de la partie eclairee present dans le svg", !!astroTile.querySelector(".pwa-moon-lit"));
 
+    console.log("== Astronomie : prochaine eclipse ==");
+    assert("titre de la section eclipse affiche", (astroTile.textContent || "").includes("Prochaine éclipse"));
+    assert("type et nature de l'eclipse affiches (solaire partielle)", (astroTile.textContent || "").includes("Éclipse solaire partielle"));
+    assert("pourcentage d'obscuration affiche (87%)", (astroTile.textContent || "").includes("87%"));
+    assert("compte a rebours affiche (dans 12 jours)", (astroTile.textContent || "").includes("dans 12 jours"));
+    assert("compte a rebours dans son propre element, distinct de la date", !!astroTile.querySelector(".pwa-eclipse-countdown"));
+
     console.log("== Astronomie : planetes visibles ==");
     const planetItems = [...astroTile.querySelectorAll(".pwa-planet-item")];
     assert("2 planetes affichees (Mars sous l'horizon exclue)", planetItems.length === 2);
@@ -1634,11 +1650,13 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("case Lune presente et cochee par defaut", document.querySelector('#tileForm [data-key="showMoonPhase"]')?.checked === true);
     assert("case ISS presente et cochee par defaut", document.querySelector('#tileForm [data-key="showIss"]')?.checked === true);
     assert("case Planetes presente et cochee par defaut", document.querySelector('#tileForm [data-key="showPlanets"]')?.checked === true);
+    assert("case Eclipse presente et cochee par defaut", document.querySelector('#tileForm [data-key="showEclipse"]')?.checked === true);
     assert("passages visibles uniquement coche par defaut (choix retenu)", document.querySelector('#tileForm [data-key="issVisibleOnly"]')?.checked === true);
     assert("Uranus/Neptune decoche par defaut (non visibles a l'oeil nu)", document.querySelector('#tileForm [data-key="includeOuterPlanets"]')?.checked === false);
 
     document.querySelector('#tileForm [data-key="showIss"]').checked = false;
     document.querySelector('#tileForm [data-key="showPlanets"]').checked = false;
+    document.querySelector('#tileForm [data-key="showEclipse"]').checked = false;
     document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(50);
     const astroTile2 = document.querySelector('[data-tile-id="t-o"]');
@@ -1646,6 +1664,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     while (!astroTile2.querySelector(".pwa-section") && tries++ < 80) await sleep(50);
     assert("section ISS masquee une fois decochee", !astroTile2.textContent.includes("Passages ISS"));
     assert("section planetes masquee une fois decochee", !astroTile2.textContent.includes("Vénus"));
+    assert("section eclipse masquee une fois decochee", !astroTile2.textContent.includes("Prochaine éclipse"));
     assert("section lune, elle, reste affichee", astroTile2.textContent.includes("Lune"));
   }
 

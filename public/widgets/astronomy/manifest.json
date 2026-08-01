@@ -1,14 +1,14 @@
 {
   "id": "astronomy",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Astronomy",
     "fr": "Astronomie"
   },
   "titleBar": true,
   "description": {
-    "en": "Moon phase, upcoming visible ISS passes, and which planets are up tonight — three independently toggleable sections. Moon phase and planet positions are computed locally (via the astronomy-engine library), with no network dependency; ISS passes come from a free, keyless community API that predicts them from up-to-date orbital data.",
-    "fr": "Phase de lune, prochains passages visibles de l'ISS, et quelles planètes sont visibles ce soir — trois sections activables indépendamment. La phase de lune et la position des planètes sont calculées localement (via la bibliothèque astronomy-engine), sans dépendance réseau ; les passages de l'ISS viennent d'une API communautaire gratuite et sans clé qui les prédit à partir de données orbitales à jour."
+    "en": "Moon phase, upcoming visible ISS passes, which planets are up tonight, and the next solar or lunar eclipse actually visible from your city (with a compact countdown) — four independently toggleable sections. Moon phase and planet positions are computed locally (via the astronomy-engine library), with no network dependency; ISS passes come from a free, keyless community API that predicts them from up-to-date orbital data.",
+    "fr": "Phase de lune, prochains passages visibles de l'ISS, quelles planètes sont visibles ce soir, et la prochaine éclipse solaire ou lunaire réellement visible depuis votre ville (avec un compte à rebours compact) — quatre sections activables indépendamment. La phase de lune et la position des planètes sont calculées localement (via la bibliothèque astronomy-engine), sans dépendance réseau ; les passages de l'ISS viennent d'une API communautaire gratuite et sans clé qui les prédit à partir de données orbitales à jour."
   },
   "tagline": {
     "en": "Moon phase, ISS passes, visible planets.",
@@ -127,6 +127,23 @@
       "group": {
         "en": "Planets",
         "fr": "Planètes"
+      }
+    },
+    {
+      "key": "showEclipse",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show next eclipse",
+        "fr": "Afficher la prochaine éclipse"
+      },
+      "hint": {
+        "en": "The next solar or lunar eclipse actually visible from the city above (not merely happening somewhere on Earth), with a compact countdown.",
+        "fr": "La prochaine éclipse solaire ou lunaire réellement visible depuis la ville ci-dessus (pas simplement en cours quelque part sur Terre), avec un compte à rebours compact."
+      },
+      "group": {
+        "en": "Eclipse",
+        "fr": "Éclipse"
       }
     },
     {

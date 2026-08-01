@@ -131,12 +131,17 @@
               .then((r) => r.json()).catch((e) => { console.warn("[piboard/astronomy] planets", e); return null; })
           : Promise.resolve(null));
         jobs.push(s.showIss !== false ? this.loadIss(lat, lon, elevation) : Promise.resolve(null));
+        jobs.push(s.showEclipse !== false
+          ? fetch(`/api/astronomy/eclipse?lat=${lat}&lon=${lon}&elevation=${elevation}`)
+              .then((r) => r.json()).catch((e) => { console.warn("[piboard/astronomy] eclipse", e); return null; })
+          : Promise.resolve(null));
 
-        const [moon, planetsData, iss] = await Promise.all(jobs);
+        const [moon, planetsData, iss, eclipse] = await Promise.all(jobs);
         this.data = {
           moon,
           planets: planetsData && planetsData.planets ? planetsData.planets.filter((p) => p.aboveHorizon) : null,
-          iss
+          iss,
+          eclipse: eclipse && !eclipse.error ? eclipse : null
         };
         this.render();
       } catch (e) {
@@ -188,6 +193,7 @@
       if (s.showMoonPhase !== false) sections.push(this.renderMoon(d.moon));
       if (s.showIss !== false) sections.push(this.renderIss(d.iss));
       if (s.showPlanets !== false) sections.push(this.renderPlanets(d.planets));
+      if (s.showEclipse !== false) sections.push(this.renderEclipse(d.eclipse));
 
       if (!sections.length) {
         this.ctx.el.innerHTML = `<div class="pw-astronomy"><div class="pwa-msg">${i18n.t("astronomy.nothingShown")}</div></div>`;
@@ -267,6 +273,47 @@
         <div class="pwa-section">
           <div class="pwa-section-title">${i18n.t("astronomy.planetsTitle")}</div>
           <ul class="pwa-planet-list">${rows}</ul>
+        </div>`;
+    }
+
+    /* Compte a rebours compact avant un instant donne : en jours quand
+       c'est encore lointain, en heures le jour meme -- calcule a chaque
+       rendu, donc reste a jour au rythme du rafraichissement normal de
+       la tuile (une eclipse se compte en jours, pas besoin d'un
+       minuteur dedie plus rapide).
+       Compact countdown until a given moment: in days while still far
+       off, in hours on the day itself -- computed on every render, so it
+       stays current at the tile's normal refresh pace (an eclipse is
+       counted in days, no need for a dedicated faster timer). */
+    countdownText(iso) {
+      const i18n = this.ctx.i18n;
+      const ms = new Date(iso).getTime() - Date.now();
+      if (ms <= 0) return i18n.t("astronomy.now");
+      const hours = ms / 3600000;
+      if (hours < 24) return i18n.t("astronomy.inHours").replace("{n}", Math.max(1, Math.round(hours)));
+      return i18n.t("astronomy.inDays").replace("{n}", Math.round(hours / 24));
+    }
+
+    renderEclipse(eclipse) {
+      const i18n = this.ctx.i18n;
+      const locale = i18n.t("clock.date.format");
+      if (!eclipse) {
+        return `<div class="pwa-section"><div class="pwa-section-title">${i18n.t("astronomy.eclipseTitle")}</div><div class="pwa-msg-inline">${i18n.t("astronomy.error")}</div></div>`;
+      }
+      const icon = eclipse.type === "solar" ? "☀️" : "🌕";
+      const kindLabel = i18n.t(`astronomy.eclipseKind.${eclipse.type}.${eclipse.kind}`);
+      const pct = Math.round(eclipse.obscuration * 100);
+      return `
+        <div class="pwa-section">
+          <div class="pwa-section-title">${i18n.t("astronomy.eclipseTitle")}</div>
+          <div class="pwa-eclipse-row">
+            <span class="pwa-eclipse-icon">${icon}</span>
+            <div class="pwa-eclipse-info">
+              <div class="pwa-eclipse-kind">${kindLabel}</div>
+              <div class="pwa-eclipse-when">${fmtDay(eclipse.peakTime, locale, i18n)} · ${fmtTime(eclipse.peakTime, locale)} · ${pct}%</div>
+              <div class="pwa-eclipse-countdown">${this.countdownText(eclipse.peakTime)}</div>
+            </div>
+          </div>
         </div>`;
     }
 

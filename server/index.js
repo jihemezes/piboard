@@ -984,6 +984,21 @@ app.get("/api/astronomy/planets", (req, res) => {
   }
 });
 
+app.get("/api/astronomy/eclipse", (req, res) => {
+  const lat = Number(req.query.lat);
+  const lon = Number(req.query.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: "lat/lon required" });
+  }
+  try {
+    const elevation = Number(req.query.elevation) || 0;
+    res.json(astronomy.nextEclipse(lat, lon, elevation, new Date()));
+  } catch (e) {
+    console.warn("[piboard] astronomy/eclipse:", e.message);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 /* ---------- Statique / static ---------- */
 
 app.use("/vendor/gridstack", express.static(GRIDSTACK_DIST, { maxAge: "7d" }));
