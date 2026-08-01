@@ -1,0 +1,149 @@
+{
+  "id": "astronomy",
+  "version": "0.1.0",
+  "name": {
+    "en": "Astronomy",
+    "fr": "Astronomie"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Moon phase, upcoming visible ISS passes, and which planets are up tonight — three independently toggleable sections. Moon phase and planet positions are computed locally (via the astronomy-engine library), with no network dependency; ISS passes come from a free, keyless community API that predicts them from up-to-date orbital data.",
+    "fr": "Phase de lune, prochains passages visibles de l'ISS, et quelles planètes sont visibles ce soir — trois sections activables indépendamment. La phase de lune et la position des planètes sont calculées localement (via la bibliothèque astronomy-engine), sans dépendance réseau ; les passages de l'ISS viennent d'une API communautaire gratuite et sans clé qui les prédit à partir de données orbitales à jour."
+  },
+  "tagline": {
+    "en": "Moon phase, ISS passes, visible planets.",
+    "fr": "Phase de lune, passages ISS, planètes visibles."
+  },
+  "size": {
+    "w": 4,
+    "h": 5,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 8,
+    "maxH": 12
+  },
+  "settings": [
+    {
+      "key": "city",
+      "type": "text",
+      "default": "Paris",
+      "label": {
+        "en": "City",
+        "fr": "Ville"
+      },
+      "hint": {
+        "en": "Used for the ISS pass predictions and the planets' altitude/direction — both depend on the observer's exact location.",
+        "fr": "Utilisée pour les prédictions de passage de l'ISS et l'altitude/direction des planètes — les deux dépendent de la position exacte de l'observateur."
+      },
+      "group": {
+        "en": "Location",
+        "fr": "Position"
+      }
+    },
+    {
+      "key": "showMoonPhase",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show moon phase",
+        "fr": "Afficher la phase de lune"
+      },
+      "group": {
+        "en": "Moon",
+        "fr": "Lune"
+      }
+    },
+    {
+      "key": "showIss",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show ISS passes",
+        "fr": "Afficher les passages ISS"
+      },
+      "group": {
+        "en": "International Space Station",
+        "fr": "Station spatiale internationale"
+      }
+    },
+    {
+      "key": "issVisibleOnly",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Visible passes only",
+        "fr": "Passages visibles uniquement"
+      },
+      "hint": {
+        "en": "A pass is only \"visible\" when the station is sunlit AND the sky above you is dark enough (civil twilight or later) — most overhead passes don't meet both conditions. Uncheck to see every pass above the horizon, including ones you can't actually see.",
+        "fr": "Un passage n'est « visible » que lorsque la station est éclairée par le soleil ET que le ciel au-dessus de vous est assez sombre (crépuscule civil ou plus tard) — la plupart des passages au-dessus de l'horizon ne remplissent pas les deux conditions. Décochez pour voir tous les passages au-dessus de l'horizon, y compris ceux que vous ne pouvez pas réellement voir."
+      },
+      "group": {
+        "en": "International Space Station",
+        "fr": "Station spatiale internationale"
+      }
+    },
+    {
+      "key": "issMaxPasses",
+      "type": "number",
+      "default": 3,
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "label": {
+        "en": "Passes shown",
+        "fr": "Passages affichés"
+      },
+      "group": {
+        "en": "International Space Station",
+        "fr": "Station spatiale internationale"
+      }
+    },
+    {
+      "key": "showPlanets",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show visible planets",
+        "fr": "Afficher les planètes visibles"
+      },
+      "group": {
+        "en": "Planets",
+        "fr": "Planètes"
+      }
+    },
+    {
+      "key": "includeOuterPlanets",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Include Uranus and Neptune",
+        "fr": "Inclure Uranus et Neptune"
+      },
+      "hint": {
+        "en": "Off by default: neither is visible to the naked eye, both need at least binoculars.",
+        "fr": "Désactivé par défaut : ni l'une ni l'autre n'est visible à l'œil nu, toutes deux nécessitent au moins des jumelles."
+      },
+      "group": {
+        "en": "Planets",
+        "fr": "Planètes"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 720,
+      "step": 5,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      },
+      "hint": {
+        "en": "All three sections change slowly; a long interval is plenty.",
+        "fr": "Les trois sections évoluent lentement ; un intervalle long suffit largement."
+      }
+    }
+  ]
+}

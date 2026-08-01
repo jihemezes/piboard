@@ -1,0 +1,104 @@
+.pw-astronomy {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 14px;
+  overflow-y: auto;
+}
+
+.pwa-msg {
+  margin: auto;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 12px;
+}
+.pwa-msg-inline {
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+  padding: 2px 0 4px;
+}
+
+.pwa-section { flex-shrink: 0; }
+.pwa-section + .pwa-section {
+  padding-top: 10px;
+  border-top: 1px solid var(--tile-edge);
+}
+.pwa-section-title {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+/* ---------- Lune / Moon ---------- */
+.pwa-moon-row { display: flex; align-items: center; gap: 12px; }
+.pwa-moon-icon { flex-shrink: 0; width: 52px; height: 52px; }
+.pwa-moon-icon svg { width: 100%; height: 100%; }
+/* Face sombre plus foncee que le fond de la tuile, face eclairee tres
+   claire : le contraste doit rester lisible aussi bien en theme jour
+   qu'en theme nuit. Dark face darker than the tile background, lit face
+   very light: contrast must stay legible in both day and night themes.
+   */
+.pwa-moon-dark { fill: #2a2e38; }
+.pwa-moon-lit { fill: #f4e9c9; }
+.pwa-moon-ring { stroke: var(--tile-edge); stroke-width: 2; }
+.pwa-moon-info { min-width: 0; }
+.pwa-moon-phase { font-size: 14px; font-weight: 700; color: var(--text); }
+.pwa-moon-pct { font-family: var(--mono); font-size: 12px; color: var(--muted); margin-top: 1px; }
+.pwa-moon-next { font-size: 11px; color: var(--faint); margin-top: 3px; }
+
+/* ---------- ISS ---------- */
+.pwa-iss-list { list-style: none; margin: 0; padding: 0; }
+.pwa-iss-item {
+  padding: 5px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwa-iss-item:last-child { border-bottom: none; }
+.pwa-iss-when {
+  font-size: 13px;
+  color: var(--text);
+  text-transform: capitalize;
+}
+.pwa-iss-visible .pwa-iss-when { font-weight: 700; color: var(--accent); }
+.pwa-iss-detail {
+  display: flex;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 1px;
+}
+
+/* ---------- Planetes / Planets ---------- */
+.pwa-planet-list { list-style: none; margin: 0; padding: 0; }
+.pwa-planet-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwa-planet-item:last-child { border-bottom: none; }
+.pwa-planet-name { flex: 1; min-width: 0; font-size: 13px; color: var(--text); }
+.pwa-planet-dir {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+}
+/* Magnitude : plus le nombre est negatif, plus l'astre est brillant --
+   convention astronomique standard, rappelee dans l'aide integree.
+   Magnitude: the more negative the number, the brighter the object --
+   standard astronomical convention, recalled in the built-in help. */
+.pwa-planet-mag {
+  flex-shrink: 0;
+  width: 3.4em;
+  text-align: right;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--faint);
+}

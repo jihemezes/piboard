@@ -206,6 +206,54 @@
     },
 
     {
+      id: "astronomy",
+      group: "tiles",
+      title: { fr: "Astronomie", en: "Astronomy" },
+      sub: {
+        fr: "Phase de lune, prochains passages visibles de l'ISS, et quelles planètes sont visibles ce soir.",
+        en: "Moon phase, upcoming visible ISS passes, and which planets are up tonight."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 4×5 par défaut, de 2×2 à 8×12</span>
+          <h4>Objectif</h4>
+          <p>Trois informations classiques de l'astronomie amateur réunies dans une seule tuile — la lune est-elle bientôt pleine, la station spatiale passe-t-elle ce soir, et quelles planètes cherchent à repérer dans le ciel.</p>
+          <h4>Trois sections indépendantes</h4>
+          <p>Chaque section a sa propre case pour l'afficher ou non — activez celles qui vous intéressent, désactivez le reste.</p>
+          <p><b>Lune</b> : une icône représentant fidèlement la forme actuelle du croissant ou de la gibbeuse (dans le bon sens selon l'hémisphère), le nom de la phase, le pourcentage d'éclairement, et les dates des prochaines nouvelle et pleine lunes.</p>
+          <p><b>Passages ISS</b> : les prochains survols de la Station spatiale internationale au-dessus de votre position, avec l'heure, la direction (d'où elle apparaît vers où elle disparaît), la durée et la hauteur maximale atteinte dans le ciel. Un passage <b>visible à l'œil nu</b> (station éclairée par le soleil, ciel assez sombre chez vous) est mis en évidence — c'est le réglage par défaut pour ne montrer que ceux qui valent la peine de sortir regarder.</p>
+          <p><b>Planètes visibles</b> : Mercure à Saturne actuellement au-dessus de l'horizon, triées de la plus haute (la plus facile à repérer) à la plus basse, avec leur direction et leur magnitude — plus ce nombre est négatif, plus la planète est brillante. Uranus et Neptune peuvent être ajoutées en option, mais aucune des deux n'est visible à l'œil nu (des jumelles au minimum sont nécessaires).</p>
+          <h4>D'où viennent les données</h4>
+          <p>La phase de lune et la position des planètes sont <b>calculées directement sur le PiBoard</b>, sans aucun appel réseau — aussi fiable qu'une horloge, jamais tributaire d'un service externe. Les passages ISS, eux, exigent des données orbitales à jour (impossibles à calculer à l'avance) et viennent d'un service communautaire gratuit et sans clé, réédition de l'ancienne API open-notify.org dont les prédictions de passage ont fermé — un projet individuel financé par des dons, à garder à l'esprit si cette section venait un jour à ne plus répondre.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Utilisée pour les passages ISS et la direction/hauteur des planètes — les deux dépendent de la position exacte de l'observateur.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la phase de lune / les passages ISS / les planètes visibles</span><span class="help-opt-desc">Chaque section, activable indépendamment.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Passages visibles uniquement</span><span class="help-opt-desc">Activé par défaut. Décochez pour voir tous les passages au-dessus de l'horizon, y compris ceux en plein jour ou dans l'ombre de la Terre.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Passages affichés</span><span class="help-opt-desc">De 1 à 10.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Inclure Uranus et Neptune</span><span class="help-opt-desc">Désactivé par défaut.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Les trois sections évoluent lentement ; un intervalle long suffit largement.</span></div>`,
+        en: `
+          <span class="help-size">Size: 4×5 by default, from 2×2 to 8×12</span>
+          <h4>Goal</h4>
+          <p>Three classic amateur-astronomy facts brought together in a single tile — is the moon nearly full, does the space station pass overhead tonight, and which planets are worth looking for in the sky.</p>
+          <h4>Three independent sections</h4>
+          <p>Each section has its own checkbox to show it or not — turn on the ones you care about, turn off the rest.</p>
+          <p><b>Moon</b>: an icon faithfully depicting the current crescent or gibbous shape (the right way round for your hemisphere), the phase name, the illuminated percentage, and the dates of the next new and full moons.</p>
+          <p><b>ISS passes</b>: the International Space Station's upcoming flyovers above your location, with the time, direction (where it appears from and where it disappears to), duration, and the maximum height reached in the sky. A pass that's <b>visible to the naked eye</b> (station sunlit, sky dark enough where you are) is highlighted — the default setting only shows those worth stepping outside for.</p>
+          <p><b>Visible planets</b>: Mercury through Saturn currently above the horizon, sorted from highest (easiest to spot) to lowest, with their direction and magnitude — the more negative that number, the brighter the planet. Uranus and Neptune can optionally be added, but neither is visible to the naked eye (at least binoculars are needed).</p>
+          <h4>Where the data comes from</h4>
+          <p>Moon phase and planet positions are <b>computed directly on the PiBoard</b>, with no network call at all — as reliable as a clock, never dependent on an outside service. ISS passes, though, need up-to-date orbital data (impossible to compute in advance) and come from a free, keyless community service, a rebuild of the old open-notify.org API whose pass predictions shut down — a solo, donation-funded project, worth keeping in mind should this section ever stop responding one day.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Used for ISS passes and the planets' direction/height — both depend on the observer's exact location.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show moon phase / ISS passes / visible planets</span><span class="help-opt-desc">Each section, independently toggleable.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Visible passes only</span><span class="help-opt-desc">On by default. Uncheck to see every pass above the horizon, including daytime ones or ones in Earth's shadow.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Passes shown</span><span class="help-opt-desc">From 1 to 10.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Include Uranus and Neptune</span><span class="help-opt-desc">Off by default.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">All three sections change slowly; a long interval is plenty.</span></div>`
+      }
+    },
+
+    {
       id: "calendar",
       group: "tiles",
       title: { fr: "Agenda", en: "Calendar" },
@@ -1110,6 +1158,8 @@
           <div class="help-credit"><span class="help-opt-name">Openverse</span> — <a href="https://openverse.org" target="_blank">openverse.org</a><br><span class="help-opt-desc">Photos de fond sous licence libre de la tuile Météo, avec crédit du photographe affiché sur la tuile quand disponible.</span></div>
           <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Cours et courbes de prix de la tuile Cours de cryptos.</span></div>
           <div class="help-credit"><span class="help-opt-name">ESPN</span> — <a href="https://www.espn.com" target="_blank">espn.com</a><br><span class="help-opt-desc">Scores en direct et classements des tuiles Scores sportifs et Classement.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Astronomy Engine</span> — <a href="https://github.com/cosinekitty/astronomy" target="_blank">github.com/cosinekitty/astronomy</a><br><span class="help-opt-desc">Calcul local de la phase de lune et de la position des planètes pour la tuile Astronomie — aucun appel réseau.</span></div>
+          <div class="help-credit"><span class="help-opt-name">ISS Pass API (Pollux Labs)</span> — <a href="https://iss-api.polluxlabs.io" target="_blank">iss-api.polluxlabs.io</a><br><span class="help-opt-desc">Prédictions de passage de la Station spatiale internationale pour la tuile Astronomie.</span></div>
           <div class="help-credit"><span class="help-opt-name">Jolpica-F1</span> — <a href="https://api.jolpi.ca" target="_blank">jolpi.ca</a><br><span class="help-opt-desc">Calendrier et horaires des séances de Formule 1 de la tuile Sports mécaniques. Successeur communautaire de l'API Ergast, retirée fin 2024.</span></div>
           <div class="help-credit"><span class="help-opt-name">MotoGP</span> — <a href="https://www.motogp.com" target="_blank">motogp.com</a><br><span class="help-opt-desc">Calendrier et horaires des séances MotoGP de la tuile Sports mécaniques, via le flux public du site officiel.</span></div>
           <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Bibliothèque de cartographie interactive utilisée par les tuiles Carte de trafic, Radar météo et Avions en vue.</span></div>
@@ -1131,6 +1181,8 @@
           <div class="help-credit"><span class="help-opt-name">Openverse</span> — <a href="https://openverse.org" target="_blank">openverse.org</a><br><span class="help-opt-desc">Openly-licensed background photos for the Weather tile, with the photographer credited on the tile when available.</span></div>
           <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Prices and price charts for the Crypto prices tile.</span></div>
           <div class="help-credit"><span class="help-opt-name">ESPN</span> — <a href="https://www.espn.com" target="_blank">espn.com</a><br><span class="help-opt-desc">Live scores and standings for the Live sports scores and League standings tiles.</span></div>
+          <div class="help-credit"><span class="help-opt-name">Astronomy Engine</span> — <a href="https://github.com/cosinekitty/astronomy" target="_blank">github.com/cosinekitty/astronomy</a><br><span class="help-opt-desc">Local computation of moon phase and planet positions for the Astronomy tile — no network call.</span></div>
+          <div class="help-credit"><span class="help-opt-name">ISS Pass API (Pollux Labs)</span> — <a href="https://iss-api.polluxlabs.io" target="_blank">iss-api.polluxlabs.io</a><br><span class="help-opt-desc">International Space Station pass predictions for the Astronomy tile.</span></div>
           <div class="help-credit"><span class="help-opt-name">Jolpica-F1</span> — <a href="https://api.jolpi.ca" target="_blank">jolpi.ca</a><br><span class="help-opt-desc">Formula 1 calendar and session times for the Motorsport schedule tile. Community successor to the Ergast API, retired at the end of 2024.</span></div>
           <div class="help-credit"><span class="help-opt-name">MotoGP</span> — <a href="https://www.motogp.com" target="_blank">motogp.com</a><br><span class="help-opt-desc">MotoGP calendar and session times for the Motorsport schedule tile, via the official site's public feed.</span></div>
           <div class="help-credit"><span class="help-opt-name">Leaflet</span> — <a href="https://leafletjs.com" target="_blank">leafletjs.com</a><br><span class="help-opt-desc">Interactive mapping library used by the Traffic map, Weather Radar and Planes Overhead tiles.</span></div>

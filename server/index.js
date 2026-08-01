@@ -48,6 +48,7 @@ const teleProgram = require("./teleProgram");
 const articleExtract = require("./articleExtract");
 const tileSecrets = require("./tileSecrets");
 const mailbox = require("./mailbox");
+const astronomy = require("./astronomy");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -952,6 +953,34 @@ app.get("/api/mail/:tileId/message", async (req, res) => {
   } catch (e) {
     console.warn("[piboard] mail message:", e.message);
     res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+/* ---------- Astronomie / astronomy ----------
+   Voir server/astronomy.js : calcul local, sans dependance reseau.
+   See server/astronomy.js: local computation, no network dependency. */
+app.get("/api/astronomy/moon", (req, res) => {
+  try {
+    res.json(astronomy.moonPhase(new Date()));
+  } catch (e) {
+    console.warn("[piboard] astronomy/moon:", e.message);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/astronomy/planets", (req, res) => {
+  const lat = Number(req.query.lat);
+  const lon = Number(req.query.lon);
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) {
+    return res.status(400).json({ error: "lat/lon required" });
+  }
+  try {
+    const elevation = Number(req.query.elevation) || 0;
+    const includeOuter = req.query.includeOuter === "true";
+    res.json({ planets: astronomy.visiblePlanets(lat, lon, elevation, includeOuter, new Date()) });
+  } catch (e) {
+    console.warn("[piboard] astronomy/planets:", e.message);
+    res.status(500).json({ error: String(e.message || e) });
   }
 });
 

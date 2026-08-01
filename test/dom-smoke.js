@@ -232,6 +232,46 @@ const MOTOGP_SEASON_FIXTURE = [
    du jour ou tourne le test, pour obtenir une tuile a coup sur hors
    plage. Per-tile scheduling: a weekday that is never the day the test
    runs on, to reliably get an out-of-window tile. */
+/* Fixtures astronomie. La phase de lune et les planetes imitent la
+   forme exacte de server/astronomy.js (ces routes sont mockees ici,
+   comme toutes les autres API tierces -- le VRAI calcul astronomy-engine
+   est deja verifie a la main, voir la session de construction du
+   widget). Astronomy fixtures. Moon phase and planets mimic the exact
+   shape of server/astronomy.js (these routes are mocked here, like every
+   other third-party API -- the REAL astronomy-engine computation was
+   already verified by hand, see the widget's build session). */
+const ASTRO_MOON_FIXTURE = {
+  phaseAngle: 100, phaseKey: "waxingGibbous", illumination: 0.62, waxing: true,
+  nextNewMoon: new Date(Date.now() + 12 * 86400000).toISOString(),
+  nextFullMoon: new Date(Date.now() + 3 * 86400000).toISOString()
+};
+const ASTRO_PLANETS_FIXTURE = {
+  planets: [
+    // Sous l'horizon : ne doit PAS apparaitre (widget.js filtre sur
+    // aboveHorizon). Below the horizon: must NOT appear (widget.js
+    // filters on aboveHorizon).
+    { name: "Mars", altitude: -12.3, azimuth: 45, compass: "NE", magnitude: 1.2, aboveHorizon: false, rise: null, set: null },
+    { name: "Venus", altitude: 38.5, azimuth: 220, compass: "SW", magnitude: -4.1, aboveHorizon: true, rise: null, set: null },
+    { name: "Jupiter", altitude: 15.2, azimuth: 90, compass: "E", magnitude: -1.9, aboveHorizon: true, rise: null, set: null }
+  ]
+};
+const ASTRO_ISS_FIXTURE = {
+  passes: [
+    {
+      rise: { time: new Date(Date.now() + 5 * 3600000).toISOString(), azimuth_deg: 236, compass: "WSW" },
+      culmination: { time: new Date(Date.now() + 5.1 * 3600000).toISOString(), elevation_deg: 62 },
+      set: { time: new Date(Date.now() + 5.2 * 3600000).toISOString(), azimuth_deg: 48, compass: "NE" },
+      duration_sec: 407, above_horizon: true, visible: true
+    },
+    {
+      rise: { time: new Date(Date.now() + 29 * 3600000).toISOString(), azimuth_deg: 100, compass: "E" },
+      culmination: { time: new Date(Date.now() + 29.1 * 3600000).toISOString(), elevation_deg: 20 },
+      set: { time: new Date(Date.now() + 29.2 * 3600000).toISOString(), azimuth_deg: 200, compass: "SSW" },
+      duration_sec: 300, above_horizon: true, visible: false
+    }
+  ]
+};
+
 const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"][(new Date().getDay() + 1) % 7];
 
 /* Fixtures Courriel : la liste ne porte que des en-tetes (jamais de
@@ -298,7 +338,8 @@ const layout = {
     { id: "t-m", widget: "notes", x: 3, y: 12, w: 3, h: 2, settings: { _schedEnabled: true } },
     { id: "t-n", widget: "mailbox", x: 6, y: 12, w: 4, h: 3, settings: {
       host: "imap.test.fr", port: 993, user: "moi@test.fr", folder: "INBOX", limit: 5, showSender: true
-    } }
+    } },
+    { id: "t-o", widget: "astronomy", x: 0, y: 15, w: 4, h: 5, settings: { city: "Toulouse" } }
   ]
 };
 
@@ -425,6 +466,15 @@ const dom = new JSDOM(html, {
         const tmm = String(tomorrow.getMonth() + 1).padStart(2, "0");
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
+      }
+      if (u.includes("/api/astronomy/moon")) {
+        return json(ASTRO_MOON_FIXTURE);
+      }
+      if (u.includes("/api/astronomy/planets")) {
+        return json(ASTRO_PLANETS_FIXTURE);
+      }
+      if (u.includes("iss-api.polluxlabs.io")) {
+        return json(ASTRO_ISS_FIXTURE);
       }
       if (u.includes("/api/mail/") && u.includes("/list")) {
         MAIL_LIST_CALLS++;
@@ -579,10 +629,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 14 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 15 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("14 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 14);
+  assert("15 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 15);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -1043,7 +1093,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (15 au total)", document.querySelectorAll(".grid-stack-item").length === 15);
+  assert("tuile ajoutee (16 au total)", document.querySelectorAll(".grid-stack-item").length === 16);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -1546,6 +1596,57 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.querySelector(".pwmb-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
       ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(20);
+  }
+
+  console.log("== Astronomie : phase de lune, planetes visibles, passages ISS ==");
+  {
+    const astroTile = document.querySelector('[data-tile-id="t-o"]');
+    tries = 0;
+    while (!astroTile.querySelector(".pwa-section") && tries++ < 80) await sleep(50);
+
+    console.log("== Astronomie : phase de lune ==");
+    assert("titre de la section lune affiche", (astroTile.textContent || "").includes("Lune"));
+    assert("nom de la phase traduit affiche (gibbeuse croissante)", (astroTile.textContent || "").includes("Gibbeuse croissante"));
+    assert("pourcentage d'eclairement affiche (62%)", (astroTile.textContent || "").includes("62%"));
+    assert("icone de lune (svg) presente", !!astroTile.querySelector(".pwa-moon-icon svg"));
+    assert("chemin de la partie eclairee present dans le svg", !!astroTile.querySelector(".pwa-moon-lit"));
+
+    console.log("== Astronomie : planetes visibles ==");
+    const planetItems = [...astroTile.querySelectorAll(".pwa-planet-item")];
+    assert("2 planetes affichees (Mars sous l'horizon exclue)", planetItems.length === 2);
+    assert("Venus (la plus haute) affichee en premier", (planetItems[0].textContent || "").includes("Vénus"));
+    assert("Mars (sous l'horizon) absente de la liste", !(astroTile.textContent || "").includes("Mars"));
+    assert("magnitude de Venus affichee (negative = brillante)", (planetItems[0].textContent || "").includes("-4.1"));
+    assert("direction de Jupiter affichee", (planetItems[1].textContent || "").includes("E ·"));
+
+    console.log("== Astronomie : passages ISS ==");
+    const issItems = [...astroTile.querySelectorAll(".pwa-iss-item")];
+    assert("2 passages ISS affiches", issItems.length === 2);
+    assert("passage visible marque comme tel (classe dediee)", issItems[0].classList.contains("pwa-iss-visible"));
+    assert("passage non visible NON marque comme visible", !issItems[1].classList.contains("pwa-iss-visible"));
+    assert("direction lever->coucher affichee", (issItems[0].textContent || "").includes("WSW → NE"));
+    assert("duree en minutes affichee", (issItems[0].textContent || "").includes("7 min"));
+    assert("elevation maximale affichee", (issItems[0].textContent || "").includes("62°"));
+
+    console.log("== Astronomie : reglages (sections activables independamment) ==");
+    astroTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("case Lune presente et cochee par defaut", document.querySelector('#tileForm [data-key="showMoonPhase"]')?.checked === true);
+    assert("case ISS presente et cochee par defaut", document.querySelector('#tileForm [data-key="showIss"]')?.checked === true);
+    assert("case Planetes presente et cochee par defaut", document.querySelector('#tileForm [data-key="showPlanets"]')?.checked === true);
+    assert("passages visibles uniquement coche par defaut (choix retenu)", document.querySelector('#tileForm [data-key="issVisibleOnly"]')?.checked === true);
+    assert("Uranus/Neptune decoche par defaut (non visibles a l'oeil nu)", document.querySelector('#tileForm [data-key="includeOuterPlanets"]')?.checked === false);
+
+    document.querySelector('#tileForm [data-key="showIss"]').checked = false;
+    document.querySelector('#tileForm [data-key="showPlanets"]').checked = false;
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const astroTile2 = document.querySelector('[data-tile-id="t-o"]');
+    tries = 0;
+    while (!astroTile2.querySelector(".pwa-section") && tries++ < 80) await sleep(50);
+    assert("section ISS masquee une fois decochee", !astroTile2.textContent.includes("Passages ISS"));
+    assert("section planetes masquee une fois decochee", !astroTile2.textContent.includes("Vénus"));
+    assert("section lune, elle, reste affichee", astroTile2.textContent.includes("Lune"));
   }
 
   console.log("== Sortie du mode edition ==");

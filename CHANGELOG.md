@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.31.0
+
+- **Nouvelle tuile : Astronomie.** Trois sections indépendamment
+  activables :
+  - **Phase de lune** — icône représentant fidèlement le croissant ou
+    la gibbeuse actuel (orientation correcte selon l'hémisphère), nom
+    de la phase, pourcentage d'éclairement, prochaines nouvelle et
+    pleine lunes ;
+  - **Passages ISS** — prochains survols de la Station spatiale
+    internationale au-dessus de votre position (heure, direction,
+    durée, hauteur maximale), avec mise en évidence des passages
+    **réellement visibles à l'œil nu** (station éclairée + ciel assez
+    sombre) — réglage par défaut ;
+  - **Planètes visibles** — Mercure à Saturne actuellement au-dessus
+    de l'horizon, triées de la plus haute à la plus basse, avec
+    direction et magnitude (Uranus/Neptune en option, non visibles à
+    l'œil nu).
+
+  **Phase de lune et planètes calculées directement sur le PiBoard**
+  (bibliothèque `astronomy-engine`, MIT), sans aucun appel réseau — 
+  aussi fiable qu'une horloge. Seuls les passages ISS nécessitent une
+  source externe (données orbitales à jour indispensables, impossibles
+  à calculer à l'avance) : `iss-api.polluxlabs.io`, gratuit et sans
+  clé — un projet individuel financé par des dons, à garder à l'esprit
+  si cette section venait un jour à ne plus répondre.
+
+  **Nouvelle dépendance serveur** : `astronomy-engine`. **Un
+  `npm install` est nécessaire après cette mise à jour.**
+
+---
+
+- **New tile: Astronomy.** Three independently toggleable sections:
+  - **Moon phase** — an icon faithfully depicting the current crescent
+    or gibbous shape (correct orientation for your hemisphere), phase
+    name, illuminated percentage, next new and full moons;
+  - **ISS passes** — the International Space Station's upcoming
+    flyovers above your location (time, direction, duration, maximum
+    height), highlighting passes that are **actually visible to the
+    naked eye** (station sunlit + sky dark enough) — the default
+    setting;
+  - **Visible planets** — Mercury through Saturn currently above the
+    horizon, sorted from highest to lowest, with direction and
+    magnitude (Uranus/Neptune optional, not naked-eye visible).
+
+  **Moon phase and planets computed directly on the PiBoard**
+  (`astronomy-engine` library, MIT), with no network call at all — as
+  reliable as a clock. Only ISS passes need an external source
+  (up-to-date orbital data is essential, impossible to compute ahead
+  of time): `iss-api.polluxlabs.io`, free and keyless — a solo,
+  donation-funded project, worth keeping in mind should this section
+  ever stop responding one day.
+
+  **New server dependency**: `astronomy-engine`. **An `npm install` is
+  required after this update.**
+
 ## 1.30.1
 
 - **Avions : compas agrandi (64→88px) et degrés rappelés** sur les 4
