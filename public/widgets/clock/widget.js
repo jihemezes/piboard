@@ -305,7 +305,28 @@
       // ".pw-clock" naturally resizes to make room for the extras --
       // fit() already reads its height dynamically, nothing to change
       // there.
-      this.ctx.el.innerHTML = `<div class="pw-clock-wrap">${clockHtml}${this.extrasHtml()}</div>`;
+      // Cote a cote (horloge a gauche, extras a droite) des qu'il y a
+      // quelque chose a montrer a droite -- meme principe que la
+      // disposition analogique deja en place : sans ca, l'heure
+      // numerique reste toujours centree meme quand des extras
+      // (fuseaux, semaine, prochain evenement) s'empilent en dessous,
+      // ce qui la comprime verticalement et nuit a la lisibilite (signale
+      // par capture d'ecran). Fonde sur les REGLAGES (pas sur la donnee
+      // effectivement chargee, ex. showNextEvent=true meme sans
+      // evenement trouve pour l'instant) pour eviter que la disposition
+      // change au fil du chargement des donnees.
+      // Side by side (clock on the left, extras on the right) as soon as
+      // there's something to show on the right -- same principle as the
+      // analog layout already in place: without this, the digital time
+      // always stays centered even when extras (zones, week, next
+      // event) stack up below it, squeezing it vertically and hurting
+      // legibility (reported via screenshot). Based on the SETTINGS (not
+      // on data actually loaded, e.g. showNextEvent=true even with no
+      // event found yet) to avoid the layout shifting as data loads.
+      const hasExtras = [1, 2, 3].some((i) => s["extraZone" + i + "Label"] && s["extraZone" + i + "Tz"])
+        || s.showWeekNumber === true || s.showNextEvent === true;
+      const wrapSide = s.mode === "digital" && hasExtras;
+      this.ctx.el.innerHTML = `<div class="pw-clock-wrap ${wrapSide ? "pwc-wrap-side" : ""}">${clockHtml}${this.extrasHtml()}</div>`;
 
       const stopBtn = this.ctx.el.querySelector(".pwc-alarm-stop");
       if (stopBtn) stopBtn.addEventListener("click", () => this.stopAlarmNow());
@@ -339,12 +360,14 @@
             </div>`).join("")}</div>`
         : "";
       return `
-        ${zonesHtml}
-        <div class="pwc-week" ${s.showWeekNumber ? "" : "hidden"}></div>
-        <div class="pwc-next-event" hidden></div>
-        <div class="pwc-alarm-banner" hidden>
-          <span class="pwc-alarm-label"></span>
-          <button type="button" class="pwc-alarm-stop">${i18n.t("clock.alarm.stop")}</button>
+        <div class="pwc-extras-col">
+          ${zonesHtml}
+          <div class="pwc-week" ${s.showWeekNumber ? "" : "hidden"}></div>
+          <div class="pwc-next-event" hidden></div>
+          <div class="pwc-alarm-banner" hidden>
+            <span class="pwc-alarm-label"></span>
+            <button type="button" class="pwc-alarm-stop">${i18n.t("clock.alarm.stop")}</button>
+          </div>
         </div>`;
     }
 

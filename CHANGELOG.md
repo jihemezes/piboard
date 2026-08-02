@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.37.1
+
+- **Correctif *Horloge* : heure numérique toujours centrée avec des
+  extras, peu lisible.** Avec un fuseau supplémentaire, le numéro de
+  semaine ou le prochain événement activés, l'heure en mode digital
+  restait centrée en permanence au-dessus des extras empilés dessous,
+  la comprimant verticalement — même problème déjà corrigé pour
+  l'horloge analogique (v1.24.0), pas étendu au digital lors de l'ajout
+  de ces fonctionnalités (v1.36.0). Même correctif appliqué : l'heure
+  se cale désormais à gauche, les extras à droite, dès qu'il y a
+  quelque chose à y afficher. Sans extra activé, l'affichage reste
+  centré comme avant.
+
+---
+
+- **Fix for *Clock*: digital time always centered with extras, hard to
+  read.** With an extra time zone, the week number, or the next event
+  turned on, the digital-mode time stayed permanently centered above
+  the extras stacked below it, squeezing it vertically — the same
+  problem already fixed for the analog clock (v1.24.0), not extended to
+  digital mode when those features were added (v1.36.0). Same fix
+  applied: the time now sits on the left, the extras on the right, as
+  soon as there's something to show there. With no extra turned on, the
+  display stays centered as before.
+
 ## 1.37.0
 
 - **Horloge : le choix du fuseau horaire se fait désormais dans une

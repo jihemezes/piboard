@@ -1867,6 +1867,8 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     tries = 0;
     while (!clockTile.querySelector(".pwc-next-event-title") && tries++ < 80) await sleep(50);
     assert("ligne 'prochain evenement' affichee", clockTile.querySelector(".pwc-next-event")?.hidden === false);
+    assert("mode digital avec extras : disposition cote a cote appliquee (heure a gauche, extras a droite, correctif de lisibilite)",
+      !!clockTile.querySelector(".pw-clock-wrap.pwc-wrap-side"));
     assert("titre de l'evenement correct", (clockTile.querySelector(".pwc-next-event-title")?.textContent || "").includes("Rendez-vous dentiste"));
 
     // L'alarme (declenchement + son + bouton Arreter) est verifiee a la

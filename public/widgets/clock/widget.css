@@ -33,6 +33,60 @@
      automatic fallback logic (see widget.js) would still hit its limit. */
   overflow: hidden;
 }
+
+/* Disposition cote a cote (heure numerique a gauche, extras a droite) :
+   des qu'il y a des extras a montrer (fuseaux, semaine, prochain
+   evenement), l'heure ne reste plus centree en permanence -- elle se
+   partagerait sinon la hauteur avec eux en s'empilant, l'ecrasant et
+   nuisant a la lisibilite (meme probleme, meme solution, que la
+   disposition analogique cote a cote deja en place). Uniquement en mode
+   digital : le mode analogique gere deja son propre cote a cote.
+   Side-by-side layout (digital time on the left, extras on the right):
+   as soon as there are extras to show (zones, week, next event), the
+   time no longer stays permanently centered -- it would otherwise share
+   height with them by stacking, squeezing it and hurting legibility
+   (same problem, same fix, as the analog side-by-side layout already in
+   place). Digital mode only: analog mode already handles its own side
+   by side. */
+.pw-clock-wrap.pwc-wrap-side {
+  flex-direction: row;
+  align-items: stretch;
+}
+.pw-clock-wrap.pwc-wrap-side .pw-clock {
+  flex: 1 1 56%;
+  min-width: 0;
+  padding-right: 3%;
+}
+.pwc-extras-col {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pw-clock-wrap.pwc-wrap-side .pwc-extras-col {
+  flex: 1 1 44%;
+  min-width: 0;
+  justify-content: center;
+  gap: 6px;
+  padding: 6% 6% 6% 0;
+  border-left: 1px solid var(--tile-edge);
+}
+/* En cote a cote, chaque extra s'aligne a gauche (au lieu de centre) et
+   perd les bordures/marges pensees pour un empilement sous une heure
+   centree. In side by side, each extra aligns left (instead of center)
+   and loses the borders/margins meant for stacking under a centered
+   time. */
+.pwc-wrap-side .pwc-zones { justify-content: flex-start; padding: 0; }
+.pwc-wrap-side .pwc-week { text-align: left; padding: 0; }
+.pwc-wrap-side .pwc-next-event {
+  text-align: left;
+  border-top: none;
+  margin: 0;
+  padding: 0;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+}
+.pwc-wrap-side .pwc-alarm-banner { border-top: none; border-radius: 8px; }
 .pw-clock .pwc-time {
   font-family: var(--mono);
   font-variant-numeric: tabular-nums;
