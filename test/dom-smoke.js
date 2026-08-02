@@ -1428,6 +1428,14 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const weatherBtn = nav.querySelector('[data-help-id="weather"]');
     assert("recherche 'agend' : l'entree Agenda (calendrier) reste visible", calendarBtn && calendarBtn.hidden === false);
     assert("recherche 'agend' : une entree non correspondante (Meteo) est cachee", weatherBtn && weatherBtn.hidden === true);
+
+    console.log("== Aide : recherche insensible aux accents ==");
+    searchInput.value = "meteo"; // sans accent, doit tout de meme trouver "Météo" / no accent, should still find "Météo"
+    searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche 'meteo' (sans accent) trouve l'entree Météo", weatherBtn && weatherBtn.hidden === false);
+    searchInput.value = "météo"; // avec accent, doit fonctionner aussi / with accent, should also work
+    searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche 'météo' (avec accent) trouve aussi l'entree Météo", weatherBtn && weatherBtn.hidden === false);
     assert("recherche : au moins un en-tete de groupe reste visible (celui du resultat)",
       !!nav.querySelector('.help-nav-group:not([hidden])'));
     assert("message 'aucun resultat' cache tant qu'il y a au moins un resultat",

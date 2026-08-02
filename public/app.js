@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.33.0
+   Version 1.33.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2615,6 +2615,20 @@
      build the table of contents (group by group) and switch which
      section is shown. Separating content (data) from rendering (this
      file) lets the help text evolve without touching display logic. */
+  /* Normalise une chaine pour la recherche : minuscules, accents retires
+     (NFD decompose "é" en "e" + accent combinant, qu'on retire ensuite).
+     Applique aux deux cotes de la comparaison (index construit a
+     l'ouverture ET saisie de l'utilisateur) -- sans ca, taper "meteo"
+     sans accent ne trouvait pas "Météo".
+     Normalizes a string for search: lowercase, diacritics stripped (NFD
+     decomposes "é" into "e" + a combining accent, then removed).
+     Applied on both sides of the comparison (index built on open AND the
+     user's input) -- without this, typing "meteo" without an accent
+     wouldn't find "Météo". */
+  function normalizeSearch(s) {
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
   function openHelp() {
     const sections = window.PIBOARD_HELP || [];
     if (!sections.length) return;
@@ -2634,7 +2648,7 @@
         ? `<div class="help-nav-group" data-help-group="${sec.group}">${groupLabels[sec.group] || sec.group}</div>` : "";
       lastGroup = sec.group;
       return groupHtml +
-        `<button type="button" class="help-nav-item" data-help-id="${sec.id}" data-help-search="${i18n.fromManifest(sec.title).toLowerCase()}">${i18n.fromManifest(sec.title)}</button>`;
+        `<button type="button" class="help-nav-item" data-help-id="${sec.id}" data-help-search="${normalizeSearch(i18n.fromManifest(sec.title))}">${i18n.fromManifest(sec.title)}</button>`;
     }).join("");
     // Recherche en tete du sommaire : utile des que la liste des tuiles
     // s'allonge (plus de 20 desormais) pour retrouver une entree sans
@@ -2657,7 +2671,7 @@
     const listEl = $("helpNavList");
     const emptyEl = $("helpNavEmpty");
     searchInput.addEventListener("input", () => {
-      const q = searchInput.value.trim().toLowerCase();
+      const q = normalizeSearch(searchInput.value.trim());
       listEl.querySelectorAll(".help-nav-item").forEach((btn) => {
         btn.hidden = !(!q || btn.dataset.helpSearch.includes(q));
       });

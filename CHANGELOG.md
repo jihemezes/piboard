@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.33.1
+
+- **Correctif *Aide* : la recherche dans le sommaire était trop
+  stricte** — taper « meteo » sans accent ne trouvait pas « Météo ».
+  La recherche ignore désormais les accents des deux côtés (saisie et
+  titres des sections), donc « meteo » et « météo » donnent le même
+  résultat.
+
+---
+
+- **Fix for *Help*: the sidebar search was too strict** — typing
+  "meteo" without an accent wouldn't find "Météo". The search now
+  ignores accents on both sides (input and section titles), so "meteo"
+  and "météo" give the same result.
+
 ## 1.33.0
 
 - **Aide : nouvelle section « À propos »** — numéro de version (mis à
