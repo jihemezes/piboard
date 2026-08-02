@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.34.0
+   Version 1.35.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2629,6 +2629,154 @@
     return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
+  /* ---------- Sauvegarde / restauration -- backups ----------
+     Voir server/backups.js : instantanes horodates de toute la
+     configuration, mot de passe de boite mail toujours exclu.
+     See server/backups.js: timestamped snapshots of the whole
+     configuration, mailbox password always excluded. */
+
+  function formatBackupDate(iso) {
+    try {
+      const locale = i18n.lang === "fr" ? "fr-FR" : "en-US";
+      return new Date(iso).toLocaleString(locale, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function showBackupsMessage(text, isError) {
+    const el = $("backupsMsg");
+    el.textContent = text;
+    el.hidden = !text;
+    el.classList.toggle("backups-msg-error", !!isError);
+  }
+
+  async function refreshBackupsList() {
+    const listEl = $("backupsList");
+    try {
+      const data = await fetch("/api/backups").then((r) => r.json());
+      const items = data.backups || [];
+      $("backupsEmpty").hidden = items.length > 0;
+      listEl.innerHTML = items.map((b) => `
+        <li class="backups-item" data-backup-id="${b.id}">
+          <div class="backups-item-info">
+            <div class="backups-item-date">${escapeHtmlAttr(b.label || formatBackupDate(b.createdAt))}</div>
+            <div class="backups-item-meta">${b.label ? formatBackupDate(b.createdAt) + " · " : ""}${b.tileCount != null ? i18n.t("backups.tileCount").replace("{n}", b.tileCount) : ""}${b.appVersion ? " · v" + escapeHtmlAttr(b.appVersion) : ""}</div>
+          </div>
+          <div class="backups-item-actions">
+            <button type="button" class="btn small" data-action="download" title="${i18n.t("backups.download")}">⬇</button>
+            <button type="button" class="btn small" data-action="restore">${i18n.t("backups.restoreConfirmAction")}</button>
+            <button type="button" class="btn small danger" data-action="delete" title="${i18n.t("common.delete")}">🗑</button>
+          </div>
+        </li>`).join("");
+    } catch (e) {
+      listEl.innerHTML = "";
+      showBackupsMessage(i18n.t("backups.error"), true);
+    }
+  }
+
+  function openBackups() {
+    $("settingsModal").hidden = true;
+    showBackupsMessage("");
+    $("backupsModal").hidden = false;
+    refreshBackupsList();
+  }
+
+  let pendingRestoreId = null;
+
+  function askRestoreConfirm(id, dateLabel) {
+    pendingRestoreId = id;
+    $("backupRestoreConfirmDate").textContent = dateLabel;
+    $("backupRestoreConfirmModal").hidden = false;
+  }
+
+  async function doRestore(id) {
+    try {
+      await fetch(`/api/backups/${encodeURIComponent(id)}/restore`, { method: "POST" }).then((r) => {
+        if (!r.ok) throw new Error("restore failed");
+        return r.json();
+      });
+      // Le plus sur pour reprendre un etat propre (grille, tuiles,
+      // reglages, tiroir) est de recharger entierement la page plutot
+      // que d'essayer de reappliquer chaque partie a chaud.
+      // The safest way to pick up a clean state (grid, tiles, settings,
+      // drawer) is a full page reload rather than trying to reapply
+      // every part live.
+      window.location.reload();
+    } catch (e) {
+      showBackupsMessage(i18n.t("backups.restoreError"), true);
+    }
+  }
+
+  function wireBackups() {
+    $("openBackupsBtn").addEventListener("click", openBackups);
+
+    $("backupCreateBtn").addEventListener("click", async () => {
+      showBackupsMessage(i18n.t("common.loading"));
+      try {
+        await fetch("/api/backups", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+        }).then((r) => { if (!r.ok) throw new Error("create failed"); return r.json(); });
+        showBackupsMessage(i18n.t("backups.created"));
+        refreshBackupsList();
+      } catch (e) {
+        showBackupsMessage(i18n.t("backups.error"), true);
+      }
+    });
+
+    $("backupImportBtn").addEventListener("click", () => $("backupImportInput").click());
+    $("backupImportInput").addEventListener("change", async () => {
+      const file = $("backupImportInput").files[0];
+      $("backupImportInput").value = "";
+      if (!file) return;
+      showBackupsMessage(i18n.t("common.loading"));
+      try {
+        const body = new FormData();
+        body.append("file", file);
+        const res = await fetch("/api/backups/import", { method: "POST", body });
+        if (!res.ok) throw new Error("import failed");
+        // L'import restaure immediatement (voir server/backups.js) :
+        // recharge pour reprendre le nouvel etat, comme apres une
+        // restauration classique. Import restores immediately (see
+        // server/backups.js): reloads to pick up the new state, just
+        // like after a regular restore.
+        window.location.reload();
+      } catch (e) {
+        showBackupsMessage(i18n.t("backups.importError"), true);
+      }
+    });
+
+    $("backupsList").addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const li = btn.closest("[data-backup-id]");
+      const id = li.dataset.backupId;
+      const action = btn.dataset.action;
+
+      if (action === "download") {
+        // Telechargement direct : une simple navigation suffit, le
+        // serveur fixe deja l'en-tete Content-Disposition.
+        // Direct download: a plain navigation is enough, the server
+        // already sets the Content-Disposition header.
+        window.open(`/api/backups/${encodeURIComponent(id)}/download`, "_blank");
+      } else if (action === "restore") {
+        askRestoreConfirm(id, li.querySelector(".backups-item-date").textContent);
+      } else if (action === "delete") {
+        try {
+          await fetch(`/api/backups/${encodeURIComponent(id)}`, { method: "DELETE" });
+          refreshBackupsList();
+        } catch (e) {
+          showBackupsMessage(i18n.t("backups.error"), true);
+        }
+      }
+    });
+
+    $("backupRestoreConfirmBtn").addEventListener("click", () => {
+      if (pendingRestoreId) doRestore(pendingRestoreId);
+      $("backupRestoreConfirmModal").hidden = true;
+    });
+  }
+
   function openHelp() {
     const sections = window.PIBOARD_HELP || [];
     if (!sections.length) return;
@@ -3267,6 +3415,9 @@
       document.addEventListener(evt, armCursorHide, { passive: true })
     );
     armCursorHide();
+
+    /* Sauvegarde / restauration / backup and restore */
+    wireBackups();
 
     /* Economiseur d'ecran / screensaver */
     renderScreensaverSlots();

@@ -49,6 +49,7 @@ const articleExtract = require("./articleExtract");
 const tileSecrets = require("./tileSecrets");
 const mailbox = require("./mailbox");
 const astronomy = require("./astronomy");
+const backups = require("./backups");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -996,6 +997,70 @@ app.get("/api/astronomy/eclipse", (req, res) => {
   } catch (e) {
     console.warn("[piboard] astronomy/eclipse:", e.message);
     res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/* ---------- Sauvegarde / restauration -- backups ----------
+   Voir server/backups.js : le coffre a secrets (mots de passe) n'en
+   fait JAMAIS partie -- voir l'en-tete de ce fichier pour le
+   raisonnement complet.
+   See server/backups.js: the secrets vault (passwords) is NEVER part of
+   it -- see that file's header for the full reasoning. */
+const backupUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } });
+
+app.get("/api/backups", (req, res) => {
+  try {
+    res.json({ backups: backups.list() });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/backups", (req, res) => {
+  try {
+    const label = req.body && typeof req.body.label === "string" ? req.body.label : null;
+    res.json(backups.create(APP_VERSION, label));
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/backups/:id/download", (req, res) => {
+  try {
+    if (!backups.idIsValid(req.params.id)) return res.status(400).json({ error: "invalid id" });
+    const record = backups.readRecord(req.params.id);
+    res.setHeader("Content-Disposition", `attachment; filename="piboard-backup-${req.params.id}.json"`);
+    res.json(record);
+  } catch (e) {
+    res.status(404).json({ error: "backup not found" });
+  }
+});
+
+app.post("/api/backups/:id/restore", (req, res) => {
+  try {
+    if (!backups.idIsValid(req.params.id)) return res.status(400).json({ error: "invalid id" });
+    res.json(backups.restore(req.params.id));
+  } catch (e) {
+    res.status(404).json({ error: "backup not found" });
+  }
+});
+
+app.delete("/api/backups/:id", (req, res) => {
+  try {
+    if (!backups.idIsValid(req.params.id)) return res.status(400).json({ error: "invalid id" });
+    backups.remove(req.params.id);
+    res.json({ ok: true });
+  } catch (e) {
+    res.status(404).json({ error: "backup not found" });
+  }
+});
+
+app.post("/api/backups/import", backupUpload.single("file"), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    res.json(backups.importAndRestore(req.file.buffer));
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
   }
 });
 

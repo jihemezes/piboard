@@ -289,6 +289,9 @@ const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed",
    of a real spam email -- script, event handler, tracking pixel,
    phishing link -- to check the sanitizing. */
 let MAIL_LIST_CALLS = 0;
+let MOCK_BACKUPS = [];
+let BACKUP_SEQ = 0;
+let BACKUP_LAYOUT_RESTORED = null; // marqueur : dernier id restaure/importe, sans vraiment recharger la page / marker: last id restored/imported, without actually reloading the page
 const MAIL_LIST_FIXTURE = {
   unseen: 1,
   total: 42,
@@ -403,6 +406,43 @@ const dom = new JSDOM(html, {
         text: () => Promise.resolve(JSON.stringify(data))
       });
 
+      if (u.includes("/api/backups")) {
+        const backupMatch = u.match(/\/api\/backups(?:\/([^/?]+))?(?:\/(download|restore))?$/);
+        const id = backupMatch && backupMatch[1] !== "import" ? decodeURIComponent(backupMatch[1] || "") : null;
+        const action = backupMatch ? backupMatch[2] : null;
+
+        if (u.endsWith("/api/backups/import") && method === "POST") {
+          BACKUP_SEQ++;
+          const rec = { id: "imported-" + BACKUP_SEQ, createdAt: new Date().toISOString(), appVersion: null, label: "Import", tileCount: 1 };
+          MOCK_BACKUPS.unshift(rec);
+          BACKUP_LAYOUT_RESTORED = "imported-layout";
+          return json(rec);
+        }
+        if (!id && method === "GET") {
+          return json({ backups: MOCK_BACKUPS });
+        }
+        if (!id && method === "POST") {
+          BACKUP_SEQ++;
+          const body = opts && opts.body ? JSON.parse(opts.body) : {};
+          const rec = { id: "backup-" + BACKUP_SEQ, createdAt: new Date().toISOString(), appVersion: "9.9.9-test", label: body.label || null, tileCount: 15 };
+          MOCK_BACKUPS.unshift(rec);
+          return json(rec);
+        }
+        if (id && action === "download" && method === "GET") {
+          const rec = MOCK_BACKUPS.find((b) => b.id === id);
+          return rec ? json(Object.assign({ piboardBackup: 1, files: {} }, rec)) : Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ error: "not found" }) });
+        }
+        if (id && action === "restore" && method === "POST") {
+          const rec = MOCK_BACKUPS.find((b) => b.id === id);
+          if (!rec) return Promise.resolve({ ok: false, status: 404, json: () => Promise.resolve({ error: "not found" }) });
+          BACKUP_LAYOUT_RESTORED = id;
+          return json(rec);
+        }
+        if (id && !action && method === "DELETE") {
+          MOCK_BACKUPS = MOCK_BACKUPS.filter((b) => b.id !== id);
+          return json({ ok: true });
+        }
+      }
       if (u.includes("/api/version")) {
         return json({ version: "9.9.9-test" });
       }
@@ -1257,6 +1297,73 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("desactivation du zoom lent enregistree", !!(body.screensaver && body.screensaver.slideshowKenBurns === false));
     assert("cadrage paysage enregistre", !!(body.screensaver && body.screensaver.slideshowFitLandscape === "contain"));
     assert("style de bordure enregistre", !!(body.screensaver && body.screensaver.slideshowContainBackground === "blur"));
+  }
+
+  console.log("== Sauvegarde et restauration ==");
+  {
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    document.getElementById("openBackupsBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("parametres generaux refermes en ouvrant la sauvegarde", document.getElementById("settingsModal").hidden === true);
+    assert("modale de sauvegarde ouverte", document.getElementById("backupsModal").hidden === false);
+    assert("aucune sauvegarde au depart : message vide affiche", document.getElementById("backupsEmpty").hidden === false);
+    assert("liste vide au depart", document.querySelectorAll(".backups-item").length === 0);
+
+    console.log("== Sauvegarde : creation ==");
+    document.getElementById("backupCreateBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (document.querySelectorAll(".backups-item").length < 1 && tries++ < 60) await sleep(50);
+    assert("une sauvegarde apparait dans la liste apres creation", document.querySelectorAll(".backups-item").length === 1);
+    assert("message vide masque une fois une sauvegarde presente", document.getElementById("backupsEmpty").hidden === true);
+    assert("nombre de tuiles affiche dans le resume", document.querySelector(".backups-item-meta").textContent.includes("15"));
+
+    document.getElementById("backupCreateBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (document.querySelectorAll(".backups-item").length < 2 && tries++ < 60) await sleep(50);
+    assert("une deuxieme sauvegarde s'ajoute SANS ecraser la premiere (2 au total)",
+      document.querySelectorAll(".backups-item").length === 2);
+    const ids = [...document.querySelectorAll(".backups-item")].map((li) => li.dataset.backupId);
+    assert("les deux sauvegardes ont des identifiants distincts", new Set(ids).size === 2);
+
+    console.log("== Sauvegarde : restauration protegee par confirmation ==");
+    const firstItem = document.querySelector(".backups-item");
+    firstItem.querySelector('[data-action="restore"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("clic sur 'restaurer' : demande de confirmation affichee, pas de restauration immediate",
+      document.getElementById("backupRestoreConfirmModal").hidden === false && BACKUP_LAYOUT_RESTORED === null);
+    // Annulation : ferme la confirmation sans rien restaurer.
+    // Cancel: closes the confirmation without restoring anything.
+    document.querySelector("#backupRestoreConfirmModal [data-close]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("annulation : aucune restauration declenchee", BACKUP_LAYOUT_RESTORED === null);
+
+    firstItem.querySelector('[data-action="restore"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    document.getElementById("backupRestoreConfirmBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (BACKUP_LAYOUT_RESTORED === null && tries++ < 60) await sleep(50);
+    assert("confirmation acceptee : la sauvegarde correspondante est restauree", BACKUP_LAYOUT_RESTORED === firstItem.dataset.backupId);
+    // Le code appelle ensuite window.location.reload() (repart d'un etat
+    // propre) : jsdom ne simule pas de vraie navigation et n'offre pas de
+    // moyen fiable de neutraliser cet appel precis pour le mesurer --
+    // limitation de l'environnement de test, deja documentee ailleurs
+    // dans ce fichier pour les widgets a base de Leaflet. Le comportement
+    // essentiel (bon identifiant restaure au bon moment) est verifie
+    // ci-dessus.
+    // The code then calls window.location.reload() (starts fresh): jsdom
+    // doesn't simulate real navigation and offers no reliable way to
+    // neutralize this specific call to measure it -- a test environment
+    // limitation, already documented elsewhere in this file for
+    // Leaflet-based widgets. The essential behavior (correct id restored
+    // at the right time) is verified above.
+
+    console.log("== Sauvegarde : suppression ==");
+    const beforeDelete = document.querySelectorAll(".backups-item").length;
+    document.querySelector('.backups-item [data-action="delete"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (document.querySelectorAll(".backups-item").length === beforeDelete && tries++ < 60) await sleep(50);
+    assert("suppression : une sauvegarde de moins dans la liste", document.querySelectorAll(".backups-item").length === beforeDelete - 1);
+
+    document.getElementById("backupsModal").hidden = true;
   }
 
   console.log("== Tuile Programme TV : onglets, rendu, synopsis ==");

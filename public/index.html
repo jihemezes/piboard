@@ -328,10 +328,58 @@
         </label>
       </fieldset>
 
-      <div class="form-actions">
+      <div class="form-actions form-actions-split">
+        <button class="btn" id="openBackupsBtn" data-i18n="backups.open">Backup &amp; restore…</button>
         <button class="btn primary" id="settingsSave" data-i18n="settings.save">Save</button>
       </div>
       <p class="about">PiBoard <span id="appVersion">v1.0.0</span> — <a href="https://github.com/jihemezes/piboard" target="_blank" rel="noopener">GitHub</a></p>
+    </div>
+  </div>
+</div>
+
+<!-- Sauvegarde et restauration : instantanes horodates de toute la
+     configuration (tuiles, emplacement, reglages, notes...), plus
+     export/import en fichier. Le mot de passe de la boite mail n'en
+     fait jamais partie (voir server/backups.js).
+     Backup and restore: timestamped snapshots of the whole
+     configuration (tiles, position, settings, notes...), plus file
+     export/import. The mailbox password is never part of it (see
+     server/backups.js). -->
+<div class="modal" id="backupsModal" hidden>
+  <div class="modal-card backups-modal-card">
+    <header class="modal-head">
+      <h2 data-i18n="backups.title">Backup &amp; restore</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="backups-body">
+      <p class="backups-intro" data-i18n="backups.intro">Every backup includes the tiles, their position and settings, saved configurations, and notepad content. Passwords (e.g. the mailbox one) are never included and must be re-entered after a restore.</p>
+      <div class="backups-actions">
+        <button type="button" class="btn primary" id="backupCreateBtn" data-i18n="backups.create">Create a backup now</button>
+        <button type="button" class="btn" id="backupImportBtn" data-i18n="backups.importBtn">Import from a file…</button>
+        <input type="file" id="backupImportInput" accept=".json,application/json" hidden>
+      </div>
+      <p class="backups-msg" id="backupsMsg" hidden></p>
+      <ul class="backups-list" id="backupsList"></ul>
+      <p class="backups-empty" id="backupsEmpty" hidden data-i18n="backups.empty">No backup yet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Confirmation avant restauration : action destructrice (ecrase la
+     configuration actuelle), toujours confirmee explicitement.
+     Confirmation before restore: destructive action (overwrites the
+     current configuration), always explicitly confirmed. -->
+<div class="modal" id="backupRestoreConfirmModal" hidden>
+  <div class="modal-card backups-confirm-card">
+    <header class="modal-head">
+      <h2 data-i18n="backups.restoreConfirmTitle">Restore this backup?</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <p data-i18n="backups.restoreConfirmBody">This replaces the current configuration (tiles, settings, notes...) with the one from this backup. This cannot be undone.</p>
+    <p class="backups-confirm-date" id="backupRestoreConfirmDate"></p>
+    <div class="form-actions">
+      <button type="button" class="btn" data-close data-i18n="common.cancel">Cancel</button>
+      <button type="button" class="btn danger" id="backupRestoreConfirmBtn" data-i18n="backups.restoreConfirmAction">Restore</button>
     </div>
   </div>
 </div>

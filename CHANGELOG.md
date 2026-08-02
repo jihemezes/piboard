@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.35.0
+
+- **Nouvelle fonctionnalité : sauvegarde et restauration complètes.**
+  Accessible via un bouton en bas des réglages généraux.
+  - Sauvegarde **les tuiles affichées, leur emplacement, leurs
+    réglages**, les configurations réutilisables enregistrées, et le
+    contenu libre par widget (le bloc-notes, notamment) ;
+  - Approche générique : tout fichier de configuration présent sur le
+    PiBoard est inclus automatiquement, sans liste figée à maintenir à
+    chaque nouvelle fonctionnalité ;
+  - **Le mot de passe de la boîte mail n'en fait jamais partie** — il
+    reste dans son coffre chiffré séparé, exclu de toute sauvegarde y
+    compris contre une tentative d'y en glisser un via un fichier
+    importé (vérifié explicitement) ;
+  - **Instantanés horodatés à la milliseconde** : une nouvelle
+    sauvegarde ne peut jamais en écraser une ancienne ;
+  - **Export et import de fichier** : chaque sauvegarde se télécharge,
+    et un fichier peut être importé (devient une nouvelle entrée de
+    l'historique, puis restauré immédiatement) ;
+  - **Restauration protégée par confirmation explicite**, action
+    irréversible ; rechargement automatique de la page après coup pour
+    repartir d'un état propre.
+
+---
+
+- **New feature: complete backup and restore.** Accessible via a button
+  at the bottom of general settings.
+  - Backs up **the displayed tiles, their position, their settings**,
+    saved reusable configurations, and free per-widget content (the
+    notepad, in particular);
+  - Generic approach: every configuration file present on the PiBoard
+    is included automatically, with no fixed list to maintain on every
+    new feature;
+  - **The mailbox password is never part of it** — it stays in its
+    separate encrypted vault, excluded from every backup, including
+    against an attempt to slip one in via an imported file (explicitly
+    verified);
+  - **Millisecond-precision timestamped snapshots**: a new backup can
+    never overwrite an older one;
+  - **File export and import**: any backup can be downloaded, and a
+    file can be imported (becomes a new history entry, then is
+    immediately restored);
+  - **Restore protected by an explicit confirmation**, an irreversible
+    action; the page automatically reloads afterward to start from a
+    clean state.
+
 ## 1.34.0
 
 - **Correctif *Programme TV* : « Stade 2 » sur France 3 affiché à tort

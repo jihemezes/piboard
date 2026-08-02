@@ -689,6 +689,37 @@ body.editing .ui-resizable-s::after {
 .hint { font-size: 12px; color: var(--faint); margin: -6px 0 14px; line-height: 1.5; }
 
 .form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 6px; }
+/* Variante avec un bouton secondaire pousse a gauche (voir le bouton
+   "Sauvegarde et restauration..." des reglages generaux).
+   Variant with a secondary button pushed to the left (see the "Backup &
+   restore..." button in general settings). */
+.form-actions-split { justify-content: space-between; }
+
+/* ---------- Sauvegarde / restauration -- backups ---------- */
+.backups-modal-card { width: min(560px, 94vw); }
+.backups-confirm-card { width: min(420px, 92vw); }
+.backups-body { padding: 4px 4px 2px; }
+.backups-intro { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 14px; }
+.backups-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.backups-msg { font-size: 12.5px; color: var(--accent); margin: 0 0 10px; }
+.backups-msg.backups-msg-error { color: #E0556F; }
+.backups-empty { color: var(--muted); font-size: 13px; font-style: italic; text-align: center; padding: 20px 0; }
+
+.backups-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+.backups-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.backups-item:last-child { border-bottom: none; }
+.backups-item-info { min-width: 0; }
+.backups-item-date { font-size: 13.5px; color: var(--text); font-weight: 600; }
+.backups-item-meta { font-size: 11.5px; color: var(--muted); margin-top: 1px; font-family: var(--mono); }
+.backups-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.backups-confirm-date { font-family: var(--mono); font-size: 13px; color: var(--text); margin: -6px 0 4px; }
 
 #tileSaveConfigMsg {
   display: inline;

@@ -1136,6 +1136,42 @@
       }
     },
 
+    {
+      id: "backups",
+      group: "platform",
+      title: { fr: "Sauvegarde et restauration", en: "Backup & restore" },
+      sub: {
+        fr: "Instantanés horodatés de toute la configuration, export/import en fichier.",
+        en: "Timestamped snapshots of the whole configuration, file export/import."
+      },
+      html: {
+        fr: `
+          <h4>Accès</h4>
+          <p>Bouton « Sauvegarde et restauration… » en bas des réglages généraux.</p>
+          <h4>Ce qui est sauvegardé</h4>
+          <p>Les tuiles affichées, leur emplacement, leurs réglages, les configurations réutilisables enregistrées, et le contenu libre par widget (le texte du bloc-notes, notamment). Concrètement : tout fichier de configuration présent sur le PiBoard au moment de la sauvegarde, plutôt qu'une liste figée — une future fonctionnalité n'a donc pas besoin d'une mise à jour de PiBoard pour être incluse dans une sauvegarde à venir.</p>
+          <p><b>Le mot de passe de la boîte mail n'en fait jamais partie.</b> Il vit dans un coffre chiffré séparé (voir l'aide de la tuile Courriel), délibérément exclu de toute sauvegarde — restaurer une configuration laisse donc la tuile Courriel sans mot de passe, à ressaisir une fois. C'est le prix, jugé raisonnable, pour qu'un fichier de sauvegarde ne devienne jamais un objet aussi sensible qu'un fichier de mots de passe.</p>
+          <h4>Instantanés horodatés</h4>
+          <p>Chaque sauvegarde reçoit un identifiant horodaté à la milliseconde : une nouvelle sauvegarde ne peut donc jamais en écraser une ancienne, contrairement à un système à emplacement unique. La liste conserve toutes les sauvegardes créées jusqu'à ce que vous les supprimiez vous-même.</p>
+          <h4>Export et import de fichier</h4>
+          <p>Chaque sauvegarde peut être téléchargée en fichier (utile pour la conserver hors du Raspberry Pi, ou pour la transférer vers un autre PiBoard). Un fichier peut aussi être importé : il devient une nouvelle entrée de l'historique, puis est immédiatement restauré. Un fichier qui ne provient pas de PiBoard, ou corrompu, est rejeté proprement plutôt que d'abîmer la configuration actuelle.</p>
+          <h4>Restauration</h4>
+          <p>Toujours précédée d'une confirmation explicite : c'est une action irréversible, qui remplace entièrement la configuration actuelle. Après confirmation, la page se recharge pour repartir d'un état propre.</p>`,
+        en: `
+          <h4>Access</h4>
+          <p>The "Backup & restore…" button at the bottom of general settings.</p>
+          <h4>What gets backed up</h4>
+          <p>The displayed tiles, their position, their settings, saved reusable configurations, and free per-widget content (the notepad's text, in particular). Concretely: every configuration file present on the PiBoard at backup time, rather than a fixed list — so a future feature doesn't need a PiBoard update to be included in an upcoming backup.</p>
+          <p><b>The mailbox password is never part of it.</b> It lives in a separate encrypted vault (see the Mailbox tile's help), deliberately excluded from every backup — restoring a configuration therefore leaves the Mailbox tile without its password, to be re-entered once. That's the price, judged reasonable, for a backup file never becoming as sensitive an object as a password file.</p>
+          <h4>Timestamped snapshots</h4>
+          <p>Every backup gets a millisecond-precision timestamped id: a new backup can therefore never overwrite an older one, unlike a single-slot system. The list keeps every backup created until you delete it yourself.</p>
+          <h4>File export and import</h4>
+          <p>Any backup can be downloaded as a file (handy to keep it off the Raspberry Pi, or to move it to another PiBoard). A file can also be imported: it becomes a new history entry, then is immediately restored. A file that doesn't come from PiBoard, or is corrupted, is cleanly rejected rather than damaging the current configuration.</p>
+          <h4>Restoring</h4>
+          <p>Always preceded by an explicit confirmation: it's an irreversible action that entirely replaces the current configuration. After confirming, the page reloads to start from a clean state.</p>`
+      }
+    },
+
     /* ================= REMERCIEMENTS / CREDITS ================= */
     {
       id: "about",
