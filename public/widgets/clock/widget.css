@@ -53,9 +53,19 @@
   align-items: stretch;
 }
 .pw-clock-wrap.pwc-wrap-side .pw-clock {
-  flex: 1 1 56%;
+  /* Recupere TOUT l'espace restant une fois la colonne des extras
+     dimensionnee a son propre contenu ci-dessous -- c'est elle qui
+     doit profiter du maximum de place, pas se contenter d'un
+     pourcentage fixe arbitraire. Padding reduit par rapport au mode
+     centre (le "gap" ci-dessous separe deja des extras).
+     Gets ALL the remaining space once the extras column has sized
+     itself to its own content below -- it's the one that should get
+     the most room, not settle for an arbitrary fixed percentage.
+     Reduced padding compared to the centered mode (the "gap" below
+     already separates it from the extras). */
+  flex: 1 1 auto;
   min-width: 0;
-  padding-right: 3%;
+  padding: 4% 3% 4% 5%;
 }
 .pwc-extras-col {
   flex-shrink: 0;
@@ -63,11 +73,21 @@
   flex-direction: column;
 }
 .pw-clock-wrap.pwc-wrap-side .pwc-extras-col {
-  flex: 1 1 44%;
+  /* Dimensionnee a son propre contenu (des libelles de fuseau courts),
+     PAS a un pourcentage fixe de la tuile -- c'est exactement ce qui
+     laissait une colonne trop large pour une police volontairement
+     petite. max-width en filet de securite si un libelle est tres long.
+     Sized to its own content (short zone labels), NOT to a fixed
+     percentage of the tile -- that's exactly what left a column too
+     wide for a deliberately small font. max-width as a safety net if a
+     label is very long. */
+  flex: 0 1 auto;
+  max-width: 42%;
   min-width: 0;
   justify-content: center;
+  align-items: flex-start;
   gap: 6px;
-  padding: 6% 6% 6% 0;
+  padding: 5% 5% 5% 4%;
   border-left: 1px solid var(--tile-edge);
 }
 /* En cote a cote, chaque extra s'aligne a gauche (au lieu de centre) et
@@ -76,7 +96,6 @@
    and loses the borders/margins meant for stacking under a centered
    time. */
 .pwc-wrap-side .pwc-zones { justify-content: flex-start; padding: 0; }
-.pwc-wrap-side .pwc-week { text-align: left; padding: 0; }
 .pwc-wrap-side .pwc-next-event {
   text-align: left;
   border-top: none;
@@ -101,6 +120,24 @@
   text-align: center;
   line-height: 1.3;
 }
+/* Conteneur de la date + du numero de semaine, en mode digital comme en
+   mode analogique : le second vit desormais juste sous la premiere
+   (voir render() dans widget.js), plutot que dans le bloc des extras --
+   plus coherent (c'est une info sur MA date, pas sur les autres
+   fuseaux) et plus econome en largeur.
+   Container for the date + the week number, in both digital and analog
+   mode: the latter now lives right under the former (see render() in
+   widget.js), rather than in the extras block -- both more coherent
+   (it's about MY date, not other zones) and more width-efficient. */
+.pwc-date-block, .pwc-analog-text {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+.pwc-analog-text { flex: 1; }
+.pw-clock.pwc-row .pwc-date-block,
+.pw-clock.pwc-analog-row .pwc-analog-text { align-items: flex-start; }
 .pw-clock .pwc-saint {
   font-style: italic;
   opacity: 0.85;
@@ -151,11 +188,7 @@
   gap: 6%;
 }
 .pw-clock.pwc-analog-row svg { flex: none; width: auto; }
-.pw-clock.pwc-analog-row .pwc-date {
-  flex: 1;
-  min-width: 0;
-  text-align: left;
-}
+.pw-clock.pwc-analog-row .pwc-date { text-align: left; }
 
 /* ---------- Extras (voir extrasHtml() dans widget.js) ----------
    Volontairement HORS de .pw-clock, en dessous : de petits blocs a
@@ -197,7 +230,7 @@
   font-family: var(--mono);
   font-size: 11px;
   color: var(--faint);
-  padding-bottom: 4px;
+  margin-top: 2px;
 }
 
 /* Prochain evenement : une ligne compacte, tronquee plutot que de

@@ -253,6 +253,17 @@
 
     render() {
       const s = this.ctx.settings;
+      // Le numero de semaine concerne MA date, pas les autres fuseaux :
+      // il rejoint donc le bloc horloge lui-meme (juste apres la date),
+      // plutot que le bloc des fuseaux supplementaires ou il vivait
+      // jusqu'ici -- a la fois plus coherent et plus econome en largeur,
+      // puisqu'il n'a plus besoin de sa propre colonne.
+      // The week number is about MY date, not other zones: it therefore
+      // joins the clock block itself (right after the date), rather than
+      // the extra-zones block where it used to live -- both more
+      // coherent and more width-efficient, since it no longer needs its
+      // own column.
+      const weekHtml = `<div class="pwc-week" ${s.showWeekNumber ? "" : "hidden"}></div>`;
       let clockHtml;
       if (s.mode === "analog") {
         // Cote a cote (cadran a gauche, texte a droite) uniquement si la
@@ -281,7 +292,10 @@
               <line class="pwa-hand pwa-sec pwa-s" x1="50" y1="54" x2="50" y2="13" ${s.showSeconds ? "" : "visibility='hidden'"}/>
               <circle class="pwa-pin" cx="50" cy="50" r="2.6"/>
             </svg>
-            <div class="pwc-date" ${s.showDate ? "" : "hidden"}></div>
+            <div class="pwc-analog-text" ${s.showDate ? "" : "hidden"}>
+              <div class="pwc-date"></div>
+              ${weekHtml}
+            </div>
           </div>`;
       } else {
         // Cote a cote : seulement pertinent si la date est affichee.
@@ -290,7 +304,10 @@
         clockHtml = `
           <div class="pw-clock ${row ? "pwc-row" : ""}">
             <div class="pwc-time"></div>
-            <div class="pwc-date" ${s.showDate ? "" : "hidden"}></div>
+            <div class="pwc-date-block" ${s.showDate ? "" : "hidden"}>
+              <div class="pwc-date"></div>
+              ${weekHtml}
+            </div>
           </div>`;
       }
       // Enveloppe commune aux deux modes : l'horloge (existante,
@@ -362,7 +379,6 @@
       return `
         <div class="pwc-extras-col">
           ${zonesHtml}
-          <div class="pwc-week" ${s.showWeekNumber ? "" : "hidden"}></div>
           <div class="pwc-next-event" hidden></div>
           <div class="pwc-alarm-banner" hidden>
             <span class="pwc-alarm-label"></span>
@@ -508,19 +524,20 @@
       if (!el) return;
       const ringing = this.activeAlarmIndex != null;
       // Le reste des extras s'efface tant qu'une alarme sonne : elle
-      // doit capter l'attention, pas se noyer au milieu des fuseaux/de
-      // la semaine/du prochain evenement. Restaure automatiquement des
-      // l'arret (chacun reprend sa propre condition d'affichage au
-      // prochain tick). The rest of the extras step aside while an
-      // alarm rings: it should grab attention, not get lost among the
-      // time zones/week/next event. Automatically restored once
-      // stopped (each picks its own display condition back up on the
-      // next tick).
+      // doit capter l'attention, pas se noyer au milieu des fuseaux/du
+      // prochain evenement. Le numero de semaine, lui, ne fait plus
+      // partie des extras (voir render()) : il reste toujours visible.
+      // Restaure automatiquement a l'arret (chacun reprend sa propre
+      // condition d'affichage au prochain tick).
+      // The rest of the extras step aside while an alarm rings: it
+      // should grab attention, not get lost among the time zones/next
+      // event. The week number, though, is no longer part of the extras
+      // (see render()): it always stays visible. Automatically restored
+      // once stopped (each picks its own display condition back up on
+      // the next tick).
       const zonesEl = this.ctx.el.querySelector(".pwc-zones");
-      const weekEl = this.ctx.el.querySelector(".pwc-week");
       const eventEl = this.ctx.el.querySelector(".pwc-next-event");
       if (zonesEl) zonesEl.hidden = ringing;
-      if (weekEl) weekEl.hidden = ringing || this.ctx.settings.showWeekNumber !== true;
       if (eventEl && !ringing) this.renderNextEvent(); // reevalue sa propre visibilite / re-evaluates its own visibility
       else if (eventEl) eventEl.hidden = true;
 
@@ -616,7 +633,20 @@
       // never overflow on wide/short or square tiles) and height (tall/
       // narrow tiles). In side-by-side layout, the COMBINED time + date
       // width must fit (measured via the row container's scrollWidth).
-      let lo = 12, hi = Math.max(16, Math.floor(Math.min(w * 0.85, h * 0.65)));
+      // Plafond de depart volontairement genereux : c'est la verification
+      // de debordement (fitsWidth/fitsHeight) qui protege reellement
+      // contre un texte trop grand, ce plafond n'est qu'une borne
+      // maximale pour la recherche. Un plafond trop bas (l'ancien,
+      // 0.65 x hauteur) empechait de decouvrir une taille plus grande
+      // pourtant disponible -- signale par capture d'ecran (chiffres
+      // trop petits malgre l'espace libre autour).
+      // Deliberately generous starting ceiling: the overflow check
+      // (fitsWidth/fitsHeight) is what actually protects against text
+      // too large, this ceiling is only an upper search bound. A ceiling
+      // too low (the old one, 0.65 x height) prevented discovering a
+      // bigger size that was actually available -- reported via
+      // screenshot (digits too small despite free space around them).
+      let lo = 12, hi = Math.max(16, Math.floor(Math.min(w * 0.95, h * 0.9)));
       for (let i = 0; i < 7; i++) {
         const mid = Math.floor((lo + hi + 1) / 2);
         time.style.fontSize = mid + "px";

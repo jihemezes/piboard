@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.37.2
+
+- **Horloge : retouche du design de la disposition côte à côte
+  (v1.37.1), signalée par capture d'écran.**
+  - **Chiffres de l'heure agrandis** : le plafond de la recherche de
+    taille de police était trop conservateur (limité à 65 % de la
+    hauteur disponible), laissant l'heure nettement plus petite que
+    l'espace réellement libre autour d'elle ;
+  - **Colonne des fuseaux secondaires resserrée** : elle prenait un
+    pourcentage fixe de la largeur, bien plus que nécessaire pour une
+    police volontairement petite. Elle se dimensionne désormais à son
+    propre contenu, laissant le maximum de place à l'heure ;
+  - **Numéro de semaine déplacé** dans le bloc horloge lui-même, juste
+    sous la date — plus cohérent (c'est une information sur *votre*
+    date, pas sur les fuseaux des autres villes) et plus économe en
+    largeur, puisqu'il n'a plus besoin de sa propre colonne.
+
+---
+
+- **Clock: design touch-up for the side-by-side layout (v1.37.1),
+  reported via screenshot.**
+  - **Larger time digits**: the font-size search ceiling was too
+    conservative (capped at 65% of the available height), leaving the
+    time noticeably smaller than the space actually free around it;
+  - **Narrower secondary time-zone column**: it took a fixed percentage
+    of the width, far more than needed for a deliberately small font.
+    It now sizes itself to its own content, leaving the time as much
+    room as possible;
+  - **Week number moved** into the clock block itself, right below the
+    date — more coherent (it's information about *your* date, not
+    other cities' zones) and more width-efficient, since it no longer
+    needs its own column.
+
 ## 1.37.1
 
 - **Correctif *Horloge* : heure numérique toujours centrée avec des
