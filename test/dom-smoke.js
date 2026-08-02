@@ -1888,6 +1888,30 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("reglage d'une alarme presente (son)", !!document.querySelector('#tileForm [data-key="alarm1Sound"]'));
     assert("5 alarmes independantes proposees (comme convenu)",
       [1, 2, 3, 4, 5].every((i) => !!document.querySelector(`#tileForm [data-key="alarm${i}Enabled"]`)));
+
+    console.log("== Horloge : selecteur de fuseau horaire (liste complete, plus de saisie libre) ==");
+    const tzSelect = document.querySelector('#tileForm [data-key="timezone"]');
+    assert("champ fuseau horaire est bien une liste, pas un champ texte", tzSelect && tzSelect.tagName === "SELECT");
+    assert("liste complete des fuseaux IANA (~418 + option vide)", tzSelect.querySelectorAll("option").length > 400);
+    assert("fuseaux regroupes par continent (optgroup)", tzSelect.querySelectorAll("optgroup").length > 5);
+    assert("Europe/Paris present dans la liste", !!tzSelect.querySelector('option[value="Europe/Paris"]'));
+    assert("libelle de ville sans le prefixe continent ni underscore (New York, pas America/New_York)",
+      !!tzSelect.querySelector('option[value="America/New_York"]') && tzSelect.querySelector('option[value="America/New_York"]').textContent === "New York");
+    assert("option par defaut = fuseau du systeme (valeur vide, deja selectionnee)",
+      tzSelect.querySelector('option[value=""]')?.selected === true);
+    const extraTzSelect = document.querySelector('#tileForm [data-key="extraZone1Tz"]');
+    assert("fuseau supplementaire aussi en liste, avec son propre libelle vide",
+      extraTzSelect && extraTzSelect.tagName === "SELECT" && extraTzSelect.querySelector('option[value=""]')?.textContent.includes("Non utilisé"));
+
+    tzSelect.value = "Asia/Tokyo";
+    tzSelect.dispatchEvent(new window.Event("change", { bubbles: true }));
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const clockTile2 = document.querySelector('[data-tile-id="t-p"]');
+    tries = 0;
+    while (!clockTile2.querySelector(".pwc-time") && tries++ < 80) await sleep(50);
+    assert("le fuseau choisi via la liste s'applique reellement a l'affichage", !!clockTile2.querySelector(".pwc-time"));
+
     document.getElementById("tileModal").querySelector(".modal-close")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(20);

@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.36.0
+   Version 1.37.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1363,10 +1363,81 @@
     const hint = f.hint ? `<small class="field-hint">${i18n.fromManifest(f.hint)}</small>` : "";
     switch (f.type) {
       case "select": {
-        const opts = (f.options || []).map((o) =>
-          `<option value="${o.value}" ${String(o.value) === String(v) ? "selected" : ""}>${i18n.fromManifest(o.label)}</option>`
-        ).join("");
-        return `<label class="field"><span>${label}</span><select data-key="${f.key}">${opts}</select>${hint}</label>`;
+        // Options avec regroupement facultatif (propriete "group" par
+        // option, ex. les fuseaux horaires groupes par continent) :
+        // rendu en <optgroup>, dans l'ordre de premiere apparition des
+        // groupes. Une option sans "group" reste au niveau racine --
+        // comportement inchange pour tous les champs select existants,
+        // aucun d'eux n'utilisant cette propriete.
+        // Options with optional grouping (a per-option "group" property,
+        // e.g. time zones grouped by continent): rendered as
+        // <optgroup>, in the groups' first-seen order. An option with no
+        // "group" stays at the root level -- unchanged behavior for
+        // every existing select field, none of which use this property.
+        const opts = f.options || [];
+        const optionHtml = (o) => `<option value="${o.value}" ${String(o.value) === String(v) ? "selected" : ""}>${i18n.fromManifest(o.label)}</option>`;
+        let body = "";
+        const groupOrder = [];
+        const byGroup = new Map();
+        for (const o of opts) {
+          if (!o.group) { body += optionHtml(o); continue; }
+          const gLabel = i18n.fromManifest(o.group);
+          if (!byGroup.has(gLabel)) { byGroup.set(gLabel, []); groupOrder.push(gLabel); }
+          byGroup.get(gLabel).push(o);
+        }
+        body += groupOrder.map((g) => `<optgroup label="${escapeHtmlAttr(g)}">${byGroup.get(g).map(optionHtml).join("")}</optgroup>`).join("");
+        return `<label class="field"><span>${label}</span><select data-key="${f.key}">${body}</select>${hint}</label>`;
+      }
+      /* Champ "fuseau horaire" : construit sa liste d'options a la volee
+         via Intl.supportedValuesOf("timeZone") -- la meme API que celle
+         qui alimente deja l'affichage reel du fuseau (voir nowInZone()
+         dans le widget Horloge), plutot qu'une liste figee de ~420
+         entrees x4 champs embarquee dans chaque manifeste (essaye
+         d'abord, ecarte : 437 Ko rien que pour ce widget). Regroupee par
+         continent (optgroup, voir le cas "select" juste au-dessus).
+         Repli sur une petite liste si l'API est indisponible (tres
+         ancien navigateur) : mieux qu'un champ vide.
+         "Time zone" field: builds its option list on the fly via
+         Intl.supportedValuesOf("timeZone") -- the same API that already
+         powers the actual zone display (see nowInZone() in the Clock
+         widget), rather than a fixed list of ~420 entries x4 fields
+         embedded in every manifest (tried first, dropped: 437 KB for
+         this widget alone). Grouped by continent (optgroup, see the
+         "select" case just above). Falls back to a short list if the
+         API is unavailable (very old browser): better than an empty
+         field. */
+      case "timezone": {
+        const FALLBACK_ZONES = ["UTC", "Europe/Paris", "Europe/London", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney"];
+        let zones;
+        try { zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : FALLBACK_ZONES; }
+        catch (e) { zones = FALLBACK_ZONES; }
+        const CONTINENT_LABELS = {
+          Africa: { en: "Africa", fr: "Afrique" }, America: { en: "America", fr: "Amérique" },
+          Antarctica: { en: "Antarctica", fr: "Antarctique" }, Arctic: { en: "Arctic", fr: "Arctique" },
+          Asia: { en: "Asia", fr: "Asie" }, Atlantic: { en: "Atlantic", fr: "Atlantique" },
+          Australia: { en: "Australia", fr: "Australie" }, Europe: { en: "Europe", fr: "Europe" },
+          Indian: { en: "Indian Ocean", fr: "Océan Indien" }, Pacific: { en: "Pacific", fr: "Pacifique" },
+          Etc: { en: "Other", fr: "Autre" }
+        };
+        const emptyLabel = f.emptyLabel || { en: "— System's own —", fr: "— Fuseau du système —" };
+        let body = `<option value="" ${v ? "" : "selected"}>${i18n.fromManifest(emptyLabel)}</option>`;
+        const byGroup = new Map();
+        const order = [];
+        for (const z of zones) {
+          const slash = z.indexOf("/");
+          const continent = slash === -1 ? "Etc" : z.slice(0, slash);
+          const city = (slash === -1 ? z : z.slice(slash + 1)).replace(/_/g, " ");
+          const gLabel = i18n.fromManifest(CONTINENT_LABELS[continent] || { en: continent, fr: continent });
+          if (!byGroup.has(gLabel)) { byGroup.set(gLabel, []); order.push(gLabel); }
+          byGroup.get(gLabel).push({ value: z, city });
+        }
+        order.sort((a, b) => a.localeCompare(b));
+        body += order.map((g) => {
+          const items = [...byGroup.get(g)].sort((a, b) => a.city.localeCompare(b.city));
+          const optsHtml = items.map((it) => `<option value="${it.value}" ${String(it.value) === String(v) ? "selected" : ""}>${escapeHtmlAttr(it.city)}</option>`).join("");
+          return `<optgroup label="${escapeHtmlAttr(g)}">${optsHtml}</optgroup>`;
+        }).join("");
+        return `<label class="field"><span>${label}</span><select data-key="${f.key}">${body}</select>${hint}</label>`;
       }
       case "checkbox":
         return `<label class="field checkbox"><input type="checkbox" data-key="${f.key}" ${v ? "checked" : ""}><span>${label}</span></label>${hint}`;

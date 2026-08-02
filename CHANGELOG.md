@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.37.0
+
+- **Horloge : le choix du fuseau horaire se fait désormais dans une
+  liste**, tous les fuseaux IANA (418 au total) regroupés par
+  continent, plutôt qu'une saisie manuelle du nom exact (ex.
+  « Europe/Paris ») introduite en v1.36.0.
+- **Nouveau type de champ générique « fuseau horaire »**, réutilisable
+  par un futur widget : liste construite à la volée dans le navigateur
+  (`Intl.supportedValuesOf`, la même source que l'affichage réel du
+  fuseau), plutôt qu'une liste figée embarquée dans chaque manifeste —
+  évite d'alourdir inutilement l'application (une première version
+  aurait ajouté 430 Ko rien que pour ce widget).
+- **Support des groupes dans les listes déroulantes** (`optgroup`)
+  ajouté au système de réglages général, à l'origine pour les
+  continents des fuseaux horaires, mais réutilisable par tout futur
+  champ de type liste.
+
+---
+
+- **Clock: time zone selection is now a drop-down list**, every IANA
+  zone (418 total) grouped by continent, rather than manually typing
+  the exact name (e.g. "Europe/Paris") introduced in v1.36.0.
+- **New generic "time zone" field type**, reusable by a future widget:
+  the list is built on the fly in the browser
+  (`Intl.supportedValuesOf`, the same source powering the actual zone
+  display), rather than a fixed list baked into every manifest —
+  avoids needlessly bloating the app (an initial version would have
+  added 430 KB for this widget alone).
+- **Grouped drop-down list support** (`optgroup`) added to the general
+  settings system, originally for the time zones' continents, but
+  reusable by any future list-type field.
+
 ## 1.36.0
 
 - **Horloge : quatre nouvelles fonctionnalités.**

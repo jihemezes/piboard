@@ -1,6 +1,6 @@
 {
   "id": "clock",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "name": {
     "en": "Clock",
     "fr": "Horloge"
@@ -212,15 +212,15 @@
     },
     {
       "key": "timezone",
-      "type": "text",
+      "type": "timezone",
       "default": "",
       "label": {
         "en": "Time zone",
         "fr": "Fuseau horaire"
       },
       "hint": {
-        "en": "An IANA time zone name, e.g. \"America/New_York\" or \"Asia/Tokyo\". Leave empty to use the system's own time zone (the historical, default behavior). An invalid name silently falls back to the system time zone.",
-        "fr": "Un nom de fuseau horaire IANA, ex. « America/New_York » ou « Asia/Tokyo ». Laissez vide pour utiliser le fuseau du système (comportement historique, par défaut). Un nom invalide retombe silencieusement sur le fuseau du système."
+        "en": "Leave on “System's own” to use the device's own time zone (the historical, default behavior).",
+        "fr": "Laissez sur « Fuseau du système » pour utiliser le fuseau de l'appareil (comportement historique, par défaut)."
       },
       "group": {
         "en": "Time zone",
@@ -246,19 +246,23 @@
     },
     {
       "key": "extraZone1Tz",
-      "type": "text",
+      "type": "timezone",
       "default": "",
       "label": {
         "en": "Extra zone 1: IANA time zone",
         "fr": "Fuseau supplémentaire 1 : fuseau IANA"
       },
-      "hint": {
-        "en": "E.g. \"America/New_York\".",
-        "fr": "Ex. « America/New_York »."
-      },
       "group": {
         "en": "Time zone",
         "fr": "Fuseau horaire"
+      },
+      "hint": {
+        "en": "Leave on “Not used” to leave this slot unused.",
+        "fr": "Laissez sur « Non utilisé » pour ne pas utiliser cet emplacement."
+      },
+      "emptyLabel": {
+        "en": "— Not used —",
+        "fr": "— Non utilisé —"
       }
     },
     {
@@ -280,19 +284,23 @@
     },
     {
       "key": "extraZone2Tz",
-      "type": "text",
+      "type": "timezone",
       "default": "",
       "label": {
         "en": "Extra zone 2: IANA time zone",
         "fr": "Fuseau supplémentaire 2 : fuseau IANA"
       },
-      "hint": {
-        "en": "E.g. \"America/New_York\".",
-        "fr": "Ex. « America/New_York »."
-      },
       "group": {
         "en": "Time zone",
         "fr": "Fuseau horaire"
+      },
+      "hint": {
+        "en": "Leave on “Not used” to leave this slot unused.",
+        "fr": "Laissez sur « Non utilisé » pour ne pas utiliser cet emplacement."
+      },
+      "emptyLabel": {
+        "en": "— Not used —",
+        "fr": "— Non utilisé —"
       }
     },
     {
@@ -314,19 +322,23 @@
     },
     {
       "key": "extraZone3Tz",
-      "type": "text",
+      "type": "timezone",
       "default": "",
       "label": {
         "en": "Extra zone 3: IANA time zone",
         "fr": "Fuseau supplémentaire 3 : fuseau IANA"
       },
-      "hint": {
-        "en": "E.g. \"America/New_York\".",
-        "fr": "Ex. « America/New_York »."
-      },
       "group": {
         "en": "Time zone",
         "fr": "Fuseau horaire"
+      },
+      "hint": {
+        "en": "Leave on “Not used” to leave this slot unused.",
+        "fr": "Laissez sur « Non utilisé » pour ne pas utiliser cet emplacement."
+      },
+      "emptyLabel": {
+        "en": "— Not used —",
+        "fr": "— Non utilisé —"
       }
     },
     {
