@@ -1,13 +1,13 @@
 {
   "id": "clock",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "name": {
     "en": "Clock",
     "fr": "Horloge"
   },
   "description": {
-    "en": "Digital or analog clock with today's date (in analog mode, the face sits on the left and the text on the right when the date is shown, so the face keeps the tile's full height), an optional French nameday, and an optional day/night background that follows the board's sun-based theme.",
-    "fr": "Horloge digitale ou analogique avec la date du jour (en mode analogique, le cadran se cale à gauche et le texte à droite quand la date est affichée, pour que le cadran garde toute la hauteur de la tuile), le saint du jour en option, et un fond jour/nuit optionnel qui suit le thème solaire du tableau."
+    "en": "Digital or analog clock with today's date (in analog mode, the face sits on the left and the text on the right when the date is shown, so the face keeps the tile's full height), an optional French nameday, and an optional day/night background that follows the board's sun-based theme. A chosen time zone (with up to 3 secondary zones shown small), a week number (two conventions to choose from), up to 5 independent alarms, and a \"next event\" line fed by an independent calendar.",
+    "fr": "Horloge digitale ou analogique avec la date du jour (en mode analogique, le cadran se cale à gauche et le texte à droite quand la date est affichée, pour que le cadran garde toute la hauteur de la tuile), le saint du jour en option, et un fond jour/nuit optionnel qui suit le thème solaire du tableau. Fuseau horaire choisi (avec jusqu'à 3 fuseaux secondaires affichés en petit), numéro de semaine (deux conventions au choix), jusqu'à 5 alarmes indépendantes, et une ligne « prochain événement » alimentée par un calendrier indépendant."
   },
   "tagline": {
     "en": "Digital or analog clock, with today's date.",
@@ -208,6 +208,1022 @@
       "label": {
         "en": "Night color",
         "fr": "Couleur de nuit"
+      }
+    },
+    {
+      "key": "timezone",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      },
+      "hint": {
+        "en": "An IANA time zone name, e.g. \"America/New_York\" or \"Asia/Tokyo\". Leave empty to use the system's own time zone (the historical, default behavior). An invalid name silently falls back to the system time zone.",
+        "fr": "Un nom de fuseau horaire IANA, ex. « America/New_York » ou « Asia/Tokyo ». Laissez vide pour utiliser le fuseau du système (comportement historique, par défaut). Un nom invalide retombe silencieusement sur le fuseau du système."
+      },
+      "group": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      }
+    },
+    {
+      "key": "extraZone1Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra zone 1: label",
+        "fr": "Fuseau supplémentaire 1 : libellé"
+      },
+      "hint": {
+        "en": "E.g. \"New York\". Leave empty to leave this slot unused.",
+        "fr": "Ex. « New York ». Laissez vide pour ne pas utiliser cet emplacement."
+      },
+      "group": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      }
+    },
+    {
+      "key": "extraZone1Tz",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra zone 1: IANA time zone",
+        "fr": "Fuseau supplémentaire 1 : fuseau IANA"
+      },
+      "hint": {
+        "en": "E.g. \"America/New_York\".",
+        "fr": "Ex. « America/New_York »."
+      },
+      "group": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      }
+    },
+    {
+      "key": "extraZone2Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra zone 2: label",
+        "fr": "Fuseau supplémentaire 2 : libellé"
+      },
+      "hint": {
+        "en": "E.g. \"New York\". Leave empty to leave this slot unused.",
+        "fr": "Ex. « New York ». Laissez vide pour ne pas utiliser cet emplacement."
+      },
+      "group": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      }
+    },
+    {
+      "key": "extraZone2Tz",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra zone 2: IANA time zone",
+        "fr": "Fuseau supplémentaire 2 : fuseau IANA"
+      },
+      "hint": {
+        "en": "E.g. \"America/New_York\".",
+        "fr": "Ex. « America/New_York »."
+      },
+      "group": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      }
+    },
+    {
+      "key": "extraZone3Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra zone 3: label",
+        "fr": "Fuseau supplémentaire 3 : libellé"
+      },
+      "hint": {
+        "en": "E.g. \"New York\". Leave empty to leave this slot unused.",
+        "fr": "Ex. « New York ». Laissez vide pour ne pas utiliser cet emplacement."
+      },
+      "group": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      }
+    },
+    {
+      "key": "extraZone3Tz",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra zone 3: IANA time zone",
+        "fr": "Fuseau supplémentaire 3 : fuseau IANA"
+      },
+      "hint": {
+        "en": "E.g. \"America/New_York\".",
+        "fr": "Ex. « America/New_York »."
+      },
+      "group": {
+        "en": "Time zone",
+        "fr": "Fuseau horaire"
+      }
+    },
+    {
+      "key": "showWeekNumber",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show week number",
+        "fr": "Afficher le numéro de semaine"
+      },
+      "group": {
+        "en": "Week number",
+        "fr": "Numéro de semaine"
+      }
+    },
+    {
+      "key": "weekNumberConvention",
+      "type": "select",
+      "default": "iso",
+      "label": {
+        "en": "Convention",
+        "fr": "Convention"
+      },
+      "options": [
+        {
+          "value": "iso",
+          "label": {
+            "en": "ISO 8601 (week 1 = week of the year's first Thursday)",
+            "fr": "ISO 8601 (semaine 1 = celle du premier jeudi de l'année)"
+          }
+        },
+        {
+          "value": "jan1",
+          "label": {
+            "en": "Simple (week 1 = week containing January 1st)",
+            "fr": "Simple (semaine 1 = celle qui contient le 1er janvier)"
+          }
+        }
+      ],
+      "hint": {
+        "en": "ISO 8601 is the international standard, most common in Europe. \"Simple\" is easier to reason about but less standard.",
+        "fr": "ISO 8601 est la norme internationale, la plus courante en Europe. « Simple » est plus facile à appréhender mais moins standard."
+      },
+      "group": {
+        "en": "Week number",
+        "fr": "Numéro de semaine"
+      }
+    },
+    {
+      "key": "showNextEvent",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show next event",
+        "fr": "Afficher le prochain événement"
+      },
+      "group": {
+        "en": "Next event",
+        "fr": "Prochain événement"
+      }
+    },
+    {
+      "key": "nextEventIcsUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Calendar address (.ics)",
+        "fr": "Adresse du calendrier (.ics)"
+      },
+      "hint": {
+        "en": "Independent from any Calendar tile you may already have — this keeps the Clock tile working on its own, even without one on the board. Only single, non-recurring events are currently detected (a weekly meeting defined via a recurrence rule won't show up).",
+        "fr": "Indépendant d'une éventuelle tuile Agenda déjà présente — la tuile Horloge continue ainsi de fonctionner seule, même sans tuile Agenda sur le tableau. Seuls les événements simples, non récurrents, sont détectés pour l'instant (une réunion hebdomadaire définie par une règle de récurrence n'apparaîtra pas)."
+      },
+      "group": {
+        "en": "Next event",
+        "fr": "Prochain événement"
+      }
+    },
+    {
+      "key": "nextEventDaysAhead",
+      "type": "number",
+      "default": 14,
+      "min": 1,
+      "max": 60,
+      "step": 1,
+      "label": {
+        "en": "Search ahead (days)",
+        "fr": "Recherche jusqu'à (jours)"
+      },
+      "group": {
+        "en": "Next event",
+        "fr": "Prochain événement"
+      }
+    },
+    {
+      "key": "alarm1Enabled",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alarm 1: enabled",
+        "fr": "Alarme 1 : activée"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm1Time",
+      "type": "time",
+      "default": "07:00",
+      "label": {
+        "en": "Alarm 1: time",
+        "fr": "Alarme 1 : heure"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm1Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Alarm 1: label",
+        "fr": "Alarme 1 : libellé"
+      },
+      "hint": {
+        "en": "Optional, e.g. \"Work\".",
+        "fr": "Facultatif, ex. « Travail »."
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm1Days",
+      "type": "select",
+      "default": "daily",
+      "label": {
+        "en": "Alarm 1: days",
+        "fr": "Alarme 1 : jours"
+      },
+      "options": [
+        {
+          "value": "daily",
+          "label": {
+            "en": "Every day",
+            "fr": "Tous les jours"
+          }
+        },
+        {
+          "value": "weekdays",
+          "label": {
+            "en": "Weekdays (Mon–Fri)",
+            "fr": "Jours ouvrés (lun–ven)"
+          }
+        },
+        {
+          "value": "weekend",
+          "label": {
+            "en": "Weekend (Sat–Sun)",
+            "fr": "Week-end (sam–dim)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      },
+      "hint": {
+        "en": "To ring only once, simply switch the alarm off again after it rings.",
+        "fr": "Pour ne sonner qu'une fois, il suffit de désactiver l'alarme après qu'elle a sonné."
+      }
+    },
+    {
+      "key": "alarm1Sound",
+      "type": "select",
+      "default": "beep-simple",
+      "label": {
+        "en": "Alarm 1: sound",
+        "fr": "Alarme 1 : son"
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm2Enabled",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alarm 2: enabled",
+        "fr": "Alarme 2 : activée"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm2Time",
+      "type": "time",
+      "default": "07:00",
+      "label": {
+        "en": "Alarm 2: time",
+        "fr": "Alarme 2 : heure"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm2Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Alarm 2: label",
+        "fr": "Alarme 2 : libellé"
+      },
+      "hint": {
+        "en": "Optional, e.g. \"Work\".",
+        "fr": "Facultatif, ex. « Travail »."
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm2Days",
+      "type": "select",
+      "default": "daily",
+      "label": {
+        "en": "Alarm 2: days",
+        "fr": "Alarme 2 : jours"
+      },
+      "options": [
+        {
+          "value": "daily",
+          "label": {
+            "en": "Every day",
+            "fr": "Tous les jours"
+          }
+        },
+        {
+          "value": "weekdays",
+          "label": {
+            "en": "Weekdays (Mon–Fri)",
+            "fr": "Jours ouvrés (lun–ven)"
+          }
+        },
+        {
+          "value": "weekend",
+          "label": {
+            "en": "Weekend (Sat–Sun)",
+            "fr": "Week-end (sam–dim)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      },
+      "hint": {
+        "en": "To ring only once, simply switch the alarm off again after it rings.",
+        "fr": "Pour ne sonner qu'une fois, il suffit de désactiver l'alarme après qu'elle a sonné."
+      }
+    },
+    {
+      "key": "alarm2Sound",
+      "type": "select",
+      "default": "beep-simple",
+      "label": {
+        "en": "Alarm 2: sound",
+        "fr": "Alarme 2 : son"
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm3Enabled",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alarm 3: enabled",
+        "fr": "Alarme 3 : activée"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm3Time",
+      "type": "time",
+      "default": "07:00",
+      "label": {
+        "en": "Alarm 3: time",
+        "fr": "Alarme 3 : heure"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm3Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Alarm 3: label",
+        "fr": "Alarme 3 : libellé"
+      },
+      "hint": {
+        "en": "Optional, e.g. \"Work\".",
+        "fr": "Facultatif, ex. « Travail »."
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm3Days",
+      "type": "select",
+      "default": "daily",
+      "label": {
+        "en": "Alarm 3: days",
+        "fr": "Alarme 3 : jours"
+      },
+      "options": [
+        {
+          "value": "daily",
+          "label": {
+            "en": "Every day",
+            "fr": "Tous les jours"
+          }
+        },
+        {
+          "value": "weekdays",
+          "label": {
+            "en": "Weekdays (Mon–Fri)",
+            "fr": "Jours ouvrés (lun–ven)"
+          }
+        },
+        {
+          "value": "weekend",
+          "label": {
+            "en": "Weekend (Sat–Sun)",
+            "fr": "Week-end (sam–dim)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      },
+      "hint": {
+        "en": "To ring only once, simply switch the alarm off again after it rings.",
+        "fr": "Pour ne sonner qu'une fois, il suffit de désactiver l'alarme après qu'elle a sonné."
+      }
+    },
+    {
+      "key": "alarm3Sound",
+      "type": "select",
+      "default": "beep-simple",
+      "label": {
+        "en": "Alarm 3: sound",
+        "fr": "Alarme 3 : son"
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm4Enabled",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alarm 4: enabled",
+        "fr": "Alarme 4 : activée"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm4Time",
+      "type": "time",
+      "default": "07:00",
+      "label": {
+        "en": "Alarm 4: time",
+        "fr": "Alarme 4 : heure"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm4Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Alarm 4: label",
+        "fr": "Alarme 4 : libellé"
+      },
+      "hint": {
+        "en": "Optional, e.g. \"Work\".",
+        "fr": "Facultatif, ex. « Travail »."
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm4Days",
+      "type": "select",
+      "default": "daily",
+      "label": {
+        "en": "Alarm 4: days",
+        "fr": "Alarme 4 : jours"
+      },
+      "options": [
+        {
+          "value": "daily",
+          "label": {
+            "en": "Every day",
+            "fr": "Tous les jours"
+          }
+        },
+        {
+          "value": "weekdays",
+          "label": {
+            "en": "Weekdays (Mon–Fri)",
+            "fr": "Jours ouvrés (lun–ven)"
+          }
+        },
+        {
+          "value": "weekend",
+          "label": {
+            "en": "Weekend (Sat–Sun)",
+            "fr": "Week-end (sam–dim)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      },
+      "hint": {
+        "en": "To ring only once, simply switch the alarm off again after it rings.",
+        "fr": "Pour ne sonner qu'une fois, il suffit de désactiver l'alarme après qu'elle a sonné."
+      }
+    },
+    {
+      "key": "alarm4Sound",
+      "type": "select",
+      "default": "beep-simple",
+      "label": {
+        "en": "Alarm 4: sound",
+        "fr": "Alarme 4 : son"
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm5Enabled",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alarm 5: enabled",
+        "fr": "Alarme 5 : activée"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm5Time",
+      "type": "time",
+      "default": "07:00",
+      "label": {
+        "en": "Alarm 5: time",
+        "fr": "Alarme 5 : heure"
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm5Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Alarm 5: label",
+        "fr": "Alarme 5 : libellé"
+      },
+      "hint": {
+        "en": "Optional, e.g. \"Work\".",
+        "fr": "Facultatif, ex. « Travail »."
+      },
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      }
+    },
+    {
+      "key": "alarm5Days",
+      "type": "select",
+      "default": "daily",
+      "label": {
+        "en": "Alarm 5: days",
+        "fr": "Alarme 5 : jours"
+      },
+      "options": [
+        {
+          "value": "daily",
+          "label": {
+            "en": "Every day",
+            "fr": "Tous les jours"
+          }
+        },
+        {
+          "value": "weekdays",
+          "label": {
+            "en": "Weekdays (Mon–Fri)",
+            "fr": "Jours ouvrés (lun–ven)"
+          }
+        },
+        {
+          "value": "weekend",
+          "label": {
+            "en": "Weekend (Sat–Sun)",
+            "fr": "Week-end (sam–dim)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
+      },
+      "hint": {
+        "en": "To ring only once, simply switch the alarm off again after it rings.",
+        "fr": "Pour ne sonner qu'une fois, il suffit de désactiver l'alarme après qu'elle a sonné."
+      }
+    },
+    {
+      "key": "alarm5Sound",
+      "type": "select",
+      "default": "beep-simple",
+      "label": {
+        "en": "Alarm 5: sound",
+        "fr": "Alarme 5 : son"
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ],
+      "group": {
+        "en": "Alarms",
+        "fr": "Alarmes"
       }
     }
   ]

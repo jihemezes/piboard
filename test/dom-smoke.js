@@ -314,6 +314,20 @@ const MAIL_MESSAGE_FIXTURE = {
   attachments: [{ filename: "facture-juillet.pdf", size: 12345 }]
 };
 
+/* Fixture ICS pour la ligne "prochain evenement" de l'Horloge :
+   evenement construit relativement a l'heure REELLE du test (pas de
+   date figee, qui finirait par appartenir au passe). Format sans "Z"
+   (heure locale), celui que parseSimpleIcs() interprete comme tel.
+   ICS fixture for the Clock's "next event" line: event built relative
+   to the test's REAL time (no fixed date, which would eventually belong
+   to the past). No "Z" suffix (local time), the form parseSimpleIcs()
+   interprets as such. */
+const CLOCK_EVENT_DATE = new Date(Date.now() + 2 * 86400000);
+const CLOCK_EVENT_ICS_STAMP = CLOCK_EVENT_DATE.getFullYear()
+  + String(CLOCK_EVENT_DATE.getMonth() + 1).padStart(2, "0")
+  + String(CLOCK_EVENT_DATE.getDate()).padStart(2, "0") + "T140000";
+const CLOCK_EVENT_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:Rendez-vous dentiste\r\nDTSTART:${CLOCK_EVENT_ICS_STAMP}\r\nDTEND:${CLOCK_EVENT_ICS_STAMP}\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+
 const layout = {
   version: 1,
   tiles: [
@@ -348,7 +362,12 @@ const layout = {
     { id: "t-n", widget: "mailbox", x: 6, y: 12, w: 4, h: 3, settings: {
       host: "imap.test.fr", port: 993, user: "moi@test.fr", folder: "INBOX", limit: 5, showSender: true
     } },
-    { id: "t-o", widget: "astronomy", x: 0, y: 15, w: 4, h: 5, settings: { city: "Toulouse" } }
+    { id: "t-o", widget: "astronomy", x: 0, y: 15, w: 4, h: 5, settings: { city: "Toulouse" } },
+    { id: "t-p", widget: "clock", x: 4, y: 15, w: 4, h: 4, settings: {
+      mode: "digital", showDate: true, showWeekNumber: true, weekNumberConvention: "iso",
+      extraZone1Label: "Tokyo", extraZone1Tz: "Asia/Tokyo",
+      showNextEvent: true, nextEventIcsUrl: "https://exemple.test/clock-agenda.ics", nextEventDaysAhead: 14
+    } }
   ]
 };
 
@@ -519,6 +538,9 @@ const dom = new JSDOM(html, {
       if (u.includes("/api/astronomy/eclipse")) {
         return json(ASTRO_ECLIPSE_FIXTURE);
       }
+      if (u.includes("clock-agenda.ics")) {
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(CLOCK_EVENT_ICS) });
+      }
       if (u.includes("/api/astronomy/moon")) {
         return json(ASTRO_MOON_FIXTURE);
       }
@@ -681,10 +703,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 15 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 16 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("15 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 15);
+  assert("16 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 16);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -1145,7 +1167,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (16 au total)", document.querySelectorAll(".grid-stack-item").length === 16);
+  assert("tuile ajoutee (17 au total)", document.querySelectorAll(".grid-stack-item").length === 17);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -1828,6 +1850,47 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("section planetes masquee une fois decochee", !astroTile2.textContent.includes("Vénus"));
     assert("section eclipse masquee une fois decochee", !astroTile2.textContent.includes("Prochaine éclipse"));
     assert("section lune, elle, reste affichee", astroTile2.textContent.includes("Lune"));
+  }
+
+  console.log("== Horloge : fuseau secondaire, numero de semaine, prochain evenement ==");
+  {
+    const clockTile = document.querySelector('[data-tile-id="t-p"]');
+    tries = 0;
+    while (!clockTile.querySelector(".pwc-zone-time") && tries++ < 80) await sleep(50);
+
+    assert("fuseau secondaire affiche (libelle Tokyo)", (clockTile.textContent || "").includes("Tokyo"));
+    assert("heure du fuseau secondaire au format HH:MM", /\d{2}:\d{2}/.test(clockTile.querySelector(".pwc-zone-time")?.textContent || ""));
+
+    const weekText = clockTile.querySelector(".pwc-week")?.textContent || "";
+    assert("numero de semaine affiche", /^S\d{1,2}$/.test(weekText));
+
+    tries = 0;
+    while (!clockTile.querySelector(".pwc-next-event-title") && tries++ < 80) await sleep(50);
+    assert("ligne 'prochain evenement' affichee", clockTile.querySelector(".pwc-next-event")?.hidden === false);
+    assert("titre de l'evenement correct", (clockTile.querySelector(".pwc-next-event-title")?.textContent || "").includes("Rendez-vous dentiste"));
+
+    // L'alarme (declenchement + son + bouton Arreter) est verifiee a la
+    // main dans la session de construction de la fonctionnalite (voir le
+    // CHANGELOG) plutot qu'ici : son heure de declenchement depend de
+    // l'heure REELLE du systeme au moment ou la suite tourne, ce que ce
+    // fichier ne maitrise pas -- meme limite deja documentee ailleurs
+    // dans cette suite (Leaflet, navigation reelle).
+    // The alarm (triggering + sound + Stop button) is verified by hand
+    // in the feature's build session (see the CHANGELOG) rather than
+    // here: its trigger time depends on the system's REAL time when the
+    // suite runs, which this file doesn't control -- the same kind of
+    // limit already documented elsewhere in this suite (Leaflet, real
+    // navigation).
+    clockTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("reglage d'une alarme presente (heure)", !!document.querySelector('#tileForm [data-key="alarm1Time"]'));
+    assert("reglage d'une alarme presente (jours)", !!document.querySelector('#tileForm [data-key="alarm1Days"]'));
+    assert("reglage d'une alarme presente (son)", !!document.querySelector('#tileForm [data-key="alarm1Sound"]'));
+    assert("5 alarmes independantes proposees (comme convenu)",
+      [1, 2, 3, 4, 5].every((i) => !!document.querySelector(`#tileForm [data-key="alarm${i}Enabled"]`)));
+    document.getElementById("tileModal").querySelector(".modal-close")
+      .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
   }
 
   console.log("== Sortie du mode edition ==");

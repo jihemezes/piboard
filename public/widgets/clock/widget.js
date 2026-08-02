@@ -2,6 +2,13 @@
 (function () {
   "use strict";
 
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function escapeAttr(s) {
+    return escapeHtml(s).replace(/"/g, "&quot;");
+  }
+
   // Options Intl selon le format de date choisi. "full" reproduit le
   // comportement historique (seul format avant cette option).
   // Intl options for the chosen date format. "full" reproduces the
@@ -15,19 +22,149 @@
     }
   }
 
+  /* Heure "actuelle" dans un fuseau horaire arbitraire, sous forme d'un
+     objet Date dont les methodes locales (getHours(), getDay()...)
+     refletent directement l'heure murale de ce fuseau -- pratique de
+     triche courante : on ne s'en sert jamais pour un calcul de duree
+     entre deux instants, seulement pour LIRE des composantes a
+     afficher, ce que ce widget fait deja partout ailleurs.
+     Fuseau vide ou invalide : repli silencieux sur l'heure du systeme.
+     "Current" time in an arbitrary time zone, as a Date object whose
+     local methods (getHours(), getDay()...) directly reflect that
+     zone's wall-clock time -- a common trick: never used for duration
+     math between two instants, only to READ components for display,
+     which is all this widget ever does elsewhere.
+     Empty or invalid zone: silently falls back to the system's time. */
+  function nowInZone(tz) {
+    if (!tz) return new Date();
+    try {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: tz, hour12: false,
+        year: "numeric", month: "2-digit", day: "2-digit",
+        hour: "2-digit", minute: "2-digit", second: "2-digit"
+      }).formatToParts(new Date());
+      const get = (type) => parts.find((p) => p.type === type).value;
+      return new Date(
+        Number(get("year")), Number(get("month")) - 1, Number(get("day")),
+        Number(get("hour")) % 24, Number(get("minute")), Number(get("second"))
+      );
+    } catch (e) {
+      return new Date(); // nom de fuseau invalide / invalid zone name
+    }
+  }
+
+  /* Semaine ISO 8601 : la semaine 1 est celle qui contient le premier
+     jeudi de l'annee (algorithme standard, verifie contre des dates de
+     reference connues). ISO 8601 week: week 1 is the one containing the
+     year's first Thursday (standard algorithm, checked against known
+     reference dates). */
+  function isoWeekNumber(date) {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    const dayNum = d.getUTCDay() || 7; // dimanche=0 -> 7 / Sunday=0 -> 7
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+  }
+
+  /* Convention "simple" : la semaine 1 est celle qui contient le 1er
+     janvier (semaines demarrant le lundi, comme le reste de
+     l'application -- voir weekStartsMonday dans le widget Agenda).
+     "Simple" convention: week 1 is the one containing January 1st
+     (weeks starting on Monday, like the rest of the app -- see
+     weekStartsMonday in the Calendar widget). */
+  function simpleWeekNumber(date) {
+    const year = date.getFullYear();
+    const jan1 = new Date(year, 0, 1);
+    const jan1Day = (jan1.getDay() + 6) % 7; // lundi=0 / Monday=0
+    const startOfWeek1 = new Date(year, 0, 1 - jan1Day);
+    const diffDays = Math.floor((date - startOfWeek1) / 86400000);
+    return Math.floor(diffDays / 7) + 1;
+  }
+
+  function weekNumberOf(date, convention) {
+    return convention === "jan1" ? simpleWeekNumber(date) : isoWeekNumber(date);
+  }
+
+  /* Analyseur ICS volontairement SIMPLIFIE pour la ligne "prochain
+     evenement" : lit uniquement SUMMARY/DTSTART/DTEND de chaque
+     VEVENT, sans interpreter RRULE (recurrence). Un evenement recurrent
+     n'apparaitra donc pas ici, contrairement au widget Agenda complet
+     (~250 lignes de moteur RRULE dedie) qui, lui, les gere. Choix
+     assume : dupliquer ce moteur dans la tuile Horloge, deja chargee de
+     plusieurs fonctionnalites avec cette session, aurait ajoute un
+     risque et une charge d'entretien disproportionnes pour une simple
+     ligne d'apercu. Documente aussi dans le texte d'aide du reglage.
+     Deliberately SIMPLIFIED ICS parser for the "next event" line: reads
+     only SUMMARY/DTSTART/DTEND from each VEVENT, without interpreting
+     RRULE (recurrence). A recurring event therefore won't show up here,
+     unlike the full Calendar widget (~250 lines of dedicated RRULE
+     engine) which does handle them. A deliberate trade-off: duplicating
+     that engine into the Clock tile, already carrying several features
+     added this session, would have added disproportionate risk and
+     upkeep for a simple preview line. Also documented in the setting's
+     help text. */
+  function parseSimpleIcs(text) {
+    const lines = String(text || "").replace(/\r\n/g, "\n").split("\n")
+      .reduce((acc, line) => {
+        if (/^[ \t]/.test(line) && acc.length) acc[acc.length - 1] += line.slice(1);
+        else acc.push(line);
+        return acc;
+      }, []);
+    const events = [];
+    let cur = null;
+    for (const raw of lines) {
+      const line = raw.trim();
+      if (line === "BEGIN:VEVENT") { cur = {}; continue; }
+      if (line === "END:VEVENT") { if (cur && cur.start) events.push(cur); cur = null; continue; }
+      if (!cur) continue;
+      const colon = line.indexOf(":");
+      if (colon === -1) continue;
+      const left = line.slice(0, colon);
+      const value = line.slice(colon + 1);
+      const name = left.split(";")[0].toUpperCase();
+      if (name === "SUMMARY") {
+        cur.summary = value.replace(/\\,/g, ",").replace(/\\n/gi, " ").trim();
+      } else if (name === "DTSTART" || name === "DTEND") {
+        const m = value.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})(Z)?)?$/);
+        if (!m) continue;
+        const allDay = !m[4];
+        const date = allDay
+          ? new Date(+m[1], +m[2] - 1, +m[3])
+          : (m[7] ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6])) : new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]));
+        if (name === "DTSTART") { cur.start = date; cur.allDay = allDay; } else { cur.end = date; }
+      }
+    }
+    return events;
+  }
+
   class ClockWidget {
     constructor(ctx) {
       this.ctx = ctx;
       this.timer = null;
       this.appliedBgKey = null; // evite de reecrire le style si rien n'a change
       this.saints = null; // calendrier des saints, charge une fois (mis en cache sur window.PiBoard)
+      this.nextEvent = null; // prochain evenement d'agenda (voir loadNextEvent())
+      this.activeAlarmIndex = null; // index (1-5) de l'alarme en cours de sonnerie, ou null
+      this.triggeredThisMinute = new Set(); // cles "index:jour heure:minute" deja declenchees, evite un re-declenchement a chaque tick de 500ms au sein de la meme minute
     }
 
     init() {
       this.render();
       this.tick();
       this.loadSaints();
+      this.loadNextEvent();
       this.timer = setInterval(() => this.tick(), 500);
+      // Rechargement reseau du prochain evenement toutes les 10 min : la
+      // recomputation a chaque tick (voir recomputeNextEvent) suffit pour
+      // qu'un evenement deja passe disparaisse au bon moment, mais ne
+      // peut pas decouvrir un evenement nouvellement ajoute au
+      // calendrier -- il faut pour ca revenir interroger le serveur de
+      // temps en temps. Network reload of the next event every 10 min:
+      // the per-tick recomputation (see recomputeNextEvent) is enough for
+      // an already-passed event to disappear at the right time, but can't
+      // discover an event newly added to the calendar -- that requires
+      // periodically querying the server again.
+      this.nextEventTimer = setInterval(() => this.loadNextEvent(), 10 * 60000);
       this.observer = new ResizeObserver(() => this.fit());
       this.observer.observe(this.ctx.el);
     }
@@ -50,17 +187,73 @@
       }
     }
 
+    /* Prochain evenement d'agenda, via une URL ICS independante de toute
+       tuile Agenda (voir le raisonnement dans la description du reglage
+       "Adresse du calendrier"). Parseur volontairement simplifie, voir
+       parseSimpleIcs() en tete de fichier.
+       Next calendar event, via an ICS URL independent from any Calendar
+       tile (see the reasoning in the "Calendar address" setting's
+       description). Deliberately simplified parser, see parseSimpleIcs()
+       at the top of the file. */
+    async loadNextEvent() {
+      const s = this.ctx.settings;
+      if (s.showNextEvent === false || !s.nextEventIcsUrl) {
+        this.allEvents = null;
+        this.nextEvent = null;
+        this.renderNextEvent();
+        return;
+      }
+      try {
+        const text = await fetch(this.ctx.api.proxyUrl(s.nextEventIcsUrl)).then((r) => r.text());
+        this.allEvents = parseSimpleIcs(text);
+      } catch (e) {
+        console.warn("[piboard/clock] next event", e);
+        this.allEvents = null;
+      }
+      this.recomputeNextEvent();
+    }
+
+    /* Recalcul LEGER (sans reseau) du prochain evenement a partir du
+       cache this.allEvents -- appele a chaque tick pour qu'un evenement
+       deja passe disparaisse au bon moment, sans re-interroger le
+       serveur toutes les 500ms. Le vrai rechargement reseau (voir
+       loadNextEvent) ne se fait que ponctuellement, voir arm() dans
+       init().
+       LIGHT recomputation (no network) of the next event from the
+       this.allEvents cache -- called on every tick so an already-passed
+       event disappears at the right time, without re-querying the
+       server every 500ms. The real network reload (see loadNextEvent)
+       only happens periodically, see arm() in init(). */
+    recomputeNextEvent() {
+      const s = this.ctx.settings;
+      if (!this.allEvents) { this.nextEvent = null; this.renderNextEvent(); return; }
+      const now = new Date();
+      const maxDate = new Date(now.getTime() + Math.max(1, Number(s.nextEventDaysAhead) || 14) * 86400000);
+      const upcoming = this.allEvents
+        .filter((e) => e.start > now && e.start <= maxDate)
+        .sort((a, b) => a.start - b.start);
+      const next = upcoming[0] || null;
+      if (next !== this.nextEvent) {
+        this.nextEvent = next;
+        this.renderNextEvent();
+      }
+    }
+
     onSettingsChanged(settings) {
+      const old = this.ctx.settings;
+      const eventChanged = settings.nextEventIcsUrl !== old.nextEventIcsUrl || settings.showNextEvent !== old.showNextEvent;
       this.ctx.settings = settings;
       this.appliedBgKey = null;
       this.render();
       this.tick();
+      if (eventChanged) this.loadNextEvent();
     }
 
-    onLangChanged() { this.tick(); }
+    onLangChanged() { this.tick(); this.renderNextEvent(); }
 
     render() {
       const s = this.ctx.settings;
+      let clockHtml;
       if (s.mode === "analog") {
         // Cote a cote (cadran a gauche, texte a droite) uniquement si la
         // date est affichee : sans elle, rien ne justifie de reserver de
@@ -74,7 +267,7 @@
         // before. Fixes the face being vertically squeezed by the text
         // below it (stacking), by giving it the full available height.
         const analogRow = s.showDate;
-        this.ctx.el.innerHTML = `
+        clockHtml = `
           <div class="pw-clock ${analogRow ? "pwc-analog-row" : ""}">
             <svg viewBox="0 0 100 100">
               <circle class="pwa-face" cx="50" cy="50" r="46"/>
@@ -94,15 +287,65 @@
         // Cote a cote : seulement pertinent si la date est affichee.
         // Side by side: only meaningful when the date is shown.
         const row = s.layout === "row" && s.showDate;
-        this.ctx.el.innerHTML = `
+        clockHtml = `
           <div class="pw-clock ${row ? "pwc-row" : ""}">
             <div class="pwc-time"></div>
             <div class="pwc-date" ${s.showDate ? "" : "hidden"}></div>
           </div>`;
       }
+      // Enveloppe commune aux deux modes : l'horloge (existante,
+      // inchangee ci-dessus -- fit() continue de cibler ".pw-clock"
+      // exactement comme avant) et, en dessous, les extras ajoutes cette
+      // session. En flex-colonne, ".pw-clock" se redimensionne
+      // naturellement pour laisser la place aux extras -- fit() lit deja
+      // sa hauteur dynamiquement, aucun changement necessaire la-bas.
+      // Common wrapper for both modes: the clock (existing, unchanged
+      // above -- fit() keeps targeting ".pw-clock" exactly as before)
+      // and, below it, the extras added this session. In a flex column,
+      // ".pw-clock" naturally resizes to make room for the extras --
+      // fit() already reads its height dynamically, nothing to change
+      // there.
+      this.ctx.el.innerHTML = `<div class="pw-clock-wrap">${clockHtml}${this.extrasHtml()}</div>`;
+
+      const stopBtn = this.ctx.el.querySelector(".pwc-alarm-stop");
+      if (stopBtn) stopBtn.addEventListener("click", () => this.stopAlarmNow());
+
       this.appliedBgKey = null; // le DOM du fond vient d'etre recree
       this.applyBg();
+      this.renderNextEvent();
+      this.renderAlarmBanner();
       this.fit();
+    }
+
+    /* Gabarit des "extras" ajoutes cette session : fuseaux
+       supplementaires, numero de semaine, prochain evenement, banniere
+       d'alarme. Volontairement HORS de ".pw-clock" (voir render()) pour
+       ne pas perturber le calcul de taille de police, deja delicat, de
+       l'heure/la date. Markup for this session's "extras": extra time
+       zones, week number, next event, alarm banner. Deliberately OUTSIDE
+       ".pw-clock" (see render()) so as not to disturb the already
+       delicate font-size computation of the time/date. */
+    extrasHtml() {
+      const s = this.ctx.settings;
+      const i18n = this.ctx.i18n;
+      const zones = [1, 2, 3]
+        .map((i) => ({ label: s["extraZone" + i + "Label"], tz: s["extraZone" + i + "Tz"] }))
+        .filter((z) => z.label && z.tz);
+      const zonesHtml = zones.length
+        ? `<div class="pwc-zones">${zones.map((z) => `
+            <div class="pwc-zone">
+              <span class="pwc-zone-label">${escapeHtml(z.label)}</span>
+              <span class="pwc-zone-time" data-tz="${escapeAttr(z.tz)}"></span>
+            </div>`).join("")}</div>`
+        : "";
+      return `
+        ${zonesHtml}
+        <div class="pwc-week" ${s.showWeekNumber ? "" : "hidden"}></div>
+        <div class="pwc-next-event" hidden></div>
+        <div class="pwc-alarm-banner" hidden>
+          <span class="pwc-alarm-label"></span>
+          <button type="button" class="pwc-alarm-stop">${i18n.t("clock.alarm.stop")}</button>
+        </div>`;
     }
 
     /* Luminance perceptuelle approximative (0 = noir, 1 = blanc)
@@ -125,7 +368,7 @@
        its own sunrise/sunset. Text switches light/dark automatically
        based on the chosen color's luminance. */
     applyBg() {
-      const box = this.ctx.el.querySelector(".pw-clock");
+      const box = this.ctx.el.querySelector(".pw-clock-wrap");
       if (!box) return;
       const s = this.ctx.settings;
 
@@ -159,6 +402,110 @@
       // themselves must also be overridden.
       box.style.setProperty("--text", textColor);
       box.style.setProperty("--muted", mutedColor);
+    }
+
+    renderNextEvent() {
+      const el = this.ctx.el.querySelector(".pwc-next-event");
+      if (!el) return;
+      if (!this.nextEvent) { el.hidden = true; return; }
+      const locale = this.ctx.i18n.t("clock.date.format");
+      const d = this.nextEvent.start;
+      const when = this.nextEvent.allDay
+        ? d.toLocaleDateString(locale, { day: "2-digit", month: "2-digit" })
+        : d.toLocaleString(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      el.hidden = false;
+      el.innerHTML = `📅 <span class="pwc-next-event-title">${escapeHtml(this.nextEvent.summary || "")}</span> <span class="pwc-next-event-when">${escapeHtml(when)}</span>`;
+    }
+
+    /* Verifie chaque alarme activee a chaque tick (500ms) : declenche au
+       plus une fois par minute grace a triggeredThisMinute, sans quoi
+       une meme alarme repartirait a chaque tick tant que l'heure
+       correspond. Checks every enabled alarm on each tick (500ms):
+       fires at most once per minute thanks to triggeredThisMinute,
+       otherwise the same alarm would refire on every tick as long as
+       the time matches. */
+    checkAlarms(now) {
+      const s = this.ctx.settings;
+      const hhmm = String(now.getHours()).padStart(2, "0") + ":" + String(now.getMinutes()).padStart(2, "0");
+      const dow = now.getDay(); // 0=dimanche / 0=Sunday
+      const minuteKey = now.toDateString() + " " + hhmm;
+      for (let i = 1; i <= 5; i++) {
+        if (s["alarm" + i + "Enabled"] !== true) continue;
+        if ((s["alarm" + i + "Time"] || "07:00") !== hhmm) continue;
+        const days = s["alarm" + i + "Days"] || "daily";
+        const dayOk = days === "daily"
+          || (days === "weekdays" && dow >= 1 && dow <= 5)
+          || (days === "weekend" && (dow === 0 || dow === 6));
+        if (!dayOk) continue;
+        const triggerKey = i + ":" + minuteKey;
+        if (this.triggeredThisMinute.has(triggerKey)) continue;
+        this.triggeredThisMinute.add(triggerKey);
+        this.triggerAlarm(i);
+      }
+      // Purge occasionnelle : evite une croissance sans fin sur une tuile
+      // restee ouverte des jours durant. Occasional purge: avoids
+      // unbounded growth on a tile left open for days.
+      if (this.triggeredThisMinute.size > 500) this.triggeredThisMinute.clear();
+    }
+
+    /* Declenche une alarme : reutilise le systeme d'alerte du tableau
+       (flash plein ecran + son genere), deja construit et eprouve pour
+       le widget Compte a rebours -- meme mecanisme, meme plafond de
+       duree (5 min), meme bouton "Arreter" affiche tant que l'alerte est
+       active. Pas de bouton "Repousser" : choix assume, une alarme
+       s'arrete ou se laisse suivre son cours.
+       Triggers an alarm: reuses the board's alert system (full-screen
+       flash + generated sound), already built and proven for the
+       Countdown widget -- same mechanism, same duration cap (5 min),
+       same "Stop" button shown while the alert is active. No "Snooze"
+       button: a deliberate choice, an alarm either gets stopped or runs
+       its course. */
+    triggerAlarm(index) {
+      const s = this.ctx.settings;
+      this.activeAlarmIndex = index;
+      this.renderAlarmBanner();
+      this.ctx.api.startAlert({
+        flash: true,
+        soundName: s["alarm" + index + "Sound"] || "beep-simple",
+        durationMs: 300000, // plafond du systeme d'alerte / alert system's own cap
+        onEnd: () => {
+          if (this.activeAlarmIndex === index) { this.activeAlarmIndex = null; this.renderAlarmBanner(); }
+        }
+      });
+    }
+
+    stopAlarmNow() {
+      this.ctx.api.stopAlert();
+      this.activeAlarmIndex = null;
+      this.renderAlarmBanner();
+    }
+
+    renderAlarmBanner() {
+      const el = this.ctx.el.querySelector(".pwc-alarm-banner");
+      if (!el) return;
+      const ringing = this.activeAlarmIndex != null;
+      // Le reste des extras s'efface tant qu'une alarme sonne : elle
+      // doit capter l'attention, pas se noyer au milieu des fuseaux/de
+      // la semaine/du prochain evenement. Restaure automatiquement des
+      // l'arret (chacun reprend sa propre condition d'affichage au
+      // prochain tick). The rest of the extras step aside while an
+      // alarm rings: it should grab attention, not get lost among the
+      // time zones/week/next event. Automatically restored once
+      // stopped (each picks its own display condition back up on the
+      // next tick).
+      const zonesEl = this.ctx.el.querySelector(".pwc-zones");
+      const weekEl = this.ctx.el.querySelector(".pwc-week");
+      const eventEl = this.ctx.el.querySelector(".pwc-next-event");
+      if (zonesEl) zonesEl.hidden = ringing;
+      if (weekEl) weekEl.hidden = ringing || this.ctx.settings.showWeekNumber !== true;
+      if (eventEl && !ringing) this.renderNextEvent(); // reevalue sa propre visibilite / re-evaluates its own visibility
+      else if (eventEl) eventEl.hidden = true;
+
+      el.hidden = !ringing;
+      if (!ringing) return;
+      const s = this.ctx.settings;
+      const label = s["alarm" + this.activeAlarmIndex + "Label"] || this.ctx.i18n.t("clock.alarm.default");
+      el.querySelector(".pwc-alarm-label").textContent = "⏰ " + label;
     }
 
     fit() {
@@ -264,11 +611,36 @@
 
     tick() {
       const s = this.ctx.settings;
-      const now = new Date();
+      // "now" sert a TOUT l'affichage (heure, date, semaine) et suit le
+      // fuseau choisi ; "realNow", l'heure reelle du systeme, sert
+      // UNIQUEMENT aux alarmes -- une alarme doit sonner a l'heure
+      // physique du Pi, pas selon un fuseau affiche a titre de reference
+      // (ex. une petite horloge "Tokyo" en plus ne doit pas faire sonner
+      // le reveil a l'heure de Tokyo).
+      // "now" drives ALL of the display (time, date, week) and follows
+      // the chosen zone; "realNow", the system's actual time, is used
+      // ONLY for alarms -- an alarm must ring at the Pi's physical time,
+      // not according to a zone shown for reference (e.g. a small extra
+      // "Tokyo" clock shouldn't make the alarm ring on Tokyo time).
+      const now = nowInZone(s.timezone);
+      const realNow = new Date();
       const el = this.ctx.el;
       const locale = this.ctx.i18n.t("clock.date.format");
 
       this.applyBg();
+      this.checkAlarms(realNow);
+      this.recomputeNextEvent();
+
+      const weekEl = el.querySelector(".pwc-week");
+      if (weekEl && s.showWeekNumber) {
+        weekEl.textContent = this.ctx.i18n.t("clock.week.short") + weekNumberOf(now, s.weekNumberConvention);
+      }
+
+      el.querySelectorAll(".pwc-zone-time").forEach((zoneEl) => {
+        const tz = zoneEl.dataset.tz;
+        const zoneNow = nowInZone(tz);
+        zoneEl.textContent = String(zoneNow.getHours()).padStart(2, "0") + ":" + String(zoneNow.getMinutes()).padStart(2, "0");
+      });
 
       const dateEl = el.querySelector(".pwc-date");
       if (dateEl && s.showDate) {
@@ -349,7 +721,9 @@
 
     destroy() {
       clearInterval(this.timer);
+      clearInterval(this.nextEventTimer);
       if (this.observer) this.observer.disconnect();
+      if (this.activeAlarmIndex != null) this.ctx.api.stopAlert();
     }
   }
 

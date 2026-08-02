@@ -159,6 +159,9 @@
       "backups.restoreConfirmAction": "Restore",
 
       "clock.date.format": "en-GB",
+      "clock.week.short": "Week ",
+      "clock.alarm.stop": "Stop",
+      "clock.alarm.default": "Alarm",
       "weather.noCustomUrl": "No custom forecast URL configured.",
       "weather.error": "Weather unavailable",
       "weather.wind": "wind",
@@ -535,6 +538,9 @@
       "backups.restoreConfirmAction": "Restaurer",
 
       "clock.date.format": "fr-FR",
+      "clock.week.short": "S",
+      "clock.alarm.stop": "Arrêter",
+      "clock.alarm.default": "Alarme",
       "weather.noCustomUrl": "Aucune URL de prévision personnalisée configurée.",
       "weather.error": "Météo indisponible",
       "weather.wind": "vent",

@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.36.0
+
+- **Horloge : quatre nouvelles fonctionnalités.**
+  - **Fuseaux multiples** — un fuseau horaire (nom IANA) peut remplacer
+    celui du système pour l'heure principale, et jusqu'à 3 fuseaux
+    secondaires s'affichent en petit dans la même tuile (façon horloge
+    mondiale compacte). Fonctionne aussi bien pour une seule tuile
+    multi-fuseaux que pour plusieurs tuiles Horloge, chacune sur un
+    fuseau différent ;
+  - **Numéro de semaine** — affiché sous la date, selon la convention
+    **ISO 8601** (norme internationale) ou une convention **simple**
+    (semaine 1 = celle du 1er janvier), au choix ;
+  - **Jusqu'à 5 alarmes indépendantes** — heure, jours (tous les jours /
+    ouvrés / week-end), libellé et son propres à chacune, réutilisant le
+    système d'alerte déjà éprouvé par le widget Compte à rebours (flash
+    plein écran + son généré). Bouton « Arrêter » sur la tuile pendant
+    la sonnerie, pas de « Repousser ». Sonnent toujours à l'heure réelle
+    du système, jamais selon un fuseau affiché à titre de référence ;
+  - **Ligne « prochain événement »** — alimentée par une adresse de
+    calendrier (.ics) propre à la tuile Horloge, indépendante d'une
+    éventuelle tuile Agenda (fonctionne donc seule). Limite assumée et
+    documentée : seuls les événements non récurrents sont détectés pour
+    l'instant.
+
+---
+
+- **Clock: four new features.**
+  - **Multiple time zones** — a time zone (IANA name) can replace the
+    system's for the main displayed time, and up to 3 secondary zones
+    show up small in the same tile (compact world-clock style). Works
+    both for a single multi-zone tile and for several Clock tiles, each
+    on a different zone;
+  - **Week number** — shown below the date, following either the
+    **ISO 8601** convention (international standard) or a **simple**
+    one (week 1 = the week of January 1st), whichever you prefer;
+  - **Up to 5 independent alarms** — each with its own time, days
+    (every day / weekdays / weekend), label and sound, reusing the
+    alert system already proven by the Countdown widget (full-screen
+    flash + generated sound). A "Stop" button appears on the tile while
+    ringing, no "Snooze". Always ring at the system's real time, never
+    according to a time zone shown for reference;
+  - **"Next event" line** — fed by a calendar address (.ics) of the
+    Clock tile's own, independent from any Calendar tile (so it keeps
+    working on its own). A deliberate, documented limit: only
+    non-recurring events are currently detected.
+
 ## 1.35.0
 
 - **Nouvelle fonctionnalité : sauvegarde et restauration complètes.**
