@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.37.3
+
+- **Correctif *Horloge* : colonne vide réservée à droite sans aucun
+  fuseau actif.** En déplaçant le numéro de semaine hors du bloc des
+  extras en v1.37.2 (il rejoint désormais le bloc horloge), la
+  condition qui déclenche la disposition côte à côte n'avait pas été
+  mise à jour en conséquence : activer uniquement « Afficher le numéro
+  de semaine » (sans fuseau supplémentaire ni prochain événement)
+  réservait quand même une colonne à droite, vide puisque son seul
+  contenu prévu avait déménagé — laissant apparaître un espace sans
+  justification visible.
+- **Trait de séparation retiré**, jugé disgracieux — l'espacement seul
+  suffit à distinguer les deux zones.
+
+---
+
+- **Fix for *Clock*: empty column reserved on the right with no active
+  zone.** When the week number moved out of the extras block in v1.37.2
+  (it now joins the clock block instead), the condition triggering the
+  side-by-side layout wasn't updated to match: turning on only "Show
+  week number" (no extra zone, no next event) still reserved a column
+  on the right, empty since its only intended content had moved away —
+  leaving a space with no visible justification.
+- **Separator line removed**, judged unattractive — spacing alone is
+  enough to tell the two areas apart.
+
 ## 1.37.2
 
 - **Horloge : retouche du design de la disposition côte à côte

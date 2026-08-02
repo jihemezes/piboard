@@ -340,8 +340,23 @@
       // legibility (reported via screenshot). Based on the SETTINGS (not
       // on data actually loaded, e.g. showNextEvent=true even with no
       // event found yet) to avoid the layout shifting as data loads.
+      // Le numero de semaine ne vit plus dans la colonne des extras
+      // depuis le deplacement en v1.37.2 (voir plus haut, il rejoint
+      // desormais le bloc horloge) : il ne doit donc plus, a lui seul,
+      // declencher la reservation d'une colonne a droite -- sans ca, un
+      // reglage "Afficher le numero de semaine" seul (sans fuseau ni
+      // prochain evenement actifs) laissait une colonne vide avec pour
+      // seul contenu visible un trait de separation, sans rien pour le
+      // justifier.
+      // The week number no longer lives in the extras column since the
+      // v1.37.2 move (see above, it now joins the clock block instead):
+      // it must therefore no longer, on its own, trigger reserving a
+      // right-hand column -- without this, a "Show week number" setting
+      // alone (no active zone or next event) left an empty column with
+      // nothing but a separator line to show for it, with nothing to
+      // justify it.
       const hasExtras = [1, 2, 3].some((i) => s["extraZone" + i + "Label"] && s["extraZone" + i + "Tz"])
-        || s.showWeekNumber === true || s.showNextEvent === true;
+        || s.showNextEvent === true;
       const wrapSide = s.mode === "digital" && hasExtras;
       this.ctx.el.innerHTML = `<div class="pw-clock-wrap ${wrapSide ? "pwc-wrap-side" : ""}">${clockHtml}${this.extrasHtml()}</div>`;
 

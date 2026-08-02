@@ -88,7 +88,6 @@
   align-items: flex-start;
   gap: 6px;
   padding: 5% 5% 5% 4%;
-  border-left: 1px solid var(--tile-edge);
 }
 /* En cote a cote, chaque extra s'aligne a gauche (au lieu de centre) et
    perd les bordures/marges pensees pour un empilement sous une heure

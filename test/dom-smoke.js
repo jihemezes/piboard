@@ -1869,7 +1869,43 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("ligne 'prochain evenement' affichee", clockTile.querySelector(".pwc-next-event")?.hidden === false);
     assert("mode digital avec extras : disposition cote a cote appliquee (heure a gauche, extras a droite, correctif de lisibilite)",
       !!clockTile.querySelector(".pw-clock-wrap.pwc-wrap-side"));
+    // Le retrait du trait de separation (juge disgracieux) est une pure
+    // regle CSS (border-left) : jsdom ne resout pas de facon fiable les
+    // styles calcules issus d'une feuille externe pour ce cas precis
+    // (deja constate ici), meme limite que celle documentee ailleurs
+    // dans ce fichier pour le rendu visuel reel (Leaflet, navigation).
+    // Verifie directement dans le fichier source plutot que force ici.
+    // Removing the separator line (judged unattractive) is a pure CSS
+    // rule (border-left): jsdom doesn't reliably resolve computed
+    // styles from an external stylesheet for this specific case
+    // (confirmed here), the same kind of limit already documented
+    // elsewhere in this file for real visual rendering (Leaflet,
+    // navigation). Verified directly in the source file rather than
+    // forced here.
     assert("titre de l'evenement correct", (clockTile.querySelector(".pwc-next-event-title")?.textContent || "").includes("Rendez-vous dentiste"));
+
+    // Non-regression : le numero de semaine seul (sans fuseau ni
+    // prochain evenement actifs) ne doit PAS a lui seul reserver une
+    // colonne a droite -- bug signale par capture d'ecran (colonne vide
+    // avec pour seul contenu un trait de separation).
+    // Regression check: the week number alone (no active zone or next
+    // event) must NOT on its own reserve a right-hand column -- a bug
+    // reported via screenshot (empty column with only a separator line
+    // to show for it).
+    clockTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    document.querySelector('#tileForm [data-key="extraZone1Label"]').value = "";
+    document.querySelector('#tileForm [data-key="extraZone1Tz"]').value = "";
+    document.querySelector('#tileForm [data-key="showNextEvent"]').checked = false;
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const clockTile3 = document.querySelector('[data-tile-id="t-p"]');
+    tries = 0;
+    while (!clockTile3.querySelector(".pwc-time") && tries++ < 80) await sleep(50);
+    assert("numero de semaine seul (sans fuseau ni evenement) : PAS de disposition cote a cote",
+      !clockTile3.querySelector(".pw-clock-wrap.pwc-wrap-side"));
+    assert("le numero de semaine reste neanmoins affiche, dans le bloc horloge",
+      !!clockTile3.querySelector(".pwc-week") && clockTile3.querySelector(".pwc-week").hidden === false);
 
     // L'alarme (declenchement + son + bouton Arreter) est verifiee a la
     // main dans la session de construction de la fonctionnalite (voir le
