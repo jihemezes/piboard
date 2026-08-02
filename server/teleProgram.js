@@ -487,12 +487,17 @@ function buildView(programmes, channelsOrder, view, ref, opts) {
      apres-cible etait fixee a 90 min (soit 22h30 pour une cible a 21h),
      assez large pour laisser un programme de 22h l'emporter sur la
      "plus longue duree" au sein de la fenetre.
-     La borne basse (20h00 par defaut) reste volontairement large : elle
-     preserve le comportement historique pour les chaines qui demarrent
-     leur programme principal tot (TMC, generalement des 20h20-20h30),
-     deja gere par la regle "le plus long l'emporte". Resserrer cette
-     borne (ex. a 20h45) est possible via le reglage correspondant, mais
-     exclurait alors ces chaines de la selection.
+
+     La borne basse (20h15 par defaut, resserree en v1.34.0) doit rester
+     assez tot pour ne pas exclure les chaines qui demarrent leur
+     programme principal avant l'heure cible (TMC, generalement des
+     20h20-20h30), tout en excluant les longs magazines diffuses avant
+     la vraie soiree -- le bug signale cette fois : "Stade 2" sur
+     France 3 (dimanche, ~20h05-20h10, 65 min) est plus long que bien
+     des programmes de soiree, et l'emportait donc a tort sur la vraie
+     1re partie via la regle "le plus long gagne" quand la borne basse
+     etait a 20h00. Un ecart de 10-15 minutes separe les deux cas
+     (Stade 2 vs TMC), d'ou le choix de 20h15 comme nouveau defaut.
 
      ABSOLUTE bounds of the start window for prime time. The upper bound
      (9:30pm by default) is what PREVENTS a second-part-evening program
@@ -501,13 +506,17 @@ function buildView(programmes, channelsOrder, view, ref, opts) {
      this version, the after-target tolerance was fixed at 90 min (i.e.
      10:30pm for a 9pm target), wide enough to let a 10pm program win
      the "longest duration" comparison within the window.
-     The lower bound (8:00pm by default) stays deliberately wide: it
-     preserves the historical behaviour for channels that start their
-     main show early (TMC, typically from 8:20-8:30pm), already handled
-     by the "longest wins" rule. Tightening this bound (e.g. to 8:45pm)
-     is possible through the matching setting, but would then exclude
-     those channels from selection. */
-  const eveningEarliestStart = o.eveningEarliestStart || "20:00";
+
+     The lower bound (8:15pm by default, tightened in v1.34.0) must stay
+     early enough not to exclude channels that start their main show
+     ahead of the target hour (TMC, typically from 8:20-8:30pm), while
+     excluding long-running magazines airing before actual prime time --
+     this time's reported bug: "Stade 2" on France 3 (Sunday, ~8:05-
+     8:10pm, 65 min) outlasts many prime-time programs, so it wrongly
+     won over the real prime-time show via the "longest wins" rule when
+     the lower bound was 8:00pm. A 10-15 minute gap separates the two
+     cases (Stade 2 vs TMC), hence 8:15pm as the new default. */
+  const eveningEarliestStart = o.eveningEarliestStart || "20:15";
   const eveningLatestStart = o.eveningLatestStart || "21:30";
   const eveningToleranceBefore = minutesFromBound(eveningStart, eveningEarliestStart, 60);
   const eveningToleranceAfter = minutesFromBound(eveningStart, eveningLatestStart, 30);

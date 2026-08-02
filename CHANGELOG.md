@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.34.0
+
+- **Correctif *Programme TV* : « Stade 2 » sur France 3 affiché à tort
+  en 1re partie de soirée.** Diffusé le dimanche vers 20h05-20h10 pour
+  65 minutes, ce magazine sportif l'emportait sur le vrai programme de
+  soirée via la règle « le plus long gagne », dès lors que sa durée
+  dépassait celle du programme réellement diffusé en première partie —
+  la fenêtre de recherche démarrait alors trop tôt (20h00) pour
+  l'exclure. Bornée à 20h15 par défaut : encore assez tôt pour détecter
+  correctement les chaînes qui démarrent leur programme principal avant
+  l'heure cible (TMC, généralement dès 20h20-20h30, vérifié non
+  régressé), mais assez tard pour exclure les longs magazines diffusés
+  avant la vraie soirée. Réglable comme auparavant si besoin.
+
+---
+
+- **Fix for *TV Guide*: "Stade 2" on France 3 wrongly shown as prime
+  time.** Airing on Sundays around 8:05-8:10pm for 65 minutes, this
+  sports magazine used to beat the real prime-time show via the
+  "longest wins" rule whenever its duration exceeded the show actually
+  airing in prime time — the search window started too early (8:00pm)
+  to exclude it. Bounded to 8:15pm by default: still early enough to
+  correctly detect channels that start their main show ahead of the
+  target hour (TMC, typically from 8:20-8:30pm, verified not
+  regressed), but late enough to exclude long-running magazines airing
+  before actual prime time. Still adjustable as before if needed.
+
 ## 1.33.1
 
 - **Correctif *Aide* : la recherche dans le sommaire était trop

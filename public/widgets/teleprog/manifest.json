@@ -1,6 +1,6 @@
 {
   "id": "teleprog",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "TV guide",
     "fr": "Programme TV"
@@ -214,14 +214,14 @@
     {
       "key": "eveningEarliestStart",
       "type": "time",
-      "default": "20:00",
+      "default": "20:15",
       "label": {
         "en": "Prime time: earliest accepted start",
         "fr": "1re partie : début au plus tôt accepté"
       },
       "hint": {
-        "en": "No program starting before this time can be selected as prime time, however long it runs. Kept early by default (8pm) so channels that start their main show ahead of the target hour (TMC, typically from 8:20-8:30pm) are still detected correctly.",
-        "fr": "Aucun programme démarrant avant cette heure ne peut être retenu comme 1re partie de soirée, même s'il est très long. Volontairement tôt par défaut (20h) pour continuer à détecter correctement les chaînes qui démarrent leur émission principale avant l'heure cible (TMC, généralement dès 20h20-20h30)."
+        "en": "No program starting before this time can be selected as prime time, however long it runs. Kept slightly early by default (8:15pm) so channels that start their main show ahead of the target hour (TMC, typically from 8:20-8:30pm) are still detected correctly — while excluding earlier long-running magazines that air before prime time (e.g. Stade 2 on France 3, starting around 8:05-8:10pm on Sundays).",
+        "fr": "Aucun programme démarrant avant cette heure ne peut être retenu comme 1re partie de soirée, même s'il est très long. Volontairement un peu tôt par défaut (20h15) pour continuer à détecter correctement les chaînes qui démarrent leur émission principale avant l'heure cible (TMC, généralement dès 20h20-20h30) — tout en excluant les longs magazines diffusés avant la vraie soirée (ex. Stade 2 sur France 3, qui démarre vers 20h05-20h10 le dimanche)."
       },
       "group": {
         "en": "Display",
