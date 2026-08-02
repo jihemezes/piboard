@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.33.0
+
+- **Aide : nouvelle section « À propos »** — numéro de version (mis à
+  jour automatiquement à chaque nouvelle version, même source que les
+  réglages généraux), copyright et licence MIT, lien vers le dépôt
+  GitHub.
+- **Aide : recherche dans le sommaire.** Un champ fixé en tête de la
+  colonne filtre les entrées à la volée par titre — utile désormais que
+  la liste des tuiles dépasse la vingtaine d'entrées. Les en-têtes de
+  groupe devenus vides se masquent automatiquement, avec un message
+  discret si aucun résultat ne correspond.
+- **Aide : mécanisme de captures d'écran** posé (dossier
+  `public/help-assets/`, champ `screenshot` optionnel par section) —
+  prêt à l'emploi, mais aucune image n'a été ajoutée : Claude ne peut
+  pas générer d'authentiques captures de l'application réelle depuis
+  son environnement de développement. Voir le `README.md` du dossier
+  pour l'ajouter soi-même.
+
+---
+
+- **Help: new "About" section** — version number (updated automatically
+  on every new release, same source as general settings), copyright and
+  MIT license, link to the GitHub repository.
+- **Help: sidebar search.** A box pinned at the top of the column
+  filters entries live by title — useful now that the tile list has
+  passed twenty entries. Group headers that become empty hide
+  automatically, with a discreet message when nothing matches.
+- **Help: screenshot mechanism** put in place (`public/help-assets/`
+  folder, optional `screenshot` field per section) — ready to use, but
+  no image has been added: Claude can't generate authentic screenshots
+  of the real running app from its development environment. See the
+  folder's `README.md` to add one yourself.
+
 ## 1.32.0
 
 - **Astronomie : nouvelle section « Prochaine éclipse ».** La prochaine

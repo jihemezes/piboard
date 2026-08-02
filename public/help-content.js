@@ -1138,6 +1138,26 @@
 
     /* ================= REMERCIEMENTS / CREDITS ================= */
     {
+      id: "about",
+      group: "credits",
+      title: { fr: "À propos", en: "About" },
+      sub: {
+        fr: "Version, licence et copyright.",
+        en: "Version, license, and copyright."
+      },
+      html: {
+        fr: `
+          <p>PiBoard <span id="helpAppVersion">…</span></p>
+          <p>© 2026 Jean-Michel Ezes. Publié sous licence <b>MIT</b> — un texte complet de la licence accompagne le projet (fichier <code>LICENSE</code> à la racine).</p>
+          <p>Projet personnel et open source : <a href="https://github.com/jihemezes/piboard" target="_blank">github.com/jihemezes/piboard</a>.</p>`,
+        en: `
+          <p>PiBoard <span id="helpAppVersion">…</span></p>
+          <p>© 2026 Jean-Michel Ezes. Released under the <b>MIT</b> license — the full license text ships with the project (<code>LICENSE</code> file at the repository root).</p>
+          <p>Personal, open-source project: <a href="https://github.com/jihemezes/piboard" target="_blank">github.com/jihemezes/piboard</a>.</p>`
+      }
+    },
+
+    {
       id: "credits",
       group: "credits",
       title: { fr: "Remerciements", en: "Credits" },

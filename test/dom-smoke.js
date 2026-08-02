@@ -403,6 +403,9 @@ const dom = new JSDOM(html, {
         text: () => Promise.resolve(JSON.stringify(data))
       });
 
+      if (u.includes("/api/version")) {
+        return json({ version: "9.9.9-test" });
+      }
       const cfgMatch = u.match(/\/api\/tile-configs\/([^/?]+)(?:\/([^/?]+))?/);
       if (cfgMatch) {
         const widgetId = decodeURIComponent(cfgMatch[1]);
@@ -1399,6 +1402,50 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("changelog : bloc francais affiche (langue active = fr)", changelogText.includes("Fonctionnalite test FR"));
     assert("changelog : bloc anglais NON affiche (filtre par langue)", !changelogText.includes("Test feature EN"));
     assert("changelog : version sans separation bilingue affichee integralement", changelogText.includes("Version simple sans separation bilingue"));
+
+    console.log("== Aide : section A propos (version, licence, copyright) ==");
+    const aboutItem = nav.querySelector('[data-help-id="about"]');
+    assert("entree 'A propos' presente dans le sommaire", !!aboutItem);
+    aboutItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (document.getElementById("helpAppVersion")?.textContent === "…" && tries++ < 60) await sleep(50);
+    const aboutText = document.getElementById("helpContent").textContent;
+    assert("numero de version affiche (recupere de /api/version, meme source que les reglages generaux)",
+      aboutText.includes("v9.9.9-test"));
+    assert("licence MIT mentionnee", aboutText.includes("MIT"));
+    assert("copyright mentionne", aboutText.includes("Jean-Michel Ezes"));
+    assert("lien vers le depot GitHub present", !!document.getElementById("helpContent").querySelector('a[href*="github.com/jihemezes/piboard"]'));
+
+    console.log("== Aide : recherche dans le sommaire ==");
+    const searchInput = document.getElementById("helpNavSearch");
+    assert("champ de recherche present en tete du sommaire", !!searchInput);
+    assert("aucune entree cachee avant toute recherche",
+      !nav.querySelector('.help-nav-item[hidden]'));
+
+    searchInput.value = "agend";
+    searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    const calendarBtn = nav.querySelector('[data-help-id="calendar"]');
+    const weatherBtn = nav.querySelector('[data-help-id="weather"]');
+    assert("recherche 'agend' : l'entree Agenda (calendrier) reste visible", calendarBtn && calendarBtn.hidden === false);
+    assert("recherche 'agend' : une entree non correspondante (Meteo) est cachee", weatherBtn && weatherBtn.hidden === true);
+    assert("recherche : au moins un en-tete de groupe reste visible (celui du resultat)",
+      !!nav.querySelector('.help-nav-group:not([hidden])'));
+    assert("message 'aucun resultat' cache tant qu'il y a au moins un resultat",
+      document.getElementById("helpNavEmpty").hidden === true);
+
+    searchInput.value = "xyznexistepas";
+    searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche sans resultat : toutes les entrees cachees",
+      [...nav.querySelectorAll(".help-nav-item")].every((b) => b.hidden === true));
+    assert("recherche sans resultat : tous les en-tetes de groupe caches",
+      [...nav.querySelectorAll(".help-nav-group")].every((g) => g.hidden === true));
+    assert("recherche sans resultat : message 'aucun resultat' affiche",
+      document.getElementById("helpNavEmpty").hidden === false);
+
+    searchInput.value = "";
+    searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche effacee : toutes les entrees redeviennent visibles",
+      [...nav.querySelectorAll(".help-nav-item")].every((b) => b.hidden === false));
 
     document.getElementById("helpModal").hidden = true;
   }

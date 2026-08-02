@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.32.0
+   Version 1.33.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2629,15 +2629,61 @@
 
     const nav = $("helpNav");
     let lastGroup = null;
-    nav.innerHTML = sections.map((sec) => {
+    const itemsHtml = sections.map((sec) => {
       const groupHtml = sec.group !== lastGroup
-        ? `<div class="help-nav-group">${groupLabels[sec.group] || sec.group}</div>` : "";
+        ? `<div class="help-nav-group" data-help-group="${sec.group}">${groupLabels[sec.group] || sec.group}</div>` : "";
       lastGroup = sec.group;
       return groupHtml +
-        `<button type="button" class="help-nav-item" data-help-id="${sec.id}">${i18n.fromManifest(sec.title)}</button>`;
+        `<button type="button" class="help-nav-item" data-help-id="${sec.id}" data-help-search="${i18n.fromManifest(sec.title).toLowerCase()}">${i18n.fromManifest(sec.title)}</button>`;
     }).join("");
+    // Recherche en tete du sommaire : utile des que la liste des tuiles
+    // s'allonge (plus de 20 desormais) pour retrouver une entree sans
+    // faire defiler. Filtre les boutons par leur titre normalise, et
+    // masque un en-tete de groupe devenu entierement vide plutot que de
+    // laisser un titre de section sans rien dessous.
+    // Search box at the top of the sidebar: useful once the tile list
+    // grows long (20+ now) to find an entry without scrolling. Filters
+    // buttons by their normalized title, and hides a group header that
+    // became entirely empty rather than leaving a section title with
+    // nothing underneath it.
+    nav.innerHTML =
+      `<div class="help-nav-search">
+        <input type="search" id="helpNavSearch" placeholder="${i18n.t("help.search")}" autocomplete="off">
+      </div>
+      <div class="help-nav-list" id="helpNavList">${itemsHtml}</div>
+      <div class="help-nav-empty" id="helpNavEmpty" hidden>${i18n.t("help.searchEmpty")}</div>`;
 
-    nav.querySelectorAll("[data-help-id]").forEach((btn) => {
+    const searchInput = $("helpNavSearch");
+    const listEl = $("helpNavList");
+    const emptyEl = $("helpNavEmpty");
+    searchInput.addEventListener("input", () => {
+      const q = searchInput.value.trim().toLowerCase();
+      listEl.querySelectorAll(".help-nav-item").forEach((btn) => {
+        btn.hidden = !(!q || btn.dataset.helpSearch.includes(q));
+      });
+      // Un groupe reste visible tant qu'au moins un de ses boutons l'est
+      // -- reparcourt dans l'ordre du DOM plutot que par cle, chaque
+      // en-tete de groupe n'etant suivi que par les boutons lui
+      // appartenant jusqu'au prochain en-tete.
+      // A group stays visible as long as at least one of its buttons
+      // does -- walked in DOM order rather than by key, since each group
+      // header is only followed by the buttons belonging to it, up to
+      // the next header.
+      let currentGroupHeader = null, groupHasVisible = false;
+      listEl.querySelectorAll(".help-nav-group, .help-nav-item").forEach((el) => {
+        if (el.classList.contains("help-nav-group")) {
+          if (currentGroupHeader) currentGroupHeader.hidden = !groupHasVisible;
+          currentGroupHeader = el;
+          groupHasVisible = false;
+        } else if (!el.hidden) {
+          groupHasVisible = true;
+        }
+      });
+      if (currentGroupHeader) currentGroupHeader.hidden = !groupHasVisible;
+      emptyEl.hidden = !!listEl.querySelector(".help-nav-item:not([hidden])");
+    });
+
+    listEl.querySelectorAll("[data-help-id]").forEach((btn) => {
       onActivate(btn, () => showHelpSection(btn.dataset.helpId));
     });
 
@@ -2705,11 +2751,40 @@
     });
 
     const content = $("helpContent");
+    // Capture d'ecran optionnelle (voir help-content.js, champ
+    // "screenshot" d'une section) : simple chemin d'image relatif a
+    // public/, affichee au-dessus du texte si present, sans rien changer
+    // pour les nombreuses sections qui n'en ont pas encore.
+    // Optional screenshot (see help-content.js, a section's "screenshot"
+    // field): a plain image path relative to public/, shown above the
+    // text if present, with no change for the many sections that don't
+    // have one yet.
+    const screenshotHtml = sec.screenshot
+      ? `<img class="help-screenshot" src="${sec.screenshot}" alt="${i18n.fromManifest(sec.title)}" loading="lazy">`
+      : "";
     content.innerHTML =
       `<h3>${i18n.fromManifest(sec.title)}</h3>` +
       (sec.sub ? `<p class="help-sub">${i18n.fromManifest(sec.sub)}</p>` : "") +
+      screenshotHtml +
       i18n.fromManifest(sec.html);
     content.scrollTop = 0;
+
+    if (id === "about") {
+      // Meme source que la version affichee dans les reglages generaux
+      // (voir plus haut /api/version) : un seul appel reseau au demarrage
+      // aurait suffi, mais la reutilisation d'un cache introduirait un
+      // couplage pour un gain negligeable -- ce texte n'est lu qu'a
+      // l'ouverture volontaire de cette section precise.
+      // Same source as the version shown in general settings (see
+      // /api/version above): a single network call at startup would have
+      // been enough, but reusing a cache would add coupling for a
+      // negligible gain -- this text is only read when this specific
+      // section is deliberately opened.
+      fetch("/api/version").then((r) => r.json()).then((d) => {
+        const el = document.getElementById("helpAppVersion");
+        if (el && d && d.version) el.textContent = "v" + d.version;
+      }).catch(() => {});
+    }
 
     if (id === "changelog") {
       const renderNow = () => {
