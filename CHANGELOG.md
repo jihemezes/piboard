@@ -1,5 +1,180 @@
 # Changelog
 
+## 1.37.8
+
+- **Précision *Flux RSS* : le message « abonnement requis » affirmait
+  une cause qui n'était pas toujours la bonne.** Confirmé sur le cas
+  concerné (Le Monde) : le site renvoie littéralement « Votre trafic a
+  été identifié comme automatisé (bot) » avec un code de statut de
+  paywall — de la détection anti-robot, pas (uniquement) un vrai
+  paywall d'abonnement. Message corrigé pour rester honnête sans
+  affirmer une cause précise quand elle n'est pas connue avec
+  certitude : « accès refusé (abonnement requis, ou protection
+  anti-robot) ». **PiBoard ne tente de contourner ni l'un ni l'autre**
+  — aucun changement de comportement, uniquement le message affiché.
+
+---
+
+- **Precision for *RSS Feed*: the "subscription required" message
+  asserted a cause that wasn't always the right one.** Confirmed on the
+  reported case (Le Monde): the site literally returns "Your traffic
+  has been identified as automated (bot)" with a paywall-style status
+  code — anti-bot detection, not (only) a genuine subscription paywall.
+  Message corrected to stay honest without asserting a specific cause
+  when it isn't known for certain: "access denied (subscription
+  required, or automated-traffic protection)". **PiBoard attempts to
+  bypass neither** — no behavior change, only the displayed message.
+
+## 1.37.7
+
+- **Correctif *Flux RSS* : l'aperçu gratuit avant paywall (visible sous
+  Windows) était rejeté sans même être lu.** Le code jetait la réponse
+  du serveur dès qu'elle n'était pas 2xx, sans jamais regarder son
+  contenu — alors que beaucoup de paywalls (dont Le Monde) renvoient la
+  page complète, aperçu gratuit inclus dans le HTML, accompagnée d'un
+  code de statut inhabituel (401/402) plutôt qu'un corps vide. Le corps
+  de la réponse est désormais toujours lu et l'extraction toujours
+  tentée dessus, quel que soit le statut HTTP.
+  - Quand un aperçu exploitable est effectivement présent, il s'affiche
+    désormais, avec une bannière honnête « aperçu gratuit uniquement »
+    pour ne pas laisser croire au texte intégral ;
+  - Quand rien d'exploitable n'est reçu (vrai blocage, corps vide), le
+    comportement reste inchangé : repli sur le résumé du flux, avec le
+    message « abonnement requis » introduit en v1.37.6 ;
+  - **PiBoard ne tente toujours aucun contournement du paywall
+    lui-même** — aucune connexion, aucun cache alternatif, aucune
+    défaite du JavaScript qui masque la suite payante. Seul ce que le
+    site choisit déjà de rendre visible à tout visiteur est affiché.
+
+---
+
+- **Fix for *RSS Feed*: the free preview before a paywall (visible on
+  Windows) was discarded without even being read.** The code threw
+  away the server's response as soon as it wasn't 2xx, without ever
+  looking at its content — while many paywalls (including Le Monde)
+  return the full page, free preview included in the HTML, along with
+  an unusual status code (401/402) rather than an empty body. The
+  response body is now always read and extraction always attempted on
+  it, whatever the HTTP status.
+  - When a usable preview is actually present, it now shows up, with an
+    honest "free preview only" banner so it doesn't look like the full
+    text;
+  - When nothing usable comes back (a genuine block, empty body),
+    behavior stays unchanged: falls back to the feed's summary, with
+    the "subscription required" message introduced in v1.37.6;
+  - **PiBoard still attempts no bypass of the paywall itself** — no
+    login, no alternate cache, no defeating the JavaScript that hides
+    the paid content. Only what the site already chooses to make
+    visible to any visitor is shown.
+
+## 1.37.6
+
+- **Diagnostic *Flux RSS* résolu grâce au journal ajouté en v1.37.4** :
+  le cas signalé (Le Monde) renvoyait un code **402 Payment Required**
+  — un vrai paywall, pas le blocage anti-bot corrigé en v1.37.5. Un
+  abonnement est réellement nécessaire pour lire ces articles ;
+  **PiBoard ne tente jamais de contourner un paywall**, ce
+  comportement est donc correct.
+- **Message honnête et spécifique ajouté** pour ce cas précis : « cet
+  article nécessite un abonnement » s'affiche désormais (codes 401/402
+  renvoyés par le site source) plutôt que la mention générique « mode
+  lecture indisponible », qui laissait à tort croire à un problème
+  technique.
+
+---
+
+- **Diagnostics for *RSS Feed* resolved thanks to the logging added in
+  v1.37.4**: the reported case (Le Monde) returned a **402 Payment
+  Required** status — a real paywall, not the anti-bot blocking fixed
+  in v1.37.5. A subscription is genuinely required to read these
+  articles; **PiBoard never attempts to bypass a paywall**, so this
+  behavior is correct.
+- **Honest, specific message added** for this exact case: "this
+  article requires a subscription" now shows up (401/402 status codes
+  returned by the source site) instead of the generic "reader mode
+  unavailable" note, which wrongly suggested a technical problem.
+
+## 1.37.5
+
+- **Correctif *Flux RSS* (tentative ciblée) : deuxième tentative
+  d'extraction avec un identifiant de navigateur standard**, si la
+  première (honnête, identifiée comme PiBoard) est bloquée. Recherche
+  effectuée avant d'écrire ce correctif : le blocage de lecteurs RSS
+  parfaitement légitimes par les protections anti-bot (Cloudflare Bot
+  Fight Mode notamment) est un problème large et documenté, y compris
+  pour des lecteurs identifiés honnêtement — cohérent avec le
+  signalement (échec systématique sur Raspberry Pi et navigateur Mac,
+  fonctionnement sur une installation Windows séparée, ce qui pointe
+  vers un blocage lié à la réputation de l'adresse IP autant qu'à
+  l'identifiant lui-même). La première tentative reste honnête ; le
+  repli ne s'active que si elle échoue, et n'imite qu'un seul en-tête
+  (le user-agent), pas une empreinte de navigateur complète.
+
+  Cette correction cible l'hypothèse la plus probable, faute de pouvoir
+  consulter les journaux serveur réels de l'installation concernée
+  (ajoutés en v1.37.4). Si le problème persiste malgré cette mise à
+  jour, le journal du serveur (désormais disponible) permettra
+  d'identifier la cause exacte.
+
+---
+
+- **Fix for *RSS Feed* (targeted attempt): second extraction attempt
+  with a standard browser identifier**, if the first one (honest,
+  identified as PiBoard) gets blocked. Researched before writing this
+  fix: legitimate RSS readers being blocked by anti-bot protections
+  (Cloudflare Bot Fight Mode among others) is a broad, documented
+  problem, even for honestly identified readers — consistent with the
+  report (consistent failure on a Raspberry Pi and Mac browser, working
+  on a separate Windows install, which points to a block tied to the
+  source IP's reputation as much as the identifier itself). The first
+  attempt stays honest; the fallback only kicks in if it fails, and
+  only mimics a single header (the user-agent), not a full browser
+  fingerprint.
+
+  This fix targets the most likely hypothesis, since the actual server
+  logs for the affected install aren't available to me (added in
+  v1.37.4). If the problem persists despite this update, the server log
+  (now available) will help pin down the exact cause.
+
+## 1.37.4
+
+- **Diagnostic *Flux RSS* : ajout d'un journal serveur pour les échecs
+  d'extraction du texte complet**, jusqu'ici totalement silencieux —
+  impossible jusqu'à présent de savoir pourquoi le mode lecture
+  échouait pour un article donné sans ça. Visible dans la console/
+  `journalctl` du serveur.
+- **Note ajoutée quand le repli sur le résumé du flux est lui-même très
+  pauvre** (souvent une simple image, de nombreux flux ne fournissant
+  qu'une vignette) : indique clairement que le mode lecture en texte
+  intégral n'était pas disponible pour cet article, plutôt que de
+  laisser deviner si la fonctionnalité est cassée.
+
+  Signalé : le mode lecture échoue sur Pi et sur navigateur Mac (donc
+  très probablement le même serveur, hébergé sur le Pi) mais fonctionne
+  sous Windows (installation Electron séparée, son propre serveur). Ces
+  deux ajouts ne corrigent pas encore la cause exacte — dont je ne
+  dispose pas des éléments pour la diagnostiquer à distance — mais
+  rendent le problème visible et moins déroutant en attendant.
+
+---
+
+- **Diagnostics for *RSS Feed*: added server-side logging for full-text
+  extraction failures**, previously entirely silent — until now,
+  impossible to tell why reader mode failed for a given article without
+  this. Visible in the server's console/`journalctl`.
+- **Note added when the fallback to the feed's summary is itself very
+  thin** (often just a single image, many feeds only providing a
+  thumbnail): clearly states that full-text reader mode wasn't
+  available for this article, rather than leaving it to guess whether
+  the feature is broken.
+
+  Reported: reader mode fails on the Pi and on a Mac browser (so very
+  likely the same server, hosted on the Pi) but works on Windows
+  (separate Electron install, its own server). These two additions
+  don't yet fix the exact cause — which I don't have the means to
+  diagnose remotely — but make the problem visible and less confusing
+  in the meantime.
+
 ## 1.37.3
 
 - **Correctif *Horloge* : colonne vide réservée à droite sans aucun

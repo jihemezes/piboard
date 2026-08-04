@@ -322,6 +322,8 @@
       // thin...).
       let html = null;
       let extraMeta = "";
+      let isPaywall = false;
+      let isPartialPreview = false;
       try {
         const res = await fetch("/api/article-extract?url=" + encodeURIComponent(it.link));
         if (res.ok) {
@@ -330,7 +332,30 @@
             html = sanitizeHtml(article.content);
             if (article.byline) extraMeta = article.byline;
             else if (article.siteName) extraMeta = article.siteName;
+            // Du texte a bien ete extrait, mais le site le renvoyait avec
+            // un statut de paywall (401/402) : c'est tres probablement
+            // l'apercu gratuit precedant la barriere de paiement, pas
+            // l'article complet -- le dire clairement plutot que de
+            // laisser croire au texte integral (voir
+            // server/articleExtract.js).
+            // Text was extracted, but the site returned it with a
+            // paywall status (401/402): this is very likely the free
+            // preview before the payment barrier, not the full article
+            // -- stated clearly rather than implying the full text (see
+            // server/articleExtract.js).
+            isPartialPreview = !!article.partial;
           }
+        } else {
+          // Statut 401/402 signale sans ambiguite un acces reserve aux
+          // abonnes (voir server/articleExtract.js) : merite un message
+          // honnete plutot qu'une mention vague de mode lecture
+          // indisponible, qui laisserait croire a un probleme technique.
+          // Status 401/402 unambiguously signals subscriber-only access
+          // (see server/articleExtract.js): deserves an honest message
+          // rather than a vague "reader mode unavailable" note, which
+          // would suggest a technical problem.
+          const errBody = await res.json().catch(() => null);
+          isPaywall = !!(errBody && errBody.paywall);
         }
       } catch (e) {
         console.warn("[piboard/rss] extract", e);
@@ -345,11 +370,34 @@
 
       if (!html) {
         const fallback = sanitizeHtml(it.content);
-        html = fallback.trim() ? fallback : `<p class="pwr-modal-empty">${i18n.t("rss.noContent")}</p>`;
+        // Repli sur le contenu brut du flux : si celui-ci est lui-meme
+        // tres pauvre en texte (souvent juste une image, comme signale
+        // -- de nombreux flux ne fournissent qu'une vignette dans leur
+        // resume), le dire clairement plutot que de laisser deviner si
+        // le mode lecture a echoue ou si la fonctionnalite est cassee.
+        // Message specifique et honnete si un paywall a ete detecte
+        // (401/402) : "cet article necessite un abonnement" est plus
+        // exact et rassurant que "mode lecture indisponible", qui
+        // suggere a tort un probleme technique cote PiBoard.
+        // Falls back to the feed's raw content: if that itself is very
+        // thin on text (often just an image, as reported -- many feeds
+        // only provide a thumbnail in their summary), say so clearly
+        // rather than leaving it to guess whether reader mode failed or
+        // the feature is broken. Specific, honest message when a
+        // paywall was detected (401/402): "this article requires a
+        // subscription" is more accurate and reassuring than "reader
+        // mode unavailable", which wrongly suggests a technical problem
+        // on PiBoard's side.
+        const plainTextLen = fallback.replace(/<[^>]+>/g, "").trim().length;
+        let thinNote = "";
+        if (isPaywall) thinNote = `<p class="pwr-modal-thin-note">${i18n.t("rss.paywallDetected")}</p>`;
+        else if (plainTextLen < 40) thinNote = `<p class="pwr-modal-thin-note">${i18n.t("rss.readerModeUnavailable")}</p>`;
+        html = fallback.trim() ? thinNote + fallback : `<p class="pwr-modal-empty">${i18n.t("rss.noContent")}</p>`;
       } else if (extraMeta) {
         metaEl.textContent = [this.feed && this.feed.source, extraMeta, niceDate(it.date, lang)].filter(Boolean).join(" · ");
       }
-      bodyEl.innerHTML = figureHtml + html;
+      const previewNote = isPartialPreview ? `<p class="pwr-modal-thin-note">${i18n.t("rss.freePreviewOnly")}</p>` : "";
+      bodyEl.innerHTML = figureHtml + previewNote + html;
     }
 
     destroy() {

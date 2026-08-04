@@ -110,6 +110,15 @@
 }
 .pwr-modal-body ul, .pwr-modal-body ol { margin: 0 0 0.8em; padding-left: 1.4em; }
 .pwr-modal-empty { color: var(--muted); font-style: italic; }
+.pwr-modal-thin-note {
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--muted);
+  font-size: 12px;
+  font-style: italic;
+}
 .pwr-modal-loading { color: var(--muted); font-style: italic; }
 .pwr-modal-figure {
   margin: 0 0 14px;

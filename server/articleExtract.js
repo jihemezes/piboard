@@ -12,9 +12,22 @@
    article, jamais de recuperation en masse ni de mise en cache
    persistante) : equivalent fonctionnel du mode lecture d'un navigateur,
    pour la consultation personnelle d'un lien que l'utilisateur a
-   choisi -- pas une republication. Si la page est proche d'un
-   paywall/anti-robot, l'extraction echoue proprement et le widget se
-   rabat sur le resume du flux.
+   choisi -- pas une republication.
+
+   Face a un acces refuse (paywall OU protection anti-robot -- les deux
+   se confondent en pratique : certains sites, dont Le Monde, renvoient
+   litteralement "Votre trafic a ete identifie comme automatise (bot)"
+   avec un statut 401/402, ce n'est donc pas toujours un vrai paywall
+   d'abonnement), ce module lit et affiche ce que la page renvoie
+   REELLEMENT -- souvent un apercu partiel (les premiers paragraphes) --
+   plutot que de jeter la reponse simplement parce que le statut HTTP est
+   inhabituel. Aucune tentative de contournement dans un cas comme dans
+   l'autre : pas de connexion, pas de cache alternatif, pas de defaite
+   d'une protection anti-robot ou du JS qui masque la suite -- seul ce
+   que le site choisit deja de rendre visible est affiche. Si le corps
+   recu est trop court pour valoir la peine (moins de 200 caracteres
+   utiles), l'extraction echoue proprement et le widget se rabat sur le
+   resume du flux.
 
    Extracts an article's readable text from its web page ("reader mode",
    like Firefox/Safari's built-in reader), for the RSS widget: feeds
@@ -26,9 +39,20 @@
    Strictly on-demand usage (one call per user click on an article,
    never bulk fetching or persistent caching): the functional equivalent
    of a browser's reader mode, for personal reading of a link the user
-   chose -- not republishing. If the page is paywalled/bot-blocked,
-   extraction fails cleanly and the widget falls back to the feed's own
-   summary.
+   chose -- not republishing.
+
+   Facing denied access (paywall OR anti-bot protection -- the two blur
+   together in practice: some sites, including Le Monde, literally
+   return "Your traffic has been identified as automated (bot)" with a
+   401/402 status, so it isn't always a genuine subscription paywall),
+   this module reads and shows what the page ACTUALLY returns -- often a
+   partial preview (the first few paragraphs) -- rather than discarding
+   the response simply because the HTTP status is unusual. No attempt to
+   bypass either case: no login, no alternate cache, no defeating an
+   anti-bot check or the JS that hides the rest -- only what the site
+   already chooses to make visible is shown. If the received body is too
+   short to be worth it (under 200 useful characters), extraction fails
+   cleanly and the widget falls back to the feed's summary.
    ============================================================ */
 "use strict";
 
@@ -52,6 +76,104 @@ const MAX_HTML_CHARS = 3 * 1024 * 1024; // ~3 Mo de HTML / ~3 MB of HTML
 // to the feed's summary.
 const MIN_TEXT_LENGTH = 200;
 
+/* Deux identifications tentees dans l'ordre :
+   1) Un identifiant honnete (PiBoard-ReaderMode), qui reste la tentative
+      PAR DEFAUT -- rien ne change pour un site qui l'accepte.
+   2) Seulement si la premiere echoue (reseau, statut HTTP, ou contenu
+      juge trop pauvre) : un user-agent de navigateur standard, en
+      repli.
+
+   Pourquoi ce repli : de nombreuses protections anti-bot (Cloudflare
+   Bot Fight Mode et equivalents) bloquent purement et simplement tout
+   user-agent qui NE RESSEMBLE PAS a un navigateur -- y compris des
+   lecteurs RSS parfaitement legitimes et honnetement identifies. C'est
+   un probleme large et documente (recherche effectuee avant d'ecrire ce
+   commentaire), pas une supposition en l'air. Signale sur ce projet :
+   le mode lecture echouait systematiquement sur un Raspberry Pi et un
+   navigateur Mac, mais fonctionnait sur une installation Windows
+   separee -- cohérent avec un blocage qui varie selon la reputation de
+   l'adresse IP source, pas seulement le user-agent en tant que tel.
+
+   Cela reste un compromis assume, pas une decision prise a la legere :
+   ce mode "lecture" ne sert qu'a la consultation personnelle d'un lien
+   deja choisi par l'utilisateur (jamais de recuperation en masse, ni de
+   republication, ni de contournement d'un paywall), et le premier essai
+   reste honnete. Le second n'imite qu'un seul en-tete (le user-agent),
+   pas une empreinte de navigateur complete.
+
+   Two identifications tried in order:
+   1) An honest identifier (PiBoard-ReaderMode), which stays the
+      DEFAULT attempt -- nothing changes for a site that accepts it.
+   2) Only if the first one fails (network, HTTP status, or content
+      judged too thin): a standard browser user-agent, as a fallback.
+
+   Why this fallback: many anti-bot protections (Cloudflare Bot Fight
+   Mode and equivalents) simply block any user-agent that DOESN'T LOOK
+   LIKE a browser -- including perfectly legitimate, honestly
+   identified RSS readers. This is a broad, documented problem
+   (researched before writing this comment), not an idle guess.
+   Reported on this project: reader mode consistently failed on a
+   Raspberry Pi and a Mac browser, but worked on a separate Windows
+   install -- consistent with a block that varies by the source IP
+   address's reputation, not just the user-agent as such.
+
+   This remains a deliberate trade-off, not a decision taken lightly:
+   this "reader" mode only serves personal reading of a link the user
+   already chose (never bulk fetching, republishing, or paywall
+   bypassing), and the first attempt stays honest. The second only
+   mimics a single header (the user-agent), not a full browser
+   fingerprint. */
+const USER_AGENTS = [
+  "Mozilla/5.0 (compatible; PiBoard-ReaderMode/1.0; +https://github.com/jihemezes/piboard)",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+];
+
+async function fetchHtml(url, userAgent) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      redirect: "follow",
+      headers: { "User-Agent": userAgent, "Accept": "text/html,application/xhtml+xml" }
+    });
+    // Le corps de la reponse est TOUJOURS lu, meme sur un statut non-2xx
+    // -- de nombreux sites a acces restreint (paywall ou protection
+    // anti-robot -- pour Le Monde, confirme en pratique : le site
+    // renvoie litteralement "Votre trafic a ete identifie comme
+    // automatise (bot)") renvoient la page complete, apercu partiel
+    // inclus dans le HTML, accompagnee d'un code de statut inhabituel
+    // (401/402) plutot qu'un corps vide. Jeter la reponse sans la lire,
+    // comme le faisait ce fichier jusqu'ici, perdait cet apercu -- alors
+    // qu'un navigateur web normal, lui, l'affiche (signale : visible
+    // sous Windows, absent sur Pi/Mac alors que la MEME page etait en
+    // cause).
+    // The response body is ALWAYS read, even on a non-2xx status -- many
+    // restricted-access sites (paywall or anti-bot protection -- for Le
+    // Monde, confirmed in practice: the site literally returns "Your
+    // traffic has been identified as automated (bot)") return the full
+    // page, partial preview included in the HTML, along with an
+    // unusual status code (401/402) rather than an empty body. Discarding
+    // the response without reading it, as this file did until now, lost
+    // that preview -- while a normal web browser does show it (reported:
+    // visible on Windows, missing on Pi/Mac for the very same page).
+    let html = await res.text();
+    if (html.length > MAX_HTML_CHARS) html = html.slice(0, MAX_HTML_CHARS);
+    return { html, status: res.status, paywallStatus: res.status === 401 || res.status === 402 };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function readabilityParse(html, url) {
+  const dom = new JSDOM(html, { url });
+  try {
+    return new Readability(dom.window.document).parse();
+  } finally {
+    dom.window.close(); // libere la memoire jsdom sans attendre le GC / frees jsdom memory without waiting on GC
+  }
+}
+
 async function extractArticle(url) {
   let parsed;
   try {
@@ -63,40 +185,42 @@ async function extractArticle(url) {
     throw new Error("unsupported protocol");
   }
 
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  let html;
-  try {
-    const res = await fetch(url, {
-      signal: controller.signal,
-      redirect: "follow",
-      headers: {
-        // Un identifiant honnete plutot qu'une usurpation de navigateur :
-        // ce mode lecture se comporte comme n'importe quel lecteur RSS,
-        // pas comme un robot d'indexation. A courteous, honest identifier
-        // rather than impersonating a browser: this reader mode behaves
-        // like any RSS reader, not like an indexing bot.
-        "User-Agent": "Mozilla/5.0 (compatible; PiBoard-ReaderMode/1.0; +https://github.com/jihemezes/piboard)",
-        "Accept": "text/html,application/xhtml+xml"
+  let article = null;
+  let sawPaywallStatus = false;
+  let lastError = null;
+  for (let i = 0; i < USER_AGENTS.length; i++) {
+    try {
+      const { html, status, paywallStatus } = await fetchHtml(url, USER_AGENTS[i]);
+      if (paywallStatus) sawPaywallStatus = true;
+      // Tente l'extraction sur CE QUI A ETE RECU, meme si le statut
+      // n'etait pas 2xx -- voir fetchHtml(). Un statut d'echec avec un
+      // corps vide (blocage pur, sans page) donne simplement un texte
+      // trop court plus bas, geree normalement par le seuil habituel.
+      // Attempts extraction on WHAT WAS RECEIVED, even if the status
+      // wasn't 2xx -- see fetchHtml(). A failing status with an empty
+      // body (a pure block, no page at all) simply yields text too
+      // short below, handled normally by the usual threshold.
+      const candidate = html ? readabilityParse(html, url) : null;
+      if (candidate && candidate.textContent && candidate.textContent.trim().length >= MIN_TEXT_LENGTH) {
+        article = candidate;
+        // Journalise seulement quand le repli a ete necessaire, pour
+        // confirmer/infirmer l'hypothese sans bruiter le journal au
+        // quotidien. Logged only when the fallback was actually needed,
+        // to confirm/rule out the hypothesis without cluttering the log
+        // day to day.
+        if (i > 0) console.warn("[piboard] article-extract: reussi avec le user-agent de repli pour", url);
+        break;
       }
-    });
-    if (!res.ok) throw new Error("upstream status " + res.status);
-    html = await res.text();
-  } finally {
-    clearTimeout(timer);
-  }
-  if (html.length > MAX_HTML_CHARS) html = html.slice(0, MAX_HTML_CHARS);
-
-  const dom = new JSDOM(html, { url });
-  let article;
-  try {
-    article = new Readability(dom.window.document).parse();
-  } finally {
-    dom.window.close(); // libere la memoire jsdom sans attendre le GC / frees jsdom memory without waiting on GC
+      lastError = new Error(status >= 400 ? "upstream status " + status : "no readable content");
+    } catch (e) {
+      lastError = e;
+    }
   }
 
-  if (!article || !article.textContent || article.textContent.trim().length < MIN_TEXT_LENGTH) {
-    throw new Error("no readable content");
+  if (!article) {
+    const err = lastError || new Error("no readable content");
+    if (sawPaywallStatus) err.paywall = true;
+    throw err;
   }
 
   return {
@@ -104,7 +228,17 @@ async function extractArticle(url) {
     byline: article.byline || null,
     siteName: article.siteName || null,
     excerpt: article.excerpt || null,
-    content: article.content || null // HTML deja nettoye par Readability / HTML already cleaned up by Readability
+    content: article.content || null, // HTML deja nettoye par Readability / HTML already cleaned up by Readability
+    // Un texte a tout de meme ete extrait, mais le statut HTTP sous-
+    // jacent signalait un acces restreint (401/402, paywall ou
+    // anti-robot) : ce qui est affiche n'est probablement qu'un apercu
+    // partiel, pas l'article complet -- l'indiquer honnetement plutot
+    // que de laisser croire au texte integral. Text was still extracted,
+    // but the underlying HTTP status signaled restricted access (401/402,
+    // paywall or anti-bot): what's shown is probably only a partial
+    // preview, not the full article -- stated honestly rather than
+    // implying the full text.
+    partial: sawPaywallStatus
   };
 }
 

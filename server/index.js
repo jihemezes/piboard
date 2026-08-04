@@ -897,7 +897,18 @@ app.get("/api/article-extract", async (req, res) => {
     const article = await articleExtract.extractArticle(target);
     res.json(article);
   } catch (e) {
-    res.status(502).json({ error: String(e.message || e) });
+    // Journalise systematiquement : sans ca, un echec d'extraction est
+    // totalement invisible depuis la console/journalctl du Pi, rendant
+    // impossible de savoir POURQUOI le widget RSS se rabat sur le
+    // resume du flux plutot que le texte complet (site qui bloque la
+    // requete, delai depasse, contenu juge trop pauvre...).
+    // Always logged: without this, an extraction failure is entirely
+    // invisible from the Pi's console/journalctl, making it impossible
+    // to tell WHY the RSS widget falls back to the feed's summary
+    // instead of the full text (site blocking the request, timeout,
+    // content judged too thin...).
+    console.warn("[piboard] article-extract echec pour", target, "->", e.message || e);
+    res.status(502).json({ error: String(e.message || e), paywall: !!e.paywall });
   }
 });
 

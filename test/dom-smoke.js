@@ -57,6 +57,18 @@ const RSS_FEED_XML = `<?xml version="1.0"?>
 <pubDate>Mon, 20 Jul 2026 08:00:00 GMT</pubDate>
 <description>Resume du flux, utilise en repli.</description>
 </item>
+<item>
+<title>Article paywall</title>
+<link>https://example.test/article-paywall</link>
+<pubDate>Mon, 20 Jul 2026 07:00:00 GMT</pubDate>
+<description>Resume du flux pour un article payant.</description>
+</item>
+<item>
+<title>Article apercu paywall</title>
+<link>https://example.test/article-preview</link>
+<pubDate>Mon, 20 Jul 2026 06:00:00 GMT</pubDate>
+<description>Resume du flux pour un article avec apercu.</description>
+</item>
 </channel>
 </rss>`;
 
@@ -596,7 +608,17 @@ const dom = new JSDOM(html, {
         });
       }
       if (u.includes("/api/article-extract") && u.includes("article-noextract")) {
-        return Promise.resolve({ ok: false, status: 502, json: () => Promise.resolve({ error: "no readable content" }) });
+        return Promise.resolve({ ok: false, status: 502, json: () => Promise.resolve({ error: "no readable content", paywall: false }) });
+      }
+      if (u.includes("/api/article-extract") && u.includes("article-paywall")) {
+        return Promise.resolve({ ok: false, status: 502, json: () => Promise.resolve({ error: "upstream status 402", paywall: true }) });
+      }
+      if (u.includes("/api/article-extract") && u.includes("article-preview")) {
+        return json({
+          title: "Article apercu paywall",
+          content: `<p>Voici l'apercu gratuit de l'article, visible avant que le paywall ne masque la suite reservee aux abonnes du site.</p>`,
+          partial: true
+        });
       }
       if (u.includes("/api/proxy") && u.includes("feed.test")) {
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(RSS_FEED_XML) });
@@ -987,7 +1009,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   tries = 0;
   while (!document.querySelector(".pw-rss .pwr-item") && tries++ < 60) await sleep(50);
   const rssItems = [...document.querySelectorAll(".pw-rss .pwr-item")];
-  assert("3 articles affiches", rssItems.length === 3);
+  assert("5 articles affiches", rssItems.length === 5);
   const linkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article avec lien");
   const unlinkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article sans lien");
   const noExtractItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article extraction echouee");
@@ -1023,6 +1045,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   assert("popup : gestionnaire onclick retire du lien du texte extrait", !rssBody?.innerHTML.includes("onclick"));
   assert("popup : href retire du lien du texte extrait (fait pour etre lu, pas navigue)", !rssBody?.querySelector("a")?.getAttribute("href"));
   assert("popup : texte du lien extrait conserve", rssBody?.textContent.includes("lien extrait"));
+  assert("popup : pas de note de repli quand l'extraction reussit", !rssBody?.querySelector(".pwr-modal-thin-note"));
 
   // Illustration fournie par le flux (media:content), affichee
   // independamment de la source du texte (extrait ici).
@@ -1042,6 +1065,36 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   while ((document.querySelector(".pwr-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
   assert("popup : repli sur le resume du flux (Resume du flux, utilise en repli)",
     (document.querySelector(".pwr-modal-body")?.textContent || "").includes("Resume du flux, utilise en repli"));
+  assert("popup : note 'mode lecture indisponible' affichee quand le repli est lui-meme tres pauvre en texte (evite l'impression de fonctionnalite cassee)",
+    !!document.querySelector(".pwr-modal-thin-note"));
+  document.querySelector(".pwr-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
+    ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
+
+  console.log("== Flux RSS : article payant (paywall, ex. Le Monde) detecte et signale honnetement ==");
+  const paywallItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article paywall");
+  paywallItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  tries = 0;
+  while ((document.querySelector(".pwr-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
+  assert("popup : repli sur le resume du flux pour un article payant",
+    (document.querySelector(".pwr-modal-body")?.textContent || "").includes("Resume du flux pour un article payant"));
+  assert("popup : message specifique 'abonnement requis', PAS la mention generique 'mode lecture indisponible'",
+    !!document.querySelector(".pwr-modal-thin-note")
+    && (document.querySelector(".pwr-modal-thin-note").textContent || "").includes("abonnement"));
+  document.querySelector(".pwr-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
+    ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(20);
+
+  console.log("== Flux RSS : apercu gratuit recupere malgre un statut de paywall (statut non-2xx mais corps exploitable) ==");
+  const previewItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article apercu paywall");
+  previewItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  tries = 0;
+  while ((document.querySelector(".pwr-modal-body")?.textContent || "").includes("Chargement") && tries++ < 60) await sleep(50);
+  const previewBody = document.querySelector(".pwr-modal-body");
+  assert("popup : l'apercu gratuit extrait est bien affiche, pas juste le resume du flux",
+    (previewBody?.textContent || "").includes("apercu gratuit de l'article"));
+  assert("popup : banniere 'apercu gratuit uniquement' affichee (honnete : ce n'est pas l'article complet)",
+    !!previewBody?.querySelector(".pwr-modal-thin-note") && (previewBody.querySelector(".pwr-modal-thin-note").textContent || "").includes("Aperçu partiel"));
   document.querySelector(".pwr-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
     ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(20);
