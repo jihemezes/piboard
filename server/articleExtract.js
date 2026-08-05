@@ -128,14 +128,44 @@ const USER_AGENTS = [
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 ];
 
-async function fetchHtml(url, userAgent) {
+/* En-tetes envoyes avec le user-agent de repli. Un user-agent de
+   navigateur arrivant SEUL, sans les en-tetes qui l'accompagnent
+   toujours dans un vrai navigateur, est un signal de detection
+   classique : la coherence de l'ensemble compte davantage que le
+   user-agent pris isolement. Ce sont les en-tetes qu'un Chrome envoie
+   sur une navigation ordinaire vers une page -- rien de plus, rien qui
+   simule une session, un cookie ou une connexion.
+   Headers sent along with the fallback user-agent. A browser
+   user-agent arriving ALONE, without the headers that always accompany
+   it in a real browser, is a classic detection signal: the consistency
+   of the whole matters more than the user-agent taken in isolation.
+   These are the headers Chrome sends on an ordinary navigation to a
+   page -- nothing more, nothing simulating a session, a cookie or a
+   login. */
+const BROWSER_HEADERS = {
+  "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
+  "Accept-Language": "fr-FR,fr;q=0.9,en-US;q=0.8,en;q=0.7",
+  "Upgrade-Insecure-Requests": "1",
+  "Sec-Fetch-Dest": "document",
+  "Sec-Fetch-Mode": "navigate",
+  "Sec-Fetch-Site": "none",
+  "Sec-Fetch-User": "?1",
+  "Sec-CH-UA": '"Chromium";v="124", "Google Chrome";v="124", "Not-A.Brand";v="99"',
+  "Sec-CH-UA-Mobile": "?0",
+  "Sec-CH-UA-Platform": '"Windows"'
+};
+
+async function fetchHtml(url, userAgent, useBrowserHeaders) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   try {
+    const headers = useBrowserHeaders
+      ? Object.assign({ "User-Agent": userAgent }, BROWSER_HEADERS)
+      : { "User-Agent": userAgent, "Accept": "text/html,application/xhtml+xml" };
     const res = await fetch(url, {
       signal: controller.signal,
       redirect: "follow",
-      headers: { "User-Agent": userAgent, "Accept": "text/html,application/xhtml+xml" }
+      headers
     });
     // Le corps de la reponse est TOUJOURS lu, meme sur un statut non-2xx
     // -- de nombreux sites a acces restreint (paywall ou protection
@@ -190,7 +220,11 @@ async function extractArticle(url) {
   let lastError = null;
   for (let i = 0; i < USER_AGENTS.length; i++) {
     try {
-      const { html, status, paywallStatus } = await fetchHtml(url, USER_AGENTS[i]);
+      // La 1re tentative reste minimale et honnete ; seule la 2e, de
+      // repli, envoie le jeu d'en-tetes complet d'un navigateur.
+      // The 1st attempt stays minimal and honest; only the 2nd,
+      // fallback one sends a browser's full header set.
+      const { html, status, paywallStatus } = await fetchHtml(url, USER_AGENTS[i], i > 0);
       if (paywallStatus) sawPaywallStatus = true;
       // Tente l'extraction sur CE QUI A ETE RECU, meme si le statut
       // n'etait pas 2xx -- voir fetchHtml(). Un statut d'echec avec un

@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.38.0
+
+- **Flux RSS : en-têtes de navigateur complets sur la tentative de
+  repli.** Jusqu'ici, le repli n'envoyait qu'un user-agent Chrome isolé
+  — or un user-agent de navigateur arrivant seul, sans les en-têtes qui
+  l'accompagnent toujours dans un vrai navigateur (langue acceptée,
+  `Sec-Fetch-*`, indices client), est justement un signal de détection
+  classique. La requête envoie désormais le jeu complet et cohérent
+  d'une navigation ordinaire. La première tentative reste minimale et
+  honnêtement identifiée comme PiBoard.
+- **Explication de la différence Windows / Pi-Mac** trouvée en
+  cherchant : l'application Windows est bâtie sur Electron, dont la
+  pile réseau diffère de celle de Node utilisée sur le Pi — les deux ne
+  présentent donc pas la même signature au niveau de la connexion
+  elle-même, indépendamment des en-têtes HTTP. Les en-têtes complets
+  couvrent la part du problème qui relève d'eux ; si un site pousse sa
+  détection jusqu'à la signature de la connexion TLS, cela ne suffira
+  pas, et c'est une limite qu'il faudra accepter.
+
+---
+
+- **RSS Feed: full browser headers on the fallback attempt.** Until
+  now, the fallback only sent a lone Chrome user-agent — but a browser
+  user-agent arriving on its own, without the headers that always
+  accompany it in a real browser (accepted language, `Sec-Fetch-*`,
+  client hints), is itself a classic detection signal. The request now
+  sends the full, consistent set of an ordinary navigation. The first
+  attempt stays minimal and honestly identified as PiBoard.
+- **Explanation found for the Windows vs Pi/Mac difference**: the
+  Windows app is built on Electron, whose networking stack differs from
+  the Node one used on the Pi — so the two don't present the same
+  signature at the connection level itself, regardless of HTTP headers.
+  Full headers cover the part of the problem that's theirs; if a site
+  pushes its detection down to the TLS connection signature, this won't
+  be enough, and that's a limit to accept.
+
 ## 1.37.8
 
 - **Précision *Flux RSS* : le message « abonnement requis » affirmait
