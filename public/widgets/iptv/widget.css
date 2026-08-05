@@ -1,0 +1,162 @@
+.pw-iptv {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pw-iptv .pwtv-msg {
+  margin: auto;
+  padding: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ---------- Liste des chaines / channel list ---------- */
+.pwtv-bar {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  padding: 8px 10px 6px;
+}
+.pwtv-search, .pwtv-group {
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 12.5px;
+  min-width: 0;
+}
+.pwtv-search { flex: 1; }
+.pwtv-group { flex: 0 1 auto; max-width: 45%; }
+.pwtv-search:focus, .pwtv-group:focus { outline: none; border-color: var(--accent); }
+
+.pwtv-count {
+  flex-shrink: 0;
+  padding: 0 12px 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.pwtv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.pwtv-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwtv-item:last-child { border-bottom: none; }
+.pwtv-item:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.pwtv-item:active { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+
+/* Logo de chaine : taille fixe pour que la liste reste alignee meme
+   quand les logos ont des proportions tres variables (ce qui est la
+   norme dans une playlist IPTV). Channel logo: fixed size so the list
+   stays aligned even though logos come in wildly varying proportions
+   (the norm in an IPTV playlist). */
+.pwtv-logo {
+  flex-shrink: 0;
+  width: 30px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+.pwtv-logo-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: 0.5;
+}
+.pwtv-name {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwtv-empty {
+  padding: 20px 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* ---------- Lecteur / player ---------- */
+.pwtv-video-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #000;
+}
+.pwtv-video {
+  width: 100%;
+  height: 100%;
+  /* contain plutot que cover : une chaine en 4:3 dans une tuile large
+     ne doit pas etre rognee. contain rather than cover: a 4:3 channel
+     in a wide tile shouldn't get cropped. */
+  object-fit: contain;
+  background: #000;
+  display: block;
+}
+.pwtv-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #eef0f3;
+  font-size: 12.5px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.pwtv-controls {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.pwtv-current {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwtv-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwtv-btn:hover { background: var(--tile-edge); }

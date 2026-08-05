@@ -50,6 +50,7 @@ const tileSecrets = require("./tileSecrets");
 const mailbox = require("./mailbox");
 const astronomy = require("./astronomy");
 const backups = require("./backups");
+const iptv = require("./iptv");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -68,6 +69,7 @@ const PUBLIC_DIR = path.join(__dirname, "..", "public");
 const WIDGETS_DIR = path.join(PUBLIC_DIR, "widgets");
 const GRIDSTACK_DIST = path.join(__dirname, "..", "node_modules", "gridstack", "dist");
 const LEAFLET_DIST = path.join(__dirname, "..", "node_modules", "leaflet", "dist");
+const HLS_DIST = path.join(__dirname, "..", "node_modules", "hls.js", "dist");
 
 const app = express();
 app.use(express.json({ limit: "1mb" }));
@@ -1075,10 +1077,26 @@ app.post("/api/backups/import", backupUpload.single("file"), (req, res) => {
   }
 });
 
+/* ---------- IPTV : playlist de chaines / channel playlist ----------
+   Voir server/iptv.js. Seule la LISTE transite par le serveur (question
+   de CORS) ; les flux video sont lus directement par le navigateur.
+   See server/iptv.js. Only the LIST goes through the server (a CORS
+   matter); the video streams are read directly by the browser. */
+app.get("/api/iptv/playlist", async (req, res) => {
+  const target = String(req.query.url || "");
+  try {
+    res.json(await iptv.fetchPlaylist(target));
+  } catch (e) {
+    console.warn("[piboard] iptv playlist echec pour", target, "->", e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
 /* ---------- Statique / static ---------- */
 
 app.use("/vendor/gridstack", express.static(GRIDSTACK_DIST, { maxAge: "7d" }));
 app.use("/vendor/leaflet", express.static(LEAFLET_DIST, { maxAge: "7d" }));
+app.use("/vendor/hls", express.static(HLS_DIST, { maxAge: "7d" }));
 app.use(express.static(PUBLIC_DIR, {
   setHeaders(res, filePath) {
     // Le front evolue : pas de cache agressif sur js/html/css
@@ -1102,7 +1120,7 @@ app.use(express.static(PUBLIC_DIR, {
    Typically happens after an update that adds a new dependency (e.g.
    leaflet for the traffic map, multer for the slideshow) without having
    re-run "npm install". */
-for (const [name, dir] of [["gridstack", GRIDSTACK_DIST], ["leaflet", LEAFLET_DIST]]) {
+for (const [name, dir] of [["gridstack", GRIDSTACK_DIST], ["leaflet", LEAFLET_DIST], ["hls.js", HLS_DIST]]) {
   if (!fs.existsSync(dir)) {
     console.warn(`\n[piboard] ATTENTION : la dependance "${name}" est introuvable (${dir}).`);
     console.warn(`[piboard] Lancez "npm install" dans le dossier de PiBoard, puis relancez "npm start".\n`);

@@ -274,6 +274,56 @@
     },
 
     {
+      id: "iptv",
+      group: "tiles",
+      title: { fr: "Chaînes TV", en: "TV channels" },
+      sub: {
+        fr: "Lit une playlist .m3u et diffuse une chaîne dans la tuile.",
+        en: "Reads an .m3u playlist and plays a channel in the tile."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 5×4 par défaut, de 3×3 à 12×12</span>
+          <h4>Objectif</h4>
+          <p>Regarder une chaîne directement sur le tableau, depuis une playlist de chaînes au format <code>.m3u</code> — le format standard que lisent VLC et Kodi.</p>
+          <h4>Fonctionnement</h4>
+          <p>La tuile affiche la liste des chaînes de la playlist, avec le logo de chacune quand la playlist en fournit un. Un champ de recherche (insensible aux accents) et un filtre par catégorie permettent de s'y retrouver, même dans une liste de plusieurs milliers d'entrées. Touchez une chaîne pour la regarder ; le bouton ☰ ramène à la liste.</p>
+          <p><b>Seule la liste des chaînes transite par le PiBoard</b>, parce que la plupart des hébergeurs de playlist n'autorisent pas la requête directe depuis une page web. Les flux vidéo, eux, sont lus directement par le navigateur, sans passer par le Pi — le faire relayer de la vidéo le mettrait à genoux.</p>
+          <h4>Performances : à lire avant de s'enthousiasmer</h4>
+          <p>C'est la tuile la plus exigeante du tableau. Un Raspberry Pi 4 tient <b>confortablement le 720p</b> ; le 1080p est limite, d'autant qu'il se dispute le processeur avec tout ce qui tourne à côté (cartes, radar, avions…). D'où le réglage « plafond de qualité », laissé sur 720p par défaut.</p>
+          <p>Deux conseils qui changent tout : utilisez la <b>planification par tuile</b> (réglages universels de la tuile) pour qu'elle ne tourne pas 24 h/24, et sachez que quitter la tuile arrête réellement le flux — rien ne continue en arrière-plan.</p>
+          <p>À noter, contre-intuitif : cette tuile tourne <b>mieux sur le Raspberry Pi que dans l'application Windows</b>, l'environnement Electron de cette dernière retombant souvent sur un décodage logiciel là où le Chromium du Pi utilise le décodage matériel.</p>
+          <h4>Où trouver une playlist</h4>
+          <p>N'importe quelle playlist M3U standard à laquelle vous avez légitimement accès. Le projet <b>IPTV-org</b> (iptv-org.github.io) publie de vastes playlists de chaînes en clair, organisées par pays, langue et catégorie — un bon point de départ.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Adresse de la playlist</span><span class="help-opt-desc">L'URL du fichier .m3u.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Catégorie affichée à l'ouverture</span><span class="help-opt-desc">Facultatif. Évite de faire défiler une longue liste à chaque fois.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Reprendre automatiquement la dernière chaîne</span><span class="help-opt-desc">Désactivé par défaut : une tuile qui se met à diffuser toute seule sur un écran mural est rarement souhaitable.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Démarrer sans le son</span><span class="help-opt-desc">Activé par défaut. Les navigateurs refusent de toute façon de démarrer une vidéo sonore sans interaction préalable.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Plafond de qualité</span><span class="help-opt-desc">720p recommandé sur un Pi.</span></div>`,
+        en: `
+          <span class="help-size">Size: 5×4 by default, from 3×3 to 12×12</span>
+          <h4>Goal</h4>
+          <p>Watch a channel straight from the board, from a channel playlist in <code>.m3u</code> format — the standard format VLC and Kodi read.</p>
+          <h4>How it works</h4>
+          <p>The tile lists the playlist's channels, each with its logo when the playlist provides one. A search box (accent-insensitive) and a category filter make it navigable even in a list of several thousand entries. Tap a channel to watch it; the ☰ button returns to the list.</p>
+          <p><b>Only the channel list goes through the PiBoard</b>, because most playlist hosts don't allow a direct request from a web page. The video streams themselves are read directly by the browser, without going through the Pi — making it relay video would bring it to its knees.</p>
+          <h4>Performance: read this before getting excited</h4>
+          <p>This is the most demanding tile on the board. A Raspberry Pi 4 handles <b>720p comfortably</b>; 1080p is borderline, all the more so as it competes for CPU with everything running alongside (maps, radar, planes…). Hence the "quality cap" setting, left at 720p by default.</p>
+          <p>Two tips that make all the difference: use <b>per-tile scheduling</b> (the tile's universal settings) so it doesn't run around the clock, and note that leaving the tile genuinely stops the stream — nothing keeps running in the background.</p>
+          <p>Worth noting, counter-intuitively: this tile runs <b>better on the Raspberry Pi than in the Windows app</b>, the latter's Electron environment often falling back to software decoding where the Pi's Chromium uses hardware decoding.</p>
+          <h4>Where to find a playlist</h4>
+          <p>Any standard M3U playlist you have legitimate access to. The <b>IPTV-org</b> project (iptv-org.github.io) publishes large free-to-air playlists organized by country, language and category — a good starting point.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Playlist address</span><span class="help-opt-desc">The .m3u file's URL.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Category shown on opening</span><span class="help-opt-desc">Optional. Avoids scrolling a long list every time.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Resume the last channel automatically</span><span class="help-opt-desc">Off by default: a tile that starts playing on its own on a wall display is rarely what you want.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Start muted</span><span class="help-opt-desc">On by default. Browsers refuse to start a video with sound without prior interaction anyway.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Quality cap</span><span class="help-opt-desc">720p recommended on a Pi.</span></div>`
+      }
+    },
+
+    {
       id: "calendar",
       group: "tiles",
       title: { fr: "Agenda", en: "Calendar" },

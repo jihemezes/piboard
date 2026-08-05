@@ -290,6 +290,21 @@ const ASTRO_ECLIPSE_FIXTURE = {
   altitude: 25.4, obscuration: 0.87
 };
 
+/* Playlist M3U de test : couvre les cas reels -- metadonnees completes,
+   logo absent, directive #EXTVLCOPT a ignorer, et deux categories
+   distinctes pour verifier le filtre. Test M3U playlist: covers the
+   real-world cases -- full metadata, missing logo, an #EXTVLCOPT
+   directive to ignore, and two distinct categories to check the filter. */
+const IPTV_PLAYLIST_FIXTURE = {
+  channels: [
+    { name: "France 24", logo: "https://ex.test/f24.png", group: "Info", tvgId: "France24.fr", url: "https://ex.test/f24/index.m3u8" },
+    { name: "Arte", logo: "https://ex.test/arte.png", group: "Généralistes", tvgId: "", url: "https://ex.test/arte/master.m3u8" },
+    { name: "Euronews", logo: "", group: "Info", tvgId: "", url: "https://ex.test/euronews.m3u8" }
+  ],
+  groups: ["Info", "Généralistes"],
+  truncated: false
+};
+
 const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"][(new Date().getDay() + 1) % 7];
 
 /* Fixtures Courriel : la liste ne porte que des en-tetes (jamais de
@@ -375,6 +390,9 @@ const layout = {
       host: "imap.test.fr", port: 993, user: "moi@test.fr", folder: "INBOX", limit: 5, showSender: true
     } },
     { id: "t-o", widget: "astronomy", x: 0, y: 15, w: 4, h: 5, settings: { city: "Toulouse" } },
+    { id: "t-q", widget: "iptv", x: 8, y: 15, w: 5, h: 4, settings: {
+      playlistUrl: "https://ex.test/chaines.m3u", startMuted: true, maxHeight: "720"
+    } },
     { id: "t-p", widget: "clock", x: 4, y: 15, w: 4, h: 4, settings: {
       mode: "digital", showDate: true, showWeekNumber: true, weekNumberConvention: "iso",
       extraZone1Label: "Tokyo", extraZone1Tz: "Asia/Tokyo",
@@ -546,6 +564,9 @@ const dom = new JSDOM(html, {
         const tmm = String(tomorrow.getMonth() + 1).padStart(2, "0");
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
+      }
+      if (u.includes("/api/iptv/playlist")) {
+        return json(IPTV_PLAYLIST_FIXTURE);
       }
       if (u.includes("/api/astronomy/eclipse")) {
         return json(ASTRO_ECLIPSE_FIXTURE);
@@ -725,10 +746,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 16 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 17 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("16 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 16);
+  assert("17 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 17);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -1220,7 +1241,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (17 au total)", document.querySelectorAll(".grid-stack-item").length === 17);
+  assert("tuile ajoutee (18 au total)", document.querySelectorAll(".grid-stack-item").length === 18);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -2006,6 +2027,56 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     document.getElementById("tileModal").querySelector(".modal-close")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(20);
+  }
+
+  console.log("== Chaines TV (IPTV) : liste, recherche, filtre, lecture ==");
+  {
+    const tvTile = document.querySelector('[data-tile-id="t-q"]');
+    tries = 0;
+    while (!tvTile.querySelector(".pwtv-item") && tries++ < 80) await sleep(50);
+
+    assert("3 chaines listees depuis la playlist", tvTile.querySelectorAll(".pwtv-item").length === 3);
+    assert("nom de chaine affiche", (tvTile.textContent || "").includes("France 24"));
+    assert("logo affiche quand la playlist en fournit un", !!tvTile.querySelector('.pwtv-logo[src*="f24.png"]'));
+    assert("repli visuel quand la chaine n'a pas de logo", !!tvTile.querySelector(".pwtv-logo-empty"));
+    assert("categories de la playlist proposees dans le filtre",
+      tvTile.querySelectorAll(".pwtv-group option").length === 3); // 2 groupes + "toutes"
+
+    console.log("== Chaines TV : filtre par categorie ==");
+    const groupSel = tvTile.querySelector(".pwtv-group");
+    groupSel.value = "Info";
+    groupSel.dispatchEvent(new window.Event("change", { bubbles: true }));
+    assert("filtre 'Info' : 2 chaines restantes", tvTile.querySelectorAll(".pwtv-item").length === 2);
+    assert("filtre 'Info' : Arte (autre categorie) exclue", !(tvTile.querySelector(".pwtv-list").textContent || "").includes("Arte"));
+
+    groupSel.value = "";
+    groupSel.dispatchEvent(new window.Event("change", { bubbles: true }));
+    assert("filtre retire : les 3 chaines reviennent", tvTile.querySelectorAll(".pwtv-item").length === 3);
+
+    console.log("== Chaines TV : recherche insensible aux accents ==");
+    const searchEl = tvTile.querySelector(".pwtv-search");
+    searchEl.value = "generalistes"; // sans accent, doit trouver "Généralistes" via le nom de chaine ? non : on cherche par NOM
+    searchEl.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche sans correspondance : message dedie", !!tvTile.querySelector(".pwtv-empty"));
+    searchEl.value = "euronews";
+    searchEl.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche 'euronews' : 1 seule chaine", tvTile.querySelectorAll(".pwtv-item").length === 1);
+    searchEl.value = "";
+    searchEl.dispatchEvent(new window.Event("input", { bubbles: true }));
+
+    console.log("== Chaines TV : passage au lecteur ==");
+    tvTile.querySelector(".pwtv-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("clic sur une chaine : le lecteur s'affiche", !!tvTile.querySelector(".pwtv-video"));
+    assert("nom de la chaine en cours affiche", (tvTile.querySelector(".pwtv-current")?.textContent || "").includes("France 24"));
+    assert("demarre sans le son (reglage par defaut, et exigence des navigateurs)",
+      tvTile.querySelector(".pwtv-video").muted === true);
+    assert("bouton de retour a la liste present", !!tvTile.querySelector(".pwtv-back"));
+
+    tvTile.querySelector(".pwtv-back").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("retour a la liste : le lecteur est retire (le flux ne tourne plus)", !tvTile.querySelector(".pwtv-video"));
+    assert("retour a la liste : les chaines sont de nouveau listees", tvTile.querySelectorAll(".pwtv-item").length === 3);
   }
 
   console.log("== Sortie du mode edition ==");

@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.39.0
+
+- **Nouvelle tuile : Chaînes TV.** Lit une playlist de chaînes au
+  format `.m3u`/`.m3u8` (le format standard de VLC et Kodi) et diffuse
+  une chaîne directement dans la tuile.
+  - **Liste navigable** : logos des chaînes, recherche par nom
+    (insensible aux accents) et filtre par catégorie — exploitable même
+    sur une playlist de plusieurs milliers d'entrées ;
+  - **Lecture HLS** via hls.js, avec repli sur la lecture native du
+    navigateur là où elle est meilleure (Safari, iOS) ;
+  - **Plafond de qualité réglable**, sur 720p par défaut : un Pi 4 tient
+    confortablement le 720p, le 1080p se dispute le processeur avec le
+    reste du tableau ;
+  - **Seule la liste des chaînes transite par le PiBoard** (question de
+    CORS) ; les flux vidéo sont lus directement par le navigateur — lui
+    faire relayer de la vidéo le mettrait à genoux ;
+  - Quitter la tuile **arrête réellement le flux**, y compris lors d'une
+    destruction de tuile (planification, changement de disposition,
+    restauration de sauvegarde) : rien ne continue en arrière-plan.
+
+  **Nouvelle dépendance** : `hls.js` (Apache-2.0), chargée uniquement à
+  la première lecture d'une chaîne plutôt qu'au démarrage du tableau.
+  **Un `npm install` est nécessaire après cette mise à jour.**
+
+  À noter, contre-intuitif : cette tuile tourne **mieux sur le
+  Raspberry Pi que dans l'application Windows**, l'environnement
+  Electron de cette dernière retombant souvent sur un décodage logiciel
+  là où le Chromium du Pi utilise le décodage matériel.
+
+---
+
+- **New tile: TV channels.** Reads a channel playlist in `.m3u`/`.m3u8`
+  format (VLC and Kodi's standard format) and plays a channel right in
+  the tile.
+  - **Navigable list**: channel logos, search by name
+    (accent-insensitive) and category filter — usable even on a
+    playlist of several thousand entries;
+  - **HLS playback** via hls.js, falling back to the browser's native
+    playback where that performs better (Safari, iOS);
+  - **Adjustable quality cap**, 720p by default: a Pi 4 handles 720p
+    comfortably, 1080p competes for CPU with the rest of the board;
+  - **Only the channel list goes through the PiBoard** (a CORS matter);
+    video streams are read directly by the browser — making it relay
+    video would bring it to its knees;
+  - Leaving the tile **genuinely stops the stream**, including on tile
+    destruction (scheduling, layout change, backup restore): nothing
+    keeps running in the background.
+
+  **New dependency**: `hls.js` (Apache-2.0), loaded only on first
+  channel playback rather than at board startup. **An `npm install` is
+  required after this update.**
+
+  Worth noting, counter-intuitively: this tile runs **better on the
+  Raspberry Pi than in the Windows app**, the latter's Electron
+  environment often falling back to software decoding where the Pi's
+  Chromium uses hardware decoding.
+
 ## 1.38.0
 
 - **Flux RSS : en-têtes de navigateur complets sur la tentative de
