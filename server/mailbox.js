@@ -28,14 +28,28 @@
    ============================================================ */
 "use strict";
 
-const { ImapFlow } = require("imapflow");
-const { simpleParser } = require("mailparser");
+// Charges A LA DEMANDE (voir clientFor/getMessage ci-dessous), pas ici :
+// meme principe qu'articleExtract.js pour jsdom -- imapflow mesure a lui
+// seul ~480ms de chargement, paye jusqu'ici a chaque demarrage du
+// serveur meme sans aucune tuile Courriel configuree.
+// Loaded ON DEMAND (see clientFor/getMessage below), not here: same
+// principle as articleExtract.js for jsdom -- imapflow alone measures
+// ~480ms to load, paid until now on every server startup even with no
+// Mailbox tile configured.
+let ImapFlow = null, simpleParser = null;
+function loadMailDeps() {
+  if (!ImapFlow) {
+    ImapFlow = require("imapflow").ImapFlow;
+    simpleParser = require("mailparser").simpleParser;
+  }
+}
 const tileSecrets = require("./tileSecrets");
 
 const CONNECT_TIMEOUT_MS = 15000;
 const MAX_LIMIT = 25;
 
 function clientFor(cfg, pass) {
+  loadMailDeps();
   const port = Number(cfg.port) || 993;
   return new ImapFlow({
     host: String(cfg.host || "").trim(),

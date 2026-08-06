@@ -62,30 +62,67 @@ files:
   # .gitignore): this more specific pattern, placed after the general
   # exclusion, overrides it for this one file.
   - "CHANGELOG.md"
+  # hls.js n'est jamais charge par require() (uniquement servi tel quel
+  # au navigateur via /vendor/hls, voir server/index.js) : seul le
+  # fichier reellement livre au navigateur a besoin d'etre present.
+  # Le reste du dossier dist/ du paquet (demos, cartes source pour
+  # chaque variante, declarations TypeScript) pese ~22 Mo pour 0 usage,
+  # mesure directement -- retire, sans effet sur le fonctionnement.
+  # hls.js is never loaded via require() (only served as-is to the
+  # browser through /vendor/hls, see server/index.js): only the file
+  # actually delivered to the browser needs to be present. The rest of
+  # the package's dist/ folder (demos, source maps for every variant,
+  # TypeScript declarations) weighs ~22 MB for zero use, measured
+  # directly -- removed, with no effect on functionality.
+  - "!node_modules/hls.js/dist/**"
+  - "node_modules/hls.js/dist/hls.min.js"
 
-# ARCHIVE ASAR DESACTIVEE, VOLONTAIREMENT.
-# PiBoard sert son interface avec express.static, qui lit les fichiers
-# par flux (fs.createReadStream) et par statistiques de descripteur.
-# Electron sait rendre une archive asar transparente pour la plupart des
-# appels fs, mais cette compatibilite reste une emulation, et un
-# tableau de bord qui sert plusieurs centaines de fichiers statiques
-# (widgets, CSS, icones SVG, bibliotheques vendorisees) est precisement
-# le cas ou les differences se manifestent.
-# Le code etant public et sous licence MIT, l'archive n'apporterait
-# aucune protection : on prefere la robustesse. A reconsiderer seulement
-# si le nombre de fichiers devient un probleme a l'installation.
+# ARCHIVE ASAR REACTIVEE, DE FACON CIBLEE.
+# Desactivee jusqu'ici (voir historique), avec une reserve explicite :
+# "a reconsiderer si le nombre de fichiers devient un probleme a
+# l'installation". C'est desormais le cas -- plusieurs contributeurs
+# signalent un demarrage de plus en plus lent sous Windows, et
+# node_modules a nettement grossi depuis (jsdom, imapflow, mailparser,
+# astronomy-engine...), chacun ajoutant son lot de petits fichiers.
+# Lire une archive asar unique est nettement plus rapide que d'ouvrir
+# individuellement des milliers de petits fichiers -- l'ecart se
+# creuse particulierement sous Windows, ou chaque acces fichier passe
+# aussi par l'antivirus en temps reel.
 #
-# ASAR ARCHIVE DELIBERATELY DISABLED.
-# PiBoard serves its interface with express.static, which reads files
-# through streams (fs.createReadStream) and descriptor stats. Electron
-# can make an asar archive transparent for most fs calls, but that
-# compatibility remains an emulation, and a dashboard serving several
-# hundred static files (widgets, CSS, SVG icons, vendored libraries) is
-# exactly where the differences show up.
-# The code being public and MIT-licensed, the archive would provide no
-# protection whatsoever: robustness is preferred. To be reconsidered
-# only if the file count becomes an install-time problem.
-asar: false
+# La preoccupation d'origine (express.static + fs.createReadStream ont
+# besoin de vrais descripteurs de fichiers, l'emulation asar pour ces
+# appels restant partielle) est traitee precisement plutot qu'evacuee :
+# asarUnpack ci-dessous liste EXACTEMENT les quatre dossiers que
+# express.static sert reellement (voir les 4 appels express.static()
+# dans server/index.js) -- ni plus, ni moins -- qui restent donc de
+# vrais fichiers sur disque, inchanges. Tout le reste (le code de
+# l'app, jsdom, imapflow...) beneficie de l'archive.
+#
+# ASAR ARCHIVE RE-ENABLED, TARGETED.
+# Disabled until now (see history), with an explicit caveat: "to be
+# reconsidered if the file count becomes an install-time problem". This
+# is now the case -- several contributors report an increasingly slow
+# startup on Windows, and node_modules has grown substantially since
+# (jsdom, imapflow, mailparser, astronomy-engine...), each adding its
+# share of small files. Reading a single asar archive is markedly
+# faster than opening thousands of small files individually -- the gap
+# widens especially on Windows, where every file access also goes
+# through real-time antivirus scanning.
+#
+# The original concern (express.static + fs.createReadStream need real
+# file descriptors, asar's emulation for those calls staying partial)
+# is addressed precisely rather than sidestepped: asarUnpack below
+# lists EXACTLY the four folders express.static actually serves (see
+# the 4 express.static() calls in server/index.js) -- no more, no less
+# -- which therefore stay real files on disk, unchanged. Everything
+# else (the app's own code, jsdom, imapflow...) benefits from the
+# archive.
+asar: true
+asarUnpack:
+  - "public/**"
+  - "node_modules/gridstack/dist/**"
+  - "node_modules/leaflet/dist/**"
+  - "node_modules/hls.js/dist/**"
 
 win:
   target:

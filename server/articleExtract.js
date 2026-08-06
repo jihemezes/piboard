@@ -56,8 +56,24 @@
    ============================================================ */
 "use strict";
 
-const { JSDOM } = require("jsdom");
-const { Readability } = require("@mozilla/readability");
+// jsdom et Readability sont volontairement charges A LA DEMANDE (voir
+// readabilityParse ci-dessous), pas ici en haut de fichier -- mesure en
+// direct : le seul chargement de jsdom coute un temps comparable a celui
+// d'Express lui-meme, paye jusqu'ici a CHAQUE demarrage du serveur, meme
+// si aucun article n'est jamais ouvert. Un contributeur mesure du
+// ralentissement au demarrage signale sous Windows.
+// jsdom and Readability are deliberately loaded ON DEMAND (see
+// readabilityParse below), not here at the top of the file -- measured
+// directly: jsdom's load alone costs about as much time as Express
+// itself, paid until now on EVERY server startup, even if no article is
+// ever opened. A measured startup slowdown was reported on Windows.
+let JSDOM = null, Readability = null;
+function loadReadabilityDeps() {
+  if (!JSDOM) {
+    JSDOM = require("jsdom").JSDOM;
+    Readability = require("@mozilla/readability").Readability;
+  }
+}
 
 const FETCH_TIMEOUT_MS = 10000;
 // Plafond de securite sur la taille de la page recuperee : evite qu'une
@@ -228,6 +244,7 @@ function looksLikeBotBlockPage(text) {
 }
 
 function readabilityParse(html, url) {
+  loadReadabilityDeps();
   const dom = new JSDOM(html, { url });
   try {
     return new Readability(dom.window.document).parse();

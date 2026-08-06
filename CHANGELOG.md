@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.41.1
+
+- **Correctif de performance : démarrage lent sous Windows, signalé sur
+  une machine standard.** Trois causes identifiées et mesurées
+  directement, plutôt que supposées :
+  - **`jsdom` et `imapflow`/`mailparser` se chargeaient systématiquement
+    au démarrage du serveur**, même sans jamais ouvrir un article RSS ni
+    configurer de tuile Courriel. Mesuré : `jsdom` seul coûte un temps
+    comparable à Express lui-même, `imapflow` ajoute encore ~480 ms.
+    Chargés désormais **à la demande**, au premier usage réel ;
+  - **`hls.js` embarquait 22 Mo de fichiers jamais utilisés** (démos,
+    cartes source de chaque variante, déclarations TypeScript) pour
+    532 Ko réellement servis au navigateur. Réduit au strict
+    nécessaire ;
+  - **L'archive ASAR, désactivée jusqu'ici**, a été réactivée de façon
+    ciblée : les 4 dossiers que le serveur sert tels quels
+    (`express.static`, qui a besoin de vrais fichiers) restent
+    décompactés, tout le reste (le code de l'app, `jsdom`, `imapflow`…)
+    profite de la lecture d'une archive unique — nettement plus rapide
+    que d'ouvrir individuellement des milliers de petits fichiers, un
+    écart qui se creuse particulièrement sous Windows à cause de
+    l'antivirus en temps réel.
+
+  Aucun changement de comportement : uniquement des optimisations de
+  chargement, vérifiées une par une (le serveur démarre et répond
+  toujours correctement, l'extraction d'article et l'accès à la boîte
+  mail fonctionnent normalement dès leur premier usage réel).
+
+---
+
+- **Performance fix: slow startup on Windows, reported on a standard
+  machine.** Three causes identified and directly measured, rather than
+  assumed:
+  - **`jsdom` and `imapflow`/`mailparser` were systematically loaded at
+    server startup**, even without ever opening an RSS article or
+    configuring a Mailbox tile. Measured: `jsdom` alone costs about as
+    much time as Express itself, `imapflow` adds another ~480 ms. Now
+    loaded **on demand**, on first actual use;
+  - **`hls.js` shipped 22 MB of never-used files** (demos, source maps
+    for every variant, TypeScript declarations) for 532 KB actually
+    served to the browser. Trimmed to the strict minimum;
+  - **The ASAR archive, disabled until now**, was re-enabled in a
+    targeted way: the 4 folders the server serves as raw files
+    (`express.static`, which needs real file descriptors) stay
+    unpacked, everything else (the app's own code, `jsdom`,
+    `imapflow`…) benefits from reading a single archive — markedly
+    faster than opening thousands of small files individually, a gap
+    that widens especially on Windows because of real-time antivirus
+    scanning.
+
+  No behavior change: purely loading optimizations, verified one by one
+  (the server still starts and responds correctly, article extraction
+  and mailbox access work normally on their first actual use).
+
 ## 1.41.0
 
 - **Flux RSS : jusqu'à 3 flux combinables dans la même tuile.** Fusionnés
