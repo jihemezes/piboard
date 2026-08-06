@@ -1,5 +1,127 @@
 # Changelog
 
+## 1.41.0
+
+- **Flux RSS : jusqu'à 3 flux combinables dans la même tuile.** Fusionnés
+  en une seule liste triée par ordre chronologique (le plus récent en
+  premier, quel que soit le flux d'origine). Un flux en panne n'empêche
+  pas les autres de s'afficher.
+  - Chaque article porte une **étiquette de source** dès qu'un 2e flux
+    est configuré — le libellé court renseigné dans les réglages s'il y
+    en a un (recommandé : le titre d'un flux est souvent bien trop long
+    pour une étiquette compacte), sinon le titre du flux lui-même ;
+  - **Avec un seul flux configuré, aucun changement** : la tuile
+    affiche son nom en en-tête, comme avant. L'en-tête laisse la place
+    aux étiquettes par article uniquement dès qu'un 2e flux est ajouté,
+    où il n'aurait plus de sens (quelle source afficher ?).
+
+  Deux défauts trouvés et corrigés en testant : le gabarit HTML de
+  l'étiquette introduisait des espaces parasites dans le titre des
+  articles (cassait une comparaison exacte utilisée par les tests), et
+  un test existant sélectionnait les articles sur toute la page plutôt
+  qu'une tuile précise — invisible avec une seule tuile Flux RSS,
+  devenu instable dès qu'il y en a deux.
+
+---
+
+- **RSS Feed: up to 3 feeds combinable in the same tile.** Merged into a
+  single list sorted in chronological order (most recent first,
+  whichever feed it came from). A feed that's down doesn't prevent the
+  others from showing.
+  - Each article carries a **source tag** as soon as a 2nd feed is
+    configured — the short label set in the settings if there is one
+    (recommended: a feed's own title is often far too long for a
+    compact tag), otherwise the feed's title itself;
+  - **With a single feed configured, nothing changes**: the tile shows
+    its name as a header, as before. The header gives way to per-item
+    tags only once a 2nd feed is added, where it would no longer make
+    sense (which source to show?).
+
+  Two defects found and fixed while testing: the tag's HTML template
+  introduced stray whitespace into article titles (broke an exact
+  comparison used by the tests), and an existing test selected articles
+  across the whole page rather than a specific tile — invisible with a
+  single RSS Feed tile, became flaky as soon as there were two.
+
+## 1.40.0
+
+- **Chaînes TV : support complet de Xtream Codes**, le système derrière
+  la plupart des plateformes IPTV par abonnement (identifiant + mot de
+  passe dans l'URL) — celui que gèrent nativement SmartIPTV, TiviMate
+  et IPTV Smarters. Détecté **automatiquement** depuis l'adresse de
+  playlist déjà saisie, sans nouveau réglage à configurer.
+  - **Navigation à plusieurs niveaux** : Direct / Films / Séries, puis
+    les catégories de chaque source (ex. « France HD|OTT »), puis la
+    liste des flux, avec un bouton retour à chaque niveau ;
+  - **Séries** : un niveau supplémentaire pour parcourir les épisodes,
+    regroupés par saison ;
+  - **Avertissement de format** ⚠ pour les films/séries dans un format
+    qu'un navigateur ne sait pas lire nativement (Matroska/`.mkv`, très
+    courant en VOD) — affiché avant la lecture plutôt qu'un échec
+    silencieux ;
+  - Le mode M3U simple (playlists statiques comme celles du projet
+    IPTV-org) reste disponible en repli automatique, inchangé.
+
+  Ce correctif répond à un signalement : une URL Xtream saisie ne
+  faisait rien remonter dans la tuile, celle-ci ne sachant lire qu'un
+  fichier M3U statique classique — un système entièrement différent.
+
+---
+
+- **TV channels: full Xtream Codes support**, the system behind most
+  subscription IPTV platforms (username + password in the URL) — the
+  one SmartIPTV, TiviMate and IPTV Smarters natively handle.
+  **Automatically** detected from the playlist address already typed
+  in, no new setting to configure.
+  - **Multi-level navigation**: Live / Movies / Series, then each
+    source's categories (e.g. "France HD|OTT"), then the stream list,
+    with a back button at every level;
+  - **Series**: an extra level to browse episodes, grouped by season;
+  - **Format warning** ⚠ for movies/series in a format a browser can't
+    read natively (Matroska/`.mkv`, very common for VOD) — shown before
+    playback rather than a silent failure;
+  - Plain M3U mode (static playlists like the IPTV-org project's)
+    remains available as an automatic fallback, unchanged.
+
+  This fix addresses a report: a typed-in Xtream URL brought up nothing
+  in the tile, since it could only read a classic static M3U file — an
+  entirely different system.
+
+## 1.39.1
+
+- **Correctif *Flux RSS* : le message de blocage anti-robot du site
+  s'affichait comme si c'était un aperçu légitime de l'article.**
+  Confirmé par capture d'écran : quand Le Monde bloque la requête, la
+  page renvoyée contient à la fois la photo d'illustration légitime (et
+  sa légende) ET le message « Votre trafic a été identifié comme
+  automatisé (bot) », mélangés dans la même zone de contenu. Le seuil
+  de longueur de texte ne faisait pas la différence, et le message de
+  blocage — logo noir du Monde compris — s'affichait dans la popup
+  comme un aperçu normal. Détecté et écarté désormais ; la popup
+  affiche le message honnête « accès refusé » à la place.
+
+  Ce correctif n'agit que sur l'affichage : il ne résout pas la cause
+  profonde (le blocage lui-même), sur laquelle j'attends toujours le
+  journal serveur pour savoir si les en-têtes complets ajoutés en
+  v1.38.0 changent quoi que ce soit.
+
+---
+
+- **Fix for *RSS Feed*: the site's anti-bot block message displayed as
+  if it were a legitimate article preview.** Confirmed via screenshot:
+  when Le Monde blocks the request, the returned page contains both the
+  legitimate illustration photo (and its caption) AND the "Your traffic
+  has been identified as automated (bot)" message, mixed within the
+  same content area. The text-length threshold didn't tell them apart,
+  and the block message — Le Monde's black logo included — displayed in
+  the popup as a normal preview. Now detected and discarded; the popup
+  shows the honest "access denied" message instead.
+
+  This fix only addresses the display: it doesn't resolve the
+  underlying cause (the block itself), on which I'm still waiting for
+  the server log to know whether the full headers added in v1.38.0
+  change anything at all.
+
 ## 1.39.0
 
 - **Nouvelle tuile : Chaînes TV.** Lit une playlist de chaînes au

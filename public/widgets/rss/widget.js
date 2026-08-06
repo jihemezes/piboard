@@ -176,35 +176,91 @@
 
     onLangChanged() { this.render(); }
 
+    /* Recupere une a trois adresses de flux (voir feedSlots()), chacune
+       avec sa propre etiquette de source, puis fusionne le tout par
+       ordre chronologique -- un flux en panne n'empeche pas les autres
+       de s'afficher, il est simplement absent du resultat.
+       Fetches one to three feed addresses (see feedSlots()), each with
+       its own source tag, then merges everything in chronological order
+       -- a feed that's down doesn't prevent the others from showing, it
+       simply stays absent from the result. */
     async refresh() {
-      try {
-        // Meme classe de bug que celle deja corrigee sur le widget
-        // Trafic : sans parametre variant d'un cycle a l'autre, l'URL
-        // demandee est EXACTEMENT la meme a chaque rafraichissement (le
-        // flux ne change pas d'adresse), et le cache HTTP du navigateur
-        // peut alors resservir indefiniment la reponse d'un cycle
-        // precedent au lieu d'aller rechercher le flux reellement a jour
-        // -- d'ou des articles qui ne bougent plus depuis la veille.
-        // Same bug class already fixed on the Traffic widget: without a
-        // parameter that changes from one cycle to the next, the
-        // requested URL is EXACTLY the same on every refresh (the feed's
-        // address doesn't change), and the browser's HTTP cache can then
-        // keep serving a previous cycle's response indefinitely instead
-        // of fetching the actually up-to-date feed -- hence articles
-        // that stop moving since the day before.
-        const proxied = this.ctx.api.proxyUrl(this.ctx.settings.url);
-        const sep = proxied.includes("?") ? "&" : "?";
-        const url = proxied + sep + "_=" + Date.now();
-        const xml = await fetch(url, { cache: "no-store" }).then((r) => {
-          if (!r.ok) throw new Error("proxy " + r.status);
-          return r.text();
-        });
-        this.feed = parseFeed(xml);
+      const slots = this.feedSlots();
+      if (!slots.length) {
+        this.feed = null;
         this.render();
-      } catch (e) {
-        console.warn("[piboard/rss]", e);
-        this.ctx.el.innerHTML = `<div class="pw-rss"><div class="pwr-err">${this.ctx.i18n.t("rss.error")}</div></div>`;
+        return;
       }
+      const results = await Promise.allSettled(slots.map((slot) => this.fetchOneFeed(slot)));
+      const ok = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+
+      if (!ok.length) {
+        console.warn("[piboard/rss] tous les flux configures ont echoue");
+        this.ctx.el.innerHTML = `<div class="pw-rss"><div class="pwr-err">${this.ctx.i18n.t("rss.error")}</div></div>`;
+        return;
+      }
+
+      const allItems = [].concat(...ok.map((f) => f.items));
+      // Plus recent d'abord ; une date illisible (NaN) est reletee en
+      // fin de liste plutot que de casser le tri.
+      // Newest first; an unparsable date (NaN) is pushed to the end
+      // rather than breaking the sort.
+      allItems.sort((a, b) => {
+        const ta = new Date(a.date).getTime(), tb = new Date(b.date).getTime();
+        if (isNaN(ta) && isNaN(tb)) return 0;
+        if (isNaN(ta)) return 1;
+        if (isNaN(tb)) return -1;
+        return tb - ta;
+      });
+
+      // Nom de source pour l'en-tete : uniquement pertinent avec un seul
+      // flux (avec plusieurs, chaque article porte deja la sienne, voir
+      // render()). Source name for the header: only meaningful with a
+      // single feed (with several, each item already carries its own,
+      // see render()).
+      this.feed = { source: ok.length === 1 ? ok[0].source : null, items: allItems };
+      this.render();
+    }
+
+    /* Emplacements de flux configures : le premier (url/label1) est
+       obligatoire, les deux suivants facultatifs -- meme convention que
+       les "emplacements fixes" utilises ailleurs dans PiBoard (trajets
+       du widget Trajet, fuseaux de l'Horloge, alarmes...).
+       Configured feed slots: the first (url/label1) is required, the
+       next two optional -- the same "fixed slots" convention used
+       elsewhere in PiBoard (Commute widget's trips, Clock's zones,
+       alarms...). */
+    feedSlots() {
+      const s = this.ctx.settings;
+      return [
+        { url: s.url, label: s.label1 },
+        { url: s.url2, label: s.label2 },
+        { url: s.url3, label: s.label3 }
+      ].filter((slot) => slot.url);
+    }
+
+    async fetchOneFeed(slot) {
+      // Meme classe de bug que celle deja corrigee sur le widget
+      // Trafic : sans parametre variant d'un cycle a l'autre, l'URL
+      // demandee est EXACTEMENT la meme a chaque rafraichissement, et le
+      // cache HTTP du navigateur peut alors resservir indefiniment la
+      // reponse d'un cycle precedent. Same bug class already fixed on
+      // the Traffic widget: without a parameter that changes between
+      // refreshes, the requested URL is EXACTLY the same each time, and
+      // the browser's HTTP cache can keep serving a previous cycle's
+      // response indefinitely.
+      const proxied = this.ctx.api.proxyUrl(slot.url);
+      const sep = proxied.includes("?") ? "&" : "?";
+      const url = proxied + sep + "_=" + Date.now();
+      const xml = await fetch(url, { cache: "no-store" }).then((r) => {
+        if (!r.ok) throw new Error("proxy " + r.status);
+        return r.text();
+      });
+      const parsed = parseFeed(xml);
+      const sourceLabel = (slot.label || "").trim() || parsed.source || "";
+      parsed.items.forEach((it) => { it.sourceLabel = sourceLabel; });
+      parsed.source = sourceLabel;
+      return parsed;
     }
 
     render() {
@@ -222,13 +278,25 @@
         : this.feed.items.slice(0, Math.max(1, Number(s.maxItems) || 6));
       this.currentItems = items;
 
+      // Un seul flux configure : en-tete unique au-dessus de la liste,
+      // comportement historique inchange. Plusieurs flux combines :
+      // l'en-tete n'aurait plus de sens (quelle source afficher ?), une
+      // etiquette apparait a la place sur chaque article -- voir
+      // feedSlots()/refresh(). Single feed configured: single header
+      // above the list, historical behaviour unchanged. Several feeds
+      // combined: the header would no longer make sense (which source to
+      // show?), a tag appears on each item instead -- see
+      // feedSlots()/refresh().
+      const multiFeed = this.feed.source == null;
+      const showTags = s.showSource !== false && multiFeed;
+
       this.ctx.el.innerHTML = `
         <div class="pw-rss ${s.rotate ? "pwr-rotate" : ""}">
-          <div class="pwr-source" ${s.showSource ? "" : "hidden"}>${this.feed.source || ""}</div>
+          <div class="pwr-source" ${s.showSource !== false && !multiFeed ? "" : "hidden"}>${this.feed.source || ""}</div>
           <ul>
             ${items.map((it, idx) => `
               <li class="pwr-item ${it.link ? "pwr-clickable" : ""}" data-idx="${idx}" data-link="${it.link ? "1" : ""}">
-                <div class="pwr-title">${it.title}</div>
+                <div class="pwr-title">${showTags && it.sourceLabel ? `<span class="pwr-tag">${escapeHtml(it.sourceLabel)}</span>` : ""}${it.title}</div>
                 <div class="pwr-meta">${niceDate(it.date, lang)}</div>
               </li>`).join("")}
           </ul>
@@ -303,7 +371,12 @@
 
       modal.querySelector(".pwr-modal-title").textContent = it.title;
       const metaEl = modal.querySelector(".pwr-modal-meta");
-      metaEl.textContent = [this.feed && this.feed.source, niceDate(it.date, lang)].filter(Boolean).join(" · ");
+      // it.sourceLabel (propre a cet article) prend le pas sur
+      // this.feed.source (nul des que plusieurs flux sont combines, voir
+      // refresh()). it.sourceLabel (specific to this item) takes
+      // precedence over this.feed.source (null as soon as several feeds
+      // are combined, see refresh()).
+      metaEl.textContent = [it.sourceLabel || (this.feed && this.feed.source), niceDate(it.date, lang)].filter(Boolean).join(" · ");
       const bodyEl = modal.querySelector(".pwr-modal-body");
       bodyEl.innerHTML = figureHtml + `<p class="pwr-modal-loading">${i18n.t("common.loading")}</p>`;
       modal.hidden = false;
@@ -394,7 +467,7 @@
         else if (plainTextLen < 40) thinNote = `<p class="pwr-modal-thin-note">${i18n.t("rss.readerModeUnavailable")}</p>`;
         html = fallback.trim() ? thinNote + fallback : `<p class="pwr-modal-empty">${i18n.t("rss.noContent")}</p>`;
       } else if (extraMeta) {
-        metaEl.textContent = [this.feed && this.feed.source, extraMeta, niceDate(it.date, lang)].filter(Boolean).join(" · ");
+        metaEl.textContent = [it.sourceLabel || (this.feed && this.feed.source), extraMeta, niceDate(it.date, lang)].filter(Boolean).join(" · ");
       }
       const previewNote = isPartialPreview ? `<p class="pwr-modal-thin-note">${i18n.t("rss.freePreviewOnly")}</p>` : "";
       bodyEl.innerHTML = figureHtml + previewNote + html;

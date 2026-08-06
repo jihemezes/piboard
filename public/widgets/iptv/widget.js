@@ -1,29 +1,50 @@
 /* PiBoard widget: chaines TV / TV channels
-   Lit une playlist M3U (format standard de VLC/Kodi) et diffuse une
-   chaine dans la tuile. Deux vues qui alternent : la LISTE (recherche +
-   filtre par categorie) et le LECTEUR.
+   Deux modes, detectes automatiquement a partir de l'URL de playlist :
 
-   Repartition des roles : le serveur PiBoard ne recupere QUE la liste
-   des chaines (question de CORS, voir server/iptv.js) ; les flux video
-   sont lus directement par le navigateur, sans transiter par le Pi --
-   relayer de la video le mettrait a genoux.
+   - XTREAM CODES (le cas des plateformes IPTV par abonnement,
+     identifiant + mot de passe dans l'URL) : navigation a plusieurs
+     niveaux -- Direct / Films / Series, puis categories (ex. "France
+     HD|OTT"), puis la liste des flux. Les series ont un niveau
+     supplementaire (episodes par saison). C'est ce que gerent
+     nativement SmartIPTV, TiviMate, IPTV Smarters.
+
+   - M3U SIMPLE (une playlist statique, ex. les listes en clair du
+     projet IPTV-org) : liste plate avec recherche et filtre par
+     categorie -- le comportement d'origine de ce widget.
+
+   Repartition des roles : le serveur PiBoard ne recupere QUE les
+   listes (categories, flux) -- question de CORS, voir server/iptv.js.
+   Les flux video eux-memes sont lus directement par le navigateur,
+   sans transiter par le Pi (relayer de la video le mettrait a genoux).
 
    Lecture HLS via hls.js, sauf sur les navigateurs qui savent lire le
    HLS nativement (Safari, iOS), ou l'element <video> suffit et donne un
-   meilleur resultat.
+   meilleur resultat. Les films (VOD) dans un format que le navigateur
+   ne sait pas lire nativement (Matroska/.mkv, tres courant) sont
+   signales avant lecture plutot que d'echouer silencieusement.
 
-   Reads an M3U playlist (VLC/Kodi's standard format) and plays a channel
-   in the tile. Two alternating views: the LIST (search + category
-   filter) and the PLAYER.
+   Two modes, auto-detected from the playlist URL:
 
-   Division of labour: the PiBoard server ONLY fetches the channel list
-   (a CORS matter, see server/iptv.js); video streams are read directly
-   by the browser, without going through the Pi -- relaying video would
-   bring it to its knees.
+   - XTREAM CODES (subscription IPTV platforms, username + password in
+     the URL): multi-level navigation -- Live / Movies / Series, then
+     categories (e.g. "France HD|OTT"), then the stream list. Series
+     have an extra level (episodes by season). This is what SmartIPTV,
+     TiviMate and IPTV Smarters natively handle.
+
+   - PLAIN M3U (a static playlist, e.g. the IPTV-org project's
+     free-to-air lists): flat list with search and category filter --
+     this widget's original behaviour.
+
+   Division of labour: the PiBoard server ONLY fetches the lists
+   (categories, streams) -- a CORS matter, see server/iptv.js. The video
+   streams themselves are read directly by the browser, without going
+   through the Pi (relaying video would bring it to its knees).
 
    HLS playback via hls.js, except on browsers that read HLS natively
-   (Safari, iOS), where the plain <video> element is enough and performs
-   better. */
+   (Safari, iOS), where the plain <video> element performs better.
+   Movies (VOD) in a format the browser can't read natively
+   (Matroska/.mkv, very common) are flagged before playback rather than
+   failing silently. */
 (function () {
   "use strict";
 
@@ -32,20 +53,25 @@
   }
   function escapeAttr(s) { return escapeHtml(s).replace(/"/g, "&quot;"); }
 
-  // Recherche insensible aux accents, comme la recherche de l'aide : une
-  // liste de chaines melange volontiers "Télé", "TELE" et "Tele".
-  // Accent-insensitive search, like the help's: a channel list happily
-  // mixes "Télé", "TELE" and "Tele".
+  // Recherche insensible aux accents, comme la recherche de l'aide.
+  // Accent-insensitive search, like the help's.
   function normalize(s) {
     return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
 
+  // Extensions qu'un navigateur sait raisonnablement lire nativement ou
+  // via hls.js. Tout le reste (Matroska/.mkv en tete, tres courant en
+  // VOD) est signale avant lecture plutot que d'echouer sans
+  // explication. Extensions a browser can reasonably read natively or
+  // via hls.js. Everything else (Matroska/.mkv chief among them, very
+  // common for VOD) is flagged before playback rather than failing
+  // without explanation.
+  const BROWSER_FRIENDLY_EXT = new Set(["mp4", "m3u8", "webm", "ogg", "ogv"]);
+
   // hls.js est vendorise (voir la route /vendor/hls du serveur) et
-  // charge une seule fois pour toutes les tuiles, a la premiere lecture
-  // -- inutile de peser 500 Ko au demarrage du tableau si aucune chaine
-  // n'est regardee. hls.js is vendored (see the server's /vendor/hls
-  // route) and loaded once for all tiles, on first playback -- no point
-  // weighing 500 KB at board startup if no channel is ever watched.
+  // charge une seule fois pour toutes les tuiles, a la premiere lecture.
+  // hls.js is vendored (see the server's /vendor/hls route) and loaded
+  // once for all tiles, on first playback.
   let hlsLoader = null;
   function loadHls() {
     if (window.Hls) return Promise.resolve(window.Hls);
@@ -60,26 +86,34 @@
     return hlsLoader;
   }
 
+  const SOURCES = [
+    { key: "live", icon: "📡" },
+    { key: "vod", icon: "🎬" },
+    { key: "series", icon: "🎞" }
+  ];
+
   class IptvWidget {
     constructor(ctx) {
       this.ctx = ctx;
+      this.mode = null; // "xtream" | "flat", determine au chargement
+      // -- mode M3U simple --
       this.channels = [];
       this.groups = [];
       this.filterGroup = "";
+      // -- mode Xtream --
+      this.xCategories = null; // { live:[], vod:[], series:[] }
+      this.xSource = null; // "live" | "vod" | "series"
+      this.xCategory = null; // categorie choisie
+      this.xItems = []; // flux/films/series de la categorie choisie
+      this.xSeries = null; // serie choisie (navigation episodes)
+      this.xSeasons = [];
+      // -- commun --
       this.search = "";
-      this.current = null; // chaine en cours de lecture / channel currently playing
+      this.current = null; // element en cours de lecture
       this.hls = null;
-      this.view = "list"; // "list" ou "player"
+      this.view = "loading";
     }
 
-    /* video.play() renvoie une promesse dans les navigateurs modernes,
-       mais la specification autorise undefined (navigateurs anciens, et
-       certains environnements de test) : appeler .catch() dessus sans
-       verifier fait tomber la tuile. Enveloppe donc systematiquement.
-       video.play() returns a promise in modern browsers, but the spec
-       allows undefined (older browsers, and some test environments):
-       calling .catch() on it unguarded takes the tile down. So it's
-       always wrapped. */
     safePlay(video) {
       let p;
       try { p = video.play(); } catch (e) { p = null; }
@@ -88,14 +122,11 @@
       }
     }
 
-    // Cle d'etat propre a CETTE tuile : deux tuiles Chaines TV cote a
-    // cote gardent chacune leur derniere chaine. State key specific to
-    // THIS tile: two side-by-side TV tiles each keep their own last
-    // channel.
+    // Cle d'etat propre a CETTE tuile. State key specific to THIS tile.
     stateKey() { return "iptv-last-" + this.ctx.instanceId; }
 
     async init() {
-      this.renderShell();
+      this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${this.ctx.i18n.t("common.loading")}</div></div>`;
       await this.loadPlaylist();
     }
 
@@ -105,9 +136,7 @@
       this.ctx.settings = settings;
       if (playlistChanged) {
         this.stopPlayback();
-        this.current = null;
-        this.view = "list";
-        this.filterGroup = settings.defaultGroup || "";
+        this.resetNav();
         this.loadPlaylist();
       } else {
         this.render();
@@ -116,43 +145,112 @@
 
     onLangChanged() { this.render(); }
 
-    renderShell() {
-      this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${this.ctx.i18n.t("common.loading")}</div></div>`;
+    resetNav() {
+      this.xSource = null; this.xCategory = null; this.xItems = [];
+      this.xSeries = null; this.xSeasons = [];
+      this.filterGroup = this.ctx.settings.defaultGroup || "";
+      this.search = "";
+      this.current = null;
     }
 
+    /* Point d'entree : essaie Xtream Codes en premier des que l'URL
+       ressemble a une URL Xtream (identifiant + mot de passe en
+       parametres), avec repli automatique sur le M3U simple si ca
+       echoue -- une URL qui ressemble a s'y meprendre sans en etre une
+       reste geree correctement. Entry point: tries Xtream Codes first
+       as soon as the URL looks like an Xtream one (username + password
+       as params), with automatic fallback to plain M3U if that fails --
+       a URL that looks the part without being one is still handled
+       correctly. */
     async loadPlaylist() {
       const s = this.ctx.settings;
       const i18n = this.ctx.i18n;
       if (!s.playlistUrl) {
+        this.mode = null;
         this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${i18n.t("iptv.needConfig")}</div></div>`;
         return;
       }
+
+      const looksXtream = /[?&]username=/.test(s.playlistUrl) && /[?&]password=/.test(s.playlistUrl);
+      if (looksXtream) {
+        try {
+          const res = await fetch("/api/iptv/xtream-categories?url=" + encodeURIComponent(s.playlistUrl));
+          const data = await res.json();
+          if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
+          this.mode = "xtream";
+          this.xCategories = data;
+          this.resetNav();
+          this.view = "xtream-sources";
+          this.render();
+          return;
+        } catch (e) {
+          console.warn("[piboard/iptv] xtream indisponible, repli sur M3U simple", e);
+          // Repli silencieux : beaucoup de fournisseurs generent une URL
+          // avec ces memes noms de parametres sans etre du vrai Xtream.
+          // Silent fallback: many providers generate a URL with these
+          // same parameter names without being genuine Xtream.
+        }
+      }
+
       try {
         const res = await fetch("/api/iptv/playlist?url=" + encodeURIComponent(s.playlistUrl));
         const data = await res.json();
         if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
+        this.mode = "flat";
         this.channels = data.channels || [];
         this.groups = data.groups || [];
         this.truncated = !!data.truncated;
-        this.filterGroup = s.defaultGroup || "";
+        this.resetNav();
+        this.view = "flat-list";
         this.render();
-        if (s.autoplayLast === true && this.channels.length) {
-          // Etat persistant par tuile (voir ctx.api.state dans app.js) :
-          // survit a un rechargement de page, contrairement a une
-          // variable en memoire. Per-tile persistent state (see
-          // ctx.api.state in app.js): survives a page reload, unlike an
-          // in-memory variable.
-          try {
-            const last = await this.ctx.api.state.get(this.stateKey());
-            const found = last ? this.channels.find((c) => c.url === last) : null;
-            if (found) this.play(found);
-          } catch (e) { /* pas d'etat memorise / no stored state */ }
-        }
+        if (s.autoplayLast === true && this.channels.length) await this.tryResumeLast(this.channels);
       } catch (e) {
         console.warn("[piboard/iptv]", e);
+        this.mode = null;
         this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${i18n.t("iptv.playlistError")}</div></div>`;
       }
     }
+
+    async tryResumeLast(candidates) {
+      try {
+        const last = await this.ctx.api.state.get(this.stateKey());
+        const found = last ? candidates.find((c) => c.url === last) : null;
+        if (found) this.play(found);
+      } catch (e) { /* pas d'etat memorise / no stored state */ }
+    }
+
+    render() {
+      const map = {
+        "flat-list": () => this.renderFlatList(),
+        "player": () => this.renderPlayer(),
+        "xtream-sources": () => this.renderXtreamSources(),
+        "xtream-categories": () => this.renderXtreamCategories(),
+        "xtream-items": () => this.renderXtreamItems(),
+        "xtream-episodes": () => this.renderXtreamEpisodes()
+      };
+      (map[this.view] || map["flat-list"])();
+    }
+
+    /* En-tete commun a toutes les vues de navigation (hors lecteur) :
+       bouton retour facultatif + titre + barre de recherche facultative.
+       Common header for every navigation view (except the player):
+       optional back button + title + optional search bar. */
+    navHeaderHtml(title, showBack, showSearch) {
+      const i18n = this.ctx.i18n;
+      return `
+        <div class="pwtv-bar">
+          ${showBack ? `<button type="button" class="pwtv-btn pwtv-navback" title="${i18n.t("iptv.back")}">‹</button>` : ""}
+          <span class="pwtv-title">${escapeHtml(title)}</span>
+        </div>
+        ${showSearch ? `<div class="pwtv-searchbar"><input type="search" class="pwtv-search" placeholder="${i18n.t("iptv.search")}" value="${escapeAttr(this.search)}"></div>` : ""}`;
+    }
+
+    wireNavBack(handler) {
+      const btn = this.ctx.el.querySelector(".pwtv-navback");
+      if (btn) btn.addEventListener("click", handler);
+    }
+
+    /* ---------- Mode M3U simple (inchange) ---------- */
 
     visibleChannels() {
       const q = normalize(this.search);
@@ -163,25 +261,12 @@
       });
     }
 
-    render() {
-      if (this.view === "player" && this.current) this.renderPlayer();
-      else this.renderList();
-    }
-
-    renderList() {
+    renderFlatList() {
       const i18n = this.ctx.i18n;
       const list = this.visibleChannels();
       const groupOpts = [`<option value="">${i18n.t("iptv.allGroups")}</option>`]
         .concat(this.groups.map((g) => `<option value="${escapeAttr(g)}" ${g === this.filterGroup ? "selected" : ""}>${escapeHtml(g)}</option>`))
         .join("");
-
-      const rows = list.length
-        ? list.map((c, i) => `
-            <li class="pwtv-item" data-idx="${i}">
-              ${c.logo ? `<img class="pwtv-logo" src="${escapeAttr(c.logo)}" alt="" loading="lazy">` : `<span class="pwtv-logo pwtv-logo-empty">📺</span>`}
-              <span class="pwtv-name">${escapeHtml(c.name)}</span>
-            </li>`).join("")
-        : `<li class="pwtv-empty">${i18n.t("iptv.noMatch")}</li>`;
 
       this.ctx.el.innerHTML = `
         <div class="pw-iptv">
@@ -190,63 +275,234 @@
             <select class="pwtv-group">${groupOpts}</select>
           </div>
           <div class="pwtv-count">${i18n.t("iptv.channelCount").replace("{n}", list.length)}${this.truncated ? " " + i18n.t("iptv.truncated") : ""}</div>
-          <ul class="pwtv-list">${rows}</ul>
+          <ul class="pwtv-list">${this.itemsHtml(list)}</ul>
         </div>`;
 
       const searchEl = this.ctx.el.querySelector(".pwtv-search");
       searchEl.addEventListener("input", () => {
         this.search = searchEl.value;
-        // Re-rend uniquement la liste, pour ne pas perdre le focus ni le
-        // curseur du champ pendant la saisie. Re-renders only the list,
-        // so the field's focus and caret aren't lost while typing.
-        this.refreshListOnly();
+        this.refreshFlatListOnly();
       });
       this.ctx.el.querySelector(".pwtv-group").addEventListener("change", (e) => {
         this.filterGroup = e.target.value;
-        this.refreshListOnly();
+        this.refreshFlatListOnly();
       });
-      this.wireListClicks();
+      this.wireItemClicks(() => this.visibleChannels(), (chan) => this.play(chan));
     }
 
-    refreshListOnly() {
+    refreshFlatListOnly() {
       const i18n = this.ctx.i18n;
       const list = this.visibleChannels();
       const ul = this.ctx.el.querySelector(".pwtv-list");
       const countEl = this.ctx.el.querySelector(".pwtv-count");
       if (countEl) countEl.textContent = i18n.t("iptv.channelCount").replace("{n}", list.length) + (this.truncated ? " " + i18n.t("iptv.truncated") : "");
       if (!ul) return;
-      ul.innerHTML = list.length
-        ? list.map((c, i) => `
-            <li class="pwtv-item" data-idx="${i}">
-              ${c.logo ? `<img class="pwtv-logo" src="${escapeAttr(c.logo)}" alt="" loading="lazy">` : `<span class="pwtv-logo pwtv-logo-empty">📺</span>`}
-              <span class="pwtv-name">${escapeHtml(c.name)}</span>
-            </li>`).join("")
-        : `<li class="pwtv-empty">${i18n.t("iptv.noMatch")}</li>`;
-      this.wireListClicks();
+      ul.innerHTML = this.itemsHtml(list);
+      this.wireItemClicks(() => this.visibleChannels(), (chan) => this.play(chan));
     }
 
-    wireListClicks() {
-      const ul = this.ctx.el.querySelector(".pwtv-list");
-      if (!ul || ul.dataset.wired === "1") return;
-      ul.dataset.wired = "1";
-      ul.addEventListener("click", (e) => {
-        const li = e.target.closest(".pwtv-item");
-        if (!li) return;
-        e.stopPropagation();
-        const chan = this.visibleChannels()[Number(li.dataset.idx)];
-        if (chan) this.play(chan);
+    /* ---------- Mode Xtream : 1er niveau (Direct / Films / Series) ---------- */
+
+    renderXtreamSources() {
+      const i18n = this.ctx.i18n;
+      const c = this.xCategories;
+      const rows = SOURCES.map((s) => `
+        <li class="pwtv-source" data-source="${s.key}">
+          <span class="pwtv-source-icon">${s.icon}</span>
+          <span class="pwtv-source-name">${i18n.t("iptv.source." + s.key)}</span>
+          <span class="pwtv-source-count">${i18n.t("iptv.categoryCount").replace("{n}", c[s.key].length)}</span>
+        </li>`).join("");
+
+      this.ctx.el.innerHTML = `
+        <div class="pw-iptv">
+          ${this.navHeaderHtml(i18n.t("iptv.sourcesTitle"), false, false)}
+          <ul class="pwtv-list pwtv-sources-list">${rows}</ul>
+        </div>`;
+
+      this.ctx.el.querySelectorAll(".pwtv-source").forEach((li) => {
+        li.addEventListener("click", () => {
+          this.xSource = li.dataset.source;
+          this.search = "";
+          this.view = "xtream-categories";
+          this.render();
+        });
       });
     }
+
+    /* ---------- Mode Xtream : 2e niveau (categories, ex. "France HD|OTT") ---------- */
+
+    renderXtreamCategories() {
+      const i18n = this.ctx.i18n;
+      const cats = this.xCategories[this.xSource] || [];
+      const q = normalize(this.search);
+      const list = q ? cats.filter((c) => normalize(c.name).includes(q)) : cats;
+
+      const rows = list.length
+        ? list.map((c) => `<li class="pwtv-item" data-id="${escapeAttr(c.id)}"><span class="pwtv-name">${escapeHtml(c.name)}</span></li>`).join("")
+        : `<li class="pwtv-empty">${i18n.t("iptv.noMatch")}</li>`;
+
+      this.ctx.el.innerHTML = `
+        <div class="pw-iptv">
+          ${this.navHeaderHtml(i18n.t("iptv.source." + this.xSource), true, true)}
+          <ul class="pwtv-list">${rows}</ul>
+        </div>`;
+
+      this.wireNavBack(() => { this.view = "xtream-sources"; this.search = ""; this.render(); });
+      this.ctx.el.querySelector(".pwtv-search").addEventListener("input", (e) => { this.search = e.target.value; this.renderXtreamCategories(); });
+      this.ctx.el.querySelectorAll(".pwtv-item[data-id]").forEach((li) => {
+        li.addEventListener("click", () => this.openXtreamCategory(list.find((c) => c.id === li.dataset.id)));
+      });
+    }
+
+    async openXtreamCategory(category) {
+      this.xCategory = category;
+      this.search = "";
+      this.view = "xtream-items";
+      this.xItems = null; // null = chargement en cours / null = loading
+      this.render();
+      const s = this.ctx.settings;
+      try {
+        const res = await fetch(`/api/iptv/xtream-streams?url=${encodeURIComponent(s.playlistUrl)}&kind=${this.xSource}&categoryId=${encodeURIComponent(category.id)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
+        this.xItems = data;
+      } catch (e) {
+        console.warn("[piboard/iptv] xtream-streams", e);
+        this.xItems = [];
+        this.xItemsError = true;
+      }
+      if (this.view === "xtream-items") this.render();
+    }
+
+    /* ---------- Mode Xtream : 3e niveau (flux d'une categorie) ---------- */
+
+    renderXtreamItems() {
+      const i18n = this.ctx.i18n;
+      const title = this.xCategory ? this.xCategory.name : "";
+
+      if (this.xItems === null) {
+        this.ctx.el.innerHTML = `
+          <div class="pw-iptv">
+            ${this.navHeaderHtml(title, true, false)}
+            <div class="pwtv-msg">${i18n.t("common.loading")}</div>
+          </div>`;
+        this.wireNavBack(() => { this.view = "xtream-categories"; this.render(); });
+        return;
+      }
+
+      const q = normalize(this.search);
+      const list = q ? this.xItems.filter((it) => normalize(it.name).includes(q)) : this.xItems;
+
+      this.ctx.el.innerHTML = `
+        <div class="pw-iptv">
+          ${this.navHeaderHtml(title, true, true)}
+          ${this.xItemsError ? `<div class="pwtv-msg">${i18n.t("iptv.playlistError")}</div>` : `<ul class="pwtv-list">${this.itemsHtml(list, true)}</ul>`}
+        </div>`;
+
+      this.wireNavBack(() => { this.view = "xtream-categories"; this.search = ""; this.render(); });
+      const searchEl = this.ctx.el.querySelector(".pwtv-search");
+      if (searchEl) searchEl.addEventListener("input", (e) => { this.search = e.target.value; this.renderXtreamItems(); });
+      this.wireItemClicks(() => list, (item) => {
+        if (item.isSeries) this.openXtreamSeries(item);
+        else this.play(item);
+      });
+    }
+
+    /* ---------- Mode Xtream : niveau supplementaire pour les series (episodes) ---------- */
+
+    async openXtreamSeries(series) {
+      this.xSeries = series;
+      this.view = "xtream-episodes";
+      this.xSeasons = null;
+      this.render();
+      const s = this.ctx.settings;
+      try {
+        const res = await fetch(`/api/iptv/xtream-series-info?url=${encodeURIComponent(s.playlistUrl)}&seriesId=${encodeURIComponent(series.id)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
+        this.xSeasons = data.seasons || [];
+      } catch (e) {
+        console.warn("[piboard/iptv] xtream-series-info", e);
+        this.xSeasons = [];
+        this.xSeasonsError = true;
+      }
+      if (this.view === "xtream-episodes") this.render();
+    }
+
+    renderXtreamEpisodes() {
+      const i18n = this.ctx.i18n;
+      const title = this.xSeries ? this.xSeries.name : "";
+
+      if (this.xSeasons === null) {
+        this.ctx.el.innerHTML = `
+          <div class="pw-iptv">
+            ${this.navHeaderHtml(title, true, false)}
+            <div class="pwtv-msg">${i18n.t("common.loading")}</div>
+          </div>`;
+        this.wireNavBack(() => { this.view = "xtream-items"; this.render(); });
+        return;
+      }
+
+      const seasonsHtml = (this.xSeasons || []).map((season) => `
+        <div class="pwtv-season">
+          <div class="pwtv-season-title">${i18n.t("iptv.season")} ${season.season}</div>
+          <ul class="pwtv-list">${this.itemsHtml(season.episodes)}</ul>
+        </div>`).join("");
+
+      this.ctx.el.innerHTML = `
+        <div class="pw-iptv pwtv-episodes-view">
+          ${this.navHeaderHtml(title, true, false)}
+          ${this.xSeasonsError ? `<div class="pwtv-msg">${i18n.t("iptv.playlistError")}</div>` : (this.xSeasons.length ? seasonsHtml : `<div class="pwtv-msg">${i18n.t("iptv.noEpisodes")}</div>`)}
+        </div>`;
+
+      this.wireNavBack(() => { this.view = "xtream-items"; this.render(); });
+      const allEpisodes = [].concat(...(this.xSeasons || []).map((s) => s.episodes));
+      this.wireItemClicks(() => allEpisodes, (ep) => this.play(ep));
+    }
+
+    /* ---------- Rendu et interaction communs aux listes d'elements ---------- */
+
+    itemsHtml(list, showFormatWarning) {
+      const i18n = this.ctx.i18n;
+      if (!list.length) return `<li class="pwtv-empty">${i18n.t("iptv.noMatch")}</li>`;
+      return list.map((c, i) => {
+        const warn = showFormatWarning && c.containerExt && !BROWSER_FRIENDLY_EXT.has(String(c.containerExt).toLowerCase())
+          ? `<span class="pwtv-format-warn" title="${i18n.t("iptv.formatWarning").replace("{ext}", c.containerExt)}">⚠</span>` : "";
+        return `
+          <li class="pwtv-item" data-idx="${i}">
+            ${c.logo ? `<img class="pwtv-logo" src="${escapeAttr(c.logo)}" alt="" loading="lazy">` : `<span class="pwtv-logo pwtv-logo-empty">${c.isSeries ? "🎞" : "📺"}</span>`}
+            <span class="pwtv-name">${escapeHtml(c.name)}</span>
+            ${warn}
+          </li>`;
+      }).join("");
+    }
+
+    wireItemClicks(getList, onPick) {
+      this.ctx.el.querySelectorAll(".pwtv-list").forEach((listEl) => {
+        listEl.addEventListener("click", (e) => {
+          const li = e.target.closest(".pwtv-item");
+          if (!li || li.dataset.idx == null) return;
+          e.stopPropagation();
+          const item = getList()[Number(li.dataset.idx)];
+          if (item) onPick(item);
+        });
+      });
+    }
+
+    /* ---------- Lecteur (commun aux deux modes) ---------- */
 
     renderPlayer() {
       const i18n = this.ctx.i18n;
       const s = this.ctx.settings;
+      const warn = this.current.containerExt && !BROWSER_FRIENDLY_EXT.has(String(this.current.containerExt).toLowerCase())
+        ? `<div class="pwtv-format-banner">${i18n.t("iptv.formatWarning").replace("{ext}", this.current.containerExt)}</div>` : "";
       this.ctx.el.innerHTML = `
         <div class="pw-iptv pwtv-playing">
           <div class="pwtv-video-wrap">
             <video class="pwtv-video" playsinline ${s.startMuted !== false ? "muted" : ""}></video>
             <div class="pwtv-status" hidden></div>
           </div>
+          ${warn}
           <div class="pwtv-controls">
             <button type="button" class="pwtv-btn pwtv-back" title="${i18n.t("iptv.backToList")}">☰</button>
             <span class="pwtv-current">${escapeHtml(this.current.name)}</span>
@@ -255,17 +511,10 @@
         </div>`;
 
       const video = this.ctx.el.querySelector(".pwtv-video");
-      // L'attribut HTML "muted" seul ne suffit pas de facon fiable : la
-      // propriete doit etre fixee en JS pour que les navigateurs
-      // acceptent de lancer la lecture automatiquement (comportement
-      // connu de Chrome et Safari). The HTML "muted" attribute alone
-      // isn't reliably enough: the property must be set in JS for
-      // browsers to allow autoplay (a known Chrome and Safari
-      // behaviour).
       video.muted = s.startMuted !== false;
       this.ctx.el.querySelector(".pwtv-back").addEventListener("click", () => {
         this.stopPlayback();
-        this.view = "list";
+        this.view = this.mode === "xtream" ? (this.xSeries ? "xtream-episodes" : (this.xCategory ? "xtream-items" : "xtream-sources")) : "flat-list";
         this.render();
       });
       const muteBtn = this.ctx.el.querySelector(".pwtv-mute");
@@ -288,11 +537,6 @@
       this.setStatus(i18n.t("iptv.connecting"));
       const capHeight = Number(this.ctx.settings.maxHeight);
 
-      // Safari/iOS lisent le HLS nativement : l'element <video> seul y
-      // donne un meilleur resultat (decodage materiel plus fiable) que
-      // hls.js. Safari/iOS read HLS natively: the plain <video> element
-      // performs better there (more reliable hardware decoding) than
-      // hls.js.
       const nativeHls = video.canPlayType("application/vnd.apple.mpegurl");
       const looksHls = /\.m3u8(\?|$)/i.test(url);
 
@@ -300,22 +544,9 @@
         try {
           const Hls = await loadHls();
           if (!Hls || !Hls.isSupported()) throw new Error("hls unsupported");
-          this.hls = new Hls({
-            // Un tableau de bord n'a pas besoin d'un long tampon : ca
-            // economise memoire et bande passante sur un Pi.
-            // A dashboard doesn't need a long buffer: saves memory and
-            // bandwidth on a Pi.
-            maxBufferLength: 20,
-            capLevelToPlayerSize: false
-          });
+          this.hls = new Hls({ maxBufferLength: 20, capLevelToPlayerSize: false });
           this.hls.on(Hls.Events.MANIFEST_PARSED, () => {
             if (capHeight > 0 && this.hls.levels && this.hls.levels.length) {
-              // Retient la meilleure qualite qui reste sous le plafond
-              // configure -- 1080p met un Pi 4 en difficulte des lors
-              // que le reste du tableau tourne a cote.
-              // Picks the best quality that stays under the configured
-              // cap -- 1080p strains a Pi 4 once the rest of the board
-              // is running alongside.
               let best = -1, bestH = -1;
               this.hls.levels.forEach((lvl, i) => {
                 if (lvl.height && lvl.height <= capHeight && lvl.height > bestH) { best = i; bestH = lvl.height; }
@@ -338,22 +569,17 @@
         }
       }
 
-      // Repli (HLS natif, ou flux direct type MP4/TS progressif).
-      // Fallback (native HLS, or a direct MP4/progressive-TS stream).
       video.src = url;
       video.addEventListener("loadedmetadata", () => this.setStatus(""), { once: true });
       video.addEventListener("error", () => this.setStatus(i18n.t("iptv.streamError")), { once: true });
       this.safePlay(video);
     }
 
-    play(channel) {
+    play(item) {
       this.stopPlayback();
-      this.current = channel;
+      this.current = item;
       this.view = "player";
-      // Memorise la derniere chaine pour l'option "reprendre
-      // automatiquement". Remembers the last channel for the "resume
-      // automatically" option.
-      this.ctx.api.state.put(this.stateKey(), channel.url).catch(() => { /* non bloquant / non-blocking */ });
+      this.ctx.api.state.put(this.stateKey(), item.url).catch(() => { /* non bloquant / non-blocking */ });
       this.renderPlayer();
     }
 
@@ -369,12 +595,10 @@
     }
 
     destroy() {
-      // Essentiel ici : une tuile detruite (changement de disposition,
-      // planification, restauration...) ne doit surtout pas laisser un
-      // flux video tourner en arriere-plan sur un Pi.
-      // Essential here: a destroyed tile (layout change, scheduling,
-      // restore...) must absolutely not leave a video stream running in
-      // the background on a Pi.
+      // Essentiel ici : une tuile detruite ne doit surtout pas laisser
+      // un flux video tourner en arriere-plan sur un Pi. Essential
+      // here: a destroyed tile must absolutely not leave a video stream
+      // running in the background on a Pi.
       this.stopPlayback();
     }
   }

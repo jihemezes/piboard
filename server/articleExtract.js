@@ -195,6 +195,38 @@ async function fetchHtml(url, userAgent, useBrowserHeaders) {
   }
 }
 
+// Signaux reconnaissables d'une page de blocage anti-robot, PAS d'un
+// vrai texte d'article -- confirme par un cas reel (capture d'ecran) :
+// Readability peut extraire une page qui contient a la fois une image
+// legitime (photo d'illustration, legende) ET le message de blocage du
+// site, sans distinction, si les deux se trouvent structurellement au
+// meme endroit que l'article aurait occupe. Sans cette detection, ce
+// message s'affichait comme si c'etait un "apercu partiel" legitime --
+// trompeur et confus. Liste non exhaustive, couvre les formulations les
+// plus courantes (plusieurs fournisseurs anti-bot se ressemblent).
+// Recognizable signals of an anti-bot block page, NOT a real article
+// text -- confirmed by a real case (screenshot): Readability can
+// extract a page that contains both a legitimate image (illustration
+// photo, caption) AND the site's block message, without distinction, if
+// both structurally sit where the article would have. Without this
+// detection, that message displayed as if it were a legitimate "partial
+// preview" -- misleading and confusing. Non-exhaustive list, covers the
+// most common phrasings (several anti-bot vendors sound alike).
+const BOT_BLOCK_SIGNALS = [
+  /identifi[ée] comme automatis[ée]/i,
+  /identified as automated/i,
+  /trafic a [ée]t[ée] identifi[ée]/i,
+  /suspicious activity/i,
+  /verify you are human/i,
+  /v[ée]rifiez que vous [êe]tes humain/i,
+  /request id[^a-z]*:\s*[0-9a-f]{8,}/i, // identifiant de requete type "RID: 1b07ad62..."
+  /\bRID:\s*[0-9a-f]{10,}/i
+];
+
+function looksLikeBotBlockPage(text) {
+  return BOT_BLOCK_SIGNALS.some((re) => re.test(text));
+}
+
 function readabilityParse(html, url) {
   const dom = new JSDOM(html, { url });
   try {
@@ -235,7 +267,20 @@ async function extractArticle(url) {
       // body (a pure block, no page at all) simply yields text too
       // short below, handled normally by the usual threshold.
       const candidate = html ? readabilityParse(html, url) : null;
-      if (candidate && candidate.textContent && candidate.textContent.trim().length >= MIN_TEXT_LENGTH) {
+      const candidateText = candidate && candidate.textContent ? candidate.textContent.trim() : "";
+      // Rejette explicitement si le texte "extrait" est en realite le
+      // message de blocage du site (voir BOT_BLOCK_SIGNALS) : sans ce
+      // controle, une image legitime (photo d'illustration) melangee au
+      // message de blocage franchissait quand meme le seuil de longueur
+      // et s'affichait comme si c'etait un vrai apercu -- confus et
+      // trompeur (confirme par un cas reel).
+      // Explicitly rejects when the "extracted" text is actually the
+      // site's block message (see BOT_BLOCK_SIGNALS): without this
+      // check, a legitimate image (illustration photo) mixed with the
+      // block message still cleared the length threshold and displayed
+      // as if it were a real preview -- confusing and misleading
+      // (confirmed by a real case).
+      if (candidateText.length >= MIN_TEXT_LENGTH && !looksLikeBotBlockPage(candidateText)) {
         article = candidate;
         // Journalise seulement quand le repli a ete necessaire, pour
         // confirmer/infirmer l'hypothese sans bruiter le journal au
@@ -244,6 +289,10 @@ async function extractArticle(url) {
         // day to day.
         if (i > 0) console.warn("[piboard] article-extract: reussi avec le user-agent de repli pour", url);
         break;
+      }
+      if (candidateText && looksLikeBotBlockPage(candidateText)) {
+        console.warn("[piboard] article-extract: page de blocage anti-robot detectee et ecartee pour", url);
+        sawPaywallStatus = true; // le message honnete cote client ("acces refuse") reste approprie / the honest client-side message ("access denied") remains appropriate
       }
       lastError = new Error(status >= 400 ? "upstream status " + status : "no readable content");
     } catch (e) {

@@ -1092,6 +1092,58 @@ app.get("/api/iptv/playlist", async (req, res) => {
   }
 });
 
+/* Xtream Codes : les trois routes suivantes attendent l'URL de
+   playlist TELLE QUE SAISIE dans les reglages (le meme champ que pour
+   un M3U simple) -- le serveur, jamais le widget, en extrait le
+   serveur racine et les identifiants. Voir parseXtreamCredentials()
+   dans server/iptv.js.
+   Xtream Codes: the three routes below expect the playlist URL AS
+   TYPED in the settings (the same field as for a plain M3U) -- the
+   server, never the widget, extracts the root server and credentials
+   from it. See parseXtreamCredentials() in server/iptv.js. */
+function xtreamCredsOr400(req, res) {
+  const creds = iptv.parseXtreamCredentials(String(req.query.url || ""));
+  if (!creds) {
+    res.status(400).json({ error: "not an Xtream-style playlist URL (no username/password found)" });
+    return null;
+  }
+  return creds;
+}
+
+app.get("/api/iptv/xtream-categories", async (req, res) => {
+  const creds = xtreamCredsOr400(req, res);
+  if (!creds) return;
+  try {
+    res.json(await iptv.fetchXtreamCategories(creds.server, creds.username, creds.password));
+  } catch (e) {
+    console.warn("[piboard] iptv xtream-categories echec ->", e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/iptv/xtream-streams", async (req, res) => {
+  const creds = xtreamCredsOr400(req, res);
+  if (!creds) return;
+  try {
+    const kind = String(req.query.kind || "");
+    res.json(await iptv.fetchXtreamStreams(creds.server, creds.username, creds.password, kind, req.query.categoryId));
+  } catch (e) {
+    console.warn("[piboard] iptv xtream-streams echec ->", e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/iptv/xtream-series-info", async (req, res) => {
+  const creds = xtreamCredsOr400(req, res);
+  if (!creds) return;
+  try {
+    res.json(await iptv.fetchXtreamSeriesEpisodes(creds.server, creds.username, creds.password, req.query.seriesId));
+  } catch (e) {
+    console.warn("[piboard] iptv xtream-series-info echec ->", e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
 /* ---------- Statique / static ---------- */
 
 app.use("/vendor/gridstack", express.static(GRIDSTACK_DIST, { maxAge: "7d" }));

@@ -1,6 +1,6 @@
 {
   "id": "rss",
-  "version": "0.3.5",
+  "version": "0.4.0",
   "name": {
     "en": "RSS feed",
     "fr": "Flux RSS"
@@ -27,8 +27,33 @@
       "type": "text",
       "default": "https://www.lemonde.fr/rss/une.xml",
       "label": {
-        "en": "Feed URL",
-        "fr": "URL du flux"
+        "en": "Feed 1: address (.xml)",
+        "fr": "Flux 1 : adresse (.xml)"
+      },
+      "hint": {
+        "en": "Required. Up to 2 more feeds can be added below (\"Additional feeds\") to combine several sources in the same tile, each item tagged with its source.",
+        "fr": "Obligatoire. Jusqu'à 2 flux supplémentaires peuvent être ajoutés plus bas (« Flux supplémentaires ») pour combiner plusieurs sources dans la même tuile, chaque article étant marqué de sa source."
+      },
+      "group": {
+        "en": "Feed",
+        "fr": "Flux"
+      }
+    },
+    {
+      "key": "label1",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Feed 1: short tag (optional)",
+        "fr": "Flux 1 : étiquette courte (facultatif)"
+      },
+      "hint": {
+        "en": "Only used once a 2nd feed is added below (with a single feed, the full source name is shown as a header instead). Leave empty to use the feed's own title — often too long for a compact tag (e.g. \"Le Monde.fr – Actualités et Infos en France et dans le monde\"); a short override like \"Le Monde\" reads much better next to each item.",
+        "fr": "Utilisé seulement dès qu'un 2e flux est ajouté ci-dessous (avec un seul flux, le nom complet de la source reste affiché en en-tête). Laissez vide pour utiliser le titre du flux lui-même — souvent trop long pour une étiquette compacte (ex. « Le Monde.fr – Actualités et Infos en France et dans le monde ») ; une version courte comme « Le Monde » se lit bien mieux à côté de chaque article."
+      },
+      "group": {
+        "en": "Feed",
+        "fr": "Flux"
       }
     },
     {
@@ -48,8 +73,12 @@
       "type": "checkbox",
       "default": true,
       "label": {
-        "en": "Show feed title",
-        "fr": "Afficher le titre du flux"
+        "en": "Show the source",
+        "fr": "Afficher la source"
+      },
+      "hint": {
+        "en": "With a single feed: its name as a header above the list. With several feeds combined: a short tag next to each article instead, so you can tell which one it came from.",
+        "fr": "Avec un seul flux : son nom en en-tête au-dessus de la liste. Avec plusieurs flux combinés : une étiquette courte à côté de chaque article à la place, pour savoir de quelle source il provient."
       }
     },
     {
@@ -59,6 +88,74 @@
       "label": {
         "en": "Rotate one headline at a time",
         "fr": "Faire défiler un titre à la fois"
+      }
+    },
+    {
+      "key": "url2",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Feed 2: address (.xml, optional)",
+        "fr": "Flux 2 : adresse (.xml, facultatif)"
+      },
+      "hint": {
+        "en": "Leave empty to not use this slot.",
+        "fr": "Laissez vide pour ne pas utiliser cet emplacement."
+      },
+      "group": {
+        "en": "Additional feeds",
+        "fr": "Flux supplémentaires"
+      }
+    },
+    {
+      "key": "label2",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Feed 2: short tag (optional)",
+        "fr": "Flux 2 : étiquette courte (facultatif)"
+      },
+      "hint": {
+        "en": "Leave empty to use the feed's own title.",
+        "fr": "Laissez vide pour utiliser le titre du flux lui-même."
+      },
+      "group": {
+        "en": "Additional feeds",
+        "fr": "Flux supplémentaires"
+      }
+    },
+    {
+      "key": "url3",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Feed 3: address (.xml, optional)",
+        "fr": "Flux 3 : adresse (.xml, facultatif)"
+      },
+      "hint": {
+        "en": "Leave empty to not use this slot.",
+        "fr": "Laissez vide pour ne pas utiliser cet emplacement."
+      },
+      "group": {
+        "en": "Additional feeds",
+        "fr": "Flux supplémentaires"
+      }
+    },
+    {
+      "key": "label3",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Feed 3: short tag (optional)",
+        "fr": "Flux 3 : étiquette courte (facultatif)"
+      },
+      "hint": {
+        "en": "Leave empty to use the feed's own title.",
+        "fr": "Laissez vide pour utiliser le titre du flux lui-même."
+      },
+      "group": {
+        "en": "Additional feeds",
+        "fr": "Flux supplémentaires"
       }
     },
     {

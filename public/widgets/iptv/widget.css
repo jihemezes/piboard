@@ -18,6 +18,7 @@
 .pwtv-bar {
   flex-shrink: 0;
   display: flex;
+  align-items: center;
   gap: 8px;
   padding: 8px 10px 6px;
 }
@@ -160,3 +161,90 @@
   touch-action: manipulation;
 }
 .pwtv-btn:hover { background: var(--tile-edge); }
+
+/* ---------- Navigation Xtream (sources -> categories -> flux) ----------
+   Barre commune a toutes les vues de navigation, avec bouton retour
+   facultatif -- voir navHeaderHtml() dans widget.js.
+   Common bar for every navigation view, with an optional back button --
+   see navHeaderHtml() in widget.js. */
+.pwtv-navback {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwtv-navback:hover { background: var(--tile-edge); }
+.pwtv-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwtv-searchbar { flex-shrink: 0; padding: 0 10px 6px; }
+.pwtv-searchbar .pwtv-search { width: 100%; }
+
+/* 1er niveau : Direct / Films / Series, chacun avec son compte de
+   categories. First level: Live / Movies / Series, each with its
+   category count. */
+.pwtv-sources-list { padding: 4px 10px; }
+.pwtv-source {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: var(--field-bg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwtv-source:hover { background: color-mix(in srgb, var(--accent) 10%, var(--field-bg)); }
+.pwtv-source:active { background: color-mix(in srgb, var(--accent) 18%, var(--field-bg)); }
+.pwtv-source-icon { flex-shrink: 0; font-size: 22px; }
+.pwtv-source-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+.pwtv-source-count { flex-shrink: 0; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+
+/* Series : regroupees par saison, chacune avec son propre sous-titre.
+   Series: grouped by season, each with its own sub-heading. */
+.pwtv-episodes-view { overflow-y: auto; }
+.pwtv-season-title {
+  padding: 8px 12px 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.pwtv-season .pwtv-list { overflow: visible; }
+
+/* Avertissement de format non lisible nativement par le navigateur
+   (Matroska/.mkv en tete) -- voir BROWSER_FRIENDLY_EXT dans widget.js.
+   Warning for a format the browser can't read natively (Matroska/.mkv
+   chief among them) -- see BROWSER_FRIENDLY_EXT in widget.js. */
+.pwtv-format-warn {
+  flex-shrink: 0;
+  color: #E0A030;
+  font-size: 13px;
+  cursor: help;
+}
+.pwtv-format-banner {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: rgba(224, 160, 48, 0.15);
+  border-top: 1px solid #E0A030;
+  color: var(--text);
+  font-size: 11.5px;
+  text-align: center;
+}

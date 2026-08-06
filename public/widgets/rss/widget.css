@@ -10,6 +10,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Etiquette de source par article, affichee uniquement des que plusieurs
+   flux sont combines dans la meme tuile (voir feedSlots()/render() dans
+   widget.js) -- remplace alors l'en-tete unique, qui n'aurait plus de
+   sens avec des sources melangees.
+   Per-item source tag, shown only once several feeds are combined in
+   the same tile (see feedSlots()/render() in widget.js) -- replaces the
+   single header then, which wouldn't make sense with mixed sources. */
+.pwr-tag {
+  display: inline-block;
+  margin-right: 6px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
 /* Ascenseur : si le nombre d'articles choisi (reglage "Nombre max
    d'articles") depasse ce qui tient dans la hauteur de la tuile, les
    articles en trop restaient jusqu'ici invisibles (overflow: hidden),

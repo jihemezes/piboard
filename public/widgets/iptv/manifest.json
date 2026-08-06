@@ -1,6 +1,6 @@
 {
   "id": "iptv",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "TV channels",
     "fr": "Chaînes TV"
@@ -32,24 +32,30 @@
         "fr": "Adresse de la playlist (.m3u)"
       },
       "hint": {
-        "en": "Any standard M3U playlist you have legitimate access to. The IPTV-org project (iptv-org.github.io) publishes large free-to-air playlists by country and category, which work well here.",
-        "fr": "Toute playlist M3U standard à laquelle vous avez légitimement accès. Le projet IPTV-org (iptv-org.github.io) publie de vastes playlists de chaînes en clair, par pays et par catégorie, qui fonctionnent bien ici."
+        "en": "Either a plain M3U playlist address, or an Xtream Codes link from a subscription IPTV provider (typically containing \"username=\" and \"password=\", e.g. from a \"get.php\" link) — both are auto-detected, no need to pick a mode. The IPTV-org project (iptv-org.github.io) publishes large free-to-air M3U playlists by country and category, which work well here too.",
+        "fr": "Soit une adresse de playlist M3U simple, soit un lien Xtream Codes d'une plateforme IPTV par abonnement (contenant typiquement « username= » et « password= », par ex. depuis un lien « get.php ») — les deux sont détectés automatiquement, pas besoin de choisir un mode. Le projet IPTV-org (iptv-org.github.io) publie de vastes playlists M3U de chaînes en clair par pays et catégorie, qui fonctionnent aussi très bien ici."
       },
-      "group": { "en": "Playlist", "fr": "Playlist" }
+      "group": {
+        "en": "Playlist",
+        "fr": "Playlist"
+      }
     },
     {
       "key": "defaultGroup",
       "type": "text",
       "default": "",
       "label": {
-        "en": "Category shown on opening",
-        "fr": "Catégorie affichée à l'ouverture"
+        "en": "Category shown on opening (simple M3U playlists only)",
+        "fr": "Catégorie affichée à l'ouverture (playlists M3U simples uniquement)"
       },
       "hint": {
-        "en": "Optional. Exact name of a category from the playlist (e.g. \"News\"), to avoid scrolling a very long list every time. Leave empty to show every channel.",
-        "fr": "Facultatif. Nom exact d'une catégorie de la playlist (ex. « News »), pour éviter de faire défiler une très longue liste à chaque fois. Laissez vide pour afficher toutes les chaînes."
+        "en": "Optional, and only applies to a plain M3U playlist (not an Xtream Codes one, auto-detected from the URL — those instead offer full navigation: Live / Movies / Series, then categories). Exact name of a category (e.g. \"News\"), to avoid scrolling a very long list every time.",
+        "fr": "Facultatif, et ne s'applique qu'à une playlist M3U simple (pas à une plateforme Xtream Codes, détectée automatiquement depuis l'URL — celles-ci proposent au contraire une navigation complète : Direct / Films / Séries, puis catégories). Nom exact d'une catégorie (ex. « News »), pour éviter de faire défiler une très longue liste à chaque fois."
       },
-      "group": { "en": "Playlist", "fr": "Playlist" }
+      "group": {
+        "en": "Playlist",
+        "fr": "Playlist"
+      }
     },
     {
       "key": "autoplayLast",
@@ -63,7 +69,10 @@
         "en": "Off by default: a tile that starts playing sound on its own, on a wall display, is rarely what you want.",
         "fr": "Désactivé par défaut : une tuile qui se met à diffuser du son toute seule, sur un écran mural, est rarement souhaitable."
       },
-      "group": { "en": "Playback", "fr": "Lecture" }
+      "group": {
+        "en": "Playback",
+        "fr": "Lecture"
+      }
     },
     {
       "key": "startMuted",
@@ -77,7 +86,10 @@
         "en": "Kept on by default. Browsers also refuse to autoplay a video with sound without a prior interaction — muted playback starts reliably.",
         "fr": "Activé par défaut. Les navigateurs refusent de toute façon de lancer une vidéo avec le son sans interaction préalable — la lecture muette, elle, démarre de façon fiable."
       },
-      "group": { "en": "Playback", "fr": "Lecture" }
+      "group": {
+        "en": "Playback",
+        "fr": "Lecture"
+      }
     },
     {
       "key": "maxHeight",
@@ -88,16 +100,43 @@
         "fr": "Plafond de qualité"
       },
       "options": [
-        { "value": "480", "label": { "en": "480p (lightest)", "fr": "480p (le plus léger)" } },
-        { "value": "720", "label": { "en": "720p (recommended on a Pi)", "fr": "720p (recommandé sur un Pi)" } },
-        { "value": "1080", "label": { "en": "1080p (demanding)", "fr": "1080p (exigeant)" } },
-        { "value": "0", "label": { "en": "No cap (the stream decides)", "fr": "Sans plafond (le flux décide)" } }
+        {
+          "value": "480",
+          "label": {
+            "en": "480p (lightest)",
+            "fr": "480p (le plus léger)"
+          }
+        },
+        {
+          "value": "720",
+          "label": {
+            "en": "720p (recommended on a Pi)",
+            "fr": "720p (recommandé sur un Pi)"
+          }
+        },
+        {
+          "value": "1080",
+          "label": {
+            "en": "1080p (demanding)",
+            "fr": "1080p (exigeant)"
+          }
+        },
+        {
+          "value": "0",
+          "label": {
+            "en": "No cap (the stream decides)",
+            "fr": "Sans plafond (le flux décide)"
+          }
+        }
       ],
       "hint": {
         "en": "Caps the quality picked from streams that offer several. On a Raspberry Pi 4, 720p is the sweet spot: 1080p competes for CPU with the rest of the dashboard.",
         "fr": "Plafonne la qualité retenue parmi celles proposées par le flux. Sur un Raspberry Pi 4, le 720p est le bon compromis : le 1080p se dispute le processeur avec le reste du tableau."
       },
-      "group": { "en": "Playback", "fr": "Lecture" }
+      "group": {
+        "en": "Playback",
+        "fr": "Lecture"
+      }
     }
   ]
 }

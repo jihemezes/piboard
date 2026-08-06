@@ -305,6 +305,49 @@ const IPTV_PLAYLIST_FIXTURE = {
   truncated: false
 };
 
+/* Fixtures Xtream Codes : reproduit exactement le scenario reel signale
+   (categories "France HD|OTT" / "France SD|OTT", trois sources, une
+   serie avec ses episodes, et un film en .mkv pour verifier
+   l'avertissement de format). Xtream Codes fixtures: reproduces the
+   exact real scenario reported ("France HD|OTT" / "France SD|OTT"
+   categories, three sources, a series with its episodes, and a movie in
+   .mkv to check the format warning). */
+const XTREAM_CATEGORIES_FIXTURE = {
+  accountStatus: "Active", expiresAt: "1893456000",
+  live: [{ id: "10", name: "France HD|OTT" }, { id: "11", name: "France SD|OTT" }],
+  vod: [{ id: "20", name: "Films Action" }],
+  series: [{ id: "30", name: "Series FR" }]
+};
+const XTREAM_LIVE_STREAMS_FIXTURE = [
+  { id: "111", name: "France 24", logo: "https://ex.test/f24.png", containerExt: null, url: "https://ex.test/live/user123/pass456/111.m3u8" },
+  { id: "112", name: "TF1", logo: "", containerExt: null, url: "https://ex.test/live/user123/pass456/112.m3u8" }
+];
+const XTREAM_VOD_STREAMS_FIXTURE = [
+  { id: "222", name: "Un Film", logo: "https://ex.test/film.jpg", containerExt: "mkv", url: "https://ex.test/movie/user123/pass456/222.mkv" }
+];
+const XTREAM_SERIES_STREAMS_FIXTURE = [
+  { id: "333", name: "Une Serie", logo: "https://ex.test/serie.jpg", isSeries: true }
+];
+const XTREAM_SERIES_INFO_FIXTURE = {
+  seasons: [{ season: 1, episodes: [{ id: "444", name: "Episode 1", ext: "mp4", url: "https://ex.test/series/user123/pass456/444.mp4" }] }],
+  plot: "Resume de la serie"
+};
+
+/* Second flux, pour la tuile de test multi-flux : un article, plus
+   recent que ceux du flux principal, pour verifier la fusion
+   chronologique. Second feed, for the multi-feed test tile: one item,
+   more recent than the main feed's, to check chronological merging. */
+const RSS_FEED2_XML = `<?xml version="1.0"?>
+<rss><channel>
+<title>Deuxieme Flux Long Nom De Source</title>
+<item>
+<title>Article du second flux, tres recent</title>
+<link>https://example.test/feed2-article1</link>
+<pubDate>Wed, 22 Jul 2026 12:00:00 GMT</pubDate>
+<description>Contenu du second flux.</description>
+</item>
+</channel></rss>`;
+
 const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"][(new Date().getDay() + 1) % 7];
 
 /* Fixtures Courriel : la liste ne porte que des en-tetes (jamais de
@@ -393,10 +436,17 @@ const layout = {
     { id: "t-q", widget: "iptv", x: 8, y: 15, w: 5, h: 4, settings: {
       playlistUrl: "https://ex.test/chaines.m3u", startMuted: true, maxHeight: "720"
     } },
+    { id: "t-r", widget: "iptv", x: 0, y: 19, w: 5, h: 4, settings: {
+      playlistUrl: "http://ex.test/get.php?username=user123&password=pass456&type=m3u_plus", startMuted: true, maxHeight: "720"
+    } },
     { id: "t-p", widget: "clock", x: 4, y: 15, w: 4, h: 4, settings: {
       mode: "digital", showDate: true, showWeekNumber: true, weekNumberConvention: "iso",
       extraZone1Label: "Tokyo", extraZone1Tz: "Asia/Tokyo",
       showNextEvent: true, nextEventIcsUrl: "https://exemple.test/clock-agenda.ics", nextEventDaysAhead: 14
+    } },
+    { id: "t-s", widget: "rss", x: 8, y: 19, w: 4, h: 3, settings: {
+      url: "https://feed.test/rss.xml", label1: "Flux Un", url2: "https://feed2.test/rss.xml", label2: "",
+      maxItems: 10, showSource: true
     } }
   ]
 };
@@ -565,6 +615,21 @@ const dom = new JSDOM(html, {
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
       }
+      if (u.includes("/api/iptv/xtream-categories")) {
+        return json(XTREAM_CATEGORIES_FIXTURE);
+      }
+      if (u.includes("/api/iptv/xtream-streams") && u.includes("kind=live")) {
+        return json(XTREAM_LIVE_STREAMS_FIXTURE);
+      }
+      if (u.includes("/api/iptv/xtream-streams") && u.includes("kind=vod")) {
+        return json(XTREAM_VOD_STREAMS_FIXTURE);
+      }
+      if (u.includes("/api/iptv/xtream-streams") && u.includes("kind=series")) {
+        return json(XTREAM_SERIES_STREAMS_FIXTURE);
+      }
+      if (u.includes("/api/iptv/xtream-series-info")) {
+        return json(XTREAM_SERIES_INFO_FIXTURE);
+      }
       if (u.includes("/api/iptv/playlist")) {
         return json(IPTV_PLAYLIST_FIXTURE);
       }
@@ -643,6 +708,9 @@ const dom = new JSDOM(html, {
       }
       if (u.includes("/api/proxy") && u.includes("feed.test")) {
         return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(RSS_FEED_XML) });
+      }
+      if (u.includes("/api/proxy") && u.includes("feed2.test")) {
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(RSS_FEED2_XML) });
       }
       if (u.includes("/api/proxy") && (u.includes("family.ics") || u.includes("work.ics"))) {
         const target = decodeURIComponent((u.split("url=")[1] || "").split("&")[0]);
@@ -746,10 +814,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 17 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 19 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("17 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 17);
+  assert("19 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 19);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -1027,9 +1095,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   }
 
   console.log("== Flux RSS : article cliquable, popup de lecture nettoyee ==");
+  const rssTileG = document.querySelector('[data-tile-id="t-g"]');
   tries = 0;
-  while (!document.querySelector(".pw-rss .pwr-item") && tries++ < 60) await sleep(50);
-  const rssItems = [...document.querySelectorAll(".pw-rss .pwr-item")];
+  while (!rssTileG.querySelector(".pwr-item") && tries++ < 60) await sleep(50);
+  const rssItems = [...rssTileG.querySelectorAll(".pwr-item")];
   assert("5 articles affiches", rssItems.length === 5);
   const linkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article avec lien");
   const unlinkedItem = rssItems.find((li) => li.querySelector(".pwr-title")?.textContent === "Article sans lien");
@@ -1241,7 +1310,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (18 au total)", document.querySelectorAll(".grid-stack-item").length === 18);
+  assert("tuile ajoutee (20 au total)", document.querySelectorAll(".grid-stack-item").length === 20);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -2077,6 +2146,90 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     await sleep(30);
     assert("retour a la liste : le lecteur est retire (le flux ne tourne plus)", !tvTile.querySelector(".pwtv-video"));
     assert("retour a la liste : les chaines sont de nouveau listees", tvTile.querySelectorAll(".pwtv-item").length === 3);
+  }
+
+  console.log("== Chaines TV (Xtream Codes) : Direct/Films/Series, categories, flux, episodes ==");
+  {
+    const tvTile = document.querySelector('[data-tile-id="t-r"]');
+    tries = 0;
+    while (!tvTile.querySelector(".pwtv-source") && tries++ < 80) await sleep(50);
+
+    assert("URL Xtream detectee : 3 sources proposees (Direct/Films/Series)", tvTile.querySelectorAll(".pwtv-source").length === 3);
+    assert("libelles des sources corrects", (tvTile.textContent || "").includes("Direct") && (tvTile.textContent || "").includes("Films") && (tvTile.textContent || "").includes("Séries"));
+
+    console.log("== Xtream : categories d'une source (noms exacts du cas reel) ==");
+    tvTile.querySelector('.pwtv-source[data-source="live"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("categorie 'France HD|OTT' affichee", (tvTile.textContent || "").includes("France HD|OTT"));
+    assert("categorie 'France SD|OTT' affichee", (tvTile.textContent || "").includes("France SD|OTT"));
+    assert("bouton retour present des le 2e niveau", !!tvTile.querySelector(".pwtv-navback"));
+
+    console.log("== Xtream : flux d'une categorie, puis lecture ==");
+    tvTile.querySelector('.pwtv-item[data-id="10"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (!tvTile.querySelector(".pwtv-item[data-idx]") && tries++ < 80) await sleep(50);
+    assert("chaines de la categorie affichees", (tvTile.textContent || "").includes("France 24") && (tvTile.textContent || "").includes("TF1"));
+    tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("lecture demarree depuis la navigation Xtream", !!tvTile.querySelector(".pwtv-video"));
+    tvTile.querySelector(".pwtv-back").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("retour depuis le lecteur : on revient a la liste des flux de la categorie (pas a la racine)",
+      (tvTile.textContent || "").includes("France 24"));
+
+    console.log("== Xtream : films, avertissement de format non lisible (.mkv) ==");
+    tvTile.querySelector(".pwtv-navback").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    tvTile.querySelector(".pwtv-navback").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    tvTile.querySelector('.pwtv-source[data-source="vod"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    tvTile.querySelector(".pwtv-item[data-id]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (!tvTile.querySelector(".pwtv-item[data-idx]") && tries++ < 80) await sleep(50);
+    assert("avertissement affiche pour un film en .mkv (format non garanti dans un navigateur)", !!tvTile.querySelector(".pwtv-format-warn"));
+
+    console.log("== Xtream : series, navigation vers les episodes ==");
+    tvTile.querySelector(".pwtv-navback").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    tvTile.querySelector(".pwtv-navback").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    tvTile.querySelector('.pwtv-source[data-source="series"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    tvTile.querySelector(".pwtv-item[data-id]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (!tvTile.querySelector(".pwtv-item[data-idx]") && tries++ < 80) await sleep(50);
+    assert("liste des series de la categorie affichee", (tvTile.textContent || "").includes("Une Serie"));
+    tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (!tvTile.querySelector(".pwtv-season") && tries++ < 80) await sleep(50);
+    assert("saison affichee", (tvTile.textContent || "").includes("Saison 1"));
+    assert("episode affiche", (tvTile.textContent || "").includes("Episode 1"));
+    tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("lecture d'un episode demarree", !!tvTile.querySelector(".pwtv-video"));
+  }
+
+  console.log("== Flux RSS : plusieurs flux combines dans la meme tuile ==");
+  {
+    const multiTile = document.querySelector('[data-tile-id="t-s"]');
+    tries = 0;
+    while (!multiTile.querySelector(".pwr-item") && tries++ < 80) await sleep(50);
+
+    assert("articles des DEUX flux presents dans la meme tuile",
+      (multiTile.textContent || "").includes("Article avec lien") && (multiTile.textContent || "").includes("Article du second flux"));
+
+    const titles = [...multiTile.querySelectorAll(".pwr-title")].map((t) => t.textContent);
+    assert("fusion par ordre chronologique : l'article du second flux (22 juillet, le plus recent) arrive en tete",
+      titles[0].includes("Article du second flux"));
+
+    const tags = [...multiTile.querySelectorAll(".pwr-tag")].map((t) => t.textContent);
+    assert("etiquette courte utilisee quand un libelle est fourni ('Flux Un', pas le titre complet du flux)",
+      tags.includes("Flux Un"));
+    assert("etiquette de repli = titre du flux quand aucun libelle n'est fourni pour le 2e flux",
+      tags.includes("Deuxieme Flux Long Nom De Source"));
+    assert("pas d'en-tete de source unique en mode multi-flux (n'aurait plus de sens)",
+      multiTile.querySelector(".pwr-source")?.hidden === true);
   }
 
   console.log("== Sortie du mode edition ==");
