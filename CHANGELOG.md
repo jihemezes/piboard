@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.41.2
+
+- **Correctif *Chaînes TV* : chaînes en direct qui ne démarraient
+  jamais.** Le message « Touchez pour lancer la lecture », affiché
+  quand le navigateur bloque le démarrage automatique, n'avait
+  **aucun gestionnaire de clic** et un `pointer-events: none` en CSS —
+  un texte purement décoratif, cliquer dessus ne faisait littéralement
+  rien. Corrigé : le message est désormais réellement cliquable et
+  relance la lecture, cette fois avec l'interaction que le navigateur
+  exigeait.
+- **Diagnostic *Chaînes TV* : absence de son sur certains flux,
+  expliquée.** Recherché avant de conclure : de nombreuses plateformes
+  IPTV encodent l'audio en AC3/DTS pour la compatibilité avec les box
+  TV, des formats qu'**aucun navigateur ne sait décoder** (restriction
+  de licence) — la vidéo se lit, le son reste silencieux, et aucun
+  bouton n'y peut rien changer. Une pastille ⚠ à côté du bouton son
+  l'indique désormais quand c'est le cas détecté, plutôt que de laisser
+  deviner si la fonctionnalité est cassée. Aucune tentative de
+  transcodage : hors de portée d'un correctif, et disproportionné pour
+  un Raspberry Pi.
+
+  Au passage : une instabilité intermittente préexistante dans la suite
+  de tests (bascule heure/date du widget Sport, dépendante d'une
+  fenêtre de temps réel trop juste) a été rendue plus robuste par
+  sondage répété plutôt qu'une attente fixe — sans rapport direct avec
+  ce correctif, mais aggravée par l'allongement de la suite avec les
+  nouveaux tests ajoutés ici.
+
+---
+
+- **Fix for *TV Channels*: live channels that never started.** The
+  "Tap to start playback" message, shown when the browser blocks
+  automatic startup, had **no click handler at all** and a CSS
+  `pointer-events: none` — purely decorative text, clicking it did
+  literally nothing. Fixed: the message is now genuinely clickable and
+  retries playback, this time with the interaction the browser was
+  asking for.
+- **Diagnostics for *TV Channels*: missing sound on some streams,
+  explained.** Researched before concluding: many IPTV platforms encode
+  audio in AC3/DTS for set-top-box compatibility, formats **no browser
+  can decode** (a licensing restriction) — the video plays, the sound
+  stays silent, and no button can change that. A ⚠ badge next to the
+  sound button now flags it when this is detected, rather than leaving
+  it to guess whether the feature is broken. No transcoding attempted:
+  out of scope for a fix, and disproportionate for a Raspberry Pi.
+
+  Along the way: a pre-existing intermittent flakiness in the test
+  suite (the Sport widget's time/date toggle, dependent on too tight a
+  real-time window) was made more robust via repeated polling rather
+  than a fixed wait — unrelated to this fix directly, but worsened by
+  the suite growing longer with the new tests added here.
+
 ## 1.41.1
 
 - **Correctif de performance : démarrage lent sous Windows, signalé sur

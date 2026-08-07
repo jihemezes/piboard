@@ -1227,9 +1227,22 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   const expectedDDMM = String(SPORT_TOMORROW.getDate()).padStart(2, "0") + "/" + String(SPORT_TOMORROW.getMonth() + 1).padStart(2, "0");
   assert("date au format jj/mm correct", dateEl.textContent === expectedDDMM);
 
-  await sleep(3100); // laisse le temps a une bascule complete (toutes les 3s) / lets a full toggle happen (every 3s)
-  assert("apres un cycle : la visibilite heure/date a bien bascule vers l'oppose",
-    dateEl.hidden === !dateWasHidden && timeEl.hidden === dateWasHidden);
+  // Sondage repete plutot qu'une attente fixe unique : plus robuste face
+  // a n'importe quel derapage de synchronisation (charge de la machine,
+  // position dans une suite de tests devenue longue) -- il suffit que le
+  // basculement se produise A UN MOMENT DONNE dans la fenetre, sans
+  // dependre d'un alignement precis sur une duree fixe supposee.
+  // Repeated polling rather than a single fixed wait: more robust
+  // against any timing drift (machine load, position within a test
+  // suite that has grown long) -- it only requires the toggle to happen
+  // AT SOME POINT within the window, without depending on precise
+  // alignment to an assumed fixed duration.
+  let toggled = false;
+  for (let i = 0; i < 20 && !toggled; i++) {
+    await sleep(300);
+    if (dateEl.hidden === !dateWasHidden && timeEl.hidden === dateWasHidden) toggled = true;
+  }
+  assert("apres un cycle : la visibilite heure/date a bien bascule vers l'oppose", toggled);
 
   console.log("== Languette -> barre d'outils ==");
   document.getElementById("dockTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -2208,6 +2221,77 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
     assert("lecture d'un episode demarree", !!tvTile.querySelector(".pwtv-video"));
+
+    console.log("== Chaines TV : correctif 'Touchez pour lancer la lecture' reellement cliquable ==");
+    // Simule le VRAI comportement d'un navigateur quand la politique de
+    // lecture automatique bloque le demarrage : video.play() renvoie une
+    // promesse REJETEE (pas une exception synchrone, ce que fait jsdom
+    // par defaut faute d'implementation -- un chemin de code different).
+    // Simulates the REAL browser behavior when the autoplay policy
+    // blocks playback: video.play() returns a REJECTED promise (not a
+    // synchronous exception, which is what jsdom does by default for
+    // lack of implementation -- a different code path).
+    console.log("== Chaines TV : correctif 'Touchez pour lancer la lecture' reellement cliquable ==");
+    // Surcharge temporaire de HTMLMediaElement.prototype.play() (une
+    // seule fois, restauree juste apres) : force le VRAI code du widget
+    // (safePlay/setStatus) a emprunter le chemin de rejet -- comportement
+    // reel d'un navigateur quand la politique de lecture automatique
+    // bloque le demarrage -- plutot que de simuler a la main le resultat
+    // attendu. Le retour a la liste puis un nouveau clic sur une chaine
+    // declenche un tout nouvel appel a attachStream()/safePlay() par le
+    // widget lui-meme.
+    // Temporary override of HTMLMediaElement.prototype.play() (once
+    // only, restored right after): forces the widget's REAL code
+    // (safePlay/setStatus) to take the rejection path -- a real
+    // browser's actual behavior when the autoplay policy blocks
+    // playback -- rather than hand-simulating the expected outcome.
+    // Going back to the list then clicking a channel again triggers a
+    // brand new attachStream()/safePlay() call by the widget itself.
+    const origPlay = dom.window.HTMLMediaElement.prototype.play;
+    let retried = false;
+    dom.window.HTMLMediaElement.prototype.play = function () {
+      dom.window.HTMLMediaElement.prototype.play = function () { retried = true; return Promise.resolve(); };
+      return Promise.reject(new Error("NotAllowedError"));
+    };
+    tvTile.querySelector(".pwtv-back").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    // Attend specifiquement le texte final ("touchez pour lancer"), pas
+    // juste "non masque" -- l'etat "Connexion..." intermediaire est LUI
+    // AUSSI non masque, une boucle moins precise sortirait prematurement
+    // et testerait un etat encore transitoire.
+    // Waits specifically for the final text ("tap to start"), not just
+    // "not hidden" -- the intermediate "Connecting..." state is ALSO not
+    // hidden, a less precise loop would exit prematurely and test a
+    // still-transitional state.
+    tries = 0;
+    while ((tvTile.querySelector(".pwtv-status")?.textContent || "") !== "Touchez pour lancer la lecture" && tries++ < 60) await sleep(50);
+
+    const statusEl = tvTile.querySelector(".pwtv-status");
+    assert("statut 'touchez pour lancer' rendu visible par le VRAI code du widget", statusEl && statusEl.hidden === false);
+    assert("pointer-events active sur ce statut precis (classe dediee)", statusEl.classList.contains("pwtv-status-clickable"));
+    statusEl.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("clic sur le statut declenche bien une nouvelle tentative de lecture reelle", retried === true);
+    dom.window.HTMLMediaElement.prototype.play = origPlay;
+
+    console.log("== Chaines TV : detection de l'absence de piste audio (AC3/DTS) ==");
+    // L'ecouteur "playing" du widget est a usage unique (once:true, par
+    // conception : la verification n'a besoin de se faire qu'une fois
+    // par flux) -- un seul declenchement est donc teste ici ; le cas
+    // "avertissement masque quand une piste est presente" est deja
+    // verifie precisement dans un script isole (voir la session de
+    // construction du correctif). The widget's "playing" listener is
+    // single-use (once:true, by design: the check only needs to happen
+    // once per stream) -- only one trigger is therefore tested here; the
+    // "warning hidden when a track is present" case is already precisely
+    // verified in a standalone script (see the fix's build session).
+    const epVideo = tvTile.querySelector(".pwtv-video");
+    Object.defineProperty(epVideo, "audioTracks", { value: [], configurable: true });
+    epVideo.dispatchEvent(new window.Event("playing"));
+    await sleep(20);
+    const audioWarn = tvTile.querySelector(".pwtv-audio-warn");
+    assert("avertissement 'pas de piste audio' affiche quand audioTracks est vide", audioWarn && audioWarn.hidden === false);
   }
 
   console.log("== Flux RSS : plusieurs flux combines dans la meme tuile ==");

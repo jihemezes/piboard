@@ -129,6 +129,19 @@
   text-align: center;
   pointer-events: none;
 }
+/* Statut reellement cliquable (voir setStatus() dans widget.js) --
+   typiquement l'invite "Touchez pour lancer la lecture", quand la
+   politique de lecture automatique du navigateur a bloque le demarrage
+   sans interaction prealable. Genuinely clickable status (see
+   setStatus() in widget.js) -- typically the "Tap to start playback"
+   prompt, when the browser's autoplay policy blocked starting without
+   prior interaction. */
+.pwtv-status-clickable {
+  pointer-events: auto;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+}
 
 .pwtv-controls {
   flex-shrink: 0;
@@ -161,6 +174,16 @@
   touch-action: manipulation;
 }
 .pwtv-btn:hover { background: var(--tile-edge); }
+/* Piste audio absente (voir checkAudioTrack() dans widget.js) --
+   typiquement un flux encode en AC3/DTS, qu'aucun navigateur ne sait
+   decoder. Missing audio track (see checkAudioTrack() in widget.js) --
+   typically a stream encoded in AC3/DTS, which no browser can decode. */
+.pwtv-audio-warn {
+  flex-shrink: 0;
+  color: #E0A030;
+  font-size: 14px;
+  cursor: help;
+}
 
 /* ---------- Navigation Xtream (sources -> categories -> flux) ----------
    Barre commune a toutes les vues de navigation, avec bouton retour

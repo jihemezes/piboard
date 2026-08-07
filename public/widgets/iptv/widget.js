@@ -118,7 +118,22 @@
       let p;
       try { p = video.play(); } catch (e) { p = null; }
       if (p && typeof p.catch === "function") {
-        p.catch(() => this.setStatus(this.ctx.i18n.t("iptv.tapToPlay")));
+        p.catch(() => {
+          // "Touchez pour lancer la lecture" doit etre une VRAIE
+          // invite cliquable, pas un simple texte : un clic utilisateur
+          // est justement ce qui satisfait la politique de lecture
+          // automatique du navigateur, refusee jusqu'ici (video.play()
+          // rejetee sans interaction prealable). Sans ce bouclage, le
+          // message s'affichait indefiniment sans aucun moyen de
+          // relancer la lecture -- signale sur les chaines en direct.
+          // "Tap to start playback" needs to be a REAL clickable
+          // prompt, not plain text: a user click is exactly what
+          // satisfies the browser's autoplay policy, rejected until now
+          // (video.play() refused without prior interaction). Without
+          // this loop-back, the message stayed on screen forever with
+          // no way to actually retry -- reported on live channels.
+          this.setStatus(this.ctx.i18n.t("iptv.tapToPlay"), () => this.safePlay(video));
+        });
       }
     }
 
@@ -506,6 +521,7 @@
           <div class="pwtv-controls">
             <button type="button" class="pwtv-btn pwtv-back" title="${i18n.t("iptv.backToList")}">☰</button>
             <span class="pwtv-current">${escapeHtml(this.current.name)}</span>
+            <span class="pwtv-audio-warn" hidden>⚠</span>
             <button type="button" class="pwtv-btn pwtv-mute">${s.startMuted !== false ? "🔇" : "🔊"}</button>
           </div>
         </div>`;
@@ -525,17 +541,38 @@
       this.attachStream(video, this.current.url);
     }
 
-    setStatus(text) {
+    /* onRetry, si fourni, rend le statut reellement cliquable
+       (pointer-events active uniquement dans ce cas -- un statut purement
+       informatif comme "Connexion..." reste traversable au clic, comme
+       avant). onRetry, if provided, makes the status genuinely clickable
+       (pointer-events enabled only in that case -- a purely informational
+       status like "Connecting..." stays click-through, as before). */
+    setStatus(text, onRetry) {
       const el = this.ctx.el.querySelector(".pwtv-status");
       if (!el) return;
       el.textContent = text || "";
       el.hidden = !text;
+      el.classList.toggle("pwtv-status-clickable", !!onRetry);
+      if (onRetry) {
+        el.onclick = (e) => { e.stopPropagation(); onRetry(); };
+      } else {
+        el.onclick = null;
+      }
     }
 
     async attachStream(video, url) {
       const i18n = this.ctx.i18n;
       this.setStatus(i18n.t("iptv.connecting"));
       const capHeight = Number(this.ctx.settings.maxHeight);
+      // "playing" (lecture reellement demarree) plutot que
+      // "loadedmetadata" : l'enumeration des pistes audio par le
+      // navigateur peut legerement retarder sur les seules metadonnees.
+      // Commun aux deux chemins de lecture ci-dessous (hls.js et natif).
+      // "playing" (playback actually started) rather than
+      // "loadedmetadata": the browser's audio track enumeration can lag
+      // slightly behind bare metadata. Common to both playback paths
+      // below (hls.js and native).
+      video.addEventListener("playing", () => this.checkAudioTrack(video), { once: true });
 
       const nativeHls = video.canPlayType("application/vnd.apple.mpegurl");
       const looksHls = /\.m3u8(\?|$)/i.test(url);
@@ -573,6 +610,39 @@
       video.addEventListener("loadedmetadata", () => this.setStatus(""), { once: true });
       video.addEventListener("error", () => this.setStatus(i18n.t("iptv.streamError")), { once: true });
       this.safePlay(video);
+    }
+
+    /* Verifie, une fois la lecture demarree, qu'une piste audio
+       DECODABLE par le navigateur a bien ete trouvee. La plupart des
+       fournisseurs IPTV encodent l'audio en AC3/DTS (compatibilite avec
+       les box TV et televiseurs) -- des formats qu'AUCUN navigateur ne
+       sait decoder (restriction de licence, verifie par recherche), meme
+       si la video elle-meme (H.264) se lit sans probleme. Le bouton
+       muet/son n'y change rien : il n'y a tout simplement aucun flux
+       audio exploitable qui arrive jusqu'au navigateur. Le signaler
+       honnetement plutot que de laisser deviner si la fonctionnalite est
+       cassee. HTMLMediaElement.audioTracks est une extension propre a
+       Chromium, mais ce projet ne vise que des navigateurs Chromium
+       (kiosque Pi, Electron) -- fiable dans ce contexte precis.
+       Checks, once playback has started, that a browser-DECODABLE audio
+       track was actually found. Most IPTV providers encode audio in
+       AC3/DTS (compatibility with set-top boxes and TVs) -- formats NO
+       browser can decode (a licensing restriction, verified by
+       research), even though the video itself (H.264) plays fine. The
+       mute/sound button changes nothing about that: there simply is no
+       usable audio stream reaching the browser. Reported honestly rather
+       than leaving it to guess whether the feature is broken.
+       HTMLMediaElement.audioTracks is a Chromium-specific extension, but
+       this project only targets Chromium browsers (Pi kiosk, Electron)
+       -- reliable in this specific context. */
+    checkAudioTrack(video) {
+      const i18n = this.ctx.i18n;
+      const el = this.ctx.el.querySelector(".pwtv-audio-warn");
+      if (!el) return;
+      const tracks = video.audioTracks;
+      const hasAudio = !tracks || tracks.length > 0; // API absente : ne pas affirmer a tort / API absent: don't wrongly assert
+      el.hidden = hasAudio;
+      el.title = i18n.t("iptv.noAudioTrack");
     }
 
     play(item) {
