@@ -636,7 +636,24 @@
             console.warn("[piboard/iptv] hls", data.type, data.details);
             this.setStatus(i18n.t("iptv.streamError"));
           });
-          this.hls.loadSource(url);
+          // Passe par le relais serveur (voir server/iptvHlsProxy.js) :
+          // hls.js recupere le manifeste ET chaque segment via des
+          // requetes JavaScript, soumises au CORS -- contrairement a la
+          // lecture native (<video src>, utilisee pour les films et
+          // series), qui n'y est pas soumise. Sans ce relais, les
+          // chaines en direct ne demarrent jamais, les panneaux IPTV
+          // n'envoyant pas d'en-tetes CORS (confirme par diagnostic :
+          // ERR_BLOCKED_BY_RESPONSE.NotSameOrigin puis 405 sur les
+          // segments).
+          // Goes through the server relay (see server/iptvHlsProxy.js):
+          // hls.js fetches the manifest AND every segment via JavaScript
+          // requests, subject to CORS -- unlike native playback
+          // (<video src>, used for movies and series), which isn't
+          // subject to it. Without this relay, live channels never
+          // start, IPTV panels not sending CORS headers (confirmed by
+          // diagnosis: ERR_BLOCKED_BY_RESPONSE.NotSameOrigin then 405 on
+          // segments).
+          this.hls.loadSource("/api/iptv/hls-proxy?url=" + encodeURIComponent(url));
           this.hls.attachMedia(video);
           return;
         } catch (e) {

@@ -52,6 +52,7 @@ const astronomy = require("./astronomy");
 const backups = require("./backups");
 const iptv = require("./iptv");
 const iptvAudio = require("./iptvAudio");
+const iptvHlsProxy = require("./iptvHlsProxy");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -1083,6 +1084,17 @@ app.post("/api/backups/import", backupUpload.single("file"), (req, res) => {
    de CORS) ; les flux video sont lus directement par le navigateur.
    See server/iptv.js. Only the LIST goes through the server (a CORS
    matter); the video streams are read directly by the browser. */
+/* Relais HLS (voir server/iptvHlsProxy.js) : contourne le blocage CORS
+   du navigateur sur les manifestes et segments des flux en direct --
+   necessaire, pas facultatif, ces flux ne demarrant simplement jamais
+   sans lui. HLS relay (see server/iptvHlsProxy.js): works around the
+   browser's CORS block on live streams' manifests and segments --
+   necessary, not optional, these streams simply never starting
+   without it. */
+app.get("/api/iptv/hls-proxy", async (req, res) => {
+  await iptvHlsProxy.handleProxyRequest(String(req.query.url || ""), res);
+});
+
 app.get("/api/iptv/playlist", async (req, res) => {
   const target = String(req.query.url || "");
   try {

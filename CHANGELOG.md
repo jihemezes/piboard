@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.43.0
+
+- **Correctif *Chaînes TV* : les chaînes en direct ne démarraient
+  jamais — cause identifiée précisément grâce à la console de
+  débogage** (`ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`, puis `405` sur
+  les segments). Ce n'était pas un problème propre à Windows : hls.js
+  récupère le manifeste **et** chaque segment via des requêtes
+  JavaScript (XHR), soumises au CORS — contrairement à la lecture
+  native (`<video src>`, utilisée pour les films et séries), qui n'y
+  est pas soumise. Les plateformes IPTV, conçues pour VLC et les box
+  TV, n'envoient jamais l'autorisation que le navigateur exige pour ce
+  type de requête : une chaîne en direct ne pouvait donc **jamais**
+  démarrer, sur aucune plateforme, quel que soit le fournisseur.
+
+  **Relais HLS** ajouté côté serveur : le manifeste est réécrit pour
+  que chaque segment — et la clé de déchiffrement AES-128 le cas
+  échéant — repasse par le PiBoard, avec l'en-tête d'autorisation que
+  le navigateur exige. Aucun décodage ni réencodage : un simple relais
+  d'octets, vérifié identique bit à bit à l'original. Gère aussi les
+  manifestes maîtres multi-débit (plusieurs qualités) et les segments
+  hébergés sur un domaine différent de celui du manifeste (CDN).
+
+  Nécessaire, pas facultatif : sans ce relais, cette fonctionnalité,
+  déjà annoncée dans le widget, ne fonctionnait tout simplement jamais.
+
+---
+
+- **Fix for *TV Channels*: live channels never started — cause
+  precisely identified thanks to the debug console**
+  (`ERR_BLOCKED_BY_RESPONSE.NotSameOrigin`, then `405` on segments).
+  This wasn't a Windows-specific problem: hls.js fetches the manifest
+  **and** every segment via JavaScript requests (XHR), subject to CORS
+  — unlike native playback (`<video src>`, used for movies and series),
+  which isn't subject to it. IPTV platforms, built for VLC and set-top
+  boxes, never send the authorization the browser requires for this
+  kind of request: a live channel could therefore **never** start, on
+  any platform, whichever provider.
+
+  **HLS relay** added server-side: the manifest is rewritten so every
+  segment — and the AES-128 decryption key where applicable — routes
+  back through the PiBoard, with the authorization header the browser
+  requires. No decoding or re-encoding: a plain byte relay, verified
+  bit-identical to the original. Also handles multi-bitrate master
+  playlists (several qualities) and segments hosted on a different
+  domain than the manifest (a CDN).
+
+  Necessary, not optional: without this relay, this feature, already
+  advertised in the widget, simply never worked at all.
+
 ## 1.42.2
 
 - **Correctif *Chaînes TV* : le message « Touchez pour lancer »
