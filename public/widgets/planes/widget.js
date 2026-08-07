@@ -10,6 +10,80 @@
 (function () {
   "use strict";
 
+  /* Echappement HTML : noms de villes, d'exploitants et de modeles
+     viennent de bases communautaires externes -- jamais injectes bruts
+     dans le DOM. HTML escaping: city, operator and model names come
+     from external community databases -- never injected raw into the
+     DOM. */
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+  function escapeAttr(s) { return escapeHtml(s).replace(/"/g, "&quot;"); }
+
+  /* Distance en km entre deux points (formule de haversine).
+     Distance in km between two points (haversine formula). */
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const toRad = (d) => d * Math.PI / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = Math.sin(dLat / 2) ** 2
+      + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+    return 2 * R * Math.asin(Math.min(1, Math.sqrt(a)));
+  }
+
+  /* Ecart, en km, entre le trajet annonce et la position REELLE de
+     l'avion : somme des distances avion->depart et avion->arrivee, moins
+     la distance directe depart->arrivee. Vaut ~0 quand l'avion est
+     effectivement sur son trajet, et grandit vite des qu'il s'en ecarte
+     (test dit "de l'ellipse" -- gere naturellement le cas d'un avion
+     situe au-dela de l'une des deux extremites, contrairement a une
+     simple distance a la trajectoire).
+
+     Pourquoi ce controle : la base associe un indicatif de vol a UN
+     trajet, de facon statique. Or un meme indicatif est reutilise d'un
+     jour a l'autre, parfois pour des liaisons differentes, et la base
+     peut simplement etre datee ou erronee. Sans verification, un trajet
+     manifestement impossible etait presente comme un fait -- signale
+     par un cas concret : un "Baden-Baden -> Munich" affiche pour un
+     avion survolant Toulouse, soit plus de 1400 km de detour.
+
+     Gap, in km, between the announced route and the aircraft's ACTUAL
+     position: sum of the aircraft->origin and aircraft->destination
+     distances, minus the direct origin->destination distance. It's ~0
+     when the aircraft really is on its route, and grows fast as soon as
+     it strays (the so-called "ellipse test" -- naturally handles an
+     aircraft sitting beyond either endpoint, unlike a plain
+     distance-to-path).
+
+     Why this check: the database maps a flight callsign to ONE route,
+     statically. But the same callsign gets reused from day to day,
+     sometimes for different legs, and the database can simply be stale
+     or wrong. Without verification, a clearly impossible route was
+     presented as fact -- reported via a concrete case: a "Baden-Baden
+     -> Munich" shown for an aircraft flying over Toulouse, i.e. more
+     than 1400 km of detour. */
+  function routeDetourKm(planeLat, planeLon, origin, destination) {
+    const oLat = Number(origin.latitude), oLon = Number(origin.longitude);
+    const dLat = Number(destination.latitude), dLon = Number(destination.longitude);
+    if (![oLat, oLon, dLat, dLon].every(Number.isFinite)) return null; // coordonnees absentes : pas de verdict / missing coordinates: no verdict
+    const direct = haversineKm(oLat, oLon, dLat, dLon);
+    const viaPlane = haversineKm(planeLat, planeLon, oLat, oLon)
+      + haversineKm(planeLat, planeLon, dLat, dLon);
+    return viaPlane - direct;
+  }
+
+  /* Seuil de tolerance, genereux a dessein : un avion devie par la
+     meteo, un circuit d'attente ou un deroutement reste legitimement a
+     quelques centaines de km de sa route directe. On ne veut signaler
+     que l'incoherence FRANCHE, pas jeter le doute sur des trajets
+     valides.
+     Deliberately generous tolerance threshold: an aircraft diverted by
+     weather, a holding pattern or a reroute legitimately stays a few
+     hundred km off its direct path. Only BLATANT inconsistency should
+     be flagged, without casting doubt on valid routes. */
+  const ROUTE_DETOUR_TOLERANCE_KM = 500;
+
   const SOURCES = {
     adsblol: (lat, lon, radiusNm) => `https://api.adsb.lol/v2/point/${lat}/${lon}/${radiusNm}`,
     // adsb.fi : l'ancien point d'acces "v2/lat/.../lon/.../dist/..." est
@@ -413,57 +487,158 @@
        flights will have no result. */
     async showRoute(plane, marker) {
       const i18n = this.ctx.i18n;
-      const popup = L.popup({ closeButton: true, maxWidth: 230, className: "pwp-popup-wrap" })
+      const popup = L.popup({ closeButton: true, maxWidth: 260, className: "pwp-popup-wrap" })
         .setLatLng(marker.getLatLng())
         .setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("common.loading")}</span>`))
         .openOn(this.map);
 
-      if (!plane.flight) {
-        popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.noCallsign")}</span>`));
+      // Les deux recherches sont lancees EN PARALLELE et sont
+      // independantes : le trajet a besoin d'un indicatif de vol (absent
+      // de nombreux appareils), tandis que les infos avion se basent sur
+      // le code hex, present sur TOUS les appareils. D'ou beaucoup plus
+      // d'avions avec au moins une information utile qu'auparavant, ou
+      // l'absence de trajet laissait la fiche entierement vide.
+      // The two lookups run IN PARALLEL and are independent: the route
+      // needs a flight callsign (missing from many aircraft), while the
+      // aircraft info relies on the hex code, present on ALL of them.
+      // Hence far more aircraft with at least some useful information
+      // than before, where a missing route left the card entirely empty.
+      const [routeInfo, acInfo] = await Promise.all([
+        this.lookupRoute(plane),
+        this.lookupAircraft(plane)
+      ]);
+
+      const acHtml = acInfo ? `<div class="pwp-popup-ac">${escapeHtml(acInfo)}</div>` : "";
+
+      if (!routeInfo) {
+        const msg = plane.flight ? i18n.t("planes.noRoute") : i18n.t("planes.noCallsign");
+        popup.setContent(this.routePopupHtml(plane,
+          `${acHtml}<span class="pwp-popup-muted">${msg}</span>${this.headingLine(plane)}`));
+        return;
+      }
+      if (routeInfo.error) {
+        popup.setContent(this.routePopupHtml(plane,
+          `${acHtml}<span class="pwp-popup-muted">${i18n.t("planes.routeError")}</span>${this.headingLine(plane)}`));
         return;
       }
 
+      // Controle de vraisemblance : si la position reelle de l'avion est
+      // franchement incompatible avec le trajet annonce, on le DIT au
+      // lieu de presenter la donnee comme un fait (voir routeDetourKm).
+      // Plausibility check: if the aircraft's actual position is
+      // blatantly incompatible with the announced route, SAY so instead
+      // of presenting the data as fact (see routeDetourKm).
+      const detour = routeDetourKm(plane.lat, plane.lon, routeInfo.origin, routeInfo.destination);
+      const doubtful = detour != null && detour > ROUTE_DETOUR_TOLERANCE_KM;
+      const warning = doubtful
+        ? `<div class="pwp-popup-doubt" title="${escapeAttr(i18n.t("planes.routeDoubtfulHint").replace("{km}", Math.round(detour)))}">⚠ ${i18n.t("planes.routeDoubtful")}</div>`
+        : "";
+
+      const airline = routeInfo.airline ? `<div class="pwp-popup-airline">${escapeHtml(routeInfo.airline)}</div>` : "";
+      popup.setContent(this.routePopupHtml(plane, `
+        ${acHtml}
+        ${airline}
+        <div class="pwp-popup-route ${doubtful ? "pwp-popup-route-doubt" : ""}">
+          <span>${escapeHtml(routeInfo.originName)}</span>
+          <span class="pwp-popup-arrow">→</span>
+          <span>${escapeHtml(routeInfo.destName)}</span>
+        </div>
+        ${warning}
+        ${this.headingLine(plane)}`));
+    }
+
+    /* Trajet du vol, via adsbdb puis, en repli, hexdb.io -- deux bases
+       communautaires gratuites et sans cle, dont les couvertures ne se
+       recouvrent pas entierement : interroger la seconde quand la
+       premiere ne connait pas l'indicatif augmente sensiblement le
+       nombre de vols documentes (signale : trop d'avions sans aucune
+       information).
+       Flight route, via adsbdb then, as a fallback, hexdb.io -- two
+       free, keyless community databases whose coverage doesn't fully
+       overlap: querying the second when the first doesn't know the
+       callsign noticeably increases the number of documented flights
+       (reported: too many aircraft with no information at all). */
+    async lookupRoute(plane) {
+      if (!plane.flight) return null;
       try {
         const url = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(plane.flight)}`;
         const res = await fetch(this.ctx.api.proxyUrl(url));
-        // adsbdb repond par un 404 -- documente comme volontaire -- pour
-        // un indicatif qu'elle ne connait pas simplement (voir son
-        // README) : un vol prive, general, ou tout simplement absent de
-        // sa base. Ce n'est PAS une panne, juste une absence de donnee ;
-        // le confondre avec une vraie erreur reseau/serveur affichait a
-        // tort "recherche indisponible" pour la tres grande majorite des
-        // avions qui n'ont simplement pas de trajet connu.
-        // adsbdb responds with a 404 -- documented as intentional -- for
-        // a callsign it simply doesn't know (see its README): a private,
-        // general aviation, or simply undocumented flight. This is NOT a
-        // failure, just missing data; conflating it with a genuine
-        // network/server error wrongly showed "lookup unavailable" for
-        // the vast majority of aircraft that simply have no known route.
-        if (res.status === 404) {
-          popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.noRoute")}</span>`));
-          return;
+        if (res.ok) {
+          const data = await res.json();
+          const r = data && data.response && data.response.flightroute;
+          if (r && r.origin && r.destination) {
+            return {
+              origin: r.origin,
+              destination: r.destination,
+              originName: r.origin.municipality || r.origin.name || "?",
+              destName: r.destination.municipality || r.destination.name || "?",
+              airline: r.airline && r.airline.name ? r.airline.name : null
+            };
+          }
+        } else if (res.status !== 404) {
+          // Un 404 signifie "indicatif inconnu de cette base", pas une
+          // panne : on enchaine sur le repli. Tout autre code est une
+          // vraie anomalie. A 404 means "callsign unknown to this
+          // database", not a failure: fall through to the fallback. Any
+          // other code is a genuine anomaly.
+          throw new Error("adsbdb " + res.status);
         }
-        if (!res.ok) throw new Error("adsbdb " + res.status);
-        const data = await res.json();
-        const route = data && data.response && data.response.flightroute;
-        if (!route || !route.origin || !route.destination) {
-          popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.noRoute")}</span>`));
-          return;
-        }
-        const originName = route.origin.municipality || route.origin.name;
-        const destName = route.destination.municipality || route.destination.name;
-        const airline = route.airline && route.airline.name ? `<div class="pwp-popup-airline">${route.airline.name}</div>` : "";
-        popup.setContent(this.routePopupHtml(plane, `
-          ${airline}
-          <div class="pwp-popup-route">
-            <span>${originName}</span>
-            <span class="pwp-popup-arrow">→</span>
-            <span>${destName}</span>
-          </div>
-          ${this.headingLine(plane)}`));
       } catch (e) {
-        console.warn("[piboard/planes] route", e);
-        popup.setContent(this.routePopupHtml(plane, `<span class="pwp-popup-muted">${i18n.t("planes.routeError")}</span>${this.headingLine(plane)}`));
+        console.warn("[piboard/planes] adsbdb", e);
+        return { error: true };
+      }
+
+      // Repli hexdb.io : format bien plus simple ("LFBO-LEBL"), sans
+      // coordonnees -- le controle de vraisemblance ne pourra donc pas
+      // s'appliquer a ces resultats, ce qui est signale honnetement
+      // plutot que de laisser croire a une verification qui n'a pas eu
+      // lieu. hexdb.io fallback: a much simpler format ("LFBO-LEBL"),
+      // without coordinates -- the plausibility check therefore can't
+      // apply to these results, which is stated honestly rather than
+      // implying a verification that never happened.
+      try {
+        const url = `https://hexdb.io/callsign-route?callsign=${encodeURIComponent(plane.flight)}`;
+        const res = await fetch(this.ctx.api.proxyUrl(url));
+        if (!res.ok) return null;
+        const text = (await res.text()).trim();
+        const m = text.match(/^([A-Z0-9]{3,4})-([A-Z0-9]{3,4})$/i);
+        if (!m) return null;
+        return {
+          origin: {}, destination: {}, // pas de coordonnees / no coordinates
+          originName: m[1].toUpperCase(),
+          destName: m[2].toUpperCase(),
+          airline: null
+        };
+      } catch (e) {
+        console.warn("[piboard/planes] hexdb route", e);
+        return null;
+      }
+    }
+
+    /* Informations sur l'appareil lui-meme (modele, exploitant), via le
+       code hex -- present sur TOUS les avions, contrairement a
+       l'indicatif de vol. C'est ce qui permet d'afficher quelque chose
+       d'utile meme pour les nombreux appareils sans trajet connu
+       (aviation generale, prive, vols non reguliers).
+       Information about the aircraft itself (model, operator), via the
+       hex code -- present on ALL aircraft, unlike the flight callsign.
+       This is what makes it possible to show something useful even for
+       the many aircraft with no known route (general aviation, private,
+       non-scheduled flights). */
+    async lookupAircraft(plane) {
+      if (!plane.hex) return null;
+      try {
+        const url = `https://api.adsbdb.com/v0/aircraft/${encodeURIComponent(plane.hex)}`;
+        const res = await fetch(this.ctx.api.proxyUrl(url));
+        if (!res.ok) return null;
+        const data = await res.json();
+        const ac = data && data.response && data.response.aircraft;
+        if (!ac) return null;
+        const bits = [ac.type, ac.registered_owner].filter((x) => x && String(x).trim());
+        return bits.length ? bits.join(" · ") : null;
+      } catch (e) {
+        console.warn("[piboard/planes] adsbdb aircraft", e);
+        return null;
       }
     }
 

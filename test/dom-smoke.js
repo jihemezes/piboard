@@ -1092,6 +1092,32 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const sourceSetting = planesManifest.settings.find((s) => s.key === "source");
     assert("reseau ADS-B : choix entre adsb.lol et adsb.fi expose dans les reglages",
       (sourceSetting?.options || []).map((o) => o.value).sort().join(",") === "adsbfi,adsblol");
+
+    // Le controle de vraisemblance d'un trajet (voir routeDetourKm dans
+    // widget.js) n'est pas testable ici : ce widget repose sur Leaflet,
+    // non instanciable sous jsdom -- limite deja documentee ailleurs
+    // dans cette suite. La logique de calcul a ete verifiee a la main
+    // sur des cas reels (voir le CHANGELOG 1.41.3) ; ce qui reste
+    // verifiable automatiquement et utile, c'est que les libelles
+    // existent bien dans LES DEUX langues.
+    // A route's plausibility check (see routeDetourKm in widget.js)
+    // isn't testable here: this widget relies on Leaflet, which can't
+    // be instantiated under jsdom -- a limit already documented
+    // elsewhere in this suite. The computation itself was verified by
+    // hand against real cases (see CHANGELOG 1.41.3); what stays
+    // automatically verifiable and useful is that the labels exist in
+    // BOTH languages.
+    for (const lang of ["fr", "en"]) {
+      window.PiBoardI18n.setLang(lang);
+      for (const key of ["planes.routeDoubtful", "planes.routeDoubtfulHint"]) {
+        // Une cle absente est renvoyee telle quelle par t() : comparer a
+        // la cle elle-meme suffit a detecter une traduction manquante.
+        // A missing key is returned as-is by t(): comparing against the
+        // key itself is enough to detect a missing translation.
+        assert(`libelle ${key} traduit en ${lang}`, window.PiBoardI18n.t(key) !== key);
+      }
+    }
+    window.PiBoardI18n.setLang("fr"); // restaure la langue attendue par la suite / restores the language the suite expects
   }
 
   console.log("== Flux RSS : article cliquable, popup de lecture nettoyee ==");

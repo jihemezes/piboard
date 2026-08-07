@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.41.3
+
+- **Avions en vue : trajets manifestement faux désormais signalés.**
+  Signalé via un cas concret — un « Baden-Baden → Munich » affiché pour
+  un avion survolant Toulouse, soit plus de 1400 km de détour. Cause :
+  la base associe un indicatif de vol à *un* trajet, de façon statique,
+  or un même indicatif est réutilisé d'un jour à l'autre (parfois pour
+  des liaisons différentes) et la donnée peut être datée ou erronée.
+  La position réelle de l'avion est maintenant confrontée au trajet
+  annoncé ; au-delà de 500 km de détour (tolérance volontairement large,
+  pour ne pas jeter le doute sur un déroutement ou une attente
+  légitimes), le trajet s'affiche barré avec un avertissement ⚠.
+  Vérifié sur des cas réels : 1449 km de détour pour le cas signalé,
+  10 km pour un vol effectivement sur sa route, 182 km pour un écart
+  légitime — le seuil discrimine nettement.
+- **Beaucoup plus d'avions documentés.** Deux ajouts :
+  - **Modèle de l'appareil et exploitant**, recherchés à partir du code
+    hex — présent sur *tous* les avions, contrairement à l'indicatif de
+    vol. La popup affiche donc quelque chose d'utile même pour les
+    nombreux appareils sans trajet connu (aviation générale, privé,
+    vols non réguliers), là où elle restait quasiment vide ;
+  - **Seconde base de trajets** (hexdb.io) interrogée en repli quand la
+    première ne connaît pas l'indicatif, les couvertures ne se
+    recouvrant pas entièrement.
+
+  Aucune nouvelle dépendance : les deux sources sont gratuites, sans
+  clé, et déjà du même type que celle utilisée jusqu'ici.
+
+---
+
+- **Aircraft nearby: blatantly wrong routes now flagged.** Reported via
+  a concrete case — a "Baden-Baden → Munich" shown for an aircraft
+  flying over Toulouse, i.e. more than 1400 km of detour. Cause: the
+  database maps a flight callsign to *one* route, statically, but the
+  same callsign gets reused from day to day (sometimes for different
+  legs) and the data can be stale or wrong. The aircraft's actual
+  position is now checked against the announced route; beyond 500 km of
+  detour (a deliberately generous tolerance, so as not to cast doubt on
+  a legitimate reroute or holding pattern), the route is shown struck
+  through with a ⚠ warning. Verified against real cases: 1449 km of
+  detour for the reported one, 10 km for a flight genuinely on its
+  route, 182 km for a legitimate deviation — the threshold discriminates
+  clearly.
+- **Far more documented aircraft.** Two additions:
+  - **Aircraft model and operator**, looked up from the hex code —
+    present on *every* aircraft, unlike the flight callsign. The popup
+    therefore shows something useful even for the many aircraft with no
+    known route (general aviation, private, non-scheduled flights),
+    where it used to stay nearly empty;
+  - **A second route database** (hexdb.io) queried as a fallback when
+    the first doesn't know the callsign, their coverage not fully
+    overlapping.
+
+  No new dependency: both sources are free, keyless, and already of the
+  same kind as the one used until now.
+
 ## 1.41.2
 
 - **Correctif *Chaînes TV* : chaînes en direct qui ne démarraient

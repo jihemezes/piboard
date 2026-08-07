@@ -169,6 +169,25 @@
 .pwp-popup b { font-family: var(--mono); letter-spacing: 0.02em; }
 .pwp-popup-body { margin-top: 4px; }
 .pwp-popup-airline { color: #c3c8d1; font-size: 11px; margin-bottom: 2px; }
+/* Modele + exploitant, issus du code hex : affiche meme quand aucun
+   trajet n'est connu (voir lookupAircraft() dans widget.js).
+   Model + operator, from the hex code: shown even when no route is
+   known (see lookupAircraft() in widget.js). */
+.pwp-popup-ac { color: #8b93a1; font-size: 10.5px; margin-bottom: 3px; }
+/* Trajet juge incoherent avec la position reelle de l'avion (voir
+   routeDetourKm()) : grise et barre, pour qu'il reste lisible sans
+   etre pris pour un fait etabli. Route judged inconsistent with the
+   aircraft's actual position (see routeDetourKm()): dimmed and struck
+   through, so it stays readable without being taken as established
+   fact. */
+.pwp-popup-route-doubt { opacity: 0.55; text-decoration: line-through; }
+.pwp-popup-doubt {
+  margin-top: 4px;
+  color: #E0A030;
+  font-size: 10.5px;
+  line-height: 1.35;
+  cursor: help;
+}
 .pwp-popup-route { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .pwp-popup-arrow { color: var(--accent); font-weight: 700; }
 .pwp-popup-muted { color: #9aa1ab; font-style: italic; font-size: 11.5px; }
