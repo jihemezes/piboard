@@ -1,6 +1,6 @@
 {
   "id": "iptv",
-  "version": "0.2.1",
+  "version": "0.3.2",
   "name": {
     "en": "TV channels",
     "fr": "Chaînes TV"
@@ -132,6 +132,23 @@
       "hint": {
         "en": "Caps the quality picked from streams that offer several. On a Raspberry Pi 4, 720p is the sweet spot: 1080p competes for CPU with the rest of the dashboard.",
         "fr": "Plafonne la qualité retenue parmi celles proposées par le flux. Sur un Raspberry Pi 4, le 720p est le bon compromis : le 1080p se dispute le processeur avec le reste du tableau."
+      },
+      "group": {
+        "en": "Playback",
+        "fr": "Lecture"
+      }
+    },
+    {
+      "key": "fixAudio",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Fix silent sound (AC3/DTS)",
+        "fr": "Corriger le son muet (AC3/DTS)"
+      },
+      "hint": {
+        "en": "Only enable if a stream plays with no sound at all. Most IPTV platforms encode audio in AC3/DTS, which no browser can decode — this converts just the audio to a readable format on the PiBoard, copying the video untouched (measured cheap: a few percent of one core). Trade-off: the stream then transits through the PiBoard instead of going straight to the browser, and ffmpeg must be installed — `sudo apt install ffmpeg` on a Raspberry Pi or Linux PC, `brew install ffmpeg` on macOS, `winget install Gyan.FFmpeg` on Windows.",
+        "fr": "À activer uniquement si un flux se lit sans aucun son. La plupart des plateformes IPTV encodent l'audio en AC3/DTS, qu'aucun navigateur ne sait décoder — ceci convertit uniquement l'audio dans un format lisible sur le PiBoard, en recopiant la vidéo telle quelle (coût mesuré faible : quelques pour cent d'un cœur). Contrepartie : le flux transite alors par le PiBoard au lieu d'aller directement au navigateur, et ffmpeg doit être installé — `sudo apt install ffmpeg` sur un Raspberry Pi ou un PC Linux, `brew install ffmpeg` sur macOS, `winget install Gyan.FFmpeg` sous Windows."
       },
       "group": {
         "en": "Playback",

@@ -149,7 +149,8 @@ console.log("== interface : les trois implementations exposent les memes fonctio
   const REQUIRED = [
     "id", "pingArgs", "pingSucceeded", "parseArp", "readArpEntries",
     "reverseLookup", "listRemovableVolumes", "cpuTemperature",
-    "filesystemRoot", "exitKiosk", "exitToDesktop"
+    "filesystemRoot", "exitKiosk", "exitToDesktop",
+    "ffmpegCandidates", "ffmpegInstallHint"
   ];
   for (const [name, impl] of [["linux", linux], ["win32", win32], ["darwin", darwin]]) {
     for (const fn of REQUIRED) {
@@ -157,6 +158,28 @@ console.log("== interface : les trois implementations exposent les memes fonctio
     }
   }
   console.log("  OK: " + REQUIRED.length + " membres verifies sur 3 implementations");
+}
+
+/* ---------- Recherche de ffmpeg ---------- */
+console.log("== ffmpeg : emplacements et conseil d'installation propres a chaque systeme ==");
+{
+  for (const [name, impl] of [["linux", linux], ["win32", win32], ["darwin", darwin]]) {
+    const candidates = impl.ffmpegCandidates();
+    assert.ok(Array.isArray(candidates) && candidates.length > 0, name + " doit proposer au moins un emplacement");
+    assert.ok(candidates.every((p) => typeof p === "string" && p.length), name + " : tous les emplacements sont des chaines non vides");
+    const hint = impl.ffmpegInstallHint();
+    assert.ok(hint && hint.fr && hint.en, name + " doit fournir un conseil d'installation bilingue");
+  }
+  // Windows est le cas ou la detection compte vraiment : ffmpeg n'y est
+  // pas fourni par le systeme et se retrouve rarement dans le PATH.
+  // Windows is where detection genuinely matters: ffmpeg doesn't ship
+  // with the system there and rarely ends up in PATH.
+  const winCandidates = win32.ffmpegCandidates();
+  assert.ok(winCandidates.some((p) => p.endsWith(".exe")), "win32 doit chercher des executables .exe");
+  assert.ok(winCandidates.length > 1, "win32 doit chercher au-dela du seul PATH");
+  assert.ok(!win32.ffmpegInstallHint().fr.includes("apt"), "win32 ne doit pas conseiller une commande Linux");
+  assert.ok(!darwin.ffmpegInstallHint().fr.includes("apt"), "macOS ne doit pas conseiller une commande Linux");
+  console.log("  OK: 3 implementations, conseils d'installation distincts et adaptes");
 }
 
 console.log("== platform : implementation choisie selon process.platform ==");

@@ -1,5 +1,162 @@
 # Changelog
 
+## 1.42.2
+
+- **Correctif *Chaînes TV* : le message « Touchez pour lancer »
+  semblait ne rien faire au clic, sous Windows.** Recherché avant de
+  conclure : Electron autorise par défaut la lecture automatique
+  **même sans clic** (`autoplayPolicy: no-user-gesture-required`,
+  contrairement à un onglet de navigateur classique) — un rejet de
+  lecture persistant même après un vrai clic pointe donc probablement
+  vers le flux lui-même, pas vers la politique de lecture automatique.
+  Le code confondait pourtant les deux cas, réaffichant le même message
+  générique dans les deux situations : le premier échec (résolu par un
+  clic) et un second échec *après* le clic (le flux qui ne démarre pas)
+  produisaient un affichage identique, donnant l'impression que rien ne
+  s'était passé.
+
+  Désormais distingués : un échec après un vrai clic affiche un message
+  différent (« cette chaîne est indisponible ») plutôt que de reboucler
+  sur « Touchez pour lancer ».
+
+- **Accès à la console de débogage clarifié.** Le raccourci réellement
+  câblé dans l'app Windows est **F12** (pas Ctrl+Shift+I) ; la barre de
+  menu, masquée par défaut, reste accessible par la touche **Alt**.
+
+---
+
+- **Fix for *TV Channels*: the "Tap to start" message seemed to do
+  nothing on click, on Windows.** Researched before concluding:
+  Electron allows automatic playback **even without a click** by
+  default (`autoplayPolicy: no-user-gesture-required`, unlike a regular
+  browser tab) — a playback rejection persisting even after a genuine
+  click therefore likely points to the stream itself, not the autoplay
+  policy. The code conflated the two cases, though, re-showing the same
+  generic message in both situations: the first failure (resolved by a
+  click) and a second failure *after* the click (the stream failing to
+  start) produced an identical display, giving the impression nothing
+  had happened.
+
+  Now distinguished: a failure after a genuine click shows a different
+  message ("this channel is unavailable") rather than looping back to
+  "Tap to start".
+
+- **Debug console access clarified.** The shortcut actually wired in
+  the Windows app is **F12** (not Ctrl+Shift+I); the menu bar, hidden by
+  default, stays reachable with the **Alt** key.
+
+## 1.42.1
+
+- **Correction du son muet (v1.42.0) : désormais réellement
+  multi-plateforme.** La première version lançait `ffmpeg` en supposant
+  qu'il soit dans le PATH — vrai sur un Raspberry Pi, mais **rarement
+  sous Windows**, où ffmpeg n'est pas fourni par le système. La
+  fonctionnalité n'aurait donc pratiquement jamais marché ailleurs que
+  sur le Pi.
+
+  La recherche de ffmpeg passe maintenant par la couche d'abstraction
+  plateforme déjà en place dans le projet (`server/platform/`), dont la
+  règle est explicite : aucun branchement système en dehors de ce
+  dossier. Emplacements couverts pour chaque système :
+  - **Linux / Raspberry Pi** : le PATH, plus `/usr/bin`, `/usr/local/bin`
+    et `/snap/bin` (utile quand le service démarre avec un
+    environnement minimal) ;
+  - **macOS** : le PATH, plus les deux préfixes Homebrew — celui des Mac
+    Apple Silicon (`/opt/homebrew`) diffère de celui des Mac Intel
+    (`/usr/local`) — et MacPorts ;
+  - **Windows** : le PATH, plus `C:\ffmpeg\bin` (le cas le plus
+    répandu, archive décompressée à la main), les dossiers Program
+    Files, ainsi que les emplacements de winget et Chocolatey.
+
+- **Commande d'installation adaptée au système**, affichée par
+  l'interface au lieu d'une instruction générique fausse sur deux
+  systèmes sur trois : `sudo apt install ffmpeg`, `brew install ffmpeg`
+  ou `winget install Gyan.FFmpeg` selon le cas.
+
+---
+
+- **Silent-sound fix (v1.42.0): now genuinely cross-platform.** The
+  first version launched `ffmpeg` assuming it was in PATH — true on a
+  Raspberry Pi, but **rarely on Windows**, where ffmpeg doesn't ship
+  with the system. The feature would therefore practically never have
+  worked anywhere but the Pi.
+
+  Looking for ffmpeg now goes through the platform abstraction layer
+  already present in the project (`server/platform/`), whose rule is
+  explicit: no system branching outside that folder. Locations covered
+  per system:
+  - **Linux / Raspberry Pi**: PATH, plus `/usr/bin`, `/usr/local/bin`
+    and `/snap/bin` (useful when the service starts with a minimal
+    environment);
+  - **macOS**: PATH, plus both Homebrew prefixes — Apple Silicon Macs
+    (`/opt/homebrew`) differ from Intel ones (`/usr/local`) — and
+    MacPorts;
+  - **Windows**: PATH, plus `C:\ffmpeg\bin` (the most widespread case,
+    a manually unpacked archive), the Program Files folders, and
+    winget's and Chocolatey's locations.
+
+- **System-appropriate install command**, surfaced by the interface
+  instead of a generic instruction that's wrong on two systems out of
+  three: `sudo apt install ffmpeg`, `brew install ffmpeg` or
+  `winget install Gyan.FFmpeg` as applicable.
+
+## 1.42.0
+
+- **Chaînes TV : le son muet a désormais une solution** — nouveau
+  réglage « Corriger le son muet (AC3/DTS) », **désactivé par défaut**.
+
+  Rappel du problème (v1.41.2) : la plupart des plateformes IPTV
+  encodent l'audio en AC3/DTS, qu'aucun navigateur ne sait décoder. Et
+  contrairement à ce qu'on pourrait croire, on ne peut pas « ajouter un
+  codec » à un navigateur : son jeu de codecs est figé à sa
+  compilation.
+
+  La solution retenue : ffmpeg convertit, sur le PiBoard, **uniquement
+  la piste audio** vers un format lisible, en **recopiant la vidéo
+  telle quelle sans la réencoder**. C'est ce qui rend l'opération
+  abordable — mesuré sur un flux 720p H.264+AC3 : le traitement de 10 s
+  de flux prend 0,44 s, soit de l'ordre de 4 % d'un cœur en temps réel.
+  Un réencodage vidéo, lui, aurait été hors de portée d'un Pi.
+
+  Vérifié de bout en bout : un flux entrant en H.264+AC3 (muet dans un
+  navigateur) ressort bien en H.264+AAC, et aucun processus ffmpeg
+  orphelin ne survit à la déconnexion du client — point critique sur un
+  Pi, un flux en direct n'ayant pas de fin.
+
+  Deux contreparties, d'où l'option désactivée par défaut : le flux
+  transite alors par le PiBoard au lieu d'aller directement au
+  navigateur, et **ffmpeg doit être installé** (`sudo apt install
+  ffmpeg` sur un Pi). Son absence est détectée et signalée clairement
+  plutôt que de produire un échec obscur.
+
+---
+
+- **TV channels: silent sound now has a fix** — new "Fix silent sound
+  (AC3/DTS)" setting, **off by default**.
+
+  Recap of the problem (v1.41.2): most IPTV platforms encode audio in
+  AC3/DTS, which no browser can decode. And contrary to what one might
+  assume, you can't "add a codec" to a browser: its codec set is fixed
+  at build time.
+
+  The chosen solution: ffmpeg converts, on the PiBoard, **only the
+  audio track** into a readable format, **copying the video as-is
+  without re-encoding it**. That's what makes the operation affordable
+  — measured on a 720p H.264+AC3 stream: processing 10 s of it takes
+  0.44 s, on the order of 4% of one core in real time. A video
+  re-encode would have been out of a Pi's reach.
+
+  Verified end to end: a stream coming in as H.264+AC3 (silent in a
+  browser) does come out as H.264+AAC, and no orphaned ffmpeg process
+  survives the client disconnecting — critical on a Pi, a live stream
+  having no end.
+
+  Two trade-offs, hence the option being off by default: the stream
+  then transits through the PiBoard instead of going straight to the
+  browser, and **ffmpeg must be installed** (`sudo apt install ffmpeg`
+  on a Pi). Its absence is detected and reported clearly rather than
+  producing an obscure failure.
+
 ## 1.41.3
 
 - **Avions en vue : trajets manifestement faux désormais signalés.**

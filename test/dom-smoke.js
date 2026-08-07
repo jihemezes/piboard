@@ -2299,7 +2299,46 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     statusEl.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(20);
     assert("clic sur le statut declenche bien une nouvelle tentative de lecture reelle", retried === true);
+
+    console.log("== Chaines TV : si la tentative apres clic echoue AUSSI, message different (pas la meme impression d'immobilisme) ==");
+    // Rouvre une chaine avec un play() qui echoue systematiquement,
+    // meme apres le clic de reprise : verifie que le second echec
+    // affiche un message DIFFERENT de "touchez pour lancer" plutot que
+    // de reboucler sur le meme texte -- c'est precisement ce qui donnait
+    // l'impression que le clic ne servait a rien (signale sous Windows).
+    // Reopens a channel with a play() that keeps failing, even after the
+    // resume click: checks that the second failure shows a DIFFERENT
+    // message than "tap to start" rather than looping back to the same
+    // text -- exactly what gave the impression the click did nothing
+    // (reported on Windows).
+    dom.window.HTMLMediaElement.prototype.play = function () { return Promise.reject(new Error("stream unreachable")); };
+    tvTile.querySelector(".pwtv-back").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while ((tvTile.querySelector(".pwtv-status")?.textContent || "") !== "Touchez pour lancer la lecture" && tries++ < 60) await sleep(50);
+    tvTile.querySelector(".pwtv-status").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while ((tvTile.querySelector(".pwtv-status")?.textContent || "") === "Touchez pour lancer la lecture" && tries++ < 60) await sleep(50);
+    const secondFailStatus = tvTile.querySelector(".pwtv-status");
+    assert("apres un second echec (post-clic), le message N'EST PLUS 'touchez pour lancer'",
+      secondFailStatus.textContent !== "Touchez pour lancer la lecture" && secondFailStatus.textContent !== "");
     dom.window.HTMLMediaElement.prototype.play = origPlay;
+
+    console.log("== Chaines TV : option de correction du son muet ==");
+    {
+      const iptvManifest = catalog.find((m) => m.id === "iptv");
+      const fixSetting = (iptvManifest?.settings || []).find((s) => s.key === "fixAudio");
+      assert("option 'corriger le son muet' exposee dans les reglages", !!fixSetting);
+      assert("desactivee par defaut (le flux ne transite par le PiBoard que sur demande explicite)",
+        fixSetting?.default === false);
+      for (const lang of ["fr", "en"]) {
+        window.PiBoardI18n.setLang(lang);
+        assert(`libelle iptv.audioFixError traduit en ${lang}`,
+          window.PiBoardI18n.t("iptv.audioFixError") !== "iptv.audioFixError");
+      }
+      window.PiBoardI18n.setLang("fr");
+    }
 
     console.log("== Chaines TV : detection de l'absence de piste audio (AC3/DTS) ==");
     // L'ecouteur "playing" du widget est a usage unique (once:true, par

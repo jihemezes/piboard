@@ -114,11 +114,31 @@
       this.view = "loading";
     }
 
-    safePlay(video) {
+    /* isRetry distingue le premier echec (probablement la politique de
+       lecture automatique du navigateur, resolue par un clic -- voir
+       plus bas) d'un second echec survenant APRES un vrai clic
+       utilisateur : dans ce cas, ce n'est plus une question de geste,
+       c'est que le FLUX lui-meme ne parvient pas a demarrer. Sans cette
+       distinction, les deux se traduisaient par le meme message a
+       l'ecran, donnant l'impression que le clic n'avait servi a rien
+       (signale : "le message reste affiche meme apres un clic").
+       isRetry distinguishes the first failure (likely the browser's
+       autoplay policy, resolved by a click -- see below) from a second
+       failure happening AFTER a genuine user click: in that case it's no
+       longer a matter of gesture, it's that the STREAM itself fails to
+       start. Without this distinction, both looked identical on screen,
+       giving the impression the click had done nothing (reported: "the
+       message stays even after a click"). */
+    safePlay(video, isRetry) {
       let p;
       try { p = video.play(); } catch (e) { p = null; }
       if (p && typeof p.catch === "function") {
-        p.catch(() => {
+        p.catch((err) => {
+          if (isRetry) {
+            console.warn("[piboard/iptv] echec de lecture apres un clic reel -- probablement le flux lui-meme, pas la politique de lecture automatique", err);
+            this.setStatus(this.ctx.i18n.t("iptv.streamError"));
+            return;
+          }
           // "Touchez pour lancer la lecture" doit etre une VRAIE
           // invite cliquable, pas un simple texte : un clic utilisateur
           // est justement ce qui satisfait la politique de lecture
@@ -132,7 +152,7 @@
           // (video.play() refused without prior interaction). Without
           // this loop-back, the message stayed on screen forever with
           // no way to actually retry -- reported on live channels.
-          this.setStatus(this.ctx.i18n.t("iptv.tapToPlay"), () => this.safePlay(video));
+          this.setStatus(this.ctx.i18n.t("iptv.tapToPlay"), () => this.safePlay(video, true));
         });
       }
     }
@@ -573,6 +593,24 @@
       // slightly behind bare metadata. Common to both playback paths
       // below (hls.js and native).
       video.addEventListener("playing", () => this.checkAudioTrack(video), { once: true });
+
+      /* Correction du son muet activee : le flux passe par le PiBoard,
+         qui reencode UNIQUEMENT l'audio (AC3/DTS -> AAC) en recopiant la
+         video telle quelle -- voir server/iptvAudio.js. La sortie est du
+         MP4 fragmente, lu nativement : hls.js est donc court-circuite,
+         il n'aurait rien a faire ici.
+         Silent-sound fix enabled: the stream goes through the PiBoard,
+         which re-encodes ONLY the audio (AC3/DTS -> AAC) while copying
+         the video as-is -- see server/iptvAudio.js. The output is
+         fragmented MP4, read natively: hls.js is therefore bypassed, it
+         would have nothing to do here. */
+      if (this.ctx.settings.fixAudio === true) {
+        video.src = "/api/iptv/audio-fix?url=" + encodeURIComponent(url);
+        video.addEventListener("loadedmetadata", () => this.setStatus(""), { once: true });
+        video.addEventListener("error", () => this.setStatus(i18n.t("iptv.audioFixError")), { once: true });
+        this.safePlay(video);
+        return;
+      }
 
       const nativeHls = video.canPlayType("application/vnd.apple.mpegurl");
       const looksHls = /\.m3u8(\?|$)/i.test(url);

@@ -51,6 +51,7 @@ const mailbox = require("./mailbox");
 const astronomy = require("./astronomy");
 const backups = require("./backups");
 const iptv = require("./iptv");
+const iptvAudio = require("./iptvAudio");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -1109,6 +1110,37 @@ function xtreamCredsOr400(req, res) {
   }
   return creds;
 }
+
+/* Reencodage audio d'un flux (voir server/iptvAudio.js) : uniquement
+   sollicite quand l'utilisateur active l'option sur une tuile, les
+   flux etant sinon lus directement par le navigateur.
+   Audio re-encoding of a stream (see server/iptvAudio.js): only ever
+   requested when the user enables the option on a tile, streams being
+   otherwise read directly by the browser. */
+app.get("/api/iptv/audio-fix", async (req, res) => {
+  const target = String(req.query.url || "");
+  if (!/^https?:\/\//i.test(target)) {
+    res.status(400).json({ error: "invalid url" });
+    return;
+  }
+  if (!(await iptvAudio.checkFfmpeg())) {
+    res.status(503).json({ error: "ffmpeg not available" });
+    return;
+  }
+  res.setHeader("Content-Type", "video/mp4");
+  res.setHeader("Cache-Control", "no-store");
+  iptvAudio.streamTranscoded(target, res);
+});
+
+app.get("/api/iptv/audio-fix-available", async (req, res) => {
+  // Le conseil d'installation depend du systeme (voir server/platform/)
+  // : l'exposer permet a l'interface d'afficher la bonne commande, au
+  // lieu d'une instruction generique fausse sur deux systemes sur trois.
+  // The install hint depends on the system (see server/platform/):
+  // exposing it lets the interface show the right command, instead of a
+  // generic instruction that's wrong on two systems out of three.
+  res.json({ available: await iptvAudio.checkFfmpeg(), installHint: iptvAudio.installHint() });
+});
 
 app.get("/api/iptv/xtream-categories", async (req, res) => {
   const creds = xtreamCredsOr400(req, res);

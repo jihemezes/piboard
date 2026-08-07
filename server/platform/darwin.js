@@ -132,6 +132,22 @@ function exitToDesktop() {
   return { ok: false, reason: "not-supported" };
 }
 
+/* Sur macOS, ffmpeg n'est jamais fourni par le systeme : il s'installe
+   via Homebrew (ou MacPorts). Les deux prefixes Homebrew sont couverts,
+   celui des Mac Apple Silicon (/opt/homebrew) etant different de celui
+   des Mac Intel (/usr/local).
+   On macOS, ffmpeg never ships with the system: it's installed via
+   Homebrew (or MacPorts). Both Homebrew prefixes are covered, Apple
+   Silicon Macs (/opt/homebrew) differing from Intel ones
+   (/usr/local). */
+function ffmpegCandidates() {
+  return ["ffmpeg", "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/local/bin/ffmpeg"];
+}
+
+function ffmpegInstallHint() {
+  return { fr: "brew install ffmpeg", en: "brew install ffmpeg" };
+}
+
 module.exports = {
   id,
   pingArgs,
@@ -145,5 +161,7 @@ module.exports = {
   filesystemRoot,
   exitKiosk,
   exitToDesktop,
-  MOUNT_ROOTS
+  MOUNT_ROOTS,
+  ffmpegCandidates,
+  ffmpegInstallHint
 };

@@ -187,6 +187,23 @@ function exitToDesktop() {
   return { ok: true };
 }
 
+/* Emplacements ou chercher ffmpeg, par ordre de priorite. Sur un Pi OS
+   ou un PC Linux, ffmpeg s'installe via le gestionnaire de paquets et
+   se retrouve dans le PATH : le simple nom suffit presque toujours. Les
+   chemins absolus couvrent le cas d'un PATH restreint (service systemd
+   demarre avec un environnement minimal, notamment).
+   Where to look for ffmpeg, in priority order. On Pi OS or a Linux PC,
+   ffmpeg installs via the package manager and lands in PATH: the bare
+   name almost always suffices. The absolute paths cover a restricted
+   PATH (a systemd service started with a minimal environment, notably). */
+function ffmpegCandidates() {
+  return ["ffmpeg", "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg"];
+}
+
+function ffmpegInstallHint() {
+  return { fr: "sudo apt install ffmpeg", en: "sudo apt install ffmpeg" };
+}
+
 module.exports = {
   id,
   pingArgs,
@@ -199,5 +216,7 @@ module.exports = {
   filesystemRoot,
   exitKiosk,
   exitToDesktop,
-  MOUNT_ROOTS
+  MOUNT_ROOTS,
+  ffmpegCandidates,
+  ffmpegInstallHint
 };

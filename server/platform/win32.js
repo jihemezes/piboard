@@ -335,6 +335,36 @@ function exitToDesktop() {
   return { ok: false, reason: "no-kiosk-controller" };
 }
 
+/* Sous Windows, ffmpeg n'est PAS fourni par le systeme et n'est que
+   tres rarement dans le PATH -- c'est la plateforme ou la detection
+   compte le plus. Les emplacements couverts correspondent aux methodes
+   d'installation courantes : winget/choco (qui placent bien dans le
+   PATH), une archive decompressee a la main dans C:\\ffmpeg (le cas le
+   plus repandu), et les dossiers Program Files.
+   On Windows, ffmpeg is NOT shipped with the system and is only very
+   rarely in PATH -- this is the platform where detection matters most.
+   The covered locations match the common installation methods:
+   winget/choco (which do put it in PATH), an archive manually unpacked
+   into C:\\ffmpeg (the most widespread case), and the Program Files
+   folders. */
+function ffmpegCandidates() {
+  const pf = process.env.ProgramFiles || "C:\\Program Files";
+  const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+  const local = process.env.LOCALAPPDATA || "";
+  return [
+    "ffmpeg.exe",
+    "C:\\ffmpeg\\bin\\ffmpeg.exe",
+    pf + "\\ffmpeg\\bin\\ffmpeg.exe",
+    pf86 + "\\ffmpeg\\bin\\ffmpeg.exe",
+    local ? local + "\\Microsoft\\WinGet\\Links\\ffmpeg.exe" : null,
+    "C:\\ProgramData\\chocolatey\\bin\\ffmpeg.exe"
+  ].filter(Boolean);
+}
+
+function ffmpegInstallHint() {
+  return { fr: "winget install Gyan.FFmpeg", en: "winget install Gyan.FFmpeg" };
+}
+
 module.exports = {
   id,
   pingArgs,
@@ -348,5 +378,7 @@ module.exports = {
   cpuTemperature,
   filesystemRoot,
   exitKiosk,
-  exitToDesktop
+  exitToDesktop,
+  ffmpegCandidates,
+  ffmpegInstallHint
 };
