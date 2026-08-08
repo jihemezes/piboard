@@ -62,20 +62,6 @@ files:
   # .gitignore): this more specific pattern, placed after the general
   # exclusion, overrides it for this one file.
   - "CHANGELOG.md"
-  # hls.js n'est jamais charge par require() (uniquement servi tel quel
-  # au navigateur via /vendor/hls, voir server/index.js) : seul le
-  # fichier reellement livre au navigateur a besoin d'etre present.
-  # Le reste du dossier dist/ du paquet (demos, cartes source pour
-  # chaque variante, declarations TypeScript) pese ~22 Mo pour 0 usage,
-  # mesure directement -- retire, sans effet sur le fonctionnement.
-  # hls.js is never loaded via require() (only served as-is to the
-  # browser through /vendor/hls, see server/index.js): only the file
-  # actually delivered to the browser needs to be present. The rest of
-  # the package's dist/ folder (demos, source maps for every variant,
-  # TypeScript declarations) weighs ~22 MB for zero use, measured
-  # directly -- removed, with no effect on functionality.
-  - "!node_modules/hls.js/dist/**"
-  - "node_modules/hls.js/dist/hls.min.js"
 
 # ARCHIVE ASAR REACTIVEE, DE FACON CIBLEE.
 # Desactivee jusqu'ici (voir historique), avec une reserve explicite :
@@ -122,6 +108,14 @@ asarUnpack:
   - "public/**"
   - "node_modules/gridstack/dist/**"
   - "node_modules/leaflet/dist/**"
+  # Dossier entier livre (voir plus haut : la tentative d'elagage a un
+  # seul fichier, via exclusion puis reinclusion, a ete abandonnee --
+  # jamais verifiee sur un vrai paquet Windows, et une chaine en direct
+  # qui ne fonctionne plus du tout est bien pire que 22 Mo de trop).
+  # Whole folder shipped (see above: the attempt to trim it down to a
+  # single file, via exclusion then re-inclusion, was abandoned -- never
+  # verified against a real Windows package, and a live channel that
+  # stops working entirely is far worse than 22 MB too many).
   - "node_modules/hls.js/dist/**"
 
 win:

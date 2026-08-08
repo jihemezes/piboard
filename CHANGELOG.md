@@ -1,5 +1,52 @@
 # Changelog
 
+## 1.43.2
+
+- **Correctif *Chaînes TV* : échec persistant malgré les correctifs
+  précédents, même après suppression/réinitialisation du widget** — ce
+  qui écartait un problème d'état propre à une tuile et pointait vers
+  le chargement de `hls.js` lui-même.
+
+  **Cause la plus probable trouvée et corrigée** : la configuration
+  d'empaquetage Windows tentait d'alléger `hls.js` à un seul fichier via
+  un motif d'exclusion puis réinclusion (introduit en v1.42.0) — une
+  configuration **jamais vérifiée sur un vrai paquet Windows**, faute
+  d'accès à une machine pour construire et tester l'installeur
+  réellement. Abandonnée : le dossier est désormais livré en entier,
+  comme les autres bibliothèques vendorisées (gridstack, leaflet). Coût
+  : ~22 Mo de plus, largement préférable à une fonctionnalité coeur
+  cassée sans le savoir.
+
+  **Diagnostic visible à l'écran ajouté**, sans dépendre des outils de
+  développement (un obstacle réel jusqu'ici) : le message d'erreur
+  affiche désormais la cause précise —fichier introuvable (avec le code
+  HTTP exact), échec d'exécution du script, ou fichier chargé mais
+  corrompu. Si le problème persiste malgré le retrait du motif
+  d'exclusion, ce message donnera enfin de quoi trancher.
+
+---
+
+- **Fix for *TV Channels*: failure persisting despite previous fixes,
+  even after deleting/resetting the widget** — which ruled out a
+  problem with a specific tile's state and pointed to `hls.js`'s own
+  loading.
+
+  **Most likely cause found and fixed**: the Windows packaging
+  configuration tried to trim `hls.js` down to a single file via an
+  exclude-then-re-include pattern (introduced in v1.42.0) — a
+  configuration **never verified against a real Windows package**, for
+  lack of access to a machine to actually build and test the installer.
+  Abandoned: the folder now ships in full, like the other vendored
+  libraries (gridstack, leaflet). Cost: ~22 MB more, far preferable to
+  a core feature silently broken.
+
+  **On-screen diagnostic added**, without relying on developer tools (a
+  real obstacle so far): the error message now shows the precise cause
+  — file not found (with the exact HTTP code), script execution
+  failure, or a file loaded but corrupted. If the problem persists
+  despite removing the exclusion pattern, this message will finally
+  give something to settle it.
+
 ## 1.43.1
 
 - **Correctif *Chaînes TV* : deux vrais bugs trouvés dans la logique de

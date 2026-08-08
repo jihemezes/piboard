@@ -76,13 +76,51 @@
   function loadHls() {
     if (window.Hls) return Promise.resolve(window.Hls);
     if (hlsLoader) return hlsLoader;
-    hlsLoader = new Promise((resolve, reject) => {
-      const s = document.createElement("script");
-      s.src = "/vendor/hls/hls.min.js";
-      s.onload = () => resolve(window.Hls);
-      s.onerror = () => reject(new Error("hls.js introuvable"));
-      document.head.appendChild(s);
-    }).catch((e) => {
+    hlsLoader = (async () => {
+      // Verifie d'abord le VRAI statut HTTP du fichier, avant de tenter
+      // de l'executer comme script : distingue un fichier absent du
+      // paquet (404 -- probleme d'empaquetage) d'une erreur survenant a
+      // l'EXECUTION du script lui-meme (fichier present, mais qui plante
+      // une fois lance). Sans cette verification prealable, un <script>
+      // qui echoue ne donne qu'un evenement "error" generique, sans
+      // indiquer LEQUEL de ces deux cas s'est produit -- information
+      // cruciale pour diagnostiquer a distance, sans acces aux outils de
+      // developpement.
+      // First checks the file's ACTUAL HTTP status, before attempting to
+      // execute it as a script: distinguishes a file missing from the
+      // package (404 -- a packaging problem) from an error happening at
+      // the script's own EXECUTION (file present, but crashing once
+      // run). Without this upfront check, a failing <script> only gives
+      // a generic "error" event, without indicating WHICH of these two
+      // cases occurred -- crucial information for diagnosing remotely,
+      // without access to developer tools.
+      let httpStatus = null;
+      try {
+        const head = await fetch("/vendor/hls/hls.min.js", { method: "GET", cache: "no-store" });
+        httpStatus = head.status;
+        if (!head.ok) throw new Error("hls.min.js : statut HTTP " + head.status);
+      } catch (e) {
+        hlsLoader = null;
+        throw new Error("hls.min.js injoignable" + (httpStatus ? " (statut " + httpStatus + ")" : " (reseau)"));
+      }
+
+      return new Promise((resolve, reject) => {
+        const s = document.createElement("script");
+        s.src = "/vendor/hls/hls.min.js";
+        s.onload = () => {
+          if (window.Hls) resolve(window.Hls);
+          // Le fichier a bien ete servi (statut HTTP correct, verifie
+          // ci-dessus) mais n'a pas defini window.Hls une fois execute :
+          // fichier corrompu ou tronque, pas un probleme reseau.
+          // The file WAS served correctly (verified above) but didn't
+          // define window.Hls once executed: a corrupted or truncated
+          // file, not a network problem.
+          else reject(new Error("hls.min.js charge (HTTP " + httpStatus + ") mais n'a pas defini window.Hls -- fichier corrompu ?"));
+        };
+        s.onerror = () => reject(new Error("echec d'execution du script hls.min.js (HTTP " + httpStatus + ")"));
+        document.head.appendChild(s);
+      });
+    })().catch((e) => {
       // Reinitialise le cache d'echec : sans ca, un chargement rate UNE
       // SEULE fois (potentiellement transitoire -- lenteur au tout
       // premier demarrage du serveur, par exemple) restait en cache
@@ -690,7 +728,16 @@
           // CORS relay (see above), reproducing the exact original block
           // under a different guise. Better an honest error message than
           // an attempt doomed to fail.
-          this.setStatus(i18n.t("iptv.streamError"));
+          //
+          // Le detail exact (voir loadHls()) s'affiche directement a
+          // l'ecran plutot que dans la seule console : permet de
+          // diagnostiquer a distance sans acces aux outils de
+          // developpement, ce qui a ete un obstacle reel jusqu'ici.
+          // The exact detail (see loadHls()) shows directly on screen
+          // rather than only in the console: allows diagnosing remotely
+          // without access to developer tools, which has been a real
+          // obstacle so far.
+          this.setStatus(i18n.t("iptv.streamError") + (e && e.message ? " (" + e.message + ")" : ""));
           return;
         }
       }
