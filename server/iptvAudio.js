@@ -165,7 +165,19 @@ function streamTranscoded(url, res, onError, mode) {
       ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
       : ["-c:v", "copy"]), // video INTACTE en mode audio seul : c'est ce qui le rend leger / video UNTOUCHED in audio-only mode: what keeps it light
     "-c:a", "aac", "-b:a", "128k", "-ac", "2",
-    "-movflags", "frag_keyframe+empty_moov+default_base_moof",
+    // default_base_moof (pense pour une consommation via MediaSource/
+    // appendBuffer, comme le fait hls.js) retire au profit de faststart :
+    // ce flux est lu ici en <video src> progressif direct, pas via MSE --
+    // un exemple fonctionnel documente pour exactement ce cas d'usage
+    // (lecture progressive d'un MP4 fragmente en direct, sans fin)
+    // utilise cette combinaison precise.
+    // default_base_moof (meant for consumption via MediaSource/
+    // appendBuffer, as hls.js does) removed in favor of faststart: this
+    // stream is read here via direct progressive <video src>, not MSE --
+    // a documented working example for exactly this use case (progressive
+    // playback of a live, endless fragmented MP4) uses this exact
+    // combination.
+    "-movflags", "frag_keyframe+empty_moov+faststart",
     "-f", "mp4",
     "pipe:1"
   ];

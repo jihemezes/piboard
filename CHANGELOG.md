@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.44.2
+
+- **Correctif *Chaînes TV* : requête `audio-fix` réussie (200 OK,
+  ffmpeg désormais installé et fonctionnel) mais lecture toujours en
+  échec.** Piste distincte des précédentes : les options
+  d'assemblage MP4 fragmenté utilisées (`default_base_moof`) sont
+  pensées pour une consommation via MediaSource/`appendBuffer` (le
+  procédé de hls.js) — pas pour la lecture progressive directe via
+  `<video src>` employée ici. Ajusté vers `faststart`, conforme à un
+  exemple fonctionnel documenté pour exactement ce cas d'usage
+  (lecture progressive d'un flux MP4 fragmenté en direct, sans fin).
+
+  Vérifié : la structure du fichier produit reste valide et
+  exploitable. N'ayant pas accès à un vrai navigateur Chrome pour
+  confirmer que ceci résout définitivement la lecture, ce correctif
+  cible la piste la plus probable identifiée plutôt qu'une certitude.
+
+---
+
+- **Fix for *TV Channels*: `audio-fix` request succeeding (200 OK,
+  ffmpeg now installed and working) but playback still failing.** A
+  distinct lead from previous ones: the fragmented MP4 muxing options
+  used (`default_base_moof`) are meant for consumption via
+  MediaSource/`appendBuffer` (hls.js's approach) — not for the direct
+  progressive playback via `<video src>` used here. Adjusted to
+  `faststart`, matching a documented working example for exactly this
+  use case (progressive playback of a live, endless fragmented MP4
+  stream).
+
+  Verified: the produced file's structure remains valid and
+  parseable. Without access to a real Chrome browser to confirm this
+  definitively resolves playback, this fix targets the most likely
+  lead identified rather than a certainty.
+
 ## 1.44.1
 
 - **Cause enfin identifiée pour le cas signalé : `ffmpeg` n'était pas
