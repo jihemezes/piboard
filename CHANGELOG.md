@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.43.5
+
+- **Correctif *Chaînes TV* : `NotSupportedError` toujours présent malgré
+  le réordonnancement de la v1.43.4** — écarte une course entre appels
+  comme cause. Ajout d'une **vérification proactive du codec**, avant
+  même de tenter la lecture : le manifeste peut se récupérer et
+  s'analyser avec succès (le relais CORS fonctionne, confirmé) tout en
+  annonçant un codec vidéo ou audio que le moteur MediaSource du
+  navigateur ne sait pas décoder — cas documenté dans le suivi de bugs
+  de hls.js, notamment avec des configurations de canaux audio
+  inhabituelles.
+
+  Le message affiché identifie désormais précisément **lequel** des
+  deux codecs (vidéo ou audio) est en cause, avec son nom exact — le
+  message générique du navigateur ne le disait pas, rendant tout
+  diagnostic supplémentaire impossible sans cette vérification.
+
+  Si le codec vidéo est en cause, aucune solution logicielle simple
+  n'existe côté navigateur (contrairement à l'audio, où l'option
+  « Corriger le son muet » sait déjà transcoder). Le message précis
+  permettra de le confirmer.
+
+---
+
+- **Fix for *TV Channels*: `NotSupportedError` still occurring despite
+  the v1.43.4 reordering** — rules out a call-order race as the cause.
+  Added a **proactive codec check**, before even attempting playback:
+  the manifest can be fetched and parsed successfully (the CORS relay
+  works, confirmed) while still announcing a video or audio codec the
+  browser's MediaSource engine can't decode — a case documented in
+  hls.js's own issue tracker, notably with unusual audio channel
+  configurations.
+
+  The displayed message now precisely identifies **which** of the two
+  codecs (video or audio) is at fault, with its exact name — the
+  browser's generic message didn't say, making any further diagnosis
+  impossible without this check.
+
+  If the video codec is at fault, no simple software fix exists on the
+  browser side (unlike audio, where the "Fix silent sound" option
+  already knows how to transcode). The precise message will confirm
+  this.
+
 ## 1.43.4
 
 - **Correctif `npm run dist`/`npm run publish` : échec `EPERM` sous

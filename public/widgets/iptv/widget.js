@@ -690,6 +690,40 @@
               });
               if (best >= 0) this.hls.currentLevel = best;
             }
+            // Verification PROACTIVE du codec, avant meme de tenter la
+            // lecture : le manifeste peut se recuperer et s'analyser
+            // avec succes (le relais CORS fonctionne, confirme) tout en
+            // annoncant un codec que le moteur MediaSource du navigateur
+            // ne sait pas decoder -- un cas documente dans le suivi de
+            // bugs de hls.js (video-dev/hls.js#5481, notamment avec des
+            // configurations de canaux audio inhabituelles). Sans cette
+            // verification, le navigateur echoue avec un message
+            // generique ("NotSupportedError : aucune source prise en
+            // charge") qui ne dit PAS lequel des deux codecs (video ou
+            // audio) est en cause -- impossible a diagnostiquer plus
+            // avant sans ca.
+            // PROACTIVE codec check, before even attempting playback:
+            // the manifest can be fetched and parsed successfully (the
+            // CORS relay works, confirmed) while still announcing a
+            // codec the browser's MediaSource engine can't decode -- a
+            // case documented in hls.js's own issue tracker
+            // (video-dev/hls.js#5481, notably with unusual audio channel
+            // configurations). Without this check, the browser fails
+            // with a generic message ("NotSupportedError: no supported
+            // sources") that does NOT say which of the two codecs
+            // (video or audio) is at fault -- impossible to diagnose
+            // further without this.
+            const lvl = this.hls.levels && this.hls.levels[this.hls.currentLevel >= 0 ? this.hls.currentLevel : 0];
+            if (lvl && window.MediaSource && typeof window.MediaSource.isTypeSupported === "function") {
+              const unsupported = [];
+              if (lvl.videoCodec && !window.MediaSource.isTypeSupported('video/mp4;codecs="' + lvl.videoCodec + '"')) unsupported.push("video: " + lvl.videoCodec);
+              if (lvl.audioCodec && !window.MediaSource.isTypeSupported('audio/mp4;codecs="' + lvl.audioCodec + '"')) unsupported.push("audio: " + lvl.audioCodec);
+              if (unsupported.length) {
+                console.warn("[piboard/iptv] codec(s) non pris en charge par ce navigateur :", unsupported.join(", "));
+                this.setStatus(i18n.t("iptv.streamError") + " (codec non pris en charge : " + unsupported.join(", ") + ")");
+                return;
+              }
+            }
             this.setStatus("");
             this.safePlay(video);
           });
