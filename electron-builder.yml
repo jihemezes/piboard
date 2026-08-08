@@ -165,6 +165,16 @@ nsis:
   # uploaded photos. Wiping it unasked would be brutal, and a
   # reinstallation finds everything back.
   deleteAppDataOnUninstall: false
+  # Etape optionnelle a l'installation : propose de telecharger ffmpeg
+  # (voir build/installer.nsh pour le detail complet -- source, licence
+  # GPLv3, comportement en cas d'echec). Refuser ou echouer au
+  # telechargement n'empeche jamais l'installation de PiBoard elle-meme
+  # de se terminer.
+  # Optional step at install time: offers to download ffmpeg (see
+  # build/installer.nsh for the full detail -- source, GPLv3 license,
+  # behavior on failure). Declining or a failed download never prevents
+  # PiBoard's own installation from completing.
+  include: build/installer.nsh
 
 # Publication des mises a jour. electron-builder depose ici l'installeur
 # ET le fichier latest.yml que lit electron-updater. Le depot doit etre

@@ -351,7 +351,15 @@ function ffmpegCandidates() {
   const pf = process.env.ProgramFiles || "C:\\Program Files";
   const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
   const local = process.env.LOCALAPPDATA || "";
+  const appData = process.env.APPDATA || "";
   return [
+    // Installe via l'etape optionnelle de l'installeur PiBoard (voir
+    // build/installer.nsh) : verifie en PREMIER, c'est le cas le plus
+    // probable si l'utilisateur a accepte cette etape.
+    // Installed via PiBoard's own optional installer step (see
+    // build/installer.nsh): checked FIRST, the most likely case if the
+    // user accepted that step.
+    appData ? appData + "\\PiBoard\\ffmpeg\\ffmpeg.exe" : null,
     "ffmpeg.exe",
     "C:\\ffmpeg\\bin\\ffmpeg.exe",
     pf + "\\ffmpeg\\bin\\ffmpeg.exe",

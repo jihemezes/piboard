@@ -179,6 +179,20 @@ console.log("== ffmpeg : emplacements et conseil d'installation propres a chaque
   assert.ok(winCandidates.length > 1, "win32 doit chercher au-dela du seul PATH");
   assert.ok(!win32.ffmpegInstallHint().fr.includes("apt"), "win32 ne doit pas conseiller une commande Linux");
   assert.ok(!darwin.ffmpegInstallHint().fr.includes("apt"), "macOS ne doit pas conseiller une commande Linux");
+
+  // Emplacement de l'etape optionnelle d'installation (voir
+  // build/installer.nsh) : verifie en PREMIER, c'est le cas le plus
+  // probable si l'utilisateur a accepte cette etape a l'installation.
+  // Optional installer step's location (see build/installer.nsh):
+  // checked FIRST, the most likely case if the user accepted that step
+  // at install time.
+  const prevAppData = process.env.APPDATA;
+  process.env.APPDATA = "C:\\Users\\Test\\AppData\\Roaming";
+  const winCandidatesWithAppData = win32.ffmpegCandidates();
+  assert.ok(winCandidatesWithAppData[0].includes("PiBoard\\ffmpeg\\ffmpeg.exe"),
+    "l'emplacement de l'installeur doit etre en premiere position quand APPDATA est defini");
+  if (prevAppData === undefined) delete process.env.APPDATA; else process.env.APPDATA = prevAppData;
+
   console.log("  OK: 3 implementations, conseils d'installation distincts et adaptes");
 }
 

@@ -160,7 +160,37 @@ function streamTranscoded(url, res, onError, mode) {
     // que ce soit une vraie panne. Automatic reconnection: an IPTV feed
     // drops regularly, without that being a genuine failure.
     "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+    // -fflags +genpts (option d'ENTREE, avant -i) regenere des
+    // horodatages de presentation propres des la lecture du flux
+    // source. -avoid_negative_ts (option de SORTIE, placee apres -i
+    // ci-dessous) normalise ensuite ceux-ci a zero au moment du
+    // remuxage -- necessaire specifiquement pour un flux EN DIRECT,
+    // contrairement a un fichier VOD fini qui demarre proprement a
+    // zero. Un flux IPTV en continu injecte souvent des horodatages
+    // enormes ou negatifs (bascule d'horloge du fournisseur, flux deja
+    // en cours depuis des heures) -- documente dans plusieurs rapports
+    // de bogue independants comme cause de lecture en echec cote
+    // navigateur, alors meme que le fichier produit reste
+    // structurellement valide (ce qui correspond exactement au cas
+    // observe : requete reussie, mais lecture refusee). Signale par :
+    // le meme pipeline fonctionne parfaitement pour les films/series
+    // (VOD, horodatages propres), seul le direct est en cause.
+    // -fflags +genpts (an INPUT option, before -i) regenerates clean
+    // presentation timestamps as the source stream is read.
+    // -avoid_negative_ts (an OUTPUT option, placed after -i below) then
+    // normalizes those to zero at remux time -- needed specifically for
+    // a LIVE stream, unlike a finite VOD file that starts cleanly at
+    // zero. A continuous IPTV feed often injects huge or negative
+    // timestamps (the provider's own clock, a stream already running
+    // for hours) -- documented in several independent bug reports as a
+    // cause of browser-side playback failure, even while the produced
+    // file stays structurally valid (matching exactly what was
+    // observed: request succeeds, but playback refused). Reported: the
+    // same pipeline works perfectly for movies/series (VOD, clean
+    // timestamps), only live is affected.
+    "-fflags", "+genpts",
     "-i", url,
+    "-avoid_negative_ts", "make_zero",
     ...(fullTranscode
       ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
       : ["-c:v", "copy"]), // video INTACTE en mode audio seul : c'est ce qui le rend leger / video UNTOUCHED in audio-only mode: what keeps it light

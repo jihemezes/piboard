@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.45.0
+
+- **Étape optionnelle à l'installation Windows : ffmpeg proposé
+  automatiquement.** Décochée par défaut, ~55 Mo, uniquement demandée
+  si le mode de compatibilité vidéo des chaînes IPTV n'a pas déjà
+  ffmpeg d'installé — une mise à jour de PiBoard ne re-propose donc pas
+  ce téléchargement à chaque fois.
+
+  **Cadre légal vérifié avant implémentation** : PiBoard *lance*
+  ffmpeg comme un processus séparé (jamais lié dans son propre code),
+  ce qui permet de redistribuer légalement une version sous licence
+  GPLv3 sans que cette licence ne s'applique au reste de l'application
+  — le principe bien établi de l'« agrégation séparée ». Le binaire est
+  hébergé sur une release dédiée du dépôt du projet (pas un lien
+  dynamique vers « la dernière version » d'un tiers, pour éviter qu'un
+  changement en amont ne casse silencieusement l'installateur), avec
+  attribution claire, licence GPLv3 incluse, et pointeur vers le code
+  source correspondant.
+
+  Un échec de téléchargement (pas d'internet, source injoignable) ne
+  bloque jamais l'installation de PiBoard lui-même — le mode de
+  compatibilité vidéo reste simplement indisponible, avec le message
+  d'erreur déjà clair introduit en v1.44.1.
+
+  **Vérifié avec le vrai compilateur NSIS** (installé et utilisé pour
+  l'occasion, plutôt que suppose fonctionnel sans le tester) : le
+  script compile sans la moindre erreur ni le moindre avertissement.
+
+---
+
+- **Optional step in the Windows installer: ffmpeg offered
+  automatically.** Unchecked by default, ~55 MB, only asked for if the
+  IPTV channels' video compatibility mode doesn't already have ffmpeg
+  installed — a PiBoard update therefore doesn't re-offer this download
+  every time.
+
+  **Legal framework checked before implementation**: PiBoard *launches*
+  ffmpeg as a separate process (never linked into its own code), which
+  allows legally redistributing a GPLv3-licensed build without that
+  license applying to the rest of the application — the well-established
+  "mere aggregation" principle. The binary is hosted on a dedicated
+  release of the project's own repo (not a dynamic link to a third
+  party's "latest version", to avoid an upstream change silently
+  breaking the installer), with clear attribution, the GPLv3 license
+  included, and a pointer to the corresponding source code.
+
+  A download failure (no internet, source unreachable) never blocks
+  PiBoard's own installation — the video compatibility mode simply
+  stays unavailable, with the clear error message already introduced in
+  v1.44.1.
+
+  **Verified with the real NSIS compiler** (installed and used for the
+  occasion, rather than assumed to work without testing it): the
+  script compiles with zero errors and zero warnings.
+
 ## 1.44.2
 
 - **Correctif *Chaînes TV* : requête `audio-fix` réussie (200 OK,
