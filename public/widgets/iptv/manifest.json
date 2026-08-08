@@ -1,6 +1,6 @@
 {
   "id": "iptv",
-  "version": "0.4.6",
+  "version": "0.5.0",
   "name": {
     "en": "TV channels",
     "fr": "Chaînes TV"
@@ -139,21 +139,44 @@
       }
     },
     {
-      "key": "fixAudio",
-      "type": "checkbox",
-      "default": false,
+      "key": "compatMode",
+      "type": "select",
       "label": {
-        "en": "Fix silent sound (AC3/DTS)",
-        "fr": "Corriger le son muet (AC3/DTS)"
+        "en": "Compatibility mode",
+        "fr": "Mode de compatibilité"
       },
       "hint": {
-        "en": "Only enable if a stream plays with no sound at all. Most IPTV platforms encode audio in AC3/DTS, which no browser can decode — this converts just the audio to a readable format on the PiBoard, copying the video untouched (measured cheap: a few percent of one core). Trade-off: the stream then transits through the PiBoard instead of going straight to the browser, and ffmpeg must be installed — `sudo apt install ffmpeg` on a Raspberry Pi or Linux PC, `brew install ffmpeg` on macOS, `winget install Gyan.FFmpeg` on Windows.",
-        "fr": "À activer uniquement si un flux se lit sans aucun son. La plupart des plateformes IPTV encodent l'audio en AC3/DTS, qu'aucun navigateur ne sait décoder — ceci convertit uniquement l'audio dans un format lisible sur le PiBoard, en recopiant la vidéo telle quelle (coût mesuré faible : quelques pour cent d'un cœur). Contrepartie : le flux transite alors par le PiBoard au lieu d'aller directement au navigateur, et ffmpeg doit être installé — `sudo apt install ffmpeg` sur un Raspberry Pi ou un PC Linux, `brew install ffmpeg` sur macOS, `winget install Gyan.FFmpeg` sous Windows."
+        "en": "\"Fix silent sound\": most IPTV platforms encode audio in AC3/DTS, which no browser can decode — this re-encodes just the audio, copying the video untouched (measured cheap: a few percent of one core). \"Full compatibility\": also re-encodes the video itself, bypassing the browser's HLS player entirely — a heavier operation (genuine video re-encoding, not a copy), but the only option left when a channel still fails with a browser error like \"NotSupportedError: no supported sources\" despite audio-only mode, since the actual codec at fault can't always be identified precisely. Either mode requires ffmpeg — `sudo apt install ffmpeg` on a Raspberry Pi or Linux PC, `brew install ffmpeg` on macOS, `winget install Gyan.FFmpeg` on Windows. Both trade a direct connection for one that transits through the PiBoard.",
+        "fr": "« Corriger le son muet » : la plupart des plateformes IPTV encodent l'audio en AC3/DTS, qu'aucun navigateur ne sait décoder — ceci réencode uniquement l'audio, en recopiant la vidéo telle quelle (coût mesuré faible : quelques pour cent d'un cœur). « Compatibilité totale » : réencode aussi la vidéo elle-même, en contournant entièrement le lecteur HLS du navigateur — une opération plus lourde (un vrai réencodage vidéo, pas une simple recopie), mais la seule option qui reste quand une chaîne échoue encore avec une erreur du navigateur du type « NotSupportedError : aucune source prise en charge » malgré le mode audio seul, le codec précisément en cause n'étant pas toujours identifiable. Les deux modes nécessitent ffmpeg — `sudo apt install ffmpeg` sur un Raspberry Pi ou un PC Linux, `brew install ffmpeg` sur macOS, `winget install Gyan.FFmpeg` sous Windows. Les deux font transiter le flux par le PiBoard au lieu d'une connexion directe."
       },
       "group": {
         "en": "Playback",
         "fr": "Lecture"
-      }
+      },
+      "default": "off",
+      "options": [
+        {
+          "value": "off",
+          "label": {
+            "en": "Off (default)",
+            "fr": "Désactivé (par défaut)"
+          }
+        },
+        {
+          "value": "audio",
+          "label": {
+            "en": "Fix silent sound only (light)",
+            "fr": "Corriger le son muet uniquement (léger)"
+          }
+        },
+        {
+          "value": "full",
+          "label": {
+            "en": "Full compatibility (video + audio, heavier)",
+            "fr": "Compatibilité totale (vidéo + audio, plus lourd)"
+          }
+        }
+      ]
     }
   ]
 }

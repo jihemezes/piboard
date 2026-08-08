@@ -113,16 +113,47 @@ function installHint() {
   return platform.ffmpegInstallHint();
 }
 
-/* Diffuse le flux distant vers la reponse HTTP, audio reencode en AAC
-   et video recopiee. Sortie en MP4 fragmente : c'est le seul format
-   conteneur qu'un navigateur accepte de lire "au fil de l'eau" depuis
-   un flux HTTP continu, sans avoir besoin d'un index prealable
-   (impossible pour du direct).
-   Streams the remote feed to the HTTP response, audio re-encoded to AAC
-   and video copied. Fragmented MP4 output: the only container format a
-   browser will read progressively from a continuous HTTP stream,
-   without needing an upfront index (impossible for live). */
-function streamTranscoded(url, res, onError) {
+/* Diffuse le flux distant vers la reponse HTTP en MP4 fragmente (le
+   seul format qu'un navigateur accepte de lire "au fil de l'eau" depuis
+   un flux HTTP continu, sans index prealable -- impossible pour du
+   direct). Deux modes :
+
+   - "audio" (par defaut) : SEULE la piste audio est reencodee en AAC,
+     la video est RECOPIEE sans reencodage -- l'operation reste tres
+     legere (quelques % d'un coeur, mesure). Corrige un son inaudible
+     (AC3/DTS, tres courant en IPTV).
+
+   - "full" : vidéo ET audio sont reencodees. Beaucoup plus lourd
+     (reencodage video reel, pas une simple recopie), mais contourne
+     ENTIEREMENT hls.js/MediaSource cote navigateur -- utile quand le
+     probleme n'est pas seulement l'audio, mais un flux qu'AUCUN
+     diagnostic cote navigateur n'arrive a expliquer precisement
+     (rapporte : "NotSupportedError: The element has no supported
+     sources" persistant malgre plusieurs verifications de codec
+     n'ayant rien trouve d'anormal a signaler). ffmpeg decode ce qui se
+     presente et reencode vers un format standard garanti, quelle que
+     soit la cause exacte cote source.
+
+   Streams the remote feed to the HTTP response as fragmented MP4 (the
+   only format a browser will read progressively from a continuous HTTP
+   stream, without an upfront index -- impossible for live). Two modes:
+
+   - "audio" (default): ONLY the audio track is re-encoded to AAC, video
+     is COPIED without re-encoding -- stays very light (a few % of one
+     core, measured). Fixes inaudible sound (AC3/DTS, very common in
+     IPTV).
+
+   - "full": BOTH video and audio are re-encoded. Much heavier (a real
+     video re-encode, not a plain copy), but ENTIRELY bypasses
+     hls.js/MediaSource on the browser side -- useful when the problem
+     isn't just audio, but a stream that NO browser-side diagnostic
+     manages to precisely explain (reported: persistent "NotSupportedError:
+     The element has no supported sources" despite several codec checks
+     finding nothing wrong to flag). ffmpeg decodes whatever's presented
+     and re-encodes to a guaranteed standard format, regardless of the
+     exact cause on the source side. */
+function streamTranscoded(url, res, onError, mode) {
+  const fullTranscode = mode === "full";
   const args = [
     "-hide_banner", "-loglevel", "error",
     // Reconnexion automatique : un flux IPTV coupe reguliererement, sans
@@ -130,7 +161,9 @@ function streamTranscoded(url, res, onError) {
     // drops regularly, without that being a genuine failure.
     "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
     "-i", url,
-    "-c:v", "copy",                 // video INTACTE : c'est ce qui rend l'operation legere / video UNTOUCHED: what makes this lightweight
+    ...(fullTranscode
+      ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
+      : ["-c:v", "copy"]), // video INTACTE en mode audio seul : c'est ce qui le rend leger / video UNTOUCHED in audio-only mode: what keeps it light
     "-c:a", "aac", "-b:a", "128k", "-ac", "2",
     "-movflags", "frag_keyframe+empty_moov+default_base_moof",
     "-f", "mp4",

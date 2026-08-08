@@ -1135,13 +1135,14 @@ app.get("/api/iptv/audio-fix", async (req, res) => {
     res.status(400).json({ error: "invalid url" });
     return;
   }
+  const mode = req.query.mode === "full" ? "full" : "audio";
   if (!(await iptvAudio.checkFfmpeg())) {
     res.status(503).json({ error: "ffmpeg not available" });
     return;
   }
   res.setHeader("Content-Type", "video/mp4");
   res.setHeader("Cache-Control", "no-store");
-  iptvAudio.streamTranscoded(target, res);
+  iptvAudio.streamTranscoded(target, res, undefined, mode);
 });
 
 app.get("/api/iptv/audio-fix-available", async (req, res) => {

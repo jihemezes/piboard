@@ -42,15 +42,21 @@ if (!app.requestSingleInstanceLock()) {
    DOIT etre defini AVANT le require du serveur : server/store.js lit
    PIBOARD_DATA au chargement du module. app.getPath("userData") pointe
    sur %APPDATA%\\PiBoard sous Windows -- inscriptible, propre a
-   l'utilisateur, conserve lors des mises a jour et supprime a la
-   desinstallation. Ecrire a cote de l'executable serait impossible :
-   Program Files n'est pas inscriptible.
+   l'utilisateur, conserve lors des mises a jour ET a la desinstallation
+   (choix explicite, voir deleteAppDataOnUninstall dans
+   electron-builder.yml : effacer la disposition des tuiles, les cles
+   API et les photos televersees sans le demander serait brutal).
+   Ecrire a cote de l'executable serait impossible : Program Files
+   n'est pas inscriptible.
 
    MUST be set BEFORE requiring the server: server/store.js reads
    PIBOARD_DATA at module load. app.getPath("userData") points to
    %APPDATA%\\PiBoard on Windows -- writable, per-user, preserved across
-   updates and removed on uninstall. Writing next to the executable
-   would be impossible: Program Files is not writable. */
+   updates AND uninstalls (a deliberate choice, see
+   deleteAppDataOnUninstall in electron-builder.yml: wiping the tile
+   layout, API keys and uploaded photos unasked would be brutal).
+   Writing next to the executable would be impossible: Program Files is
+   not writable. */
 process.env.PIBOARD_DATA = process.env.PIBOARD_DATA || path.join(app.getPath("userData"), "data");
 
 /* Boucle locale uniquement : la fenetre est le seul client du serveur,

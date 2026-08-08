@@ -2325,13 +2325,15 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       secondFailStatus.textContent !== "Touchez pour lancer la lecture" && secondFailStatus.textContent !== "");
     dom.window.HTMLMediaElement.prototype.play = origPlay;
 
-    console.log("== Chaines TV : option de correction du son muet ==");
+    console.log("== Chaines TV : mode de compatibilite (son muet / complet) ==");
     {
       const iptvManifest = catalog.find((m) => m.id === "iptv");
-      const fixSetting = (iptvManifest?.settings || []).find((s) => s.key === "fixAudio");
-      assert("option 'corriger le son muet' exposee dans les reglages", !!fixSetting);
+      const compatSetting = (iptvManifest?.settings || []).find((s) => s.key === "compatMode");
+      assert("option 'mode de compatibilite' exposee dans les reglages", !!compatSetting);
       assert("desactivee par defaut (le flux ne transite par le PiBoard que sur demande explicite)",
-        fixSetting?.default === false);
+        compatSetting?.default === "off");
+      assert("les 3 options (desactive/audio seul/complet) sont proposees",
+        (compatSetting?.options || []).map((o) => o.value).sort().join(",") === "audio,full,off");
       for (const lang of ["fr", "en"]) {
         window.PiBoardI18n.setLang(lang);
         assert(`libelle iptv.audioFixError traduit en ${lang}`,

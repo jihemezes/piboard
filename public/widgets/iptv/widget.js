@@ -656,18 +656,25 @@
       // below (hls.js and native).
       video.addEventListener("playing", () => this.checkAudioTrack(video), { once: true });
 
-      /* Correction du son muet activee : le flux passe par le PiBoard,
-         qui reencode UNIQUEMENT l'audio (AC3/DTS -> AAC) en recopiant la
-         video telle quelle -- voir server/iptvAudio.js. La sortie est du
-         MP4 fragmente, lu nativement : hls.js est donc court-circuite,
-         il n'aurait rien a faire ici.
-         Silent-sound fix enabled: the stream goes through the PiBoard,
-         which re-encodes ONLY the audio (AC3/DTS -> AAC) while copying
-         the video as-is -- see server/iptvAudio.js. The output is
-         fragmented MP4, read natively: hls.js is therefore bypassed, it
-         would have nothing to do here. */
-      if (this.ctx.settings.fixAudio === true) {
-        video.src = "/api/iptv/audio-fix?url=" + encodeURIComponent(url);
+      /* Mode de compatibilite active (audio seul ou complet) : le flux
+         passe par le PiBoard, qui reencode l'audio (et la video en mode
+         "full") -- voir server/iptvAudio.js. La sortie est du MP4
+         fragmente, lu nativement : hls.js est donc court-circuite dans
+         les deux cas, il n'aurait rien a faire ici. Le mode "full"
+         contourne ENTIEREMENT hls.js/MediaSource, utile quand aucun
+         diagnostic de codec cote navigateur n'a rien trouve d'anormal a
+         signaler malgre un echec persistant.
+         Compatibility mode enabled (audio-only or full): the stream
+         goes through the PiBoard, which re-encodes the audio (and the
+         video in "full" mode) -- see server/iptvAudio.js. The output is
+         fragmented MP4, read natively: hls.js is therefore bypassed in
+         both cases, it would have nothing to do here. "full" mode
+         ENTIRELY bypasses hls.js/MediaSource, useful when no
+         browser-side codec diagnostic found anything wrong to flag
+         despite a persistent failure. */
+      const compatMode = this.ctx.settings.compatMode;
+      if (compatMode === "audio" || compatMode === "full") {
+        video.src = "/api/iptv/audio-fix?url=" + encodeURIComponent(url) + "&mode=" + compatMode;
         video.addEventListener("loadedmetadata", () => this.setStatus(""), { once: true });
         video.addEventListener("error", () => this.setStatus(i18n.t("iptv.audioFixError")), { once: true });
         this.safePlay(video);

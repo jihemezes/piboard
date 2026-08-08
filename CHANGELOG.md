@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.44.0
+
+- **Chaînes TV : nouveau mode « Compatibilité totale »**, pour les
+  chaînes qui échouent encore avec une erreur du navigateur (ex.
+  `NotSupportedError : aucune source prise en charge`) malgré sept
+  correctifs successifs et plusieurs vérifications de codec n'ayant
+  rien trouvé d'anormal à signaler — le codec précisément en cause
+  reste, dans certains cas, indétectable avec certitude côté
+  navigateur.
+
+  L'option « Corriger le son muet » devient un réglage à deux niveaux :
+  - **Son muet uniquement** (comportement inchangé) : seule la piste
+    audio est réencodée, la vidéo est recopiée telle quelle — reste
+    très léger ;
+  - **Compatibilité totale** (nouveau) : la vidéo est *aussi*
+    réencodée, contournant entièrement le lecteur HLS du navigateur.
+    Nettement plus lourd (un vrai réencodage vidéo, pas une simple
+    recopie), mais fonctionne quel que soit le codec source exact,
+    puisque ffmpeg décode ce qui se présente et réencode vers un
+    format standard garanti.
+
+  Vérifié de bout en bout avec un flux HEVC+AC3 (délibérément
+  incompatible) : le mode complet produit bien un H.264+AAC standard en
+  sortie ; le mode son seul confirmé inchangé (vidéo HEVC toujours
+  recopiée intacte).
+
+---
+
+- **TV Channels: new "Full compatibility" mode**, for channels still
+  failing with a browser error (e.g. `NotSupportedError: no supported
+  sources`) despite seven successive fixes and several codec checks
+  finding nothing wrong to flag — the exact codec at fault remains, in
+  some cases, undetectable with certainty from the browser side.
+
+  The "Fix silent sound" option becomes a two-level setting:
+  - **Silent sound only** (unchanged behavior): only the audio track
+    is re-encoded, video is copied as-is — stays very light;
+  - **Full compatibility** (new): the video is *also* re-encoded,
+    entirely bypassing the browser's HLS player. Noticeably heavier (a
+    genuine video re-encode, not a plain copy), but works regardless
+    of the exact source codec, since ffmpeg decodes whatever's
+    presented and re-encodes to a guaranteed standard format.
+
+  Verified end to end with an HEVC+AC3 stream (deliberately
+  incompatible): full mode correctly produces standard H.264+AAC
+  output; audio-only mode confirmed unchanged (HEVC video still copied
+  untouched).
+
 ## 1.43.6
 
 - **Correctif *Chaînes TV* : `NotSupportedError` toujours affiché sans
