@@ -1,5 +1,68 @@
 # Changelog
 
+## 1.43.4
+
+- **Correctif `npm run dist`/`npm run publish` : échec `EPERM` sous
+  Windows au nettoyage du dossier `dist\`**, signalé lors d'une
+  reconstruction — le script de nettoyage n'avait aucune tentative de
+  réessai, alors qu'un verrou de fichier transitoire (antivirus,
+  instance encore ouverte) est une situation Windows courante et
+  généralement résolue en une seconde. `maxRetries`/`retryDelay`
+  ajoutés (solution standard de Node.js pour ce cas précis), avec un
+  message clair plutôt qu'une trace technique si l'échec persiste
+  malgré les tentatives.
+
+- **Correctif *Chaînes TV* : `NotSupportedError` persistant malgré un
+  relais CORS fonctionnel** (confirmé par le diagnostic de la
+  v1.43.3 : le manifeste est bien récupéré avec succès, l'échec
+  survient après). Retrouvé un rapport de bogue quasi identique dans
+  le suivi de bugs de hls.js (*video-dev/hls.js#432*, *#4952*) :
+  l'ordre `loadSource()` puis `attachMedia()` (tous deux appelés
+  immédiatement, celui utilisé jusqu'ici) crée une course avec le
+  moteur de lecture du navigateur, provoquant cette erreur de façon
+  intermittente. Réordonné selon le motif documenté comme plus
+  fiable : `attachMedia()` en premier, `loadSource()` déclenché
+  ensuite par l'événement `MEDIA_ATTACHED` plutôt qu'appelé
+  immédiatement. Vérifié : le nouvel ordre exact est bien respecté, et
+  le relais CORS reste emprunté normalement.
+
+  Si le problème persiste malgré ce réordonnancement, l'option
+  « Corriger le son muet » (réglages de la tuile) offre un vrai
+  contournement pour cette chaîne précise : elle fait entièrement
+  l'impasse sur hls.js (lecture vidéo native après un léger
+  retraitement audio côté serveur), donc insensible à ce genre de
+  souci propre au lecteur HLS.
+
+---
+
+- **Fix for `npm run dist`/`npm run publish`: Windows `EPERM` failure
+  cleaning the `dist\` folder**, reported during a rebuild — the clean
+  script had no retry at all, even though a transient file lock
+  (antivirus, a still-open instance) is a common Windows situation
+  usually resolved within a second. `maxRetries`/`retryDelay` added
+  (Node.js's standard solution for this exact case), with a clear
+  message instead of a technical stack trace if the failure persists
+  despite retries.
+
+- **Fix for *TV Channels*: persistent `NotSupportedError` despite a
+  working CORS relay** (confirmed by the v1.43.3 diagnostic: the
+  manifest is fetched successfully, the failure happens afterward).
+  Found a near-identical bug report in hls.js's own issue tracker
+  (*video-dev/hls.js#432*, *#4952*): the `loadSource()` then
+  `attachMedia()` order (both called immediately, the one used until
+  now) creates a race with the browser's playback engine, causing this
+  error intermittently. Reordered to match the pattern reported more
+  reliable: `attachMedia()` first, `loadSource()` then triggered by the
+  `MEDIA_ATTACHED` event rather than called immediately. Verified: the
+  new exact order is respected, and the CORS relay is still used
+  normally.
+
+  If the problem persists despite this reordering, the "Fix silent
+  sound" option (tile settings) offers a genuine workaround for this
+  particular channel: it bypasses hls.js entirely (native video
+  playback after light server-side audio reprocessing), so it's immune
+  to this kind of HLS-player-specific issue.
+
 ## 1.43.3
 
 - **Correctif *Chaînes TV* : le diagnostic à l'écran de la v1.43.2 ne

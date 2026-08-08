@@ -715,24 +715,46 @@
             // individual segment then failed -- a distinct problem.
             this.setStatus(i18n.t("iptv.streamError") + " (" + data.type + " / " + data.details + ")");
           });
-          // Passe par le relais serveur (voir server/iptvHlsProxy.js) :
-          // hls.js recupere le manifeste ET chaque segment via des
-          // requetes JavaScript, soumises au CORS -- contrairement a la
-          // lecture native (<video src>, utilisee pour les films et
-          // series), qui n'y est pas soumise. Sans ce relais, les
-          // chaines en direct ne demarrent jamais, les panneaux IPTV
-          // n'envoyant pas d'en-tetes CORS (confirme par diagnostic :
-          // ERR_BLOCKED_BY_RESPONSE.NotSameOrigin puis 405 sur les
-          // segments).
-          // Goes through the server relay (see server/iptvHlsProxy.js):
-          // hls.js fetches the manifest AND every segment via JavaScript
-          // requests, subject to CORS -- unlike native playback
-          // (<video src>, used for movies and series), which isn't
-          // subject to it. Without this relay, live channels never
-          // start, IPTV panels not sending CORS headers (confirmed by
-          // diagnosis: ERR_BLOCKED_BY_RESPONSE.NotSameOrigin then 405 on
-          // segments).
-          this.hls.loadSource("/api/iptv/hls-proxy?url=" + encodeURIComponent(url));
+          // attachMedia() D'ABORD, loadSource() ensuite -- declenche par
+          // MEDIA_ATTACHED plutot qu'appele immediatement. Plusieurs
+          // signalements independants dans le suivi de bugs de hls.js
+          // (dont un "NotSupportedError" quasi identique, video-dev/
+          // hls.js#432 et #4952) documentent que l'ordre inverse
+          // (utilise jusqu'ici : loadSource() PUIS attachMedia(), tous
+          // deux synchrones) provoque de facon intermittente cette
+          // meme erreur -- une course entre l'attachement du flux
+          // media et le debut du chargement, dependante du moment
+          // exact ou le moteur MSE du navigateur devient pret. Cet
+          // ordre est signale plus fiable.
+          //
+          // Le relais serveur (voir server/iptvHlsProxy.js) reste
+          // inchange : hls.js recupere le manifeste ET chaque segment
+          // via des requetes JavaScript, soumises au CORS --
+          // contrairement a la lecture native (<video src>, utilisee
+          // pour les films et series), qui n'y est pas soumise. Sans ce
+          // relais, les chaines en direct ne demarrent jamais, les
+          // panneaux IPTV n'envoyant pas d'en-tetes CORS.
+          //
+          // attachMedia() FIRST, loadSource() next -- triggered by
+          // MEDIA_ATTACHED rather than called immediately. Several
+          // independent reports in hls.js's own issue tracker (including
+          // a near-identical "NotSupportedError", video-dev/hls.js#432
+          // and #4952) document that the reverse order (used until now:
+          // loadSource() THEN attachMedia(), both synchronous)
+          // intermittently causes this exact error -- a race between
+          // attaching the media source and starting the load, dependent
+          // on exactly when the browser's MSE engine becomes ready. This
+          // order is reported more reliable.
+          //
+          // The server relay (see server/iptvHlsProxy.js) stays
+          // unchanged: hls.js fetches the manifest AND every segment via
+          // JavaScript requests, subject to CORS -- unlike native
+          // playback (<video src>, used for movies and series), which
+          // isn't subject to it. Without this relay, live channels never
+          // start, IPTV panels not sending CORS headers.
+          this.hls.once(Hls.Events.MEDIA_ATTACHED, () => {
+            this.hls.loadSource("/api/iptv/hls-proxy?url=" + encodeURIComponent(url));
+          });
           this.hls.attachMedia(video);
           return;
         } catch (e) {

@@ -1,6 +1,6 @@
 {
   "name": "piboard",
-  "version": "1.43.3",
+  "version": "1.43.4",
   "description": "Tile-based kiosk dashboard for Raspberry Pi / Tableau de bord kiosque a tuiles pour Raspberry Pi",
   "author": "Jean-Michel Ezes (jihemezes)",
   "license": "MIT",
@@ -10,7 +10,7 @@
     "start": "node server/index.js",
     "test": "node test/dom-smoke.js",
     "electron": "electron .",
-    "clean": "node -e \"require('fs').rmSync('dist', { recursive: true, force: true })\"",
+    "clean": "node -e \"const fs=require('fs'); try { fs.rmSync('dist', { recursive: true, force: true, maxRetries: 10, retryDelay: 500 }); } catch (e) { console.error('Impossible de supprimer dist\\\\ -- ferme toute instance de PiBoard.exe encore ouverte (Gestionnaire des taches), attends la fin d\\'un eventuel scan antivirus, puis reessaie. / Could not remove dist\\\\ -- close any PiBoard.exe instance still open (Task Manager), wait out any antivirus scan in progress, then retry.'); process.exit(1); }\"",
     "dist": "npm install && npm run clean && electron-builder --win --publish never",
     "publish": "npm install && npm run clean && electron-builder --win --publish always"
   },
