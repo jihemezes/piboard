@@ -674,10 +674,44 @@
          despite a persistent failure. */
       const compatMode = this.ctx.settings.compatMode;
       if (compatMode === "audio" || compatMode === "full") {
-        video.src = "/api/iptv/audio-fix?url=" + encodeURIComponent(url) + "&mode=" + compatMode;
-        video.addEventListener("loadedmetadata", () => this.setStatus(""), { once: true });
-        video.addEventListener("error", () => this.setStatus(i18n.t("iptv.audioFixError")), { once: true });
-        this.safePlay(video);
+        const fixUrl = "/api/iptv/audio-fix?url=" + encodeURIComponent(url) + "&mode=" + compatMode;
+        video.src = fixUrl;
+        // La lecture n'est tentee qu'UNE FOIS LA SOURCE CONFIRMEE CHARGEE
+        // (loadedmetadata), pas immediatement en parallele de la requete
+        // reseau : appeler video.play() tout de suite, avant que la
+        // requete n'ait eu le temps d'aboutir ou d'echouer, faisait
+        // courser son propre message d'echec generique ("NotSupportedError
+        // : aucune source prise en charge") contre le message specifique
+        // de l'evenement "error" -- le premier arrivait presque toujours
+        // en premier et masquait le second, notamment le cas d'un statut
+        // HTTP 503 (ffmpeg introuvable sur le systeme), qui merite un
+        // message bien plus precis.
+        // Playback is only attempted ONCE THE SOURCE IS CONFIRMED LOADED
+        // (loadedmetadata), not immediately alongside the network
+        // request: calling video.play() right away, before the request
+        // had time to succeed or fail, made its own generic failure
+        // message ("NotSupportedError: no supported sources") race
+        // against the "error" event's specific message -- the former
+        // almost always arrived first and masked the latter, notably an
+        // HTTP 503 status (ffmpeg not found on the system), which
+        // deserves a far more precise message.
+        video.addEventListener("loadedmetadata", () => { this.setStatus(""); this.safePlay(video); }, { once: true });
+        video.addEventListener("error", async () => {
+          // L'element video n'expose pas le statut HTTP de la requete
+          // ayant echoue (juste un code d'erreur media generique) : une
+          // seconde requete, dediee au diagnostic, va le chercher.
+          // The video element doesn't expose the HTTP status of the
+          // failed request (just a generic media error code): a second,
+          // diagnostic-only request fetches it.
+          try {
+            const check = await fetch(fixUrl, { method: "GET", cache: "no-store" });
+            if (check.status === 503) this.setStatus(i18n.t("iptv.audioFixError"));
+            else if (!check.ok) this.setStatus(i18n.t("iptv.streamError") + " (HTTP " + check.status + ")");
+            else this.setStatus(i18n.t("iptv.streamError"));
+          } catch (e) {
+            this.setStatus(i18n.t("iptv.streamError"));
+          }
+        }, { once: true });
         return;
       }
 

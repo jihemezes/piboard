@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.44.1
+
+- **Cause enfin identifiée pour le cas signalé : `ffmpeg` n'était pas
+  installé** sur la machine Windows concernée — confirmé par
+  l'onglet Réseau (`503 Service Unavailable` sur `/api/iptv/audio-fix`,
+  code renvoyé uniquement quand `ffmpeg` reste introuvable). Sans
+  rapport avec les sept correctifs précédents autour de hls.js/codec,
+  qui concernaient un problème réel mais distinct.
+
+- **Correctif *Chaînes TV* : ce `503` s'affichait comme le même
+  `NotSupportedError` générique**, masquant totalement sa vraie cause.
+  `video.play()` était appelé immédiatement après avoir fixé la source,
+  avant même que la requête réseau n'ait eu le temps d'aboutir ou
+  d'échouer — son propre message d'échec générique arrivait presque
+  toujours en premier et masquait le message spécifique de l'événement
+  `error`. La lecture n'est désormais tentée qu'une fois la source
+  confirmée chargée (`loadedmetadata`), plus en parallèle d'une requête
+  encore en cours. Vérifié avec le cas exact rencontré (503) : le
+  message précis (« vérifiez que ffmpeg est installé ») s'affiche
+  maintenant correctement, plus jamais masqué.
+
+---
+
+- **Root cause finally identified for the reported case: `ffmpeg`
+  wasn't installed** on the Windows machine in question — confirmed via
+  the Network tab (`503 Service Unavailable` on `/api/iptv/audio-fix`,
+  a code only ever returned when `ffmpeg` can't be found). Unrelated to
+  the seven previous fixes around hls.js/codecs, which addressed a real
+  but distinct problem.
+
+- **Fix for *TV Channels*: that `503` displayed as the same generic
+  `NotSupportedError`**, entirely masking its real cause. `video.play()`
+  was called immediately after setting the source, before the network
+  request even had time to succeed or fail — its own generic failure
+  message almost always arrived first and masked the "error" event's
+  specific message. Playback is now only attempted once the source is
+  confirmed loaded (`loadedmetadata`), no longer alongside a still-
+  pending request. Verified with the exact case encountered (503): the
+  precise message ("check that ffmpeg is installed") now correctly
+  shows, never masked again.
+
 ## 1.44.0
 
 - **Chaînes TV : nouveau mode « Compatibilité totale »**, pour les
