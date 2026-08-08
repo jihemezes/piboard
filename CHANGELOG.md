@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.43.3
+
+- **Correctif *Chaînes TV* : le diagnostic à l'écran de la v1.43.2 ne
+  couvrait qu'un seul des trois endroits possibles d'échec** — d'où
+  l'absence de message malgré une reconstruction et réinstallation
+  complètes confirmées. Complété :
+  - **Erreur `hls.js` fatale après un manifeste chargé avec succès**
+    (ex. un segment individuel qui échoue) : affiche désormais le type
+    et le code précis (ex. « networkError / fragLoadError »), pas
+    seulement dans la console ;
+  - **Échec de lecture après un vrai clic** (relais CORS et hls.js
+    fonctionnels, mais la lecture elle-même refuse de démarrer) :
+    affiche désormais le nom et le message exacts de l'erreur du
+    navigateur (ex. « NotSupportedError : ... »).
+
+  Les trois cas de figure identifiés jusqu'ici (échec de chargement de
+  hls.js, erreur hls.js fatale, échec de lecture) affichent désormais
+  tous un détail exploitable directement à l'écran, sans dépendre des
+  outils de développement.
+
+---
+
+- **Fix for *TV Channels*: the v1.43.2 on-screen diagnostic only
+  covered one of three possible failure points** — hence no message
+  showing despite a confirmed full rebuild and reinstall. Completed:
+  - **Fatal `hls.js` error after a successfully loaded manifest** (e.g.
+    an individual segment failing): now shows the precise type and code
+    (e.g. "networkError / fragLoadError"), not just in the console;
+  - **Playback failure after a genuine click** (CORS relay and hls.js
+    both working, but playback itself refuses to start): now shows the
+    browser error's exact name and message (e.g. "NotSupportedError:
+    ...").
+
+  All three failure scenarios identified so far (hls.js load failure,
+  fatal hls.js error, playback failure) now show actionable detail
+  directly on screen, without relying on developer tools.
+
 ## 1.43.2
 
 - **Correctif *Chaînes TV* : échec persistant malgré les correctifs

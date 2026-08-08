@@ -189,7 +189,16 @@
         p.catch((err) => {
           if (isRetry) {
             console.warn("[piboard/iptv] echec de lecture apres un clic reel -- probablement le flux lui-meme, pas la politique de lecture automatique", err);
-            this.setStatus(this.ctx.i18n.t("iptv.streamError"));
+            // Troisieme et dernier endroit ou un message generique sans
+            // detail pouvait s'afficher : le nom et le message exacts de
+            // l'erreur navigateur (ex. "NotSupportedError: The element
+            // has no supported sources") s'affichent maintenant aussi a
+            // l'ecran. Third and last spot where a generic, detail-less
+            // message could show: the browser error's exact name and
+            // message (e.g. "NotSupportedError: The element has no
+            // supported sources") now also show on screen.
+            const detail = err && (err.name || err.message) ? [err.name, err.message].filter(Boolean).join(": ") : "";
+            this.setStatus(this.ctx.i18n.t("iptv.streamError") + (detail ? " (" + detail + ")" : ""));
             return;
           }
           // "Touchez pour lancer la lecture" doit etre une VRAIE
@@ -687,7 +696,24 @@
           this.hls.on(Hls.Events.ERROR, (evt, data) => {
             if (!data.fatal) return;
             console.warn("[piboard/iptv] hls", data.type, data.details);
-            this.setStatus(i18n.t("iptv.streamError"));
+            // Le type + le code precis (ex. "networkError /
+            // manifestLoadError", ou "networkError / levelLoadError")
+            // s'affiche desormais a l'ecran, pas seulement dans la
+            // console -- second endroit ou un message generique sans
+            // detail pouvait s'afficher, en plus de l'echec de
+            // chargement de hls.js lui-meme deja couvert. Precise
+            // notamment SI le manifeste initial a ete recupere avec
+            // succes (le relais CORS fonctionne) mais qu'un segment
+            // individuel echoue ensuite -- un probleme distinct.
+            // The type + precise code (e.g. "networkError /
+            // manifestLoadError", or "networkError / levelLoadError")
+            // now shows on screen, not just in the console -- a second
+            // spot where a generic, detail-less message could show, in
+            // addition to hls.js's own load failure already covered.
+            // Notably clarifies WHETHER the initial manifest was
+            // fetched successfully (the CORS relay works) but an
+            // individual segment then failed -- a distinct problem.
+            this.setStatus(i18n.t("iptv.streamError") + " (" + data.type + " / " + data.details + ")");
           });
           // Passe par le relais serveur (voir server/iptvHlsProxy.js) :
           // hls.js recupere le manifeste ET chaque segment via des
