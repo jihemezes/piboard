@@ -727,6 +727,45 @@
             this.setStatus("");
             this.safePlay(video);
           });
+          // Second controle, complementaire au precedent : le codec
+          // indique dans le manifeste (verifie ci-dessus) est FACULTATIF
+          // dans la norme HLS, et de nombreux flux IPTV -- concus pour
+          // VLC, qui n'en a pas besoin -- ne le fournissent tout
+          // simplement pas. BUFFER_CODECS, lui, reflete le codec
+          // REELLEMENT DETECTE par hls.js apres analyse des donnees du
+          // premier fragment (lecture du conteneur mp4 ou du type ADTS
+          // pour l'AAC en MPEG-TS) : toujours disponible, meme quand le
+          // manifeste ne dit rien. Necessaire pour couvrir precisement
+          // le cas signale : plus de message generique du navigateur
+          // apres un manifeste analyse avec succes, sans que le premier
+          // controle n'ait rien trouve a signaler.
+          // Second, complementary check: the codec stated in the
+          // manifest (checked above) is OPTIONAL per the HLS spec, and
+          // many IPTV streams -- built for VLC, which doesn't need it --
+          // simply don't provide it. BUFFER_CODECS, on the other hand,
+          // reflects the codec hls.js ACTUALLY DETECTED after analyzing
+          // the first fragment's data (reading the mp4 container or the
+          // ADTS type for AAC-in-MPEG-TS): always available, even when
+          // the manifest says nothing. Needed to precisely cover the
+          // reported case: still a generic browser message after a
+          // successfully parsed manifest, with the first check finding
+          // nothing to flag.
+          this.hls.once(Hls.Events.BUFFER_CODECS, (evt, data) => {
+            if (!window.MediaSource || typeof window.MediaSource.isTypeSupported !== "function") return;
+            const unsupported = [];
+            Object.keys(data.tracks || {}).forEach((kind) => {
+              const track = data.tracks[kind];
+              const codec = track && (track.levelCodec || track.codec);
+              const container = (track && track.container) || "video/mp4";
+              if (codec && !window.MediaSource.isTypeSupported(container + ';codecs="' + codec + '"')) {
+                unsupported.push(kind + ": " + codec);
+              }
+            });
+            if (unsupported.length) {
+              console.warn("[piboard/iptv] codec(s) reellement detecte(s) non pris en charge :", unsupported.join(", "));
+              this.setStatus(i18n.t("iptv.streamError") + " (codec non pris en charge : " + unsupported.join(", ") + ")");
+            }
+          });
           this.hls.on(Hls.Events.ERROR, (evt, data) => {
             if (!data.fatal) return;
             console.warn("[piboard/iptv] hls", data.type, data.details);

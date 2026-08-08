@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.43.6
+
+- **Correctif *Chaînes TV* : `NotSupportedError` toujours affiché sans
+  détail, malgré la vérification de codec de la v1.43.5.** Cause
+  trouvée : cette vérification se basait sur le codec *annoncé* dans le
+  manifeste — facultatif dans la norme HLS, et de nombreux flux IPTV,
+  conçus pour VLC (qui n'en a pas besoin), ne le fournissent tout
+  simplement pas. D'où un premier contrôle qui ne trouvait rien à
+  signaler, laissant le message générique du navigateur s'afficher tel
+  quel.
+
+  **Second contrôle ajouté**, basé sur `BUFFER_CODECS` — le codec
+  *réellement détecté* par hls.js après analyse des données du premier
+  fragment (toujours disponible, contrairement à celui du manifeste).
+  Vérifié avec un manifeste sans codec déclaré (le cas typique
+  concerné) : identifie précisément le codec en cause, y compris
+  quand un seul des deux (vidéo ou audio) pose problème.
+
+---
+
+- **Fix for *TV Channels*: `NotSupportedError` still showing with no
+  detail, despite the v1.43.5 codec check.** Cause found: that check
+  relied on the codec *announced* in the manifest — optional per the
+  HLS spec, and many IPTV streams, built for VLC (which doesn't need
+  it), simply don't provide it. Hence a first check finding nothing to
+  flag, leaving the browser's generic message to show as-is.
+
+  **Second check added**, based on `BUFFER_CODECS` — the codec hls.js
+  *actually detected* after analyzing the first fragment's data
+  (always available, unlike the manifest's). Verified with a manifest
+  declaring no codec (the typical case at hand): precisely identifies
+  the codec at fault, including when only one of the two (video or
+  audio) is the problem.
+
 ## 1.43.5
 
 - **Correctif *Chaînes TV* : `NotSupportedError` toujours présent malgré
