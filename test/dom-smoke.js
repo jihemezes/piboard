@@ -2340,6 +2340,19 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       window.PiBoardI18n.setLang("fr");
     }
 
+    // Correctif "aucun repli sur l'URL brute quand hls.js echoue a se
+    // charger" (voir widget.js, catch de la branche hls.js) : verifie
+    // via un script isole plutot qu'ici, simuler l'echec de chargement
+    // exigeant de modifier document.createElement de facon GLOBALE, au
+    // risque de perturber les nombreux autres tests de ce fichier tres
+    // long qui creent aussi des elements script/autres.
+    // "No fallback to the raw URL when hls.js fails to load" fix (see
+    // widget.js, the hls.js branch's catch): verified via a standalone
+    // script rather than here, simulating the load failure requiring a
+    // GLOBAL patch of document.createElement, risking interference with
+    // the many other tests in this very long file that also create
+    // script/other elements.
+
     console.log("== Chaines TV : detection de l'absence de piste audio (AC3/DTS) ==");
     // L'ecouteur "playing" du widget est a usage unique (once:true, par
     // conception : la verification n'a besoin de se faire qu'une fois

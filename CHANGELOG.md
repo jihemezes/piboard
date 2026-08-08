@@ -1,5 +1,52 @@
 # Changelog
 
+## 1.43.1
+
+- **Correctif *Chaînes TV* : deux vrais bugs trouvés dans la logique de
+  repli, identifiés grâce à un second relevé de console** (`405` sur
+  l'URL **directe** du fournisseur, `NotSupportedError`) — le relais
+  HLS de la v1.43.0 était contourné dans certains cas.
+  - **Repli dangereux corrigé** : quand hls.js échoue à se charger, le
+    code retombait sur `<video src>` avec **l'URL brute du
+    fournisseur** — contournant le relais CORS tout juste ajouté, *et*
+    de toute façon voué à l'échec (Chromium ne sait pas décoder un
+    manifeste HLS brut sans hls.js, contrairement à Safari). Un message
+    d'erreur honnête s'affiche désormais à la place ;
+  - **Échec de chargement mis en cache définitivement, corrigé** : si
+    le tout premier chargement de hls.js échouait (même pour une raison
+    transitoire), cet échec restait mis en cache pour le reste de la
+    session — condamnant toute tentative future, y compris après un
+    nouveau clic, au repli cassé ci-dessus. Une tentative peut
+    désormais réessayer proprement.
+
+  Cause profonde de l'échec initial de chargement de hls.js toujours
+  en cours d'investigation — ces deux correctifs empêchent le
+  symptôme (contournement du relais, blocage permanent) de se
+  reproduire, sans expliquer encore pourquoi hls.js échoue à charger
+  sur cette installation précise.
+
+---
+
+- **Fix for *TV Channels*: two real bugs found in the fallback logic,
+  identified thanks to a second console reading** (`405` on the
+  provider's **direct** URL, `NotSupportedError`) — the v1.43.0 HLS
+  relay was being bypassed in some cases.
+  - **Dangerous fallback fixed**: when hls.js failed to load, the code
+    fell back to `<video src>` with **the provider's raw URL** —
+    bypassing the CORS relay just added, *and* doomed to fail anyway
+    (Chromium can't decode a raw HLS manifest without hls.js, unlike
+    Safari). An honest error message now shows instead;
+  - **Permanently cached load failure fixed**: if the very first hls.js
+    load attempt failed (even for a transient reason), that failure
+    stayed cached for the rest of the session — dooming every future
+    attempt, including after a fresh click, to the broken fallback
+    above. An attempt can now cleanly retry.
+
+  The root cause of hls.js's initial load failure is still under
+  investigation — these two fixes prevent the symptom (relay bypass,
+  permanent lockout) from recurring, without yet explaining why hls.js
+  fails to load on this particular install.
+
 ## 1.43.0
 
 - **Correctif *Chaînes TV* : les chaînes en direct ne démarraient

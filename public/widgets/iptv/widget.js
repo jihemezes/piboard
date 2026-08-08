@@ -82,6 +82,21 @@
       s.onload = () => resolve(window.Hls);
       s.onerror = () => reject(new Error("hls.js introuvable"));
       document.head.appendChild(s);
+    }).catch((e) => {
+      // Reinitialise le cache d'echec : sans ca, un chargement rate UNE
+      // SEULE fois (potentiellement transitoire -- lenteur au tout
+      // premier demarrage du serveur, par exemple) restait en cache
+      // pour le reste de la session, condamnant TOUTE tentative future
+      // au repli natif -- qui, lui, ne sait de toute facon pas lire du
+      // HLS sur Chromium (voir plus bas) et contourne en plus le relais
+      // CORS. Resets the failure cache: without this, a load that
+      // failed ONCE (potentially transient -- slowness right at the
+      // server's very first startup, for instance) stayed cached for
+      // the rest of the session, dooming every future attempt to the
+      // native fallback -- which, on Chromium, can't read HLS anyway
+      // (see below) and additionally bypasses the CORS relay.
+      hlsLoader = null;
+      throw e;
     });
     return hlsLoader;
   }
@@ -657,7 +672,26 @@
           this.hls.attachMedia(video);
           return;
         } catch (e) {
-          console.warn("[piboard/iptv] hls.js indisponible, repli natif", e);
+          console.warn("[piboard/iptv] hls.js indisponible", e);
+          // AUCUN repli sur <video src=url> ici pour un flux .m3u8 sur
+          // un navigateur sans decodage HLS natif : Chromium (Pi comme
+          // Electron) ne sait de toute facon PAS lire un manifeste HLS
+          // brut, quel que soit le relais -- confirme par le message
+          // NotSupportedError observe en pratique. Utiliser l'URL brute
+          // ici contournerait en plus le relais CORS (voir plus haut),
+          // reproduisant exactement le blocage d'origine sous un autre
+          // visage. Mieux vaut un message d'erreur honnete qu'une
+          // tentative vouee a l'echec.
+          // NO fallback to <video src=url> here for an .m3u8 stream on a
+          // browser without native HLS decoding: Chromium (Pi as much as
+          // Electron) simply CANNOT read a raw HLS manifest regardless
+          // of the relay -- confirmed by the NotSupportedError observed
+          // in practice. Using the raw URL here would also bypass the
+          // CORS relay (see above), reproducing the exact original block
+          // under a different guise. Better an honest error message than
+          // an attempt doomed to fail.
+          this.setStatus(i18n.t("iptv.streamError"));
+          return;
         }
       }
 
