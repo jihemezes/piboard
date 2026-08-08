@@ -593,10 +593,25 @@
       const s = this.ctx.settings;
       const warn = this.current.containerExt && !BROWSER_FRIENDLY_EXT.has(String(this.current.containerExt).toLowerCase())
         ? `<div class="pwtv-format-banner">${i18n.t("iptv.formatWarning").replace("{ext}", this.current.containerExt)}</div>` : "";
+      // VOD (film/serie) : duree finie, la navigation (lecture/pause,
+      // avance/retour rapide) y a un sens -- utilise les commandes
+      // NATIVES du navigateur, plus robustes et completes qu'une barre
+      // maison. Repere via le chemin de l'URL (/movie/ ou /series/),
+      // fiable quelle que soit la source (Xtream ou M3U simple), plutot
+      // que de dependre d'un champ de donnees particulier. Absent pour
+      // le direct, ou il n'y a rien a avancer/reculer.
+      // VOD (movie/series): finite duration, navigation (play/pause,
+      // fast-forward/rewind) makes sense there -- uses the browser's
+      // NATIVE controls, more robust and complete than a custom bar.
+      // Detected via the URL's path (/movie/ or /series/), reliable
+      // regardless of the source (Xtream or plain M3U), rather than
+      // depending on a specific data field. Absent for live, where
+      // there's nothing to seek through.
+      const isVod = /\/(movie|series)\//.test(this.current.url || "");
       this.ctx.el.innerHTML = `
         <div class="pw-iptv pwtv-playing">
           <div class="pwtv-video-wrap">
-            <video class="pwtv-video" playsinline ${s.startMuted !== false ? "muted" : ""}></video>
+            <video class="pwtv-video" playsinline ${isVod ? "controls" : ""} ${s.startMuted !== false ? "muted" : ""}></video>
             <div class="pwtv-status" hidden></div>
           </div>
           ${warn}
@@ -604,7 +619,7 @@
             <button type="button" class="pwtv-btn pwtv-back" title="${i18n.t("iptv.backToList")}">☰</button>
             <span class="pwtv-current">${escapeHtml(this.current.name)}</span>
             <span class="pwtv-audio-warn" hidden>⚠</span>
-            <button type="button" class="pwtv-btn pwtv-mute">${s.startMuted !== false ? "🔇" : "🔊"}</button>
+            ${isVod ? "" : `<button type="button" class="pwtv-btn pwtv-mute">${s.startMuted !== false ? "🔇" : "🔊"}</button>`}
           </div>
         </div>`;
 
@@ -616,10 +631,12 @@
         this.render();
       });
       const muteBtn = this.ctx.el.querySelector(".pwtv-mute");
-      muteBtn.addEventListener("click", () => {
-        video.muted = !video.muted;
-        muteBtn.textContent = video.muted ? "🔇" : "🔊";
-      });
+      if (muteBtn) {
+        muteBtn.addEventListener("click", () => {
+          video.muted = !video.muted;
+          muteBtn.textContent = video.muted ? "🔇" : "🔊";
+        });
+      }
       this.attachStream(video, this.current.url);
     }
 
@@ -676,26 +693,36 @@
       if (compatMode === "audio" || compatMode === "full") {
         const fixUrl = "/api/iptv/audio-fix?url=" + encodeURIComponent(url) + "&mode=" + compatMode;
         video.src = fixUrl;
-        // La lecture n'est tentee qu'UNE FOIS LA SOURCE CONFIRMEE CHARGEE
-        // (loadedmetadata), pas immediatement en parallele de la requete
-        // reseau : appeler video.play() tout de suite, avant que la
-        // requete n'ait eu le temps d'aboutir ou d'echouer, faisait
-        // courser son propre message d'echec generique ("NotSupportedError
-        // : aucune source prise en charge") contre le message specifique
-        // de l'evenement "error" -- le premier arrivait presque toujours
-        // en premier et masquait le second, notamment le cas d'un statut
-        // HTTP 503 (ffmpeg introuvable sur le systeme), qui merite un
-        // message bien plus precis.
-        // Playback is only attempted ONCE THE SOURCE IS CONFIRMED LOADED
-        // (loadedmetadata), not immediately alongside the network
-        // request: calling video.play() right away, before the request
-        // had time to succeed or fail, made its own generic failure
-        // message ("NotSupportedError: no supported sources") race
-        // against the "error" event's specific message -- the former
-        // almost always arrived first and masked the latter, notably an
-        // HTTP 503 status (ffmpeg not found on the system), which
-        // deserves a far more precise message.
-        video.addEventListener("loadedmetadata", () => { this.setStatus(""); this.safePlay(video); }, { once: true });
+        // La lecture n'est tentee qu'UNE FOIS ASSEZ DE DONNEES
+        // REELLEMENT DISPONIBLES ("canplay"), pas seulement une fois le
+        // FORMAT reconnu ("loadedmetadata", qui peut se declencher
+        // quasi instantanement avec ce type de flux -- les en-tetes
+        // ftyp/moov minimalistes de "empty_moov" suffisent a la faire
+        // reagir, avant meme qu'un seul fragment de donnees reelles ne
+        // soit arrive). Cet ecart est particulierement marque pour un
+        // flux EN DIRECT : ffmpeg transcode en temps reel, le premier
+        // fragment exploitable prend donc un temps reel a etre produit
+        // -- contrairement a un fichier VOD deja entierement encode,
+        // ou les donnees s'accumulent bien plus vite que le debit de
+        // lecture. Les lecteurs IPTV dedies affichent d'ailleurs
+        // toujours une phase de mise en memoire tampon avant le direct,
+        // jamais pour la VOD : signale comme piste probable pour ce
+        // qui manquait ici.
+        // Playback is only attempted ONCE ENOUGH DATA IS ACTUALLY
+        // AVAILABLE ("canplay"), not merely once the FORMAT is
+        // recognized ("loadedmetadata", which can fire almost instantly
+        // with this kind of stream -- the minimal ftyp/moov headers
+        // from "empty_moov" are enough to trigger it, before a single
+        // fragment of real data has even arrived). This gap is
+        // particularly pronounced for a LIVE stream: ffmpeg transcodes
+        // in real time, so the first usable fragment takes real time to
+        // produce -- unlike an already fully-encoded VOD file, where
+        // data accumulates far faster than playback consumes it.
+        // Dedicated IPTV players, notably, always show a buffering
+        // phase before live playback, never for VOD: flagged as the
+        // likely missing piece here.
+        this.setStatus(i18n.t("iptv.buffering"));
+        video.addEventListener("canplay", () => { this.setStatus(""); this.safePlay(video); }, { once: true });
         video.addEventListener("error", async () => {
           // L'element video n'expose pas le statut HTTP de la requete
           // ayant echoue (juste un code d'erreur media generique) : une

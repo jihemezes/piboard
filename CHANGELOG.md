@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.46.0
+
+- **Correctif *Chaînes TV* : cause probable enfin trouvée pour le
+  direct — signalée par une observation de l'utilisateur.** La lecture
+  était tentée dès que le *format* du flux était reconnu
+  (« loadedmetadata »), pas une fois qu'il y avait *réellement assez de
+  données* pour démarrer (« canplay ») — un écart particulièrement
+  marqué pour un flux en direct, où ffmpeg transcode en temps réel : le
+  premier fragment exploitable prend un temps réel à être produit,
+  contrairement à un fichier VOD déjà entièrement encodé. Les lecteurs
+  IPTV dédiés affichent d'ailleurs toujours une phase de mise en
+  mémoire tampon avant le direct, jamais pour la VOD — exactement
+  l'indice qui manquait. Une mention « Mise en mémoire tampon… »
+  s'affiche désormais pendant l'attente. Vérifié : la lecture n'est
+  plus tentée prématurément sur le seul « loadedmetadata ».
+
+- **Nouveau : commandes de lecture pour les films et séries.**
+  Lecture/pause, avance et retour rapide, volume — via les contrôles
+  natifs du navigateur, plus robustes qu'une barre personnalisée.
+  Apparaissent automatiquement pour ce contenu (durée finie,
+  navigable), détecté via le chemin de l'URL (`/movie/` ou `/series/`,
+  fiable quelle que soit la source) ; absents pour les chaînes en
+  direct, où il n'y a rien à avancer ou reculer.
+
+---
+
+- **Fix for *TV Channels*: likely cause finally found for live —
+  flagged by a user observation.** Playback was attempted as soon as
+  the stream's *format* was recognized ("loadedmetadata"), not once
+  there was *actually enough data* to start ("canplay") — a gap
+  particularly pronounced for a live stream, where ffmpeg transcodes
+  in real time: the first usable fragment takes real time to produce,
+  unlike an already fully-encoded VOD file. Dedicated IPTV players,
+  notably, always show a buffering phase before live playback, never
+  for VOD — exactly the missing clue. A "Buffering…" message now shows
+  while waiting. Verified: playback is no longer attempted prematurely
+  on "loadedmetadata" alone.
+
+- **New: playback controls for movies and series.** Play/pause,
+  fast-forward and rewind, volume — via the browser's native controls,
+  more robust than a custom bar. Appear automatically for this content
+  (finite, seekable duration), detected via the URL's path (`/movie/`
+  or `/series/`, reliable regardless of the source); absent for live
+  channels, where there's nothing to seek through.
+
 ## 1.45.0
 
 - **Étape optionnelle à l'installation Windows : ffmpeg proposé

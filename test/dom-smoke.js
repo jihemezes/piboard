@@ -2211,6 +2211,8 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
     assert("lecture demarree depuis la navigation Xtream", !!tvTile.querySelector(".pwtv-video"));
+    assert("PAS de controles natifs pour une chaine en direct (rien a avancer/reculer)",
+      !tvTile.querySelector(".pwtv-video").hasAttribute("controls"));
     tvTile.querySelector(".pwtv-back").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
     assert("retour depuis le lecteur : on revient a la liste des flux de la categorie (pas a la racine)",
@@ -2247,6 +2249,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     tvTile.querySelector(".pwtv-item[data-idx]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
     assert("lecture d'un episode demarree", !!tvTile.querySelector(".pwtv-video"));
+    assert("controles natifs (lecture/pause/avance rapide) presents pour la VOD (episode)",
+      tvTile.querySelector(".pwtv-video").hasAttribute("controls"));
+    assert("bouton muet maison absent pour la VOD (redondant avec le volume natif)",
+      !tvTile.querySelector(".pwtv-mute"));
 
     console.log("== Chaines TV : correctif 'Touchez pour lancer la lecture' reellement cliquable ==");
     // Simule le VRAI comportement d'un navigateur quand la politique de
