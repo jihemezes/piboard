@@ -55,7 +55,38 @@ const platform = require("./platform");
 let vlcChecked = false;
 let vlcPath = null;
 
+const fs = require("fs");
+
+/* Pour un CHEMIN ABSOLU (emplacements d'installation connus, la
+   majorite des candidats -- voir server/platform/*.js), simple
+   verification d'EXISTENCE DU FICHIER : aucun risque d'execution
+   bloquante. Important specifiquement pour VLC : contrairement a
+   ffmpeg (dont "-version" affiche du texte et se termine de facon
+   fiable, verifie), rien ne garantit que vlc.exe se comporte pareil
+   avec "--version" sous Windows -- une eventuelle tentative
+   d'ouverture d'interface graphique ferait echouer la verification a
+   tort (delai d'expiration), meme quand VLC est bel et bien installe.
+   Seuls les noms nus (ex. "cvlc", "vlc.exe", qui dependent du PATH)
+   sont encore verifies en les executant, seule methode possible dans
+   ce cas -- mais ils arrivent apres les chemins absolus dans les
+   listes de candidats, qui couvrent deja le cas le plus courant
+   (installation standard).
+   For an ABSOLUTE PATH (known install locations, the majority of
+   candidates -- see server/platform/*.js), a simple FILE EXISTENCE
+   check: no risk of a blocking execution. Important specifically for
+   VLC: unlike ffmpeg (whose "-version" reliably prints text and exits,
+   verified), nothing guarantees vlc.exe behaves the same with
+   "--version" on Windows -- a possible attempt to open a graphical
+   interface would make the check wrongly fail (timeout), even when VLC
+   is genuinely installed. Only bare names (e.g. "cvlc", "vlc.exe",
+   which depend on PATH) are still checked by executing them, the only
+   method possible in that case -- but they come after absolute paths in
+   the candidate lists, which already cover the most common case (a
+   standard install). */
 function tryCandidate(cmd) {
+  if (/[\\/]/.test(cmd)) {
+    return Promise.resolve(fs.existsSync(cmd));
+  }
   return new Promise((resolve) => {
     execFile(cmd, ["--version"], { timeout: 5000 }, (err) => resolve(!err));
   });
@@ -127,4 +158,4 @@ function spawnRelay(url) {
   });
 }
 
-module.exports = { checkVlc, findVlc, installHint, spawnRelay };
+module.exports = { checkVlc, findVlc, installHint, spawnRelay, tryCandidate };

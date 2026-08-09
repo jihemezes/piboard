@@ -392,9 +392,24 @@ function vlcCandidates() {
   const pf = process.env.ProgramFiles || "C:\\Program Files";
   const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
   return [
-    "vlc.exe",
+    // Chemins absolus D'ABORD : verification par simple existence de
+    // fichier, rapide et fiable (voir tryCandidate() dans
+    // server/iptvVlc.js) -- couvre deja le cas le plus courant
+    // (installation standard). Le nom nu vient en dernier, seulement en
+    // repli : sa verification necessite de L'EXECUTER, ce qui pourrait
+    // bloquer plusieurs secondes si vlc.exe tente d'ouvrir son
+    // interface graphique plutot que d'afficher du texte et de se
+    // terminer (rien ne le garantit, contrairement a ffmpeg).
+    // Absolute paths FIRST: checked via simple file existence, fast and
+    // reliable (see tryCandidate() in server/iptvVlc.js) -- already
+    // covers the most common case (a standard install). The bare name
+    // comes last, only as a fallback: checking it requires EXECUTING
+    // it, which could hang for several seconds if vlc.exe tries to open
+    // its graphical interface rather than printing text and exiting
+    // (nothing guarantees this, unlike ffmpeg).
     pf + "\\VideoLAN\\VLC\\vlc.exe",
-    pf86 + "\\VideoLAN\\VLC\\vlc.exe"
+    pf86 + "\\VideoLAN\\VLC\\vlc.exe",
+    "vlc.exe"
   ];
 }
 

@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.47.2
+
+- **Correctif *Chaînes TV* : VLC installé et confirmé par l'utilisateur,
+  mais signalé « indisponible » par le diagnostic.** Cause trouvée :
+  la détection de VLC vérifiait sa présence en **l'exécutant** avec
+  `--version` — fiable pour ffmpeg (vérifié, affiche du texte et se
+  termine), mais rien ne garantit ce même comportement pour `vlc.exe`
+  sous Windows, qui pourrait tenter d'ouvrir son interface graphique
+  au lieu de simplement répondre et se fermer, faisant échouer la
+  vérification par expiration du délai — même quand VLC est bel et
+  bien installé.
+
+  Un **chemin absolu** (emplacements d'installation connus) est
+  désormais vérifié par simple **existence de fichier**, sans jamais
+  l'exécuter. Les listes de candidats Windows/macOS ont aussi été
+  réordonnées : chemins absolus en premier (rapide, sûr), nom nu
+  (`vlc.exe`/`vlc`) en dernier, comme simple repli.
+
+  Test dédié ajouté, qui reproduit exactement le bug corrigé
+  (détection d'un chemin absolu existant sans jamais l'exécuter).
+
+---
+
+- **Fix for *TV Channels*: VLC installed and confirmed by the user, but
+  reported "unavailable" by the diagnostic.** Cause found: VLC's
+  detection checked for its presence by **executing** it with
+  `--version` — reliable for ffmpeg (verified, prints text and exits),
+  but nothing guarantees the same behavior for `vlc.exe` on Windows,
+  which might try to open its graphical interface instead of simply
+  responding and closing, making the check fail via timeout — even when
+  VLC is genuinely installed.
+
+  An **absolute path** (known install locations) is now checked via
+  simple **file existence**, never executing it at all. The Windows/
+  macOS candidate lists were also reordered: absolute paths first
+  (fast, safe), bare name (`vlc.exe`/`vlc`) last, as a plain fallback.
+
+  Dedicated test added, which reproduces the exact fixed bug (detecting
+  an existing absolute path without ever executing it).
+
 ## 1.47.1
 
 - **Correctif : fenêtre de console qui s'ouvre puis se referme sous

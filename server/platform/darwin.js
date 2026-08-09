@@ -160,7 +160,15 @@ function ffmpegInstallHint() {
    provider rejects with a 405 when faced with ffmpeg -- confirmed by
    examining the official reference player. */
 function vlcCandidates() {
-  return ["vlc", "/Applications/VLC.app/Contents/MacOS/VLC", "/opt/homebrew/bin/vlc"];
+  // Meme raisonnement que win32.js : chemins absolus d'abord
+  // (verification par existence de fichier), nom nu en dernier
+  // (repli, verification par execution -- risque de blocage moindre
+  // sur macOS, mais la coherence entre plateformes reste preferable).
+  // Same reasoning as win32.js: absolute paths first (checked via file
+  // existence), bare name last (fallback, checked via execution -- less
+  // hang risk on macOS, but consistency across platforms remains
+  // preferable).
+  return ["/Applications/VLC.app/Contents/MacOS/VLC", "/opt/homebrew/bin/vlc", "vlc"];
 }
 
 function vlcInstallHint() {
