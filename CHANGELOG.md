@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.50.3
+
+- **Correctif décisif : la construction de l'installeur échouait
+  réellement**, expliquant à la fois l'absence de VLC et le retour à
+  l'ancien comportement (fenêtre modale) rapportés en v1.50.1/1.50.2.
+  Le vrai journal de construction fourni par l'utilisateur a permis de
+  trouver la cause exacte : `warning 6010: install function
+  "OptDownloadsPageCreate" not referenced`, traité comme une erreur
+  fatale par electron-builder — la construction n'a donc jamais
+  abouti, et Windows/electron-builder sont probablement restés sur un
+  ancien exécutable déjà présent.
+
+  **Cause identifiée avec certitude, reproduite directement avec
+  `makensis`** : `assistedInstaller.nsh` (le modèle interne
+  d'electron-builder) enveloppe sa déclaration de page dans
+  `!ifndef BUILD_UNINSTALLER` — pendant la passe de compilation du
+  désinstalleur (où cet indicateur est défini), ma page ne s'insère
+  jamais, mais mes fonctions, elles, restaient compilées sans
+  condition, provoquant exactement l'avertissement observé.
+
+  Variables, macro et fonctions désormais enveloppées dans la même
+  condition. **Vérifié en reproduisant l'échec exact** (même message
+  exact que dans le journal fourni), **avant et après le correctif**,
+  dans les deux passes de compilation (installeur et désinstalleur) —
+  zéro avertissement des deux côtés.
+
+---
+
+- **Decisive fix: the installer build was genuinely failing**,
+  explaining both the missing VLC and the reversion to the old
+  behavior (modal dialog) reported in v1.50.1/1.50.2. The real build
+  log supplied by the user made it possible to find the exact cause:
+  `warning 6010: install function "OptDownloadsPageCreate" not
+  referenced`, treated as a fatal error by electron-builder — the
+  build therefore never completed, and Windows/electron-builder likely
+  fell back to an already-present older executable.
+
+  **Cause identified with certainty, directly reproduced with
+  `makensis`**: `assistedInstaller.nsh` (electron-builder's own
+  internal template) wraps its page declaration in `!ifndef
+  BUILD_UNINSTALLER` — during the uninstaller compile pass (where that
+  flag is defined), my page never gets inserted, but my functions
+  themselves stayed compiled unconditionally, causing exactly the
+  observed warning.
+
+  Variables, macro, and functions now wrapped in the same guard.
+  **Verified by reproducing the exact failure** (the same exact
+  message as in the supplied log), **before and after the fix**, in
+  both compile passes (installer and uninstaller) — zero warnings on
+  both sides.
+
 ## 1.50.2
 
 - **Correctif : fenêtre PowerShell supplémentaire pendant l'extraction

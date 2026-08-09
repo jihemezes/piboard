@@ -66,11 +66,41 @@
 !define FFMPEG_DOWNLOAD_URL "https://github.com/jihemezes/piboard/releases/download/ffmpeg-win64-v8.1.2/ffmpeg-piboard-win64-gpl.zip"
 !define VLC_DOWNLOAD_URL "https://github.com/jihemezes/piboard/releases/download/vlc-win64-v3.0.20/vlc-piboard-win64.zip"
 
+; Tout ce qui suit (variables, macro, ET fonctions) est enveloppe dans
+; !ifndef BUILD_UNINSTALLER -- meme raisonnement que pour les
+; fonctions ci-dessous : sans ce garde-fou etendu aux variables, la
+; passe de compilation du desinstalleur les declare sans jamais les
+; utiliser (les fonctions qui les utilisent etant elles-memes
+; desormais conditionnelles), causant un second type d'avertissement
+; ("Variable non referencee") -- reproduit et corrige directement avec
+; makensis.
+; Everything below (variables, macro, AND functions) is wrapped in
+; !ifndef BUILD_UNINSTALLER -- same reasoning as for the functions
+; below: without this guard extended to the variables, the uninstaller
+; compile pass declares them without ever using them (the functions
+; that use them being themselves now conditional), causing a second
+; kind of warning ("Variable not referenced") -- reproduced and fixed
+; directly with makensis.
+!ifndef BUILD_UNINSTALLER
+
 Var OptDlg
 Var CheckFfmpeg
 Var CheckVlc
 Var NeedFfmpeg
 Var NeedVlc
+
+; Tout ce qui suit (macro ET fonctions) beneficie de la meme
+; protection : sans elle, la declaration de page est absente pendant
+; la passe de compilation du desinstalleur (ou BUILD_UNINSTALLER est
+; defini) tandis que les fonctions, elles, restaient compilees sans
+; condition, causant "fonction non referencee" (reproduit et confirme
+; directement avec makensis).
+; Everything below (macro AND functions) benefits from the same
+; guard: without it, the page declaration is absent during the
+; uninstaller compile pass (where BUILD_UNINSTALLER is defined) while
+; the functions themselves stayed compiled unconditionally, causing
+; "function not referenced" (reproduced and confirmed directly with
+; makensis).
 
 !macro customPageAfterChangeDir
   Page custom OptDownloadsPageCreate OptDownloadsPageLeave
@@ -223,3 +253,5 @@ Function InstallVlc
   Delete "$TEMP\vlc-piboard.zip"
   RMDir /r "$TEMP\vlc-piboard-extracted"
 FunctionEnd
+
+!endif ; BUILD_UNINSTALLER
