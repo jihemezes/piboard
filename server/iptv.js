@@ -261,7 +261,23 @@ async function fetchXtreamStreams(server, username, password, kind, categoryId) 
 
   return list.slice(0, MAX_CHANNELS).map((s) => {
     const id = String(kind === "live" ? s.stream_id : s.stream_id);
-    const ext = kind === "vod" ? (s.container_extension || "mp4") : "m3u8";
+    // .ts pour le direct, pas .m3u8 : trouve par examen du code source
+    // du lecteur de reference officiel (WalPlayer), qui construit
+    // l'URL du flux en direct avec l'extension .ts (flux MPEG-TS brut,
+    // pas un manifeste HLS). Confirme comme la vraie cause du 405
+    // persistant : le fournisseur (via son proxy "PremiumProxy")
+    // rejette les requetes .m3u8 sur cet endpoint, quel que soit le
+    // client -- navigateur, ffmpeg, VLC, tous rejetes identiquement en
+    // .m3u8, avant meme d'avoir teste .ts.
+    // .ts for live, not .m3u8: found by examining the official
+    // reference player's (WalPlayer) source code, which builds the
+    // live stream URL with a .ts extension (raw MPEG-TS stream, not an
+    // HLS manifest). Confirmed as the real cause of the persistent
+    // 405: the provider (via its "PremiumProxy" proxy) rejects .m3u8
+    // requests on this endpoint, regardless of client -- browser,
+    // ffmpeg, VLC, all rejected identically with .m3u8, before .ts was
+    // ever tried.
+    const ext = kind === "vod" ? (s.container_extension || "mp4") : (kind === "live" ? "ts" : "m3u8");
     const path = kind === "live" ? "live" : "movie";
     return {
       id,

@@ -689,7 +689,26 @@
          ENTIRELY bypasses hls.js/MediaSource, useful when no
          browser-side codec diagnostic found anything wrong to flag
          despite a persistent failure. */
-      const compatMode = this.ctx.settings.compatMode;
+      // Le DIRECT passe desormais TOUJOURS par le pipeline de
+      // transcodage, independamment du reglage compatMode -- pas
+      // seulement en option comme pour la VOD. Raison : les URLs de
+      // direct se terminent maintenant en .ts (flux MPEG-TS brut, voir
+      // server/iptv.js), jamais en .m3u8 (manifeste HLS) -- .ts n'est
+      // JAMAIS lisible directement par un navigateur, quel que soit le
+      // fournisseur. compatMode continue de controler UNIQUEMENT le
+      // niveau (audio seul/complet) pour ce cas deja obligatoire, et
+      // reste optionnel pour la VOD (qui, elle, se lit nativement,
+      // confirme par retour utilisateur).
+      // LIVE now ALWAYS goes through the transcode pipeline,
+      // regardless of the compatMode setting -- not just optionally
+      // like for VOD. Reason: live URLs now end in .ts (raw MPEG-TS
+      // stream, see server/iptv.js), never .m3u8 (HLS manifest) -- .ts
+      // is NEVER directly playable by a browser, whatever the
+      // provider. compatMode still controls ONLY the level (audio-only/
+      // full) for this now-mandatory case, and stays optional for VOD
+      // (which plays natively, confirmed by user feedback).
+      const isLiveUrl = /\/live\//i.test(url);
+      const compatMode = isLiveUrl ? (this.ctx.settings.compatMode === "full" ? "full" : "audio") : this.ctx.settings.compatMode;
       if (compatMode === "audio" || compatMode === "full") {
         const fixUrl = "/api/iptv/audio-fix?url=" + encodeURIComponent(url) + "&mode=" + compatMode;
         video.src = fixUrl;

@@ -1,5 +1,68 @@
 # Changelog
 
+## 1.49.0
+
+- **Chaînes TV : cause racine du 405 enfin trouvée — mauvaise
+  extension d'URL, pas un problème de client.** VLC natif (le vrai
+  moteur, testé directement en v1.48.1) recevait le même 405 que
+  ffmpeg, éliminant toute piste liée au user-agent, aux méthodes HTTP,
+  ou à la bibliothèque réseau utilisée. Cause trouvée par examen
+  statique du code source d'un lecteur IPTV de référence officiel
+  (installeur fourni par l'utilisateur, précédemment examiné pour
+  découvrir l'usage de libVLC) : il construit l'URL des chaînes en
+  direct avec l'extension **`.ts`** (flux MPEG-TS brut), jamais
+  `.m3u8` (manifeste HLS) — alors que PiBoard utilisait `.m3u8`
+  jusqu'ici pour toutes les chaînes en direct.
+
+  Le fournisseur (via son proxy « PremiumProxy ») rejette
+  systématiquement les requêtes `.m3u8` sur cet endpoint, quel que
+  soit le client — confirmé par la même erreur 405 obtenue avec le
+  navigateur, ffmpeg, et VLC natif, avant que cette différence
+  d'extension ne soit découverte.
+
+  **Conséquence architecturale** : un flux `.ts` brut n'est jamais
+  lisible directement par un navigateur, ni par hls.js (conçu pour de
+  vrais manifestes HLS). Le pipeline de transcodage (VLC si
+  disponible, sinon ffmpeg — voir v1.45.0-v1.48.1) devient donc
+  **obligatoire** pour toutes les chaînes en direct, plus seulement
+  optionnel comme pour les films/séries. Le réglage « Mode de
+  compatibilité » ne contrôle plus que le *niveau* (audio seul ou
+  complet) pour ce cas désormais systématique.
+
+  Nouveau test dédié, qui verrouille ce comportement critique :
+  vérifie que le direct passe bien par le pipeline de transcodage
+  avec une URL en `.ts`, jamais en `.m3u8`.
+
+---
+
+- **TV Channels: root cause of the 405 finally found — wrong URL
+  extension, not a client problem.** Native VLC (the real engine,
+  directly tested in v1.48.1) received the same 405 as ffmpeg,
+  ruling out any lead related to user-agent, HTTP methods, or the
+  networking library used. Cause found by statically examining an
+  official reference IPTV player's source code (installer supplied by
+  the user, previously examined to discover its use of libVLC): it
+  builds live channel URLs with a **`.ts`** extension (raw MPEG-TS
+  stream), never `.m3u8` (HLS manifest) — while PiBoard was using
+  `.m3u8` for all live channels until now.
+
+  The provider (via its "PremiumProxy" proxy) systematically rejects
+  `.m3u8` requests on this endpoint, regardless of client — confirmed
+  by the same 405 error obtained with the browser, ffmpeg, and native
+  VLC, before this extension difference was discovered.
+
+  **Architectural consequence**: a raw `.ts` stream is never directly
+  playable by a browser, nor by hls.js (built for genuine HLS
+  manifests). The transcode pipeline (VLC if available, else ffmpeg —
+  see v1.45.0-v1.48.1) therefore becomes **mandatory** for all live
+  channels, no longer just optional like for movies/series. The
+  "Compatibility mode" setting now only controls the *level* (audio-
+  only or full) for this now-systematic case.
+
+  New dedicated test added, which locks in this critical behavior:
+  verifies live correctly goes through the transcode pipeline with a
+  `.ts` URL, never `.m3u8`.
+
 ## 1.48.1
 
 - **Correctif *Chaînes TV* : sortie de VLC totalement vide dans le

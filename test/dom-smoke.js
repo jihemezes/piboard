@@ -319,8 +319,16 @@ const XTREAM_CATEGORIES_FIXTURE = {
   series: [{ id: "30", name: "Series FR" }]
 };
 const XTREAM_LIVE_STREAMS_FIXTURE = [
-  { id: "111", name: "France 24", logo: "https://ex.test/f24.png", containerExt: null, url: "https://ex.test/live/user123/pass456/111.m3u8" },
-  { id: "112", name: "TF1", logo: "", containerExt: null, url: "https://ex.test/live/user123/pass456/112.m3u8" }
+  // .ts, pas .m3u8 : reflete le vrai comportement de server/iptv.js
+  // depuis la decouverte, par examen du lecteur de reference officiel,
+  // que .m3u8 est systematiquement rejete (405) par certains
+  // fournisseurs sur cet endpoint, quel que soit le client.
+  // .ts, not .m3u8: reflects server/iptv.js's real behavior since the
+  // finding, from examining the official reference player, that .m3u8
+  // is systematically rejected (405) by some providers on this
+  // endpoint, regardless of client.
+  { id: "111", name: "France 24", logo: "https://ex.test/f24.png", containerExt: null, url: "https://ex.test/live/user123/pass456/111.ts" },
+  { id: "112", name: "TF1", logo: "", containerExt: null, url: "https://ex.test/live/user123/pass456/112.ts" }
 ];
 const XTREAM_VOD_STREAMS_FIXTURE = [
   { id: "222", name: "Un Film", logo: "https://ex.test/film.jpg", containerExt: "mkv", url: "https://ex.test/movie/user123/pass456/222.mkv" }
@@ -2213,6 +2221,19 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("lecture demarree depuis la navigation Xtream", !!tvTile.querySelector(".pwtv-video"));
     assert("PAS de controles natifs pour une chaine en direct (rien a avancer/reculer)",
       !tvTile.querySelector(".pwtv-video").hasAttribute("controls"));
+    // Verrouille le comportement critique decouvert par examen du
+    // lecteur de reference : le direct passe TOUJOURS par le pipeline
+    // de transcodage desormais (URL en .ts, jamais lisible directement
+    // par un navigateur), pas par hls.js ni l'URL brute du fournisseur.
+    // Locks in the critical behavior found by examining the reference
+    // player: live now ALWAYS goes through the transcode pipeline
+    // (a .ts URL, never directly playable by a browser), not hls.js nor
+    // the provider's raw URL.
+    const liveVideoSrc = tvTile.querySelector(".pwtv-video").getAttribute("src") || "";
+    assert("le direct passe par le pipeline de transcodage (/api/iptv/audio-fix)",
+      liveVideoSrc.startsWith("/api/iptv/audio-fix"));
+    assert("l'URL Xtream d'origine transmise en parametre se termine bien en .ts (pas .m3u8)",
+      decodeURIComponent(liveVideoSrc).includes(".ts") && !decodeURIComponent(liveVideoSrc).includes(".m3u8"));
     tvTile.querySelector(".pwtv-back").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
     assert("retour depuis le lecteur : on revient a la liste des flux de la categorie (pas a la racine)",
