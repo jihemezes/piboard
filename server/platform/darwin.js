@@ -148,6 +148,25 @@ function ffmpegInstallHint() {
   return { fr: "brew install ffmpeg", en: "brew install ffmpeg" };
 }
 
+/* Le binaire VLC reel se trouve a l'interieur du bundle .app, pas de
+   cvlc distinct sur macOS non plus (meme situation que Windows) : le
+   code appelant doit passer --intf dummy explicitement. Necessaire
+   pour le relais des chaines en direct qu'un fournisseur IPTV rejette
+   avec un 405 face a ffmpeg -- confirme par examen du lecteur de
+   reference officiel.
+   The actual VLC binary sits inside the .app bundle, no separate cvlc
+   on macOS either (same situation as Windows): the calling code must
+   pass --intf dummy explicitly. Needed to relay live channels an IPTV
+   provider rejects with a 405 when faced with ffmpeg -- confirmed by
+   examining the official reference player. */
+function vlcCandidates() {
+  return ["vlc", "/Applications/VLC.app/Contents/MacOS/VLC", "/opt/homebrew/bin/vlc"];
+}
+
+function vlcInstallHint() {
+  return { fr: "brew install --cask vlc", en: "brew install --cask vlc" };
+}
+
 module.exports = {
   id,
   pingArgs,
@@ -163,5 +182,7 @@ module.exports = {
   exitToDesktop,
   MOUNT_ROOTS,
   ffmpegCandidates,
-  ffmpegInstallHint
+  ffmpegInstallHint,
+  vlcCandidates,
+  vlcInstallHint
 };

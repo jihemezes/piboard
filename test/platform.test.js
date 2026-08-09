@@ -150,7 +150,7 @@ console.log("== interface : les trois implementations exposent les memes fonctio
     "id", "pingArgs", "pingSucceeded", "parseArp", "readArpEntries",
     "reverseLookup", "listRemovableVolumes", "cpuTemperature",
     "filesystemRoot", "exitKiosk", "exitToDesktop",
-    "ffmpegCandidates", "ffmpegInstallHint"
+    "ffmpegCandidates", "ffmpegInstallHint", "vlcCandidates", "vlcInstallHint"
   ];
   for (const [name, impl] of [["linux", linux], ["win32", win32], ["darwin", darwin]]) {
     for (const fn of REQUIRED) {
@@ -194,6 +194,30 @@ console.log("== ffmpeg : emplacements et conseil d'installation propres a chaque
   if (prevAppData === undefined) delete process.env.APPDATA; else process.env.APPDATA = prevAppData;
 
   console.log("  OK: 3 implementations, conseils d'installation distincts et adaptes");
+}
+
+/* ---------- Recherche de VLC (relais des chaines en direct) ---------- */
+console.log("== VLC : emplacements et conseil d'installation propres a chaque systeme ==");
+{
+  for (const [name, impl] of [["linux", linux], ["win32", win32], ["darwin", darwin]]) {
+    const candidates = impl.vlcCandidates();
+    assert.ok(Array.isArray(candidates) && candidates.length > 0, name + " doit proposer au moins un emplacement VLC");
+    const hint = impl.vlcInstallHint();
+    assert.ok(hint && hint.fr && hint.en, name + " doit fournir un conseil d'installation VLC bilingue");
+  }
+  // Linux utilise cvlc (script qui ajoute --intf dummy automatiquement) ;
+  // Windows/macOS n'ont PAS de cvlc distinct -- le code appelant doit
+  // donc passer --intf dummy explicitement pour fonctionner
+  // identiquement sur les trois systemes.
+  // Linux uses cvlc (a script that adds --intf dummy automatically);
+  // Windows/macOS have NO separate cvlc -- the calling code must
+  // therefore pass --intf dummy explicitly to work identically across
+  // all three systems.
+  assert.ok(linux.vlcCandidates().some((p) => p.includes("cvlc")), "linux doit chercher cvlc");
+  assert.ok(!win32.vlcCandidates().some((p) => p.toLowerCase().includes("cvlc")), "win32 ne doit PAS chercher cvlc.exe (n'existe pas)");
+  assert.ok(win32.vlcCandidates().some((p) => p.endsWith("vlc.exe")), "win32 doit chercher vlc.exe");
+  assert.ok(darwin.vlcCandidates().some((p) => p.includes(".app/Contents/MacOS/VLC")), "darwin doit chercher le binaire a l'interieur du bundle .app");
+  console.log("  OK: cvlc sur Linux uniquement, vlc.exe/VLC sans wrapper sur Windows/macOS");
 }
 
 console.log("== platform : implementation choisie selon process.platform ==");

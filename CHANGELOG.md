@@ -1,5 +1,81 @@
 # Changelog
 
+## 1.47.0
+
+- **Chaînes TV : relais VLC pour les fournisseurs qui rejettent
+  ffmpeg.** Le `405 Method Not Allowed` persistait malgré le
+  user-agent VLC et la désactivation de Range/ICY-Metadata (v1.46.2,
+  v1.46.3). Cause trouvée par examen statique de l'application
+  officielle du fournisseur (installeur fourni par l'utilisateur) :
+  elle n'utilise **jamais** le pipeline vidéo du navigateur pour le
+  direct — elle embarque le vrai moteur natif de VLC (libVLC, via
+  WebChimera.js). Aucun en-tête ni astuce visible dans son code : le
+  succès vient vraisemblablement de différences d'implémentation HTTP
+  bas niveau entre libVLC et ffmpeg, pas d'un réglage qu'on pouvait
+  simplement copier.
+
+  Plutôt que d'embarquer le module natif complet (compilation liée à
+  une version précise d'Electron, chantier bien plus lourd), VLC est
+  utilisé comme un **processus séparé** — exactement le même principe
+  déjà en place pour ffmpeg. Pour les chaînes en direct spécifiquement,
+  VLC récupère désormais le flux en amont (relais brut, aucun
+  réencodage) quand il est installé, puis le transmet à ffmpeg pour le
+  réencodage audio/vidéo final — réutilise telle quelle la logique de
+  muxage déjà éprouvée.
+
+  **Repli propre si VLC n'est pas installé** : les chaînes en direct
+  continuent de fonctionner via ffmpeg seul pour les fournisseurs sans
+  cette restriction — rien ne casse pour ceux qui n'en ont pas besoin.
+
+  Détection multi-plateforme ajoutée (Linux via `cvlc`, Windows/macOS
+  via `vlc`/`VLC` avec `--intf dummy` passé explicitement — ces deux
+  systèmes n'ont pas de `cvlc` distinct, vérifié avant d'écrire le
+  code plutôt que supposé).
+
+  **Vérifié de bout en bout**, pas seulement en théorie : pipeline
+  complet testé avec un vrai flux continu (VLC → ffmpeg → réponse
+  HTTP, sortie H.264+AAC valide) ; confirmé que les URLs de films/séries
+  contournent bien VLC (inutile pour ce cas, déjà fonctionnel) ; confirmé
+  qu'aucun processus VLC ne survit à une déconnexion client — point
+  critique pour éviter une fuite sur un Pi, un flux en direct n'ayant
+  pas de fin.
+
+---
+
+- **TV Channels: VLC relay for providers that reject ffmpeg.** The
+  `405 Method Not Allowed` persisted despite the VLC user-agent and
+  disabling Range/ICY-Metadata (v1.46.2, v1.46.3). Cause found by
+  statically examining the provider's official app (installer supplied
+  by the user): it **never** uses the browser's video pipeline for
+  live — it embeds VLC's actual native engine (libVLC, via
+  WebChimera.js). No header or trick visible in its code: success is
+  most likely due to low-level HTTP implementation differences between
+  libVLC and ffmpeg, not a setting that could simply be copied.
+
+  Rather than embedding the full native module (compilation tied to a
+  precise Electron version, a much heavier undertaking), VLC is used as
+  a **separate process** — the exact same principle already in place
+  for ffmpeg. For live channels specifically, VLC now fetches the
+  stream upstream (raw relay, no re-encoding) when installed, then
+  hands it to ffmpeg for the final audio/video re-encoding — reuses the
+  already-proven muxing logic as-is.
+
+  **Clean fallback if VLC isn't installed**: live channels keep working
+  via ffmpeg alone for providers without this restriction — nothing
+  breaks for those who don't need it.
+
+  Cross-platform detection added (Linux via `cvlc`, Windows/macOS via
+  `vlc`/`VLC` with `--intf dummy` passed explicitly — these two systems
+  have no separate `cvlc`, verified before writing the code rather than
+  assumed).
+
+  **Verified end to end**, not just in theory: full pipeline tested
+  against a real continuous stream (VLC → ffmpeg → HTTP response,
+  valid H.264+AAC output); confirmed movie/series URLs correctly skip
+  VLC (unneeded for that case, already working); confirmed no VLC
+  process survives a client disconnect — critical to avoid a leak on a
+  Pi, a live stream having no end.
+
 ## 1.46.3
 
 - **Correctif *Chaînes TV* : `405` toujours présent malgré le

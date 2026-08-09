@@ -373,6 +373,35 @@ function ffmpegInstallHint() {
   return { fr: "winget install Gyan.FFmpeg", en: "winget install Gyan.FFmpeg" };
 }
 
+/* vlc.exe : PAS de cvlc.exe distinct sous Windows (cvlc est un script
+   shell Unix qui ajoute simplement --intf dummy a vlc -- inexistant
+   ici). Le code appelant doit donc TOUJOURS passer --intf dummy
+   explicitement, plutot que de compter sur un binaire "console"
+   separe. Emplacement d'installation par defaut :
+   %ProgramFiles%\VideoLAN\VLC\vlc.exe. Necessaire pour le relais des
+   chaines en direct qu'un fournisseur IPTV rejette avec un 405 face a
+   ffmpeg -- confirme par examen du lecteur de reference officiel.
+   vlc.exe: NO separate cvlc.exe on Windows (cvlc is a Unix shell
+   script that simply adds --intf dummy to vlc -- doesn't exist here).
+   The calling code must therefore ALWAYS pass --intf dummy explicitly,
+   rather than relying on a separate "console" binary. Default install
+   location: %ProgramFiles%\VideoLAN\VLC\vlc.exe. Needed to relay live
+   channels an IPTV provider rejects with a 405 when faced with ffmpeg
+   -- confirmed by examining the official reference player. */
+function vlcCandidates() {
+  const pf = process.env.ProgramFiles || "C:\\Program Files";
+  const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+  return [
+    "vlc.exe",
+    pf + "\\VideoLAN\\VLC\\vlc.exe",
+    pf86 + "\\VideoLAN\\VLC\\vlc.exe"
+  ];
+}
+
+function vlcInstallHint() {
+  return { fr: "winget install VideoLAN.VLC", en: "winget install VideoLAN.VLC" };
+}
+
 module.exports = {
   id,
   pingArgs,
@@ -388,5 +417,7 @@ module.exports = {
   exitKiosk,
   exitToDesktop,
   ffmpegCandidates,
-  ffmpegInstallHint
+  ffmpegInstallHint,
+  vlcCandidates,
+  vlcInstallHint
 };

@@ -152,77 +152,63 @@ function installHint() {
      finding nothing wrong to flag). ffmpeg decodes whatever's presented
      and re-encodes to a guaranteed standard format, regardless of the
      exact cause on the source side. */
-function streamTranscoded(url, res, onError, mode) {
+/* inputStream, si fourni (la sortie de VLC -- voir server/iptvVlc.js),
+   fait lire ffmpeg depuis ce flux (pipe:0) plutot que de recuperer
+   l'URL lui-meme : c'est VLC qui s'occupe alors de la reception (la
+   ou ffmpeg seul se voit rejete par certains fournisseurs, voir
+   server/iptvVlc.js pour le detail complet de ce constat), ffmpeg ne
+   fait plus que reencoder/remuxer ce qu'il recoit -- reutilise ainsi
+   telle quelle la logique de muxage MP4 fragmente deja eprouvee, sans
+   la dupliquer.
+   inputStream, if provided (VLC's output -- see server/iptvVlc.js),
+   makes ffmpeg read from that stream (pipe:0) rather than fetching the
+   URL itself: VLC then handles reception (where ffmpeg alone gets
+   rejected by some providers, see server/iptvVlc.js for the full
+   detail of that finding), ffmpeg only re-encodes/remuxes what it
+   receives -- reuses the already-proven fragmented MP4 muxing logic
+   as-is, without duplicating it. */
+function streamTranscoded(url, res, onError, mode, inputStream) {
   const fullTranscode = mode === "full";
+  const usingPipe = !!inputStream;
+
   const args = [
     "-hide_banner", "-loglevel", "error",
-    // Reconnexion automatique : un flux IPTV coupe reguliererement, sans
-    // que ce soit une vraie panne. Automatic reconnection: an IPTV feed
-    // drops regularly, without that being a genuine failure.
-    "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+    ...(usingPipe ? [] : [
+      // Reconnexion automatique : un flux IPTV coupe reguliererement,
+      // sans que ce soit une vraie panne. Non pertinent quand VLC
+      // recupere deja le flux en amont (voir server/iptvVlc.js) : c'est
+      // alors VLC qui gere sa propre reconnexion.
+      // Automatic reconnection: an IPTV feed drops regularly, without
+      // that being a genuine failure. Not relevant when VLC already
+      // fetches the stream upstream (see server/iptvVlc.js): VLC then
+      // handles its own reconnection.
+      "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+      // Identification honnete en User-Agent, alignee sur celle deja
+      // utilisee avec succes pour la liste des chaines (voir
+      // server/iptv.js). Non pertinent en lecture depuis un tube (VLC
+      // a deja fait sa propre requete HTTP avec sa propre
+      // identification native).
+      // Honest identification via User-Agent, matching the one already
+      // used successfully for the channel list (see server/iptv.js).
+      // Not relevant when reading from a pipe (VLC already made its own
+      // HTTP request with its own native identification).
+      "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
+      // Non pertinent en lecture depuis un tube, meme raison.
+      // Not relevant when reading from a pipe, same reason.
+      "-seekable", "0", "-icy", "0"
+    ]),
     // -fflags +genpts (option d'ENTREE, avant -i) regenere des
-    // horodatages de presentation propres des la lecture du flux
-    // source. -avoid_negative_ts (option de SORTIE, placee apres -i
-    // ci-dessous) normalise ensuite ceux-ci a zero au moment du
-    // remuxage -- necessaire specifiquement pour un flux EN DIRECT,
-    // contrairement a un fichier VOD fini qui demarre proprement a
-    // zero. Un flux IPTV en continu injecte souvent des horodatages
-    // enormes ou negatifs (bascule d'horloge du fournisseur, flux deja
-    // en cours depuis des heures) -- documente dans plusieurs rapports
-    // de bogue independants comme cause de lecture en echec cote
-    // navigateur, alors meme que le fichier produit reste
-    // structurellement valide (ce qui correspond exactement au cas
-    // observe : requete reussie, mais lecture refusee). Signale par :
-    // le meme pipeline fonctionne parfaitement pour les films/series
-    // (VOD, horodatages propres), seul le direct est en cause.
+    // horodatages de presentation propres des la lecture du flux --
+    // reste utile meme en lecture depuis un tube (VLC), un flux EN
+    // DIRECT injectant souvent des horodatages enormes ou negatifs
+    // independamment de qui l'a recupere.
     // -fflags +genpts (an INPUT option, before -i) regenerates clean
-    // presentation timestamps as the source stream is read.
-    // -avoid_negative_ts (an OUTPUT option, placed after -i below) then
-    // normalizes those to zero at remux time -- needed specifically for
-    // a LIVE stream, unlike a finite VOD file that starts cleanly at
-    // zero. A continuous IPTV feed often injects huge or negative
-    // timestamps (the provider's own clock, a stream already running
-    // for hours) -- documented in several independent bug reports as a
-    // cause of browser-side playback failure, even while the produced
-    // file stays structurally valid (matching exactly what was
-    // observed: request succeeds, but playback refused). Reported: the
-    // same pipeline works perfectly for movies/series (VOD, clean
-    // timestamps), only live is affected.
+    // presentation timestamps as the stream is read -- still useful
+    // even when reading from a pipe (VLC), a LIVE stream often
+    // injecting huge or negative timestamps regardless of who fetched
+    // it.
     "-fflags", "+genpts",
-    // Identification honnete en User-Agent, alignee sur celle deja
-    // utilisee avec succes pour la liste des chaines (voir
-    // server/iptv.js) : ffmpeg envoie par defaut "Lavf/X.Y.Z" (sa
-    // propre version de bibliotheque), que ce fournisseur IPTV precis
-    // rejette avec un 405 -- confirme par l'outil de diagnostic
-    // (server/iptvAudio.js:diagnose). VLC etant le client de reference
-    // de l'ecosysteme IPTV, c'est generalement le mieux accepte.
-    // Honest identification via User-Agent, matching the one already
-    // used successfully for the channel list (see server/iptv.js):
-    // ffmpeg sends "Lavf/X.Y.Z" (its own library version) by default,
-    // which this specific IPTV provider rejects with a 405 -- confirmed
-    // by the diagnostic tool (server/iptvAudio.js:diagnose). VLC being
-    // the IPTV ecosystem's reference client, it's generally the best
-    // accepted.
-    "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
-    // Un flux EN DIRECT, sans fin, n'a pas de sens a "rembobiner" :
-    // sans cette option, ffmpeg envoie par defaut un en-tete "Range:
-    // bytes=0-" (pensee pour du contenu fini, avec une taille connue)
-    // ET une demande de metadonnees ICY (Icy-MetaData: 1, style
-    // SHOUTcast) -- confirme par examen de la requete HTTP reelle que
-    // ffmpeg envoie. De nombreux serveurs de streaming en direct
-    // rejettent l'un ou l'autre, parfois avec un 405 plutot que le
-    // code plus attendu (416) -- cause probable du 405 persistant
-    // malgre le user-agent deja corrige.
-    // A LIVE, endless stream doesn't make sense to "seek" through:
-    // without this option, ffmpeg sends a "Range: bytes=0-" header by
-    // default (meant for finite content with a known size) AND an ICY
-    // (SHOUTcast-style) metadata request (Icy-MetaData: 1) -- confirmed
-    // by examining the actual HTTP request ffmpeg sends. Many live
-    // streaming servers reject either one, sometimes with a 405 rather
-    // than the more expected 416 -- the likely cause of the 405
-    // persisting despite the user-agent already fixed.
-    "-seekable", "0", "-icy", "0",
-    "-i", url,
+    "-i", usingPipe ? "pipe:0" : url,
     "-avoid_negative_ts", "make_zero",
     ...(fullTranscode
       ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
@@ -245,7 +231,17 @@ function streamTranscoded(url, res, onError, mode) {
     "pipe:1"
   ];
 
-  const ff = spawn(ffmpegPath || "ffmpeg", args, { stdio: ["ignore", "pipe", "pipe"] });
+  const ff = spawn(ffmpegPath || "ffmpeg", args, { stdio: [usingPipe ? "pipe" : "ignore", "pipe", "pipe"] });
+  if (usingPipe) {
+    inputStream.pipe(ff.stdin);
+    // Une erreur d'ecriture (VLC deja termine, par exemple) ne doit pas
+    // faire planter le processus serveur -- ffmpeg detectera de toute
+    // facon la fin du flux d'entree normalement.
+    // A write error (VLC already ended, for instance) must not crash
+    // the server process -- ffmpeg will detect the input stream ending
+    // normally regardless.
+    ff.stdin.on("error", () => { /* noop */ });
+  }
   let stderrTail = "";
   ff.stderr.on("data", (d) => {
     stderrTail = (stderrTail + d.toString()).slice(-500);

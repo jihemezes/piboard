@@ -237,6 +237,8 @@ module.exports = {
   exitToDesktop,
   ffmpegCandidates: impl.ffmpegCandidates,
   ffmpegInstallHint: impl.ffmpegInstallHint,
+  vlcCandidates: impl.vlcCandidates,
+  vlcInstallHint: impl.vlcInstallHint,
   // Exposees pour les tests unitaires, qui doivent pouvoir verifier les
   // trois parseurs quelle que soit la machine qui execute la suite.
   // Exposed for unit tests, which must be able to check all three

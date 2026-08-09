@@ -53,6 +53,7 @@ const backups = require("./backups");
 const iptv = require("./iptv");
 const iptvAudio = require("./iptvAudio");
 const iptvHlsProxy = require("./iptvHlsProxy");
+const iptvVlc = require("./iptvVlc");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -1140,9 +1141,50 @@ app.get("/api/iptv/audio-fix", async (req, res) => {
     res.status(503).json({ error: "ffmpeg not available" });
     return;
   }
+
+  // Pour un flux EN DIRECT (pas VOD -- movies/series fonctionnent deja
+  // sans ceci, confirme par retour utilisateur), VLC recupere le flux
+  // en amont quand il est disponible : certains fournisseurs IPTV
+  // rejettent ffmpeg seul (405), constat confirme par examen du
+  // lecteur de reference officiel, qui utilise libVLC nativement pour
+  // le direct -- voir server/iptvVlc.js pour le detail complet. Repli
+  // PROPRE sur ffmpeg seul si VLC n'est pas installe : certains
+  // fournisseurs n'ont pas ce probleme, la fonctionnalite doit rester
+  // utilisable sans VLC dans ce cas.
+  // For a LIVE stream (not VOD -- movies/series already work without
+  // this, confirmed by user feedback), VLC fetches the stream upstream
+  // when available: some IPTV providers reject ffmpeg alone (405), a
+  // finding confirmed by examining the official reference player,
+  // which uses libVLC natively for live -- see server/iptvVlc.js for
+  // the full detail. CLEAN fallback to ffmpeg alone if VLC isn't
+  // installed: some providers don't have this problem, the feature
+  // must stay usable without VLC in that case.
+  const isLive = /\/live\//i.test(target) || !/\/(movie|series)\//i.test(target);
+  let vlc = null;
+  let inputStream;
+  if (isLive && (await iptvVlc.checkVlc())) {
+    vlc = iptvVlc.spawnRelay(target);
+    inputStream = vlc.stdout;
+    vlc.on("error", (e) => console.warn("[piboard] iptv vlc relay", e.message || e));
+  }
+
   res.setHeader("Content-Type", "video/mp4");
   res.setHeader("Cache-Control", "no-store");
-  iptvAudio.streamTranscoded(target, res, undefined, mode);
+  iptvAudio.streamTranscoded(target, res, undefined, mode, inputStream);
+
+  // VLC est un processus SEPARE de ffmpeg (voir server/iptvAudio.js,
+  // qui arrete deja ffmpeg a la deconnexion) : doit etre arrete ici
+  // independamment, sinon un flux en direct continuerait a etre relaye
+  // dans le vide -- fuite garantie sur un Pi.
+  // VLC is a process SEPARATE from ffmpeg (see server/iptvAudio.js,
+  // which already stops ffmpeg on disconnect): must be stopped here
+  // independently, otherwise a live stream would keep being relayed
+  // into the void -- a guaranteed leak on a Pi.
+  if (vlc) {
+    const killVlc = () => { try { vlc.kill("SIGKILL"); } catch (e) { /* noop */ } };
+    res.on("close", killVlc);
+    res.on("error", killVlc);
+  }
 });
 
 app.get("/api/iptv/audio-fix-available", async (req, res) => {

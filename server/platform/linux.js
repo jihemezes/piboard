@@ -204,6 +204,26 @@ function ffmpegInstallHint() {
   return { fr: "sudo apt install ffmpeg", en: "sudo apt install ffmpeg" };
 }
 
+/* cvlc (VLC sans interface graphique) : necessaire pour le relais des
+   chaines en direct qu'un fournisseur IPTV rejette avec un 405 face a
+   ffmpeg -- confirme par examen du lecteur de reference officiel, qui
+   utilise libVLC nativement pour le direct plutot que le pipeline
+   video du navigateur. VLC/cvlc s'installe egalement via le
+   gestionnaire de paquets sur Pi OS/Linux, meme logique de recherche
+   que ffmpeg. cvlc (VLC without a graphical interface): needed to
+   relay live channels an IPTV provider rejects with a 405 when faced
+   with ffmpeg -- confirmed by examining the official reference player,
+   which uses libVLC natively for live rather than the browser's video
+   pipeline. VLC/cvlc also installs via the package manager on Pi
+   OS/Linux, same lookup logic as ffmpeg. */
+function vlcCandidates() {
+  return ["cvlc", "/usr/bin/cvlc", "/usr/local/bin/cvlc", "/snap/bin/vlc.cvlc"];
+}
+
+function vlcInstallHint() {
+  return { fr: "sudo apt install vlc-bin vlc-plugin-base", en: "sudo apt install vlc-bin vlc-plugin-base" };
+}
+
 module.exports = {
   id,
   pingArgs,
@@ -218,5 +238,7 @@ module.exports = {
   exitToDesktop,
   MOUNT_ROOTS,
   ffmpegCandidates,
-  ffmpegInstallHint
+  ffmpegInstallHint,
+  vlcCandidates,
+  vlcInstallHint
 };
