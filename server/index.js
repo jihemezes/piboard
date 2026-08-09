@@ -1163,9 +1163,23 @@ app.get("/api/iptv/audio-fix", async (req, res) => {
   let vlc = null;
   let inputStream;
   if (isLive && (await iptvVlc.checkVlc())) {
-    vlc = iptvVlc.spawnRelay(target);
+    vlc = iptvVlc.spawnTranscode(target);
     inputStream = vlc.stdout;
-    vlc.on("error", (e) => console.warn("[piboard] iptv vlc relay", e.message || e));
+    // Capture de la sortie d'erreur de VLC : absente jusqu'ici, un echec
+    // silencieux du cote VLC (0 octet produit, ffmpeg bloque a attendre
+    // des donnees qui n'arrivent jamais) restait invisible. Journalisee
+    // cote serveur ; a considerer pour un futur ajout au diagnostic si
+    // le besoin s'en fait de nouveau sentir.
+    // Captures VLC's own error output: missing until now, a silent
+    // failure on VLC's side (0 bytes produced, ffmpeg stuck waiting for
+    // data that never arrives) stayed invisible. Logged server-side;
+    // worth adding to the diagnostic tool too if the need arises again.
+    let vlcStderr = "";
+    vlc.stderr.on("data", (d) => { vlcStderr = (vlcStderr + d.toString()).slice(-500); });
+    vlc.on("close", (code) => {
+      if (code !== 0 && code !== null) console.warn("[piboard] iptv vlc transcode code", code, vlcStderr.trim());
+    });
+    vlc.on("error", (e) => console.warn("[piboard] iptv vlc transcode", e.message || e));
   }
 
   res.setHeader("Content-Type", "video/mp4");
@@ -1232,9 +1246,19 @@ app.get("/api/iptv/diagnose", async (req, res) => {
   const vlcAvailable = isLive && (await iptvVlc.checkVlc());
   let vlc = null;
   let inputStream;
+  let vlcStderr = "";
   if (vlcAvailable) {
-    vlc = iptvVlc.spawnRelay(target);
+    vlc = iptvVlc.spawnTranscode(target);
     inputStream = vlc.stdout;
+    // Capture de la sortie d'erreur de VLC, incluse dans le rapport
+    // final : absente jusqu'ici, un echec silencieux du cote VLC (0
+    // octet produit, ffmpeg bloque sans jamais recevoir de donnees)
+    // restait totalement invisible et impossible a diagnostiquer.
+    // Captures VLC's own error output, included in the final report:
+    // missing until now, a silent failure on VLC's side (0 bytes
+    // produced, ffmpeg stuck never receiving any data) stayed entirely
+    // invisible and impossible to diagnose.
+    vlc.stderr.on("data", (d) => { vlcStderr = (vlcStderr + d.toString()).slice(-3000); });
   }
 
   const r = await iptvAudio.diagnose(target, mode, inputStream);
@@ -1254,6 +1278,7 @@ app.get("/api/iptv/diagnose", async (req, res) => {
     "Octets produits / bytes produced : " + r.bytesProduced + "\n" +
     "Premier octet apres / first byte after : " + (r.firstByteAfterMs == null ? "jamais (aucune donnee produite) / never (no data produced)" : r.firstByteAfterMs + " ms") + "\n" +
     "Duree totale / total duration : " + r.totalDurationMs + " ms\n\n" +
+    (vlcAvailable ? "--- Sortie VLC (stderr) / VLC output (stderr) ---\n" + (vlcStderr || "(vide / empty)") + "\n\n" : "") +
     "--- Sortie ffmpeg (stderr) / ffmpeg output (stderr) ---\n" +
     (r.ffmpegStderr || "(vide / empty)")
   );

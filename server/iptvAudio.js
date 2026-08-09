@@ -210,10 +210,20 @@ function streamTranscoded(url, res, onError, mode, inputStream) {
     "-fflags", "+genpts",
     "-i", usingPipe ? "pipe:0" : url,
     "-avoid_negative_ts", "make_zero",
-    ...(fullTranscode
+    // Quand l'entree vient de VLC (usingPipe), la video ET l'audio sont
+    // deja en H.264/AAC -- VLC a fait le transcodage lui-meme (voir
+    // server/iptvVlc.js:spawnTranscode). ffmpeg ne fait plus ici qu'un
+    // simple REMUXAGE (recopie pure, aucun reencodage) : plus rapide et
+    // plus fiable qu'un second passage de reencodage inutile.
+    // When the input comes from VLC (usingPipe), both video AND audio
+    // are already H.264/AAC -- VLC did the transcoding itself (see
+    // server/iptvVlc.js:spawnTranscode). ffmpeg here only does a simple
+    // REMUX (plain copy, no re-encoding): faster and more reliable than
+    // a needless second re-encoding pass.
+    ...(usingPipe ? ["-c:v", "copy"] : (fullTranscode
       ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
-      : ["-c:v", "copy"]), // video INTACTE en mode audio seul : c'est ce qui le rend leger / video UNTOUCHED in audio-only mode: what keeps it light
-    "-c:a", "aac", "-b:a", "128k", "-ac", "2",
+      : ["-c:v", "copy"])), // video INTACTE en mode audio seul : c'est ce qui le rend leger / video UNTOUCHED in audio-only mode: what keeps it light
+    ...(usingPipe ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
     // default_base_moof (pense pour une consommation via MediaSource/
     // appendBuffer, comme le fait hls.js) retire au profit de faststart :
     // ce flux est lu ici en <video src> progressif direct, pas via MSE --
@@ -333,10 +343,10 @@ function diagnose(url, mode, inputStream) {
       "-i", usingPipe ? "pipe:0" : url,
       "-avoid_negative_ts", "make_zero",
       "-t", "8", // diagnostic borne a 8s de flux source, jamais envoye au navigateur / diagnostic bounded to 8s of source stream, never sent to the browser
-      ...(fullTranscode
+      ...(usingPipe ? ["-c:v", "copy"] : (fullTranscode
         ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
-        : ["-c:v", "copy"]),
-      "-c:a", "aac", "-b:a", "128k", "-ac", "2",
+        : ["-c:v", "copy"])),
+      ...(usingPipe ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
       "-movflags", "frag_keyframe+empty_moov+faststart",
       "-f", "mp4",
       "pipe:1"

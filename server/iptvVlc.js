@@ -139,12 +139,36 @@ function installHint() {
    identically regardless of the system this way. The "dst=-" syntax
    (standard output) is portable across Windows/macOS/Linux, unlike
    "/dev/stdout" which doesn't exist on Windows -- verified directly. */
-function spawnRelay(url) {
+/* VLC transcode LUI-MEME (video H.264 + audio AAC, sortie MPEG-TS) au
+   lieu d'un simple relais brut vers ffmpeg : signale par l'utilisateur,
+   le relais brut laissait ffmpeg bloque sans jamais recevoir de
+   donnees (0 octet, aucune erreur -- symptome distinct du 405
+   original, jamais totalement explique). Plutot que de chercher
+   pourquoi le tube VLC->ffmpeg restait silencieux, VLC fait
+   desormais TOUT le travail difficile lui-meme (recuperation ET
+   conversion), elimine ffmpeg comme intermediaire potentiellement en
+   cause. vcodec=copy (repli video sans reencodage, comme pour ffmpeg)
+   NE FONCTIONNE PAS dans le module de transcodage de VLC ("cannot
+   find video encoder fourcc:copy", verifie directement) : la video
+   est donc TOUJOURS reencodee ici, plus couteux qu'une simple recopie
+   mais fiable, confirme par test direct.
+   VLC transcodes IT SELF (H.264 video + AAC audio, MPEG-TS output)
+   instead of a plain raw relay into ffmpeg: reported by the user, the
+   raw relay left ffmpeg hanging without ever receiving data (0 bytes,
+   no error -- a symptom distinct from the original 405, never fully
+   explained). Rather than chasing why the VLC->ffmpeg pipe stayed
+   silent, VLC now does ALL the hard work itself (fetching AND
+   converting), removing ffmpeg as a potentially-at-fault middleman.
+   vcodec=copy (a video passthrough without re-encoding, like ffmpeg's)
+   does NOT work in VLC's transcode module ("cannot find video encoder
+   fourcc:copy", verified directly): video is therefore ALWAYS
+   re-encoded here, costlier than a plain copy but reliable, confirmed
+   by direct testing. */
+function spawnTranscode(url) {
   const args = [
     "--intf", "dummy",
-    "-q",
     url,
-    "--sout", "#std{access=file,mux=ts,dst=-}"
+    "--sout", "#transcode{vcodec=h264,venc=x264{preset=veryfast},acodec=mp4a,ab=128,channels=2}:std{access=file,mux=ts,dst=-}"
   ];
   return spawn(vlcPath || "cvlc", args, {
     stdio: ["ignore", "pipe", "pipe"],
@@ -158,4 +182,4 @@ function spawnRelay(url) {
   });
 }
 
-module.exports = { checkVlc, findVlc, installHint, spawnRelay, tryCandidate };
+module.exports = { checkVlc, findVlc, installHint, spawnTranscode, tryCandidate };

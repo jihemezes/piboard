@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.48.0
+
+- **Chaînes TV : VLC transcode désormais lui-même**, au lieu d'un
+  simple relais brut vers ffmpeg. Signalé par l'utilisateur : le
+  relais brut laissait ffmpeg bloqué, sans jamais recevoir la moindre
+  donnée (0 octet, aucune erreur — symptôme distinct du 405 d'origine,
+  jamais totalement expliqué). Plutôt que de chercher pourquoi le tube
+  VLC → ffmpeg restait silencieux, VLC fait maintenant **tout le
+  travail lui-même** (récupération et conversion vidéo H.264 + audio
+  AAC), ffmpeg n'intervenant plus qu'en simple remuxage (recopie pure,
+  aucun réencodage) — plus rapide et plus fiable qu'un second passage
+  de réencodage inutile.
+
+  `vcodec=copy` (repli vidéo sans réencodage, comme pour ffmpeg) **ne
+  fonctionne pas** dans le module de transcodage de VLC (« cannot find
+  video encoder fourcc:copy », vérifié directement) : la vidéo est donc
+  toujours réencodée par VLC pour les chaînes en direct, plus coûteux
+  qu'une simple recopie mais fiable, confirmé par test direct.
+
+  **Capture de la sortie d'erreur de VLC ajoutée**, absente jusqu'ici —
+  un échec silencieux du côté VLC restait totalement invisible.
+  L'outil de diagnostic l'inclut désormais dans son rapport.
+
+  Vérifié de bout en bout : flux source AC3 converti en AAC par VLC ;
+  pipeline complet VLC → ffmpeg → réponse HTTP testé avec un vrai flux
+  continu, sortie H.264+AAC valide ; aucun processus VLC/ffmpeg
+  orphelin après une requête terminée.
+
+---
+
+- **TV Channels: VLC now transcodes itself**, instead of a plain raw
+  relay into ffmpeg. Reported by the user: the raw relay left ffmpeg
+  hanging, never receiving any data at all (0 bytes, no error — a
+  symptom distinct from the original 405, never fully explained).
+  Rather than chasing why the VLC → ffmpeg pipe stayed silent, VLC now
+  does **all the work itself** (fetching and converting to H.264 video
+  + AAC audio), with ffmpeg only doing a simple remux (plain copy, no
+  re-encoding) — faster and more reliable than a needless second
+  re-encoding pass.
+
+  `vcodec=copy` (a video passthrough without re-encoding, like
+  ffmpeg's) **does not work** in VLC's transcode module ("cannot find
+  video encoder fourcc:copy", verified directly): video is therefore
+  always re-encoded by VLC for live channels, costlier than a plain
+  copy but reliable, confirmed by direct testing.
+
+  **VLC's own error output capture added**, missing until now — a
+  silent failure on VLC's side stayed entirely invisible. The
+  diagnostic tool now includes it in its report.
+
+  Verified end to end: an AC3 source stream converted to AAC by VLC;
+  full VLC → ffmpeg → HTTP response pipeline tested against a real
+  continuous stream, valid H.264+AAC output; no orphaned VLC/ffmpeg
+  process after a completed request.
+
 ## 1.47.2
 
 - **Correctif *Chaînes TV* : VLC installé et confirmé par l'utilisateur,

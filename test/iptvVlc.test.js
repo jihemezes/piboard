@@ -20,7 +20,7 @@ const platform = require("../server/platform");
 (async () => {
   console.log("== iptvVlc : expose l'interface attendue ==");
   {
-    for (const fn of ["checkVlc", "findVlc", "installHint", "spawnRelay", "tryCandidate"]) {
+    for (const fn of ["checkVlc", "findVlc", "installHint", "spawnTranscode", "tryCandidate"]) {
       assert.ok(typeof iptvVlc[fn] === "function", `iptvVlc.${fn} doit etre une fonction`);
     }
     console.log("  OK");
@@ -75,12 +75,12 @@ const platform = require("../server/platform");
     console.log("  OK (vlc trouve a :", foundPath || "introuvable, repli attendu", ")");
   }
 
-  console.log("== iptvVlc.spawnRelay : construit une commande valide (verification indirecte) ==");
+  console.log("== iptvVlc.spawnTranscode : construit une commande valide (verification indirecte) ==");
   {
     let proc;
     try {
-      proc = iptvVlc.spawnRelay("http://127.0.0.1:1/nonexistent");
-      assert.ok(proc && proc.stdout && proc.stderr, "spawnRelay doit renvoyer un child_process avec stdout/stderr");
+      proc = iptvVlc.spawnTranscode("http://127.0.0.1:1/nonexistent");
+      assert.ok(proc && proc.stdout && proc.stderr, "spawnTranscode doit renvoyer un child_process avec stdout/stderr");
       proc.kill("SIGKILL");
       console.log("  OK");
     } catch (e) {
