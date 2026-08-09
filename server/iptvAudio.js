@@ -189,6 +189,21 @@ function streamTranscoded(url, res, onError, mode) {
     // same pipeline works perfectly for movies/series (VOD, clean
     // timestamps), only live is affected.
     "-fflags", "+genpts",
+    // Identification honnete en User-Agent, alignee sur celle deja
+    // utilisee avec succes pour la liste des chaines (voir
+    // server/iptv.js) : ffmpeg envoie par defaut "Lavf/X.Y.Z" (sa
+    // propre version de bibliotheque), que ce fournisseur IPTV precis
+    // rejette avec un 405 -- confirme par l'outil de diagnostic
+    // (server/iptvAudio.js:diagnose). VLC etant le client de reference
+    // de l'ecosysteme IPTV, c'est generalement le mieux accepte.
+    // Honest identification via User-Agent, matching the one already
+    // used successfully for the channel list (see server/iptv.js):
+    // ffmpeg sends "Lavf/X.Y.Z" (its own library version) by default,
+    // which this specific IPTV provider rejects with a 405 -- confirmed
+    // by the diagnostic tool (server/iptvAudio.js:diagnose). VLC being
+    // the IPTV ecosystem's reference client, it's generally the best
+    // accepted.
+    "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
     "-i", url,
     "-avoid_negative_ts", "make_zero",
     ...(fullTranscode
@@ -270,6 +285,7 @@ function diagnose(url, mode) {
       "-hide_banner", "-loglevel", "info",
       "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
       "-fflags", "+genpts",
+      "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
       "-i", url,
       "-avoid_negative_ts", "make_zero",
       "-t", "8", // diagnostic borne a 8s de flux source, jamais envoye au navigateur / diagnostic bounded to 8s of source stream, never sent to the browser

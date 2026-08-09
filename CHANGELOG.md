@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.46.2
+
+- **Correctif *Chaînes TV* : cause identifiée sans ambiguïté grâce à
+  l'outil de diagnostic** — `405 Method Not Allowed` renvoyé par le
+  serveur du fournisseur IPTV lui-même, 0 octet produit. Rien à voir
+  avec hls.js, les codecs, le format MP4 fragmenté ou la mise en
+  mémoire tampon explorés jusqu'ici.
+
+  Deux user-agents corrigés vers `VLC/3.0.20 LibVLC/3.0.20` — déjà
+  utilisé avec succès pour la liste des chaînes, seul point qui n'avait
+  jamais posé problème :
+  - **`server/iptvAudio.js`** (mode compatibilité) : ffmpeg envoyait son
+    identifiant par défaut (`Lavf/X.Y.Z`), rejeté par ce fournisseur ;
+  - **`server/iptvHlsProxy.js`** (relais du direct, mode par défaut) :
+    utilisait par erreur l'identifiant du mode lecture des articles
+    RSS (`PiBoard-ReaderMode`, hérité d'un copier-coller, sans rapport
+    avec l'IPTV) — très probablement la vraie cause du tout premier
+    signalement (`405` observé dès la toute première capture de
+    console partagée), avant même la découverte du besoin de ffmpeg.
+
+  **Non vérifié directement** : cette sandbox de développement n'a pas
+  accès au réseau du fournisseur concerné (restriction propre à
+  l'environnement), donc impossible de confirmer ici que le `405`
+  disparaît réellement. À vérifier avec l'outil de diagnostic introduit
+  en v1.46.1, sur ta machine.
+
+---
+
+- **Fix for *TV Channels*: cause identified without ambiguity thanks to
+  the diagnostic tool** — `405 Method Not Allowed` returned by the IPTV
+  provider's own server, 0 bytes produced. Unrelated to hls.js,
+  codecs, the fragmented MP4 format, or buffering, all explored until
+  now.
+
+  Two user-agents fixed to `VLC/3.0.20 LibVLC/3.0.20` — already used
+  successfully for the channel list, the one part that never had a
+  problem:
+  - **`server/iptvAudio.js`** (compatibility mode): ffmpeg was sending
+    its default identifier (`Lavf/X.Y.Z`), rejected by this provider;
+  - **`server/iptvHlsProxy.js`** (the live relay, default mode): was
+    mistakenly using the RSS article reader mode's identifier
+    (`PiBoard-ReaderMode`, inherited via copy-paste, unrelated to
+    IPTV) — very likely the real cause of the very first report (a
+    `405` observed in the very first console capture shared), before
+    the need for ffmpeg was even discovered.
+
+  **Not directly verified**: this development sandbox has no network
+  access to the provider in question (an environment-specific
+  restriction), so it's impossible to confirm here that the `405`
+  actually disappears. To be checked with the diagnostic tool
+  introduced in v1.46.1, on your machine.
+
 ## 1.46.1
 
 - **Nouvel outil de diagnostic *Chaînes TV*, consultable directement

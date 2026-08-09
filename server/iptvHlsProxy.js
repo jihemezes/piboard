@@ -50,7 +50,24 @@
 "use strict";
 
 const FETCH_TIMEOUT_MS = 15000;
-const USER_AGENT = "Mozilla/5.0 (compatible; PiBoard-ReaderMode/1.0; +https://github.com/jihemezes/piboard)";
+// VLC/3.0.20, deja utilise avec succes pour la liste des chaines (voir
+// server/iptv.js), PAS l'identifiant "PiBoard-ReaderMode" du mode
+// lecture des articles RSS herite par erreur d'un copier-coller --
+// sans rapport avec l'IPTV. Confirme necessaire par l'outil de
+// diagnostic (server/iptvAudio.js:diagnose) : l'identifiant par
+// defaut de ffmpeg se voyait rejete par ce fournisseur precis avec un
+// 405, la meme famille d'erreur que celle observee ici avant ce
+// correctif. VLC etant le client de reference de l'ecosysteme IPTV,
+// c'est generalement le mieux accepte.
+// VLC/3.0.20, already used successfully for the channel list (see
+// server/iptv.js), NOT the "PiBoard-ReaderMode" identifier from the
+// RSS article reader mode mistakenly inherited via copy-paste --
+// unrelated to IPTV. Confirmed necessary by the diagnostic tool
+// (server/iptvAudio.js:diagnose): ffmpeg's default identifier got
+// rejected by this specific provider with a 405, the same error
+// family observed here before this fix. VLC being the IPTV
+// ecosystem's reference client, it's generally the best accepted.
+const USER_AGENT = "VLC/3.0.20 LibVLC/3.0.20";
 
 function isPlaylist(url, contentType) {
   if (contentType && /mpegurl/i.test(contentType)) return true;
