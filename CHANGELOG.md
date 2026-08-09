@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.48.1
+
+- **Correctif *Chaînes TV* : sortie de VLC totalement vide dans le
+  diagnostic, malgré 15 secondes sans le moindre octet produit.**
+  Cause : VLC reste quasi muet à son niveau de verbosité par défaut,
+  même en cas d'échec de connexion — aucune option de verbosité
+  n'était passée. `-vv` ajouté.
+
+  **Vérifié directement** contre une connexion refusée délibérée :
+  sans `-vv`, sortie d'erreur totalement vide (reproduit exactement le
+  symptôme signalé) ; avec `-vv`, VLC rapporte clairement `HTTP
+  connection failure` / `connection failed: Connection refused`. Le
+  prochain diagnostic devrait enfin révéler ce que VLC tente de faire
+  et pourquoi ça échoue.
+
+---
+
+- **Fix for *TV Channels*: VLC's output completely empty in the
+  diagnostic, despite 15 seconds with not a single byte produced.**
+  Cause: VLC stays nearly silent at its default verbosity level, even
+  on a connection failure — no verbosity option was being passed.
+  `-vv` added.
+
+  **Directly verified** against a deliberately refused connection:
+  without `-vv`, completely empty error output (reproduces the exact
+  reported symptom); with `-vv`, VLC clearly reports "HTTP connection
+  failure" / "connection failed: Connection refused". The next
+  diagnostic run should finally reveal what VLC is attempting and why
+  it fails.
+
 ## 1.48.0
 
 - **Chaînes TV : VLC transcode désormais lui-même**, au lieu d'un

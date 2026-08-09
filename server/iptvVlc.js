@@ -167,6 +167,15 @@ function installHint() {
 function spawnTranscode(url) {
   const args = [
     "--intf", "dummy",
+    // -vv : sans cette verbosite, VLC reste quasi muet sur son niveau
+    // de log par defaut, meme en cas d'echec de connexion -- confirme
+    // par un rapport de diagnostic a la sortie d'erreur totalement
+    // vide malgre un echec reel (15s sans le moindre octet produit).
+    // -vv: without this verbosity, VLC stays nearly silent at its
+    // default log level, even on a connection failure -- confirmed by
+    // a diagnostic report with completely empty error output despite a
+    // genuine failure (15s with not a single byte produced).
+    "-vv",
     url,
     "--sout", "#transcode{vcodec=h264,venc=x264{preset=veryfast},acodec=mp4a,ab=128,channels=2}:std{access=file,mux=ts,dst=-}"
   ];
