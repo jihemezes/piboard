@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.50.1
+
+- **Installeur Windows : vraie page à cases à cocher, plus de fenêtre
+  modale.** Signalé par l'utilisateur : la fenêtre « Oui/Non » de la
+  v1.45.0 redemandait à chaque réinstallation tant qu'on répondait
+  Non. Remplacée par une véritable page de l'assistant d'installation,
+  avec de vraies cases à cocher, décochées par défaut — ne rien cocher
+  fait simplement avancer à la page suivante, sans jamais redemander
+  bruyamment.
+
+  **VLC ajouté selon le même principe que ffmpeg.** Contrairement à
+  ffmpeg (un seul exécutable autonome), VLC dépend de son dossier
+  « plugins » et de plusieurs DLL pour fonctionner — le dossier
+  complet est copié, pas seulement `vlc.exe`.
+
+  La page entière est sautée si les deux outils sont déjà présents
+  (une mise à jour ne redemande donc rien) ; si un seul manque, seule
+  sa case s'affiche.
+
+  **Vérifié avec le vrai compilateur NSIS** : compile sans la moindre
+  erreur ni le moindre avertissement, produit un véritable exécutable
+  Windows valide.
+
+---
+
+- **Windows installer: a real checkbox page, no more modal dialog.**
+  Reported by the user: the v1.45.0 "Yes/No" dialog kept re-asking on
+  every reinstall as long as the answer was No. Replaced with a
+  genuine installer wizard page, with real checkboxes, unchecked by
+  default — checking nothing simply moves to the next page, never
+  noisily asking again.
+
+  **VLC added following the same principle as ffmpeg.** Unlike ffmpeg
+  (a single standalone executable), VLC depends on its "plugins"
+  folder and several DLLs to function — the full folder is copied,
+  not just `vlc.exe`.
+
+  The whole page is skipped if both tools are already present (an
+  update therefore asks nothing); if only one is missing, only its
+  checkbox shows.
+
+  **Verified with the real NSIS compiler**: compiles with zero errors
+  and zero warnings, produces a genuine valid Windows executable.
+
 ## 1.50.0
 
 - **Chaînes TV en direct : boutons pause et plein écran ajoutés.**
