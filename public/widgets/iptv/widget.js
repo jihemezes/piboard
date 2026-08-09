@@ -619,7 +619,11 @@
             <button type="button" class="pwtv-btn pwtv-back" title="${i18n.t("iptv.backToList")}">☰</button>
             <span class="pwtv-current">${escapeHtml(this.current.name)}</span>
             <span class="pwtv-audio-warn" hidden>⚠</span>
-            ${isVod ? "" : `<button type="button" class="pwtv-btn pwtv-mute">${s.startMuted !== false ? "🔇" : "🔊"}</button>`}
+            ${isVod ? "" : `
+              <button type="button" class="pwtv-btn pwtv-playpause" title="${i18n.t("iptv.pause")}">⏸</button>
+              <button type="button" class="pwtv-btn pwtv-mute">${s.startMuted !== false ? "🔇" : "🔊"}</button>
+              <button type="button" class="pwtv-btn pwtv-fullscreen" title="${i18n.t("iptv.fullscreen")}">⛶</button>
+            `}
           </div>
         </div>`;
 
@@ -635,6 +639,63 @@
         muteBtn.addEventListener("click", () => {
           video.muted = !video.muted;
           muteBtn.textContent = video.muted ? "🔇" : "🔊";
+        });
+      }
+      // Pause/lecture : pas de barre de progression pour le direct
+      // (rien a avancer/reculer, voir plus haut), mais mettre en pause
+      // et reprendre gardent un sens meme sans elle -- l'image se fige
+      // simplement sur l'instant courant, la reprise relance le direct
+      // a l'instant reel (pas de rattrapage), comportement attendu pour
+      // du direct.
+      // Play/pause: no progress bar for live (nothing to seek through,
+      // see above), but pausing and resuming still make sense without
+      // it -- the image simply freezes on the current instant, resuming
+      // restarts live at the real current time (no catch-up), expected
+      // behavior for live content.
+      const playPauseBtn = this.ctx.el.querySelector(".pwtv-playpause");
+      if (playPauseBtn) {
+        playPauseBtn.addEventListener("click", () => {
+          if (video.paused) {
+            this.safePlay(video);
+            playPauseBtn.textContent = "⏸";
+            playPauseBtn.title = i18n.t("iptv.pause");
+          } else {
+            video.pause();
+            playPauseBtn.textContent = "▶";
+            playPauseBtn.title = i18n.t("iptv.play");
+          }
+        });
+        // Garde le bouton synchronise si la lecture s'arrete/reprend
+        // pour une AUTRE raison que ce bouton (ex. mise en tampon
+        // apres une coupure reseau, qui appelle aussi video.pause()
+        // en interne).
+        // Keeps the button in sync if playback stops/resumes for a
+        // reason OTHER than this button (e.g. buffering after a network
+        // drop, which also calls video.pause() internally).
+        video.addEventListener("pause", () => { playPauseBtn.textContent = "▶"; playPauseBtn.title = i18n.t("iptv.play"); });
+        video.addEventListener("playing", () => { playPauseBtn.textContent = "⏸"; playPauseBtn.title = i18n.t("iptv.pause"); });
+      }
+      // Plein ecran : cible le conteneur video (pas juste <video>), pour
+      // que l'incrustation eventuelle (avertissement audio, banniere de
+      // format) reste visible en plein ecran plutot que d'etre coupee.
+      // requestFullscreen peut echouer (navigateur qui le refuse hors
+      // d'un geste utilisateur direct, deja le cas ici) : capture
+      // silencieusement, sans casser le reste de l'interface.
+      // Fullscreen: targets the video container (not just <video>), so
+      // any overlay (audio warning, format banner) stays visible in
+      // fullscreen rather than being cut off. requestFullscreen can
+      // fail (a browser refusing it outside a direct user gesture,
+      // already the case here): caught silently, without breaking the
+      // rest of the interface.
+      const fullscreenBtn = this.ctx.el.querySelector(".pwtv-fullscreen");
+      if (fullscreenBtn) {
+        fullscreenBtn.addEventListener("click", () => {
+          const wrap = this.ctx.el.querySelector(".pwtv-video-wrap");
+          if (document.fullscreenElement) {
+            document.exitFullscreen().catch(() => { /* noop */ });
+          } else if (wrap && wrap.requestFullscreen) {
+            wrap.requestFullscreen().catch(() => { /* noop */ });
+          }
         });
       }
       this.attachStream(video, this.current.url);

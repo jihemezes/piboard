@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.50.0
+
+- **Chaînes TV en direct : boutons pause et plein écran ajoutés.**
+  Les chaînes en direct n'ont pas de contrôles natifs du navigateur
+  (pas de barre de progression, rien à avancer/reculer sur du
+  direct), mais mettre en pause et passer en plein écran gardent tout
+  leur sens même sans elle. Deux nouveaux boutons dans la barre de
+  contrôle, à côté du bouton muet existant.
+
+  Mettre en pause fige simplement l'image sur l'instant courant ;
+  reprendre relance le direct à l'instant réel (pas de rattrapage,
+  comportement attendu pour du direct). Le plein écran cible le
+  conteneur vidéo entier (pas seulement l'élément `<video>`), pour que
+  d'éventuelles incrustations (avertissement audio, bannière de
+  format) restent visibles.
+
+  Absents pour les films/séries, qui utilisent déjà les contrôles
+  natifs du navigateur (redondant sinon).
+
+---
+
+- **Live TV channels: pause and fullscreen buttons added.** Live
+  channels have no native browser controls (no progress bar, nothing
+  to seek through on live), but pausing and going fullscreen still
+  fully make sense without one. Two new buttons in the control bar,
+  next to the existing mute button.
+
+  Pausing simply freezes the image at the current instant; resuming
+  restarts live at the real current time (no catch-up, expected
+  behavior for live content). Fullscreen targets the entire video
+  container (not just the `<video>` element), so any overlay (audio
+  warning, format banner) stays visible.
+
+  Absent for movies/series, which already use the browser's native
+  controls (redundant otherwise).
+
 ## 1.49.1
 
 - **Correctif *Chaînes TV* : image figée sur toutes les chaînes en
