@@ -1155,6 +1155,47 @@ app.get("/api/iptv/audio-fix-available", async (req, res) => {
   res.json({ available: await iptvAudio.checkFfmpeg(), installHint: iptvAudio.installHint() });
 });
 
+/* Page de diagnostic, pensee pour etre consultee directement dans un
+   navigateur (une simple URL a coller) plutot que via les outils de
+   developpement -- un obstacle reel pour une application installee sous
+   Windows, deja rencontre plusieurs fois. Lance le vrai pipeline ffmpeg
+   sur l'URL fournie, pendant 8s seulement (jamais envoye au
+   navigateur), et affiche precisement ce qui s'est passe.
+   Diagnostic page, meant to be viewed directly in a browser (a plain
+   URL to paste) rather than via developer tools -- a real obstacle for
+   an installed Windows application, already run into several times.
+   Runs the real ffmpeg pipeline on the given URL, for 8s only (never
+   sent to the browser), and shows precisely what happened. */
+app.get("/api/iptv/diagnose", async (req, res) => {
+  const target = String(req.query.url || "");
+  const mode = req.query.mode === "full" ? "full" : "audio";
+  if (!/^https?:\/\//i.test(target)) {
+    res.status(400).send("URL invalide / invalid URL");
+    return;
+  }
+  if (!(await iptvAudio.checkFfmpeg())) {
+    res.status(503).send("ffmpeg introuvable / ffmpeg not found");
+    return;
+  }
+  const r = await iptvAudio.diagnose(target, mode);
+  res.set("Content-Type", "text/plain; charset=utf-8");
+  if (r.spawnError) {
+    res.send("Echec au demarrage de ffmpeg / Failed to start ffmpeg:\n" + r.spawnError);
+    return;
+  }
+  res.send(
+    "=== Diagnostic IPTV / IPTV diagnostic ===\n" +
+    "URL : " + target + "\n" +
+    "Mode : " + mode + "\n\n" +
+    "Code de sortie ffmpeg / ffmpeg exit code : " + r.exitCode + "\n" +
+    "Octets produits / bytes produced : " + r.bytesProduced + "\n" +
+    "Premier octet apres / first byte after : " + (r.firstByteAfterMs == null ? "jamais (aucune donnee produite) / never (no data produced)" : r.firstByteAfterMs + " ms") + "\n" +
+    "Duree totale / total duration : " + r.totalDurationMs + " ms\n\n" +
+    "--- Sortie ffmpeg (stderr) / ffmpeg output (stderr) ---\n" +
+    (r.ffmpegStderr || "(vide / empty)")
+  );
+});
+
 app.get("/api/iptv/xtream-categories", async (req, res) => {
   const creds = xtreamCredsOr400(req, res);
   if (!creds) return;

@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.46.1
+
+- **Nouvel outil de diagnostic *Chaînes TV*, consultable directement
+  dans un navigateur.** L'échec persistant sur plusieurs chaînes
+  différentes malgré les correctifs précédents, sans accès facile à la
+  console/au journal du serveur pour une application installée sous
+  Windows, appelait un outil dédié plutôt qu'une nouvelle hypothèse à
+  l'aveugle. Lance le pipeline ffmpeg réel sur une URL donnée, pendant
+  8 secondes seulement (jamais envoyé au lecteur), et affiche
+  précisément : code de sortie, octets produits, délai avant le
+  premier octet, et surtout la sortie d'erreur complète de ffmpeg.
+
+  Usage : coller dans un navigateur (remplacer l'URL de la chaîne par
+  celle affichée dans l'onglet Réseau) —
+  `http://127.0.0.1:8090/api/iptv/diagnose?url=URL_DE_LA_CHAINE&mode=full`
+  (ou `mode=audio`).
+
+  Vérifié de bout en bout sur un vrai flux continu : révèle par exemple
+  un délai de plus d'1 seconde avant le premier octet produit,
+  cohérent avec un flux réellement en direct.
+
+---
+
+- **New *TV Channels* diagnostic tool, viewable directly in a
+  browser.** The persistent failure across several different channels
+  despite previous fixes, with no easy access to the server's console/
+  log for an installed Windows application, called for a dedicated
+  tool rather than another blind guess. Runs the real ffmpeg pipeline
+  on a given URL, for 8 seconds only (never sent to the player), and
+  precisely reports: exit code, bytes produced, delay before the first
+  byte, and above all ffmpeg's full error output.
+
+  Usage: paste into a browser (replace the channel URL with the one
+  shown in the Network tab) —
+  `http://127.0.0.1:8090/api/iptv/diagnose?url=CHANNEL_URL&mode=full`
+  (or `mode=audio`).
+
+  Verified end to end against a real continuous stream: reveals, for
+  instance, a delay of over 1 second before the first byte produced,
+  consistent with a genuinely live stream.
+
 ## 1.46.0
 
 - **Correctif *Chaînes TV* : cause probable enfin trouvée pour le

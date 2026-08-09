@@ -249,4 +249,68 @@ function streamTranscoded(url, res, onError, mode) {
   return ff;
 }
 
-module.exports = { checkFfmpeg, findFfmpeg, installHint, streamTranscoded };
+/* Diagnostic : lance exactement le meme pipeline que streamTranscoded,
+   mais pour une duree BORNEE (pas de flux sans fin vers le navigateur),
+   et rapporte precisement ce qui s'est passe -- octets produits, code
+   de sortie de ffmpeg, et surtout sa sortie d'erreur complete. Pense
+   pour etre consulte directement depuis un navigateur (simple URL),
+   sans avoir besoin d'acceder a la console/au journal du serveur --
+   un obstacle reel pour une application installee sous Windows.
+   Diagnostic: runs the exact same pipeline as streamTranscoded, but for
+   a BOUNDED duration (no endless stream sent to the browser), and
+   reports precisely what happened -- bytes produced, ffmpeg's exit
+   code, and above all its full error output. Meant to be viewed
+   directly from a browser (a plain URL), without needing access to the
+   server's console/log -- a real obstacle for an installed Windows
+   application. */
+function diagnose(url, mode) {
+  return new Promise((resolve) => {
+    const fullTranscode = mode === "full";
+    const args = [
+      "-hide_banner", "-loglevel", "info",
+      "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+      "-fflags", "+genpts",
+      "-i", url,
+      "-avoid_negative_ts", "make_zero",
+      "-t", "8", // diagnostic borne a 8s de flux source, jamais envoye au navigateur / diagnostic bounded to 8s of source stream, never sent to the browser
+      ...(fullTranscode
+        ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
+        : ["-c:v", "copy"]),
+      "-c:a", "aac", "-b:a", "128k", "-ac", "2",
+      "-movflags", "frag_keyframe+empty_moov+faststart",
+      "-f", "mp4",
+      "pipe:1"
+    ];
+
+    const startedAt = Date.now();
+    const ff = spawn(ffmpegPath || "ffmpeg", args, { stdio: ["ignore", "pipe", "pipe"] });
+    let bytesOut = 0;
+    let firstByteMs = null;
+    let stderr = "";
+
+    ff.stdout.on("data", (d) => {
+      bytesOut += d.length;
+      if (firstByteMs === null) firstByteMs = Date.now() - startedAt;
+    });
+    ff.stderr.on("data", (d) => { stderr += d.toString(); });
+
+    const timer = setTimeout(() => { try { ff.kill("SIGKILL"); } catch (e) { /* noop */ } }, 15000);
+
+    ff.on("close", (code) => {
+      clearTimeout(timer);
+      resolve({
+        exitCode: code,
+        bytesProduced: bytesOut,
+        firstByteAfterMs: firstByteMs,
+        totalDurationMs: Date.now() - startedAt,
+        ffmpegStderr: stderr.slice(-4000) // les dernieres lignes suffisent generalement / the last lines are usually enough
+      });
+    });
+    ff.on("error", (e) => {
+      clearTimeout(timer);
+      resolve({ spawnError: e.message || String(e) });
+    });
+  });
+}
+
+module.exports = { checkFfmpeg, findFfmpeg, installHint, streamTranscoded, diagnose };
