@@ -204,6 +204,24 @@ function streamTranscoded(url, res, onError, mode) {
     // the IPTV ecosystem's reference client, it's generally the best
     // accepted.
     "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
+    // Un flux EN DIRECT, sans fin, n'a pas de sens a "rembobiner" :
+    // sans cette option, ffmpeg envoie par defaut un en-tete "Range:
+    // bytes=0-" (pensee pour du contenu fini, avec une taille connue)
+    // ET une demande de metadonnees ICY (Icy-MetaData: 1, style
+    // SHOUTcast) -- confirme par examen de la requete HTTP reelle que
+    // ffmpeg envoie. De nombreux serveurs de streaming en direct
+    // rejettent l'un ou l'autre, parfois avec un 405 plutot que le
+    // code plus attendu (416) -- cause probable du 405 persistant
+    // malgre le user-agent deja corrige.
+    // A LIVE, endless stream doesn't make sense to "seek" through:
+    // without this option, ffmpeg sends a "Range: bytes=0-" header by
+    // default (meant for finite content with a known size) AND an ICY
+    // (SHOUTcast-style) metadata request (Icy-MetaData: 1) -- confirmed
+    // by examining the actual HTTP request ffmpeg sends. Many live
+    // streaming servers reject either one, sometimes with a 405 rather
+    // than the more expected 416 -- the likely cause of the 405
+    // persisting despite the user-agent already fixed.
+    "-seekable", "0", "-icy", "0",
     "-i", url,
     "-avoid_negative_ts", "make_zero",
     ...(fullTranscode
@@ -286,6 +304,7 @@ function diagnose(url, mode) {
       "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
       "-fflags", "+genpts",
       "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
+      "-seekable", "0", "-icy", "0",
       "-i", url,
       "-avoid_negative_ts", "make_zero",
       "-t", "8", // diagnostic borne a 8s de flux source, jamais envoye au navigateur / diagnostic bounded to 8s of source stream, never sent to the browser

@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.46.3
+
+- **Correctif *Chaînes TV* : `405` toujours présent malgré le
+  user-agent VLC (v1.46.2).** Cause trouvée en examinant la requête
+  HTTP brute que ffmpeg envoie réellement : deux en-têtes envoyés par
+  défaut, sans rapport avec l'identification du client, mais tout
+  aussi susceptibles de faire rejeter la requête par un serveur de
+  streaming en direct —
+  - `Range: bytes=0-` : une demande de « rembobinage », pensée pour du
+    contenu fini à taille connue — sans grand sens pour un flux en
+    direct sans fin ;
+  - `Icy-MetaData: 1` : une demande de métadonnées façon SHOUTcast,
+    hors de propos pour un flux vidéo IPTV.
+
+  Les deux désormais désactivés (`-seekable 0 -icy 0`). **Vérifié
+  concrètement** en capturant la requête brute réellement envoyée par
+  ffmpeg, avec et sans ces options : les deux en-têtes disparaissent
+  bien.
+
+  Cette sandbox de développement n'ayant toujours pas accès au réseau
+  du fournisseur concerné, la disparition effective du `405` sur le
+  vrai flux reste à confirmer avec l'outil de diagnostic (v1.46.1).
+
+---
+
+- **Fix for *TV Channels*: `405` still present despite the VLC
+  user-agent (v1.46.2).** Cause found by examining the raw HTTP
+  request ffmpeg actually sends: two headers sent by default,
+  unrelated to client identification, but just as likely to get the
+  request rejected by a live streaming server —
+  - `Range: bytes=0-`: a "seek" request, meant for finite content with
+    a known size — not particularly meaningful for an endless live
+    stream;
+  - `Icy-MetaData: 1`: a SHOUTcast-style metadata request, irrelevant
+    for an IPTV video stream.
+
+  Both now disabled (`-seekable 0 -icy 0`). **Concretely verified** by
+  capturing the raw request ffmpeg actually sends, with and without
+  these options: both headers correctly disappear.
+
+  This development sandbox still having no network access to the
+  provider in question, whether the `405` actually disappears on the
+  real stream remains to be confirmed with the diagnostic tool
+  (v1.46.1).
+
 ## 1.46.2
 
 - **Correctif *Chaînes TV* : cause identifiée sans ambiguïté grâce à
