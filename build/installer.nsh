@@ -173,7 +173,7 @@ Function InstallFfmpeg
   ; supplementaire pour la decompression. Expand-Archive: natively
   ; available since PowerShell 5.0 (Windows 10 and newer), no extra
   ; NSIS plugin needed for extraction.
-  nsExec::ExecToLog 'powershell -NoProfile -Command "Expand-Archive -Path \"$TEMP\ffmpeg-piboard.zip\" -DestinationPath \"$TEMP\ffmpeg-piboard-extracted\" -Force"'
+  nsExec::ExecToLog 'powershell -NoProfile -WindowStyle Hidden -Command "Expand-Archive -Path \"$TEMP\ffmpeg-piboard.zip\" -DestinationPath \"$TEMP\ffmpeg-piboard-extracted\" -Force"'
   Pop $0
   ${If} $0 == "0"
     CopyFiles /SILENT "$TEMP\ffmpeg-piboard-extracted\ffmpeg.exe" "$APPDATA\PiBoard\ffmpeg\ffmpeg.exe"
@@ -204,7 +204,7 @@ Function InstallVlc
 
   CreateDirectory "$APPDATA\PiBoard\vlc"
   DetailPrint "Extraction de VLC... / Extracting VLC..."
-  nsExec::ExecToLog 'powershell -NoProfile -Command "Expand-Archive -Path \"$TEMP\vlc-piboard.zip\" -DestinationPath \"$TEMP\vlc-piboard-extracted\" -Force"'
+  nsExec::ExecToLog 'powershell -NoProfile -WindowStyle Hidden -Command "Expand-Archive -Path \"$TEMP\vlc-piboard.zip\" -DestinationPath \"$TEMP\vlc-piboard-extracted\" -Force"'
   Pop $0
   ${If} $0 == "0"
     ; VLC, contrairement a ffmpeg, n'est PAS un executable autonome :

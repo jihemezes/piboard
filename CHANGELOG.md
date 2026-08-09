@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.50.2
+
+- **Correctif : fenêtre PowerShell supplémentaire pendant l'extraction
+  de ffmpeg/VLC.** `nsExec::ExecToLog` masque normalement la fenêtre du
+  processus lancé, mais PowerShell est connu pour parfois afficher
+  brièvement la sienne malgré tout. `-WindowStyle Hidden` ajouté en
+  renfort explicite, pour les deux extractions (ffmpeg et VLC).
+
+- **Page à cases à cocher toujours pas visible, malgré la v1.50.1** :
+  investigation approfondie du mécanisme d'inclusion d'electron-builder
+  (tracé jusque dans son code source) sans trouver de problème
+  d'ordonnancement — le fichier `installer.nsh` est bien inséré avant
+  le modèle principal. Cause probable restant à confirmer : version
+  précédente encore testée plutôt qu'une reconstruction complète pour
+  1.50.2 précisément (déjà arrivé plusieurs fois dans le
+  développement de cette fonctionnalité).
+
+  **Vérification sans ambiguïté cette fois** : avant de tester,
+  supprimer entièrement le dossier `dist\` existant, puis lancer
+  `npm run dist` et confirmer qu'un nouveau fichier `.exe` apparaît
+  avec une date de modification très récente, avant de désinstaller
+  et réinstaller.
+
+---
+
+- **Fix: an extra PowerShell window during ffmpeg/VLC extraction.**
+  `nsExec::ExecToLog` normally hides the launched process's window, but
+  PowerShell is known to sometimes flash its own regardless.
+  `-WindowStyle Hidden` added as explicit reinforcement, for both
+  extractions (ffmpeg and VLC).
+
+- **Checkbox page still not visible, despite v1.50.1**: thorough
+  investigation of electron-builder's include mechanism (traced into
+  its own source code) without finding an ordering issue -- the
+  `installer.nsh` file is indeed inserted before the main template.
+  Likely remaining cause: a previous version still being tested rather
+  than a full rebuild specifically for 1.50.2 (already happened several
+  times during this feature's development).
+
+  **Unambiguous verification this time**: before testing, fully delete
+  the existing `dist\` folder, then run `npm run dist` and confirm a
+  new `.exe` file appears with a very recent modification date, before
+  uninstalling and reinstalling.
+
 ## 1.50.1
 
 - **Installeur Windows : vraie page à cases à cocher, plus de fenêtre
