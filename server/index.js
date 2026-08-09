@@ -1219,7 +1219,27 @@ app.get("/api/iptv/diagnose", async (req, res) => {
     res.status(503).send("ffmpeg introuvable / ffmpeg not found");
     return;
   }
-  const r = await iptvAudio.diagnose(target, mode);
+
+  // Meme logique que la route de lecture reelle (/api/iptv/audio-fix) :
+  // sans ceci, ce diagnostic testerait ffmpeg seul alors que la vraie
+  // lecture passe par VLC pour le direct -- deux chemins differents,
+  // deux resultats potentiellement differents. Voir server/iptvVlc.js.
+  // Same logic as the real playback route (/api/iptv/audio-fix):
+  // without this, this diagnostic would test ffmpeg alone while real
+  // playback goes through VLC for live -- two different paths, two
+  // potentially different results. See server/iptvVlc.js.
+  const isLive = /\/live\//i.test(target) || !/\/(movie|series)\//i.test(target);
+  const vlcAvailable = isLive && (await iptvVlc.checkVlc());
+  let vlc = null;
+  let inputStream;
+  if (vlcAvailable) {
+    vlc = iptvVlc.spawnRelay(target);
+    inputStream = vlc.stdout;
+  }
+
+  const r = await iptvAudio.diagnose(target, mode, inputStream);
+  if (vlc) { try { vlc.kill("SIGKILL"); } catch (e) { /* noop */ } }
+
   res.set("Content-Type", "text/plain; charset=utf-8");
   if (r.spawnError) {
     res.send("Echec au demarrage de ffmpeg / Failed to start ffmpeg:\n" + r.spawnError);
@@ -1228,7 +1248,8 @@ app.get("/api/iptv/diagnose", async (req, res) => {
   res.send(
     "=== Diagnostic IPTV / IPTV diagnostic ===\n" +
     "URL : " + target + "\n" +
-    "Mode : " + mode + "\n\n" +
+    "Mode : " + mode + "\n" +
+    "Chemin emprunte / Path used : " + (vlcAvailable ? "VLC -> ffmpeg" : "ffmpeg seul / ffmpeg alone" + (isLive ? " (VLC indisponible ou non installe / VLC unavailable or not installed)" : " (contenu VOD, VLC non necessaire / VOD content, VLC not needed)")) + "\n\n" +
     "Code de sortie ffmpeg / ffmpeg exit code : " + r.exitCode + "\n" +
     "Octets produits / bytes produced : " + r.bytesProduced + "\n" +
     "Premier octet apres / first byte after : " + (r.firstByteAfterMs == null ? "jamais (aucune donnee produite) / never (no data produced)" : r.firstByteAfterMs + " ms") + "\n" +

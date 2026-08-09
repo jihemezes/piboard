@@ -231,7 +231,19 @@ function streamTranscoded(url, res, onError, mode, inputStream) {
     "pipe:1"
   ];
 
-  const ff = spawn(ffmpegPath || "ffmpeg", args, { stdio: [usingPipe ? "pipe" : "ignore", "pipe", "pipe"] });
+  const ff = spawn(ffmpegPath || "ffmpeg", args, {
+    stdio: [usingPipe ? "pipe" : "ignore", "pipe", "pipe"],
+    // Sans ceci, Windows affiche une fenetre de console visible (qui
+    // s'ouvre puis se referme) pour tout processus lance depuis une
+    // app Electron -- signale par l'utilisateur. windowsHide la
+    // supprime ; sans effet sur Linux/macOS (option ignoree la ou elle
+    // ne s'applique pas).
+    // Without this, Windows shows a visible console window (that opens
+    // then closes) for any process launched from an Electron app --
+    // reported by the user. windowsHide suppresses it; no effect on
+    // Linux/macOS (the option is ignored where it doesn't apply).
+    windowsHide: true
+  });
   if (usingPipe) {
     inputStream.pipe(ff.stdin);
     // Une erreur d'ecriture (VLC deja termine, par exemple) ne doit pas
@@ -292,16 +304,33 @@ function streamTranscoded(url, res, onError, mode, inputStream) {
    directly from a browser (a plain URL), without needing access to the
    server's console/log -- a real obstacle for an installed Windows
    application. */
-function diagnose(url, mode) {
+/* inputStream, si fourni, fait tester ffmpeg en lecture depuis ce flux
+   (la sortie de VLC, voir server/iptvVlc.js) plutot que de recuperer
+   l'URL lui-meme -- reflete fidelement le pipeline REELLEMENT utilise
+   en lecture (voir la route /api/iptv/audio-fix dans server/index.js).
+   Sans ceci, le diagnostic testerait ffmpeg seul alors que la vraie
+   lecture passe par VLC pour le direct : deux chemins differents, deux
+   resultats potentiellement differents.
+   inputStream, if provided, makes ffmpeg tested reading from that
+   stream (VLC's output, see server/iptvVlc.js) rather than fetching the
+   URL itself -- faithfully reflects the pipeline ACTUALLY used during
+   playback (see the /api/iptv/audio-fix route in server/index.js).
+   Without this, the diagnostic would test ffmpeg alone while real
+   playback goes through VLC for live: two different paths, two
+   potentially different results. */
+function diagnose(url, mode, inputStream) {
   return new Promise((resolve) => {
     const fullTranscode = mode === "full";
+    const usingPipe = !!inputStream;
     const args = [
       "-hide_banner", "-loglevel", "info",
-      "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+      ...(usingPipe ? [] : [
+        "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "5",
+        "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
+        "-seekable", "0", "-icy", "0"
+      ]),
       "-fflags", "+genpts",
-      "-user_agent", "VLC/3.0.20 LibVLC/3.0.20",
-      "-seekable", "0", "-icy", "0",
-      "-i", url,
+      "-i", usingPipe ? "pipe:0" : url,
       "-avoid_negative_ts", "make_zero",
       "-t", "8", // diagnostic borne a 8s de flux source, jamais envoye au navigateur / diagnostic bounded to 8s of source stream, never sent to the browser
       ...(fullTranscode
@@ -314,7 +343,11 @@ function diagnose(url, mode) {
     ];
 
     const startedAt = Date.now();
-    const ff = spawn(ffmpegPath || "ffmpeg", args, { stdio: ["ignore", "pipe", "pipe"] });
+    const ff = spawn(ffmpegPath || "ffmpeg", args, { stdio: [usingPipe ? "pipe" : "ignore", "pipe", "pipe"], windowsHide: true });
+    if (usingPipe) {
+      inputStream.pipe(ff.stdin);
+      ff.stdin.on("error", () => { /* noop */ });
+    }
     let bytesOut = 0;
     let firstByteMs = null;
     let stderr = "";

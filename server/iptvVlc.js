@@ -115,7 +115,16 @@ function spawnRelay(url) {
     url,
     "--sout", "#std{access=file,mux=ts,dst=-}"
   ];
-  return spawn(vlcPath || "cvlc", args, { stdio: ["ignore", "pipe", "pipe"] });
+  return spawn(vlcPath || "cvlc", args, {
+    stdio: ["ignore", "pipe", "pipe"],
+    // Meme correctif que pour ffmpeg (voir server/iptvAudio.js) :
+    // sans ceci, Windows affiche une fenetre de console visible pour
+    // ce processus, signale par l'utilisateur.
+    // Same fix as for ffmpeg (see server/iptvAudio.js): without this,
+    // Windows shows a visible console window for this process,
+    // reported by the user.
+    windowsHide: true
+  });
 }
 
 module.exports = { checkVlc, findVlc, installHint, spawnRelay };

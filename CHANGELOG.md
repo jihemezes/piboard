@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.47.1
+
+- **Correctif : fenêtre de console qui s'ouvre puis se referme sous
+  Windows.** Signalé par l'utilisateur pendant un test. Cause :
+  `child_process.spawn()` affiche par défaut une fenêtre de console
+  visible pour tout processus lancé depuis une application Electron,
+  sauf indication contraire — jamais précisé pour ffmpeg ni VLC.
+  `windowsHide: true` ajouté aux trois appels concernés. Sans effet sur
+  Linux/macOS.
+
+- **Correctif de cohérence : l'outil de diagnostic testait ffmpeg
+  seul**, alors que la lecture réelle passe désormais par VLC pour le
+  direct (v1.47.0) — deux chemins différents, deux résultats
+  potentiellement différents. Le diagnostic emprunte désormais
+  exactement le même chemin que la lecture réelle, et indique
+  clairement lequel des deux (VLC → ffmpeg, ou ffmpeg seul) a été
+  utilisé.
+
+---
+
+- **Fix: a console window flashing open then closed on Windows.**
+  Reported by the user during testing. Cause: `child_process.spawn()`
+  shows a visible console window by default for any process launched
+  from an Electron application, unless told otherwise — never
+  specified for ffmpeg or VLC. `windowsHide: true` added to the three
+  calls involved. No effect on Linux/macOS.
+
+- **Consistency fix: the diagnostic tool was testing ffmpeg alone**,
+  while real playback now goes through VLC for live (v1.47.0) — two
+  different paths, two potentially different results. The diagnostic
+  now takes the exact same path as real playback, and clearly states
+  which of the two (VLC → ffmpeg, or ffmpeg alone) was used.
+
 ## 1.47.0
 
 - **Chaînes TV : relais VLC pour les fournisseurs qui rejettent
