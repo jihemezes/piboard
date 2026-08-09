@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.49.1
+
+- **Correctif *Chaînes TV* : image figée sur toutes les chaînes en
+  direct, après la correction de l'extension `.ts` (v1.49.0).**
+  Identifié précisément par l'outil de diagnostic : `Malformed AAC
+  bitstream detected`, puis `Conversion failed!` après une seule
+  image (`frame=1`). Cause : VLC encode l'audio AAC au format ADTS
+  (standard pour un conteneur TS, chaque trame porte son propre
+  en-tête), mais le conteneur MP4 final exige le format ASC (Audio
+  Specific Config, un seul en-tête global). Sans conversion de ce
+  framing — pas un réencodage, le codec audio reste identique —
+  ffmpeg échouait dès la première trame audio et abandonnait tout le
+  flux, expliquant précisément le symptôme : une image, puis plus
+  rien, sur n'importe quelle chaîne.
+
+  Filtre de flux binaire `aac_adtstoasc` ajouté au remuxage audio
+  quand l'entrée vient de VLC. **Vérifié en reproduisant l'échec
+  exact** avec un flux continu de test (6,7 Ko produits et erreur
+  identique sans le correctif) puis en confirmant la résolution
+  (581 Ko produits, 282 images sur ~5 s de flux — un direct
+  réellement continu, pas une image figée).
+
+---
+
+- **Fix for *TV Channels*: frozen image on all live channels, after
+  the `.ts` extension fix (v1.49.0).** Precisely identified by the
+  diagnostic tool: `Malformed AAC bitstream detected`, then
+  `Conversion failed!` after a single frame (`frame=1`). Cause: VLC
+  encodes AAC audio in ADTS format (standard for a TS container, each
+  frame carries its own header), but the final MP4 container requires
+  the ASC format (Audio Specific Config, a single global header).
+  Without converting this framing — not a re-encode, the audio codec
+  itself stays the same — ffmpeg failed on the very first audio frame
+  and abandoned the entire stream, precisely explaining the symptom:
+  one frame, then nothing, on any channel.
+
+  `aac_adtstoasc` bitstream filter added to the audio remux when the
+  input comes from VLC. **Verified by reproducing the exact failure**
+  with a continuous test stream (6.7 KB produced and the identical
+  error without the fix) then confirming the resolution (581 KB
+  produced, 282 frames over ~5s of stream — a genuinely continuous
+  live feed, not a frozen image).
+
 ## 1.49.0
 
 - **Chaînes TV : cause racine du 405 enfin trouvée — mauvaise

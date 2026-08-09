@@ -223,7 +223,29 @@ function streamTranscoded(url, res, onError, mode, inputStream) {
     ...(usingPipe ? ["-c:v", "copy"] : (fullTranscode
       ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
       : ["-c:v", "copy"])), // video INTACTE en mode audio seul : c'est ce qui le rend leger / video UNTOUCHED in audio-only mode: what keeps it light
-    ...(usingPipe ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
+    // aac_adtstoasc : necessaire specifiquement quand l'entree vient de
+    // VLC (usingPipe) -- VLC encode l'AAC au format ADTS (standard pour
+    // un conteneur TS, chaque trame porte son propre en-tete), mais un
+    // conteneur MP4 exige le format ASC (Audio Specific Config, un seul
+    // en-tete global). Sans cette conversion de framing (PAS un
+    // reencodage : le codec reste identique), ffmpeg echoue des la
+    // premiere trame audio et ABANDONNE tout le flux -- explique
+    // precisement le symptome observe : une seule image affichee, puis
+    // plus rien, quelle que soit la chaine. Confirme par l'outil de
+    // diagnostic : "Malformed AAC bitstream detected", "frame=1
+    // ... Conversion failed!".
+    // aac_adtstoasc: needed specifically when the input comes from VLC
+    // (usingPipe) -- VLC encodes AAC in ADTS format (standard for a TS
+    // container, each frame carries its own header), but an MP4
+    // container requires the ASC format (Audio Specific Config, a
+    // single global header). Without this framing conversion (NOT a
+    // re-encode: the codec itself stays the same), ffmpeg fails on the
+    // very first audio frame and ABANDONS the entire stream -- precisely
+    // explains the observed symptom: a single frame shown, then
+    // nothing, regardless of channel. Confirmed by the diagnostic tool:
+    // "Malformed AAC bitstream detected", "frame=1 ... Conversion
+    // failed!".
+    ...(usingPipe ? ["-c:a", "copy", "-bsf:a", "aac_adtstoasc"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
     // default_base_moof (pense pour une consommation via MediaSource/
     // appendBuffer, comme le fait hls.js) retire au profit de faststart :
     // ce flux est lu ici en <video src> progressif direct, pas via MSE --
@@ -346,7 +368,29 @@ function diagnose(url, mode, inputStream) {
       ...(usingPipe ? ["-c:v", "copy"] : (fullTranscode
         ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
         : ["-c:v", "copy"])),
-      ...(usingPipe ? ["-c:a", "copy"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
+      // aac_adtstoasc : necessaire specifiquement quand l'entree vient de
+      // VLC (usingPipe) -- VLC encode l'AAC au format ADTS (standard pour
+      // un conteneur TS, chaque trame porte son propre en-tete), mais un
+      // conteneur MP4 exige le format ASC (Audio Specific Config, un seul
+      // en-tete global). Sans cette conversion de framing (PAS un
+      // reencodage : le codec reste identique), ffmpeg echoue des la
+      // premiere trame audio et ABANDONNE tout le flux -- explique
+      // precisement le symptome observe : une seule image affichee, puis
+      // plus rien, quelle que soit la chaine. Confirme par l'outil de
+      // diagnostic : "Malformed AAC bitstream detected", "frame=1
+      // ... Conversion failed!".
+      // aac_adtstoasc: needed specifically when the input comes from VLC
+      // (usingPipe) -- VLC encodes AAC in ADTS format (standard for a TS
+      // container, each frame carries its own header), but an MP4
+      // container requires the ASC format (Audio Specific Config, a
+      // single global header). Without this framing conversion (NOT a
+      // re-encode: the codec itself stays the same), ffmpeg fails on the
+      // very first audio frame and ABANDONS the entire stream -- precisely
+      // explains the observed symptom: a single frame shown, then
+      // nothing, regardless of channel. Confirmed by the diagnostic tool:
+      // "Malformed AAC bitstream detected", "frame=1 ... Conversion
+      // failed!".
+      ...(usingPipe ? ["-c:a", "copy", "-bsf:a", "aac_adtstoasc"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
       "-movflags", "frag_keyframe+empty_moov+faststart",
       "-f", "mp4",
       "pipe:1"
