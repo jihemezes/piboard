@@ -116,6 +116,24 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Numero de chaine TNT (LCN) : petite pastille avant le nom, discrete
+   mais lisible -- imite le repere visuel d'une vraie telecommande.
+   TNT channel number (LCN): small badge before the name, discreet but
+   legible -- mirrors the visual cue of a real remote control. */
+.pw-teleprog .pwtp-chan-num {
+  display: inline-block;
+  min-width: 1.3em;
+  padding: 0 0.35em;
+  margin-right: 0.4em;
+  border-radius: 4px;
+  background: var(--tile-edge);
+  color: var(--text);
+  font-family: var(--mono);
+  font-weight: 700;
+  text-align: center;
+  text-transform: none;
+  letter-spacing: normal;
+}
 .pw-teleprog .pwtp-time {
   flex: 0 0 auto;
   font-size: 11px;

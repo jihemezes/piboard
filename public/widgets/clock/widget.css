@@ -165,6 +165,71 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* ---------- Neutralisation "tuile portrait" (voir applyNarrowOverrides()
+   dans widget.js) ----------
+   Ajoutees/retirees dynamiquement en JS a partir des dimensions REELLES
+   du cadre (pas un reglage) : annulent les dispositions cote a cote
+   choisies par ailleurs depuis les reglages quand la tuile n'a
+   effectivement pas la largeur necessaire pour les accueillir.
+   ---------- "Portrait tile" override (see applyNarrowOverrides() in
+   widget.js) ----------
+   Added/removed dynamically in JS from the frame's ACTUAL dimensions
+   (not a setting): cancels the side-by-side layouts otherwise chosen
+   from settings when the tile genuinely lacks the width to host
+   them. */
+.pw-clock-wrap.pwc-wrap-side.pwc-force-stack {
+  flex-direction: column;
+}
+.pw-clock-wrap.pwc-wrap-side.pwc-force-stack .pw-clock {
+  /* Retrouve le padding symetrique du mode empile plutot que celui,
+     asymetrique, pense pour la colonne de gauche du mode cote a cote.
+     Falls back to the symmetric padding of the stacked mode rather
+     than the asymmetric one meant for the left column of side by
+     side. */
+  padding: 6%;
+}
+.pw-clock-wrap.pwc-wrap-side.pwc-force-stack .pwc-extras-col {
+  max-width: 100%;
+  align-items: center;
+  padding: 0 6% 6%;
+}
+.pw-clock-wrap.pwc-wrap-side.pwc-force-stack .pwc-zones {
+  justify-content: center;
+}
+.pw-clock-wrap.pwc-wrap-side.pwc-force-stack .pwc-next-event {
+  text-align: center;
+  border-top: 1px solid var(--tile-edge);
+  margin: 0 4%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.pw-clock-wrap.pwc-wrap-side.pwc-force-stack .pwc-alarm-banner {
+  border-top: 1px solid #E5384B;
+  border-radius: 0;
+}
+.pw-clock.pwc-row.pwc-force-stack-row,
+.pw-clock.pwc-analog-row.pwc-force-stack-row {
+  flex-direction: column;
+}
+.pw-clock.pwc-row.pwc-force-stack-row .pwc-date-block {
+  align-items: center;
+}
+.pw-clock.pwc-row.pwc-force-stack-row .pwc-date {
+  text-align: center;
+  white-space: normal;
+}
+.pw-clock.pwc-analog-row.pwc-force-stack-row .pwc-analog-text {
+  align-items: center;
+}
+.pw-clock.pwc-analog-row.pwc-force-stack-row .pwc-date {
+  text-align: center;
+}
+.pw-clock.pwc-analog-row.pwc-force-stack-row svg {
+  flex: 1;
+  width: 100%;
+}
+
 .pw-clock svg { flex: 1; min-height: 0; width: 100%; }
 .pw-clock .pwa-face { fill: none; stroke: var(--tile-edge); stroke-width: 2.5; }
 .pw-clock .pwa-tick { stroke: var(--muted); stroke-width: 2; stroke-linecap: round; }

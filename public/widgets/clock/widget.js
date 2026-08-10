@@ -563,11 +563,53 @@
       el.querySelector(".pwc-alarm-label").textContent = "⏰ " + label;
     }
 
+    /* Neutralise les dispositions "cote a cote" (heure+date sur une
+       ligne, cadran+date, horloge+extras) quand la tuile est reellement
+       trop haute et etroite pour les accueillir -- ces dispositions
+       sont choisies depuis les REGLAGES (voir render()), qui ne
+       connaissent pas la vraie forme de la tuile. Sans ce filet, une
+       tuile portrait etroite se retrouve avec tout son contenu tasse
+       dans une bande horizontale minuscule, entoure d'espace vide en
+       haut et en bas (signale par capture d'ecran), au lieu de profiter
+       de la hauteur disponible en s'empilant normalement.
+       Mesure sur .pw-clock-wrap (le cadre complet, horloge + extras) :
+       c'est sa forme d'ensemble qui determine si "cote a cote" a un
+       sens, pas seulement celle du bloc horloge.
+       0 = pas encore mesure (jsdom, ou tout premier rendu) : aucune
+       neutralisation, comportement inchange -- meme convention que
+       fitsBelow() plus haut et que computeLayoutMode() de la tuile
+       meteo.
+
+       Neutralizes "side by side" layouts (time+date on one line, face+
+       date, clock+extras) when the tile is genuinely too tall and
+       narrow to host them -- these layouts are chosen from SETTINGS
+       (see render()), which don't know the tile's actual shape.
+       Without this safety net, a narrow portrait tile ends up with all
+       its content squeezed into a tiny horizontal band, surrounded by
+       empty space above and below (reported via screenshot), instead
+       of making use of the available height by stacking normally.
+       Measured on .pw-clock-wrap (the full frame, clock + extras): its
+       overall shape is what determines whether "side by side" makes
+       sense, not just the clock block's own.
+       0 = not yet measured (jsdom, or the very first render): no
+       override, unchanged behavior -- same convention as fitsBelow()
+       above and the weather tile's computeLayoutMode(). */
+    applyNarrowOverrides(el, box) {
+      const wrap = el.querySelector(".pw-clock-wrap");
+      const w = wrap ? wrap.clientWidth : 0;
+      const h = wrap ? wrap.clientHeight : 0;
+      const narrow = w > 0 && h > 0 && w < h * 0.82;
+      if (wrap) wrap.classList.toggle("pwc-force-stack", narrow);
+      box.classList.toggle("pwc-force-stack-row", narrow);
+      return narrow;
+    }
+
     fit() {
       const el = this.ctx.el;
       const box = el.querySelector(".pw-clock");
       if (!box) return;
       const dateEl = box.querySelector(".pwc-date");
+      this.applyNarrowOverrides(el, box);
 
       if (this.ctx.settings.mode === "analog") {
         // Cadran carre dont la taille exacte est calculee ici plutot que
@@ -586,7 +628,11 @@
         // leave room for the text on the right). Stacked (no date): the
         // face fills the whole frame as before.
         const svg = box.querySelector("svg");
-        const row = box.classList.contains("pwc-analog-row");
+        // Cote a cote effectif : le reglage le demande ET la tuile a
+        // reellement la place (voir applyNarrowOverrides ci-dessus).
+        // Effective side by side: the setting asks for it AND the tile
+        // actually has the room (see applyNarrowOverrides above).
+        const row = box.classList.contains("pwc-analog-row") && !box.classList.contains("pwc-force-stack-row");
         const side = row ? Math.max(20, Math.min(box.clientHeight, box.clientWidth * 0.62)) : 0;
         if (svg) {
           if (row) {
@@ -637,7 +683,10 @@
       if (!time) return;
       const w = box.clientWidth || 120;
       const h = box.clientHeight || 80;
-      const row = box.classList.contains("pwc-row");
+      // Cote a cote effectif : voir le commentaire equivalent en mode
+      // analogique ci-dessus. Effective side by side: see the matching
+      // comment in analog mode above.
+      const row = box.classList.contains("pwc-row") && !box.classList.contains("pwc-force-stack-row");
 
       // Recherche dichotomique tenant compte a la fois de la largeur
       // disponible (l'heure ne doit jamais deborder sur les tuiles larges

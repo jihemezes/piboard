@@ -84,41 +84,60 @@ const XMLTVFR_FRANCE_CANDIDATES = [
    selon les grabbers), pour aider a apparier une grille XMLTV a cette
    liste sans configuration manuelle. Non exhaustif ni fige : la tuile
    permet de choisir/reordonner librement.
+
+   tntNumber : numero logique (LCN) officiel sur la TNT gratuite,
+   d'apres le plan de numerotation Arcom en vigueur depuis le 6 juin
+   2025 (https://www.arcom.fr/presse/nouvelle-numerotation-des-chaines-
+   compter-du-6-juin-2025-larcom-accompagne-les-telespectateurs).
+   Absent pour les chaines qui n'ont plus de canal sur la TNT gratuite
+   (Canal+, C8, NRJ 12, retirees lors de cette meme reforme) -- leur
+   numero n'est alors simplement pas affiche par la tuile (numero non
+   disponible), plutot que d'afficher une information perimee.
+
    Default list offered on the tile side. We keep here the mapping
    readable-name -> usual XMLTV ids (several aliases depending on the
    grabber), to help match an XMLTV grid to this list without manual
    configuration. Not exhaustive nor fixed: the tile lets you
-   choose/reorder freely. */
+   choose/reorder freely.
+
+   tntNumber: official logical channel number (LCN) on free-to-air
+   TNT, per the Arcom numbering plan in effect since June 6, 2025 (see
+   URL above). Absent for channels no longer carried on free TNT
+   (Canal+, C8, NRJ 12, dropped in that same reform) -- their number
+   is then simply not shown by the tile (unavailable), rather than
+   displaying stale information. */
 const DEFAULT_CHANNELS = [
-  { name: "TF1", aliases: ["TF1.fr", "C192.api.telerama.fr"] },
-  { name: "France 2", aliases: ["France2.fr", "C3.api.telerama.fr"] },
-  { name: "France 3", aliases: ["France3.fr", "C4.api.telerama.fr"] },
+  { name: "TF1", aliases: ["TF1.fr", "C192.api.telerama.fr"], tntNumber: 1 },
+  { name: "France 2", aliases: ["France2.fr", "C3.api.telerama.fr"], tntNumber: 2 },
+  { name: "France 3", aliases: ["France3.fr", "C4.api.telerama.fr"], tntNumber: 3 },
   { name: "Canal+", aliases: ["CanalPlus.fr", "Canal-plus.fr"] },
-  { name: "France 5", aliases: ["France5.fr"] },
-  { name: "M6", aliases: ["M6.fr"] },
-  { name: "Arte", aliases: ["Arte.fr"] },
+  { name: "France 5", aliases: ["France5.fr"], tntNumber: 5 },
+  { name: "M6", aliases: ["M6.fr"], tntNumber: 6 },
+  { name: "Arte", aliases: ["Arte.fr"], tntNumber: 7 },
   { name: "C8", aliases: ["C8.fr"] },
-  { name: "W9", aliases: ["W9.fr"] },
-  { name: "TMC", aliases: ["TMC.fr"] },
-  { name: "TFX", aliases: ["TFX.fr", "NT1.fr"] },
+  { name: "W9", aliases: ["W9.fr"], tntNumber: 9 },
+  { name: "TMC", aliases: ["TMC.fr"], tntNumber: 10 },
+  { name: "TFX", aliases: ["TFX.fr", "NT1.fr"], tntNumber: 11 },
   { name: "NRJ 12", aliases: ["NRJ12.fr"] },
-  { name: "LCP", aliases: ["LCP.fr", "PublicSenat.fr"] },
-  { name: "France 4", aliases: ["France4.fr"] },
-  { name: "BFM TV", aliases: ["BFMTV.fr"] },
-  { name: "CNews", aliases: ["CNews.fr", "Inews.fr"] },
-  { name: "CStar", aliases: ["CStar.fr", "Direct8.fr"] },
-  { name: "Gulli", aliases: ["Gulli.fr"] },
-  { name: "TF1 Séries Films", aliases: ["TF1SeriesFilms.fr", "HD1.fr"] },
-  { name: "L'Équipe", aliases: ["LEquipe.fr", "Equipe21.fr"] },
-  { name: "6ter", aliases: ["6ter.fr"] },
-  { name: "RMC Story", aliases: ["RMCStory.fr", "Numeroe23.fr"] },
-  { name: "RMC Découverte", aliases: ["RMCDecouverte.fr"] },
-  { name: "Chérie 25", aliases: ["Cherie25.fr"] },
-  { name: "LCI", aliases: ["LCI.fr"] },
-  { name: "Franceinfo", aliases: ["Franceinfo.fr", "France-info.fr"] },
-  { name: "T18", aliases: ["T18.fr"] },
-  { name: "Novo 19", aliases: ["Novo19.fr"] }
+  { name: "LCP", aliases: ["LCP.fr", "PublicSenat.fr"], tntNumber: 8 },
+  { name: "France 4", aliases: ["France4.fr"], tntNumber: 4 },
+  { name: "BFM TV", aliases: ["BFMTV.fr"], tntNumber: 13 },
+  { name: "CNews", aliases: ["CNews.fr", "Inews.fr"], tntNumber: 14 },
+  { name: "CStar", aliases: ["CStar.fr", "Direct8.fr"], tntNumber: 17 },
+  { name: "Gulli", aliases: ["Gulli.fr"], tntNumber: 12 },
+  { name: "TF1 Séries Films", aliases: ["TF1SeriesFilms.fr", "HD1.fr"], tntNumber: 20 },
+  { name: "L'Équipe", aliases: ["LEquipe.fr", "Equipe21.fr"], tntNumber: 21 },
+  { name: "6ter", aliases: ["6ter.fr"], tntNumber: 22 },
+  { name: "RMC Story", aliases: ["RMCStory.fr", "Numeroe23.fr"], tntNumber: 23 },
+  { name: "RMC Découverte", aliases: ["RMCDecouverte.fr"], tntNumber: 24 },
+  { name: "Chérie 25", aliases: ["Cherie25.fr"], tntNumber: 25 },
+  { name: "LCI", aliases: ["LCI.fr"], tntNumber: 15 },
+  { name: "Franceinfo", aliases: ["Franceinfo.fr", "France-info.fr"], tntNumber: 16 },
+  { name: "T18", aliases: ["T18.fr"], tntNumber: 18 },
+  { name: "Novo 19", aliases: ["Novo19.fr"], tntNumber: 19 },
+  { name: "Paris Première", aliases: ["ParisPremiere.fr"], tntNumber: 26 }
 ];
+
 
 /* ---------- Utilitaires de date XMLTV / XMLTV date helpers ----------
    XMLTV encode les horaires ainsi : "20240115203000 +0100"
@@ -718,10 +737,24 @@ async function getView(config, deps) {
     generatedAt: ref.toISOString(),
     channels: rows.map((r) => {
       const ch = grid.channels.get(r.channelId);
+      const chName = ch ? ch.name : r.channelId;
       return {
         channelId: r.channelId,
-        channelName: ch ? ch.name : r.channelId,
+        channelName: chName,
         channelIcon: ch ? ch.icon : null,
+        // Numero TNT (LCN) officiel, si la chaine en a encore un sur la
+        // TNT gratuite (voir DEFAULT_CHANNELS plus haut) -- rapproche le
+        // nom tel qu'affiche dans la grille XMLTV de la reference
+        // Arcom via le meme index d'alias que resolveChannelId().
+        // Absent (null) si la chaine n'est pas reconnue ou n'a plus de
+        // canal gratuit (ex. Canal+, C8, NRJ 12).
+        // Official TNT logical channel number, if the channel still has
+        // one on free-to-air TNT (see DEFAULT_CHANNELS above) -- matches
+        // the name as shown in the XMLTV grid against the Arcom
+        // reference via the same alias index used by resolveChannelId().
+        // Absent (null) if the channel isn't recognized or no longer has
+        // a free channel (e.g. Canal+, C8, NRJ 12).
+        channelNumber: (ALIAS_INDEX.get(normalizeChannelKey(chName)) || {}).tntNumber || null,
         program: r.program ? {
           start: r.program.start.toISOString(),
           stop: r.program.stop ? r.program.stop.toISOString() : null,

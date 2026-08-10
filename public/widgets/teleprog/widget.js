@@ -254,8 +254,9 @@
       const s = this.ctx.settings;
       const showThumbs = s.showThumbnails !== false;
       const showCat = s.showCategory !== false;
+      const showChanNum = s.showChannelNumber !== false;
 
-      body.innerHTML = `<div class="pwtp-list">${rows.map((row, i) => this.rowHtml(row, i, showThumbs, showCat)).join("")}</div>`;
+      body.innerHTML = `<div class="pwtp-list">${rows.map((row, i) => this.rowHtml(row, i, showThumbs, showCat, showChanNum)).join("")}</div>`;
 
       // Ouvre/ferme le synopsis au clic sur une ligne.
       body.querySelectorAll(".pwtp-row").forEach((el) => {
@@ -268,16 +269,23 @@
       });
     }
 
-    rowHtml(row, i, showThumbs, showCat) {
+    rowHtml(row, i, showThumbs, showCat, showChanNum) {
       const i18n = this.ctx.i18n;
       const p = row.program;
       const open = this.selected === i;
       const chName = escapeHtml(row.channelName || row.channelId);
+      // Numero de chaine TNT, affiche seulement quand la grille en fournit
+      // un (voir channelNumber cote serveur -- absent pour les chaines
+      // sans canal gratuit, ex. Canal+) ET quand le reglage l'autorise.
+      // TNT channel number, shown only when the grid provides one (see
+      // channelNumber server-side -- absent for channels without a free
+      // channel, e.g. Canal+) AND when the setting allows it.
+      const chNum = (showChanNum && row.channelNumber) ? `<span class="pwtp-chan-num">${row.channelNumber}</span>` : "";
 
       if (!p) {
         return `
           <div class="pwtp-row pwtp-row-empty" data-idx="${i}">
-            <div class="pwtp-chan">${chName}</div>
+            <div class="pwtp-chan">${chNum}${chName}</div>
             <div class="pwtp-noprog">${i18n.t("teleprog.noProgram")}</div>
           </div>`;
       }
@@ -312,7 +320,7 @@
           <div class="pwtp-main">
             ${thumb}
             <div class="pwtp-text">
-              <div class="pwtp-line1"><span class="pwtp-chan">${chName}</span><span class="pwtp-time">${time}</span></div>
+              <div class="pwtp-line1"><span class="pwtp-chan">${chNum}${chName}</span><span class="pwtp-time">${time}</span></div>
               <div class="pwtp-title">${escapeHtml(p.title)}${badge}</div>
               ${sub}
               <div class="pwtp-meta">${cat}</div>

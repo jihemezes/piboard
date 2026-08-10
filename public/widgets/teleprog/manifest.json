@@ -329,6 +329,23 @@
       }
     },
     {
+      "key": "showChannelNumber",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show TNT channel number",
+        "fr": "Afficher le numéro de la chaîne TNT"
+      },
+      "hint": {
+        "en": "Shows the official free-to-air TNT number (e.g. \"6\" for M6) before the channel name, when known. Not shown for channels without a free TNT number (e.g. Canal+).",
+        "fr": "Affiche le numéro officiel de la chaîne sur la TNT gratuite (ex. « 6 » pour M6) avant son nom, quand il est connu. Non affiché pour les chaînes sans numéro sur la TNT gratuite (ex. Canal+)."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
       "key": "refresh",
       "type": "number",
       "default": 30,

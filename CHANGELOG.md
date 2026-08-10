@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.51.3
+
+- **Horloge : dispositions « côte à côte » écrasées sur une tuile
+  portrait étroite.** Corrigé — quand la tuile est réellement trop
+  haute et étroite pour accueillir une disposition côte à côte (heure
+  + date sur une ligne, cadran + date, horloge + fuseaux additionnels),
+  la tuile revient automatiquement à un empilement vertical classique,
+  quel que soit le réglage choisi. Avant ce correctif, ces dispositions
+  restaient forcées par les réglages sans tenir compte de la forme
+  réelle de la tuile, tassant tout le contenu dans une bande
+  horizontale minuscule entourée de vide (signalé par capture d'écran).
+  Bascule calculée en direct sur les dimensions réelles du cadre (pas
+  un nouveau réglage) : rien à configurer, la tuile s'adapte d'elle-
+  même en la redimensionnant.
+
+---
+
+- **Clock: "side by side" layouts squeezed on a narrow portrait
+  tile.** Fixed — when the tile is genuinely too tall and narrow to
+  host a side-by-side layout (time + date on one line, face + date,
+  clock + extra time zones), the tile now automatically falls back to
+  normal vertical stacking, whatever the chosen setting. Before this
+  fix, these layouts stayed forced by settings regardless of the
+  tile's actual shape, squeezing all content into a tiny horizontal
+  band surrounded by empty space (reported via screenshot). Computed
+  live from the frame's actual dimensions (not a new setting): nothing
+  to configure, the tile adapts on its own as you resize it.
+
+## 1.51.2
+
+- **Programme TV : numéro de la chaîne TNT.** La tuile affiche
+  désormais une petite pastille avec le numéro officiel de la chaîne
+  sur la TNT gratuite (ex. « 6 » pour M6, « 21 » pour L'Équipe) devant
+  son nom, quand il est connu — basé sur le plan de numérotation Arcom
+  en vigueur depuis le 6 juin 2025. Absent pour les chaînes qui n'ont
+  plus de canal sur la TNT gratuite (Canal+, C8, NRJ 12). Nouveau
+  réglage « Afficher le numéro de la chaîne TNT » (activé par défaut)
+  pour le masquer si besoin.
+
+---
+
+- **TV guide: TNT (DTT) channel number.** The tile now shows a small
+  badge with the channel's official number on free-to-air French DTT
+  (e.g. "6" for M6, "21" for L'Équipe) before its name, when known —
+  based on the Arcom numbering plan in effect since June 6, 2025.
+  Absent for channels no longer carried on free DTT (Canal+, C8,
+  NRJ 12). New "Show TNT channel number" setting (on by default) to
+  hide it if you prefer.
+
 ## 1.51.1
 
 - **Horloge : le saint du jour bascule à tort « côté à côté » en
