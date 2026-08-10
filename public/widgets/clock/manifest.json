@@ -130,8 +130,8 @@
         "fr": "Disposition du saint du jour"
       },
       "hint": {
-        "en": "\"Below\" automatically switches to \"Side by side\" on tiles too short for a 2nd line, or when the time/date arrangement below is already \"Side by side\" — the name day is never allowed to overflow the tile.",
-        "fr": "« En dessous » bascule automatiquement sur « Côté à côté » sur les tuiles trop basses pour une 2e ligne, ou quand la disposition heure/date ci-dessous est déjà « Côté à côté » — le saint du jour ne déborde jamais de la tuile."
+        "en": "\"Below\" automatically switches to \"Side by side\" only on tiles too short for a 2nd line — the name day is never allowed to overflow the tile. This applies regardless of the time/date arrangement below.",
+        "fr": "« En dessous » bascule automatiquement sur « Côté à côté » uniquement sur les tuiles trop basses pour une 2e ligne — le saint du jour ne déborde jamais de la tuile. Ceci s'applique quelle que soit la disposition heure/date ci-dessous."
       },
       "options": [
         {

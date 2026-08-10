@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.51.1
+
+- **Horloge : le saint du jour bascule à tort « côté à côté » en
+  disposition heure/date « Côté à côté ».** Corrigé — le saint du jour
+  reste désormais **en dessous de la date** dans tous les cas (réglage
+  par défaut), y compris quand l'heure et la date elles-mêmes sont
+  affichées côte à côte. Seule une tuile réellement trop basse pour
+  accueillir une 2e ligne fait encore basculer automatiquement
+  l'affichage sur « côte à côte », comme documenté par le réglage
+  « Disposition du saint du jour ».
+
+---
+
+- **Clock: the name day wrongly switched to "side by side" whenever
+  the time/date arrangement was itself "side by side".** Fixed — the
+  name day now always stays **below the date** (default setting),
+  including when the time and date are shown side by side. Only a
+  tile genuinely too short for a 2nd line still triggers the
+  automatic "side by side" fallback, as documented by the "Name day
+  arrangement" setting.
+
 ## 1.51.0
 
 - **Chaînes TV en direct : navigation précédent/suivant et curseur de

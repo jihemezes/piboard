@@ -724,21 +724,26 @@
         } else {
           // "En dessous" (2e ligne) a besoin de hauteur : bascule
           // automatiquement sur "cote a cote" (une seule ligne, apres un
-          // point median) si la tuile est trop basse pour une 2e ligne,
-          // ou si la disposition heure/date est deja "cote a cote" (une
-          // seule ligne par principe) -- le saint du jour ne doit jamais
-          // faire deborder la tuile, quel que soit le reglage choisi.
+          // point median) uniquement si la tuile est trop basse pour une
+          // 2e ligne -- le saint du jour ne doit jamais faire deborder la
+          // tuile. La disposition heure/date ("cote a cote" ou non) n'a
+          // plus d'influence ici : le saint vit dans .pwc-date-block, qui
+          // est deja son propre bloc en colonne (voir widget.css), donc
+          // une 2e ligne s'y ajoute proprement meme quand l'heure et la
+          // date sont elles-memes cote a cote.
           // "Below" (2nd line) needs vertical room: automatically falls
-          // back to "side by side" (single line, after a middot) when the
-          // tile is too short for a 2nd line, or when the time/date
-          // arrangement is already "side by side" (single line by
-          // design) -- the name day must never overflow the tile,
-          // whatever setting is chosen.
+          // back to "side by side" (single line, after a middot) only
+          // when the tile is too short for a 2nd line -- the name day
+          // must never overflow the tile. The time/date arrangement
+          // ("side by side" or not) no longer influences this: the name
+          // day lives in .pwc-date-block, which is already its own
+          // column block (see widget.css), so a 2nd line stacks cleanly
+          // there even when the time and date are themselves side by
+          // side.
           const box = el.querySelector(".pw-clock");
-          const rowLayout = s.mode !== "analog" && s.layout === "row";
           const boxH = box ? box.clientHeight : 0;
           const fitsBelow = boxH === 0 || boxH >= 90; // 0 = pas encore mesure (1er rendu) / not yet measured (first render)
-          const wantsBelow = s.saintLayout !== "inline" && !rowLayout && fitsBelow;
+          const wantsBelow = s.saintLayout !== "inline" && fitsBelow;
 
           dateEl.innerHTML = wantsBelow
             ? `${dateStr}<br><span class="pwc-saint">${saint}</span>`
