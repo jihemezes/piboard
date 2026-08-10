@@ -174,6 +174,15 @@
   touch-action: manipulation;
 }
 .pwtv-btn:hover { background: var(--tile-edge); }
+/* Curseur de volume : largeur fixe modeste, la barre de controle etant
+   deja chargee (retour, precedent, pause, suivant, muet, volume, plein
+   ecran). Volume slider: modest fixed width, the control bar already
+   being busy (back, previous, pause, next, mute, volume, fullscreen). */
+.pwtv-volume {
+  width: 60px;
+  accent-color: var(--accent, #4a9eff);
+  flex-shrink: 0;
+}
 /* Piste audio absente (voir checkAudioTrack() dans widget.js) --
    typiquement un flux encode en AC3/DTS, qu'aucun navigateur ne sait
    decoder. Missing audio track (see checkAudioTrack() in widget.js) --

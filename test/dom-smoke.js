@@ -2223,6 +2223,18 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       !tvTile.querySelector(".pwtv-video").hasAttribute("controls"));
     assert("bouton pause/lecture present pour le direct", !!tvTile.querySelector(".pwtv-playpause"));
     assert("bouton plein ecran present pour le direct", !!tvTile.querySelector(".pwtv-fullscreen"));
+    assert("curseur de volume present pour le direct", !!tvTile.querySelector(".pwtv-volume"));
+    assert("boutons precedent/suivant presents (2 chaines dans le fixture)",
+      !!tvTile.querySelector(".pwtv-prevchan") && !!tvTile.querySelector(".pwtv-nextchan"));
+    assert("chaine actuelle = France 24 (premiere de la liste)",
+      tvTile.querySelector(".pwtv-current").textContent === "France 24");
+    tvTile.querySelector(".pwtv-nextchan").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("bouton 'suivant' passe bien a TF1", tvTile.querySelector(".pwtv-current").textContent === "TF1");
+    tvTile.querySelector(".pwtv-nextchan").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("bouton 'suivant' depuis la derniere reboucle vers France 24",
+      tvTile.querySelector(".pwtv-current").textContent === "France 24");
     // Verrouille le comportement critique decouvert par examen du
     // lecteur de reference : le direct passe TOUJOURS par le pipeline
     // de transcodage desormais (URL en .ts, jamais lisible directement
@@ -2280,6 +2292,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       !tvTile.querySelector(".pwtv-playpause"));
     assert("bouton plein ecran maison absent pour la VOD (redondant avec les controles natifs)",
       !tvTile.querySelector(".pwtv-fullscreen"));
+    assert("curseur de volume maison absent pour la VOD (redondant avec le volume natif)",
+      !tvTile.querySelector(".pwtv-volume"));
+    assert("boutons precedent/suivant absents pour la VOD",
+      !tvTile.querySelector(".pwtv-prevchan") && !tvTile.querySelector(".pwtv-nextchan"));
 
     console.log("== Chaines TV : correctif 'Touchez pour lancer la lecture' reellement cliquable ==");
     // Simule le VRAI comportement d'un navigateur quand la politique de

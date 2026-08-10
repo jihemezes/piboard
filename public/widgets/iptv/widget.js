@@ -620,8 +620,11 @@
             <span class="pwtv-current">${escapeHtml(this.current.name)}</span>
             <span class="pwtv-audio-warn" hidden>⚠</span>
             ${isVod ? "" : `
+              ${this.navList && this.navList.length > 1 ? `<button type="button" class="pwtv-btn pwtv-prevchan" title="${i18n.t("iptv.prevChannel")}">⏮</button>` : ""}
               <button type="button" class="pwtv-btn pwtv-playpause" title="${i18n.t("iptv.pause")}">⏸</button>
+              ${this.navList && this.navList.length > 1 ? `<button type="button" class="pwtv-btn pwtv-nextchan" title="${i18n.t("iptv.nextChannel")}">⏭</button>` : ""}
               <button type="button" class="pwtv-btn pwtv-mute">${s.startMuted !== false ? "🔇" : "🔊"}</button>
+              <input type="range" class="pwtv-volume" min="0" max="100" value="${s.startMuted !== false ? "0" : "100"}" title="${i18n.t("iptv.volume")}">
               <button type="button" class="pwtv-btn pwtv-fullscreen" title="${i18n.t("iptv.fullscreen")}">⛶</button>
             `}
           </div>
@@ -629,16 +632,64 @@
 
       const video = this.ctx.el.querySelector(".pwtv-video");
       video.muted = s.startMuted !== false;
+      // Chaine precedente/suivante : navigue dans la liste COMPLETE
+      // capturee au lancement de la lecture (voir play()), pas une
+      // liste filtree par une recherche qui pourrait avoir change.
+      // Reboucle aux extremites (de la derniere chaine, "suivant"
+      // revient a la premiere), comme une vraie telecommande.
+      // Previous/next channel: navigates the FULL list captured when
+      // playback started (see play()), not a list filtered by a search
+      // that might have changed. Wraps at the ends (from the last
+      // channel, "next" goes back to the first), like a real remote.
+      const prevBtn = this.ctx.el.querySelector(".pwtv-prevchan");
+      if (prevBtn) {
+        prevBtn.addEventListener("click", () => {
+          const n = this.navList.length;
+          this.play(this.navList[(this.navIndex - 1 + n) % n]);
+        });
+      }
+      const nextBtn = this.ctx.el.querySelector(".pwtv-nextchan");
+      if (nextBtn) {
+        nextBtn.addEventListener("click", () => {
+          const n = this.navList.length;
+          this.play(this.navList[(this.navIndex + 1) % n]);
+        });
+      }
       this.ctx.el.querySelector(".pwtv-back").addEventListener("click", () => {
         this.stopPlayback();
         this.view = this.mode === "xtream" ? (this.xSeries ? "xtream-episodes" : (this.xCategory ? "xtream-items" : "xtream-sources")) : "flat-list";
         this.render();
       });
       const muteBtn = this.ctx.el.querySelector(".pwtv-mute");
+      const volumeSlider = this.ctx.el.querySelector(".pwtv-volume");
       if (muteBtn) {
         muteBtn.addEventListener("click", () => {
           video.muted = !video.muted;
           muteBtn.textContent = video.muted ? "🔇" : "🔊";
+          // Garde le curseur coherent avec l'etat muet/non-muet : a 0
+          // si muet, restaure le volume actuel du lecteur sinon (et non
+          // 100 fixe, au cas ou l'utilisateur avait deja ajuste le
+          // volume avant de couper le son).
+          // Keeps the slider consistent with the muted/unmuted state: 0
+          // if muted, restores the player's actual current volume
+          // otherwise (not a fixed 100, in case the user had already
+          // adjusted volume before muting).
+          if (volumeSlider) volumeSlider.value = video.muted ? "0" : String(Math.round(video.volume * 100));
+        });
+      }
+      // Curseur de volume : deplace au-dessus de 0 demute automatiquement
+      // (sinon le changement de volume resterait sans effet audible, le
+      // son restant coupe) ; a 0, remute -- comportement standard d'un
+      // lecteur video.
+      // Volume slider: moved above 0 automatically unmutes (otherwise
+      // the volume change would stay inaudible, sound remaining cut);
+      // at 0, mutes -- standard video player behavior.
+      if (volumeSlider) {
+        volumeSlider.addEventListener("input", () => {
+          const v = Number(volumeSlider.value) / 100;
+          video.volume = v;
+          video.muted = v === 0;
+          if (muteBtn) muteBtn.textContent = video.muted ? "🔇" : "🔊";
         });
       }
       // Pause/lecture : pas de barre de progression pour le direct
@@ -1054,6 +1105,19 @@
       this.stopPlayback();
       this.current = item;
       this.view = "player";
+      // Liste COMPLETE (non filtree par une recherche en cours, qui
+      // pourrait changer ou etre effacee independamment) et position de
+      // l'element dans cette liste : necessaire pour la navigation
+      // precedent/suivant. Naviguer dans la liste complete plutot que
+      // filtree evite un blocage si une recherche ne laissait qu'un
+      // seul resultat au moment du clic initial.
+      // FULL list (not filtered by an in-progress search, which could
+      // change or be cleared independently) and the item's position in
+      // it: needed for previous/next navigation. Navigating the full
+      // list rather than a filtered one avoids a dead end if a search
+      // left only one result at the moment of the initial click.
+      this.navList = this.mode === "xtream" ? (this.xItems || []) : this.channels;
+      this.navIndex = this.navList.findIndex((it) => it.url === item.url);
       this.ctx.api.state.put(this.stateKey(), item.url).catch(() => { /* non bloquant / non-blocking */ });
       this.renderPlayer();
     }

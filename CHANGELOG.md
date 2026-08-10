@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.51.0
+
+- **Chaînes TV en direct : navigation précédent/suivant et curseur de
+  volume.** Deux nouveaux boutons dans la barre de contrôle, avec
+  rebouclage aux extrémités (comme une vraie télécommande) : depuis la
+  dernière chaîne, « suivant » revient à la première, et inversement.
+
+  La navigation s'appuie sur la liste **complète** des chaînes,
+  capturée au moment de lancer la lecture — pas une liste filtrée par
+  une recherche en cours, qui aurait pu créer un blocage (une seule
+  chaîne visible au moment du clic). Absents quand une seule chaîne
+  est disponible (rien à naviguer).
+
+  Le bouton muet devient un **curseur de volume** complet : déplacer le
+  curseur au-dessus de 0 démute automatiquement, le ramener à 0 remute
+  — comportement standard d'un lecteur vidéo, plus seulement muet/non
+  muet.
+
+  Vérifié avec le vrai code du widget (pas une simulation isolée),
+  dans son contexte réel de navigation Xtream : passage effectif
+  d'une chaîne à l'autre, rebouclage aux deux extrémités, absence
+  correcte pour la VOD (contrôles natifs déjà suffisants) et pour une
+  liste à un seul élément.
+
+---
+
+- **Live TV channels: previous/next navigation and a volume slider.**
+  Two new buttons in the control bar, wrapping at the ends (like a
+  real remote): from the last channel, "next" goes back to the first,
+  and vice versa.
+
+  Navigation relies on the **full** channel list, captured when
+  playback starts — not a list filtered by an in-progress search,
+  which could have created a dead end (only one channel visible at
+  click time). Absent when only one channel is available (nothing to
+  navigate).
+
+  The mute button becomes a full **volume slider**: moving it above 0
+  automatically unmutes, bringing it back to 0 mutes — standard video
+  player behavior, not just mute/unmute anymore.
+
+  Verified with the real widget code (not an isolated simulation), in
+  its real Xtream navigation context: actual channel switching,
+  wrapping at both ends, correct absence for VOD (native controls
+  already sufficient) and for a single-item list.
+
 ## 1.50.3
 
 - **Correctif décisif : la construction de l'installeur échouait
