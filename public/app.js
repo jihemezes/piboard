@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.51.3
+   Version 1.52.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un

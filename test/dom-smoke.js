@@ -455,6 +455,10 @@ const layout = {
     { id: "t-s", widget: "rss", x: 8, y: 19, w: 4, h: 3, settings: {
       url: "https://feed.test/rss.xml", label1: "Flux Un", url2: "https://feed2.test/rss.xml", label2: "",
       maxItems: 10, showSource: true
+    } },
+    { id: "t-t", widget: "camera", x: 0, y: 23, w: 3, h: 3, settings: {} },
+    { id: "t-u", widget: "camera", x: 3, y: 23, w: 4, h: 3, settings: {
+      camera1Name: "Portail", camera1Rtsp: "rtsp://cam.test/stream1", camera1Mode: "snapshot"
     } }
   ]
 };
@@ -822,10 +826,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 19 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 21 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("19 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 19);
+  assert("21 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 21);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -1357,7 +1361,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (20 au total)", document.querySelectorAll(".grid-stack-item").length === 20);
+  assert("tuile ajoutee (22 au total)", document.querySelectorAll(".grid-stack-item").length === 22);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -2443,6 +2447,29 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       tags.includes("Deuxieme Flux Long Nom De Source"));
     assert("pas d'en-tete de source unique en mode multi-flux (n'aurait plus de sens)",
       multiTile.querySelector(".pwr-source")?.hidden === true);
+  }
+
+  console.log("== Camera : tuile non configuree -> message plutot qu'une grille vide ==");
+  {
+    const emptyTile = document.querySelector('[data-tile-id="t-t"]');
+    tries = 0;
+    while (!emptyTile.querySelector(".pwcam-empty") && tries++ < 40) await sleep(50);
+    assert("message 'aucune camera configuree' affiche", !!emptyTile.querySelector(".pwcam-empty"));
+    assert("aucune carte camera pour une tuile vide", !emptyTile.querySelector(".pwcam-card"));
+  }
+
+  console.log("== Camera : une camera configuree en mode 'Photo uniquement' ==");
+  {
+    const camTile = document.querySelector('[data-tile-id="t-u"]');
+    tries = 0;
+    while (!camTile.querySelector(".pwcam-card") && tries++ < 40) await sleep(50);
+    const card = camTile.querySelector(".pwcam-card");
+    assert("une carte montee pour la camera configuree", !!card);
+    assert("nom de la camera affiche", (card.querySelector(".pwcam-name")?.textContent || "") === "Portail");
+    assert("element photo present (mode 'Photo uniquement')", !!card.querySelector(".pwcam-img"));
+    assert("aucun element video en mode 'Photo uniquement'", !card.querySelector(".pwcam-video"));
+    assert("pas de bouton de bascule quand un seul mode est disponible (pas 'Photo + direct au tap')",
+      !card.querySelector(".pwcam-toggle"));
   }
 
   console.log("== Sortie du mode edition ==");

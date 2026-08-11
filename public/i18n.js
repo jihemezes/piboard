@@ -311,6 +311,13 @@
       "notes.updated": "updated",
       "notes.words": "words",
 
+      "camera.empty": "No camera configured yet — add one in this tile's settings.",
+      "camera.unavailable": "Camera unavailable",
+      "camera.tapToView": "Tap to view",
+      "camera.watchLive": "Watch live",
+      "camera.backToPhoto": "Back to photo",
+      "camera.ffmpegMissing": "ffmpeg not found — live view and RTSP snapshots need it. Install it on the PiBoard.",
+
       "countdown.start": "Start",
       "countdown.pause": "Pause",
       "countdown.reset": "Reset",
@@ -721,6 +728,13 @@
       "iptv.formatWarning": "Le format « .{ext} » risque de ne pas se lire dans un navigateur (courant pour les flux de films/séries).",      "notes.saved": "Enregistré",
       "notes.updated": "modifié",
       "notes.words": "mots",
+
+      "camera.empty": "Aucune caméra configurée pour l'instant — ajoutez-en une dans les réglages de cette tuile.",
+      "camera.unavailable": "Caméra indisponible",
+      "camera.tapToView": "Touchez pour afficher",
+      "camera.watchLive": "Voir en direct",
+      "camera.backToPhoto": "Revenir à la photo",
+      "camera.ffmpegMissing": "ffmpeg introuvable — nécessaire pour le direct et les instantanés RTSP. Installez-le sur le PiBoard.",
 
       "countdown.start": "Démarrer",
       "countdown.pause": "Pause",

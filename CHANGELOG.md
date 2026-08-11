@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.52.0
+
+- **Nouvelle tuile : Caméra.** Affiche le flux d'une ou plusieurs
+  caméras IP / portiers connectés (RTSP, compatibles ONVIF — pensée
+  dès le départ pour la Philips WelcomeEye Connect 3, dont la notice
+  officielle confirme l'usage d'ONVIF pour intégrer des caméras, mais
+  fonctionne avec n'importe quelle caméra IP exposant un flux RTSP).
+  Jusqu'à 4 caméras par tuile, chacune avec son propre mode : photo
+  rafraîchie périodiquement, direct démarré immédiatement, ou photo
+  avec bascule vers le direct au tap. Le direct est **réellement à la
+  demande** : aucun flux ne tourne sur le PiBoard tant que personne ne
+  regarde, la connexion se coupe (et le traitement vidéo s'arrête
+  immédiatement côté PiBoard) dès qu'on revient à la photo ou que la
+  tuile quitte l'écran. Vidéo relayée telle quelle par défaut (« copy »,
+  coût CPU quasi nul, la grande majorité des caméras RTSP encodant déjà
+  en H.264), avec une option de réencodage par caméra pour les rares
+  cas incompatibles (H.265/HEVC). Sans son, volontairement : un écran
+  de contrôle passif, pas un interphone. Nécessite ffmpeg (déjà requis
+  par la tuile Chaînes TV).
+
+---
+
+- **New tile: Camera.** Shows the feed from one or more IP cameras /
+  smart doorbells (RTSP, ONVIF-compatible — built from the ground up
+  for the Philips WelcomeEye Connect 3, whose official manual confirms
+  it uses ONVIF to integrate cameras, but works with any IP camera
+  exposing an RTSP feed). Up to 4 cameras per tile, each with its own
+  mode: periodically refreshed photo, live started immediately, or
+  photo with a tap-to-switch to live. Live is **genuinely on demand**:
+  no stream ever runs on the PiBoard while nobody's watching, the
+  connection closes (and video processing on the PiBoard's side stops
+  immediately) as soon as you go back to photo or the tile leaves the
+  screen. Video relayed as-is by default ("copy", near-zero CPU cost,
+  the vast majority of RTSP cameras already encoding H.264), with a
+  per-camera re-encode option for the rare incompatible cases
+  (H.265/HEVC). Deliberately without sound: a passive monitoring
+  screen, not an intercom. Requires ffmpeg (already needed by the TV
+  Channels tile).
+
 ## 1.51.3
 
 - **Horloge : dispositions « côte à côte » écrasées sur une tuile

@@ -1,0 +1,463 @@
+{
+  "id": "camera",
+  "version": "0.1.0",
+  "name": {
+    "en": "Camera",
+    "fr": "Caméra"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Shows the feed from one or more IP cameras or smart doorbells (RTSP, ONVIF-compatible — e.g. Philips WelcomeEye Connect 3), as a periodically refreshed photo, live video on tap, or both. Live view runs entirely on demand: nothing is relayed on the PiBoard while nobody's watching.",
+    "fr": "Affiche le flux d'une ou plusieurs caméras IP ou portiers connectés (RTSP, compatibles ONVIF — ex. Philips WelcomeEye Connect 3), en photo rafraîchie périodiquement, en direct au tap, ou les deux. Le direct fonctionne entièrement à la demande : rien n'est relayé sur le PiBoard tant que personne ne regarde."
+  },
+  "tagline": {
+    "en": "IP camera / smart doorbell feed, on demand.",
+    "fr": "Flux de caméra IP / portier connecté, à la demande."
+  },
+  "size": {
+    "w": 4,
+    "h": 3,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 8,
+    "maxH": 6
+  },
+  "settings": [
+    {
+      "key": "snapshotRefreshSeconds",
+      "type": "number",
+      "default": 15,
+      "label": {
+        "en": "Photo refresh (seconds)",
+        "fr": "Rafraîchissement de la photo (secondes)"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "hint": {
+        "en": "How often the still image refreshes for cameras in \"Photo\" or \"Photo + live on tap\" mode. Has no effect on cameras set to \"Live only\".",
+        "fr": "Fréquence de rafraîchissement de l'image fixe pour les caméras en mode « Photo » ou « Photo + direct au tap ». Sans effet sur les caméras en mode « Direct uniquement »."
+      },
+      "min": 5,
+      "max": 300,
+      "step": 5
+    },
+    {
+      "key": "camera1Name",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Name",
+        "fr": "Nom"
+      },
+      "group": {
+        "en": "Camera 1",
+        "fr": "Caméra 1"
+      }
+    },
+    {
+      "key": "camera1Rtsp",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "RTSP URL",
+        "fr": "URL RTSP"
+      },
+      "group": {
+        "en": "Camera 1",
+        "fr": "Caméra 1"
+      },
+      "hint": {
+        "en": "e.g. rtsp://user:password@192.168.1.50:554/stream1 — get this from the camera's own settings (for an ONVIF camera such as the Philips WelcomeEye Connect 3, the ONVIF/RTSP credentials configured on the device). Required for this camera to appear on the tile.",
+        "fr": "ex. rtsp://utilisateur:motdepasse@192.168.1.50:554/stream1 — à récupérer dans les réglages de la caméra elle-même (pour une caméra ONVIF comme la Philips WelcomeEye Connect 3, les identifiants ONVIF/RTSP configurés sur l'appareil). Obligatoire pour que cette caméra apparaisse sur la tuile."
+      }
+    },
+    {
+      "key": "camera1Mode",
+      "type": "select",
+      "default": "both",
+      "label": {
+        "en": "Display mode",
+        "fr": "Mode d'affichage"
+      },
+      "group": {
+        "en": "Camera 1",
+        "fr": "Caméra 1"
+      },
+      "hint": {
+        "en": "\"Live only\" keeps a video relay running on the PiBoard for as long as this tile is visible — heavier on the Pi's CPU. The other two modes only ever use the live relay while you're actively watching (or never, for \"Photo only\").",
+        "fr": "« Direct uniquement » garde un relais vidéo actif sur le PiBoard tant que cette tuile est visible — plus lourd pour le CPU du Pi. Les deux autres modes n'utilisent le relais vidéo que pendant une consultation active (ou jamais, pour « Photo uniquement »)."
+      },
+      "options": [
+        {
+          "value": "snapshot",
+          "label": {
+            "en": "Photo only (refreshed periodically)",
+            "fr": "Photo uniquement (rafraîchie périodiquement)"
+          }
+        },
+        {
+          "value": "live",
+          "label": {
+            "en": "Live only (starts immediately)",
+            "fr": "Direct uniquement (démarre immédiatement)"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "Photo, with live on tap",
+            "fr": "Photo, avec le direct au tap"
+          }
+        }
+      ]
+    },
+    {
+      "key": "camera1SnapshotUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Snapshot URL (optional)",
+        "fr": "URL d'instantané (optionnel)"
+      },
+      "group": {
+        "en": "Camera 1",
+        "fr": "Caméra 1"
+      },
+      "hint": {
+        "en": "If this camera exposes its own JPEG snapshot address (e.g. http://user:password@192.168.1.50/snapshot.jpg), use it here for a much lighter photo mode. Left empty, the photo is instead extracted from the RTSP feed above (works with any camera, costs a bit more CPU per refresh).",
+        "fr": "Si cette caméra expose sa propre adresse d'instantané JPEG (ex. http://utilisateur:motdepasse@192.168.1.50/snapshot.jpg), indiquez-la ici pour un mode photo beaucoup plus léger. Laissé vide, la photo est à la place extraite du flux RTSP ci-dessus (fonctionne avec n'importe quelle caméra, coûte un peu plus de CPU à chaque rafraîchissement)."
+      }
+    },
+    {
+      "key": "camera1Transcode",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Force video re-encode",
+        "fr": "Forcer le réencodage vidéo"
+      },
+      "group": {
+        "en": "Camera 1",
+        "fr": "Caméra 1"
+      },
+      "hint": {
+        "en": "Leave off (the default): the video is relayed as-is, at almost no CPU cost. Turn on only if live view stays black/fails — usually means the camera encodes in a format Chromium can't play directly (e.g. H.265/HEVC); re-encoding to H.264 fixes it, at a real CPU cost on the Pi.",
+        "fr": "Laissez désactivé (par défaut) : la vidéo est relayée telle quelle, à un coût CPU quasi nul. N'activez que si le direct reste noir/échoue — signe généralement que la caméra encode dans un format que Chromium ne sait pas lire directement (ex. H.265/HEVC) ; le réencodage en H.264 corrige cela, à un vrai coût CPU sur le Pi."
+      }
+    },
+    {
+      "key": "camera2Name",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Name",
+        "fr": "Nom"
+      },
+      "group": {
+        "en": "Camera 2",
+        "fr": "Caméra 2"
+      }
+    },
+    {
+      "key": "camera2Rtsp",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "RTSP URL",
+        "fr": "URL RTSP"
+      },
+      "group": {
+        "en": "Camera 2",
+        "fr": "Caméra 2"
+      },
+      "hint": {
+        "en": "e.g. rtsp://user:password@192.168.1.50:554/stream1 — get this from the camera's own settings (for an ONVIF camera such as the Philips WelcomeEye Connect 3, the ONVIF/RTSP credentials configured on the device). Required for this camera to appear on the tile.",
+        "fr": "ex. rtsp://utilisateur:motdepasse@192.168.1.50:554/stream1 — à récupérer dans les réglages de la caméra elle-même (pour une caméra ONVIF comme la Philips WelcomeEye Connect 3, les identifiants ONVIF/RTSP configurés sur l'appareil). Obligatoire pour que cette caméra apparaisse sur la tuile."
+      }
+    },
+    {
+      "key": "camera2Mode",
+      "type": "select",
+      "default": "both",
+      "label": {
+        "en": "Display mode",
+        "fr": "Mode d'affichage"
+      },
+      "group": {
+        "en": "Camera 2",
+        "fr": "Caméra 2"
+      },
+      "hint": {
+        "en": "\"Live only\" keeps a video relay running on the PiBoard for as long as this tile is visible — heavier on the Pi's CPU. The other two modes only ever use the live relay while you're actively watching (or never, for \"Photo only\").",
+        "fr": "« Direct uniquement » garde un relais vidéo actif sur le PiBoard tant que cette tuile est visible — plus lourd pour le CPU du Pi. Les deux autres modes n'utilisent le relais vidéo que pendant une consultation active (ou jamais, pour « Photo uniquement »)."
+      },
+      "options": [
+        {
+          "value": "snapshot",
+          "label": {
+            "en": "Photo only (refreshed periodically)",
+            "fr": "Photo uniquement (rafraîchie périodiquement)"
+          }
+        },
+        {
+          "value": "live",
+          "label": {
+            "en": "Live only (starts immediately)",
+            "fr": "Direct uniquement (démarre immédiatement)"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "Photo, with live on tap",
+            "fr": "Photo, avec le direct au tap"
+          }
+        }
+      ]
+    },
+    {
+      "key": "camera2SnapshotUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Snapshot URL (optional)",
+        "fr": "URL d'instantané (optionnel)"
+      },
+      "group": {
+        "en": "Camera 2",
+        "fr": "Caméra 2"
+      },
+      "hint": {
+        "en": "If this camera exposes its own JPEG snapshot address (e.g. http://user:password@192.168.1.50/snapshot.jpg), use it here for a much lighter photo mode. Left empty, the photo is instead extracted from the RTSP feed above (works with any camera, costs a bit more CPU per refresh).",
+        "fr": "Si cette caméra expose sa propre adresse d'instantané JPEG (ex. http://utilisateur:motdepasse@192.168.1.50/snapshot.jpg), indiquez-la ici pour un mode photo beaucoup plus léger. Laissé vide, la photo est à la place extraite du flux RTSP ci-dessus (fonctionne avec n'importe quelle caméra, coûte un peu plus de CPU à chaque rafraîchissement)."
+      }
+    },
+    {
+      "key": "camera2Transcode",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Force video re-encode",
+        "fr": "Forcer le réencodage vidéo"
+      },
+      "group": {
+        "en": "Camera 2",
+        "fr": "Caméra 2"
+      },
+      "hint": {
+        "en": "Leave off (the default): the video is relayed as-is, at almost no CPU cost. Turn on only if live view stays black/fails — usually means the camera encodes in a format Chromium can't play directly (e.g. H.265/HEVC); re-encoding to H.264 fixes it, at a real CPU cost on the Pi.",
+        "fr": "Laissez désactivé (par défaut) : la vidéo est relayée telle quelle, à un coût CPU quasi nul. N'activez que si le direct reste noir/échoue — signe généralement que la caméra encode dans un format que Chromium ne sait pas lire directement (ex. H.265/HEVC) ; le réencodage en H.264 corrige cela, à un vrai coût CPU sur le Pi."
+      }
+    },
+    {
+      "key": "camera3Name",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Name",
+        "fr": "Nom"
+      },
+      "group": {
+        "en": "Camera 3",
+        "fr": "Caméra 3"
+      }
+    },
+    {
+      "key": "camera3Rtsp",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "RTSP URL",
+        "fr": "URL RTSP"
+      },
+      "group": {
+        "en": "Camera 3",
+        "fr": "Caméra 3"
+      },
+      "hint": {
+        "en": "e.g. rtsp://user:password@192.168.1.50:554/stream1 — get this from the camera's own settings (for an ONVIF camera such as the Philips WelcomeEye Connect 3, the ONVIF/RTSP credentials configured on the device). Required for this camera to appear on the tile.",
+        "fr": "ex. rtsp://utilisateur:motdepasse@192.168.1.50:554/stream1 — à récupérer dans les réglages de la caméra elle-même (pour une caméra ONVIF comme la Philips WelcomeEye Connect 3, les identifiants ONVIF/RTSP configurés sur l'appareil). Obligatoire pour que cette caméra apparaisse sur la tuile."
+      }
+    },
+    {
+      "key": "camera3Mode",
+      "type": "select",
+      "default": "both",
+      "label": {
+        "en": "Display mode",
+        "fr": "Mode d'affichage"
+      },
+      "group": {
+        "en": "Camera 3",
+        "fr": "Caméra 3"
+      },
+      "hint": {
+        "en": "\"Live only\" keeps a video relay running on the PiBoard for as long as this tile is visible — heavier on the Pi's CPU. The other two modes only ever use the live relay while you're actively watching (or never, for \"Photo only\").",
+        "fr": "« Direct uniquement » garde un relais vidéo actif sur le PiBoard tant que cette tuile est visible — plus lourd pour le CPU du Pi. Les deux autres modes n'utilisent le relais vidéo que pendant une consultation active (ou jamais, pour « Photo uniquement »)."
+      },
+      "options": [
+        {
+          "value": "snapshot",
+          "label": {
+            "en": "Photo only (refreshed periodically)",
+            "fr": "Photo uniquement (rafraîchie périodiquement)"
+          }
+        },
+        {
+          "value": "live",
+          "label": {
+            "en": "Live only (starts immediately)",
+            "fr": "Direct uniquement (démarre immédiatement)"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "Photo, with live on tap",
+            "fr": "Photo, avec le direct au tap"
+          }
+        }
+      ]
+    },
+    {
+      "key": "camera3SnapshotUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Snapshot URL (optional)",
+        "fr": "URL d'instantané (optionnel)"
+      },
+      "group": {
+        "en": "Camera 3",
+        "fr": "Caméra 3"
+      },
+      "hint": {
+        "en": "If this camera exposes its own JPEG snapshot address (e.g. http://user:password@192.168.1.50/snapshot.jpg), use it here for a much lighter photo mode. Left empty, the photo is instead extracted from the RTSP feed above (works with any camera, costs a bit more CPU per refresh).",
+        "fr": "Si cette caméra expose sa propre adresse d'instantané JPEG (ex. http://utilisateur:motdepasse@192.168.1.50/snapshot.jpg), indiquez-la ici pour un mode photo beaucoup plus léger. Laissé vide, la photo est à la place extraite du flux RTSP ci-dessus (fonctionne avec n'importe quelle caméra, coûte un peu plus de CPU à chaque rafraîchissement)."
+      }
+    },
+    {
+      "key": "camera3Transcode",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Force video re-encode",
+        "fr": "Forcer le réencodage vidéo"
+      },
+      "group": {
+        "en": "Camera 3",
+        "fr": "Caméra 3"
+      },
+      "hint": {
+        "en": "Leave off (the default): the video is relayed as-is, at almost no CPU cost. Turn on only if live view stays black/fails — usually means the camera encodes in a format Chromium can't play directly (e.g. H.265/HEVC); re-encoding to H.264 fixes it, at a real CPU cost on the Pi.",
+        "fr": "Laissez désactivé (par défaut) : la vidéo est relayée telle quelle, à un coût CPU quasi nul. N'activez que si le direct reste noir/échoue — signe généralement que la caméra encode dans un format que Chromium ne sait pas lire directement (ex. H.265/HEVC) ; le réencodage en H.264 corrige cela, à un vrai coût CPU sur le Pi."
+      }
+    },
+    {
+      "key": "camera4Name",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Name",
+        "fr": "Nom"
+      },
+      "group": {
+        "en": "Camera 4",
+        "fr": "Caméra 4"
+      }
+    },
+    {
+      "key": "camera4Rtsp",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "RTSP URL",
+        "fr": "URL RTSP"
+      },
+      "group": {
+        "en": "Camera 4",
+        "fr": "Caméra 4"
+      },
+      "hint": {
+        "en": "e.g. rtsp://user:password@192.168.1.50:554/stream1 — get this from the camera's own settings (for an ONVIF camera such as the Philips WelcomeEye Connect 3, the ONVIF/RTSP credentials configured on the device). Required for this camera to appear on the tile.",
+        "fr": "ex. rtsp://utilisateur:motdepasse@192.168.1.50:554/stream1 — à récupérer dans les réglages de la caméra elle-même (pour une caméra ONVIF comme la Philips WelcomeEye Connect 3, les identifiants ONVIF/RTSP configurés sur l'appareil). Obligatoire pour que cette caméra apparaisse sur la tuile."
+      }
+    },
+    {
+      "key": "camera4Mode",
+      "type": "select",
+      "default": "both",
+      "label": {
+        "en": "Display mode",
+        "fr": "Mode d'affichage"
+      },
+      "group": {
+        "en": "Camera 4",
+        "fr": "Caméra 4"
+      },
+      "hint": {
+        "en": "\"Live only\" keeps a video relay running on the PiBoard for as long as this tile is visible — heavier on the Pi's CPU. The other two modes only ever use the live relay while you're actively watching (or never, for \"Photo only\").",
+        "fr": "« Direct uniquement » garde un relais vidéo actif sur le PiBoard tant que cette tuile est visible — plus lourd pour le CPU du Pi. Les deux autres modes n'utilisent le relais vidéo que pendant une consultation active (ou jamais, pour « Photo uniquement »)."
+      },
+      "options": [
+        {
+          "value": "snapshot",
+          "label": {
+            "en": "Photo only (refreshed periodically)",
+            "fr": "Photo uniquement (rafraîchie périodiquement)"
+          }
+        },
+        {
+          "value": "live",
+          "label": {
+            "en": "Live only (starts immediately)",
+            "fr": "Direct uniquement (démarre immédiatement)"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "Photo, with live on tap",
+            "fr": "Photo, avec le direct au tap"
+          }
+        }
+      ]
+    },
+    {
+      "key": "camera4SnapshotUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Snapshot URL (optional)",
+        "fr": "URL d'instantané (optionnel)"
+      },
+      "group": {
+        "en": "Camera 4",
+        "fr": "Caméra 4"
+      },
+      "hint": {
+        "en": "If this camera exposes its own JPEG snapshot address (e.g. http://user:password@192.168.1.50/snapshot.jpg), use it here for a much lighter photo mode. Left empty, the photo is instead extracted from the RTSP feed above (works with any camera, costs a bit more CPU per refresh).",
+        "fr": "Si cette caméra expose sa propre adresse d'instantané JPEG (ex. http://utilisateur:motdepasse@192.168.1.50/snapshot.jpg), indiquez-la ici pour un mode photo beaucoup plus léger. Laissé vide, la photo est à la place extraite du flux RTSP ci-dessus (fonctionne avec n'importe quelle caméra, coûte un peu plus de CPU à chaque rafraîchissement)."
+      }
+    },
+    {
+      "key": "camera4Transcode",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Force video re-encode",
+        "fr": "Forcer le réencodage vidéo"
+      },
+      "group": {
+        "en": "Camera 4",
+        "fr": "Caméra 4"
+      },
+      "hint": {
+        "en": "Leave off (the default): the video is relayed as-is, at almost no CPU cost. Turn on only if live view stays black/fails — usually means the camera encodes in a format Chromium can't play directly (e.g. H.265/HEVC); re-encoding to H.264 fixes it, at a real CPU cost on the Pi.",
+        "fr": "Laissez désactivé (par défaut) : la vidéo est relayée telle quelle, à un coût CPU quasi nul. N'activez que si le direct reste noir/échoue — signe généralement que la caméra encode dans un format que Chromium ne sait pas lire directement (ex. H.265/HEVC) ; le réencodage en H.264 corrige cela, à un vrai coût CPU sur le Pi."
+      }
+    }
+  ]
+}

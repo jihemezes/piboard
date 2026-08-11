@@ -54,6 +54,7 @@ const iptv = require("./iptv");
 const iptvAudio = require("./iptvAudio");
 const iptvHlsProxy = require("./iptvHlsProxy");
 const iptvVlc = require("./iptvVlc");
+const cameraStream = require("./cameraStream");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -1282,6 +1283,135 @@ app.get("/api/iptv/diagnose", async (req, res) => {
     "--- Sortie ffmpeg (stderr) / ffmpeg output (stderr) ---\n" +
     (r.ffmpegStderr || "(vide / empty)")
   );
+});
+
+/* ---------- Tuile Camera (voir server/cameraStream.js) ----------
+   Lecture A LA DEMANDE d'une camera IP / d'un portier video connecte
+   (RTSP), compatible ONVIF (ex. Philips WelcomeEye Connect 3 -- sa
+   propre notice confirme l'usage d'ONVIF pour integrer des cameras).
+   L'URL RTSP (avec identifiants eventuels dans l'URL, comme pour
+   n'importe quel lecteur RTSP) est fournie par la tuile elle-meme a
+   chaque requete plutot que memorisee cote serveur : pas de registre
+   de cameras a gerer ici, la configuration vit entierement dans les
+   reglages de la tuile (voir public/widgets/camera/manifest.json).
+   ---------- Camera tile (see server/cameraStream.js) ----------
+   ON-DEMAND playback of an IP camera / connected video doorbell
+   (RTSP), ONVIF-compatible (e.g. Philips WelcomeEye Connect 3 -- its
+   own manual confirms it uses ONVIF to integrate cameras). The RTSP
+   URL (with any credentials embedded in the URL, as with any RTSP
+   player) is supplied by the tile itself on every request rather than
+   stored server-side: no camera registry to manage here, configuration
+   lives entirely in the tile's settings (see
+   public/widgets/camera/manifest.json). */
+function rtspUrlOr400(req, res) {
+  const target = String(req.query.url || "");
+  if (!/^rtsps?:\/\//i.test(target)) {
+    res.status(400).json({ error: "invalid or missing rtsp(s):// url" });
+    return null;
+  }
+  return target;
+}
+
+/* Video en direct : voir cameraStream.streamLive -- ffmpeg est lance a
+   la connexion et tue a la deconnexion (element <video> ferme/detruit
+   cote tuile), aucun flux ne tourne en dehors d'une consultation
+   active.
+   Live video: see cameraStream.streamLive -- ffmpeg is spawned on
+   connect and killed on disconnect (the tile's <video> element
+   closed/destroyed), no stream ever runs outside an active viewing. */
+app.get("/api/camera/live", async (req, res) => {
+  const target = rtspUrlOr400(req, res);
+  if (!target) return;
+  if (!(await iptvAudio.checkFfmpeg())) {
+    res.status(503).json({ error: "ffmpeg not available" });
+    return;
+  }
+  const ffmpegPath = await iptvAudio.findFfmpeg();
+  res.setHeader("Content-Type", "video/mp4");
+  res.setHeader("Cache-Control", "no-store");
+  cameraStream.streamLive(target, res, { transcode: req.query.transcode === "1" }, ffmpegPath);
+});
+
+/* Instantane genere depuis le flux RTSP (voir cameraStream.grabFrame),
+   pour le mode "photo" quand la camera n'expose pas sa propre URL
+   d'instantane HTTP -- sinon, la tuile passe directement par
+   /api/image-proxy (plus leger, pas d'appel a ffmpeg).
+   Snapshot generated from the RTSP feed (see cameraStream.grabFrame),
+   for "photo" mode when the camera doesn't expose its own HTTP
+   snapshot URL -- otherwise, the tile goes straight through
+   /api/image-proxy instead (lighter, no ffmpeg call). */
+app.get("/api/camera/snapshot", async (req, res) => {
+  const target = rtspUrlOr400(req, res);
+  if (!target) return;
+  if (!(await iptvAudio.checkFfmpeg())) {
+    res.status(503).json({ error: "ffmpeg not available" });
+    return;
+  }
+  const ffmpegPath = await iptvAudio.findFfmpeg();
+  const result = await cameraStream.grabFrame(target, ffmpegPath);
+  if (!result.ok) {
+    res.status(502).json({ error: result.error });
+    return;
+  }
+  res.setHeader("Content-Type", "image/jpeg");
+  res.setHeader("Cache-Control", "no-store");
+  res.send(result.buffer);
+});
+
+/* Instantane via l'URL HTTP propre de la camera, quand elle en fournit
+   une (chemin le plus leger : pas d'appel a ffmpeg). Distinct de
+   /api/image-proxy : identifiants HTTP Basic extraits de l'URL et
+   envoyes en en-tete Authorization plutot que dans l'URL elle-meme --
+   necessaire ici (beaucoup de cameras exposent leur instantane sous
+   la forme http://utilisateur:motdepasse@ip/snapshot.jpg), la norme
+   fetch() du navigateur ET celle de Node rejettent purement et
+   simplement toute URL contenant des identifiants. Cache-Control
+   volontairement absent de /api/image-proxy (pense pour des vignettes
+   statiques) : ici l'image doit se rafraichir a chaque appel.
+   Snapshot via the camera's own HTTP URL, when it provides one
+   (lightest path: no ffmpeg call). Distinct from /api/image-proxy:
+   HTTP Basic credentials extracted from the URL and sent as an
+   Authorization header rather than left in the URL itself -- needed
+   here (many cameras expose their snapshot as
+   http://user:password@ip/snapshot.jpg), and both the browser's and
+   Node's fetch() standard flatly reject any URL containing
+   credentials. Cache-Control deliberately absent from /api/image-proxy
+   (meant for static thumbnails): here the image must refresh on every
+   call. */
+app.get("/api/camera/snapshot-url", async (req, res) => {
+  const raw = String(req.query.url || "");
+  let parsed;
+  try {
+    parsed = new URL(raw);
+  } catch (e) {
+    return res.status(400).json({ error: "invalid url" });
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    return res.status(400).json({ error: "only http(s) urls are allowed" });
+  }
+  const headers = { "User-Agent": "PiBoard/0.1 (+https://github.com/jihemezes/piboard)" };
+  if (parsed.username || parsed.password) {
+    headers.Authorization = "Basic " + Buffer.from(decodeURIComponent(parsed.username) + ":" + decodeURIComponent(parsed.password)).toString("base64");
+    parsed.username = "";
+    parsed.password = "";
+  }
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 10000);
+    const upstream = await fetch(parsed.href, { signal: controller.signal, redirect: "follow", headers });
+    clearTimeout(timer);
+    const type = upstream.headers.get("content-type") || "";
+    if (!type.startsWith("image/")) {
+      return res.status(415).json({ error: "not an image", type });
+    }
+    const ab = await upstream.arrayBuffer();
+    res.status(upstream.status);
+    res.set("Content-Type", type);
+    res.set("Cache-Control", "no-store");
+    res.send(Buffer.from(ab));
+  } catch (e) {
+    res.status(502).json({ error: "upstream snapshot fetch failed", detail: String(e.message || e) });
+  }
 });
 
 app.get("/api/iptv/xtream-categories", async (req, res) => {
