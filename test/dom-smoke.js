@@ -455,10 +455,6 @@ const layout = {
     { id: "t-s", widget: "rss", x: 8, y: 19, w: 4, h: 3, settings: {
       url: "https://feed.test/rss.xml", label1: "Flux Un", url2: "https://feed2.test/rss.xml", label2: "",
       maxItems: 10, showSource: true
-    } },
-    { id: "t-t", widget: "camera", x: 0, y: 23, w: 3, h: 3, settings: {} },
-    { id: "t-u", widget: "camera", x: 3, y: 23, w: 4, h: 3, settings: {
-      camera1Name: "Portail", camera1Rtsp: "rtsp://cam.test/stream1", camera1Mode: "snapshot"
     } }
   ]
 };
@@ -598,7 +594,10 @@ const dom = new JSDOM(html, {
         return json(list);
       }
       if (u.includes("/api/tele-program")) {
-        // Reponse mock : une chaine avec un programme inedit + une sans
+        // Reponse mock : une chaine avec un programme en cours (utile
+        // aussi pour la barre de progression), une sans programme, et
+        // une avec un programme A VENIR (utile pour le rappel, qui ne
+        // se propose que pour une diffusion pas encore commencee).
         const viewMatch = u.match(/[?&]view=([^&]+)/);
         return json({
           view: viewMatch ? viewMatch[1] : "now",
@@ -607,7 +606,10 @@ const dom = new JSDOM(html, {
             { channelId: "TF1.fr", channelName: "TF1", channelIcon: null,
               program: { start: new Date().toISOString(), stop: new Date(Date.now() + 3600000).toISOString(),
                 title: "Film de test", subtitle: null, desc: "Un synopsis de test.", category: "Film", icon: null, isNew: true } },
-            { channelId: "France2.fr", channelName: "France 2", channelIcon: null, program: null }
+            { channelId: "France2.fr", channelName: "France 2", channelIcon: null, program: null },
+            { channelId: "M6.fr", channelName: "M6", channelIcon: null,
+              program: { start: new Date(Date.now() + 600000).toISOString(), stop: new Date(Date.now() + 4200000).toISOString(),
+                title: "Émission à venir", subtitle: null, desc: null, category: null, icon: null, isNew: false } }
           ]
         });
       }
@@ -826,10 +828,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 21 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 19 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("21 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 21);
+  assert("19 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 19);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -1361,7 +1363,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (22 au total)", document.querySelectorAll(".grid-stack-item").length === 22);
+  assert("tuile ajoutee (20 au total)", document.querySelectorAll(".grid-stack-item").length === 20);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
@@ -1620,6 +1622,95 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     await sleep(60);
     assert("onglet 2e partie devient actif",
       tile.querySelector('.pwtp-tab[data-view="late"]').classList.contains("pwtp-tab-active"));
+
+    console.log("== Tuile Programme TV : barre de progression 'en cours' ==");
+    {
+      const tf1Row = Array.from(tile.querySelectorAll(".pwtp-row")).find((r) => r.textContent.includes("Film de test"));
+      assert("ligne TF1 (programme en cours) retrouvee", !!tf1Row);
+      assert("barre de progression affichee pour une diffusion en cours",
+        !!tf1Row.querySelector(".pwtp-progress"));
+      const m6Row = Array.from(tile.querySelectorAll(".pwtp-row")).find((r) => r.textContent.includes("Émission à venir"));
+      assert("pas de barre de progression pour une diffusion pas encore commencee",
+        !m6Row.querySelector(".pwtp-progress"));
+    }
+
+    console.log("== Tuile Programme TV : chaine favorite epinglee en tete ==");
+    {
+      const rowsBefore = Array.from(tile.querySelectorAll(".pwtp-row"));
+      const franceRowBefore = rowsBefore.find((r) => r.textContent.includes("France 2"));
+      assert("France 2 n'est PAS en tete avant mise en favori",
+        rowsBefore.indexOf(franceRowBefore) > 0);
+
+      franceRowBefore.querySelector(".pwtp-fav").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+
+      const rowsAfter = Array.from(tile.querySelectorAll(".pwtp-row"));
+      assert("France 2 passe en tete de liste une fois epinglee en favori",
+        rowsAfter[0].textContent.includes("France 2"));
+      assert("etoile pleine affichee pour une chaine favorite",
+        rowsAfter[0].querySelector(".pwtp-fav-on") && rowsAfter[0].querySelector(".pwtp-fav-on").textContent === "★");
+
+      // Nettoyage : on retire le favori pour ne pas fausser le test suivant (recherche)
+      rowsAfter[0].querySelector(".pwtp-fav").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+    }
+
+    console.log("== Tuile Programme TV : recherche filtre les lignes affichees ==");
+    {
+      const search = tile.querySelector(".pwtp-search");
+      assert("barre de recherche presente", !!search);
+
+      search.value = "France";
+      search.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(30);
+      let visible = Array.from(tile.querySelectorAll(".pwtp-row"));
+      assert("recherche 'France' ne laisse que la ligne France 2", visible.length === 1 && visible[0].textContent.includes("France 2"));
+
+      search.value = "aucune-correspondance-xyz";
+      search.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(30);
+      assert("message 'aucun resultat' quand rien ne correspond", !!tile.querySelector(".pwtp-msg"));
+      assert("aucune ligne affichee quand rien ne correspond", tile.querySelectorAll(".pwtp-row").length === 0);
+
+      // Recherche insensible aux accents (voir normalize() dans le widget)
+      search.value = "emission a venir"; // sans accent, doit quand meme trouver "Émission à venir" le cas echeant
+      search.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(30);
+      visible = Array.from(tile.querySelectorAll(".pwtp-row"));
+      assert("recherche insensible aux accents trouve 'Émission à venir'",
+        visible.length === 1 && visible[0].textContent.includes("Émission à venir"));
+
+      search.value = "";
+      search.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(30);
+      assert("recherche videe -> toutes les lignes reviennent", tile.querySelectorAll(".pwtp-row").length === 3);
+    }
+
+    console.log("== Tuile Programme TV : rappel avant le debut (reutilise l'alerte du Compte a rebours) ==");
+    {
+      const m6Row = Array.from(tile.querySelectorAll(".pwtp-row")).find((r) => r.textContent.includes("Émission à venir"));
+      const remindBtn = m6Row.querySelector(".pwtp-remind");
+      assert("bouton de rappel propose pour une diffusion a venir", !!remindBtn);
+      assert("cloche barree par defaut (aucun rappel programme)", remindBtn.textContent === "🔕");
+
+      const tf1RowNoRemind = Array.from(tile.querySelectorAll(".pwtp-row")).find((r) => r.textContent.includes("Film de test"));
+      assert("pas de bouton de rappel pour une diffusion deja en cours",
+        !tf1RowNoRemind.querySelector(".pwtp-remind"));
+
+      remindBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      const remindBtnAfter = Array.from(tile.querySelectorAll(".pwtp-row"))
+        .find((r) => r.textContent.includes("Émission à venir")).querySelector(".pwtp-remind");
+      assert("cloche pleine une fois le rappel programme", remindBtnAfter.textContent === "🔔");
+      assert("classe active appliquee au bouton de rappel", remindBtnAfter.classList.contains("pwtp-remind-on"));
+
+      // Desactivation : reclic annule le rappel
+      remindBtnAfter.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      const remindBtnFinal = Array.from(tile.querySelectorAll(".pwtp-row"))
+        .find((r) => r.textContent.includes("Émission à venir")).querySelector(".pwtp-remind");
+      assert("rappel annule au reclic", remindBtnFinal.textContent === "🔕");
+    }
 
     console.log("== Tuile Programme TV : parcourir les chaines disponibles (correctif v1.7.4) ==");
     tile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -2447,29 +2538,6 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       tags.includes("Deuxieme Flux Long Nom De Source"));
     assert("pas d'en-tete de source unique en mode multi-flux (n'aurait plus de sens)",
       multiTile.querySelector(".pwr-source")?.hidden === true);
-  }
-
-  console.log("== Camera : tuile non configuree -> message plutot qu'une grille vide ==");
-  {
-    const emptyTile = document.querySelector('[data-tile-id="t-t"]');
-    tries = 0;
-    while (!emptyTile.querySelector(".pwcam-empty") && tries++ < 40) await sleep(50);
-    assert("message 'aucune camera configuree' affiche", !!emptyTile.querySelector(".pwcam-empty"));
-    assert("aucune carte camera pour une tuile vide", !emptyTile.querySelector(".pwcam-card"));
-  }
-
-  console.log("== Camera : une camera configuree en mode 'Photo uniquement' ==");
-  {
-    const camTile = document.querySelector('[data-tile-id="t-u"]');
-    tries = 0;
-    while (!camTile.querySelector(".pwcam-card") && tries++ < 40) await sleep(50);
-    const card = camTile.querySelector(".pwcam-card");
-    assert("une carte montee pour la camera configuree", !!card);
-    assert("nom de la camera affiche", (card.querySelector(".pwcam-name")?.textContent || "") === "Portail");
-    assert("element photo present (mode 'Photo uniquement')", !!card.querySelector(".pwcam-img"));
-    assert("aucun element video en mode 'Photo uniquement'", !card.querySelector(".pwcam-video"));
-    assert("pas de bouton de bascule quand un seul mode est disponible (pas 'Photo + direct au tap')",
-      !card.querySelector(".pwcam-toggle"));
   }
 
   console.log("== Sortie du mode edition ==");

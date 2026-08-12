@@ -352,60 +352,6 @@
     },
 
     {
-      id: "camera",
-      group: "tiles",
-      title: { fr: "Caméra", en: "Camera" },
-      sub: {
-        fr: "Affiche le flux d'une ou plusieurs caméras IP / portiers connectés (RTSP, compatibles ONVIF).",
-        en: "Shows the feed from one or more IP cameras / smart doorbells (RTSP, ONVIF-compatible)."
-      },
-      html: {
-        fr: `
-          <span class="help-size">Taille : 4×3 par défaut, de 2×2 à 8×6</span>
-          <h4>Objectif</h4>
-          <p>Surveiller une ou plusieurs caméras IP directement sur le tableau — un portail, une entrée, un jardin — sans passer par une appli tierce. Pensée dès le départ pour les portiers vidéo connectés compatibles <b>ONVIF</b> (ex. Philips WelcomeEye Connect 3, dont la notice officielle confirme l'usage d'ONVIF pour intégrer des caméras), mais fonctionne avec n'importe quelle caméra IP exposant un flux RTSP.</p>
-          <h4>Fonctionnement</h4>
-          <p>Jusqu'à <b>4 caméras</b> par tuile, chacune avec son propre mode d'affichage : <b>Photo uniquement</b> (une image fixe, rafraîchie périodiquement), <b>Direct uniquement</b> (vidéo, démarrée immédiatement) ou <b>Photo, avec le direct au tap</b> (le compromis recommandé : une photo légère par défaut, la vidéo à la demande d'un simple tap).</p>
-          <p><b>Le direct est réellement à la demande</b> : aucun flux ne tourne sur le PiBoard tant que personne ne regarde. Dès que la vidéo est fermée (retour à la photo, ou la tuile quitte l'écran), la connexion se coupe et le traitement vidéo côté PiBoard s'arrête immédiatement — pas de minuterie, pas de fuite de processus.</p>
-          <p><b>URL RTSP</b> : à récupérer dans les réglages de la caméra elle-même (identifiants ONVIF/RTSP pour un portier compatible), sous la forme <code>rtsp://utilisateur:motdepasse@192.168.1.50:554/stream1</code>. C'est le seul champ obligatoire pour qu'une caméra apparaisse sur la tuile.</p>
-          <p><b>URL d'instantané (optionnel)</b> : si la caméra expose sa propre adresse JPEG statique, l'indiquer ici rend le mode photo nettement plus léger (simple relais d'image, sans passer par ffmpeg). Laissé vide, la photo est à la place extraite du flux RTSP à chaque rafraîchissement — fonctionne avec n'importe quelle caméra, coûte juste un peu plus de calcul.</p>
-          <p><b>Sans son</b>, volontairement : cette tuile est un écran de contrôle passif, pas un interphone.</p>
-          <p><b>ffmpeg doit être installé</b> — la commande dépend du système : <code>sudo apt install ffmpeg</code> sur un Raspberry Pi ou un PC Linux, <code>brew install ffmpeg</code> sur macOS, <code>winget install Gyan.FFmpeg</code> sous Windows. PiBoard le cherche automatiquement aux emplacements habituels de chaque système.</p>
-          <h4>Performances</h4>
-          <p>La vidéo est relayée telle quelle par défaut (« copy », un simple remuxage, coût CPU quasi nul) — la grande majorité des caméras RTSP encodent déjà en H.264, lu nativement par tout navigateur. Si le direct reste noir ou échoue pour une caméra précise, activez « Forcer le réencodage vidéo » sur cette caméra : signe généralement d'un codec que Chromium ne sait pas lire directement (H.265/HEVC, courant sur les modèles récents), corrigé au prix d'un vrai coût CPU.</p>
-          <h4>Options (par caméra)</h4>
-          <div class="help-opt"><span class="help-opt-name">Nom</span><span class="help-opt-desc">Affiché en en-tête de la carte.</span></div>
-          <div class="help-opt"><span class="help-opt-name">URL RTSP</span><span class="help-opt-desc">Obligatoire pour que la caméra apparaisse sur la tuile.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Mode d'affichage</span><span class="help-opt-desc">Photo uniquement / Direct uniquement / Photo avec le direct au tap.</span></div>
-          <div class="help-opt"><span class="help-opt-name">URL d'instantané</span><span class="help-opt-desc">Optionnel. Mode photo plus léger si la caméra en expose une.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Forcer le réencodage vidéo</span><span class="help-opt-desc">Désactivé par défaut. À activer seulement si le direct échoue.</span></div>
-          <h4>Réglage global</h4>
-          <div class="help-opt"><span class="help-opt-name">Rafraîchissement de la photo</span><span class="help-opt-desc">Fréquence de mise à jour de l'image fixe, en secondes.</span></div>`,
-        en: `
-          <span class="help-size">Size: 4×3 by default, from 2×2 to 8×6</span>
-          <h4>Goal</h4>
-          <p>Keep an eye on one or more IP cameras straight from the board — a gate, an entrance, a garden — without a third-party app. Built from the ground up for <b>ONVIF</b>-compatible smart video doorbells (e.g. the Philips WelcomeEye Connect 3, whose official manual confirms it uses ONVIF to integrate cameras), but works with any IP camera exposing an RTSP feed.</p>
-          <h4>How it works</h4>
-          <p>Up to <b>4 cameras</b> per tile, each with its own display mode: <b>Photo only</b> (a still image, refreshed periodically), <b>Live only</b> (video, started immediately) or <b>Photo, with live on tap</b> (the recommended trade-off: a light photo by default, video on demand with a simple tap).</p>
-          <p><b>Live is genuinely on demand</b>: no stream ever runs on the PiBoard while nobody's watching. As soon as the video is closed (back to photo, or the tile leaves the screen), the connection closes and video processing on the PiBoard's side stops immediately — no timer, no process leak.</p>
-          <p><b>RTSP URL</b>: get this from the camera's own settings (ONVIF/RTSP credentials for a compatible doorbell), in the form <code>rtsp://user:password@192.168.1.50:554/stream1</code>. It's the only required field for a camera to show up on the tile.</p>
-          <p><b>Snapshot URL (optional)</b>: if the camera exposes its own static JPEG address, entering it here makes photo mode noticeably lighter (a plain image relay, no ffmpeg involved). Left empty, the photo is instead extracted from the RTSP feed on every refresh — works with any camera, just costs a bit more compute.</p>
-          <p><b>No sound</b>, by design: this tile is a passive monitoring screen, not an intercom.</p>
-          <p><b>ffmpeg must be installed</b> — the command depends on the system: <code>sudo apt install ffmpeg</code> on a Raspberry Pi or Linux PC, <code>brew install ffmpeg</code> on macOS, <code>winget install Gyan.FFmpeg</code> on Windows. PiBoard looks for it automatically in each system's usual locations.</p>
-          <h4>Performance</h4>
-          <p>Video is relayed as-is by default ("copy", a plain remux, near-zero CPU cost) — the vast majority of RTSP cameras already encode H.264, natively played by any browser. If live view stays black or fails for a particular camera, turn on "Force video re-encode" for that camera: usually a sign of a codec Chromium can't play directly (H.265/HEVC, common on newer models), fixed at a real CPU cost.</p>
-          <h4>Options (per camera)</h4>
-          <div class="help-opt"><span class="help-opt-name">Name</span><span class="help-opt-desc">Shown in the card's header.</span></div>
-          <div class="help-opt"><span class="help-opt-name">RTSP URL</span><span class="help-opt-desc">Required for the camera to show up on the tile.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Display mode</span><span class="help-opt-desc">Photo only / Live only / Photo with live on tap.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Snapshot URL</span><span class="help-opt-desc">Optional. Lighter photo mode if the camera exposes one.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Force video re-encode</span><span class="help-opt-desc">Off by default. Only turn on if live view fails.</span></div>
-          <h4>Global setting</h4>
-          <div class="help-opt"><span class="help-opt-name">Photo refresh</span><span class="help-opt-desc">How often the still image updates, in seconds.</span></div>`
-      }
-    },
-
-    {
       id: "calendar",
       group: "tiles",
       title: { fr: "Agenda", en: "Calendar" },

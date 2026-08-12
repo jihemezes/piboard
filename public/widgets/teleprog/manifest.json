@@ -1,6 +1,6 @@
 {
   "id": "teleprog",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "TV guide",
     "fr": "Programme TV"
@@ -346,6 +346,40 @@
       }
     },
     {
+      "key": "showSearch",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show search bar",
+        "fr": "Afficher la barre de recherche"
+      },
+      "hint": {
+        "en": "Filters the programs currently shown (by title, subtitle, or channel name) as you type. Only searches the view you're currently on, not the other two.",
+        "fr": "Filtre les émissions actuellement affichées (par titre, sous-titre ou nom de chaîne) au fur et à mesure de la saisie. Ne cherche que dans la vue affichée, pas dans les deux autres."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "showProgress",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show \"on air\" progress bar",
+        "fr": "Afficher la barre de progression « en cours »"
+      },
+      "hint": {
+        "en": "A thin progress bar under any program that's actually airing right now (start ≤ now ≤ end), whichever view you're on.",
+        "fr": "Une fine barre de progression sous toute émission réellement en cours de diffusion (début ≤ maintenant ≤ fin), quelle que soit la vue affichée."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
       "key": "refresh",
       "type": "number",
       "default": 30,
@@ -383,6 +417,181 @@
       "group": {
         "en": "Display",
         "fr": "Affichage"
+      }
+    },
+    {
+      "key": "reminderMinutesBefore",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 60,
+      "step": 1,
+      "label": {
+        "en": "Remind me before start (minutes)",
+        "fr": "Me rappeler avant le début (minutes)"
+      },
+      "hint": {
+        "en": "Tap the 🔔 icon on an upcoming program to be reminded this many minutes before it starts. Reuses the same on-screen alert as the Countdown tile (flash/sound below), and survives a page reload.",
+        "fr": "Touchez l'icône 🔔 sur une émission à venir pour être prévenu ce nombre de minutes avant son début. Réutilise la même alerte à l'écran que la tuile Compte à rebours (flash/son ci-dessous), et survit à un rechargement de page."
+      },
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
+      }
+    },
+    {
+      "key": "reminderFlashScreen",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Flash the whole screen",
+        "fr": "Faire clignoter tout l'écran"
+      },
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
+      }
+    },
+    {
+      "key": "reminderPlaySound",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Play a sound (needs speakers on the screen)",
+        "fr": "Jouer un son (nécessite des haut-parleurs sur l'écran)"
+      },
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
+      }
+    },
+    {
+      "key": "reminderSoundChoice",
+      "type": "select",
+      "default": "bell-door",
+      "label": {
+        "en": "Sound",
+        "fr": "Son"
+      },
+      "hint": {
+        "en": "All sounds are synthesized on the fly (no audio files, works offline).",
+        "fr": "Tous les sons sont synthétisés à la volée (aucun fichier audio, fonctionne hors-ligne)."
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ],
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
+      }
+    },
+    {
+      "key": "reminderAlertDurationSeconds",
+      "type": "number",
+      "default": 20,
+      "min": 5,
+      "max": 120,
+      "step": 5,
+      "label": {
+        "en": "Alert duration (seconds)",
+        "fr": "Durée de l'alerte (secondes)"
+      },
+      "hint": {
+        "en": "The flash and sound keep going for this long. This is a heads-up, not an alarm clock — kept short by default.",
+        "fr": "Le flash et le son continuent pendant cette durée. C'est un simple rappel, pas un réveil — volontairement court par défaut."
+      },
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
+      }
+    },
+    {
+      "key": "reminderNotifyUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Notification webhook URL (optional, {message} = the text below)",
+        "fr": "URL webhook de notification (optionnel, {message} = le texte ci-dessous)"
+      },
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
+      }
+    },
+    {
+      "key": "reminderNotifyMethod",
+      "type": "select",
+      "default": "GET",
+      "label": {
+        "en": "Webhook method",
+        "fr": "Méthode du webhook"
+      },
+      "options": [
+        {
+          "value": "GET",
+          "label": {
+            "en": "GET",
+            "fr": "GET"
+          }
+        },
+        {
+          "value": "POST",
+          "label": {
+            "en": "POST (body = message)",
+            "fr": "POST (corps = message)"
+          }
+        }
+      ],
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
+      }
+    },
+    {
+      "key": "reminderNotifyMessage",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Notification message (optional, {title} and {channel} available)",
+        "fr": "Message de la notification (optionnel, {title} et {channel} disponibles)"
+      },
+      "group": {
+        "en": "Reminders",
+        "fr": "Rappels"
       }
     }
   ]
