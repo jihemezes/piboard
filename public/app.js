@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.52.0
+   Version 1.52.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -272,20 +272,56 @@
       }
     };
 
-    let state = { active: false, endTimer: null, soundTimer: null, flashEl: null, ctx: null };
+    /* state.dismiss regroupe les gestionnaires document (voir plus bas) :
+       null quand aucune alerte n'est active, pour ne jamais laisser de
+       gestionnaire globaux enregistres en dehors d'une alerte en cours.
+       state.dismiss groups the document-level handlers (see below):
+       null when no alert is active, so no global handler ever stays
+       registered outside of an ongoing alert. */
+    let state = { active: false, endTimer: null, soundTimer: null, flashEl: null, hintEl: null, ctx: null, onEndCb: null, dismiss: null };
+
+    /* Retire les gestionnaires d'arret au tap n'importe ou sur l'ecran,
+       poses par start() (voir plus bas). Removes the tap-anywhere
+       dismiss handlers set up by start() (see below). */
+    function removeDismissHandlers() {
+      if (!state.dismiss) return;
+      if (state.dismiss.pointerup) document.removeEventListener("pointerup", state.dismiss.pointerup);
+      document.removeEventListener("click", state.dismiss.click);
+      state.dismiss = null;
+    }
 
     function stop() {
       clearTimeout(state.endTimer);
       clearTimeout(state.soundTimer);
       if (state.flashEl && state.flashEl.parentNode) state.flashEl.remove();
+      if (state.hintEl && state.hintEl.parentNode) state.hintEl.remove();
       if (state.ctx) { try { state.ctx.close(); } catch (e) { /* deja ferme */ } }
-      state = { active: false, endTimer: null, soundTimer: null, flashEl: null, ctx: null };
+      removeDismissHandlers();
+      // onEnd toujours appele a l'arret, quelle qu'en soit la cause --
+      // minuterie naturelle, bouton "Arreter" dedie d'une tuile, OU
+      // tap n'importe ou sur l'ecran (voir start()) : chaque widget
+      // n'a besoin d'implementer sa remise a jour d'affichage QU'UNE
+      // FOIS, dans onEnd, plutot que de la dupliquer dans son propre
+      // bouton "Arreter". Capture avant la remise a zero de l'etat, et
+      // appele apres, pour que le code de l'appelant puisse lire
+      // isActive()===false en toute coherence.
+      // onEnd always called on stop, whatever the cause -- natural
+      // timer, a tile's own dedicated "Stop" button, OR a tap anywhere
+      // on the screen (see start()): each widget only needs to
+      // implement its display reset ONCE, in onEnd, rather than
+      // duplicating it in its own "Stop" button. Captured before the
+      // state reset, called after, so the caller's code can read
+      // isActive()===false consistently.
+      const onEndCb = state.onEndCb;
+      state = { active: false, endTimer: null, soundTimer: null, flashEl: null, hintEl: null, ctx: null, onEndCb: null, dismiss: null };
+      if (onEndCb) onEndCb();
     }
 
     function start({ flash, soundName, durationMs, onEnd }) {
       stop(); // une seule alerte a la fois / only one alert at a time
       const dur = Math.max(1000, Math.min(300000, durationMs || 60000));
       state.active = true;
+      state.onEndCb = onEnd || null;
 
       if (flash) {
         const overlay = document.createElement("div");
@@ -293,6 +329,20 @@
         document.body.appendChild(overlay);
         state.flashEl = overlay;
       }
+
+      // Pastille discrete rappelant qu'un tap n'importe ou sur l'ecran
+      // arrete l'alerte -- affichee pour toute alerte (avec ou sans
+      // flash, ex. son seul), puisque ce geste marche desormais dans
+      // les deux cas (voir le gestionnaire de tap plus bas).
+      // Discreet chip reminding that a tap anywhere on the screen stops
+      // the alert -- shown for every alert (with or without flash, e.g.
+      // sound-only), since the gesture now works either way (see the
+      // tap handler below).
+      const hint = document.createElement("div");
+      hint.className = "board-tap-hint";
+      hint.textContent = i18n.t("common.tapToStopAlert");
+      document.body.appendChild(hint);
+      state.hintEl = hint;
 
       if (soundName) {
         try {
@@ -310,7 +360,55 @@
         } catch (e) { /* pas d'audio disponible / no audio available */ }
       }
 
-      state.endTimer = setTimeout(() => { stop(); if (onEnd) onEnd(); }, dur);
+      state.endTimer = setTimeout(stop, dur);
+
+      /* Arret au tap ou au clic N'IMPORTE OU sur l'ecran, meme sans le
+         flash affiche (alerte sonore seule) : phase de propagation
+         normale ("bubble"), PAS de capture. Un bouton "Arreter" dedie
+         d'une tuile (Compte a rebours, alarme de l'Horloge...) appelle
+         deja e.stopPropagation() sur son propre clic -- l'evenement
+         n'atteint alors jamais ce gestionnaire, et le bouton garde
+         l'entiere maitrise de son propre arret (pas de double
+         declenchement qui ferait, par exemple, repartir un minuteur a
+         zero au lieu de simplement l'arreter). Partout ailleurs sur
+         l'ecran -- l'overlay de flash, une autre tuile, le fond --
+         l'evenement remonte normalement et arrete l'alerte ici.
+         Meme convention pointerup+repli click qu'onActivate() plus
+         haut, pour la meme raison (reactivite tactile).
+         Stop on ANY tap or click on the screen, even without the flash
+         showing (sound-only alert): normal ("bubble") propagation
+         phase, NOT capture. A tile's own dedicated "Stop" button
+         (Countdown, Clock alarm...) already calls e.stopPropagation()
+         on its own click -- the event then never reaches this handler,
+         and the button keeps full control of its own stop path (no
+         double-trigger that would, e.g., restart a timer from scratch
+         instead of just stopping it). Everywhere else on the screen --
+         the flash overlay, another tile, the background -- the event
+         bubbles normally and stops the alert here. Same pointerup+click
+         fallback convention as onActivate() above, for the same reason
+         (touch responsiveness). */
+      const pointerupHandler = window.PointerEvent ? (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return; // clic droit/milieu ignore
+        stop();
+      } : null;
+      const clickHandler = () => stop();
+      // Enregistrement differe (tick suivant) : si jamais startAlert()
+      // etait un jour appelee de facon synchrone depuis l'intérieur
+      // d'un gestionnaire de clic/tap, ce meme evenement en cours de
+      // propagation ne doit pas immediatement re-arreter l'alerte qui
+      // vient de demarrer. Aucun des appelants actuels (minuteries)
+      // n'est dans ce cas, mais autant s'en premunir a peu de frais.
+      // Deferred registration (next tick): if startAlert() were ever
+      // called synchronously from within a click/tap handler, that same
+      // still-propagating event must not immediately stop the alert
+      // that was just started. None of the current callers (timers) are
+      // in that situation, but it's cheap insurance regardless.
+      setTimeout(() => {
+        if (!state.active) return; // deja arretee entre-temps / already stopped in the meantime
+        if (pointerupHandler) document.addEventListener("pointerup", pointerupHandler);
+        document.addEventListener("click", clickHandler);
+        state.dismiss = { pointerup: pointerupHandler, click: clickHandler };
+      }, 0);
     }
 
     return { start, stop, isActive: () => state.active, SOUND_NAMES: Object.keys(SOUNDS) };

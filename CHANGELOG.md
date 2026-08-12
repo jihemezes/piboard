@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.52.1
+
+- **Toutes les alertes/alarmes/rappels : arrêt en touchant ou cliquant
+  n'importe où sur l'écran.** Le mécanisme d'alerte partagé (flash
+  plein écran + son) — utilisé par le Compte à rebours, les alarmes de
+  l'Horloge et les rappels du Programme TV — s'arrête désormais aussi
+  bien via le bouton « Arrêter » dédié d'une tuile qu'en touchant ou
+  cliquant n'importe où ailleurs sur l'écran, y compris quand seul le
+  son est activé (sans flash). Une pastille discrète « Touchez l'écran
+  pour arrêter » le rappelle pendant qu'une alerte est active. Chaque
+  widget n'a plus qu'un seul endroit à gérer sa remise à jour
+  d'affichage (via `onEnd`, désormais toujours appelé à l'arrêt, quelle
+  qu'en soit la cause) plutôt que de la dupliquer dans son propre
+  bouton.
+
+---
+
+- **Every alert/alarm/reminder: stop by tapping or clicking anywhere
+  on the screen.** The shared alert mechanism (full-screen flash +
+  sound) — used by the Countdown, the Clock's alarms, and the TV
+  guide's reminders — now stops both via a tile's own dedicated "Stop"
+  button and by tapping or clicking anywhere else on the screen,
+  including when only sound is enabled (no flash). A discreet "Tap the
+  screen to stop" chip reminds you of this while an alert is active.
+  Each widget now only has one place to handle its display reset (via
+  `onEnd`, now always called on stop, whatever the cause) rather than
+  duplicating it in its own button.
+
 ## 1.52.0
 
 - **Programme TV : recherche, favoris, barre de progression, rappels.**

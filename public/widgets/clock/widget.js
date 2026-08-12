@@ -528,10 +528,19 @@
       });
     }
 
+    /* Arret manuel (bouton "Arreter" du bandeau). La remise a jour de
+       l'affichage (activeAlarmIndex=null, renderAlarmBanner()) n'est
+       PAS dupliquee ici : le onEnd ci-dessus s'en charge, et
+       stopAlert() l'appelle desormais systematiquement -- y compris
+       quand l'alarme est arretee d'une autre facon (tap n'importe ou
+       sur l'ecran, voir public/app.js:boardAlert).
+       Manual stop (banner's "Stop" button). The display reset
+       (activeAlarmIndex=null, renderAlarmBanner()) is NOT duplicated
+       here: the onEnd above handles it, and stopAlert() now always
+       calls it -- including when the alarm is stopped some other way
+       (tap anywhere on the screen, see public/app.js:boardAlert). */
     stopAlarmNow() {
       this.ctx.api.stopAlert();
-      this.activeAlarmIndex = null;
-      this.renderAlarmBanner();
     }
 
     renderAlarmBanner() {

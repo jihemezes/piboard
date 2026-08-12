@@ -225,12 +225,22 @@
     }
 
     /* Arret manuel de l'alerte en cours (bouton "Arreter"), sans toucher
-       au reste de l'etat du minuteur. Manual stop of the ongoing alert
-       ("Stop" button), without touching the rest of the timer's state. */
+       au reste de l'etat du minuteur. La remise a jour de l'affichage
+       (alertActive=false, render()) n'est PAS dupliquee ici : elle est
+       geree une seule fois par le onEnd passe a startAlert() dans
+       fireAlert() ci-dessus, que stopAlert() appelle desormais
+       systematiquement -- y compris quand l'alerte est arretee d'une
+       autre facon (tap n'importe ou sur l'ecran, voir
+       public/app.js:boardAlert).
+       Manual stop of the ongoing alert ("Stop" button), without
+       touching the rest of the timer's state. The display reset
+       (alertActive=false, render()) is NOT duplicated here: it's
+       handled once by the onEnd passed to startAlert() in fireAlert()
+       above, which stopAlert() now always calls -- including when the
+       alert is stopped some other way (tap anywhere on the screen, see
+       public/app.js:boardAlert). */
     stopAlertNow() {
       this.ctx.api.stopAlert();
-      this.alertActive = false;
-      this.render();
     }
 
     fit() {

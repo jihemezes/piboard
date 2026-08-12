@@ -455,6 +455,17 @@ const layout = {
     { id: "t-s", widget: "rss", x: 8, y: 19, w: 4, h: 3, settings: {
       url: "https://feed.test/rss.xml", label1: "Flux Un", url2: "https://feed2.test/rss.xml", label2: "",
       maxItems: 10, showSource: true
+    } },
+    // Cible deja passee : declenche l'alerte de tableau des le premier
+    // tick() (appele en synchrone dans init()), sans avoir a manipuler
+    // le formulaire de reglages ni a attendre une minuterie reelle --
+    // utile pour tester le tap-n'importe-ou (voir plus bas).
+    // Target already in the past: fires the board alert on the very
+    // first tick() (called synchronously in init()), without having to
+    // manipulate the settings form or wait for a real timer -- useful
+    // for testing tap-anywhere-to-dismiss (see below).
+    { id: "t-v", widget: "countdown", x: 0, y: 23, w: 3, h: 2, settings: {
+      mode: "date", targetDateTime: "2020-01-01T00:00", flashScreen: true, playSound: false, alertDurationSeconds: 30
     } }
   ]
 };
@@ -828,17 +839,96 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 19 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 20 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("19 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 19);
+  assert("20 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 20);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
   assert("i18n FR appliquee", document.documentElement.lang === "fr");
   assert("grille statique au depart (verrouillee)", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));
 
-  console.log("== Saint du jour (Horloge + Meteo) ==");
+  console.log("== Alerte de tableau : arret au tap n'importe ou sur l'ecran (compte a rebours, alarme horloge, rappel TV) ==");
+  {
+    // Cible deja passee des le montage (voir tuile t-v) : l'alerte
+    // partagee (flash + pastille tap-to-stop) doit deja etre active,
+    // reellement declenchee par la tuile elle-meme (fireAlert()) --
+    // alertActive est donc bien a true cote widget, condition necessaire
+    // pour verifier correctement le comportement de SON PROPRE bouton
+    // "Arreter" ci-dessous.
+    // Target already past at mount time (see tile t-v): the shared
+    // alert (flash + tap-to-stop chip) should already be active,
+    // genuinely triggered by the tile itself (fireAlert()) --
+    // alertActive is thus genuinely true widget-side, a necessary
+    // condition to correctly verify the behavior of ITS OWN "Stop"
+    // button below.
+    assert("flash plein ecran affiche des le montage (cible deja passee)", !!document.querySelector(".board-flash"));
+    assert("pastille 'touchez l'ecran pour arreter' affichee", !!document.querySelector(".board-tap-hint"));
+    assert("pastille traduite en francais", document.querySelector(".board-tap-hint").textContent === "Touchez l'écran pour arrêter");
+
+    const countdownTile = document.querySelector('[data-tile-id="t-v"]');
+    assert("tuile Compte a rebours retrouvee", !!countdownTile);
+    const stopBtn = countdownTile.querySelector(".pwd-reset");
+    assert("bouton 'Arreter' du compte a rebours visible pendant l'alerte (meme en mode date)",
+      stopBtn?.classList.contains("pwd-stop"));
+
+    // L'enregistrement du gestionnaire de tap est differe d'un tick
+    // (voir public/app.js:boardAlert) : laisser le temps de s'attacher.
+    // The tap handler registration is deferred by one tick (see
+    // public/app.js:boardAlert): give it time to attach.
+    await sleep(30);
+
+    console.log("== Alerte de tableau : le bouton 'Arreter' dedie d'une tuile garde la main (pas de double-declenchement) ==");
+    // On arrete D'ABORD via le VRAI bouton "Arreter" de la tuile
+    // (alertActive reellement a true cote widget a cet instant) --
+    // verifie que le bouton dedie continue de fonctionner normalement
+    // (e.stopPropagation() l'isole du nouveau gestionnaire de tap
+    // generique, voir le commentaire de boardAlert.start()).
+    // First stop via the tile's ACTUAL "Stop" button (alertActive
+    // genuinely true widget-side at this point) -- verifies the
+    // dedicated button keeps working normally (e.stopPropagation()
+    // isolates it from the new generic tap handler, see the comment on
+    // boardAlert.start()).
+    stopBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("flash retire par le bouton 'Arreter' dedie de la tuile", !document.querySelector(".board-flash"));
+    assert("pastille retiree par le bouton 'Arreter' dedie", !document.querySelector(".board-tap-hint"));
+    assert("bouton revient a son etat normal (onEnd bien appele par le bouton dedie)",
+      !countdownTile.querySelector(".pwd-reset")?.classList.contains("pwd-stop"));
+
+    console.log("== Alerte de tableau : tap n'importe ou sur l'ecran arrete une alerte generique (compte a rebours, alarme horloge OU rappel TV) ==");
+    // Alerte independante de toute tuile (equivalent d'une alarme
+    // Horloge ou d'un rappel Programme TV qui vient de sonner) :
+    // window.PiBoard.startAlert est la MEME fonction partagee que
+    // ctx.api.startAlert utilisee par les trois widgets -- tester
+    // directement dessus verifie le mecanisme generique sans dependre
+    // de la logique interne (etat "alerted", etc.) d'un widget precis.
+    // Alert independent of any tile (equivalent of a Clock alarm or a
+    // TV guide reminder that just rang): window.PiBoard.startAlert is
+    // the SAME shared function as ctx.api.startAlert used by all three
+    // widgets -- testing directly against it verifies the generic
+    // mechanism without depending on a specific widget's internal
+    // logic (the "alerted" flag, etc.).
+    let onEndCalled = false;
+    window.PiBoard.startAlert({ flash: true, soundName: null, durationMs: 30000, onEnd: () => { onEndCalled = true; } });
+    await sleep(30);
+    assert("alerte generique bien demarree", !!document.querySelector(".board-flash"));
+
+    // Tap sur un element quelconque de l'ecran, sans rapport avec
+    // l'alerte -- pas de bouton "Arreter" dedie ici, exactement le cas
+    // d'usage demande (fermer en touchant n'importe ou l'ecran).
+    // Tap on some unrelated element on the screen -- no dedicated
+    // "Stop" button here, exactly the requested use case (dismiss by
+    // touching anywhere on the screen).
+    document.body.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("flash retire par un tap n'importe ou sur l'ecran", !document.querySelector(".board-flash"));
+    assert("pastille retiree par un tap n'importe ou sur l'ecran", !document.querySelector(".board-tap-hint"));
+    assert("onEnd bien appele suite au tap n'importe ou", onEndCalled);
+  }
+
+
   // Le fetch du calendrier des saints est asynchrone (charge apres le
   // premier rendu) : on attend qu'il se propage avant de verifier.
   // Fetching the nameday calendar is asynchronous (loaded after the
@@ -1363,7 +1453,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (20 au total)", document.querySelectorAll(".grid-stack-item").length === 20);
+  assert("tuile ajoutee (21 au total)", document.querySelectorAll(".grid-stack-item").length === 21);
 
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
