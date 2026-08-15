@@ -44,3 +44,21 @@
   color: var(--muted);
   font-size: 13px;
 }
+
+/* Balise <webview> (application de bureau Electron uniquement, voir
+   hasWebviewTag() dans widget.js). ATTENTION : contrairement a une
+   <iframe>, elle n'a AUCUNE dimension par defaut -- sans ces regles
+   elle occupe une hauteur nulle et la tuile parait vide, exactement le
+   symptome qu'on cherche a corriger.
+   <webview> tag (Electron desktop app only, see hasWebviewTag() in
+   widget.js). CAUTION: unlike an <iframe>, it has NO default size --
+   without these rules it takes zero height and the tile looks empty,
+   exactly the symptom we're trying to fix. */
+.pw-webview .pwv-webview {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #fff;
+}

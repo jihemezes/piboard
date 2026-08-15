@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.57.0
+
+- **Tuile Page web : affichage natif dans l'application de bureau
+  Windows.** Sous Windows, PiBoard tourne dans Electron, qui dispose
+  d'une capacité qu'un navigateur ordinaire n'a pas : afficher un site
+  tiers **en ignorant complètement son en-tête `X-Frame-Options`**,
+  tout en le gardant **pleinement interactif** (défilement, clics,
+  formulaires) et en lui laissant charger ses ressources normalement.
+  C'est désormais le comportement par défaut de la tuile dans
+  l'application de bureau — sans détour serveur, sans réécriture de
+  page, sans capture d'image.
+  Les trois modes précédents restent utiles sur un Raspberry Pi en
+  mode kiosque, où cette capacité n'existe pas ; le mode « Image »
+  reste également accessible sous Windows si on le choisit
+  explicitement.
+
+---
+
+- **Web page tile: native display in the Windows desktop app.** On
+  Windows, PiBoard runs inside Electron, which has a capability a
+  plain browser doesn't: displaying a third-party site while
+  **completely ignoring its `X-Frame-Options` header**, while keeping
+  it **fully interactive** (scrolling, clicks, forms) and letting it
+  load its resources normally. This is now the tile's default
+  behavior in the desktop app — no server round-trip, no page
+  rewriting, no screenshot.
+  The three previous modes remain useful on a Raspberry Pi in kiosk
+  mode, where this capability doesn't exist; "Image" mode also stays
+  reachable on Windows if explicitly chosen.
+
 ## 1.56.0
 
 - **Tuile Page web : nouveau mode « Image », qui fonctionne avec

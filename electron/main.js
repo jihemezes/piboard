@@ -147,6 +147,32 @@ function createWindow() {
       // need to access Node.
       nodeIntegration: false,
       contextIsolation: true,
+      // Balise <webview> : necessaire a la tuile "Page web" sous
+      // Windows (voir public/widgets/webview/widget.js). C'est le seul
+      // moyen d'afficher un site tiers en IGNORANT son en-tete
+      // X-Frame-Options / sa CSP frame-ancestors -- ce qu'une <iframe>
+      // ordinaire ne peut pas faire, et qui laissait la tuile
+      // desesperement blanche pour la plupart des sites. Contrairement
+      // aux contournements cote serveur, le site reste ici pleinement
+      // interactif et charge ses ressources normalement.
+      // Desactivee par defaut depuis Electron 5 : il faut l'activer
+      // explicitement. Le risque associe (une page tierce hostile
+      // exploitant l'API webview) reste ici tres limite : le contenu
+      // affiche est une URL saisie par l'utilisateur lui-meme dans les
+      // reglages de SA tuile, et l'isolation du contexte reste active.
+      // <webview> tag: needed by the "Web page" tile on Windows (see
+      // public/widgets/webview/widget.js). It's the only way to display
+      // a third-party site while IGNORING its X-Frame-Options header /
+      // frame-ancestors CSP -- which a plain <iframe> cannot do, and
+      // which left the tile hopelessly blank for most sites. Unlike the
+      // server-side workarounds, the site here stays fully interactive
+      // and loads its resources normally.
+      // Disabled by default since Electron 5: it must be enabled
+      // explicitly. The associated risk (a hostile third-party page
+      // abusing the webview API) stays very limited here: the displayed
+      // content is a URL the user typed themselves into THEIR OWN
+      // tile's settings, and context isolation remains on.
+      webviewTag: true,
       spellcheck: false
     }
   });

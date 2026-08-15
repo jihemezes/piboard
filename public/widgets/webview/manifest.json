@@ -1,6 +1,6 @@
 {
   "id": "webview",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "Web page",
     "fr": "Page web"
@@ -44,8 +44,8 @@
         "fr": "Mode d'affichage"
       },
       "hint": {
-        "en": "\"Via PiBoard\" relays the page from the PiBoard server — works for sites that block iframe embedding. \"Direct\" loads the site's address straight in the tile: fastest and fully interactive, but only if the site allows embedding. \"Image\" renders the page with a real browser on the PiBoard and shows a photo of the result: works with absolutely any site, at the cost of being static (no scrolling or clicking) and a few seconds per refresh.",
-        "fr": "« Via PiBoard » relaie la page depuis le serveur PiBoard — fonctionne pour les sites qui bloquent l'affichage en iframe. « Direct » charge l'adresse du site telle quelle : le plus rapide et pleinement interactif, mais seulement si le site l'autorise. « Image » fait rendre la page par un vrai navigateur sur le PiBoard et affiche une photo du résultat : fonctionne avec absolument n'importe quel site, au prix d'un affichage fixe (pas de défilement ni de clic) et de quelques secondes par rafraîchissement."
+        "en": "In the Windows desktop app, the site is always shown directly and interactively (X-Frame-Options is ignored there) — these modes then only matter if you pick \"Image\". On a Raspberry Pi in kiosk mode: \"Via PiBoard\" relays the page from the server (works for sites blocking iframe embedding); \"Direct\" loads the address as-is (fastest, but only if the site allows embedding); \"Image\" renders the page with a real browser and shows a photo (works with absolutely any site, but static and a few seconds per refresh).",
+        "fr": "Dans l'application de bureau Windows, le site est toujours affiché directement et reste interactif (X-Frame-Options y est ignoré) — ces modes n'ont alors d'effet que si vous choisissez « Image ». Sur un Raspberry Pi en mode kiosque : « Via PiBoard » relaie la page depuis le serveur (fonctionne pour les sites bloquant l'affichage en iframe) ; « Direct » charge l'adresse telle quelle (le plus rapide, mais seulement si le site l'autorise) ; « Image » fait rendre la page par un vrai navigateur et affiche une photo (fonctionne avec absolument n'importe quel site, mais affichage fixe et quelques secondes par rafraîchissement)."
       },
       "options": [
         {

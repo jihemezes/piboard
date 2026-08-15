@@ -58,6 +58,28 @@
     return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : "https://" + trimmed;
   }
 
+  /* PiBoard tourne-t-il dans l'application de bureau (Electron) ?
+     Determinant pour cette tuile : Electron fournit la balise
+     <webview>, qui affiche un site tiers en IGNORANT son
+     X-Frame-Options / sa CSP frame-ancestors -- ce qu'une <iframe>
+     ordinaire ne sait pas faire. C'est de loin la meilleure option
+     quand elle est disponible : le site reste pleinement interactif,
+     charge ses ressources normalement, et aucun detour serveur n'est
+     necessaire.
+     Sur un navigateur ordinaire (Chromium en kiosque sur le Pi), la
+     balise n'existe pas : on retombe sur les modes serveur.
+     Is PiBoard running inside the desktop app (Electron)? Decisive for
+     this tile: Electron provides the <webview> tag, which displays a
+     third-party site while IGNORING its X-Frame-Options /
+     frame-ancestors CSP -- something a plain <iframe> cannot do. By far
+     the best option when available: the site stays fully interactive,
+     loads its resources normally, and no server round-trip is needed.
+     In a plain browser (kiosk Chromium on the Pi), the tag doesn't
+     exist: we fall back to the server-side modes. */
+  function hasWebviewTag() {
+    return /Electron\//i.test(navigator.userAgent);
+  }
+
   class WebviewWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -135,6 +157,41 @@
 
       if (!s.url) {
         this.ctx.el.innerHTML = `<div class="pw-webview"><div class="pwv-missing">${this.ctx.i18n.t("webview.missing")}</div></div>`;
+        return;
+      }
+
+      /* Application de bureau (Electron) : la balise <webview> est
+         essayee AVANT tout le reste, sauf si le mode "Image" est
+         explicitement demande. C'est la seule option qui affiche le
+         site tel quel, interactif, sans se soucier de son
+         X-Frame-Options -- les modes serveur ("proxy"/"direct") n'ont
+         plus de raison d'etre ici.
+         Desktop app (Electron): the <webview> tag is tried BEFORE
+         anything else, unless "Image" mode is explicitly requested.
+         It's the only option that shows the site as-is, interactive,
+         regardless of its X-Frame-Options -- the server-side modes
+         ("proxy"/"direct") have no reason to be used here. */
+      if (hasWebviewTag() && s.mode !== "shot") {
+        const url = normalizeUrl(s.url);
+        this.ctx.el.innerHTML = `<div class="pw-webview">
+          <webview class="pwv-webview" src="${escapeAttr(url)}" allowpopups></webview>
+        </div>`;
+        this.iframe = null;
+        const wv = this.ctx.el.querySelector("webview");
+        // Meme repli que le mode "Image" en cas d'echec de chargement :
+        // un message plutot qu'un cadre vide sans explication.
+        // Same fallback as "Image" mode on load failure: a message
+        // rather than an empty frame with no explanation.
+        wv.addEventListener("did-fail-load", (e) => {
+          if (e.errorCode === -3) return; // chargement interrompu (navigation normale) / aborted load (normal navigation)
+          this.ctx.el.querySelector(".pw-webview").innerHTML =
+            `<div class="pwv-status">${escapeAttr(this.ctx.i18n.t("webview.shotError"))}</div>`;
+        });
+
+        const wvMinutes = Number(s.reload) || 0;
+        if (wvMinutes > 0) {
+          this.timer = setInterval(() => { try { wv.reload(); } catch (err) { /* noop */ } }, wvMinutes * 60000);
+        }
         return;
       }
 
