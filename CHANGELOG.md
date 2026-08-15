@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.59.0
+
+- **Renommage : « Cours de cryptos » devient « Cours Cryptos ».**
+
+- **Correctif : la tuile Cours Cryptos échouait souvent à afficher les
+  courbes, sur une durée en particulier ou sur l'ensemble.** Cause
+  identifiée : le widget appelait l'API publique CoinGecko
+  **directement depuis le navigateur**, sans clé — cette API est
+  plafonnée à seulement **5 à 15 requêtes par minute, partagées par
+  toute l'adresse IP du foyer** (pas par appareil). Un simple
+  rafraîchissement automatique combiné à la consultation d'une courbe
+  suffisait à épuiser ce quota, d'où des échecs fréquents et
+  imprévisibles.
+  - Les cours et les courbes passent désormais par le **serveur
+    PiBoard** (nouveau module `server/crypto.js`), qui **met en cache**
+    les résultats (cours ~1 min, courbes ~10 min) — un rafraîchissement
+    ou une consultation répétée ne redéclenche plus d'appel à
+    CoinGecko à chaque fois, quel que soit le nombre d'écrans ouverts.
+  - En cas de panne momentanée de CoinGecko, la **dernière valeur
+    connue** reste affichée plutôt que de disparaître, avec un discret
+    rappel « dernières valeurs connues » plutôt qu'une erreur ou une
+    tuile vide.
+  - Un espacement minimal entre les appels sortants protège le quota
+    même en cas de consultation de plusieurs cryptos/courbes jamais
+    vues à la fois.
+
+---
+
+- **French display name simplified: "Cours de cryptos" → "Cours
+  Cryptos".** (English name unchanged: "Crypto prices".)
+
+- **Fix: the Crypto prices tile often failed to show charts, for one
+  specific duration or for all of them.** Root cause identified: the
+  widget called CoinGecko's public API **directly from the browser**,
+  without a key — that API is capped at only **5 to 15 requests per
+  minute, shared by the household's entire IP address** (not per
+  device). A plain automatic refresh combined with viewing a chart was
+  enough to exhaust that quota, hence frequent, unpredictable
+  failures.
+  - Prices and charts now go through the **PiBoard server** (new
+    `server/crypto.js` module), which **caches** results (prices ~1
+    min, charts ~10 min) — refreshing or repeatedly viewing the same
+    chart no longer re-triggers a CoinGecko call every time, no matter
+    how many screens are open.
+  - On a momentary CoinGecko outage, the **last known value** stays
+    displayed rather than vanishing, with a discreet "last known
+    values" reminder rather than an error or an empty tile.
+  - A minimum spacing between outbound calls protects the quota even
+    when viewing several never-before-seen coins/charts at once.
+
 ## 1.58.1
 
 - **Page web : bouton de rafraîchissement sur chaque onglet.** Une

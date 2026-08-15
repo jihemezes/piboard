@@ -466,7 +466,8 @@ const layout = {
     // for testing tap-anywhere-to-dismiss (see below).
     { id: "t-v", widget: "countdown", x: 0, y: 23, w: 3, h: 2, settings: {
       mode: "date", targetDateTime: "2020-01-01T00:00", flashScreen: true, playSound: false, alertDurationSeconds: 30
-    } }
+    } },
+    { id: "t-w", widget: "crypto", x: 3, y: 23, w: 3, h: 2, settings: { coins: "bitcoin", currency: "eur", refresh: 5 } }
   ]
 };
 
@@ -479,6 +480,22 @@ const putCalls = [];
    (server/tileConfigs.js), to replay the full remove -> reuse
    journey without a real server. */
 const tileConfigsMock = {};
+
+/* Mock avec etat pour les routes /api/crypto/* (server/crypto.js) :
+   permet de simuler un repli sur donnees perimees (priceStale/
+   chartStale) et une panne totale (blockPrices/blockChart) sans
+   dependre du reseau reel. Stateful mock for the /api/crypto/* routes
+   (server/crypto.js): lets tests simulate a stale-data fallback
+   (priceStale/chartStale) and a total outage (blockPrices/blockChart)
+   without depending on the real network. */
+const cryptoMock = {
+  priceData: { bitcoin: { eur: 50000, eur_24h_change: 2.5 } },
+  priceStale: false,
+  blockPrices: false,
+  chartPrices: [100, 105, 98, 110],
+  chartStale: false,
+  blockChart: false
+};
 
 /* Chargeur de ressources : sert les fichiers locaux */
 class LocalLoader extends ResourceLoader {
@@ -603,6 +620,14 @@ const dom = new JSDOM(html, {
           ? [{ id: "TF1.fr", name: "TF1" }, { id: "France2.fr", name: "France 2" }, { id: "Extra1.fr", name: "Chaine supplementaire 1" }, { id: "Extra2.fr", name: "Chaine supplementaire 2" }]
           : [{ id: "TF1.fr", name: "TF1" }, { id: "France2.fr", name: "France 2" }];
         return json(list);
+      }
+      if (u.includes("/api/crypto/prices")) {
+        if (cryptoMock.blockPrices) return { ok: false, status: 502, json: () => Promise.resolve({ error: "boom" }) };
+        return json({ data: cryptoMock.priceData, stale: !!cryptoMock.priceStale });
+      }
+      if (u.includes("/api/crypto/chart")) {
+        if (cryptoMock.blockChart) return { ok: false, status: 502, json: () => Promise.resolve({ error: "boom" }) };
+        return json({ prices: cryptoMock.chartPrices, stale: !!cryptoMock.chartStale });
       }
       // ATTENTION a l'ordre : "/api/tele-program/grid" contient
       // "/api/tele-program", donc ce cas doit etre teste AVANT le
@@ -873,10 +898,10 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
-  while (document.querySelectorAll(".grid-stack-item").length < 20 && tries++ < 60) await sleep(100);
+  while (document.querySelectorAll(".grid-stack-item").length < 21 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("20 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 20);
+  assert("21 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 21);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -1133,6 +1158,72 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
         Array.from(tabsAfterRemoval).some((t) => t.classList.contains("pwv-tab-active")));
       assert("le contenu affiche correspond bien a l'onglet marque actif",
         !!webviewTile.querySelector(".pw-webview iframe"));
+    }
+  }
+
+  console.log("== Cours Cryptos : cours affiches via le proxy serveur (plus d'appel direct a CoinGecko) ==");
+  {
+    const cryptoTile = document.querySelector('[data-tile-id="t-w"]');
+    tries = 0;
+    while (!cryptoTile.querySelector(".pwc-row") && tries++ < 40) await sleep(50);
+    const row = cryptoTile.querySelector(".pwc-row");
+    assert("ligne de cours affichee", !!row);
+    assert("prix affiche (formate)", (row.querySelector(".pwc-price")?.textContent || "").includes("50"));
+    assert("variation 24h affichee", (row.querySelector(".pwc-change")?.textContent || "").includes("2.5"));
+    assert("aucun bandeau 'donnees perimees' quand tout va bien", !cryptoTile.querySelector(".pwc-stale"));
+
+    console.log("== Cours Cryptos : bandeau discret quand le proxy signale un repli sur donnees perimees ==");
+    cryptoMock.priceStale = true;
+    cryptoTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+    assert("bandeau 'dernieres valeurs connues' affiche quand le proxy signale stale:true",
+      !!cryptoTile.querySelector(".pwc-stale"));
+    assert("les cours restent neanmoins affiches (pas remplaces par une erreur)",
+      !!cryptoTile.querySelector(".pwc-row"));
+    cryptoMock.priceStale = false;
+
+    console.log("== Cours Cryptos : message d'erreur clair si le proxy est injoignable (pas de page blanche) ==");
+    cryptoMock.blockPrices = true;
+    cryptoTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+    assert("message d'erreur affiche quand le proxy echoue completement",
+      !!cryptoTile.querySelector(".pwc-err"));
+    cryptoMock.blockPrices = false;
+    cryptoTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+
+    console.log("== Cours Cryptos : clic sur une ligne ouvre la courbe (via le proxy, pas CoinGecko directement) ==");
+    {
+      const freshRow = cryptoTile.querySelector(".pwc-row");
+      freshRow.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      const modal = document.querySelector(".pwc-chart-line")?.closest(".modal");
+      assert("fenetre de courbe ouverte au clic sur une ligne", !!modal && !modal.hidden);
+      tries = 0;
+      while (document.querySelector(".pwc-chart-line")?.getAttribute("d") === "" && tries++ < 40) await sleep(50);
+      assert("courbe tracee (chemin SVG non vide)",
+        (document.querySelector(".pwc-chart-line")?.getAttribute("d") || "").length > 0);
+      assert("aucun indicateur 'perime' quand la courbe est fraiche",
+        document.querySelector(".pwc-chart-status")?.hidden !== false
+        || (document.querySelector(".pwc-chart-status")?.textContent || "") === "");
+
+      console.log("== Cours Cryptos : courbe perimee -> indicateur discret, pas une erreur ==");
+      cryptoMock.chartStale = true;
+      document.querySelector('.pwc-range-btn[data-days="7"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(200);
+      assert("statut affiche pour signaler une courbe perimee",
+        document.querySelector(".pwc-chart-status")?.hidden === false);
+      assert("ce n'est PAS le message d'erreur (les donnees restent exploitables)",
+        (document.querySelector(".pwc-chart-status")?.textContent || "") !== "Courbe indisponible");
+      cryptoMock.chartStale = false;
+
+      modal.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     }
   }
 
@@ -1661,7 +1752,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (21 au total)", document.querySelectorAll(".grid-stack-item").length === 21);
+  assert("tuile ajoutee (22 au total)", document.querySelectorAll(".grid-stack-item").length === 22);
 
   console.log("== Tiroirs (gauche existant, haut, droite) : presence, ouverture, un seul a la fois ==");
   {

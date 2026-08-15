@@ -43,6 +43,21 @@
 .pw-crypto .pwc-down { color: #E0556F; }
 .pw-crypto .pwc-err { margin: auto; color: var(--muted); font-size: 13px; text-align: center; }
 
+/* Repli sur la derniere valeur connue (voir server/crypto.js) : rappel
+   discret, pas une erreur -- les chiffres affiches sont utilisables,
+   simplement pas les plus recents.
+   Fallback to the last known value (see server/crypto.js): a discreet
+   reminder, not an error -- the shown numbers are usable, just not the
+   most recent. */
+.pw-crypto .pwc-stale {
+  flex-shrink: 0;
+  padding: 3px 8px;
+  font-size: 10.5px;
+  color: var(--faint);
+  text-align: center;
+  border-top: 1px solid var(--tile-edge);
+}
+
 /* ---------- Fenetre de courbe (fermeture manuelle uniquement) ----------
    Reutilise les classes de modale du coeur (.modal/.modal-card) pour la
    coherence visuelle. Le fond ne ferme pas la fenetre au clic : seul le

@@ -48,6 +48,7 @@ const teleProgram = require("./teleProgram");
 const articleExtract = require("./articleExtract");
 const webviewProxy = require("./webviewProxy");
 const webviewShot = require("./webviewShot");
+const crypto = require("./crypto");
 const tileSecrets = require("./tileSecrets");
 const mailbox = require("./mailbox");
 const astronomy = require("./astronomy");
@@ -569,6 +570,47 @@ app.get("/api/webview-shot", async (req, res) => {
   } catch (e) {
     console.error("[piboard] webview-shot exception non geree ->", req.query.url, e);
     if (!res.headersSent) res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+/* Voir server/crypto.js pour le detail complet : proxy CoinGecko avec
+   cache et repli sur la derniere valeur connue -- l'API publique sans
+   cle est plafonnee a seulement 5-15 requetes/minute, PAR ADRESSE IP,
+   partagee par tout le foyer. Appeler directement depuis le navigateur
+   (comportement d'avant cette route) epuise ce quota en quelques
+   rafraichissements, d'ou des echecs frequents et imprevisibles.
+   See server/crypto.js for the full detail: CoinGecko proxy with
+   caching and fallback to the last known value -- the keyless public
+   API is capped at only 5-15 requests/minute, PER IP ADDRESS, shared
+   by the whole household. Calling it directly from the browser (the
+   behavior before this route) exhausts that quota within a few
+   refreshes, hence frequent, unpredictable failures. */
+app.get("/api/crypto/prices", async (req, res) => {
+  const ids = String(req.query.ids || "").split(",").map((s) => s.trim()).filter(Boolean).slice(0, 20);
+  const currency = String(req.query.currency || "eur").toLowerCase();
+  if (!ids.length) return res.status(400).json({ error: "missing ids" });
+  try {
+    const result = await crypto.getPrices(ids, currency);
+    res.set("Cache-Control", "no-store");
+    res.json(result);
+  } catch (e) {
+    console.warn("[piboard] crypto prices echec ->", ids.join(","), e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/crypto/chart", async (req, res) => {
+  const id = String(req.query.id || "").trim();
+  const currency = String(req.query.currency || "eur").toLowerCase();
+  const days = Math.max(1, Math.min(365, Number(req.query.days) || 1));
+  if (!id) return res.status(400).json({ error: "missing id" });
+  try {
+    const result = await crypto.getChart(id, currency, days);
+    res.set("Cache-Control", "no-store");
+    res.json(result);
+  } catch (e) {
+    console.warn("[piboard] crypto chart echec ->", id, days, e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
   }
 });
 

@@ -77,12 +77,12 @@
         return;
       }
       try {
-        const url = "https://api.coingecko.com/api/v3/simple/price?ids=" + encodeURIComponent(ids.join(","))
-          + "&vs_currencies=" + s.currency + "&include_24hr_change=true";
-        const data = await fetch(url).then((r) => {
+        const url = "/api/crypto/prices?ids=" + encodeURIComponent(ids.join(",")) + "&currency=" + encodeURIComponent(s.currency);
+        const result = await fetch(url).then((r) => {
           if (!r.ok) throw new Error("status " + r.status);
           return r.json();
         });
+        const data = result.data || {};
         const symbol = SYMBOL[s.currency] || "";
         const rows = ids.filter((id) => data[id]).map((id) => {
           const price = data[id][s.currency];
@@ -98,7 +98,16 @@
               </span>
             </div>`;
         }).join("");
-        el.innerHTML = `<div class="pw-crypto">${rows || `<div class="pwc-err">${this.ctx.i18n.t("crypto.error")}</div>`}</div>`;
+        // Repli signale (voir server/crypto.js) : les cours affiches sont
+        // corrects mais pas les plus recents -- un discret rappel plutot
+        // que de le camoufler ou d'afficher une erreur alors que des
+        // chiffres exploitables sont bien la.
+        // Flagged fallback (see server/crypto.js): the shown prices are
+        // correct but not the most recent -- a discreet reminder rather
+        // than hiding it, or showing an error when usable numbers are
+        // actually there.
+        const staleNotice = result.stale ? `<div class="pwc-stale">${this.ctx.i18n.t("crypto.stale")}</div>` : "";
+        el.innerHTML = `<div class="pw-crypto">${rows || `<div class="pwc-err">${this.ctx.i18n.t("crypto.error")}</div>`}${staleNotice}</div>`;
 
         el.querySelectorAll(".pwc-row").forEach((row) => {
           // Meme correctif que le bouton de gestion du widget Diaporama :
@@ -211,25 +220,26 @@
 
       const cacheKey = coinId + ":" + days;
       try {
-        let prices = this.chartCache[cacheKey];
-        if (!prices) {
-          const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId)}/market_chart`
-            + `?vs_currency=${s.currency}&days=${days}`;
-          const data = await fetch(url).then((r) => {
+        let cached = this.chartCache[cacheKey];
+        if (!cached) {
+          const url = "/api/crypto/chart?id=" + encodeURIComponent(coinId)
+            + "&currency=" + encodeURIComponent(s.currency) + "&days=" + days;
+          const result = await fetch(url).then((r) => {
             if (!r.ok) throw new Error("status " + r.status);
             return r.json();
           });
-          prices = (data.prices || []).map((p) => p[1]);
-          if (!prices.length) throw new Error("no data");
-          this.chartCache[cacheKey] = prices;
+          if (!result.prices || !result.prices.length) throw new Error("no data");
+          cached = result;
+          this.chartCache[cacheKey] = cached;
         }
         // Toujours la meme requete active ? (l'utilisateur a pu changer de periode entre-temps)
         // Still the current request? (the user may have switched range meanwhile)
         if (coinId !== this.activeCoin || days !== this.activeDays) return;
-        const { line, fill } = buildPath(prices, 400, 200, 12);
+        const { line, fill } = buildPath(cached.prices, 400, 200, 12);
         lineEl.setAttribute("d", line);
         fillEl.setAttribute("d", fill);
-        status.hidden = true;
+        status.hidden = !cached.stale;
+        status.textContent = cached.stale ? i18n.t("crypto.stale") : "";
       } catch (e) {
         console.warn("[piboard/crypto/chart]", e);
         if (coinId !== this.activeCoin || days !== this.activeDays) return;

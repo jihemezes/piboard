@@ -492,7 +492,7 @@
     {
       id: "crypto",
       group: "tiles",
-      title: { fr: "Cours de cryptos", en: "Crypto prices" },
+      title: { fr: "Cours Cryptos", en: "Crypto prices" },
       sub: {
         fr: "Cours en direct et variation 24h de quelques cryptomonnaies, via CoinGecko (sans clé API). Touchez une crypto pour voir sa courbe (24h / 7j / 30j / 1an).",
         en: "Live prices and 24h change for a few coins, powered by CoinGecko (no API key). Tap a coin to see its price chart (24h / 7d / 30d / 1y)."
@@ -504,6 +504,7 @@
           <p>Suivre le cours de quelques cryptomonnaies sans quitter le tableau de bord.</p>
           <h4>Possibilités</h4>
           <p>La liste des cryptos suivies se personnalise librement (par exemple Bitcoin, Ethereum, une monnaie plus confidentielle) via leurs identifiants CoinGecko. Touchez une ligne pour faire apparaître sa courbe de prix sur plusieurs périodes (24 heures, 7 jours, 30 jours, 1 an), pratique pour évaluer une tendance sans avoir besoin d'ouvrir une application dédiée.</p>
+          <p>Les cours passent par le serveur PiBoard (jamais directement par le navigateur) : l'API gratuite de CoinGecko est très limitée (5 à 15 requêtes par minute, partagées par toute l'adresse IP du foyer), ce qui provoquait auparavant des échecs fréquents et imprévisibles. Le serveur met désormais les cours et courbes en cache, et conserve la dernière valeur connue en cas de panne momentanée de CoinGecko — un discret rappel « dernières valeurs connues » apparaît alors, plutôt qu'une tuile vide.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Cryptos</span><span class="help-opt-desc">Liste d'identifiants CoinGecko séparés par des virgules (ex. <code>bitcoin,ethereum,solana</code>). L'identifiant CoinGecko correspond en général au nom complet en minuscules.</span></div>
           <div class="help-opt"><span class="help-opt-name">Devise</span><span class="help-opt-desc">Euro ou dollar US.</span></div>
@@ -514,6 +515,7 @@
           <p>Track the price of a few cryptocurrencies without leaving the dashboard.</p>
           <h4>Possibilities</h4>
           <p>The list of tracked coins can be freely customized (for instance Bitcoin, Ethereum, a more niche coin) via their CoinGecko identifiers. Tap a row to bring up its price chart over several periods (24 hours, 7 days, 30 days, 1 year), handy for gauging a trend without needing to open a dedicated app.</p>
+          <p>Prices go through the PiBoard server (never straight from the browser): CoinGecko's free API is very limited (5 to 15 requests per minute, shared by the household's entire IP address), which used to cause frequent, unpredictable failures. The server now caches prices and charts, and keeps the last known value if CoinGecko has a momentary outage — a discreet "last known values" reminder then appears, rather than an empty tile.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Coins</span><span class="help-opt-desc">Comma-separated list of CoinGecko IDs (e.g. <code>bitcoin,ethereum,solana</code>). The CoinGecko ID is generally the full lowercase name.</span></div>
           <div class="help-opt"><span class="help-opt-name">Currency</span><span class="help-opt-desc">Euro or US dollar.</span></div>
@@ -1347,7 +1349,7 @@
           <div class="help-credit"><span class="help-opt-name">adsbdb</span> — <a href="https://www.adsbdb.com" target="_blank">adsbdb.com</a><br><span class="help-opt-desc">Recherche de trajet (ville de départ/arrivée) et d'informations sur l'appareil (modèle, exploitant) au clic sur un avion, dans la tuile Avions en vue.</span></div>
           <div class="help-credit"><span class="help-opt-name">hexdb.io</span> — <a href="https://hexdb.io" target="_blank">hexdb.io</a><br><span class="help-opt-desc">Source de repli pour la recherche de trajet, dans la tuile Avions en vue.</span></div>
           <div class="help-credit"><span class="help-opt-name">Openverse</span> — <a href="https://openverse.org" target="_blank">openverse.org</a><br><span class="help-opt-desc">Photos de fond sous licence libre de la tuile Météo, avec crédit du photographe affiché sur la tuile quand disponible.</span></div>
-          <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Cours et courbes de prix de la tuile Cours de cryptos.</span></div>
+          <div class="help-credit"><span class="help-opt-name">CoinGecko</span> — <a href="https://www.coingecko.com" target="_blank">coingecko.com</a><br><span class="help-opt-desc">Cours et courbes de prix de la tuile Cours Cryptos.</span></div>
           <div class="help-credit"><span class="help-opt-name">ESPN</span> — <a href="https://www.espn.com" target="_blank">espn.com</a><br><span class="help-opt-desc">Scores en direct et classements des tuiles Scores sportifs et Classement.</span></div>
           <div class="help-credit"><span class="help-opt-name">Astronomy Engine</span> — <a href="https://github.com/cosinekitty/astronomy" target="_blank">github.com/cosinekitty/astronomy</a><br><span class="help-opt-desc">Calcul local de la phase de lune et de la position des planètes pour la tuile Astronomie — aucun appel réseau.</span></div>
           <div class="help-credit"><span class="help-opt-name">ISS Pass API (Pollux Labs)</span> — <a href="https://iss-api.polluxlabs.io" target="_blank">iss-api.polluxlabs.io</a><br><span class="help-opt-desc">Prédictions de passage de la Station spatiale internationale pour la tuile Astronomie.</span></div>

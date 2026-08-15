@@ -382,6 +382,7 @@
 
       "crypto.error": "Prices unavailable",
       "crypto.chartError": "Chart unavailable",
+      "crypto.stale": "Showing the last known values — CoinGecko is momentarily unreachable.",
       "crypto.range.24h": "24h",
       "crypto.range.7d": "7d",
       "crypto.range.30d": "30d",
@@ -817,6 +818,7 @@
 
       "crypto.error": "Cours indisponibles",
       "crypto.chartError": "Courbe indisponible",
+      "crypto.stale": "Dernières valeurs connues affichées — CoinGecko est momentanément injoignable.",
       "crypto.range.24h": "24h",
       "crypto.range.7d": "7j",
       "crypto.range.30d": "30j",
