@@ -46,6 +46,7 @@ const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
 const articleExtract = require("./articleExtract");
+const webviewProxy = require("./webviewProxy");
 const tileSecrets = require("./tileSecrets");
 const mailbox = require("./mailbox");
 const astronomy = require("./astronomy");
@@ -469,6 +470,38 @@ app.get("/api/image-proxy", async (req, res) => {
   } catch (e) {
     res.status(502).json({ error: "upstream image fetch failed", detail: String(e.message || e) });
   }
+});
+
+/* Voir server/webviewProxy.js pour le detail complet : sert une page
+   tierce depuis l'origine de PiBoard plutot que de la charger
+   directement dans l'iframe du widget "Page web", pour contourner le
+   blocage d'affichage en iframe (X-Frame-Options/CSP) qu'un site peut
+   poser -- sinon une page blanche silencieuse, sans la moindre erreur
+   visible.
+   See server/webviewProxy.js for the full detail: serves a third-party
+   page from PiBoard's own origin rather than loading it directly in
+   the "Web page" widget's iframe, to work around iframe-embedding
+   blocks (X-Frame-Options/CSP) a site may set -- otherwise a silent
+   blank page, with no visible error at all. */
+app.get("/api/webview-proxy", async (req, res) => {
+  const result = await webviewProxy.proxyPage(String(req.query.url || ""));
+  if (!result.ok) {
+    // Page HTML minimale plutot qu'une reponse JSON brute : c'est ce
+    // que l'iframe du widget affichera directement -- un message
+    // lisible vaut mieux qu'un JSON illisible ou (pire) une page
+    // blanche qui laisse croire a une panne silencieuse.
+    // Minimal HTML page rather than a raw JSON response: this is what
+    // the widget's iframe will display directly -- a readable message
+    // beats unreadable JSON or (worse) a blank page that looks like a
+    // silent failure.
+    res.status(result.status || 502);
+    res.set("Content-Type", "text/html; charset=utf-8");
+    res.set("Cache-Control", "no-store");
+    return res.send(webviewProxy.errorPageHtml(result.error));
+  }
+  res.set("Content-Type", "text/html; charset=utf-8");
+  res.set("Cache-Control", "no-store");
+  res.send(result.html);
 });
 
 app.get("/api/layout", (req, res) => {

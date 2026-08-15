@@ -342,4 +342,4 @@ async function extractArticle(url) {
   };
 }
 
-module.exports = { extractArticle };
+module.exports = { extractArticle, USER_AGENTS, BROWSER_HEADERS };

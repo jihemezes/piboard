@@ -1168,28 +1168,32 @@
       group: "tiles",
       title: { fr: "Page web", en: "Web page" },
       sub: {
-        fr: "Affiche n'importe quelle page web (carte de trafic, app domotique, page de statut…). Le site doit autoriser l'affichage en iframe.",
-        en: "Embeds any web page (traffic map, home app, status page…). The site must allow iframe embedding."
+        fr: "Affiche n'importe quelle page web (carte de trafic, app domotique, page de statut…). Fonctionne d'emblée avec la plupart des sites.",
+        en: "Embeds any web page (traffic map, home app, status page…). Works out of the box with most sites."
       },
       html: {
         fr: `
           <span class="help-size">Taille : 6×4 par défaut, de 2×2 à 12×16</span>
           <h4>Objectif</h4>
           <p>Intégrer une page web externe directement dans une tuile — utile pour tout service que PiBoard ne propose pas nativement (une application domotique, un tableau de statut, une carte tierce).</p>
-          <h4>Possibilités</h4>
-          <p>Toute page web peut en théorie être affichée, à condition que le site distant l'autorise (certains sites bloquent volontairement l'affichage en cadre, pour des raisons de sécurité — dans ce cas la tuile reste vide, sans solution de contournement possible côté PiBoard). Le zoom permet de faire tenir une page pensée pour un grand écran dans l'espace réduit d'une tuile, et le rechargement automatique garde le contenu à jour sans intervention.</p>
+          <h4>Un site qui n'affiche rien ? C'est presque toujours réglé automatiquement</h4>
+          <p>De nombreux sites — les sites municipaux et institutionnels français en particulier, souvent par conformité RGS/ANSSI — bloquent volontairement leur affichage en cadre (iframe) pour des raisons de sécurité anti-détournement. Sans solution de contournement, cela produit une tuile silencieusement vide, sans le moindre message d'erreur visible. Le mode d'affichage <b>« Via PiBoard »</b> (activé par défaut) contourne ce blocage : la page est récupérée par le serveur PiBoard puis relayée depuis sa propre adresse, ce qui rend ce blocage sans effet. Si malgré tout la page ne peut pas être récupérée (site injoignable, page introuvable…), un message clair l'indique directement dans la tuile plutôt qu'un vide silencieux.</p>
+          <p>Limite assumée de ce mode : le contenu s'affiche correctement (texte, images, mise en forme), mais un site très fortement interactif (une application web complète, pas un simple site vitrine) peut perdre certaines fonctionnalités qui dépendent d'appels réseau internes au site. Le mode <b>« Direct »</b> reste disponible pour les sites qui autorisent explicitement leur affichage en iframe : plus rapide (pas de détour serveur) et garde le site pleinement interactif.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">URL de la page</span><span class="help-opt-desc">L'adresse à afficher dans la tuile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Mode d'affichage</span><span class="help-opt-desc">Via PiBoard (par défaut, contourne la plupart des blocages) ou Direct (plus rapide, nécessite l'autorisation du site).</span></div>
           <div class="help-opt"><span class="help-opt-name">Zoom</span><span class="help-opt-desc">Pourcentage de zoom appliqué à la page affichée.</span></div>
           <div class="help-opt"><span class="help-opt-name">Recharger toutes les</span><span class="help-opt-desc">Intervalle en minutes entre deux rechargements automatiques (0 = jamais).</span></div>`,
         en: `
           <span class="help-size">Size: 6×4 by default, from 2×2 to 12×16</span>
           <h4>Goal</h4>
           <p>Embed an external web page directly into a tile — useful for any service PiBoard doesn't natively offer (a home automation app, a status dashboard, a third-party map).</p>
-          <h4>Possibilities</h4>
-          <p>Any web page can in theory be shown, provided the remote site allows it (some sites deliberately block being framed, for security reasons — in that case the tile stays empty, with no workaround possible on PiBoard's side). Zoom lets a page designed for a large screen fit into a tile's smaller space, and automatic reloading keeps the content up to date without intervention.</p>
+          <h4>A site showing nothing? That's almost always handled automatically</h4>
+          <p>Many sites — French municipal and institutional sites in particular, often for RGS/ANSSI compliance — deliberately block being shown in a frame (iframe) for anti-clickjacking security reasons. With no workaround, this produces a silently empty tile, with no visible error message at all. The <b>"Via PiBoard"</b> display mode (on by default) works around this block: the page is fetched by the PiBoard server then relayed from its own address, which makes that block ineffective. If the page still can't be fetched at all (unreachable site, page not found…), a clear message says so right in the tile instead of a silent void.</p>
+          <p>Accepted limitation of this mode: content displays correctly (text, images, layout), but a very heavily interactive site (a full web application, not a simple showcase site) may lose some features that depend on network calls internal to the site. <b>"Direct"</b> mode remains available for sites that explicitly allow being shown in an iframe: faster (no server round-trip) and keeps the site fully interactive.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Page URL</span><span class="help-opt-desc">The address to show in the tile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Display mode</span><span class="help-opt-desc">Via PiBoard (default, works around most blocks) or Direct (faster, requires the site's permission).</span></div>
           <div class="help-opt"><span class="help-opt-name">Zoom</span><span class="help-opt-desc">Zoom percentage applied to the shown page.</span></div>
           <div class="help-opt"><span class="help-opt-name">Reload every</span><span class="help-opt-desc">Interval in minutes between two automatic reloads (0 = never).</span></div>`
       }

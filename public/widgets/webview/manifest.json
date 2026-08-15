@@ -1,13 +1,13 @@
 {
   "id": "webview",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Web page",
     "fr": "Page web"
   },
   "description": {
-    "en": "Embeds any web page (traffic map, home app, status page…). The site must allow iframe embedding.",
-    "fr": "Affiche n'importe quelle page web (carte de trafic, app domotique, page de statut…). Le site doit autoriser l'affichage en iframe."
+    "en": "Embeds any web page (traffic map, home app, status page…). Most sites work out of the box, even ones that normally block being shown in an iframe.",
+    "fr": "Affiche n'importe quelle page web (carte de trafic, app domotique, page de statut…). Fonctionne d'emblée avec la plupart des sites, y compris ceux qui bloquent normalement leur affichage en iframe."
   },
   "tagline": {
     "en": "Displays any web page inside a tile.",
@@ -30,6 +30,35 @@
         "en": "Page URL",
         "fr": "URL de la page"
       }
+    },
+    {
+      "key": "mode",
+      "type": "select",
+      "default": "proxy",
+      "label": {
+        "en": "Display mode",
+        "fr": "Mode d'affichage"
+      },
+      "hint": {
+        "en": "\"Via PiBoard\" fetches the page on the PiBoard server and relays it — works even for sites that normally block iframe embedding (the usual cause of a page staying blank with no error). \"Direct\" loads the site's own address straight in the tile: faster and keeps the site's own interactive features working, but only if that site explicitly allows being shown in an iframe.",
+        "fr": "« Via PiBoard » récupère la page sur le serveur PiBoard puis la relaie — fonctionne même pour les sites qui bloquent normalement l'affichage en iframe (cause la plus fréquente d'une page qui reste blanche sans erreur). « Direct » charge l'adresse du site telle quelle dans la tuile : plus rapide et garde les fonctions interactives du site, mais seulement si ce site autorise explicitement son affichage en iframe."
+      },
+      "options": [
+        {
+          "value": "proxy",
+          "label": {
+            "en": "Via PiBoard (works around most blocked sites)",
+            "fr": "Via PiBoard (contourne la plupart des sites bloqués)"
+          }
+        },
+        {
+          "value": "direct",
+          "label": {
+            "en": "Direct (faster, site must allow embedding)",
+            "fr": "Direct (plus rapide, le site doit autoriser l'affichage)"
+          }
+        }
+      ]
     },
     {
       "key": "zoom",

@@ -962,6 +962,31 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("onEnd bien appele suite au tap n'importe ou", onEndCalled);
   }
 
+  console.log("== Page web : mode 'Via PiBoard' par defaut (contourne le blocage d'affichage en iframe) ==");
+  {
+    const webviewTile = document.querySelector('[data-tile-id="t-b"]');
+    const iframe = webviewTile.querySelector(".pw-webview iframe");
+    assert("tuile Page web retrouvee", !!iframe);
+    assert("mode par defaut = 'Via PiBoard' : l'iframe pointe vers le proxy, pas directement vers le site",
+      iframe.getAttribute("src").startsWith("/api/webview-proxy?url="));
+    assert("URL du site correctement encodee en parametre",
+      iframe.getAttribute("src").includes(encodeURIComponent("http://example.local/")));
+
+    console.log("== Page web : bascule vers le mode 'Direct' ==");
+    webviewTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    const modeSel = document.querySelector('#tileForm [data-key="mode"]');
+    assert("reglage 'Mode d'affichage' present dans le formulaire", !!modeSel);
+    assert("proxy est bien la valeur par defaut du reglage", modeSel.value === "proxy");
+    modeSel.value = "direct";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+
+    const iframeAfter = webviewTile.querySelector(".pw-webview iframe");
+    assert("mode 'Direct' : l'iframe pointe desormais directement vers le site",
+      iframeAfter.getAttribute("src") === "http://example.local/");
+  }
+
 
   // Le fetch du calendrier des saints est asynchrone (charge apres le
   // premier rendu) : on attend qu'il se propage avant de verifier.
@@ -1691,8 +1716,9 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("selecteur referme apres choix", document.getElementById("configPickerModal").hidden === true);
     const restoredTile = items()[items().length - 1];
     assert("tuile reutilise le titre enregistre", restoredTile.textContent.includes("Trafic Toulouse"));
-    assert("tuile reutilise l'URL enregistree",
-      !!restoredTile.querySelector('iframe[src="http://umbrel.local:1234/"]'));
+    assert("tuile reutilise l'URL enregistree (mode 'Via PiBoard' par defaut : passe par le proxy)",
+      !!restoredTile.querySelector('iframe[src^="/api/webview-proxy?url="]')
+      && restoredTile.querySelector("iframe").getAttribute("src").includes(encodeURIComponent("http://umbrel.local:1234/")));
 
     /* 4) Verifier que la suppression d'une config depuis le selecteur fonctionne */
     document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));

@@ -1,6 +1,37 @@
-/* PiBoard widget: webview / page web (iframe configurable) */
+/* PiBoard widget: webview / page web (iframe configurable)
+
+   Deux modes (reglage "mode") :
+   - "proxy" (par defaut) : la page est recuperee cote serveur puis
+     reexpediee depuis l'origine de PiBoard (voir /api/webview-proxy et
+     server/webviewProxy.js pour le detail). Contourne le blocage
+     d'affichage en iframe (X-Frame-Options/CSP) que la plupart des
+     sites posent desormais par defaut -- sans ce detour, ces sites
+     affichaient une page blanche silencieuse, sans la moindre erreur
+     visible.
+   - "direct" : ancien comportement, l'iframe pointe directement vers
+     l'URL du site. Plus rapide (pas de detour serveur) et garde le
+     site pleinement interactif (ses propres requetes AJAX/fetch
+     visent bien son origine), mais ne fonctionne QUE si le site
+     autorise explicitement l'affichage en iframe.
+
+   Two modes (setting "mode"):
+   - "proxy" (default): the page is fetched server-side then relayed
+     from PiBoard's own origin (see /api/webview-proxy and
+     server/webviewProxy.js for detail). Works around the
+     iframe-embedding block (X-Frame-Options/CSP) most sites now set
+     by default -- without this workaround, those sites showed a
+     silent blank page, with no visible error at all.
+   - "direct": old behavior, the iframe points straight at the site's
+     URL. Faster (no server round-trip) and keeps the site fully
+     interactive (its own AJAX/fetch requests correctly target its own
+     origin), but only works if the site explicitly allows iframe
+     embedding. */
 (function () {
   "use strict";
+
+  function escapeAttr(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
 
   class WebviewWidget {
     constructor(ctx) {
@@ -18,6 +49,13 @@
       this.render();
     }
 
+    frameSrc(bust) {
+      const s = this.ctx.settings;
+      if (s.mode === "direct") return s.url;
+      const p = "/api/webview-proxy?url=" + encodeURIComponent(s.url);
+      return bust ? (p + "&t=" + Date.now()) : p;
+    }
+
     render() {
       const s = this.ctx.settings;
       clearInterval(this.timer);
@@ -28,7 +66,7 @@
         return;
       }
 
-      this.ctx.el.innerHTML = `<div class="pw-webview"><iframe src="${s.url}" loading="lazy"
+      this.ctx.el.innerHTML = `<div class="pw-webview"><iframe src="${escapeAttr(this.frameSrc(false))}" loading="lazy"
         sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe></div>`;
       this.iframe = this.ctx.el.querySelector("iframe");
       this.applyZoom();
@@ -40,8 +78,18 @@
       const minutes = Number(s.reload) || 0;
       if (minutes > 0) {
         this.timer = setInterval(() => {
-          // eslint-disable-next-line no-self-assign
-          this.iframe.src = this.iframe.src;
+          // Mode direct : reassignation a l'identique, comme avant (une
+          // partie des sites optimisent quand meme le rechargement).
+          // Mode proxy : notre reponse porte deja Cache-Control:
+          // no-store, mais un identifiant change garantit malgre tout
+          // une navigation fraiche plutot qu'une reassignation a
+          // l'identique que certains moteurs pourraient ignorer.
+          // Direct mode: reassigned as-is, like before (some sites
+          // still honor the reload anyway). Proxy mode: our response
+          // already carries Cache-Control: no-store, but a changing
+          // identifier still guarantees a fresh navigation rather than
+          // an identical reassignment some engines might skip.
+          this.iframe.src = this.frameSrc(true);
         }, minutes * 60000);
       }
     }

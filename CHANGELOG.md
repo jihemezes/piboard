@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.55.0
+
+- **Correctif : la tuile Page web n'affichait rien pour de nombreux
+  sites (page blanche silencieuse, sans erreur).** Cause identifiée :
+  la plupart des sites — les sites municipaux et institutionnels
+  français en particulier, souvent par conformité RGS/ANSSI — bloquent
+  volontairement leur affichage en iframe (en-tête `X-Frame-Options`
+  ou CSP `frame-ancestors`), pour se protéger du détournement de clic.
+  Sans contournement, Chromium n'affiche rien du tout et ne remonte
+  aucune erreur visible. Nouveau mode d'affichage **« Via PiBoard »**
+  (activé par défaut) : la page est récupérée par le serveur PiBoard
+  puis relayée depuis sa propre adresse, rendant ce blocage sans effet
+  — testé et confirmé sur le scénario exact signalé (site avec
+  `X-Frame-Options` + CSP). Si la page reste malgré tout inaccessible
+  (site injoignable, page introuvable…), un message clair s'affiche
+  directement dans la tuile plutôt qu'un vide silencieux. L'ancien
+  comportement reste disponible via le mode **« Direct »** (plus
+  rapide, garde le site pleinement interactif, mais nécessite que le
+  site autorise explicitement son affichage en iframe).
+
+---
+
+- **Fix: the Web page tile showed nothing for many sites (a silent
+  blank page, no error).** Root cause identified: most sites — French
+  municipal and institutional sites in particular, often for
+  RGS/ANSSI compliance — deliberately block being shown in an iframe
+  (`X-Frame-Options` header or CSP `frame-ancestors`), as
+  anti-clickjacking protection. With no workaround, Chromium displays
+  nothing at all and surfaces no visible error. New **"Via PiBoard"**
+  display mode (on by default): the page is fetched by the PiBoard
+  server then relayed from its own address, making that block
+  ineffective — tested and confirmed against the exact reported
+  scenario (a site with `X-Frame-Options` + CSP). If the page still
+  can't be reached at all (unreachable site, page not found…), a clear
+  message shows right in the tile instead of a silent void. The old
+  behavior remains available via **"Direct"** mode (faster, keeps the
+  site fully interactive, but requires the site to explicitly allow
+  being shown in an iframe).
+
 ## 1.54.1
 
 - **Un seul tiroir de tuiles ouvert à la fois.** Ouvrir un tiroir
