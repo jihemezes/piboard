@@ -155,10 +155,44 @@ function rewriteHtml(html, baseUrl) {
   return out;
 }
 
+/* Normalise une adresse saisie sans schema explicite (ex. "mon-site.fr"
+   ou "www.mon-site.fr" tape dans le champ de reglage, par reflexe de
+   barre d'adresse de navigateur -- laquelle complete automatiquement
+   "https://", contrairement a new URL() qui exige une URL absolue et
+   echoue sinon avec "invalid url"). Ajoute "https://" par defaut
+   lorsque l'entree ne commence pas deja par un schema http(s)
+   reconnu. Fonction PURE, testee isolement.
+   Normalizes an address typed without an explicit scheme (e.g.
+   "my-site.example" or "www.my-site.example" typed into the setting
+   field, out of browser-address-bar habit -- which auto-completes
+   "https://", unlike new URL() which requires an absolute URL and
+   otherwise fails with "invalid url"). Adds "https://" by default when
+   the input doesn't already start with a recognized http(s) scheme.
+   PURE function, tested in isolation. */
+function normalizeUrl(input) {
+  const trimmed = String(input || "").trim();
+  if (!trimmed) return trimmed;
+  // Detecte un schema DEJA present, quel qu'il soit (http, https, ftp,
+  // ws...) -- pas seulement http(s) -- et le laisse alors intact : un
+  // schema differe (ex. "ftp://...") doit rester tel quel pour etre
+  // rejete par la verification "http(s) uniquement" qui suit dans
+  // proxyPage(), jamais reinterprete en le prefixant de force de
+  // "https://" (ce qui le mangleraita en une URL https bancale plutot
+  // que de le rejeter correctement).
+  // Detects a scheme ALREADY present, whatever it is (http, https,
+  // ftp, ws...) -- not just http(s) -- and then leaves it untouched: a
+  // different scheme (e.g. "ftp://...") must stay as-is so it gets
+  // correctly rejected by the "http(s) only" check that follows in
+  // proxyPage(), never reinterpreted by force-prefixing it with
+  // "https://" (which would mangle it into a broken https URL instead
+  // of correctly rejecting it).
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : "https://" + trimmed;
+}
+
 async function proxyPage(url) {
   let parsed;
   try {
-    parsed = new URL(url);
+    parsed = new URL(normalizeUrl(url));
   } catch (e) {
     return { ok: false, status: 400, error: "invalid url" };
   }
@@ -202,4 +236,4 @@ function errorPageHtml(error) {
   </body></html>`;
 }
 
-module.exports = { proxyPage, errorPageHtml, rewriteHtml, fetchPage };
+module.exports = { proxyPage, errorPageHtml, rewriteHtml, fetchPage, normalizeUrl };

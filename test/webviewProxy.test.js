@@ -93,9 +93,36 @@ function startFixtureServer() {
     console.log("  OK");
   }
 
-  console.log("== proxyPage : URL invalide ou protocole non http(s) rejetes proprement ==");
+  console.log("== normalizeUrl : complete 'https://' quand absent (reflexe de barre d'adresse) ==");
   {
-    let r = await webviewProxy.proxyPage("pas-une-url");
+    assert.strictEqual(webviewProxy.normalizeUrl("mairiederouffiac.fr"), "https://mairiederouffiac.fr",
+      "domaine seul, sans schema -> https:// ajoute");
+    assert.strictEqual(webviewProxy.normalizeUrl("www.mairiederouffiac.fr"), "https://www.mairiederouffiac.fr",
+      "domaine avec www., sans schema -> https:// ajoute");
+    assert.strictEqual(webviewProxy.normalizeUrl("https://deja-complete.test/"), "https://deja-complete.test/",
+      "schema https deja present -> inchange");
+    assert.strictEqual(webviewProxy.normalizeUrl("http://deja-complete.test/"), "http://deja-complete.test/",
+      "schema http deja present -> inchange (pas force en https)");
+    assert.strictEqual(webviewProxy.normalizeUrl("  mairiederouffiac.fr  "), "https://mairiederouffiac.fr",
+      "espaces en trop retires avant completion");
+    assert.strictEqual(webviewProxy.normalizeUrl(""), "", "chaine vide laissee telle quelle");
+    console.log("  OK");
+  }
+
+  console.log("== proxyPage : URL invalide (chaine non parsable, meme apres completion du schema) rejetee proprement ==");
+  {
+    // Espaces : reste syntaxiquement invalide meme apres l'ajout de
+    // "https://" par normalizeUrl -- contrairement a un simple nom de
+    // domaine sans schema (voir plus bas), qui lui devient une URL
+    // valide une fois complete.
+    // Spaces: stays syntactically invalid even after normalizeUrl adds
+    // "https://" -- unlike a plain domain name with no scheme (see
+    // below), which becomes a valid URL once completed.
+    let r = await webviewProxy.proxyPage("ceci n'est pas une url");
+    assert.strictEqual(r.ok, false);
+    assert.strictEqual(r.status, 400);
+
+    r = await webviewProxy.proxyPage("");
     assert.strictEqual(r.ok, false);
     assert.strictEqual(r.status, 400);
 
@@ -109,6 +136,32 @@ function startFixtureServer() {
   const base = "http://127.0.0.1:" + server.address().port;
 
   try {
+    console.log("== proxyPage : URL sans schema (cas reel signale : 'invalid url' malgre un site valide) ==");
+    {
+      // Sans "http(s)://" -- typiquement "mairiederouffiac.fr" tape par
+      // reflexe de barre d'adresse -- ne doit PLUS jamais echouer avec
+      // "invalid url" des la validation. normalizeUrl la complete
+      // d'abord en "https://<host>/blocked", qui atteint ensuite
+      // reellement la couche reseau (et echoue la pour une tout autre
+      // raison : le serveur de test ne parle que du HTTP simple, pas
+      // HTTPS -- ce qui prouve justement que la requete a bien ete
+      // tentee, au lieu d'etre rejetee en amont).
+      // With no "http(s)://" -- typically "mairiederouffiac.fr" typed
+      // out of address-bar habit -- must NEVER again fail with
+      // "invalid url" at validation. normalizeUrl completes it first
+      // into "https://<host>/blocked", which then genuinely reaches the
+      // network layer (and fails there for an entirely different
+      // reason: the test server only speaks plain HTTP, not HTTPS --
+      // which is exactly what proves the request was actually
+      // attempted, rather than rejected upfront).
+      const hostOnly = base.replace(/^https?:\/\//, "");
+      const r = await webviewProxy.proxyPage(hostOnly + "/blocked");
+      assert.notStrictEqual(r.status, 400, "n'est plus rejetee des la validation comme une 'invalid url'");
+      assert.strictEqual(r.ok, false, "echoue bien plus loin, au niveau reseau (pas de HTTPS sur ce serveur de test)");
+      assert.strictEqual(r.status, 502, "echec de type reseau (502), pas de validation (400)");
+    }
+    console.log("  OK");
+
     console.log("== proxyPage : site qui bloque le framing (X-Frame-Options + CSP) -- cas reel signale ==");
     {
       const r = await webviewProxy.proxyPage(base + "/blocked");

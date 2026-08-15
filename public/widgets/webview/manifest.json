@@ -29,6 +29,10 @@
       "label": {
         "en": "Page URL",
         "fr": "URL de la page"
+      },
+      "hint": {
+        "en": "\"https://\" is added automatically if left out.",
+        "fr": "« https:// » est ajouté automatiquement si vous ne le tapez pas."
       }
     },
     {

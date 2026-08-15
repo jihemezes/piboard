@@ -33,6 +33,31 @@
     return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
+  /* Meme tolerance que server/webviewProxy.js:normalizeUrl (voir son
+     commentaire) : une adresse tapee sans "https://" (par reflexe de
+     barre d'adresse de navigateur) est completee plutot que rejetee.
+     Necessaire ICI AUSSI, pas seulement cote serveur : le mode
+     "direct" ne passe jamais par le serveur, une adresse sans schema y
+     serait traitee comme une URL relative par le navigateur (echec
+     silencieux) sans ce filet.
+     Same tolerance as server/webviewProxy.js:normalizeUrl (see its
+     comment): an address typed without "https://" (out of
+     browser-address-bar habit) gets completed rather than rejected.
+     Needed HERE TOO, not just server-side: "direct" mode never goes
+     through the server, an address with no scheme would be treated as
+     a relative URL by the browser (silent failure) without this net. */
+  function normalizeUrl(input) {
+    const trimmed = String(input || "").trim();
+    if (!trimmed) return trimmed;
+    // Meme detection generique de schema que server/webviewProxy.js
+    // (voir son commentaire) : un schema deja present, quel qu'il soit,
+    // n'est jamais reinterprete de force.
+    // Same generic scheme detection as server/webviewProxy.js (see its
+    // comment): a scheme already present, whatever it is, is never
+    // force-reinterpreted.
+    return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : "https://" + trimmed;
+  }
+
   class WebviewWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -51,8 +76,9 @@
 
     frameSrc(bust) {
       const s = this.ctx.settings;
-      if (s.mode === "direct") return s.url;
-      const p = "/api/webview-proxy?url=" + encodeURIComponent(s.url);
+      const url = normalizeUrl(s.url);
+      if (s.mode === "direct") return url;
+      const p = "/api/webview-proxy?url=" + encodeURIComponent(url);
       return bust ? (p + "&t=" + Date.now()) : p;
     }
 

@@ -985,6 +985,32 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const iframeAfter = webviewTile.querySelector(".pw-webview iframe");
     assert("mode 'Direct' : l'iframe pointe desormais directement vers le site",
       iframeAfter.getAttribute("src") === "http://example.local/");
+
+    console.log("== Page web : URL sans schema (reflexe de barre d'adresse) completee en https:// automatiquement ==");
+    // Cas reel signale : une adresse tapee sans "http(s)://" (ex.
+    // "mon-site.fr") echouait avec "invalid url" en mode Via PiBoard,
+    // et aurait ete traitee a tort comme un chemin relatif en mode
+    // Direct. Reproduit ici dans les deux modes.
+    // Real reported case: an address typed without "http(s)://" (e.g.
+    // "my-site.example") failed with "invalid url" in Via PiBoard mode,
+    // and would have been wrongly treated as a relative path in Direct
+    // mode. Reproduced here in both modes.
+    webviewTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    document.querySelector('#tileForm [data-key="url"]').value = "sans-schema.example.test/page";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+    assert("mode 'Direct' + URL sans schema : 'https://' ajoute automatiquement",
+      webviewTile.querySelector(".pw-webview iframe").getAttribute("src") === "https://sans-schema.example.test/page");
+
+    webviewTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    document.querySelector('#tileForm [data-key="mode"]').value = "proxy";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+    const proxiedSrc = webviewTile.querySelector(".pw-webview iframe").getAttribute("src");
+    assert("mode 'Via PiBoard' + URL sans schema : 'https://' ajoute avant le passage par le proxy",
+      proxiedSrc.includes(encodeURIComponent("https://sans-schema.example.test/page")));
   }
 
 

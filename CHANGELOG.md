@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.55.2
+
+- **Correctif : la tuile Page web affichait « invalid url » pour une
+  adresse tapée sans « https:// ».** Une adresse saisie par réflexe de
+  barre de navigateur (ex. « mairiederouffiac.fr » plutôt que
+  « https://mairiederouffiac.fr/ ») était rejetée d'emblée en mode
+  « Via PiBoard », et aurait été traitée à tort comme un chemin relatif
+  en mode « Direct ». Le préfixe « https:// » est désormais ajouté
+  automatiquement quand il est omis, dans les deux modes — un schéma
+  déjà présent (y compris un schéma incorrect comme `ftp://`, désormais
+  détecté correctement) n'est en revanche jamais modifié.
+
+---
+
+- **Fix: the Web page tile showed "invalid url" for an address typed
+  without "https://".** An address typed out of browser-address-bar
+  habit (e.g. "mairiederouffiac.fr" rather than
+  "https://mairiederouffiac.fr/") was rejected outright in "Via
+  PiBoard" mode, and would have been wrongly treated as a relative
+  path in "Direct" mode. The "https://" prefix is now added
+  automatically when left out, in both modes — a scheme already
+  present (including an incorrect one like `ftp://`, now correctly
+  detected) is never altered.
+
 ## 1.55.1
 
 - **Correctif : la tuile Page web pouvait afficher l'erreur générique
