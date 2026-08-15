@@ -15,24 +15,58 @@
 }
 .pwv-tab {
   flex: 0 1 auto;
-  max-width: 140px;
+  max-width: 170px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px 0 10px;
+  border: 1px solid var(--tile-edge);
+  border-bottom: none;
+  border-radius: 6px 6px 0 0;
+  background: var(--field-bg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwv-tab-active { background: var(--tile); }
+.pwv-tab-label {
+  min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  padding: 5px 10px;
+  padding: 5px 0;
   font-size: 11px;
   font-family: var(--font);
   font-weight: 600;
   color: var(--muted);
-  background: var(--field-bg);
-  border: 1px solid var(--tile-edge);
-  border-bottom: none;
-  border-radius: 6px 6px 0 0;
+}
+.pwv-tab-active .pwv-tab-label { color: var(--text); }
+
+/* Bouton de rafraichissement : distinct du reste de l'onglet (voir
+   activateTab() dans widget.js), pour pouvoir recharger l'onglet
+   DEJA actif sans avoir a en changer puis y revenir.
+   Refresh button: distinct from the rest of the tab (see
+   activateTab() in widget.js), so the ALREADY active tab can be
+   reloaded without switching away and back. */
+.pwv-tab-refresh {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1;
   cursor: pointer;
   touch-action: manipulation;
 }
-.pwv-tab-active { color: var(--text); background: var(--tile); }
-body.touch .pwv-tab { padding: 9px 14px; font-size: 12.5px; }
+.pwv-tab-refresh:hover { color: var(--accent); background: var(--tile-edge); }
+body.touch .pwv-tab-label { padding: 9px 0; font-size: 12.5px; }
+body.touch .pwv-tab-refresh { width: 26px; height: 26px; font-size: 15px; }
 
 /* ---------- Zone de contenu (l'onglet actif) / content area (the active tab) ----------
    flex:1 pour occuper toute la hauteur restante sous la barre

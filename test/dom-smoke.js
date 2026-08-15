@@ -1056,9 +1056,9 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
       const tabs = webviewTile.querySelectorAll(".pwv-tab");
       assert("barre d'onglets affichee des que 2 sites ou plus sont configures", tabs.length === 3);
-      assert("libelle personnalise utilise quand fourni", tabs[1].textContent === "Mon 2e site");
+      assert("libelle personnalise utilise quand fourni", tabs[1].querySelector(".pwv-tab-label").textContent === "Mon 2e site");
       assert("libelle par defaut = nom de domaine quand aucun n'est fourni (sans le 'www.')",
-        tabs[2].textContent === "troisieme-site.example.test");
+        tabs[2].querySelector(".pwv-tab-label").textContent === "troisieme-site.example.test");
       assert("1er onglet actif par defaut", tabs[0].classList.contains("pwv-tab-active"));
       assert("URL du 1er onglet chargee par defaut",
         webviewTile.querySelector(".pw-webview iframe").getAttribute("src")
@@ -1074,6 +1074,42 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
           .includes(encodeURIComponent("https://troisieme-site.example.test")));
       assert("la barre d'onglets elle-meme n'est pas reconstruite au changement d'onglet",
         webviewTile.querySelectorAll(".pwv-tabs").length === 1);
+
+      console.log("== Page web : bouton de rafraichissement sur chaque onglet ==");
+      {
+        assert("bouton de rafraichissement present sur chaque onglet",
+          webviewTile.querySelectorAll(".pwv-tab-refresh").length === 3);
+
+        // Clic sur le bouton de rafraichissement de l'onglet DEJA actif
+        // (le 3e a ce stade) : un clic sur l'onglet lui-meme n'aurait
+        // rien fait (deja actif, voir plus haut), c'est precisement ce
+        // que ce bouton permet malgre tout.
+        // Click on the ALREADY active tab's refresh button (the 3rd at
+        // this point): clicking the tab itself would have done nothing
+        // (already active, see above), this is exactly what this
+        // button allows anyway.
+        const activeTabBefore = webviewTile.querySelector(".pwv-tab.pwv-tab-active");
+        const iframeBefore = webviewTile.querySelector(".pw-webview iframe");
+        activeTabBefore.querySelector(".pwv-tab-refresh").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(60);
+        assert("onglet toujours actif apres son propre rafraichissement",
+          webviewTile.querySelector(".pwv-tab.pwv-tab-active").dataset.idx === activeTabBefore.dataset.idx);
+        assert("le contenu a bien ete rafraichi (nouvel element iframe cree)",
+          webviewTile.querySelector(".pw-webview iframe") !== iframeBefore);
+
+        // Clic sur le bouton de rafraichissement d'un onglet INACTIF (le
+        // 1er) : doit a la fois y basculer et charger son contenu.
+        // Click on an INACTIVE tab's refresh button (the 1st): must
+        // both switch to it and load its content.
+        webviewTile.querySelectorAll(".pwv-tab")[0].querySelector(".pwv-tab-refresh")
+          .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(60);
+        assert("le bouton de rafraichissement d'un onglet inactif y bascule aussi",
+          webviewTile.querySelectorAll(".pwv-tab")[0].classList.contains("pwv-tab-active"));
+        assert("son contenu est charge",
+          webviewTile.querySelector(".pw-webview iframe").getAttribute("src")
+            .includes(encodeURIComponent("https://sans-schema.example.test/page")));
+      }
 
       // Retire le 2e site : la barre d'onglets doit se reconstruire
       // proprement (2 onglets restants), sans onglet fantome ni

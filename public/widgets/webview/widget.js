@@ -178,9 +178,12 @@
     }
 
     tabsHtml(sites) {
-      return `<div class="pwv-tabs">${sites.map((site, i) =>
-        `<button type="button" class="pwv-tab${i === this.activeIdx ? " pwv-tab-active" : ""}" data-idx="${i}" title="${escapeAttr(site.url)}">${escapeAttr(site.label)}</button>`
-      ).join("")}</div>`;
+      const i18n = this.ctx.i18n;
+      return `<div class="pwv-tabs">${sites.map((site, i) => `
+        <div class="pwv-tab${i === this.activeIdx ? " pwv-tab-active" : ""}" data-idx="${i}" title="${escapeAttr(site.url)}">
+          <span class="pwv-tab-label">${escapeAttr(site.label)}</span>
+          <button type="button" class="pwv-tab-refresh" data-idx="${i}" title="${escapeAttr(i18n.t("webview.refreshTab"))}" aria-label="${escapeAttr(i18n.t("webview.refreshTab"))}">⟳</button>
+        </div>`).join("")}</div>`;
     }
 
     render() {
@@ -200,25 +203,54 @@
       this.ctx.el.innerHTML = `<div class="pw-webview">${sites.length > 1 ? this.tabsHtml(sites) : ""}<div class="pwv-content"></div></div>`;
 
       if (sites.length > 1) {
-        this.ctx.el.querySelectorAll(".pwv-tab").forEach((btn) => {
-          // stopPropagation : sinon ce clic remonte jusqu'a la grille en
-          // mode edition et rouvre les reglages de la tuile en pleine
-          // consultation -- meme correctif que les autres tuiles a
-          // onglets (Programme TV, Horloge...).
-          // stopPropagation: otherwise this click bubbles up to the grid
-          // in edit mode and reopens the tile's settings mid-viewing --
-          // same fix as other tabbed tiles (TV guide, Clock...).
+        // stopPropagation partout ici : sinon ces clics remontent
+        // jusqu'a la grille en mode edition et rouvrent les reglages de
+        // la tuile en pleine consultation -- meme correctif que les
+        // autres tuiles a onglets (Programme TV, Horloge...).
+        // stopPropagation everywhere here: otherwise these clicks
+        // bubble up to the grid in edit mode and reopen the tile's
+        // settings mid-viewing -- same fix as other tabbed tiles (TV
+        // guide, Clock...).
+        this.ctx.el.querySelectorAll(".pwv-tab").forEach((tabEl) => {
+          tabEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const idx = Number(tabEl.dataset.idx);
+            if (idx === this.activeIdx) return;
+            this.activateTab(sites, idx);
+          });
+        });
+        // Bouton de rafraichissement : distinct du clic sur l'onglet
+        // lui-meme, puisque cliquer sur l'onglet DEJA actif ne fait
+        // normalement rien (evite un rechargement accidentel) -- c'est
+        // precisement ce que ce bouton permet de declencher malgre
+        // tout, sans avoir a basculer vers un autre onglet puis revenir.
+        // Refresh button: distinct from clicking the tab itself, since
+        // clicking the ALREADY active tab normally does nothing (avoids
+        // an accidental reload) -- this is exactly what this button
+        // lets you trigger anyway, without switching to another tab and
+        // back.
+        this.ctx.el.querySelectorAll(".pwv-tab-refresh").forEach((btn) => {
           btn.addEventListener("click", (e) => {
             e.stopPropagation();
-            const idx = Number(btn.dataset.idx);
-            if (idx === this.activeIdx) return;
-            this.activeIdx = idx;
-            this.ctx.el.querySelectorAll(".pwv-tab").forEach((b) => b.classList.toggle("pwv-tab-active", Number(b.dataset.idx) === idx));
-            this.renderContent(sites);
+            this.activateTab(sites, Number(btn.dataset.idx));
           });
         });
       }
 
+      this.renderContent(sites);
+    }
+
+    /* Bascule sur l'onglet demande (aucun effet s'il l'est deja) puis
+       (re)charge son contenu -- utilise a la fois par le clic sur un
+       onglet et par son bouton de rafraichissement, qui partagent la
+       meme action concrete : afficher une version fraiche de ce site.
+       Switches to the requested tab (no-op if it already is) then
+       (re)loads its content -- used by both clicking a tab and its
+       refresh button, which share the same concrete action: show a
+       fresh version of that site. */
+    activateTab(sites, idx) {
+      this.activeIdx = idx;
+      this.ctx.el.querySelectorAll(".pwv-tab").forEach((t) => t.classList.toggle("pwv-tab-active", Number(t.dataset.idx) === idx));
       this.renderContent(sites);
     }
 

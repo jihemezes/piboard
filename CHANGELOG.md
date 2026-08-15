@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.58.1
+
+- **Page web : bouton de rafraîchissement sur chaque onglet.** Une
+  petite icône ⟳ à côté du nom de chaque onglet permet de recharger sa
+  page à tout moment — y compris celui déjà affiché, puisqu'un simple
+  clic sur l'onglet actif ne fait normalement rien.
+
+---
+
+- **Web page: refresh button on each tab.** A small ⟳ icon next to
+  each tab's name reloads its page at any time — including the one
+  already shown, since a plain click on the active tab normally does
+  nothing.
+
 ## 1.58.0
 
 - **Tuile Page web : jusqu'à 5 sites, basculables par onglets.** Une
