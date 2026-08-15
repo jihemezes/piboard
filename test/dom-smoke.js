@@ -1011,6 +1011,27 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const proxiedSrc = webviewTile.querySelector(".pw-webview iframe").getAttribute("src");
     assert("mode 'Via PiBoard' + URL sans schema : 'https://' ajoute avant le passage par le proxy",
       proxiedSrc.includes(encodeURIComponent("https://sans-schema.example.test/page")));
+
+    console.log("== Page web : mode 'Image' (rendu par un vrai navigateur, aucune iframe) ==");
+    // Troisieme approche : ni iframe, ni relais HTML -- donc plus rien
+    // que le site puisse bloquer. C'est une IMAGE qui est affichee.
+    // Third approach: no iframe, no HTML relay -- so nothing left for
+    // the site to block. What's displayed is an IMAGE.
+    webviewTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    const modeOptions = Array.from(document.querySelectorAll('#tileForm [data-key="mode"] option')).map((o) => o.value);
+    assert("les 3 modes sont proposes (Via PiBoard / Direct / Image)",
+      modeOptions.includes("proxy") && modeOptions.includes("direct") && modeOptions.includes("shot"));
+    document.querySelector('#tileForm [data-key="mode"]').value = "shot";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+
+    assert("mode 'Image' : plus aucune iframe dans la tuile",
+      !webviewTile.querySelector(".pw-webview iframe"));
+    assert("mode 'Image' : une balise image est utilisee a la place",
+      !!webviewTile.querySelector(".pw-webview img.pwv-shot"));
+    assert("mode 'Image' : un message d'attente est affiche pendant le rendu (plusieurs secondes sur un Pi)",
+      !!webviewTile.querySelector(".pw-webview .pwv-status"));
   }
 
 

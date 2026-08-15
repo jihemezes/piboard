@@ -17,3 +17,30 @@
   padding: 12px;
   text-align: center;
 }
+
+/* Mode "Image" (voir shotSrc()/refreshShot() dans widget.js) : la page
+   est rendue en PNG cote serveur puis affichee comme une simple image.
+   object-fit: contain plutot que cover -- une page web tronquee sur les
+   bords perdrait justement l'information qu'on venait y chercher.
+   "Image" mode (see shotSrc()/refreshShot() in widget.js): the page is
+   rendered to PNG server-side then shown as a plain image.
+   object-fit: contain rather than cover -- a web page cropped at the
+   edges would lose exactly the information you came for. */
+.pw-webview .pwv-shot {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: top center;
+  background: #fff;
+}
+.pw-webview .pwv-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 13px;
+}

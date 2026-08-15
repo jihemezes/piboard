@@ -140,6 +140,24 @@ function exitToDesktop() {
    Homebrew (or MacPorts). Both Homebrew prefixes are covered, Apple
    Silicon Macs (/opt/homebrew) differing from Intel ones
    (/usr/local). */
+/* Chromium/Chrome, pour le rendu d'une page web en image cote serveur
+   (voir server/webviewShot.js). Chemins d'installation standard des
+   paquets .app sous macOS.
+   Chromium/Chrome, for server-side rendering of a web page to an image
+   (see server/webviewShot.js). Standard .app bundle install paths on
+   macOS. */
+function chromiumCandidates() {
+  return [
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+    "/Applications/Chromium.app/Contents/MacOS/Chromium",
+    "/Applications/Microsoft Edge.app/Contents/MacOS/Microsoft Edge"
+  ];
+}
+
+function chromiumInstallHint() {
+  return { fr: "brew install --cask chromium", en: "brew install --cask chromium" };
+}
+
 function ffmpegCandidates() {
   return ["ffmpeg", "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/local/bin/ffmpeg"];
 }
@@ -191,6 +209,8 @@ module.exports = {
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,
+  chromiumCandidates,
+  chromiumInstallHint,
   vlcCandidates,
   vlcInstallHint
 };

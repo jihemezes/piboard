@@ -1,6 +1,6 @@
 {
   "id": "webview",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Web page",
     "fr": "Page web"
@@ -44,8 +44,8 @@
         "fr": "Mode d'affichage"
       },
       "hint": {
-        "en": "\"Via PiBoard\" fetches the page on the PiBoard server and relays it — works even for sites that normally block iframe embedding (the usual cause of a page staying blank with no error). \"Direct\" loads the site's own address straight in the tile: faster and keeps the site's own interactive features working, but only if that site explicitly allows being shown in an iframe.",
-        "fr": "« Via PiBoard » récupère la page sur le serveur PiBoard puis la relaie — fonctionne même pour les sites qui bloquent normalement l'affichage en iframe (cause la plus fréquente d'une page qui reste blanche sans erreur). « Direct » charge l'adresse du site telle quelle dans la tuile : plus rapide et garde les fonctions interactives du site, mais seulement si ce site autorise explicitement son affichage en iframe."
+        "en": "\"Via PiBoard\" relays the page from the PiBoard server — works for sites that block iframe embedding. \"Direct\" loads the site's address straight in the tile: fastest and fully interactive, but only if the site allows embedding. \"Image\" renders the page with a real browser on the PiBoard and shows a photo of the result: works with absolutely any site, at the cost of being static (no scrolling or clicking) and a few seconds per refresh.",
+        "fr": "« Via PiBoard » relaie la page depuis le serveur PiBoard — fonctionne pour les sites qui bloquent l'affichage en iframe. « Direct » charge l'adresse du site telle quelle : le plus rapide et pleinement interactif, mais seulement si le site l'autorise. « Image » fait rendre la page par un vrai navigateur sur le PiBoard et affiche une photo du résultat : fonctionne avec absolument n'importe quel site, au prix d'un affichage fixe (pas de défilement ni de clic) et de quelques secondes par rafraîchissement."
       },
       "options": [
         {
@@ -60,6 +60,13 @@
           "label": {
             "en": "Direct (faster, site must allow embedding)",
             "fr": "Direct (plus rapide, le site doit autoriser l'affichage)"
+          }
+        },
+        {
+          "value": "shot",
+          "label": {
+            "en": "Image (works with any site, not interactive)",
+            "fr": "Image (fonctionne avec n'importe quel site, non interactif)"
           }
         }
       ]
@@ -86,6 +93,10 @@
       "label": {
         "en": "Reload every (minutes, 0 = never)",
         "fr": "Recharger toutes les (minutes, 0 = jamais)"
+      },
+      "hint": {
+        "en": "In \"Image\" mode, this is also how often the page is re-photographed. A short interval means relaunching a browser often on the PiBoard — 10 minutes or more is usually plenty.",
+        "fr": "En mode « Image », c'est aussi la fréquence à laquelle la page est re-photographiée. Un intervalle court signifie relancer souvent un navigateur sur le PiBoard — 10 minutes ou plus suffisent généralement."
       }
     }
   ]

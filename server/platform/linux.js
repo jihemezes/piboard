@@ -204,6 +204,35 @@ function ffmpegInstallHint() {
   return { fr: "sudo apt install ffmpeg", en: "sudo apt install ffmpeg" };
 }
 
+/* Chromium, pour le rendu d'une page web en image cote serveur (voir
+   server/webviewShot.js). Sur un Raspberry Pi en kiosque, il est deja
+   installe et tourne -- c'est le navigateur meme qui affiche PiBoard :
+   aucune dependance supplementaire a installer dans le cas d'usage
+   principal. "chromium" est le nom du paquet sous Pi OS/Debian recent,
+   "chromium-browser" celui des versions plus anciennes ; les deux sont
+   testes, ainsi que Chrome au cas ou.
+   Chromium, for server-side rendering of a web page to an image (see
+   server/webviewShot.js). On a Raspberry Pi kiosk it's already
+   installed and running -- it's the very browser displaying PiBoard:
+   no extra dependency to install in the main use case. "chromium" is
+   the package name on recent Pi OS/Debian, "chromium-browser" on older
+   ones; both are tried, plus Chrome just in case. */
+function chromiumCandidates() {
+  return [
+    "chromium",
+    "/usr/bin/chromium",
+    "chromium-browser",
+    "/usr/bin/chromium-browser",
+    "/snap/bin/chromium",
+    "google-chrome",
+    "/usr/bin/google-chrome"
+  ];
+}
+
+function chromiumInstallHint() {
+  return { fr: "sudo apt install chromium", en: "sudo apt install chromium" };
+}
+
 /* cvlc (VLC sans interface graphique) : necessaire pour le relais des
    chaines en direct qu'un fournisseur IPTV rejette avec un 405 face a
    ffmpeg -- confirme par examen du lecteur de reference officiel, qui
@@ -239,6 +268,8 @@ module.exports = {
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,
+  chromiumCandidates,
+  chromiumInstallHint,
   vlcCandidates,
   vlcInstallHint
 };

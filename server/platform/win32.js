@@ -347,6 +347,38 @@ function exitToDesktop() {
    winget/choco (which do put it in PATH), an archive manually unpacked
    into C:\\ffmpeg (the most widespread case), and the Program Files
    folders. */
+/* Chromium/Chrome, pour le rendu d'une page web en image cote serveur
+   (voir server/webviewShot.js). Sous Windows, PiBoard tourne en
+   application Electron : Chrome/Edge sont les navigateurs realistement
+   presents. Edge est inclus car installe par defaut sur tout Windows
+   recent -- il partage le meme moteur et les memes options de ligne de
+   commande que Chrome.
+   Chromium/Chrome, for server-side rendering of a web page to an image
+   (see server/webviewShot.js). On Windows, PiBoard runs as an Electron
+   app: Chrome/Edge are the realistically present browsers. Edge is
+   included because it ships by default on every recent Windows -- it
+   shares the same engine and the same command-line options as
+   Chrome. */
+function chromiumCandidates() {
+  const pf = process.env.ProgramFiles || "C:\\Program Files";
+  const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
+  return [
+    pf + "\\Google\\Chrome\\Application\\chrome.exe",
+    pf86 + "\\Google\\Chrome\\Application\\chrome.exe",
+    pf + "\\Microsoft\\Edge\\Application\\msedge.exe",
+    pf86 + "\\Microsoft\\Edge\\Application\\msedge.exe",
+    "chrome.exe",
+    "msedge.exe"
+  ].filter(Boolean);
+}
+
+function chromiumInstallHint() {
+  return {
+    fr: "Installez Google Chrome (ou utilisez Microsoft Edge, deja present sur Windows).",
+    en: "Install Google Chrome (or use Microsoft Edge, already present on Windows)."
+  };
+}
+
 function ffmpegCandidates() {
   const pf = process.env.ProgramFiles || "C:\\Program Files";
   const pf86 = process.env["ProgramFiles(x86)"] || "C:\\Program Files (x86)";
@@ -433,6 +465,8 @@ module.exports = {
   exitToDesktop,
   ffmpegCandidates,
   ffmpegInstallHint,
+  chromiumCandidates,
+  chromiumInstallHint,
   vlcCandidates,
   vlcInstallHint
 };

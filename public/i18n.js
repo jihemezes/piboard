@@ -437,7 +437,9 @@
       "vkb.done": "Done",
       "vkb.symbols": "123",
       "vkb.letters": "ABC",
-      "webview.missing": "Set a URL in the tile settings."
+      "webview.missing": "Set a URL in the tile settings.",
+      "webview.shotLoading": "Rendering the page…",
+      "webview.shotError": "Could not render this page. Check the PiBoard console for the reason."
     },
     fr: {
       "drawer.empty": "Ouvrez la barre d'outils et ajoutez des tuiles pendant que le tiroir est ouvert : elles vivront ici.",
@@ -869,7 +871,9 @@
       "vkb.done": "Terminé",
       "vkb.symbols": "123",
       "vkb.letters": "ABC",
-      "webview.missing": "Renseignez une URL dans les paramètres de la tuile."
+      "webview.missing": "Renseignez une URL dans les paramètres de la tuile.",
+      "webview.shotLoading": "Rendu de la page en cours…",
+      "webview.shotError": "Impossible de rendre cette page. La console PiBoard en indique la raison."
     }
   };
 

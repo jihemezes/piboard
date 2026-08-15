@@ -237,6 +237,8 @@ module.exports = {
   exitToDesktop,
   ffmpegCandidates: impl.ffmpegCandidates,
   ffmpegInstallHint: impl.ffmpegInstallHint,
+  chromiumCandidates: impl.chromiumCandidates,
+  chromiumInstallHint: impl.chromiumInstallHint,
   vlcCandidates: impl.vlcCandidates,
   vlcInstallHint: impl.vlcInstallHint,
   // Exposees pour les tests unitaires, qui doivent pouvoir verifier les

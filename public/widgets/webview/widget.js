@@ -82,6 +82,52 @@
       return bust ? (p + "&t=" + Date.now()) : p;
     }
 
+    /* Adresse de la capture d'ecran (mode "image"). La taille demandee
+       suit celle de la tuile, pour que la page soit rendue au bon
+       format plutot que redimensionnee ensuite -- une page rendue en
+       1280x800 puis ecrasee dans une tuile etroite serait illisible.
+       Screenshot address ("image" mode). The requested size follows the
+       tile's own, so the page is rendered at the right shape rather
+       than squeezed afterwards -- a page rendered at 1280x800 then
+       crammed into a narrow tile would be unreadable. */
+    shotSrc() {
+      const s = this.ctx.settings;
+      const scale = (Number(s.zoom) || 100) / 100;
+      const w = Math.max(320, Math.round((this.ctx.el.clientWidth || 640) / scale));
+      const h = Math.max(240, Math.round((this.ctx.el.clientHeight || 480) / scale));
+      return "/api/webview-shot?url=" + encodeURIComponent(normalizeUrl(s.url))
+        + "&w=" + w + "&h=" + h + "&t=" + Date.now();
+    }
+
+    /* Mode "image" : la capture prend plusieurs secondes sur un Pi
+       (lancement de Chromium). L'image n'est remplacee qu'une fois la
+       nouvelle effectivement chargee -- meme precaution que la tuile
+       Camera : on evite un cadre vide clignotant a chaque
+       rafraichissement.
+       "Image" mode: capturing takes several seconds on a Pi (Chromium
+       launch). The image is only swapped once the new one has actually
+       loaded -- same precaution as the Camera tile: avoids a blinking
+       empty frame on every refresh. */
+    refreshShot() {
+      const img = this.ctx.el.querySelector(".pwv-shot");
+      const status = this.ctx.el.querySelector(".pwv-status");
+      if (!img) return;
+      const url = this.shotSrc();
+      const probe = new Image();
+      probe.onload = () => {
+        img.src = url;
+        img.hidden = false;
+        if (status) status.hidden = true;
+      };
+      probe.onerror = () => {
+        if (status) {
+          status.textContent = this.ctx.i18n.t("webview.shotError");
+          status.hidden = false;
+        }
+      };
+      probe.src = url;
+    }
+
     render() {
       const s = this.ctx.settings;
       clearInterval(this.timer);
@@ -89,6 +135,32 @@
 
       if (!s.url) {
         this.ctx.el.innerHTML = `<div class="pw-webview"><div class="pwv-missing">${this.ctx.i18n.t("webview.missing")}</div></div>`;
+        return;
+      }
+
+      if (s.mode === "shot") {
+        this.ctx.el.innerHTML = `<div class="pw-webview">
+          <img class="pwv-shot" alt="" hidden>
+          <div class="pwv-status">${this.ctx.i18n.t("webview.shotLoading")}</div>
+        </div>`;
+        this.iframe = null;
+        this.refreshShot();
+        // Une tuile redimensionnee change la taille de rendu demandee :
+        // on recapture, mais seulement apres stabilisation, pour ne pas
+        // relancer Chromium a chaque pixel pendant un glisser.
+        // A resized tile changes the requested render size: recapture,
+        // but only once settled, so Chromium isn't relaunched on every
+        // pixel during a drag.
+        this.observer = new ResizeObserver(() => {
+          clearTimeout(this.resizeDebounce);
+          this.resizeDebounce = setTimeout(() => this.refreshShot(), 800);
+        });
+        this.observer.observe(this.ctx.el);
+
+        const shotMinutes = Number(s.reload) || 0;
+        if (shotMinutes > 0) {
+          this.timer = setInterval(() => this.refreshShot(), shotMinutes * 60000);
+        }
         return;
       }
 
@@ -132,6 +204,7 @@
 
     destroy() {
       clearInterval(this.timer);
+      clearTimeout(this.resizeDebounce);
       if (this.observer) this.observer.disconnect();
     }
   }

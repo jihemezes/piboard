@@ -47,6 +47,7 @@ const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
 const articleExtract = require("./articleExtract");
 const webviewProxy = require("./webviewProxy");
+const webviewShot = require("./webviewShot");
 const tileSecrets = require("./tileSecrets");
 const mailbox = require("./mailbox");
 const astronomy = require("./astronomy");
@@ -531,6 +532,43 @@ app.get("/api/webview-proxy", async (req, res) => {
       res.set("Cache-Control", "no-store");
       res.send(webviewProxy.errorPageHtml(String(e.message || e)));
     }
+  }
+});
+
+/* Rendu de la page EN IMAGE via Chromium headless (voir
+   server/webviewShot.js) : troisieme approche, celle qui ne depend
+   d'aucune cooperation du site -- ni iframe, ni reecriture de HTML.
+   Resultat fixe (pas d'interaction), mais fonctionne partout.
+   Renders the page AS AN IMAGE through headless Chromium (see
+   server/webviewShot.js): third approach, the one depending on no
+   cooperation from the site -- no iframe, no HTML rewriting. Static
+   result (no interaction), but works everywhere. */
+app.get("/api/webview-shot", async (req, res) => {
+  try {
+    const url = webviewProxy.normalizeUrl(String(req.query.url || ""));
+    let parsed;
+    try {
+      parsed = new URL(url);
+    } catch (e) {
+      return res.status(400).json({ error: "invalid url" });
+    }
+    if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+      return res.status(400).json({ error: "only http(s) urls are allowed" });
+    }
+    const result = await webviewShot.capture(parsed.href, {
+      width: Number(req.query.w) || 1280,
+      height: Number(req.query.h) || 800
+    });
+    if (!result.ok) {
+      console.warn("[piboard] webview-shot echec ->", parsed.href, result.error);
+      return res.status(502).json({ error: result.error, installHint: result.installHint });
+    }
+    res.set("Content-Type", "image/png");
+    res.set("Cache-Control", "no-store");
+    res.send(result.buffer);
+  } catch (e) {
+    console.error("[piboard] webview-shot exception non geree ->", req.query.url, e);
+    if (!res.headersSent) res.status(502).json({ error: String(e.message || e) });
   }
 });
 

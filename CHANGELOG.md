@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.56.0
+
+- **Tuile Page web : nouveau mode « Image », qui fonctionne avec
+  n'importe quel site.** Après l'iframe directe et le relais HTML, une
+  troisième approche, radicalement différente : la page est rendue par
+  un **vrai navigateur** lancé sur le PiBoard (Chromium en mode sans
+  interface — déjà installé sur un Raspberry Pi en kiosque, puisque
+  c'est lui qui affiche PiBoard), puis affichée comme une simple image.
+  Comme il n'y a plus ni cadre ni relais de code, il ne reste plus rien
+  qu'un site puisse bloquer — le JavaScript de la page s'exécute
+  normalement avant la capture, contrairement au mode « Via PiBoard ».
+  - **Contrepartie assumée** : l'affichage est **fixe** (pas de
+    défilement, pas de clic, pas de formulaire). Adapté à une page
+    qu'on consulte du regard, pas à un service interactif.
+  - Chaque rafraîchissement lance un navigateur et prend quelques
+    secondes sur un Pi : un intervalle de rechargement généreux
+    (10 minutes ou plus) est recommandé. L'image n'est remplacée
+    qu'une fois la nouvelle chargée, sans cadre vide clignotant.
+  - En cas d'échec, la raison est journalisée dans la console PiBoard
+    et un message s'affiche dans la tuile.
+
+---
+
+- **Web page tile: new "Image" mode, which works with any site.**
+  After the direct iframe and the HTML relay, a third, radically
+  different approach: the page is rendered by a **real browser**
+  launched on the PiBoard (headless Chromium — already installed on a
+  Raspberry Pi kiosk, since it's the very browser displaying PiBoard),
+  then shown as a plain image. Since there's no longer a frame or
+  relayed code, there's nothing left for a site to block — the page's
+  JavaScript runs normally before the capture, unlike "Via PiBoard"
+  mode.
+  - **Accepted trade-off**: the display is **static** (no scrolling,
+    no clicking, no forms). Suited to a page you just look at, not an
+    interactive service.
+  - Each refresh launches a browser and takes a few seconds on a Pi: a
+    generous reload interval (10 minutes or more) is recommended. The
+    image is only swapped once the new one has loaded, with no
+    blinking empty frame.
+  - On failure, the reason is logged to the PiBoard console and a
+    message is shown in the tile.
+
 ## 1.55.2
 
 - **Correctif : la tuile Page web affichait « invalid url » pour une
