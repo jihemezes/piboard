@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.55.1
+
+- **Correctif : la tuile Page web pouvait afficher l'erreur générique
+  du navigateur (« This page couldn't load ») au lieu du message
+  d'erreur lisible de PiBoard.** La route `/api/webview-proxy`
+  n'avait aucun filet de sécurité : une exception imprévue laissait la
+  requête sans réponse au lieu d'échouer proprement — Express 4 ne
+  rattrape pas automatiquement le rejet d'une promesse dans un
+  gestionnaire asynchrone. Le navigateur voyait alors une connexion
+  qui ne répond jamais et affichait sa propre page d'erreur, dans
+  l'iframe de la tuile. Ajout d'un `try/catch` complet autour de la
+  route, avec journalisation côté serveur (console) pour faciliter un
+  diagnostic si le cas se reproduit — la tuile affiche désormais
+  toujours le message d'erreur lisible de PiBoard plutôt qu'une
+  connexion qui traîne en longueur.
+
+---
+
+- **Fix: the Web page tile could show the browser's generic error
+  ("This page couldn't load") instead of PiBoard's readable error
+  message.** The `/api/webview-proxy` route had no safety net: an
+  unexpected exception left the request without a response instead of
+  failing cleanly — Express 4 doesn't automatically catch a rejected
+  promise inside an async handler. The browser then saw a connection
+  that never responds and displayed its own error page, inside the
+  tile's iframe. Added a full `try/catch` around the route, with
+  server-side (console) logging to help diagnose it if it recurs — the
+  tile now always shows PiBoard's readable error message rather than a
+  hanging connection.
+
 ## 1.55.0
 
 - **Correctif : la tuile Page web n'affichait rien pour de nombreux

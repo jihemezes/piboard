@@ -484,24 +484,54 @@ app.get("/api/image-proxy", async (req, res) => {
    blocks (X-Frame-Options/CSP) a site may set -- otherwise a silent
    blank page, with no visible error at all. */
 app.get("/api/webview-proxy", async (req, res) => {
-  const result = await webviewProxy.proxyPage(String(req.query.url || ""));
-  if (!result.ok) {
-    // Page HTML minimale plutot qu'une reponse JSON brute : c'est ce
-    // que l'iframe du widget affichera directement -- un message
-    // lisible vaut mieux qu'un JSON illisible ou (pire) une page
-    // blanche qui laisse croire a une panne silencieuse.
-    // Minimal HTML page rather than a raw JSON response: this is what
-    // the widget's iframe will display directly -- a readable message
-    // beats unreadable JSON or (worse) a blank page that looks like a
-    // silent failure.
-    res.status(result.status || 502);
+  // Filet de securite indispensable ici : SANS lui, une exception
+  // imprevue (reseau, TLS, ou un cas non couvert par les try/catch
+  // internes de webviewProxy.js) laisse la requete sans reponse --
+  // Express 4 ne rattrape PAS automatiquement le rejet d'une promesse
+  // dans un gestionnaire async. Le navigateur voit alors une connexion
+  // qui ne repond jamais et affiche sa propre page d'erreur generique
+  // ("This page couldn't load"), DANS l'iframe -- distinct de la page
+  // d'erreur maison ci-dessous, qui elle necessite une reponse HTTP
+  // recue avec succes pour s'afficher. Log cote serveur pour permettre
+  // un diagnostic si le cas se represente.
+  // Essential safety net here: WITHOUT it, an unexpected exception
+  // (network, TLS, or a case not covered by webviewProxy.js's own
+  // try/catch blocks) leaves the request without a response -- Express
+  // 4 does NOT automatically catch a rejected promise inside an async
+  // handler. The browser then sees a connection that never responds
+  // and shows its own generic error page ("This page couldn't load"),
+  // INSIDE the iframe -- distinct from the custom error page below,
+  // which itself requires a successfully received HTTP response to
+  // display. Logged server-side to allow diagnosis if this recurs.
+  try {
+    const result = await webviewProxy.proxyPage(String(req.query.url || ""));
+    if (!result.ok) {
+      // Page HTML minimale plutot qu'une reponse JSON brute : c'est ce
+      // que l'iframe du widget affichera directement -- un message
+      // lisible vaut mieux qu'un JSON illisible ou (pire) une page
+      // blanche qui laisse croire a une panne silencieuse.
+      // Minimal HTML page rather than a raw JSON response: this is what
+      // the widget's iframe will display directly -- a readable message
+      // beats unreadable JSON or (worse) a blank page that looks like a
+      // silent failure.
+      console.warn("[piboard] webview-proxy echec ->", req.query.url, JSON.stringify(result.error));
+      res.status(result.status || 502);
+      res.set("Content-Type", "text/html; charset=utf-8");
+      res.set("Cache-Control", "no-store");
+      return res.send(webviewProxy.errorPageHtml(result.error));
+    }
     res.set("Content-Type", "text/html; charset=utf-8");
     res.set("Cache-Control", "no-store");
-    return res.send(webviewProxy.errorPageHtml(result.error));
+    res.send(result.html);
+  } catch (e) {
+    console.error("[piboard] webview-proxy exception non geree ->", req.query.url, e);
+    if (!res.headersSent) {
+      res.status(502);
+      res.set("Content-Type", "text/html; charset=utf-8");
+      res.set("Cache-Control", "no-store");
+      res.send(webviewProxy.errorPageHtml(String(e.message || e)));
+    }
   }
-  res.set("Content-Type", "text/html; charset=utf-8");
-  res.set("Cache-Control", "no-store");
-  res.send(result.html);
 });
 
 app.get("/api/layout", (req, res) => {
