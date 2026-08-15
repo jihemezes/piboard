@@ -214,6 +214,23 @@
       </fieldset>
 
       <fieldset class="form-section">
+        <legend data-i18n="settings.section.drawers">Tile drawers</legend>
+        <p class="hint" data-i18n="settings.drawers.hint">How much of the screen each drawer covers when open, as a percentage. Can also be adjusted by dragging its edge with the mouse or a finger, up to 96% — use these fields to go all the way to 100%, or if the edge is hard to grab.</p>
+        <label class="field">
+          <span data-i18n="settings.drawers.left">Left drawer (width)</span>
+          <input type="number" id="setDrawerLeftPct" min="10" max="100" step="1">
+        </label>
+        <label class="field">
+          <span data-i18n="settings.drawers.top">Top drawer (height)</span>
+          <input type="number" id="setDrawerTopPct" min="10" max="100" step="1">
+        </label>
+        <label class="field">
+          <span data-i18n="settings.drawers.right">Right drawer (width)</span>
+          <input type="number" id="setDrawerRightPct" min="10" max="100" step="1">
+        </label>
+      </fieldset>
+
+      <fieldset class="form-section">
         <legend data-i18n="settings.colors">Colors</legend>
         <div class="field">
           <div class="color-grid">

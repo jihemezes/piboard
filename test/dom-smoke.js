@@ -1489,7 +1489,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   await sleep(200);
   assert("tuile ajoutee (21 au total)", document.querySelectorAll(".grid-stack-item").length === 21);
 
-  console.log("== Tiroirs (gauche existant, haut, droite) : presence, ouverture, premier plan ==");
+  console.log("== Tiroirs (gauche existant, haut, droite) : presence, ouverture, un seul a la fois ==");
   {
     const left = document.getElementById("drawer");
     const top = document.getElementById("drawerTop");
@@ -1505,16 +1505,26 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const zAfterTop = Number(top.style.zIndex) || 0;
     assert("ouverture met le tiroir au premier plan (z-index attribue)", zAfterTop > 0);
 
+    // Un seul tiroir ouvert a la fois : en ouvrir un autre doit refermer
+    // celui qui l'etait, automatiquement.
+    // Only one drawer open at a time: opening another one must close
+    // whichever was open, automatically.
     document.getElementById("drawerRightTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     assert("tiroir droit ouvert au clic sur sa languette", right.classList.contains("open"));
+    assert("le tiroir haut, ouvert precedemment, se referme automatiquement", !top.classList.contains("open"));
     const zAfterRight = Number(right.style.zIndex) || 0;
-    assert("le tiroir ouvert en dernier passe devant le precedent (z-index superieur)", zAfterRight > zAfterTop);
+    assert("le tiroir nouvellement ouvert recoit un z-index superieur", zAfterRight > zAfterTop);
 
     document.getElementById("drawerTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     assert("tiroir gauche (existant) toujours fonctionnel : s'ouvre aussi", left.classList.contains("open"));
+    assert("le tiroir droit, ouvert precedemment, se referme automatiquement", !right.classList.contains("open"));
 
     document.getElementById("drawerTopTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    assert("re-clic sur la languette : le tiroir haut se referme", !top.classList.contains("open"));
+    assert("ouvrir le tiroir haut referme le tiroir gauche, ouvert jusque-la", !left.classList.contains("open"));
+    assert("le tiroir haut est bien celui desormais ouvert", top.classList.contains("open"));
+
+    document.getElementById("drawerTopTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("re-clic sur la languette d'un tiroir deja ouvert : il se referme (pas de reouverture)", !top.classList.contains("open"));
   }
 
   console.log("== Tiroirs : redimensionnement a la souris, jusqu'a quasi tout l'ecran ==");
@@ -1774,6 +1784,59 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     assert("desactivation du zoom lent enregistree", !!(body.screensaver && body.screensaver.slideshowKenBurns === false));
     assert("cadrage paysage enregistre", !!(body.screensaver && body.screensaver.slideshowFitLandscape === "contain"));
     assert("style de bordure enregistre", !!(body.screensaver && body.screensaver.slideshowContainBackground === "blur"));
+  }
+
+  console.log("== Reglages generaux : couverture des tiroirs (section dediee, application immediate) ==");
+  {
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+
+    assert("champ de couverture du tiroir gauche present", !!document.getElementById("setDrawerLeftPct"));
+    assert("champ de couverture du tiroir haut present", !!document.getElementById("setDrawerTopPct"));
+    assert("champ de couverture du tiroir droit present", !!document.getElementById("setDrawerRightPct"));
+
+    // Pre-rempli avec la taille actuelle du tiroir (fixee par le test de
+    // redimensionnement precedent), pas une valeur figee.
+    // Pre-filled with the drawer's current size (set by the earlier
+    // resize test), not a hardcoded value.
+    const root = document.documentElement;
+    const currentLeftPct = Math.round(parseFloat(root.style.getPropertyValue("--drawer-w")));
+    assert("champ pre-rempli avec la couverture actuelle du tiroir gauche",
+      Number(document.getElementById("setDrawerLeftPct").value) === currentLeftPct);
+
+    // Change la couverture du tiroir droit a 100% -- au-dela de ce que
+    // permet le glisser-deposer a la souris (borne a 96%), precisement
+    // le point souleve : atteindre une couverture totale de l'ecran.
+    // Changes the right drawer's coverage to 100% -- beyond what mouse
+    // dragging allows (capped at 96%), exactly the point raised:
+    // reaching full screen coverage.
+    const rightField = document.getElementById("setDrawerRightPct");
+    rightField.value = "100";
+    rightField.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await sleep(700);
+
+    assert("couverture du tiroir droit appliquee immediatement (variable CSS a jour)",
+      Math.round(parseFloat(root.style.getPropertyValue("--drawer-right-w"))) === 100);
+    assert("le champ reflete la valeur reellement appliquee", Number(rightField.value) === 100);
+    assert("application immediate : pas besoin du bouton 'Enregistrer' de la fenetre",
+      document.getElementById("settingsModal").hidden === false);
+
+    const layoutPuts = putCalls.filter((c) => c.url.includes("/api/layout"));
+    assert("le changement declenche une sauvegarde du layout (comme un redimensionnement a la souris)",
+      layoutPuts.length > 0
+      && JSON.parse(layoutPuts[layoutPuts.length - 1].body).drawerRight.widthPct === 100);
+
+    // Une valeur hors bornes (0) doit rester au minimum utilisable, pas
+    // etre appliquee telle quelle.
+    // An out-of-bounds value (0) must stay at the usable minimum, not
+    // be applied as-is.
+    const topField = document.getElementById("setDrawerTopPct");
+    topField.value = "0";
+    topField.dispatchEvent(new window.Event("change", { bubbles: true }));
+    assert("valeur hors bornes ramenee au minimum utilisable (jamais 0%)",
+      Math.round(parseFloat(root.style.getPropertyValue("--drawer-top-h"))) >= 10);
+
+    document.querySelector("#settingsModal .modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   }
 
   console.log("== Sauvegarde et restauration ==");

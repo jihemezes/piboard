@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.54.1
+
+- **Un seul tiroir de tuiles ouvert à la fois.** Ouvrir un tiroir
+  (gauche, haut ou droite) referme désormais automatiquement celui qui
+  était ouvert — plus de superposition à gérer manuellement.
+- **Couverture d'écran des tiroirs réglable dans les réglages
+  généraux.** Nouvelle section « Tiroirs de tuiles » : un champ par
+  tiroir donnant sa couverture en pourcentage, appliqué immédiatement
+  (pas besoin du bouton « Enregistrer »). Le glisser-déposer à la
+  souris reste plafonné à 96 % (au-delà, la poignée sortirait de
+  l'écran et deviendrait insaisissable) ; ces nouveaux champs vont
+  jusqu'à **100 %**, la seule voie pour une couverture réellement
+  totale de l'écran — le point signalé après la précédente mise à
+  jour.
+
+---
+
+- **Only one tile drawer open at a time.** Opening a drawer (left, top
+  or right) now automatically closes whichever one was open — no more
+  overlap to manage by hand.
+- **Drawer screen coverage configurable in general settings.** New
+  "Tile drawers" section: one field per drawer giving its coverage as
+  a percentage, applied immediately (no need for the "Save" button).
+  Mouse dragging stays capped at 96% (beyond that, the handle would
+  land off-screen and become ungrabbable); these new fields go all the
+  way to **100%**, the only way to reach genuinely full screen
+  coverage — the issue flagged after the previous update.
+
 ## 1.54.0
 
 - **Deux nouveaux tiroirs de tuiles : en haut et à droite de l'écran.**

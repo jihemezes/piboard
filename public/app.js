@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.54.0
+   Version 1.54.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -85,7 +85,8 @@
   // Bounds shared by all 3 drawers: up to "almost entirely" the screen
   // (96%), never shrinking below a usable size.
   const DRAWER_MIN_PCT = 10;
-  const DRAWER_MAX_PCT = 96;
+  const DRAWER_MAX_PCT = 96; // borne du redimensionnement a la souris/au doigt -- la poignee doit rester saisissable / mouse/touch resize bound -- the handle must stay reachable
+  const DRAWER_SETTINGS_MAX_PCT = 100; // borne des reglages generaux -- seule voie pour atteindre 100% (poignee alors hors ecran) / general settings bound -- the only way to reach 100% (handle would then be off-screen)
   const drawers = new Map(); // side -> { def, grid, el, sizePct }
   let drawerZIndexCounter = 500;
   let settings = null;
@@ -891,17 +892,38 @@
     d.el.style.zIndex = String(drawerZIndexCounter);
   }
 
+  /* Un seul tiroir ouvert a la fois : en ouvrir un referme les autres.
+     Puisque chaque tiroir peut desormais recouvrir la quasi-totalite de
+     l'ecran, en laisser plusieurs ouverts en meme temps les ferait se
+     superposer integralement -- inutile d'empiler, un seul a la fois
+     suffit et reste previsible.
+     Only one drawer open at a time: opening one closes the others.
+     Since each drawer can now cover almost the entire screen, leaving
+     several open at once would have them fully overlap -- no point
+     stacking, one at a time is enough and stays predictable. */
+  function closeOtherDrawers(exceptSide) {
+    drawers.forEach((d, side) => {
+      if (side !== exceptSide) d.el.classList.remove("open");
+    });
+  }
+
   /* Applique la taille d'un tiroir (en % de l'ecran, largeur ou hauteur
-     selon son axe) via sa variable CSS dediee. Bornee a
-     [DRAWER_MIN_PCT, DRAWER_MAX_PCT] -- voir le commentaire sur ces
-     constantes plus haut. Applies a drawer's size (as a % of the
-     screen, width or height depending on its axis) through its own CSS
-     variable. Clamped to [DRAWER_MIN_PCT, DRAWER_MAX_PCT] -- see the
-     comment on those constants above. */
-  function applyDrawerSize(side, pct) {
+     selon son axe) via sa variable CSS dediee. Bornee par defaut a
+     [DRAWER_MIN_PCT, DRAWER_MAX_PCT] (redimensionnement a la
+     souris/au doigt) -- voir le commentaire sur ces constantes plus
+     haut. Un maxPct plus eleve peut etre fourni explicitement (voir les
+     champs numeriques des reglages generaux, qui autorisent jusqu'a
+     100%).
+     Applies a drawer's size (as a % of the screen, width or height
+     depending on its axis) through its own CSS variable. Clamped by
+     default to [DRAWER_MIN_PCT, DRAWER_MAX_PCT] (mouse/touch resize) --
+     see the comment on those constants above. A higher maxPct can be
+     supplied explicitly (see the general settings' number fields, which
+     allow up to 100%). */
+  function applyDrawerSize(side, pct, maxPct) {
     const d = drawers.get(side);
     if (!d) return;
-    d.sizePct = Math.max(DRAWER_MIN_PCT, Math.min(DRAWER_MAX_PCT, Math.round(pct)));
+    d.sizePct = Math.max(DRAWER_MIN_PCT, Math.min(maxPct != null ? maxPct : DRAWER_MAX_PCT, Math.round(pct)));
     const unit = d.def.axis === "x" ? "vw" : "vh";
     document.documentElement.style.setProperty(d.def.cssVar, d.sizePct + unit);
   }
@@ -2256,6 +2278,16 @@
     $("setKeyboard").checked = !!settings.keyboardEnabled;
     $("setTouch").checked = !!settings.touchMode;
     $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
+    // Couverture des tiroirs : lue depuis leur etat reel (persiste via
+    // le layout, pas les reglages generaux -- voir le commentaire sur
+    // les ecouteurs "change" plus bas) plutot que dupliquee ici.
+    // Drawer coverage: read from their actual state (persisted via the
+    // layout, not general settings -- see the comment on the "change"
+    // listeners below) rather than duplicated here.
+    for (const def of DRAWER_DEFS) {
+      const d = drawers.get(def.side);
+      if (d) $("setDrawer" + def.side[0].toUpperCase() + def.side.slice(1) + "Pct").value = d.sizePct;
+    }
     pendingCity = null;
     $("setCity").value = "";
     $("citySuggest").hidden = true;
@@ -3421,6 +3453,7 @@
       const tabEl = $(def.tabId);
       tabEl.addEventListener("click", () => {
         const opening = !d.el.classList.contains("open");
+        if (opening) closeOtherDrawers(def.side); // un seul tiroir ouvert a la fois / only one drawer open at a time
         d.el.classList.toggle("open");
         if (opening) bringDrawerToFront(def.side);
       });
@@ -3452,6 +3485,30 @@
         bringDrawerToFront(def.side);
         document.addEventListener("pointermove", onResizeMove);
         document.addEventListener("pointerup", onResizeEnd);
+      });
+
+      /* Champ numerique des reglages generaux (section "Tiroirs de
+         tuiles") : une alternative decouverte plus facilement que la
+         fine poignee de redimensionnement, et la seule voie pour
+         atteindre exactement 100% (au-dela de 96%, la poignee sortirait
+         de l'ecran et ne serait plus saisissable a la souris). Applique
+         immediatement (pas besoin du bouton "Enregistrer" de la
+         fenetre) et persiste comme un redimensionnement a la souris,
+         via le layout -- ce n'est pas un reglage general a proprement
+         parler, seulement sa commande la plus pratique.
+         Number field in general settings ("Tile drawers" section): an
+         alternative that's easier to discover than the thin resize
+         handle, and the only way to reach exactly 100% (past 96%, the
+         handle would land off-screen and no longer be reachable with a
+         mouse). Applies immediately (no need for the window's "Save"
+         button) and persists like a mouse resize, through the layout --
+         not really a general setting, just its most convenient
+         control. */
+      const pctFieldId = "setDrawer" + def.side[0].toUpperCase() + def.side.slice(1) + "Pct";
+      $(pctFieldId).addEventListener("change", (e) => {
+        applyDrawerSize(def.side, Number(e.target.value) || d.sizePct, DRAWER_SETTINGS_MAX_PCT);
+        e.target.value = d.sizePct; // reflete la valeur reellement appliquee (bornee) / reflects the actually applied (clamped) value
+        scheduleSave();
       });
     }
 
