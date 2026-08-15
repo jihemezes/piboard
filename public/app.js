@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.53.0
+   Version 1.54.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -53,8 +53,41 @@
   // because its container is narrower (50vw), not via a different column count.
 
   let grid = null;
-  let drawerGrid = null;
-  let drawerWidthPct = 50;
+  /* Trois tiroirs independants (gauche existant, haut, droite),
+     decrits generiquement pour eviter de tripler chaque bout de code
+     qui les manipule. "axis" determine le sens de redimensionnement
+     (x = largeur/pointeur horizontal, y = hauteur/pointeur vertical).
+     "layoutKey"/"sizeKey" sont le nom et la forme utilises dans le
+     layout persiste cote serveur -- "drawer"/"widthPct" est conserve
+     tel quel pour le tiroir gauche afin de rester compatible avec les
+     layouts deja enregistres avant l'ajout des deux autres tiroirs.
+     Three independent drawers (existing left, top, right), described
+     generically to avoid tripling every bit of code that manipulates
+     them. "axis" determines the resize direction (x = width/horizontal
+     pointer, y = height/vertical pointer). "layoutKey"/"sizeKey" are
+     the name and shape used in the server-persisted layout --
+     "drawer"/"widthPct" is kept as-is for the left drawer to stay
+     compatible with layouts already saved before the other two drawers
+     were added. */
+  const DRAWER_DEFS = [
+    { side: "left", zone: "drawer-left", axis: "x", cssVar: "--drawer-w",
+      layoutKey: "drawer", sizeKey: "widthPct", defaultSizePct: 50,
+      gridId: "drawerGrid", elId: "drawer", tabId: "drawerTab", resizeId: "drawerResize", emptyId: "drawerEmpty" },
+    { side: "top", zone: "drawer-top", axis: "y", cssVar: "--drawer-top-h",
+      layoutKey: "drawerTop", sizeKey: "heightPct", defaultSizePct: 40,
+      gridId: "drawerGridTop", elId: "drawerTop", tabId: "drawerTopTab", resizeId: "drawerTopResize", emptyId: "drawerTopEmpty" },
+    { side: "right", zone: "drawer-right", axis: "x", cssVar: "--drawer-right-w",
+      layoutKey: "drawerRight", sizeKey: "widthPct", defaultSizePct: 38,
+      gridId: "drawerGridRight", elId: "drawerRight", tabId: "drawerRightTab", resizeId: "drawerRightResize", emptyId: "drawerRightEmpty" }
+  ];
+  // Bornes communes aux 3 tiroirs : jusqu'a "quasi integralement" l'ecran
+  // (96%), sans jamais descendre sous une taille utilisable.
+  // Bounds shared by all 3 drawers: up to "almost entirely" the screen
+  // (96%), never shrinking below a usable size.
+  const DRAWER_MIN_PCT = 10;
+  const DRAWER_MAX_PCT = 96;
+  const drawers = new Map(); // side -> { def, grid, el, sizePct }
+  let drawerZIndexCounter = 500;
   let settings = null;
   let catalog = [];                 // manifestes / manifests
   const widgetClasses = new Map();  // id -> classe / class
@@ -816,9 +849,67 @@
     return "#" + m.slice(0, 3).map((n) => Number(n).toString(16).padStart(2, "0")).join("");
   }
 
+  /* Grille Gridstack cible pour une zone donnee ("board" ou
+     "drawer-<side>"). Point d'entree unique reutilise par mountTile,
+     removeTile, etc. -- evite de reecrire le meme aiguillage a chaque
+     endroit. Target Gridstack grid for a given zone ("board" or
+     "drawer-<side>"). Single entry point reused by mountTile,
+     removeTile, etc. -- avoids rewriting the same lookup everywhere. */
+  function gridForZone(zone) {
+    if (!zone || zone === "board") return grid;
+    const d = drawers.get(zone.replace(/^drawer-/, ""));
+    return d ? d.grid : grid;
+  }
+
+  /* Cote(s) actuellement ouvert(s), dans l'ordre de leur z-index (le
+     plus recemment mis au premier plan en dernier) -- sert a decider
+     dans quel tiroir une nouvelle tuile doit atterrir quand plusieurs
+     sont ouverts a la fois (voir addTile).
+     Currently open side(s), ordered by z-index (most recently brought
+     to front last) -- used to decide which drawer a new tile should
+     land in when several are open at once (see addTile). */
+  function openDrawerSides() {
+    return Array.from(drawers.values())
+      .filter((d) => d.el.classList.contains("open"))
+      .sort((a, b) => (Number(a.el.style.zIndex) || 0) - (Number(b.el.style.zIndex) || 0))
+      .map((d) => d.def.side);
+  }
+
+  /* Fait passer un tiroir au premier plan par rapport aux deux autres.
+     Necessaire des lors que plusieurs tiroirs peuvent chacun recouvrir
+     "quasi integralement" l'ecran : sans cela, ouvrir/agrandir le
+     tiroir du haut par-dessus un tiroir gauche deja tres large le
+     laisserait inaccessible sous ce dernier.
+     Brings a drawer to the front relative to the other two. Needed
+     since several drawers can each cover "almost the entire" screen:
+     without this, opening/enlarging the top drawer over an already
+     very wide left drawer would leave it stuck underneath it. */
+  function bringDrawerToFront(side) {
+    const d = drawers.get(side);
+    if (!d) return;
+    drawerZIndexCounter += 1;
+    d.el.style.zIndex = String(drawerZIndexCounter);
+  }
+
+  /* Applique la taille d'un tiroir (en % de l'ecran, largeur ou hauteur
+     selon son axe) via sa variable CSS dediee. Bornee a
+     [DRAWER_MIN_PCT, DRAWER_MAX_PCT] -- voir le commentaire sur ces
+     constantes plus haut. Applies a drawer's size (as a % of the
+     screen, width or height depending on its axis) through its own CSS
+     variable. Clamped to [DRAWER_MIN_PCT, DRAWER_MAX_PCT] -- see the
+     comment on those constants above. */
+  function applyDrawerSize(side, pct) {
+    const d = drawers.get(side);
+    if (!d) return;
+    d.sizePct = Math.max(DRAWER_MIN_PCT, Math.min(DRAWER_MAX_PCT, Math.round(pct)));
+    const unit = d.def.axis === "x" ? "vw" : "vh";
+    document.documentElement.style.setProperty(d.def.cssVar, d.sizePct + unit);
+  }
+
+
   async function mountTile(conf, zone) {
     zone = zone || "board";
-    const targetGrid = zone === "drawer" ? drawerGrid : grid;
+    const targetGrid = gridForZone(zone);
     const manifest = catalog.find((m) => m.id === conf.widget);
 
     // Garde-fou : une tuile enregistree AVANT que son minimum de manifest
@@ -1043,21 +1134,31 @@
     }
     tiles.clear();
     grid.removeAll();
-    drawerGrid.removeAll();
+    for (const d of drawers.values()) d.grid.removeAll();
   }
 
   async function renderLayout(layout) {
     unmountAll();
-    const drawer = layout.drawer || { widthPct: 50, tiles: [] };
-    applyDrawerWidth(drawer.widthPct || 50);
     grid.batchUpdate();
-    drawerGrid.batchUpdate();
+    for (const d of drawers.values()) d.grid.batchUpdate();
+
     for (const conf of layout.tiles) await mountTile(conf, "board");
-    for (const conf of drawer.tiles || []) await mountTile(conf, "drawer");
+    let anyDrawerTiles = false;
+    for (const d of drawers.values()) {
+      const saved = layout[d.def.layoutKey] || { [d.def.sizeKey]: d.def.defaultSizePct, tiles: [] };
+      applyDrawerSize(d.def.side, saved[d.def.sizeKey] || d.def.defaultSizePct);
+      for (const conf of saved.tiles || []) { await mountTile(conf, d.def.zone); anyDrawerTiles = true; }
+    }
+
     grid.batchUpdate(false);
-    drawerGrid.batchUpdate(false);
+    for (const d of drawers.values()) d.grid.batchUpdate(false);
+
     $("boardEmpty").hidden = layout.tiles.length > 0;
-    $("drawerEmpty").hidden = (drawer.tiles || []).length > 0;
+    for (const d of drawers.values()) {
+      let count = 0;
+      for (const [, r] of tiles) if (r.zone === d.def.zone) count++;
+      $(d.def.emptyId).hidden = count > 0;
+    }
     startScheduleTicker();
   }
 
@@ -1078,13 +1179,14 @@
   }
 
   function serializeLayout() {
-    return {
-      tiles: serializeZone(grid, "board"),
-      drawer: {
-        widthPct: drawerWidthPct,
-        tiles: serializeZone(drawerGrid, "drawer")
-      }
-    };
+    const out = { tiles: serializeZone(grid, "board") };
+    for (const d of drawers.values()) {
+      out[d.def.layoutKey] = {
+        [d.def.sizeKey]: d.sizePct,
+        tiles: serializeZone(d.grid, d.def.zone)
+      };
+    }
+    return out;
   }
 
   function scheduleSave() {
@@ -1144,11 +1246,18 @@
   }
 
   async function addTile(widgetId) {
-    // Tiroir ouvert = on ajoute dans le tiroir ; sinon sur le tableau.
-    // Drawer open = the tile goes into the drawer; otherwise on the board.
-    const toDrawer = $("drawer").classList.contains("open");
-    const zone = toDrawer ? "drawer" : "board";
-    const targetGrid = toDrawer ? drawerGrid : grid;
+    // Un tiroir ouvert = la tuile y atterrit ; le tableau sinon. Si
+    // plusieurs tiroirs sont ouverts a la fois, celui le plus recemment
+    // mis au premier plan (voir bringDrawerToFront) l'emporte -- c'est
+    // presque toujours celui que la personne regarde activement.
+    // An open drawer = the tile lands there; the board otherwise. If
+    // several drawers are open at once, whichever was most recently
+    // brought to front (see bringDrawerToFront) wins -- that's almost
+    // always the one being actively looked at.
+    const openSides = openDrawerSides();
+    const activeSide = openSides.length ? openSides[openSides.length - 1] : null;
+    const zone = activeSide ? ("drawer-" + activeSide) : "board";
+    const targetGrid = gridForZone(zone);
     const cols = COLS;
     const manifest = catalog.find((m) => m.id === widgetId);
 
@@ -1185,7 +1294,7 @@
     };
     mountTile(conf, zone).then(() => {
       $("boardEmpty").hidden = true;
-      if (toDrawer) $("drawerEmpty").hidden = true;
+      if (activeSide) $(drawers.get(activeSide).def.emptyId).hidden = true;
       scheduleSave();
     });
   }
@@ -1216,12 +1325,16 @@
     // reason to outlive the tile that used it.
     fetch("/api/tile-secrets/" + encodeURIComponent(tileId), { method: "DELETE" })
       .catch((e) => console.warn("[piboard] secret non efface:", e));
-    (rec.zone === "drawer" ? drawerGrid : grid).removeWidget(rec.el);
+    gridForZone(rec.zone).removeWidget(rec.el);
     tiles.delete(tileId);
-    let boardCount = 0, drawerCount = 0;
-    for (const [, r] of tiles) (r.zone === "drawer" ? drawerCount++ : boardCount++);
+    let boardCount = 0;
+    const drawerCounts = new Map();
+    for (const [, r] of tiles) {
+      if (r.zone === "board") boardCount++;
+      else drawerCounts.set(r.zone, (drawerCounts.get(r.zone) || 0) + 1);
+    }
     $("boardEmpty").hidden = boardCount > 0;
-    $("drawerEmpty").hidden = drawerCount > 0;
+    for (const d of drawers.values()) $(d.def.emptyId).hidden = (drawerCounts.get(d.def.zone) || 0) > 0;
     scheduleSave();
   }
 
@@ -2073,7 +2186,7 @@
     editing = force != null ? force : !editing;
     document.body.classList.toggle("editing", editing);
     grid.setStatic(!editing);
-    drawerGrid.setStatic(!editing);
+    drawers.forEach((d) => d.grid.setStatic(!editing));
     $("btnEdit").classList.toggle("active", editing);
     // Barre visible en permanence pendant l'edition ; minuterie au retour
     // Toolbar stays visible while editing; timer re-armed on exit
@@ -3179,14 +3292,7 @@
     const rows = settings.gridRows || 8;
     const cell = Math.floor((window.innerHeight - gap) / rows);
     grid.cellHeight(cell);
-    drawerGrid.cellHeight(cell);
-  }
-
-  /* Applique la largeur du tiroir (en % de l'ecran) via une variable CSS.
-     Applies the drawer width (as a % of the screen) through a CSS variable. */
-  function applyDrawerWidth(pct) {
-    drawerWidthPct = Math.max(25, Math.min(75, Math.round(pct)));
-    document.documentElement.style.setProperty("--drawer-w", drawerWidthPct + "vw");
+    drawers.forEach((d) => d.grid.cellHeight(cell));
   }
 
   /* ---------- Curseur en kiosque / kiosk cursor ---------- */
@@ -3251,26 +3357,36 @@
       alwaysShowResizeHandle: "mobile"
     }, "#grid");
 
-    drawerGrid = GridStack.init({
-      column: COLS,
-      margin: 5,
-      float: true,
-      staticGrid: true,
-      resizable: { handles: "e,se,s,sw,w" },
-      alwaysShowResizeHandle: "mobile"
-    }, "#drawerGrid");
+    // Un GridStack independant par tiroir, construit depuis DRAWER_DEFS
+    // plutot que triple a la main -- les trois se comportent a
+    // l'identique (memes options), seul l'element DOM cible differe.
+    // An independent GridStack per drawer, built from DRAWER_DEFS
+    // rather than hand-tripled -- all three behave identically (same
+    // options), only the target DOM element differs.
+    for (const def of DRAWER_DEFS) {
+      const dGrid = GridStack.init({
+        column: COLS,
+        margin: 5,
+        float: true,
+        staticGrid: true,
+        resizable: { handles: "e,se,s,sw,w" },
+        alwaysShowResizeHandle: "mobile"
+      }, "#" + def.gridId);
+      drawers.set(def.side, { def, grid: dGrid, el: $(def.elId), sizePct: def.defaultSizePct });
+    }
 
     updateCellHeight();
     window.addEventListener("resize", updateCellHeight);
     grid.on("change", () => { if (editing) scheduleSave(); });
-    drawerGrid.on("change", () => { if (editing) scheduleSave(); });
+    drawers.forEach((d) => d.grid.on("change", () => { if (editing) scheduleSave(); }));
 
     /* En mode edition : un clic simple sur une tuile ouvre ses parametres.
        Un drag/resize qui vient de se terminer ne compte pas comme un clic.
        While editing: a plain click on a tile opens its settings.
        A drag/resize that just ended does not count as a click. */
     let justManipulated = false;
-    [grid, drawerGrid].forEach((g) => {
+    const allGrids = [grid, ...Array.from(drawers.values()).map((d) => d.grid)];
+    allGrids.forEach((g) => {
       ["dragstart", "resizestart"].forEach((evt) => g.on(evt, () => { justManipulated = true; }));
       ["dragstop", "resizestop"].forEach((evt) => g.on(evt, () => {
         setTimeout(() => { justManipulated = false; }, 250);
@@ -3283,42 +3399,61 @@
       if (item && item.dataset.tileId) openTileSettings(item.dataset.tileId);
     };
     document.getElementById("grid").addEventListener("click", editClickHandler);
-    document.getElementById("drawerGrid").addEventListener("click", editClickHandler);
+    drawers.forEach((d) => document.getElementById(d.def.gridId).addEventListener("click", editClickHandler));
 
-    /* Tiroir lateral : languette d'ouverture + poignee de redimensionnement.
-       La largeur est persistee dans le layout ; l'etat ouvert/ferme ne l'est
-       pas (au demarrage kiosque, la carte doit occuper tout l'ecran).
-       Side drawer: pull tab + resize handle. The width is persisted in the
-       layout; the open/closed state is not (on kiosk boot, the map must
-       have the whole screen). */
-    $("drawerTab").addEventListener("click", () => {
-      $("drawer").classList.toggle("open");
-    });
+    /* Tiroirs (gauche, haut, droite) : languette d'ouverture + poignee de
+       redimensionnement pour chacun, construites generiquement depuis
+       DRAWER_DEFS. La taille de chaque tiroir est persistee dans le
+       layout ; son etat ouvert/ferme ne l'est pas (au demarrage kiosque,
+       le tableau doit occuper tout l'ecran). Ouvrir un tiroir, ou
+       commencer a le redimensionner, le fait passer au premier plan --
+       utile des lors que plusieurs tiroirs, chacun pouvant recouvrir
+       quasi tout l'ecran, peuvent se superposer.
+       Drawers (left, top, right): pull tab + resize handle for each,
+       built generically from DRAWER_DEFS. Each drawer's size is
+       persisted in the layout; its open/closed state is not (on kiosk
+       boot, the board must have the whole screen). Opening a drawer, or
+       starting to resize it, brings it to the front -- useful since
+       several drawers, each able to cover almost the whole screen, can
+       overlap. */
+    for (const def of DRAWER_DEFS) {
+      const d = drawers.get(def.side);
+      const tabEl = $(def.tabId);
+      tabEl.addEventListener("click", () => {
+        const opening = !d.el.classList.contains("open");
+        d.el.classList.toggle("open");
+        if (opening) bringDrawerToFront(def.side);
+      });
 
-    const drawerEl = $("drawer");
-    const resizeHandle = $("drawerResize");
-    let resizing = false;
-    const onResizeMove = (e) => {
-      if (!resizing) return;
-      const x = e.touches ? e.touches[0].clientX : e.clientX;
-      const pct = Math.max(25, Math.min(75, (x / window.innerWidth) * 100));
-      applyDrawerWidth(pct);
-    };
-    const onResizeEnd = () => {
-      if (!resizing) return;
-      resizing = false;
-      drawerEl.classList.remove("resizing");
-      document.removeEventListener("pointermove", onResizeMove);
-      document.removeEventListener("pointerup", onResizeEnd);
-      scheduleSave();
-    };
-    resizeHandle.addEventListener("pointerdown", (e) => {
-      e.preventDefault();
-      resizing = true;
-      drawerEl.classList.add("resizing");
-      document.addEventListener("pointermove", onResizeMove);
-      document.addEventListener("pointerup", onResizeEnd);
-    });
+      const resizeHandle = $(def.resizeId);
+      let resizing = false;
+      const onResizeMove = (e) => {
+        if (!resizing) return;
+        const pos = e.touches ? e.touches[0] : e;
+        const pct = def.axis === "x"
+          ? (def.side === "right"
+            ? ((window.innerWidth - pos.clientX) / window.innerWidth) * 100
+            : (pos.clientX / window.innerWidth) * 100)
+          : ((pos.clientY) / window.innerHeight) * 100;
+        applyDrawerSize(def.side, pct);
+      };
+      const onResizeEnd = () => {
+        if (!resizing) return;
+        resizing = false;
+        d.el.classList.remove("resizing");
+        document.removeEventListener("pointermove", onResizeMove);
+        document.removeEventListener("pointerup", onResizeEnd);
+        scheduleSave();
+      };
+      resizeHandle.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        resizing = true;
+        d.el.classList.add("resizing");
+        bringDrawerToFront(def.side);
+        document.addEventListener("pointermove", onResizeMove);
+        document.addEventListener("pointerup", onResizeEnd);
+      });
+    }
 
     applyTheme();
     // Appliquer le mode tactile des le demarrage. Sans cela, la classe

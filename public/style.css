@@ -789,26 +789,56 @@ body.touch .modal-card { resize: none; }
    all times (the drawer is only translated off-screen, never unmounted),
    so countdowns, scores, etc. stay live. */
 
+/* ---------- Tiroirs de tuiles / tile drawers ----------
+   Trois tiroirs independants (gauche, haut, droite), chacun une
+   deuxieme grille de widgets tiree depuis un bord de l'ecran. Les
+   widgets continuent de tourner en permanence (le tiroir est
+   seulement translate hors ecran, jamais demonte) : comptes a rebours,
+   scores, etc. restent a jour.
+
+   Chaque tiroir peut etre agrandi jusqu'a recouvrir presque tout
+   l'ecran (voir les bornes MIN/MAX dans applyDrawerSize() cote JS) --
+   c'est un calque independant du tableau, pas une subdivision de son
+   espace : plusieurs tiroirs ouverts et agrandis en meme temps se
+   superposent, celui manipule ou ouvert en dernier passant au premier
+   plan (voir bringDrawerToFront() cote JS).
+
+   Convention commune aux 3 tiroirs pour la languette : la fleche
+   pointe TOUJOURS dans le sens ou le tiroir va se deplacer au PROCHAIN
+   clic (fleche a droite = "va s'ouvrir vers la droite", etc.) -- c'est
+   la regle deja en place pour le tiroir gauche, simplement reprise
+   pour les deux autres.
+
+   Three independent drawers (left, top, right), each a second widget
+   grid pulled in from a screen edge. Widgets keep running at all
+   times (the drawer is only translated off-screen, never unmounted):
+   countdowns, scores, etc. stay live.
+
+   Each drawer can be enlarged to cover almost the whole screen (see
+   the MIN/MAX bounds in applyDrawerSize() JS-side) -- it's an
+   independent layer over the board, not a subdivision of its space:
+   several drawers open and enlarged at once will overlap, with
+   whichever was manipulated or opened last coming to the front (see
+   bringDrawerToFront() JS-side).
+
+   Convention shared by all 3 drawers for the pull tab: the arrow
+   ALWAYS points in the direction the drawer will travel on the NEXT
+   click (arrow pointing right = "will open to the right", etc.) --
+   this is the rule already in place for the left drawer, simply
+   carried over to the other two. */
+
 .drawer {
   position: fixed;
-  top: 0;
-  bottom: 0;
-  left: 0;
-  width: var(--drawer-w, 50vw);
-  min-width: 240px;
-  z-index: 500; /* au-dessus du tableau, sous les modales (1000) */
-  transform: translateX(-100%);
+  z-index: 500; /* au-dessus du tableau, sous les modales (1000) ; ajuste dynamiquement, voir bringDrawerToFront() */
   transition: transform 0.28s ease;
   pointer-events: none; /* la languette reactive ses propres events */
 }
-.drawer.open { transform: translateX(0); }
+.drawer.open { transform: none; }
 
 .drawer-inner {
   position: absolute;
   inset: 0;
   background: color-mix(in srgb, var(--bg) 88%, black 12%);
-  border-right: 1px solid var(--tile-edge);
-  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.35);
   overflow: hidden;
   pointer-events: auto;
 }
@@ -827,18 +857,13 @@ body.touch .modal-card { resize: none; }
   pointer-events: none;
 }
 
-/* Languette : depasse du bord droit du tiroir, reste visible tiroir ferme
-   Pull tab: sticks out past the drawer's right edge, visible when closed */
+/* Languette : forme commune aux 3 tiroirs, seule sa position/rotation
+   change par variante ci-dessous.
+   Pull tab: shape shared by all 3 drawers, only position/rotation
+   changes per variant below. */
 .drawer-tab {
   position: absolute;
-  right: -30px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 30px;
-  height: 84px;
   border: 1px solid var(--tile-edge);
-  border-left: none;
-  border-radius: 0 12px 12px 0;
   background: var(--tile);
   color: var(--muted);
   cursor: pointer;
@@ -859,33 +884,130 @@ body.touch .modal-card { resize: none; }
   stroke-linejoin: round;
   transition: transform 0.28s ease;
 }
-.drawer.open .drawer-tab svg { transform: rotate(180deg); }
 
-/* Poignee de redimensionnement : bord droit du tiroir, visible ouvert
-   Resize handle: drawer's right edge, visible when open */
-.drawer-resize {
-  position: absolute;
-  right: -5px;
-  top: 0;
-  bottom: 0;
-  width: 10px;
-  cursor: ew-resize;
-  pointer-events: none;
-}
+/* Poignee de redimensionnement : forme commune, position/curseur
+   varient par variante ci-dessous.
+   Resize handle: shape shared, position/cursor vary per variant
+   below. */
+.drawer-resize { position: absolute; pointer-events: none; }
 .drawer.open .drawer-resize { pointer-events: auto; }
 .drawer-resize::after {
   content: "";
   position: absolute;
-  left: 4px;
-  top: 0;
-  bottom: 0;
-  width: 2px;
   background: transparent;
   transition: background 0.15s ease;
 }
 .drawer-resize:hover::after,
 .drawer.resizing .drawer-resize::after { background: var(--accent); }
 .drawer.resizing { transition: none; }
+
+/* ---------- Variante gauche (existante) / left variant (existing) ---------- */
+.drawer-left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--drawer-w, 50vw);
+  min-width: 240px;
+  transform: translateX(-100%);
+}
+.drawer-left .drawer-inner {
+  border-right: 1px solid var(--tile-edge);
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.35);
+}
+.drawer-left .drawer-tab {
+  right: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 84px;
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+}
+.drawer-left.open .drawer-tab svg { transform: rotate(180deg); }
+.drawer-left .drawer-resize {
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+}
+.drawer-left .drawer-resize::after { left: 4px; top: 0; bottom: 0; width: 2px; }
+
+/* ---------- Variante haute / top variant ---------- */
+.drawer-top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--drawer-top-h, 40vh);
+  min-height: 160px;
+  transform: translateY(-100%);
+}
+.drawer-top .drawer-inner {
+  border-bottom: 1px solid var(--tile-edge);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.drawer-top .drawer-tab {
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 84px;
+  height: 30px;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+}
+/* Ferme : la fleche de base (pointe a droite) tourne pour pointer vers
+   le bas -- sens dans lequel le tiroir va s'ouvrir. Ouvert : pointe
+   vers le haut -- sens dans lequel il va se refermer.
+   Closed: the base arrow (points right) rotates to point down -- the
+   direction the drawer will open in. Open: points up -- the direction
+   it will close in. */
+.drawer-top .drawer-tab svg { transform: rotate(90deg); }
+.drawer-top.open .drawer-tab svg { transform: rotate(-90deg); }
+.drawer-top .drawer-resize {
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  cursor: ns-resize;
+}
+.drawer-top .drawer-resize::after { top: 4px; left: 0; right: 0; height: 2px; }
+
+/* ---------- Variante droite / right variant ---------- */
+.drawer-right {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: var(--drawer-right-w, 38vw);
+  min-width: 240px;
+  transform: translateX(100%);
+}
+.drawer-right .drawer-inner {
+  border-left: 1px solid var(--tile-edge);
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.35);
+}
+.drawer-right .drawer-tab {
+  left: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 84px;
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+}
+/* Ferme : pointe vers la gauche -- sens d'ouverture. Ouvert : pointe
+   vers la droite -- sens de fermeture.
+   Closed: points left -- opening direction. Open: points right --
+   closing direction. */
+.drawer-right .drawer-tab svg { transform: rotate(180deg); }
+.drawer-right.open .drawer-tab svg { transform: rotate(0deg); }
+.drawer-right .drawer-resize {
+  left: -5px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+}
+.drawer-right .drawer-resize::after { left: 4px; top: 0; bottom: 0; width: 2px; }
 
 /* ---------- Clavier virtuel / on-screen keyboard ---------- */
 
@@ -1264,14 +1386,22 @@ body.touch .dock-bar { gap: 16px; padding: 18px 22px; }
 body.touch .dock-btn { width: 104px; height: 104px; border-radius: 20px; }
 body.touch .dock-btn svg { width: 52px; height: 52px; }
 
-/* Onglet du tiroir lateral / side drawer tab */
-body.touch .drawer-tab { right: -48px; width: 48px; height: 132px; border-radius: 0 14px 14px 0; }
+/* Onglets des tiroirs (agrandis pour le doigt) / drawer tabs (enlarged for touch) */
+body.touch .drawer-left .drawer-tab { right: -48px; width: 48px; height: 132px; border-radius: 0 14px 14px 0; }
+body.touch .drawer-top .drawer-tab { bottom: -48px; width: 132px; height: 48px; border-radius: 0 0 14px 14px; }
+body.touch .drawer-right .drawer-tab { left: -48px; width: 48px; height: 132px; border-radius: 14px 0 0 14px; }
 body.touch .drawer-tab svg { width: 28px; height: 28px; }
 
-/* Poignee de redimensionnement du tiroir : zone de prise elargie
-   Drawer resize handle: widened grab area */
-body.touch .drawer-resize { right: -12px; width: 24px; }
-body.touch .drawer-resize::after { left: 10px; width: 4px; }
+/* Poignees de redimensionnement des tiroirs : zone de prise elargie
+   Drawer resize handles: widened grab area */
+body.touch .drawer-left .drawer-resize,
+body.touch .drawer-right .drawer-resize { width: 24px; }
+body.touch .drawer-left .drawer-resize { right: -12px; }
+body.touch .drawer-right .drawer-resize { left: -12px; }
+body.touch .drawer-left .drawer-resize::after,
+body.touch .drawer-right .drawer-resize::after { left: 10px; width: 4px; }
+body.touch .drawer-top .drawer-resize { bottom: -12px; height: 24px; }
+body.touch .drawer-top .drawer-resize::after { top: 10px; height: 4px; }
 
 /* Icones des tuiles (engrenage, croix) / tile icons (gear, cross) */
 body.touch .tile-btn { padding: 10px; }

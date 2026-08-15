@@ -56,7 +56,7 @@
           <h4>Les différentes zones du tableau de bord</h4>
           <ul>
             <li><b>Le tableau principal</b> — la grille visible en permanence, celle que l'on voit à l'écran au quotidien.</li>
-            <li><b>Le tiroir latéral de tuiles</b> — un panneau escamotable, ouvert via la languette sur le bord gauche de l'écran. Il permet de préparer ou ranger des tuiles supplémentaires sans encombrer le tableau principal (par exemple des tuiles utilisées occasionnellement). Une tuile ajoutée pendant que ce tiroir est ouvert y est placée directement ; sinon, elle rejoint le tableau principal.</li>
+            <li><b>Les trois tiroirs de tuiles</b> — des panneaux escamotables, ouverts via une languette sur le bord gauche, en haut, ou sur le bord droit de l'écran. Ils permettent de préparer ou ranger des tuiles supplémentaires sans encombrer le tableau principal (par exemple des tuiles utilisées occasionnellement), et d'augmenter la surface d'affichage disponible dans l'ensemble. Chacun peut être redimensionné à la souris ou au doigt (poignée sur son bord ouvert) jusqu'à recouvrir quasiment tout l'écran ; ils sont indépendants les uns des autres et peuvent rester ouverts simultanément — celui manipulé ou ouvert en dernier passe alors au premier plan. Une tuile ajoutée pendant qu'un tiroir est ouvert y est placée directement (dans le dernier ouvert, si plusieurs le sont à la fois) ; sinon, elle rejoint le tableau principal.</li>
             <li><b>Le tiroir de configuration du bas</b> — la barre d'outils escamotable en bas de l'écran (languette centrale), qui donne accès à l'ajout de tuiles, au mode édition, aux réglages généraux, à cette aide, et au redémarrage de l'affichage. Voir la section « Barre d'outils & réglages » du sommaire pour le détail de chaque bouton et réglage.</li>
           </ul>`,
         en: `
@@ -87,7 +87,7 @@
           <h4>The dashboard's different areas</h4>
           <ul>
             <li><b>The main board</b> — the grid always visible, the one you see on screen day to day.</li>
-            <li><b>The side tile drawer</b> — a collapsible panel, opened via the pull tab on the screen's left edge. It lets you prepare or store extra tiles without cluttering the main board (for instance tiles used occasionally). A tile added while this drawer is open is placed there directly; otherwise, it joins the main board.</li>
+            <li><b>The three tile drawers</b> — collapsible panels, opened via a pull tab on the screen's left edge, top edge, or right edge. They let you prepare or store extra tiles without cluttering the main board (for instance tiles used occasionally), and add to the overall display surface available. Each one can be resized with the mouse or a finger (handle on its open edge) to cover almost the whole screen; they're independent of one another and can stay open at the same time — whichever was manipulated or opened last comes to the front. A tile added while a drawer is open is placed there directly (in the most recently opened one, if several are open at once); otherwise, it joins the main board.</li>
             <li><b>The bottom config drawer</b> — the collapsible toolbar at the bottom of the screen (center pull tab), giving access to adding tiles, edit mode, general settings, this help, and restarting the display. See the "Toolbar & Settings" section of the table of contents for details on every button and setting.</li>
           </ul>`
       }
@@ -106,7 +106,7 @@
         fr: `
           <h4>La barre d'outils</h4>
           <p>Elle est masquée par défaut pour ne pas encombrer l'affichage. Touchez la petite languette centrée en bas de l'écran pour la faire apparaître ; elle se referme automatiquement après 20 secondes d'inactivité (sauf en mode édition, où elle reste ouverte). Sept boutons :</p>
-          <div class="help-opt"><span class="help-opt-name">+ Ajouter une tuile</span><span class="help-opt-desc">Ouvre le catalogue des widgets disponibles. Touchez-en un pour l'ajouter au tableau (ou au tiroir latéral de tuiles, s'il est ouvert à ce moment-là) ; ses réglages s'ouvrent aussitôt pour le configurer.</span></div>
+          <div class="help-opt"><span class="help-opt-name">+ Ajouter une tuile</span><span class="help-opt-desc">Ouvre le catalogue des widgets disponibles. Touchez-en un pour l'ajouter au tableau (ou au tiroir de tuiles ouvert à ce moment-là — celui le plus récemment ouvert, si plusieurs le sont à la fois) ; ses réglages s'ouvrent aussitôt pour le configurer.</span></div>
           <div class="help-opt"><span class="help-opt-name">Mode édition (cadenas)</span><span class="help-opt-desc">Active le déplacement et le redimensionnement des tuiles. En mode édition, un simple appui sur une tuile ouvre directement ses réglages. Repassez par ce bouton pour verrouiller à nouveau le tableau.</span></div>
           <div class="help-opt"><span class="help-opt-name">Réglages (engrenage)</span><span class="help-opt-desc">Ouvre la fenêtre des réglages généraux du tableau de bord — détaillée ci-dessous.</span></div>
           <div class="help-opt"><span class="help-opt-name">Aide (?)</span><span class="help-opt-desc">La fenêtre que vous consultez actuellement.</span></div>
@@ -134,7 +134,7 @@
         en: `
           <h4>The toolbar</h4>
           <p>It's hidden by default so it doesn't clutter the display. Tap the small tab centered at the bottom of the screen to reveal it; it closes automatically after 20 seconds of inactivity (except in edit mode, where it stays open). Seven buttons:</p>
-          <div class="help-opt"><span class="help-opt-name">+ Add a tile</span><span class="help-opt-desc">Opens the catalog of available widgets. Tap one to add it to the board (or to the side tile drawer, if it's open at that moment); its settings open right away to configure it.</span></div>
+          <div class="help-opt"><span class="help-opt-name">+ Add a tile</span><span class="help-opt-desc">Opens the catalog of available widgets. Tap one to add it to the board (or to whichever tile drawer is open at that moment — the most recently opened one, if several are open at once); its settings open right away to configure it.</span></div>
           <div class="help-opt"><span class="help-opt-name">Edit mode (lock)</span><span class="help-opt-desc">Enables dragging and resizing tiles. In edit mode, simply tapping a tile opens its settings directly. Press this button again to lock the board back.</span></div>
           <div class="help-opt"><span class="help-opt-name">Settings (gear)</span><span class="help-opt-desc">Opens the dashboard's general settings window — detailed below.</span></div>
           <div class="help-opt"><span class="help-opt-name">Help (?)</span><span class="help-opt-desc">The window you're currently reading.</span></div>

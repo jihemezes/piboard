@@ -19,7 +19,7 @@
 </main>
 
 <!-- Tiroir lateral gauche / left side drawer -->
-<aside class="drawer" id="drawer">
+<aside class="drawer drawer-left" id="drawer">
   <div class="drawer-inner">
     <div class="grid-stack" id="drawerGrid"></div>
     <p class="drawer-empty" id="drawerEmpty" hidden>
@@ -30,6 +30,34 @@
     <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
   </button>
   <div class="drawer-resize" id="drawerResize" title="Resize"></div>
+</aside>
+
+<!-- Tiroir superieur / top drawer -->
+<aside class="drawer drawer-top" id="drawerTop">
+  <div class="drawer-inner">
+    <div class="grid-stack" id="drawerGridTop"></div>
+    <p class="drawer-empty" id="drawerTopEmpty" hidden>
+      <span data-i18n="drawer.empty">Open the toolbar and add tiles while the drawer is open: they will live here.</span>
+    </p>
+  </div>
+  <button class="drawer-tab" id="drawerTopTab" aria-label="Top drawer" title="PiBoard">
+    <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div class="drawer-resize" id="drawerTopResize" title="Resize"></div>
+</aside>
+
+<!-- Tiroir lateral droit / right side drawer -->
+<aside class="drawer drawer-right" id="drawerRight">
+  <div class="drawer-inner">
+    <div class="grid-stack" id="drawerGridRight"></div>
+    <p class="drawer-empty" id="drawerRightEmpty" hidden>
+      <span data-i18n="drawer.empty">Open the toolbar and add tiles while the drawer is open: they will live here.</span>
+    </p>
+  </div>
+  <button class="drawer-tab" id="drawerRightTab" aria-label="Right drawer" title="PiBoard">
+    <svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div class="drawer-resize" id="drawerRightResize" title="Resize"></div>
 </aside>
 
 <!-- Languette + barre d'outils / pull tab + toolbar -->

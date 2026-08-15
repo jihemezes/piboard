@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.54.0
+
+- **Deux nouveaux tiroirs de tuiles : en haut et à droite de l'écran.**
+  Sur le modèle du tiroir latéral gauche déjà existant, deux tiroirs
+  supplémentaires — tiré depuis le bord supérieur et depuis le bord
+  droit de l'écran — augmentent la surface d'affichage disponible.
+  Chaque tiroir :
+  - est **indépendant** des deux autres (ouverture, fermeture et
+    contenu propres) et peut rester ouvert en même temps qu'eux ;
+  - se **redimensionne à la souris ou au doigt** (poignée sur son
+    bord ouvert), jusqu'à recouvrir **quasi intégralement l'écran** —
+    la limite est passée de 25–75 % à 10–96 % pour les trois tiroirs,
+    gauche compris ;
+  - passe **au premier plan** dès qu'on l'ouvre ou qu'on le
+    redimensionne, pour rester accessible même quand un autre tiroir,
+    déjà très agrandi, le recouvrirait sinon ;
+  - reçoit directement une tuile ajoutée pendant qu'il est ouvert
+    (celui le plus récemment ouvert, si plusieurs le sont à la fois) ;
+    sinon la tuile rejoint le tableau principal, comme avant.
+  Widgets toujours actifs en arrière-plan tiroir fermé (comptes à
+  rebours, scores en direct...), exactement comme pour le tiroir
+  gauche. Les tailles des trois tiroirs sont sauvegardées
+  indépendamment ; les tableaux de bord déjà configurés avant cette
+  mise à jour conservent la largeur de leur tiroir gauche sans rien à
+  reconfigurer.
+
+---
+
+- **Two new tile drawers: at the top and on the right of the
+  screen.** Modeled on the already-existing left side drawer, two
+  additional drawers — pulled from the screen's top edge and right
+  edge — increase the available display surface. Each drawer:
+  - is **independent** from the other two (its own open/closed state
+    and content) and can stay open at the same time as them;
+  - **resizes with the mouse or a finger** (handle on its open edge),
+    up to covering **almost the entire screen** — the limit moved from
+    25–75% to 10–96% for all three drawers, left included;
+  - comes **to the front** as soon as it's opened or resized, staying
+    reachable even when another, already much-enlarged drawer would
+    otherwise cover it;
+  - directly receives a tile added while it's open (the most recently
+    opened one, if several are open at once); otherwise the tile joins
+    the main board, as before.
+  Widgets keep running in the background while their drawer is closed
+  (countdowns, live scores...), exactly as with the left drawer. The
+  three drawers' sizes are saved independently; dashboards already
+  configured before this update keep their left drawer's width with
+  nothing to reconfigure.
+
 ## 1.53.0
 
 - **Programme TV : grille plein écran façon magazine TV.** Un bandeau

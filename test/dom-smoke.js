@@ -1489,6 +1489,141 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   await sleep(200);
   assert("tuile ajoutee (21 au total)", document.querySelectorAll(".grid-stack-item").length === 21);
 
+  console.log("== Tiroirs (gauche existant, haut, droite) : presence, ouverture, premier plan ==");
+  {
+    const left = document.getElementById("drawer");
+    const top = document.getElementById("drawerTop");
+    const right = document.getElementById("drawerRight");
+    assert("tiroir gauche present avec sa classe de variante", left.classList.contains("drawer-left"));
+    assert("tiroir haut present avec sa classe de variante", top.classList.contains("drawer-top"));
+    assert("tiroir droit present avec sa classe de variante", right.classList.contains("drawer-right"));
+    assert("les 3 tiroirs sont fermes au demarrage (l'ecran doit rester libre au boot)",
+      !left.classList.contains("open") && !top.classList.contains("open") && !right.classList.contains("open"));
+
+    document.getElementById("drawerTopTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("tiroir haut ouvert au clic sur sa languette", top.classList.contains("open"));
+    const zAfterTop = Number(top.style.zIndex) || 0;
+    assert("ouverture met le tiroir au premier plan (z-index attribue)", zAfterTop > 0);
+
+    document.getElementById("drawerRightTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("tiroir droit ouvert au clic sur sa languette", right.classList.contains("open"));
+    const zAfterRight = Number(right.style.zIndex) || 0;
+    assert("le tiroir ouvert en dernier passe devant le precedent (z-index superieur)", zAfterRight > zAfterTop);
+
+    document.getElementById("drawerTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("tiroir gauche (existant) toujours fonctionnel : s'ouvre aussi", left.classList.contains("open"));
+
+    document.getElementById("drawerTopTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("re-clic sur la languette : le tiroir haut se referme", !top.classList.contains("open"));
+  }
+
+  console.log("== Tiroirs : redimensionnement a la souris, jusqu'a quasi tout l'ecran ==");
+  {
+    const root = document.documentElement;
+    const drag = (handleId, downX, downY, moveX, moveY) => {
+      document.getElementById(handleId).dispatchEvent(new window.MouseEvent("pointerdown", { clientX: downX, clientY: downY, bubbles: true }));
+      document.dispatchEvent(new window.MouseEvent("pointermove", { clientX: moveX, clientY: moveY, bubbles: true }));
+      document.dispatchEvent(new window.MouseEvent("pointerup", { bubbles: true }));
+    };
+
+    // Tiroir gauche (largeur, ancre a gauche) : deplacer le pointeur a
+    // mi-largeur de l'ecran (1024px de large dans jsdom) doit donner ~50%.
+    // Left drawer (width, anchored left): moving the pointer to mid
+    // screen width (1024px wide in jsdom) should give ~50%.
+    drag("drawerResize", 0, 0, 512, 0);
+    let leftPct = parseFloat(root.style.getPropertyValue("--drawer-w"));
+    assert("tiroir gauche : redimensionnement a mi-ecran ~50%", leftPct > 45 && leftPct < 55);
+
+    // Tiroir droit (largeur, ancre a droite) : plus le pointeur est pres
+    // du bord GAUCHE de l'ecran, plus le tiroir devient large -- teste
+    // ici pres du bord pour verifier qu'il peut recouvrir "quasi
+    // integralement" l'ecran, comme demande.
+    // Right drawer (width, anchored right): the closer the pointer is
+    // to the LEFT edge of the screen, the wider the drawer becomes --
+    // tested here near the edge to verify it can cover "almost
+    // entirely" the screen, as requested.
+    drag("drawerRightResize", 1024, 0, 41, 0);
+    let rightPct = parseFloat(root.style.getPropertyValue("--drawer-right-w"));
+    assert("tiroir droit : peut s'agrandir jusqu'a quasi tout l'ecran (>=90%)", rightPct >= 90);
+
+    // Tiroir haut (hauteur, ancre en haut) : pointeur tout en bas de
+    // l'ecran (768px de haut dans jsdom) -> doit aussi tendre vers le
+    // maximum, jamais depasser la borne haute (recouvrement quasi total
+    // mais pas un debordement incontrole).
+    // Top drawer (height, anchored top): pointer at the very bottom of
+    // the screen (768px tall in jsdom) -> should also trend toward the
+    // maximum, never exceeding the upper bound (near-total coverage but
+    // not an uncontrolled overflow).
+    drag("drawerTopResize", 0, 0, 0, 767);
+    let topPct = parseFloat(root.style.getPropertyValue("--drawer-top-h"));
+    assert("tiroir haut : peut s'agrandir jusqu'a quasi tout l'ecran (>=90%)", topPct >= 90);
+    assert("mais jamais 100% plein ecran (borne haute respectee, reste un calque)", topPct <= 96);
+
+    // Borne basse : un pointeur ramene tout pres du bord de fermeture ne
+    // doit jamais reduire un tiroir a une largeur/hauteur inutilisable.
+    // Lower bound: a pointer dragged right up against the closing edge
+    // must never shrink a drawer to an unusably small width/height.
+    drag("drawerResize", 0, 0, 2, 0);
+    leftPct = parseFloat(root.style.getPropertyValue("--drawer-w"));
+    assert("borne basse respectee (jamais en dessous d'une taille utilisable)", leftPct >= 10);
+
+    // Chaque redimensionnement declenche une sauvegarde (comportement
+    // deja en place pour le tiroir gauche, verifie ici pour les 3).
+    // Each resize triggers a save (behavior already in place for the
+    // left drawer, checked here for all 3).
+    await sleep(700);
+    const layoutPuts = putCalls.filter((c) => c.url.includes("/api/layout"));
+    assert("redimensionnement d'un tiroir declenche une sauvegarde du layout", layoutPuts.length > 0);
+    const lastLayoutBody = JSON.parse(layoutPuts[layoutPuts.length - 1].body);
+    assert("layout envoye : cle 'drawer' (gauche, compat. ascendante) presente", !!lastLayoutBody.drawer);
+    assert("layout envoye : cle 'drawerTop' presente", !!lastLayoutBody.drawerTop);
+    assert("layout envoye : cle 'drawerRight' presente", !!lastLayoutBody.drawerRight);
+    assert("largeur du tiroir gauche bien serialisee", typeof lastLayoutBody.drawer.widthPct === "number");
+    assert("hauteur du tiroir haut serialisee sous sa propre cle (heightPct)", typeof lastLayoutBody.drawerTop.heightPct === "number");
+    assert("largeur du tiroir droit serialisee", typeof lastLayoutBody.drawerRight.widthPct === "number");
+  }
+
+  console.log("== Tiroirs : une tuile ajoutee pendant qu'un tiroir precis est ouvert atterrit dedans (pas sur le tableau) ==");
+  {
+    // Le tiroir droit est le seul ouvert a ce stade (gauche et haut ont
+    // ete refermes/rouverts ci-dessus -- on repart d'un etat net).
+    // Only the right drawer is open at this point (left and top were
+    // closed/reopened above -- start from a clean state).
+    document.getElementById("drawer").classList.remove("open");
+    document.getElementById("drawerTop").classList.remove("open");
+    if (!document.getElementById("drawerRight").classList.contains("open")) {
+      document.getElementById("drawerRightTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    }
+
+    const boardCountBefore = document.querySelectorAll("#grid .grid-stack-item").length;
+    const rightCountBefore = document.querySelectorAll("#drawerGridRight .grid-stack-item").length;
+
+    document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(200);
+
+    assert("la tuile n'est PAS atterrie sur le tableau principal",
+      document.querySelectorAll("#grid .grid-stack-item").length === boardCountBefore);
+    assert("la tuile est bien atterrie dans le tiroir droit (celui ouvert)",
+      document.querySelectorAll("#drawerGridRight .grid-stack-item").length === rightCountBefore + 1);
+
+    // Nettoyage : un test plus loin dans la suite suppose que "la
+    // derniere .grid-stack-item du document" est la sienne, sur le
+    // tableau -- une tuile laissee dans un tiroir apres celle-ci (en
+    // aval dans l'ordre du document) fausserait cette hypothese.
+    // Cleanup: a test further down the suite assumes "the document's
+    // last .grid-stack-item" is its own, on the board -- a tile left in
+    // a drawer after this one (later in document order) would break
+    // that assumption.
+    const drawerTiles = document.querySelectorAll("#drawerGridRight .grid-stack-item");
+    const addedTile = drawerTiles[drawerTiles.length - 1];
+    addedTile.querySelector(".tile-x").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("nettoyage : la tuile ajoutee dans le tiroir est bien retiree",
+      document.querySelectorAll("#drawerGridRight .grid-stack-item").length === rightCountBefore);
+
+    document.getElementById("drawerRightTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  }
+
   console.log("== Configuration reutilisable (tuile nommee) ==");
   {
     const webviewIndex = catalog.findIndex((m) => m.id === "webview");
