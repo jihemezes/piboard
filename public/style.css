@@ -413,7 +413,37 @@ body.editing .ui-resizable-s::after {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  /* Redimensionnable a la souris (coin bas-droit, poignee native du
+     navigateur) : certains contenus injectes -- un mail mis en forme,
+     un article -- peuvent avoir besoin de plus de largeur que celle
+     par defaut pour rester lisibles. S'applique a TOUTES les fenetres
+     construites sur ce meme .modal-card (lecture de mail, article RSS,
+     detail meteo, reglages de tuile, aide, catalogue...), pas
+     seulement au courriel. Bornes pour ne jamais degenerer vers une
+     boite illisible (trop petite) ou qui deborde de l'ecran (trop
+     grande) ; overflow:hidden ci-dessus suffit deja a satisfaire
+     l'exigence CSS de resize (tout sauf "visible"), pas besoin de le
+     changer -- le contenu interne gere deja son propre defilement.
+     Resizable with the mouse (bottom-right corner, native browser
+     handle): some injected content -- a formatted email, an article --
+     may need more width than the default to stay readable. Applies to
+     EVERY window built on this same .modal-card (email reader, RSS
+     article, weather detail, tile settings, help, catalog...), not
+     just email. Bounded so it never degenerates into an unreadable box
+     (too small) or one that overflows the screen (too large);
+     overflow:hidden above already satisfies CSS resize's requirement
+     (anything but "visible"), no need to change it -- the inner content
+     already handles its own scrolling. */
+  resize: both;
+  min-width: 280px;
+  min-height: 160px;
+  max-width: 96vw;
 }
+/* Poignee de redimensionnement invisible sur tactile (aucune souris) :
+   evite un petit triangle inutile/perturbant sur le tableau mural.
+   Resize handle hidden on touch (no mouse): avoids a small, pointless/
+   distracting triangle on the wall-mounted board. */
+body.touch .modal-card { resize: none; }
 
 .modal-head {
   display: flex;

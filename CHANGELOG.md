@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.52.2
+
+- **Toutes les fenêtres popup redimensionnables à la souris.** Lecture
+  d'un mail, article RSS, détail météo, réglages d'une tuile, aide,
+  catalogue… toute fenêtre construite sur le même principe partagé
+  (`.modal-card`) peut désormais être agrandie en tirant son coin
+  bas-droit — pratique quand un contenu mis en forme (un mail HTML
+  complexe, par exemple) a besoin de plus de largeur pour rester
+  lisible. Poignée native du navigateur, bornée pour ne jamais
+  descendre en dessous d'une taille lisible ni déborder de l'écran.
+  N'apparaît qu'avec une souris — masquée en mode tactile, où elle
+  n'aurait pas de sens.
+
+---
+
+- **Every popup window resizable with the mouse.** Reading an email,
+  an RSS article, weather details, a tile's settings, help, the
+  catalog… every window built on the same shared principle
+  (`.modal-card`) can now be enlarged by dragging its bottom-right
+  corner — handy when formatted content (a complex HTML email, for
+  instance) needs more width to stay readable. Native browser handle,
+  bounded so it never shrinks below a readable size or overflows the
+  screen. Only shows up with a mouse — hidden in touch mode, where it
+  wouldn't make sense.
+
 ## 1.52.1
 
 - **Toutes les alertes/alarmes/rappels : arrêt en touchant ou cliquant
