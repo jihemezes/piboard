@@ -1168,40 +1168,52 @@
       group: "tiles",
       title: { fr: "Page web", en: "Web page" },
       sub: {
-        fr: "Affiche n'importe quelle page web (carte de trafic, app domotique, page de statut…). Fonctionne d'emblée avec la plupart des sites.",
-        en: "Embeds any web page (traffic map, home app, status page…). Works out of the box with most sites."
+        fr: "Affiche jusqu'à 5 pages web, basculables par onglets. Fonctionne d'emblée avec la plupart des sites.",
+        en: "Displays up to 5 web pages, switchable via tabs. Works out of the box with most sites."
       },
       html: {
         fr: `
           <span class="help-size">Taille : 6×4 par défaut, de 2×2 à 12×16</span>
           <h4>Objectif</h4>
-          <p>Intégrer une page web externe directement dans une tuile — utile pour tout service que PiBoard ne propose pas nativement (une application domotique, un tableau de statut, une carte tierce).</p>
-          <h4>Un site qui n'affiche rien ? C'est presque toujours réglé automatiquement</h4>
+          <p>Intégrer une ou plusieurs pages web externes directement dans une tuile — utile pour tout service que PiBoard ne propose pas nativement (une application domotique, un tableau de statut, une carte tierce).</p>
+          <h4>Plusieurs sites, par onglets</h4>
+          <p>Jusqu'à 5 sites peuvent être configurés (« Site 1 » à « Site 5 »). Dès qu'un deuxième site est renseigné, une barre d'onglets apparaît en haut de la tuile pour basculer de l'un à l'autre — masquée tant qu'un seul site est configuré, pour ne rien encombrer inutilement. Un nom d'onglet personnalisé peut être donné à chacun ; à défaut, le nom de domaine du site est utilisé. Seul l'onglet actif est réellement chargé : passer d'un onglet à l'autre remplace le contenu affiché plutôt que de garder les 5 sites actifs en même temps.</p>
+          <h4>Dans l'application de bureau Windows : affichage natif, sans aucun réglage</h4>
+          <p>PiBoard tourne alors dans Electron, qui dispose d'une capacité qu'un navigateur ordinaire n'a pas : afficher un site tiers en <b>ignorant totalement son en-tête X-Frame-Options</b>, tout en le gardant pleinement interactif (défilement, clics, formulaires) et en lui laissant charger ses ressources normalement. C'est le comportement automatique dans ce cas — les modes d'affichage ci-dessous n'ont alors d'effet que si le mode « Image » est choisi explicitement.</p>
+          <h4>Sur Raspberry Pi (ou si le mode « Image » est choisi) : un site qui n'affiche rien ? C'est presque toujours réglé automatiquement</h4>
           <p>De nombreux sites — les sites municipaux et institutionnels français en particulier, souvent par conformité RGS/ANSSI — bloquent volontairement leur affichage en cadre (iframe) pour des raisons de sécurité anti-détournement. Sans solution de contournement, cela produit une tuile silencieusement vide, sans le moindre message d'erreur visible. Le mode d'affichage <b>« Via PiBoard »</b> (activé par défaut) contourne ce blocage : la page est récupérée par le serveur PiBoard puis relayée depuis sa propre adresse, ce qui rend ce blocage sans effet. Si malgré tout la page ne peut pas être récupérée (site injoignable, page introuvable…), un message clair l'indique directement dans la tuile plutôt qu'un vide silencieux.</p>
           <p>Limite assumée de ce mode : le contenu s'affiche correctement (texte, images, mise en forme), mais un site très fortement interactif (une application web complète, pas un simple site vitrine) peut perdre certaines fonctionnalités qui dépendent d'appels réseau internes au site. Le mode <b>« Direct »</b> reste disponible pour les sites qui autorisent explicitement leur affichage en iframe : plus rapide (pas de détour serveur) et garde le site pleinement interactif.</p>
           <h4>Le mode « Image » : la solution qui marche partout</h4>
-          <p>Si aucun des deux autres modes n'affiche correctement un site, le mode <b>« Image »</b> y arrivera : la page est rendue par un <i>vrai navigateur</i> lancé sur le PiBoard lui-même (le JavaScript s'exécute normalement), puis PiBoard affiche une photo du résultat. Comme il n'y a plus ni cadre ni relais de code, il ne reste plus rien qu'un site puisse bloquer.</p>
+          <p>Si aucun des autres modes n'affiche correctement un site, le mode <b>« Image »</b> y arrivera : la page est rendue par un <i>vrai navigateur</i> lancé sur le PiBoard lui-même (le JavaScript s'exécute normalement), puis PiBoard affiche une photo du résultat. Comme il n'y a plus ni cadre ni relais de code, il ne reste plus rien qu'un site puisse bloquer — c'est aussi le seul mode qui a un effet visible dans l'application de bureau Windows, décrite plus haut.</p>
           <p>La contrepartie est réelle et vaut d'être connue avant de choisir ce mode : l'affichage est <b>fixe</b> — pas de défilement, pas de clic, pas de formulaire. Il convient à une page que l'on consulte du regard (page d'accueil, tableau de bord, page de statut), pas à un service avec lequel on interagit. Chaque rafraîchissement lance un navigateur et prend quelques secondes sur un Raspberry Pi : mieux vaut un intervalle de rechargement généreux (10 minutes ou plus). Ce mode utilise Chromium, déjà installé sur un Raspberry Pi en mode kiosque — c'est le navigateur qui affiche PiBoard lui-même, donc rien de plus à installer dans ce cas.</p>
-          <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">URL de la page</span><span class="help-opt-desc">L'adresse à afficher dans la tuile. « https:// » est ajouté automatiquement si omis.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Mode d'affichage</span><span class="help-opt-desc">Via PiBoard (par défaut, contourne la plupart des blocages), Direct (plus rapide, nécessite l'autorisation du site) ou Image (marche partout, mais affichage fixe).</span></div>
+          <h4>Options (par site, jusqu'à 5)</h4>
+          <div class="help-opt"><span class="help-opt-name">URL de la page</span><span class="help-opt-desc">L'adresse à afficher. « https:// » est ajouté automatiquement si omis. Seul le Site 1 est obligatoire.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Nom de l'onglet</span><span class="help-opt-desc">Optionnel. Reprend le nom de domaine du site si laissé vide.</span></div>
+          <h4>Options (communes à tous les sites)</h4>
+          <div class="help-opt"><span class="help-opt-name">Mode d'affichage</span><span class="help-opt-desc">Via PiBoard (par défaut, contourne la plupart des blocages), Direct (plus rapide, nécessite l'autorisation du site) ou Image (marche partout, mais affichage fixe). Sans effet dans l'application de bureau Windows, sauf en mode Image.</span></div>
           <div class="help-opt"><span class="help-opt-name">Zoom</span><span class="help-opt-desc">Pourcentage de zoom appliqué à la page affichée.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Recharger toutes les</span><span class="help-opt-desc">Intervalle en minutes entre deux rechargements automatiques (0 = jamais).</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Recharger toutes les</span><span class="help-opt-desc">Intervalle en minutes entre deux rechargements automatiques de l'onglet actif (0 = jamais).</span></div>`,
         en: `
           <span class="help-size">Size: 6×4 by default, from 2×2 to 12×16</span>
           <h4>Goal</h4>
-          <p>Embed an external web page directly into a tile — useful for any service PiBoard doesn't natively offer (a home automation app, a status dashboard, a third-party map).</p>
-          <h4>A site showing nothing? That's almost always handled automatically</h4>
+          <p>Embed one or more external web pages directly into a tile — useful for any service PiBoard doesn't natively offer (a home automation app, a status dashboard, a third-party map).</p>
+          <h4>Several sites, via tabs</h4>
+          <p>Up to 5 sites can be configured ("Site 1" through "Site 5"). As soon as a second site is filled in, a tab bar appears at the top of the tile to switch between them — hidden while only one site is configured, so nothing is cluttered needlessly. A custom tab name can be given to each; otherwise the site's domain name is used. Only the active tab is actually loaded: switching tabs replaces the displayed content rather than keeping all 5 sites active at once.</p>
+          <h4>In the Windows desktop app: native display, no setting needed</h4>
+          <p>PiBoard then runs inside Electron, which has a capability a plain browser doesn't: displaying a third-party site while <b>completely ignoring its X-Frame-Options header</b>, while keeping it fully interactive (scrolling, clicks, forms) and letting it load its resources normally. This is the automatic behavior in that case — the display modes below then only matter if "Image" mode is explicitly chosen.</p>
+          <h4>On Raspberry Pi (or if "Image" mode is chosen): a site showing nothing? That's almost always handled automatically</h4>
           <p>Many sites — French municipal and institutional sites in particular, often for RGS/ANSSI compliance — deliberately block being shown in a frame (iframe) for anti-clickjacking security reasons. With no workaround, this produces a silently empty tile, with no visible error message at all. The <b>"Via PiBoard"</b> display mode (on by default) works around this block: the page is fetched by the PiBoard server then relayed from its own address, which makes that block ineffective. If the page still can't be fetched at all (unreachable site, page not found…), a clear message says so right in the tile instead of a silent void.</p>
           <p>Accepted limitation of this mode: content displays correctly (text, images, layout), but a very heavily interactive site (a full web application, not a simple showcase site) may lose some features that depend on network calls internal to the site. <b>"Direct"</b> mode remains available for sites that explicitly allow being shown in an iframe: faster (no server round-trip) and keeps the site fully interactive.</p>
           <h4>"Image" mode: the one that works everywhere</h4>
-          <p>If neither of the other two modes displays a site correctly, <b>"Image"</b> mode will: the page is rendered by a <i>real browser</i> launched on the PiBoard itself (JavaScript runs normally), then PiBoard shows a photo of the result. Since there's no longer a frame or relayed code, there's nothing left for a site to block.</p>
+          <p>If no other mode displays a site correctly, <b>"Image"</b> mode will: the page is rendered by a <i>real browser</i> launched on the PiBoard itself (JavaScript runs normally), then PiBoard shows a photo of the result. Since there's no longer a frame or relayed code, there's nothing left for a site to block — it's also the only mode with any visible effect in the Windows desktop app, described above.</p>
           <p>The trade-off is real and worth knowing before choosing this mode: the display is <b>static</b> — no scrolling, no clicking, no forms. It suits a page you just look at (home page, dashboard, status page), not a service you interact with. Each refresh launches a browser and takes a few seconds on a Raspberry Pi: a generous reload interval (10 minutes or more) is best. This mode uses Chromium, already installed on a Raspberry Pi in kiosk mode — it's the very browser displaying PiBoard, so nothing extra to install in that case.</p>
-          <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">Page URL</span><span class="help-opt-desc">The address to show in the tile. "https://" is added automatically if left out.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Display mode</span><span class="help-opt-desc">Via PiBoard (default, works around most blocks), Direct (faster, requires the site's permission) or Image (works everywhere, but static).</span></div>
+          <h4>Options (per site, up to 5)</h4>
+          <div class="help-opt"><span class="help-opt-name">Page URL</span><span class="help-opt-desc">The address to show. "https://" is added automatically if left out. Only Site 1 is required.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Tab label</span><span class="help-opt-desc">Optional. Defaults to the site's domain name if left empty.</span></div>
+          <h4>Options (shared by every site)</h4>
+          <div class="help-opt"><span class="help-opt-name">Display mode</span><span class="help-opt-desc">Via PiBoard (default, works around most blocks), Direct (faster, requires the site's permission) or Image (works everywhere, but static). No effect in the Windows desktop app, except in Image mode.</span></div>
           <div class="help-opt"><span class="help-opt-name">Zoom</span><span class="help-opt-desc">Zoom percentage applied to the shown page.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Reload every</span><span class="help-opt-desc">Interval in minutes between two automatic reloads (0 = never).</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Reload every</span><span class="help-opt-desc">Interval in minutes between two automatic reloads of the active tab (0 = never).</span></div>`
       }
     },
 

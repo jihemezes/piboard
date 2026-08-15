@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.58.0
+
+- **Tuile Page web : jusqu'à 5 sites, basculables par onglets.** Une
+  barre d'onglets apparaît en haut de la tuile dès qu'un deuxième site
+  est configuré (« Site 2 » à « Site 5 » dans les réglages) — masquée
+  tant qu'un seul site est renseigné, pour ne rien encombrer
+  inutilement dans le cas d'usage le plus courant. Un nom d'onglet
+  personnalisé peut être donné à chacun ; à défaut, le nom de domaine
+  du site est utilisé. Seul l'onglet actif est réellement chargé :
+  passer d'un onglet à l'autre remplace le contenu affiché plutôt que
+  de garder les 5 sites actifs en même temps — un seul site à la fois
+  suffit déjà à solliciter le réseau ou, en mode Image, à relancer un
+  navigateur. Mode d'affichage, zoom et intervalle de rechargement
+  restent des réglages communs, appliqués à l'onglet actif. Tuiles déjà
+  configurées avant cette mise à jour : leur site s'affiche
+  automatiquement dans le premier onglet, sans rien à reconfigurer.
+
+---
+
+- **Web page tile: up to 5 sites, switchable via tabs.** A tab bar
+  appears at the top of the tile as soon as a second site is
+  configured ("Site 2" through "Site 5" in the settings) — hidden
+  while only one site is filled in, so nothing is cluttered needlessly
+  in the most common use case. A custom tab name can be given to each;
+  otherwise the site's domain name is used. Only the active tab is
+  actually loaded: switching tabs replaces the displayed content
+  rather than keeping all 5 sites active at once — a single site is
+  already enough to load the network or, in Image mode, relaunch a
+  browser. Display mode, zoom and reload interval remain shared
+  settings, applied to the active tab. Tiles already configured before
+  this update: their site now shows automatically in the first tab,
+  with nothing to reconfigure.
+
 ## 1.57.0
 
 - **Tuile Page web : affichage natif dans l'application de bureau

@@ -1,6 +1,16 @@
-/* PiBoard widget: webview / page web (iframe configurable)
+/* PiBoard widget: webview / page web (jusqu'a 5 sites via des onglets)
 
-   Deux modes (reglage "mode") :
+   Jusqu'a 5 sites (reglages site1Url..site5Url) sont proposes comme
+   des onglets en haut de la tuile -- masques quand un seul site est
+   configure, pour ne pas prendre de place inutilement dans le cas
+   d'usage le plus courant. Un seul site est rendu a la fois (celui de
+   l'onglet actif) : changer d'onglet remplace le contenu affiche
+   plutot que de garder les autres sites charges en arriere-plan --
+   c'est deja assez couteux de charger UN site (surtout en mode
+   "Image", qui relance un navigateur), inutile d'en payer le prix pour
+   5 a la fois alors qu'un seul est visible.
+
+   Trois modes (reglage "mode"), communs a tous les onglets :
    - "proxy" (par defaut) : la page est recuperee cote serveur puis
      reexpediee depuis l'origine de PiBoard (voir /api/webview-proxy et
      server/webviewProxy.js pour le detail). Contourne le blocage
@@ -8,26 +18,54 @@
      sites posent desormais par defaut -- sans ce detour, ces sites
      affichaient une page blanche silencieuse, sans la moindre erreur
      visible.
-   - "direct" : ancien comportement, l'iframe pointe directement vers
-     l'URL du site. Plus rapide (pas de detour serveur) et garde le
-     site pleinement interactif (ses propres requetes AJAX/fetch
-     visent bien son origine), mais ne fonctionne QUE si le site
-     autorise explicitement l'affichage en iframe.
+   - "direct" : l'iframe pointe directement vers l'URL du site. Plus
+     rapide (pas de detour serveur) et garde le site pleinement
+     interactif, mais ne fonctionne QUE si le site autorise
+     explicitement l'affichage en iframe.
+   - "shot" ("Image") : la page est rendue par Chromium headless cote
+     serveur puis affichee comme une image fixe (voir
+     /api/webview-shot et server/webviewShot.js). Fonctionne avec
+     absolument n'importe quel site, au prix d'un affichage non
+     interactif.
 
-   Two modes (setting "mode"):
+   Cas particulier : dans l'application de bureau (Electron), la balise
+   <webview> est utilisee a la place de tout ce qui precede (sauf si le
+   mode "Image" est explicitement choisi) -- elle affiche le site tel
+   quel, interactif, en ignorant totalement son X-Frame-Options. Voir
+   hasWebviewTag() plus bas.
+
+   Up to 5 sites (settings site1Url..site5Url) are offered as tabs at
+   the top of the tile -- hidden when only one site is configured, so
+   as not to take up space needlessly in the most common case. Only one
+   site is rendered at a time (the active tab's): switching tabs
+   replaces the displayed content rather than keeping the other sites
+   loaded in the background -- loading ONE site is already costly
+   enough (especially in "Image" mode, which relaunches a browser), no
+   point paying that cost for 5 at once when only one is visible.
+
+   Three modes (setting "mode"), shared by every tab:
    - "proxy" (default): the page is fetched server-side then relayed
      from PiBoard's own origin (see /api/webview-proxy and
      server/webviewProxy.js for detail). Works around the
      iframe-embedding block (X-Frame-Options/CSP) most sites now set
      by default -- without this workaround, those sites showed a
      silent blank page, with no visible error at all.
-   - "direct": old behavior, the iframe points straight at the site's
-     URL. Faster (no server round-trip) and keeps the site fully
-     interactive (its own AJAX/fetch requests correctly target its own
-     origin), but only works if the site explicitly allows iframe
-     embedding. */
+   - "direct": the iframe points straight at the site's URL. Faster
+     (no server round-trip) and keeps the site fully interactive, but
+     only works if the site explicitly allows iframe embedding.
+   - "shot" ("Image"): the page is rendered by headless Chromium
+     server-side then shown as a static image (see /api/webview-shot
+     and server/webviewShot.js). Works with absolutely any site, at
+     the cost of a non-interactive display.
+
+   Special case: in the desktop app (Electron), the <webview> tag is
+   used instead of all of the above (unless "Image" mode is explicitly
+   chosen) -- it shows the site as-is, interactive, while completely
+   ignoring its X-Frame-Options. See hasWebviewTag() below. */
 (function () {
   "use strict";
+
+  const MAX_SITES = 5;
 
   function escapeAttr(s) {
     return String(s == null ? "" : s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -58,6 +96,20 @@
     return /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) ? trimmed : "https://" + trimmed;
   }
 
+  /* Nom d'onglet par defaut quand aucun libelle n'est fourni : le nom
+     de domaine, sans le "www." decoratif. Repli sur l'URL telle quelle
+     si elle n'est meme pas parsable.
+     Default tab name when no label is provided: the domain name,
+     without the decorative "www.". Falls back to the raw URL if it
+     isn't even parsable. */
+  function labelFor(url) {
+    try {
+      return new URL(normalizeUrl(url)).hostname.replace(/^www\./i, "");
+    } catch (e) {
+      return url;
+    }
+  }
+
   /* PiBoard tourne-t-il dans l'application de bureau (Electron) ?
      Determinant pour cette tuile : Electron fournit la balise
      <webview>, qui affiche un site tiers en IGNORANT son
@@ -85,6 +137,8 @@
       this.ctx = ctx;
       this.timer = null;
       this.observer = null;
+      this.resizeDebounce = null;
+      this.activeIdx = 0;
     }
 
     init() {
@@ -96,69 +150,92 @@
       this.render();
     }
 
-    frameSrc(bust) {
+    /* Liste des sites reellement configures (URL non vide) parmi les
+       MAX_SITES emplacements fixes des reglages -- meme principe que
+       les fuseaux additionnels de l'horloge ou les emplacements de la
+       tuile Camera. Le premier emplacement retombe sur l'ancien
+       reglage "url" s'il est vide : compatibilite ascendante pour une
+       tuile configuree avant l'ajout des onglets, qui ne doit pas se
+       retrouver vide a la premiere ouverture apres mise a jour.
+       List of ACTUALLY configured sites (non-empty URL) among the
+       MAX_SITES fixed setting slots -- same principle as the clock's
+       extra zones or the Camera tile's slots. The first slot falls
+       back to the old "url" setting if empty: backward compatibility
+       for a tile configured before tabs were added, which must not end
+       up empty on first open after the update. */
+    sites() {
       const s = this.ctx.settings;
-      const url = normalizeUrl(s.url);
-      if (s.mode === "direct") return url;
-      const p = "/api/webview-proxy?url=" + encodeURIComponent(url);
-      return bust ? (p + "&t=" + Date.now()) : p;
+      const list = [];
+      for (let i = 1; i <= MAX_SITES; i++) {
+        let raw = String(s["site" + i + "Url"] || "").trim();
+        if (i === 1 && !raw && s.url) raw = String(s.url).trim();
+        if (!raw) continue;
+        const url = normalizeUrl(raw);
+        const label = String(s["site" + i + "Label"] || "").trim() || labelFor(url);
+        list.push({ url, label });
+      }
+      return list;
     }
 
-    /* Adresse de la capture d'ecran (mode "image"). La taille demandee
-       suit celle de la tuile, pour que la page soit rendue au bon
-       format plutot que redimensionnee ensuite -- une page rendue en
-       1280x800 puis ecrasee dans une tuile etroite serait illisible.
-       Screenshot address ("image" mode). The requested size follows the
-       tile's own, so the page is rendered at the right shape rather
-       than squeezed afterwards -- a page rendered at 1280x800 then
-       crammed into a narrow tile would be unreadable. */
-    shotSrc() {
-      const s = this.ctx.settings;
-      const scale = (Number(s.zoom) || 100) / 100;
-      const w = Math.max(320, Math.round((this.ctx.el.clientWidth || 640) / scale));
-      const h = Math.max(240, Math.round((this.ctx.el.clientHeight || 480) / scale));
-      return "/api/webview-shot?url=" + encodeURIComponent(normalizeUrl(s.url))
-        + "&w=" + w + "&h=" + h + "&t=" + Date.now();
-    }
-
-    /* Mode "image" : la capture prend plusieurs secondes sur un Pi
-       (lancement de Chromium). L'image n'est remplacee qu'une fois la
-       nouvelle effectivement chargee -- meme precaution que la tuile
-       Camera : on evite un cadre vide clignotant a chaque
-       rafraichissement.
-       "Image" mode: capturing takes several seconds on a Pi (Chromium
-       launch). The image is only swapped once the new one has actually
-       loaded -- same precaution as the Camera tile: avoids a blinking
-       empty frame on every refresh. */
-    refreshShot() {
-      const img = this.ctx.el.querySelector(".pwv-shot");
-      const status = this.ctx.el.querySelector(".pwv-status");
-      if (!img) return;
-      const url = this.shotSrc();
-      const probe = new Image();
-      probe.onload = () => {
-        img.src = url;
-        img.hidden = false;
-        if (status) status.hidden = true;
-      };
-      probe.onerror = () => {
-        if (status) {
-          status.textContent = this.ctx.i18n.t("webview.shotError");
-          status.hidden = false;
-        }
-      };
-      probe.src = url;
+    tabsHtml(sites) {
+      return `<div class="pwv-tabs">${sites.map((site, i) =>
+        `<button type="button" class="pwv-tab${i === this.activeIdx ? " pwv-tab-active" : ""}" data-idx="${i}" title="${escapeAttr(site.url)}">${escapeAttr(site.label)}</button>`
+      ).join("")}</div>`;
     }
 
     render() {
-      const s = this.ctx.settings;
-      clearInterval(this.timer);
-      if (this.observer) { this.observer.disconnect(); this.observer = null; }
+      const sites = this.sites();
 
-      if (!s.url) {
+      if (!sites.length) {
         this.ctx.el.innerHTML = `<div class="pw-webview"><div class="pwv-missing">${this.ctx.i18n.t("webview.missing")}</div></div>`;
         return;
       }
+      // Reglages modifies entre-temps (un onglet retire, par exemple) :
+      // repli sur le premier onglet plutot qu'un index qui n'existe
+      // plus. Settings changed in the meantime (a tab removed, for
+      // instance): fall back to the first tab rather than an index that
+      // no longer exists.
+      if (this.activeIdx >= sites.length) this.activeIdx = 0;
+
+      this.ctx.el.innerHTML = `<div class="pw-webview">${sites.length > 1 ? this.tabsHtml(sites) : ""}<div class="pwv-content"></div></div>`;
+
+      if (sites.length > 1) {
+        this.ctx.el.querySelectorAll(".pwv-tab").forEach((btn) => {
+          // stopPropagation : sinon ce clic remonte jusqu'a la grille en
+          // mode edition et rouvre les reglages de la tuile en pleine
+          // consultation -- meme correctif que les autres tuiles a
+          // onglets (Programme TV, Horloge...).
+          // stopPropagation: otherwise this click bubbles up to the grid
+          // in edit mode and reopens the tile's settings mid-viewing --
+          // same fix as other tabbed tiles (TV guide, Clock...).
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const idx = Number(btn.dataset.idx);
+            if (idx === this.activeIdx) return;
+            this.activeIdx = idx;
+            this.ctx.el.querySelectorAll(".pwv-tab").forEach((b) => b.classList.toggle("pwv-tab-active", Number(b.dataset.idx) === idx));
+            this.renderContent(sites);
+          });
+        });
+      }
+
+      this.renderContent(sites);
+    }
+
+    /* Construit le contenu de l'onglet actif -- seule cette zone est
+       reconstruite au changement d'onglet, la barre d'onglets elle-meme
+       reste en place. Builds the active tab's content -- only this area
+       is rebuilt on tab switch, the tab bar itself stays in place. */
+    renderContent(sites) {
+      clearInterval(this.timer);
+      clearTimeout(this.resizeDebounce);
+      if (this.observer) { this.observer.disconnect(); this.observer = null; }
+      this.iframe = null;
+
+      const s = this.ctx.settings;
+      const site = sites[this.activeIdx];
+      const content = this.ctx.el.querySelector(".pwv-content");
+      if (!content) return;
 
       /* Application de bureau (Electron) : la balise <webview> est
          essayee AVANT tout le reste, sauf si le mode "Image" est
@@ -172,20 +249,15 @@
          regardless of its X-Frame-Options -- the server-side modes
          ("proxy"/"direct") have no reason to be used here. */
       if (hasWebviewTag() && s.mode !== "shot") {
-        const url = normalizeUrl(s.url);
-        this.ctx.el.innerHTML = `<div class="pw-webview">
-          <webview class="pwv-webview" src="${escapeAttr(url)}" allowpopups></webview>
-        </div>`;
-        this.iframe = null;
-        const wv = this.ctx.el.querySelector("webview");
+        content.innerHTML = `<webview class="pwv-webview" src="${escapeAttr(site.url)}" allowpopups></webview>`;
+        const wv = content.querySelector("webview");
         // Meme repli que le mode "Image" en cas d'echec de chargement :
         // un message plutot qu'un cadre vide sans explication.
         // Same fallback as "Image" mode on load failure: a message
         // rather than an empty frame with no explanation.
         wv.addEventListener("did-fail-load", (e) => {
           if (e.errorCode === -3) return; // chargement interrompu (navigation normale) / aborted load (normal navigation)
-          this.ctx.el.querySelector(".pw-webview").innerHTML =
-            `<div class="pwv-status">${escapeAttr(this.ctx.i18n.t("webview.shotError"))}</div>`;
+          content.innerHTML = `<div class="pwv-status">${escapeAttr(this.ctx.i18n.t("webview.shotError"))}</div>`;
         });
 
         const wvMinutes = Number(s.reload) || 0;
@@ -196,12 +268,8 @@
       }
 
       if (s.mode === "shot") {
-        this.ctx.el.innerHTML = `<div class="pw-webview">
-          <img class="pwv-shot" alt="" hidden>
-          <div class="pwv-status">${this.ctx.i18n.t("webview.shotLoading")}</div>
-        </div>`;
-        this.iframe = null;
-        this.refreshShot();
+        content.innerHTML = `<img class="pwv-shot" alt="" hidden><div class="pwv-status">${this.ctx.i18n.t("webview.shotLoading")}</div>`;
+        this.refreshShot(site.url);
         // Une tuile redimensionnee change la taille de rendu demandee :
         // on recapture, mais seulement apres stabilisation, pour ne pas
         // relancer Chromium a chaque pixel pendant un glisser.
@@ -210,20 +278,20 @@
         // pixel during a drag.
         this.observer = new ResizeObserver(() => {
           clearTimeout(this.resizeDebounce);
-          this.resizeDebounce = setTimeout(() => this.refreshShot(), 800);
+          this.resizeDebounce = setTimeout(() => this.refreshShot(site.url), 800);
         });
         this.observer.observe(this.ctx.el);
 
         const shotMinutes = Number(s.reload) || 0;
         if (shotMinutes > 0) {
-          this.timer = setInterval(() => this.refreshShot(), shotMinutes * 60000);
+          this.timer = setInterval(() => this.refreshShot(site.url), shotMinutes * 60000);
         }
         return;
       }
 
-      this.ctx.el.innerHTML = `<div class="pw-webview"><iframe src="${escapeAttr(this.frameSrc(false))}" loading="lazy"
-        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe></div>`;
-      this.iframe = this.ctx.el.querySelector("iframe");
+      content.innerHTML = `<iframe src="${escapeAttr(this.frameSrc(site.url, false))}" loading="lazy"
+        sandbox="allow-scripts allow-same-origin allow-forms allow-popups"></iframe>`;
+      this.iframe = content.querySelector("iframe");
       this.applyZoom();
 
       // Le zoom depend de la taille de la tuile / zoom depends on tile size
@@ -244,16 +312,76 @@
           // already carries Cache-Control: no-store, but a changing
           // identifier still guarantees a fresh navigation rather than
           // an identical reassignment some engines might skip.
-          this.iframe.src = this.frameSrc(true);
+          this.iframe.src = this.frameSrc(site.url, true);
         }, minutes * 60000);
       }
+    }
+
+    frameSrc(url, bust) {
+      const s = this.ctx.settings;
+      if (s.mode === "direct") return url;
+      const p = "/api/webview-proxy?url=" + encodeURIComponent(url);
+      return bust ? (p + "&t=" + Date.now()) : p;
+    }
+
+    /* Adresse de la capture d'ecran (mode "image"). La taille demandee
+       suit celle de la tuile, pour que la page soit rendue au bon
+       format plutot que redimensionnee ensuite -- une page rendue en
+       1280x800 puis ecrasee dans une tuile etroite serait illisible.
+       Screenshot address ("image" mode). The requested size follows the
+       tile's own, so the page is rendered at the right shape rather
+       than squeezed afterwards -- a page rendered at 1280x800 then
+       crammed into a narrow tile would be unreadable. */
+    shotSrc(url) {
+      const s = this.ctx.settings;
+      const scale = (Number(s.zoom) || 100) / 100;
+      const w = Math.max(320, Math.round((this.ctx.el.clientWidth || 640) / scale));
+      const h = Math.max(240, Math.round((this.ctx.el.clientHeight || 480) / scale));
+      return "/api/webview-shot?url=" + encodeURIComponent(url) + "&w=" + w + "&h=" + h + "&t=" + Date.now();
+    }
+
+    /* Mode "image" : la capture prend plusieurs secondes sur un Pi
+       (lancement de Chromium). L'image n'est remplacee qu'une fois la
+       nouvelle effectivement chargee -- meme precaution que la tuile
+       Camera : on evite un cadre vide clignotant a chaque
+       rafraichissement.
+       "Image" mode: capturing takes several seconds on a Pi (Chromium
+       launch). The image is only swapped once the new one has actually
+       loaded -- same precaution as the Camera tile: avoids a blinking
+       empty frame on every refresh. */
+    refreshShot(url) {
+      const content = this.ctx.el.querySelector(".pwv-content");
+      const img = content && content.querySelector(".pwv-shot");
+      const status = content && content.querySelector(".pwv-status");
+      if (!img) return;
+      const shotUrl = this.shotSrc(url);
+      const probe = new Image();
+      probe.onload = () => {
+        img.src = shotUrl;
+        img.hidden = false;
+        if (status) status.hidden = true;
+      };
+      probe.onerror = () => {
+        if (status) {
+          status.textContent = this.ctx.i18n.t("webview.shotError");
+          status.hidden = false;
+        }
+      };
+      probe.src = shotUrl;
     }
 
     applyZoom() {
       if (!this.iframe) return;
       const scale = (Number(this.ctx.settings.zoom) || 100) / 100;
-      const w = this.ctx.el.clientWidth;
-      const h = this.ctx.el.clientHeight;
+      // Dimensions de la zone de CONTENU, pas de la tuile entiere : la
+      // barre d'onglets (si affichee) prend une partie de la hauteur,
+      // sans cela l'iframe deborderait sous les onglets.
+      // Dimensions of the CONTENT area, not the whole tile: the tab bar
+      // (when shown) takes up part of the height, without this the
+      // iframe would overflow under the tabs.
+      const content = this.ctx.el.querySelector(".pwv-content") || this.ctx.el;
+      const w = content.clientWidth;
+      const h = content.clientHeight;
       this.iframe.style.width = Math.round(w / scale) + "px";
       this.iframe.style.height = Math.round(h / scale) + "px";
       this.iframe.style.transform = "scale(" + scale + ")";

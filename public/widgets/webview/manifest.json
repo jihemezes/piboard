@@ -1,17 +1,17 @@
 {
   "id": "webview",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "name": {
     "en": "Web page",
     "fr": "Page web"
   },
   "description": {
-    "en": "Embeds any web page (traffic map, home app, status page…). Most sites work out of the box, even ones that normally block being shown in an iframe.",
-    "fr": "Affiche n'importe quelle page web (carte de trafic, app domotique, page de statut…). Fonctionne d'emblée avec la plupart des sites, y compris ceux qui bloquent normalement leur affichage en iframe."
+    "en": "Embeds up to 5 web pages, switchable via tabs (traffic map, home app, status page…). Most sites work out of the box, even ones that normally block being shown in an iframe.",
+    "fr": "Affiche jusqu'à 5 pages web, basculables par onglets (carte de trafic, app domotique, page de statut…). Fonctionne d'emblée avec la plupart des sites, y compris ceux qui bloquent normalement leur affichage en iframe."
   },
   "tagline": {
-    "en": "Displays any web page inside a tile.",
-    "fr": "Affiche n'importe quelle page web dans une tuile."
+    "en": "Displays up to 5 web pages inside a tile, switchable via tabs.",
+    "fr": "Affiche jusqu'à 5 pages web dans une tuile, basculables par onglets."
   },
   "size": {
     "w": 6,
@@ -23,7 +23,7 @@
   },
   "settings": [
     {
-      "key": "url",
+      "key": "site1Url",
       "type": "text",
       "default": "",
       "label": {
@@ -33,6 +33,163 @@
       "hint": {
         "en": "\"https://\" is added automatically if left out.",
         "fr": "« https:// » est ajouté automatiquement si vous ne le tapez pas."
+      },
+      "group": {
+        "en": "Site 1 (required)",
+        "fr": "Site 1 (obligatoire)"
+      }
+    },
+    {
+      "key": "site1Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Tab label (optional)",
+        "fr": "Nom de l'onglet (optionnel)"
+      },
+      "hint": {
+        "en": "Shown on the tab. Defaults to the site's domain name if left empty.",
+        "fr": "Affiché sur l'onglet. Reprend le nom de domaine du site si laissé vide."
+      },
+      "group": {
+        "en": "Site 1 (required)",
+        "fr": "Site 1 (obligatoire)"
+      }
+    },
+    {
+      "key": "site2Url",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Page URL",
+        "fr": "URL de la page"
+      },
+      "hint": {
+        "en": "\"https://\" is added automatically if left out. Leave empty to disable this tab.",
+        "fr": "« https:// » est ajouté automatiquement si vous ne le tapez pas. Laissez vide pour désactiver cet onglet."
+      },
+      "group": {
+        "en": "Site 2 (optional)",
+        "fr": "Site 2 (optionnel)"
+      }
+    },
+    {
+      "key": "site2Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Tab label (optional)",
+        "fr": "Nom de l'onglet (optionnel)"
+      },
+      "hint": {
+        "en": "Shown on the tab. Defaults to the site's domain name if left empty.",
+        "fr": "Affiché sur l'onglet. Reprend le nom de domaine du site si laissé vide."
+      },
+      "group": {
+        "en": "Site 2 (optional)",
+        "fr": "Site 2 (optionnel)"
+      }
+    },
+    {
+      "key": "site3Url",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Page URL",
+        "fr": "URL de la page"
+      },
+      "hint": {
+        "en": "\"https://\" is added automatically if left out. Leave empty to disable this tab.",
+        "fr": "« https:// » est ajouté automatiquement si vous ne le tapez pas. Laissez vide pour désactiver cet onglet."
+      },
+      "group": {
+        "en": "Site 3 (optional)",
+        "fr": "Site 3 (optionnel)"
+      }
+    },
+    {
+      "key": "site3Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Tab label (optional)",
+        "fr": "Nom de l'onglet (optionnel)"
+      },
+      "hint": {
+        "en": "Shown on the tab. Defaults to the site's domain name if left empty.",
+        "fr": "Affiché sur l'onglet. Reprend le nom de domaine du site si laissé vide."
+      },
+      "group": {
+        "en": "Site 3 (optional)",
+        "fr": "Site 3 (optionnel)"
+      }
+    },
+    {
+      "key": "site4Url",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Page URL",
+        "fr": "URL de la page"
+      },
+      "hint": {
+        "en": "\"https://\" is added automatically if left out. Leave empty to disable this tab.",
+        "fr": "« https:// » est ajouté automatiquement si vous ne le tapez pas. Laissez vide pour désactiver cet onglet."
+      },
+      "group": {
+        "en": "Site 4 (optional)",
+        "fr": "Site 4 (optionnel)"
+      }
+    },
+    {
+      "key": "site4Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Tab label (optional)",
+        "fr": "Nom de l'onglet (optionnel)"
+      },
+      "hint": {
+        "en": "Shown on the tab. Defaults to the site's domain name if left empty.",
+        "fr": "Affiché sur l'onglet. Reprend le nom de domaine du site si laissé vide."
+      },
+      "group": {
+        "en": "Site 4 (optional)",
+        "fr": "Site 4 (optionnel)"
+      }
+    },
+    {
+      "key": "site5Url",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Page URL",
+        "fr": "URL de la page"
+      },
+      "hint": {
+        "en": "\"https://\" is added automatically if left out. Leave empty to disable this tab.",
+        "fr": "« https:// » est ajouté automatiquement si vous ne le tapez pas. Laissez vide pour désactiver cet onglet."
+      },
+      "group": {
+        "en": "Site 5 (optional)",
+        "fr": "Site 5 (optionnel)"
+      }
+    },
+    {
+      "key": "site5Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Tab label (optional)",
+        "fr": "Nom de l'onglet (optionnel)"
+      },
+      "hint": {
+        "en": "Shown on the tab. Defaults to the site's domain name if left empty.",
+        "fr": "Affiché sur l'onglet. Reprend le nom de domaine du site si laissé vide."
+      },
+      "group": {
+        "en": "Site 5 (optional)",
+        "fr": "Site 5 (optionnel)"
       }
     },
     {
@@ -44,8 +201,8 @@
         "fr": "Mode d'affichage"
       },
       "hint": {
-        "en": "In the Windows desktop app, the site is always shown directly and interactively (X-Frame-Options is ignored there) — these modes then only matter if you pick \"Image\". On a Raspberry Pi in kiosk mode: \"Via PiBoard\" relays the page from the server (works for sites blocking iframe embedding); \"Direct\" loads the address as-is (fastest, but only if the site allows embedding); \"Image\" renders the page with a real browser and shows a photo (works with absolutely any site, but static and a few seconds per refresh).",
-        "fr": "Dans l'application de bureau Windows, le site est toujours affiché directement et reste interactif (X-Frame-Options y est ignoré) — ces modes n'ont alors d'effet que si vous choisissez « Image ». Sur un Raspberry Pi en mode kiosque : « Via PiBoard » relaie la page depuis le serveur (fonctionne pour les sites bloquant l'affichage en iframe) ; « Direct » charge l'adresse telle quelle (le plus rapide, mais seulement si le site l'autorise) ; « Image » fait rendre la page par un vrai navigateur et affiche une photo (fonctionne avec absolument n'importe quel site, mais affichage fixe et quelques secondes par rafraîchissement)."
+        "en": "Applies to every tab. In the Windows desktop app, the site is always shown directly and interactively (X-Frame-Options is ignored there) — these modes then only matter if you pick \"Image\". On a Raspberry Pi in kiosk mode: \"Via PiBoard\" relays the page from the server (works for sites blocking iframe embedding); \"Direct\" loads the address as-is (fastest, but only if the site allows embedding); \"Image\" renders the page with a real browser and shows a photo (works with absolutely any site, but static and a few seconds per refresh).",
+        "fr": "S'applique à tous les onglets. Dans l'application de bureau Windows, le site est toujours affiché directement et reste interactif (X-Frame-Options y est ignoré) — ces modes n'ont alors d'effet que si vous choisissez « Image ». Sur un Raspberry Pi en mode kiosque : « Via PiBoard » relaie la page depuis le serveur (fonctionne pour les sites bloquant l'affichage en iframe) ; « Direct » charge l'adresse telle quelle (le plus rapide, mais seulement si le site l'autorise) ; « Image » fait rendre la page par un vrai navigateur et affiche une photo (fonctionne avec absolument n'importe quel site, mais affichage fixe et quelques secondes par rafraîchissement)."
       },
       "options": [
         {
@@ -95,8 +252,8 @@
         "fr": "Recharger toutes les (minutes, 0 = jamais)"
       },
       "hint": {
-        "en": "In \"Image\" mode, this is also how often the page is re-photographed. A short interval means relaunching a browser often on the PiBoard — 10 minutes or more is usually plenty.",
-        "fr": "En mode « Image », c'est aussi la fréquence à laquelle la page est re-photographiée. Un intervalle court signifie relancer souvent un navigateur sur le PiBoard — 10 minutes ou plus suffisent généralement."
+        "en": "In \"Image\" mode, this is also how often the page is re-photographed. A short interval means relaunching a browser often on the PiBoard — 10 minutes or more is usually plenty. Reloads whichever tab is currently active.",
+        "fr": "En mode « Image », c'est aussi la fréquence à laquelle la page est re-photographiée. Un intervalle court signifie relancer souvent un navigateur sur le PiBoard — 10 minutes ou plus suffisent généralement. Recharge l'onglet actuellement affiché."
       }
     }
   ]

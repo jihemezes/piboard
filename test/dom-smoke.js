@@ -997,7 +997,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     // mode. Reproduced here in both modes.
     webviewTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(60);
-    document.querySelector('#tileForm [data-key="url"]').value = "sans-schema.example.test/page";
+    document.querySelector('#tileForm [data-key="site1Url"]').value = "sans-schema.example.test/page";
     document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(700);
     assert("mode 'Direct' + URL sans schema : 'https://' ajoute automatiquement",
@@ -1032,6 +1032,72 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       !!webviewTile.querySelector(".pw-webview img.pwv-shot"));
     assert("mode 'Image' : un message d'attente est affiche pendant le rendu (plusieurs secondes sur un Pi)",
       !!webviewTile.querySelector(".pw-webview .pwv-status"));
+
+    console.log("== Page web : plusieurs sites via des onglets (jusqu'a 5) ==");
+    {
+      // Repart d'un mode simple (proxy) pour des assertions lisibles sur
+      // le src de l'iframe. Starts from a simple mode (proxy) for
+      // readable assertions on the iframe's src.
+      webviewTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      document.querySelector('#tileForm [data-key="mode"]').value = "proxy";
+      assert("un seul site configure : aucune barre d'onglets",
+        !webviewTile.querySelector(".pwv-tabs"));
+
+      const site2Url = document.querySelector('#tileForm [data-key="site2Url"]');
+      const site2Label = document.querySelector('#tileForm [data-key="site2Label"]');
+      assert("2e emplacement de site present dans le formulaire", !!site2Url);
+      site2Url.value = "https://deuxieme-site.example.test/";
+      site2Label.value = "Mon 2e site";
+      const site3Url = document.querySelector('#tileForm [data-key="site3Url"]');
+      site3Url.value = "troisieme-site.example.test"; // sans schema, delibere / no scheme, deliberate
+      document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(700);
+
+      const tabs = webviewTile.querySelectorAll(".pwv-tab");
+      assert("barre d'onglets affichee des que 2 sites ou plus sont configures", tabs.length === 3);
+      assert("libelle personnalise utilise quand fourni", tabs[1].textContent === "Mon 2e site");
+      assert("libelle par defaut = nom de domaine quand aucun n'est fourni (sans le 'www.')",
+        tabs[2].textContent === "troisieme-site.example.test");
+      assert("1er onglet actif par defaut", tabs[0].classList.contains("pwv-tab-active"));
+      assert("URL du 1er onglet chargee par defaut",
+        webviewTile.querySelector(".pw-webview iframe").getAttribute("src")
+          .includes(encodeURIComponent("https://sans-schema.example.test/page")));
+
+      tabs[2].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      assert("clic sur un onglet : il devient actif, l'ancien ne l'est plus",
+        webviewTile.querySelectorAll(".pwv-tab")[2].classList.contains("pwv-tab-active")
+        && !webviewTile.querySelectorAll(".pwv-tab")[0].classList.contains("pwv-tab-active"));
+      assert("le contenu affiche est celui du nouvel onglet, avec 'https://' complete",
+        webviewTile.querySelector(".pw-webview iframe").getAttribute("src")
+          .includes(encodeURIComponent("https://troisieme-site.example.test")));
+      assert("la barre d'onglets elle-meme n'est pas reconstruite au changement d'onglet",
+        webviewTile.querySelectorAll(".pwv-tabs").length === 1);
+
+      // Retire le 2e site : la barre d'onglets doit se reconstruire
+      // proprement (2 onglets restants), sans onglet fantome ni
+      // plantage -- l'ancien index actif (qui pointait sur le 3e site,
+      // desormais le 2e) n'etant plus valable pour un tableau plus
+      // court, l'affichage retombe simplement sur le premier onglet.
+      // Removes the 2nd site: the tab bar must rebuild cleanly (2
+      // remaining tabs), no ghost tab or crash -- since the old active
+      // index (which pointed at the 3rd site, now the 2nd) is no longer
+      // valid for a shorter array, the display simply falls back to the
+      // first tab.
+      webviewTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      document.querySelector('#tileForm [data-key="site2Url"]').value = "";
+      document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(700);
+      const tabsAfterRemoval = webviewTile.querySelectorAll(".pwv-tab");
+      assert("un onglet retire des reglages : n'apparait plus dans la barre (2 restants)",
+        tabsAfterRemoval.length === 2);
+      assert("un onglet reste actif (pas d'etat casse apres le retrait)",
+        Array.from(tabsAfterRemoval).some((t) => t.classList.contains("pwv-tab-active")));
+      assert("le contenu affiche correspond bien a l'onglet marque actif",
+        !!webviewTile.querySelector(".pw-webview iframe"));
+    }
   }
 
 
@@ -1722,7 +1788,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const titleInput = document.querySelector('#tileForm [data-key="_title"]');
     titleInput.value = "Trafic Toulouse";
     titleInput.dispatchEvent(new window.Event("input", { bubbles: true }));
-    const urlInput = document.querySelector('#tileForm [data-key="url"]');
+    const urlInput = document.querySelector('#tileForm [data-key="site1Url"]');
     urlInput.value = "http://umbrel.local:1234/";
     urlInput.dispatchEvent(new window.Event("input", { bubbles: true }));
 
