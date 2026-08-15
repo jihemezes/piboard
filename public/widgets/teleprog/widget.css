@@ -286,3 +286,283 @@ body.touch .pw-teleprog .pwtp-title { font-size: 14px; }
 body.touch .pw-teleprog .pwtp-search { padding: 10px 12px; font-size: 14px; }
 body.touch .pw-teleprog .pwtp-fav,
 body.touch .pw-teleprog .pwtp-remind { padding: 6px; font-size: 15px; }
+
+/* ============================================================
+   Grille plein ecran (fenetre modale) / full-screen grid (modal)
+   Voir openGrid()/renderGridBody() dans widget.js. Une frise
+   temporelle horizontale : chaque ligne est une chaine, chaque bloc un
+   programme dont la LARGEUR est proportionnelle a sa duree.
+   See openGrid()/renderGridBody() in widget.js. A horizontal timeline:
+   each row is a channel, each block a program whose WIDTH is
+   proportional to its duration.
+   ============================================================ */
+
+/* Nettement plus large que la modale par defaut : une grille horaire
+   n'a d'interet qu'avec de la largeur. Reste redimensionnable a la
+   souris (regle .modal-card partagee). Notably wider than the default
+   modal: a time grid is only useful with width. Stays mouse-resizable
+   (shared .modal-card rule). */
+.pwtp-grid-card {
+  width: min(1700px, 96vw);
+  height: 88vh;
+  max-height: 88vh;
+}
+
+/* ---------- Bandeau d'ouverture, en bas de la tuile ---------- */
+.pw-teleprog .pwtp-grid-btn {
+  flex: 0 0 auto;
+  width: 100%;
+  padding: 7px 6px;
+  font-size: 12px;
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pw-teleprog .pwtp-grid-btn:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
+body.touch .pw-teleprog .pwtp-grid-btn { padding: 11px 8px; font-size: 13.5px; }
+
+/* ---------- Barre d'outils de la grille ---------- */
+.pwtp-grid-toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwtp-grid-search {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: var(--font);
+  color: var(--text);
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+}
+.pwtp-grid-search::placeholder { color: var(--faint); }
+.pwtp-grid-toolbar button {
+  flex: 0 0 auto;
+  min-width: 34px;
+  padding: 7px 12px;
+  font-size: 13px;
+  font-family: var(--font);
+  font-weight: 600;
+  color: var(--text);
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwtp-grid-toolbar button:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
+
+/* ---------- Zone defilante (les 2 axes) ---------- */
+.pwtp-grid-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  position: relative;
+}
+.pwtp-grid-inner {
+  position: relative;
+  /* La largeur reelle est portee par la frise et les pistes (calculee
+     en JS selon le zoom) ; inline-block permet a ce conteneur de
+     s'etendre a cette largeur plutot qu'a celle du parent, sans quoi
+     le curseur "maintenant" en position absolue serait mal borne.
+     Actual width is carried by the timeline and tracks (computed in JS
+     from the zoom); inline-block lets this container stretch to that
+     width rather than the parent's, otherwise the absolutely
+     positioned "now" marker would be mis-bounded. */
+  display: inline-block;
+  min-width: 100%;
+}
+
+/* ---------- Ligne du temps (en-tete colle en haut) ---------- */
+.pwtp-timeline {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  height: 26px;
+  /* Decale de la largeur de la colonne des logos, pour que les
+     graduations tombent bien au-dessus des pistes correspondantes.
+     Offset by the logo column's width, so ticks land right above the
+     matching tracks. */
+  margin-left: 132px;
+  background: var(--tile);
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwtp-tick {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-left: 1px solid var(--tile-edge);
+  padding-left: 5px;
+}
+.pwtp-tick span {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--muted);
+  line-height: 26px;
+  white-space: nowrap;
+}
+
+/* ---------- Lignes de chaines ---------- */
+.pwtp-grid-rows { position: relative; }
+.pwtp-grid-row {
+  display: flex;
+  align-items: stretch;
+  border-bottom: 1px solid var(--tile-edge);
+}
+
+/* Colonne des chaines : reste visible pendant le defilement horizontal,
+   sinon on perd de vue a quelle chaine appartient la ligne des qu'on
+   avance dans le temps. Channel column: stays visible during
+   horizontal scrolling, otherwise you lose track of which channel a
+   row belongs to as soon as you scroll forward in time. */
+.pwtp-grid-chan {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  flex: 0 0 132px;
+  width: 132px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  background: var(--tile);
+  border-right: 1px solid var(--tile-edge);
+}
+.pwtp-grid-logo {
+  flex: 0 0 auto;
+  width: 30px;
+  height: 22px;
+  object-fit: contain;
+}
+.pwtp-grid-logo-ph {
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 4px;
+}
+.pwtp-grid-chan-name {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  min-width: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Piste temporelle d'une chaine ---------- */
+.pwtp-grid-track {
+  position: relative;
+  flex: 0 0 auto;
+  height: 58px;
+}
+
+/* ---------- Bloc de programme ---------- */
+.pwtp-block {
+  position: absolute;
+  top: 3px;
+  bottom: 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 6px;
+  overflow: hidden;
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  cursor: pointer;
+}
+.pwtp-block:hover { border-color: var(--accent); }
+/* Programme correspondant a la recherche : mis en evidence sans masquer
+   les autres (on ne troue pas une frise temporelle).
+   Program matching the search: highlighted without hiding the others
+   (you don't punch holes in a timeline). */
+.pwtp-block-match {
+  background: color-mix(in srgb, var(--accent) 22%, var(--field-bg));
+  border-color: var(--accent);
+}
+/* Duree estimee (source sans heure de fin) : bord en pointilles, pour
+   ne pas presenter une approximation comme un horaire ferme.
+   Estimated duration (source with no end time): dashed border, so an
+   approximation isn't presented as a firm schedule. */
+.pwtp-block-est { border-style: dashed; }
+
+.pwtp-block-thumb {
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+.pwtp-block-text { min-width: 0; }
+.pwtp-block-time {
+  display: block;
+  font-size: 10px;
+  font-family: var(--mono);
+  color: var(--muted);
+}
+.pwtp-block-title {
+  display: block;
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Synopsis : masque par defaut, revele au clic sur le bloc (evite une
+   seconde fenetre par-dessus la premiere).
+   Synopsis: hidden by default, revealed on block click (avoids a second
+   window stacked over the first). */
+.pwtp-block-desc { display: none; }
+.pwtp-block-open {
+  z-index: 4;
+  min-width: 240px;
+  bottom: auto;
+  min-height: 100%;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  background: var(--tile);
+  border-color: var(--accent);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+}
+.pwtp-block-open .pwtp-block-desc {
+  display: block;
+  flex: 1 0 100%;
+  padding: 4px 0 6px;
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: var(--muted);
+  white-space: normal;
+}
+
+/* ---------- Curseur "maintenant" ---------- */
+.pwtp-now-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: 132px; /* meme decalage que la frise / same offset as the timeline */
+  background: #E0556F;
+  pointer-events: none;
+  z-index: 3;
+}
+
+body.touch .pwtp-grid-track { height: 66px; }
+body.touch .pwtp-grid-search { padding: 10px 12px; font-size: 14px; }
+body.touch .pwtp-grid-toolbar button { padding: 10px 14px; font-size: 14px; }

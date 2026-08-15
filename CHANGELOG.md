@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.53.0
+
+- **Programme TV : grille plein écran façon magazine TV.** Un bandeau
+  en bas de la tuile ouvre une grande fenêtre présentant le programme
+  sur une véritable échelle de temps :
+  - **Une ligne par chaîne**, avec son logo et son numéro TNT à gauche.
+    La colonne des chaînes reste visible pendant le défilement
+    horizontal.
+  - **Blocs proportionnels à la durée** de chaque programme, disposés
+    sur l'axe du temps. Le titre est affiché dès que le bloc est assez
+    large, et une vignette s'y ajoute quand la place le permet et que
+    la source en fournit une. Un clic sur un bloc révèle son synopsis.
+  - **Ligne du temps en haut**, graduée à l'heure pleine, plus un
+    curseur rouge marquant l'instant présent — la grille s'ouvre
+    d'ailleurs cadrée sur « maintenant ».
+  - **Zoom** (6 niveaux) pour passer d'une vue d'ensemble de la soirée
+    au détail d'une plage horaire précise, en conservant le centre de
+    la vue d'un niveau à l'autre.
+  - **Recherche** propre à la fenêtre, insensible aux accents : filtre
+    par nom de chaîne ou par titre d'émission. Quand un programme
+    correspond, sa ligne reste affichée entière (on ne troue pas une
+    frise temporelle), le bloc trouvé étant simplement mis en évidence.
+  Les durées affichées **avant** et **après** l'heure courante sont
+  réglables (0 à 12 h avant, 1 à 48 h après). Un programme dont la
+  source ne donne pas d'heure de fin reçoit une durée estimée, signalée
+  par un bord en pointillés plutôt qu'écarté de la grille.
+
+---
+
+- **TV guide: full-screen, TV-magazine-style grid.** A bar at the
+  bottom of the tile opens a large window laying out the schedule on a
+  real time scale:
+  - **One row per channel**, with its logo and DTT number on the left.
+    The channel column stays visible while scrolling horizontally.
+  - **Blocks proportional to each program's duration**, placed along
+    the time axis. The title shows as soon as the block is wide
+    enough, and a thumbnail is added when there's room and the source
+    provides one. Clicking a block reveals its synopsis.
+  - **Timeline at the top**, marked on the hour, plus a red marker for
+    the current moment — the grid actually opens framed on "now".
+  - **Zoom** (6 levels) to go from an overview of the evening to the
+    detail of a specific time range, keeping the view's center from one
+    level to the next.
+  - **Search** within the window, accent-insensitive: filters by
+    channel name or program title. When a program matches, its row
+    stays fully displayed (you don't punch holes in a timeline), the
+    matching block simply being highlighted.
+  The hours shown **before** and **after** the current time are
+  configurable (0–12 h before, 1–48 h after). A program whose source
+  gives no end time gets an estimated duration, flagged with a dashed
+  border rather than being dropped from the grid.
+
 ## 1.52.2
 
 - **Toutes les fenêtres popup redimensionnables à la souris.** Lecture

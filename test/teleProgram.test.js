@@ -373,6 +373,81 @@ console.log("== loadGrid : decompression gzip locale (.gz) ==");
     assert.strictEqual(res.channels[0].program.title, "Journal de 20h");
     console.log("  OK");
 
+    console.log("== buildGridRange : chevauchement de la fenetre (pas seulement inclusion) ==");
+    {
+      const D = (s) => new Date(s);
+      const progs = [
+        { channelId: "A", start: D("2026-08-15T18:00:00Z"), stop: D("2026-08-15T19:30:00Z"), title: "Commence avant, encore a l'antenne" },
+        { channelId: "A", start: D("2026-08-15T19:30:00Z"), stop: D("2026-08-15T21:00:00Z"), title: "Entierement dedans" },
+        { channelId: "A", start: D("2026-08-15T21:00:00Z"), stop: D("2026-08-15T23:30:00Z"), title: "Deborde apres la fin" },
+        { channelId: "A", start: D("2026-08-15T15:00:00Z"), stop: D("2026-08-15T16:00:00Z"), title: "Termine avant la fenetre" },
+        { channelId: "A", start: D("2026-08-16T02:00:00Z"), stop: D("2026-08-16T03:00:00Z"), title: "Commence apres la fenetre" },
+        { channelId: "B", start: D("2026-08-15T20:00:00Z"), stop: null, title: "Sans heure de fin" },
+        { channelId: "Z", start: D("2026-08-15T20:00:00Z"), stop: D("2026-08-15T21:00:00Z"), title: "Chaine non demandee" }
+      ];
+      const rows = tp.buildGridRange(progs, ["A", "B"], D("2026-08-15T19:00:00Z"), D("2026-08-15T22:00:00Z"));
+
+      assert.strictEqual(rows.length, 2, "une ligne par chaine demandee, dans l'ordre demande");
+      assert.strictEqual(rows[0].channelId, "A");
+      assert.strictEqual(rows[1].channelId, "B");
+
+      const titlesA = rows[0].programs.map((p) => p.title);
+      assert.ok(titlesA.includes("Commence avant, encore a l'antenne"),
+        "un programme commence AVANT la fenetre mais encore en cours doit apparaitre (sinon 1re colonne vide a tort)");
+      assert.ok(titlesA.includes("Deborde apres la fin"),
+        "un programme qui deborde APRES la fin de la fenetre doit apparaitre");
+      assert.ok(!titlesA.includes("Termine avant la fenetre"), "un programme entierement anterieur est ecarte");
+      assert.ok(!titlesA.includes("Commence apres la fenetre"), "un programme entierement posterieur est ecarte");
+      assert.strictEqual(titlesA.length, 3);
+
+      // Ordre chronologique garanti : l'affichage en grille en depend
+      // directement pour poser ses blocs de gauche a droite.
+      const startsA = rows[0].programs.map((p) => p.start.getTime());
+      assert.deepStrictEqual(startsA, startsA.slice().sort((a, b) => a - b), "programmes tries par heure de debut");
+
+      assert.strictEqual(rows[1].programs.length, 1,
+        "un programme sans heure de fin est conserve (a l'affichage de lui donner une duree par defaut)");
+
+      // Une chaine demandee mais sans aucun programme dans la fenetre
+      // doit tout de meme produire une ligne (vide) : sinon la grille
+      // perdrait la chaine, plutot que d'afficher une ligne creuse.
+      const withEmpty = tp.buildGridRange(progs, ["A", "INCONNUE"], D("2026-08-15T19:00:00Z"), D("2026-08-15T22:00:00Z"));
+      assert.strictEqual(withEmpty.length, 2, "une chaine sans programme garde sa ligne");
+      assert.deepStrictEqual(withEmpty[1].programs, [], "cette ligne est simplement vide");
+      console.log("  OK");
+    }
+
+    console.log("== getGrid : fenetre avant/apres et bornage des valeurs extremes ==");
+    {
+      const zlib3 = require("zlib");
+      const gzBuf3 = zlib3.gzipSync(Buffer.from(SAMPLE));
+      const mockFetch3 = async () => ({
+        ok: true, status: 200,
+        arrayBuffer: async () => gzBuf3.buffer.slice(gzBuf3.byteOffset, gzBuf3.byteOffset + gzBuf3.byteLength)
+      });
+      const nowMs = new Date("2024-01-15T19:30:00.000Z").getTime();
+
+      tp.clearCache();
+      const res = await tp.getGrid(
+        { source: "xmltvfr", channels: ["TF1.fr"], hoursBefore: 2, hoursAfter: 4 },
+        { fetchImpl: mockFetch3, now: nowMs }
+      );
+      assert.strictEqual(new Date(res.from).getTime(), nowMs - 2 * 3600000, "borne basse = maintenant - hoursBefore");
+      assert.strictEqual(new Date(res.to).getTime(), nowMs + 4 * 3600000, "borne haute = maintenant + hoursAfter");
+      assert.ok(Array.isArray(res.channels[0].programs), "chaque chaine porte une LISTE de programmes (pas un seul)");
+
+      // Bornage : une fenetre demesuree (requete forgee) ne doit pas
+      // permettre de reclamer des jours de guide sur toutes les chaines.
+      tp.clearCache();
+      const clamped = await tp.getGrid(
+        { source: "xmltvfr", channels: ["TF1.fr"], hoursBefore: 999, hoursAfter: 999 },
+        { fetchImpl: mockFetch3, now: nowMs }
+      );
+      assert.strictEqual(new Date(clamped.from).getTime(), nowMs - 12 * 3600000, "hoursBefore borne a 12 h");
+      assert.strictEqual(new Date(clamped.to).getTime(), nowMs + 48 * 3600000, "hoursAfter borne a 48 h");
+      console.log("  OK");
+    }
+
     console.log("\n>>> TOUS LES TESTS TELEPROGRAM PASSENT");
   })();
 }

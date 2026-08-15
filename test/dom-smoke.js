@@ -604,6 +604,40 @@ const dom = new JSDOM(html, {
           : [{ id: "TF1.fr", name: "TF1" }, { id: "France2.fr", name: "France 2" }];
         return json(list);
       }
+      // ATTENTION a l'ordre : "/api/tele-program/grid" contient
+      // "/api/tele-program", donc ce cas doit etre teste AVANT le
+      // suivant, sinon la grille recevrait la reponse de la vue simple.
+      // MIND THE ORDER: "/api/tele-program/grid" contains
+      // "/api/tele-program", so this case must be tested BEFORE the next
+      // one, otherwise the grid would get the simple view's response.
+      if (u.includes("/api/tele-program/grid")) {
+        const nowMs = Date.now();
+        const from = new Date(nowMs - 3600000);   // 1 h avant / 1 h before
+        const to = new Date(nowMs + 6 * 3600000); // 6 h apres / 6 h after
+        return json({
+          generatedAt: new Date(nowMs).toISOString(),
+          from: from.toISOString(),
+          to: to.toISOString(),
+          channels: [
+            { channelId: "TF1.fr", channelName: "TF1", channelIcon: "https://logo.test/tf1.png", channelNumber: 1,
+              programs: [
+                // Commence AVANT l'origine de la fenetre : doit apparaitre tronque au bord gauche
+                { start: new Date(nowMs - 5400000).toISOString(), stop: new Date(nowMs - 1800000).toISOString(),
+                  title: "Emission precedente", subtitle: null, desc: "Synopsis precedent.", category: null, icon: null, isNew: false },
+                { start: new Date(nowMs - 1800000).toISOString(), stop: new Date(nowMs + 1800000).toISOString(),
+                  title: "Film de test", subtitle: null, desc: "Un synopsis de test.", category: "Film", icon: "https://img.test/film.jpg", isNew: true },
+                { start: new Date(nowMs + 1800000).toISOString(), stop: new Date(nowMs + 5400000).toISOString(),
+                  title: "Documentaire", subtitle: null, desc: null, category: null, icon: null, isNew: false }
+              ] },
+            { channelId: "France2.fr", channelName: "France 2", channelIcon: null, channelNumber: 2,
+              programs: [
+                { start: new Date(nowMs - 900000).toISOString(), stop: new Date(nowMs + 2700000).toISOString(),
+                  title: "Émission à venir", subtitle: null, desc: null, category: null, icon: null, isNew: false }
+              ] },
+            { channelId: "M6.fr", channelName: "M6", channelIcon: null, channelNumber: 6, programs: [] }
+          ]
+        });
+      }
       if (u.includes("/api/tele-program")) {
         // Reponse mock : une chaine avec un programme en cours (utile
         // aussi pour la barre de progression), une sans programme, et
@@ -1800,6 +1834,122 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
       const remindBtnFinal = Array.from(tile.querySelectorAll(".pwtp-row"))
         .find((r) => r.textContent.includes("Émission à venir")).querySelector(".pwtp-remind");
       assert("rappel annule au reclic", remindBtnFinal.textContent === "🔕");
+    }
+
+    console.log("== Tuile Programme TV : grille plein ecran (bandeau, frise, blocs proportionnels, zoom, recherche) ==");
+    {
+      const gridBtn = tile.querySelector(".pwtp-grid-btn");
+      assert("bandeau d'ouverture de la grille present en bas de la tuile", !!gridBtn);
+      assert("bandeau visible (reglage actif par defaut)", !gridBtn.hidden);
+      assert("aucune fenetre de grille avant le premier clic (creation paresseuse)",
+        !document.querySelector(".pwtp-grid-card"));
+
+      gridBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(120);
+
+      const gridModal = document.querySelector(".pwtp-grid-card")?.closest(".modal");
+      assert("fenetre de grille ouverte au clic", !!gridModal && !gridModal.hidden);
+
+      // --- Ligne du temps ---
+      const ticks = gridModal.querySelectorAll(".pwtp-tick");
+      assert("frise temporelle presente en haut avec des graduations horaires", ticks.length >= 5);
+      assert("chaque graduation porte une heure lisible", (ticks[0].textContent || "").trim().length > 0);
+
+      // --- Lignes de chaines + logos ---
+      const rows = gridModal.querySelectorAll(".pwtp-grid-row");
+      assert("une ligne par chaine (3 chaines dans le fixture)", rows.length === 3);
+      assert("logo de chaine affiche a gauche quand la grille en fournit un",
+        !!rows[0].querySelector("img.pwtp-grid-logo"));
+      assert("repli visuel quand la chaine n'a pas de logo",
+        !!rows[1].querySelector(".pwtp-grid-logo-ph"));
+      assert("nom de la chaine affiche a cote du logo",
+        (rows[0].querySelector(".pwtp-grid-chan-name")?.textContent || "").includes("TF1"));
+      assert("une chaine sans aucun programme garde sa ligne (pas de trou dans la grille)",
+        rows[2].querySelectorAll(".pwtp-block").length === 0);
+
+      // --- Blocs proportionnels a la duree ---
+      const tf1Blocks = rows[0].querySelectorAll(".pwtp-block");
+      assert("3 blocs de programme sur TF1", tf1Blocks.length === 3);
+      const widthOf = (el) => parseFloat(el.style.width);
+      const leftOf = (el) => parseFloat(el.style.left);
+      // "Film de test" dure 1 h, "Documentaire" dure 1 h : largeurs egales.
+      // "Emission precedente" est tronquee a l'origine (elle a commence
+      // 90 min avant, la fenetre demarre 60 min avant) -> 30 min visibles.
+      const [prev, film, doc] = tf1Blocks;
+      assert("bloc tronque a l'origine positionne au bord gauche", leftOf(prev) === 0);
+      assert("deux programmes d'une heure ont la meme largeur",
+        Math.abs(widthOf(film) - widthOf(doc)) < 1);
+      assert("un programme de 30 min visibles est ~2x plus etroit qu'un programme d'1 h",
+        widthOf(film) / widthOf(prev) > 1.7 && widthOf(film) / widthOf(prev) < 2.3);
+      assert("les blocs se suivent de gauche a droite dans l'ordre chronologique",
+        leftOf(prev) < leftOf(film) && leftOf(film) < leftOf(doc));
+      assert("titre du programme affiche dans le bloc",
+        (film.querySelector(".pwtp-block-title")?.textContent || "") === "Film de test");
+      assert("vignette affichee quand le bloc est assez large et que la source en fournit une",
+        !!film.querySelector("img.pwtp-block-thumb"));
+      assert("aucune vignette quand la source n'en fournit pas",
+        !doc.querySelector("img.pwtp-block-thumb"));
+
+      // --- Curseur "maintenant" ---
+      assert("curseur vertical 'maintenant' affiche", !!gridModal.querySelector(".pwtp-now-line"));
+
+      // --- Zoom ---
+      const widthBefore = widthOf(film);
+      gridModal.querySelector(".pwtp-grid-zoom-in").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      const filmAfterZoomIn = gridModal.querySelectorAll(".pwtp-grid-row")[0].querySelectorAll(".pwtp-block")[1];
+      assert("zoom avant : les blocs s'elargissent", widthOf(filmAfterZoomIn) > widthBefore);
+
+      gridModal.querySelector(".pwtp-grid-zoom-out").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      gridModal.querySelector(".pwtp-grid-zoom-out").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      const filmAfterZoomOut = gridModal.querySelectorAll(".pwtp-grid-row")[0].querySelectorAll(".pwtp-block")[1];
+      assert("zoom arriere : les blocs se retrecissent", widthOf(filmAfterZoomOut) < widthBefore);
+
+      // --- Recherche dans la grille ---
+      const gridSearch = gridModal.querySelector(".pwtp-grid-search");
+      assert("zone de recherche presente dans la fenetre de grille", !!gridSearch);
+
+      gridSearch.value = "France";
+      gridSearch.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(60);
+      assert("recherche par nom de chaine : seule France 2 reste",
+        gridModal.querySelectorAll(".pwtp-grid-row").length === 1
+        && (gridModal.querySelector(".pwtp-grid-chan-name")?.textContent || "").includes("France 2"));
+
+      gridSearch.value = "documentaire";
+      gridSearch.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(60);
+      const matchRows = gridModal.querySelectorAll(".pwtp-grid-row");
+      assert("recherche par titre d'emission : la chaine qui la diffuse est retenue",
+        matchRows.length === 1 && (matchRows[0].querySelector(".pwtp-grid-chan-name")?.textContent || "").includes("TF1"));
+      assert("la ligne entiere reste affichee (on ne troue pas la frise), le bloc trouve etant mis en evidence",
+        matchRows[0].querySelectorAll(".pwtp-block").length === 3
+        && matchRows[0].querySelectorAll(".pwtp-block-match").length === 1);
+
+      gridSearch.value = "zzz-aucune-correspondance";
+      gridSearch.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(60);
+      assert("recherche sans resultat : message dedie, aucune ligne",
+        gridModal.querySelectorAll(".pwtp-grid-row").length === 0 && !!gridModal.querySelector(".pwtp-msg"));
+
+      gridSearch.value = "";
+      gridSearch.dispatchEvent(new window.Event("input", { bubbles: true }));
+      await sleep(60);
+      assert("recherche videe : les 3 chaines reviennent",
+        gridModal.querySelectorAll(".pwtp-grid-row").length === 3);
+
+      // --- Synopsis au clic sur un bloc ---
+      const blockToOpen = gridModal.querySelectorAll(".pwtp-grid-row")[0].querySelectorAll(".pwtp-block")[1];
+      blockToOpen.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(40);
+      assert("clic sur un bloc : synopsis revele (pas de 2e fenetre empilee)",
+        blockToOpen.classList.contains("pwtp-block-open"));
+
+      // --- Fermeture ---
+      gridModal.querySelector(".modal-close[data-close]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(40);
+      assert("fenetre de grille refermee par la croix", gridModal.hidden);
     }
 
     console.log("== Tuile Programme TV : parcourir les chaines disponibles (correctif v1.7.4) ==");

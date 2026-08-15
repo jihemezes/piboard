@@ -348,6 +348,40 @@ app.get("/api/tele-program", async (req, res) => {
   }
 });
 
+/* Grille horaire complete (voir teleProgram.getGrid) : TOUS les
+   programmes de chaque chaine sur une fenetre [maintenant - N heures,
+   maintenant + M heures], pour l'affichage en grille facon magazine TV
+   du widget Programme TV. Meme liste blanche de champs et meme cache
+   que /api/tele-program ci-dessus -- seule la selection des programmes
+   change. Les bornes de la fenetre sont re-verifiees dans getGrid()
+   (une requete forgee a la main ne peut pas demander 30 jours de
+   guide sur 400 chaines).
+   Full time grid (see teleProgram.getGrid): EVERY program on each
+   channel over a [now - N hours, now + M hours] window, for the TV
+   guide widget's magazine-style grid display. Same field whitelist and
+   same cache as /api/tele-program above -- only the program selection
+   differs. Window bounds are re-checked inside getGrid() (a
+   hand-crafted request can't ask for 30 days of guide across 400
+   channels). */
+app.get("/api/tele-program/grid", async (req, res) => {
+  const q = req.query;
+  const channels = String(q.channels || "")
+    .split(",").map((s) => s.trim()).filter(Boolean).slice(0, 60);
+  const config = Object.assign(teleProgramSourceConfig(q), {
+    channels,
+    hoursBefore: Number.isFinite(Number(q.hoursBefore)) ? Number(q.hoursBefore) : 1,
+    hoursAfter: Number.isFinite(Number(q.hoursAfter)) ? Number(q.hoursAfter) : 6,
+    showThumbnails: q.thumbnails !== "0",
+    ttlMs: 30 * 60 * 1000
+  });
+  try {
+    const result = await teleProgram.getGrid(config, {});
+    res.json(result);
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
 /* Liste des chaines REELLEMENT disponibles pour la source configuree --
    utilisee par le bouton "Parcourir les chaines disponibles" du widget
    Programme TV (voir fieldMarkup() / le gestionnaire ".field-browse-btn"

@@ -70,6 +70,81 @@
 
   const VIEWS = ["now", "evening", "late"];
 
+  /* Echelle de temps de la grille : largeur de base d'une minute, en
+     pixels, avant application du zoom. Choisie pour qu'une heure fasse
+     ~180 px au zoom 1 -- assez large pour lire le titre d'un programme
+     de 30 min sans zoomer, assez compact pour voir ~5 h d'un coup sur
+     un ecran 1920.
+     Grid time scale: base width of one minute, in pixels, before zoom.
+     Chosen so an hour is ~180 px at zoom 1 -- wide enough to read a
+     30-min program's title without zooming, compact enough to see ~5 h
+     at once on a 1920 screen. */
+  const PX_PER_MINUTE_BASE = 3;
+  const ZOOM_LEVELS = [0.5, 0.75, 1, 1.5, 2, 3];
+  /* En deca de cette largeur, un bloc n'affiche plus sa vignette (elle
+     mangerait toute la place au detriment du titre) ; en deca de la
+     seconde, meme le titre devient illisible et n'est plus rendu (le
+     bloc reste present, cliquable, avec son infobulle).
+     Below this width a block drops its thumbnail (it would eat all the
+     room at the title's expense); below the second one even the title
+     becomes unreadable and isn't rendered (the block stays present,
+     clickable, with its tooltip). */
+  const MIN_WIDTH_FOR_THUMB = 110;
+  const MIN_WIDTH_FOR_TITLE = 34;
+
+  /* Position et largeur d'un bloc de programme sur l'echelle de temps,
+     en pixels, a partir de l'origine de la grille et du facteur de zoom
+     (pixels par minute). Fonction PURE, testee isolement -- c'est le
+     calcul central de l'affichage en grille, celui qui garantit qu'un
+     bloc est bien proportionnel a la duree du programme.
+
+     Les blocs qui debordent de la fenetre sont volontairement ecretes
+     aux bornes (et non ignores) : un film commence avant l'origine doit
+     apparaitre des le bord gauche, tronque, plutot que de laisser un
+     trou au debut de sa ligne.
+
+     Un programme sans heure de fin (certaines sources n'en fournissent
+     pas) recoit une duree par defaut plutot que d'etre ecarte : mieux
+     vaut un bloc approximatif, signale comme tel a l'affichage, qu'une
+     case vide.
+
+     Position and width of a program block on the time scale, in
+     pixels, from the grid's origin and the zoom factor (pixels per
+     minute). PURE function, tested in isolation -- this is the core
+     calculation of the grid display, the one guaranteeing a block is
+     genuinely proportional to the program's duration.
+
+     Blocks overflowing the window are deliberately clipped to the
+     bounds (not dropped): a film that started before the origin must
+     show from the left edge, truncated, rather than leaving a hole at
+     the start of its row.
+
+     A program with no end time (some sources don't provide one) gets a
+     default duration rather than being dropped: an approximate block,
+     flagged as such in the display, beats an empty slot. */
+  function computeBlockGeometry(program, originMs, endMs, pxPerMinute, opts) {
+    const o = opts || {};
+    const defaultDurationMin = o.defaultDurationMin != null ? o.defaultDurationMin : 30;
+    const startMs = new Date(program.start).getTime();
+    if (isNaN(startMs)) return null;
+    const rawStopMs = program.stop ? new Date(program.stop).getTime() : NaN;
+    const stopMs = isNaN(rawStopMs) ? startMs + defaultDurationMin * 60000 : rawStopMs;
+    if (stopMs <= originMs || startMs >= endMs) return null;
+
+    const clippedStart = Math.max(startMs, originMs);
+    const clippedStop = Math.min(stopMs, endMs);
+    const left = ((clippedStart - originMs) / 60000) * pxPerMinute;
+    const width = ((clippedStop - clippedStart) / 60000) * pxPerMinute;
+    return {
+      left,
+      width,
+      clippedStart: startMs < originMs,
+      estimatedDuration: isNaN(rawStopMs)
+    };
+  }
+
+
+
   /* Calcule, en millisecondes, le delai avant le prochain
      rafraichissement de la vue "En ce moment" : juste apres la fin
      annoncee du programme qui se termine le plus tot parmi les lignes
@@ -143,6 +218,15 @@
       // Expose pour les tests (fonctions pures, aucune donnee sensible) / exposed for tests (pure functions, no sensitive data)
       this._computeNowRefreshDelay = computeNowRefreshDelay;
       this._computeAiringProgress = computeAiringProgress;
+      this._computeBlockGeometry = computeBlockGeometry;
+
+      // --- Grille plein ecran (fenetre modale) / full-screen grid (modal) ---
+      this.gridModal = null;      // element .modal, cree paresseusement au 1er clic
+      this.gridData = null;       // derniere reponse /api/tele-program/grid
+      this.gridQuery = "";        // filtre de recherche propre a la grille
+      this.gridZoom = 1;          // facteur multiplicatif applique a PX_PER_MINUTE_BASE
+      this.gridLoading = false;
+      this.gridError = null;
     }
 
     async init() {
@@ -448,12 +532,18 @@
           </div>
           <div class="pwtp-tabs"></div>
           <div class="pwtp-body"></div>
+          <button type="button" class="pwtp-grid-btn" hidden>${escapeHtml(i18n.t("teleprog.openGrid"))}</button>
         </div>`;
       const search = this.ctx.el.querySelector(".pwtp-search");
       search.addEventListener("click", (e) => e.stopPropagation()); // sinon rouvre les reglages en mode edition
       search.addEventListener("input", () => {
         this.searchQuery = search.value;
         this.renderBody();
+      });
+      const gridBtn = this.ctx.el.querySelector(".pwtp-grid-btn");
+      gridBtn.addEventListener("click", (e) => {
+        e.stopPropagation(); // sinon rouvre les reglages en mode edition
+        this.openGrid();
       });
     }
 
@@ -462,6 +552,8 @@
       if (!root) { this.renderShell(); }
       const toolbar = this.ctx.el.querySelector(".pwtp-toolbar");
       if (toolbar) toolbar.hidden = this.ctx.settings.showSearch === false;
+      const gridBtn = this.ctx.el.querySelector(".pwtp-grid-btn");
+      if (gridBtn) gridBtn.hidden = this.ctx.settings.showGridButton === false;
       this.renderTabs();
       this.renderBody();
     }
@@ -664,12 +756,303 @@
         </div>`;
     }
 
+    /* ---------- Grille plein ecran / full-screen grid ----------
+       Fenetre modale batie sur le meme .modal/.modal-card partage que
+       le reste de l'application (donc redimensionnable a la souris,
+       fermable par la croix, styles coherents) mais nettement plus
+       large : une grille facon magazine TV n'a d'interet qu'avec de la
+       largeur.
+
+       Construite paresseusement au premier clic sur le bandeau : la
+       plupart des tuiles ne l'ouvriront jamais, inutile de payer le
+       cout du DOM et de la requete reseau au montage.
+       Modal window built on the same shared .modal/.modal-card as the
+       rest of the app (so mouse-resizable, closable via the cross,
+       consistent styling) but noticeably wider: a TV-magazine grid is
+       only useful with width.
+
+       Built lazily on the first click on the bar: most tiles will never
+       open it, no point paying the DOM and network cost at mount. */
+    ensureGridModal() {
+      if (this.gridModal) return this.gridModal;
+      const i18n = this.ctx.i18n;
+      const wrap = document.createElement("div");
+      wrap.className = "modal";
+      wrap.hidden = true;
+      wrap.innerHTML = `
+        <div class="modal-card pwtp-grid-card">
+          <header class="modal-head">
+            <h2>${escapeHtml(i18n.t("teleprog.gridTitle"))}</h2>
+            <button type="button" class="modal-close" data-close aria-label="${escapeHtml(i18n.t("common.close"))}">&times;</button>
+          </header>
+          <div class="pwtp-grid-toolbar">
+            <input type="text" class="pwtp-grid-search" placeholder="${escapeHtml(i18n.t("teleprog.gridSearchPlaceholder"))}">
+            <button type="button" class="pwtp-grid-now" title="${escapeHtml(i18n.t("teleprog.backToNow"))}">${escapeHtml(i18n.t("teleprog.gridNow"))}</button>
+            <button type="button" class="pwtp-grid-zoom-out" title="${escapeHtml(i18n.t("teleprog.zoomOut"))}">−</button>
+            <button type="button" class="pwtp-grid-zoom-in" title="${escapeHtml(i18n.t("teleprog.zoomIn"))}">+</button>
+          </div>
+          <div class="pwtp-grid-scroll">
+            <div class="pwtp-grid-inner"></div>
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+
+      wrap.addEventListener("click", (e) => {
+        // Fermeture par la croix OU par le fond, comme les autres
+        // fenetres de l'application. Closes via the cross OR the
+        // backdrop, like the app's other windows.
+        if (e.target === wrap || e.target.closest("[data-close]")) this.closeGrid();
+      });
+      wrap.querySelector(".pwtp-grid-search").addEventListener("input", (e) => {
+        this.gridQuery = e.target.value;
+        this.renderGridBody();
+      });
+      wrap.querySelector(".pwtp-grid-zoom-in").addEventListener("click", () => this.zoomGrid(1));
+      wrap.querySelector(".pwtp-grid-zoom-out").addEventListener("click", () => this.zoomGrid(-1));
+      wrap.querySelector(".pwtp-grid-now").addEventListener("click", () => this.scrollGridToNow());
+
+      this.gridModal = wrap;
+      return wrap;
+    }
+
+    async openGrid() {
+      const modal = this.ensureGridModal();
+      modal.hidden = false;
+      this.gridLoading = true;
+      this.gridError = null;
+      this.renderGridBody();
+      try {
+        const s = this.ctx.settings;
+        const p = new URLSearchParams();
+        p.set("source", s.source || "xmltvfr");
+        p.set("guide", s.xmltvfrGuide === "france" ? "france" : "tnt");
+        p.set("channels", this.channelList().join(","));
+        if (s.source === "xmltv" && s.xmltvUrl) p.set("xmltvUrl", s.xmltvUrl);
+        if (s.source === "scrape" && s.scrapeUrl) p.set("scrapeUrl", s.scrapeUrl);
+        p.set("hoursBefore", String(s.gridHoursBefore != null ? s.gridHoursBefore : 1));
+        p.set("hoursAfter", String(s.gridHoursAfter != null ? s.gridHoursAfter : 6));
+        if (s.showThumbnails === false) p.set("thumbnails", "0");
+
+        const res = await fetch("/api/tele-program/grid?" + p.toString());
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || ("status " + res.status));
+        this.gridData = data;
+        this.gridLoading = false;
+        this.renderGridBody();
+        // Cadrage initial sur l'heure courante : sans cela, une fenetre
+        // demarrant plusieurs heures avant maintenant s'ouvrirait sur du
+        // passe, alors que l'interet immediat est "et maintenant ?".
+        // Initial framing on the current time: without it, a window
+        // starting hours before now would open on the past, when the
+        // immediate interest is "what's on now?".
+        this.scrollGridToNow();
+      } catch (e) {
+        console.warn("[piboard/teleprog] grille", e);
+        this.gridLoading = false;
+        this.gridError = String(e.message || e);
+        this.renderGridBody();
+      }
+    }
+
+    closeGrid() {
+      if (this.gridModal) this.gridModal.hidden = true;
+    }
+
+    zoomGrid(direction) {
+      const i = ZOOM_LEVELS.indexOf(this.gridZoom);
+      const next = Math.min(ZOOM_LEVELS.length - 1, Math.max(0, (i < 0 ? 2 : i) + direction));
+      if (ZOOM_LEVELS[next] === this.gridZoom) return;
+      // Conserve le centre de la vue au fil du zoom : sans cela, zoomer
+      // renverrait l'utilisateur au debut de la fenetre a chaque clic,
+      // ce qui rend le reglage inutilisable pour examiner une plage
+      // horaire precise. Preserves the view's center across zooms:
+      // otherwise each click would send the user back to the window's
+      // start, making the control useless for examining a specific time
+      // range.
+      const scroll = this.gridModal && this.gridModal.querySelector(".pwtp-grid-scroll");
+      const ratio = (scroll && scroll.scrollWidth > 0)
+        ? (scroll.scrollLeft + scroll.clientWidth / 2) / scroll.scrollWidth
+        : null;
+      this.gridZoom = ZOOM_LEVELS[next];
+      this.renderGridBody();
+      if (scroll && ratio != null) {
+        scroll.scrollLeft = Math.max(0, ratio * scroll.scrollWidth - scroll.clientWidth / 2);
+      }
+    }
+
+    scrollGridToNow() {
+      const scroll = this.gridModal && this.gridModal.querySelector(".pwtp-grid-scroll");
+      if (!scroll || !this.gridData) return;
+      const originMs = new Date(this.gridData.from).getTime();
+      const pxPerMinute = PX_PER_MINUTE_BASE * this.gridZoom;
+      const nowOffsetPx = ((Date.now() - originMs) / 60000) * pxPerMinute;
+      // Un peu de marge a gauche du curseur "maintenant" pour garder
+      // visible ce qui vient juste de commencer. A little margin left of
+      // the "now" marker to keep what just started visible.
+      scroll.scrollLeft = Math.max(0, nowOffsetPx - 120);
+    }
+
+    /* Filtre les lignes de la grille : une chaine est retenue si son nom
+       correspond, OU si l'un de ses programmes correspond -- dans ce
+       dernier cas la ligne entiere reste affichee (on ne troue pas une
+       frise temporelle), les blocs correspondants etant simplement mis
+       en evidence. Meme normalisation insensible aux accents que la
+       recherche de la tuile.
+       Filters the grid's rows: a channel is kept if its name matches,
+       OR if any of its programs match -- in the latter case the whole
+       row stays visible (you don't punch holes in a timeline), matching
+       blocks simply being highlighted. Same accent-insensitive
+       normalization as the tile's search. */
+    gridVisibleRows() {
+      const rows = (this.gridData && this.gridData.channels) || [];
+      const q = normalize(this.gridQuery);
+      if (!q) return rows;
+      return rows.filter((row) =>
+        normalize(row.channelName).includes(q)
+        || (row.programs || []).some((p) => normalize(p.title).includes(q) || normalize(p.subtitle).includes(q))
+      );
+    }
+
+    renderGridBody() {
+      if (!this.gridModal) return;
+      const i18n = this.ctx.i18n;
+      const inner = this.gridModal.querySelector(".pwtp-grid-inner");
+      if (!inner) return;
+
+      if (this.gridError) {
+        inner.innerHTML = `<div class="pwtp-msg pwtp-err">${i18n.t("teleprog.error")} ${escapeHtml(this.gridError)}</div>`;
+        return;
+      }
+      if (this.gridLoading && !this.gridData) {
+        inner.innerHTML = `<div class="pwtp-msg">${i18n.t("teleprog.loading")}</div>`;
+        return;
+      }
+      if (!this.gridData) {
+        inner.innerHTML = `<div class="pwtp-msg">${i18n.t("teleprog.empty")}</div>`;
+        return;
+      }
+
+      const rows = this.gridVisibleRows();
+      if (!rows.length) {
+        inner.innerHTML = `<div class="pwtp-msg">${i18n.t("teleprog.gridNoResults").replace("{query}", escapeHtml(this.gridQuery))}</div>`;
+        return;
+      }
+
+      const originMs = new Date(this.gridData.from).getTime();
+      const endMs = new Date(this.gridData.to).getTime();
+      const pxPerMinute = PX_PER_MINUTE_BASE * this.gridZoom;
+      const totalWidth = ((endMs - originMs) / 60000) * pxPerMinute;
+      const q = normalize(this.gridQuery);
+
+      inner.innerHTML = `
+        ${this.gridTimelineHtml(originMs, endMs, pxPerMinute, totalWidth)}
+        <div class="pwtp-grid-rows">
+          ${rows.map((row) => this.gridRowHtml(row, originMs, endMs, pxPerMinute, totalWidth, q)).join("")}
+        </div>
+        ${this.gridNowMarkerHtml(originMs, endMs, pxPerMinute)}`;
+
+      // Clic sur un bloc : ouvre le synopsis dans une infobulle simple
+      // plutot qu'une seconde fenetre par-dessus la premiere.
+      // Clicking a block: shows the synopsis in a simple tooltip rather
+      // than a second window stacked over the first.
+      inner.querySelectorAll(".pwtp-block").forEach((el) => {
+        el.addEventListener("click", (e) => {
+          e.stopPropagation();
+          el.classList.toggle("pwtp-block-open");
+        });
+      });
+    }
+
+    /* Ligne du temps en en-tete : une graduation par heure pleine, avec
+       l'heure lisible. Les graduations sont posees aux heures REELLES
+       (pas tous les N pixels) pour rester alignees avec les blocs quels
+       que soient le zoom et l'origine -- qui n'est presque jamais une
+       heure ronde puisqu'elle depend de l'instant d'ouverture.
+       Header timeline: one tick per full hour, with the readable time.
+       Ticks are placed at REAL hours (not every N pixels) to stay
+       aligned with the blocks whatever the zoom and origin -- which is
+       almost never a round hour since it depends on when the grid was
+       opened. */
+    gridTimelineHtml(originMs, endMs, pxPerMinute, totalWidth) {
+      const ticks = [];
+      const first = new Date(originMs);
+      first.setMinutes(0, 0, 0);
+      if (first.getTime() < originMs) first.setHours(first.getHours() + 1);
+      for (let t = first.getTime(); t < endMs; t += 3600000) {
+        const left = ((t - originMs) / 60000) * pxPerMinute;
+        ticks.push(`<div class="pwtp-tick" style="left:${left.toFixed(1)}px"><span>${escapeHtml(this.formatTime(new Date(t).toISOString()))}</span></div>`);
+      }
+      return `<div class="pwtp-timeline" style="width:${totalWidth.toFixed(1)}px">${ticks.join("")}</div>`;
+    }
+
+    /* Curseur vertical "maintenant" : repere visuel le plus utile de la
+       grille, puisque tout le reste se lit par rapport a lui. Omis si
+       l'instant courant est sorti de la fenetre chargee (grille laissee
+       ouverte longtemps).
+       Vertical "now" marker: the grid's most useful visual cue, since
+       everything else is read relative to it. Omitted if the current
+       time has drifted out of the loaded window (grid left open for a
+       long time). */
+    gridNowMarkerHtml(originMs, endMs, pxPerMinute) {
+      const now = Date.now();
+      if (now < originMs || now > endMs) return "";
+      const left = ((now - originMs) / 60000) * pxPerMinute;
+      return `<div class="pwtp-now-line" style="left:${left.toFixed(1)}px"></div>`;
+    }
+
+    gridRowHtml(row, originMs, endMs, pxPerMinute, totalWidth, normalizedQuery) {
+      const chName = escapeHtml(row.channelName || row.channelId);
+      const chNum = row.channelNumber ? `<span class="pwtp-chan-num">${row.channelNumber}</span>` : "";
+      // Logo de la chaine quand la grille en fournit un, via le proxy
+      // image du serveur (evite CORS/contenu mixte, comme les vignettes
+      // de la tuile) ; repli sur le nom seul sinon.
+      // Channel logo when the grid provides one, via the server's image
+      // proxy (avoids CORS/mixed content, like the tile's thumbnails);
+      // falls back to the name alone otherwise.
+      const logo = row.channelIcon
+        ? `<img class="pwtp-grid-logo" loading="lazy" src="/api/image-proxy?url=${encodeURIComponent(row.channelIcon)}" alt="">`
+        : `<div class="pwtp-grid-logo pwtp-grid-logo-ph" aria-hidden="true"></div>`;
+
+      const blocks = (row.programs || []).map((p) => {
+        const geo = computeBlockGeometry(p, originMs, endMs, pxPerMinute);
+        if (!geo || geo.width <= 0) return "";
+        const matches = normalizedQuery && (normalize(p.title).includes(normalizedQuery) || normalize(p.subtitle).includes(normalizedQuery));
+        const showThumb = geo.width >= MIN_WIDTH_FOR_THUMB && p.icon;
+        const showTitle = geo.width >= MIN_WIDTH_FOR_TITLE;
+        const thumb = showThumb
+          ? `<img class="pwtp-block-thumb" loading="lazy" src="/api/image-proxy?url=${encodeURIComponent(p.icon)}" alt="">`
+          : "";
+        const startLabel = this.formatTime(p.start);
+        const title = showTitle
+          ? `<div class="pwtp-block-text"><span class="pwtp-block-time">${escapeHtml(startLabel)}</span><span class="pwtp-block-title">${escapeHtml(p.title)}</span></div>`
+          : "";
+        const tip = `${startLabel} · ${p.title}${p.subtitle ? " — " + p.subtitle : ""}`;
+        return `<div class="pwtp-block${matches ? " pwtp-block-match" : ""}${geo.estimatedDuration ? " pwtp-block-est" : ""}"
+          style="left:${geo.left.toFixed(1)}px;width:${Math.max(2, geo.width - 2).toFixed(1)}px"
+          title="${escapeHtml(tip)}">${thumb}${title}<div class="pwtp-block-desc">${escapeHtml(p.desc || "")}</div></div>`;
+      }).join("");
+
+      return `
+        <div class="pwtp-grid-row">
+          <div class="pwtp-grid-chan">${logo}<span class="pwtp-grid-chan-name">${chNum}${chName}</span></div>
+          <div class="pwtp-grid-track" style="width:${totalWidth.toFixed(1)}px">${blocks}</div>
+        </div>`;
+    }
+
     destroy() {
       clearInterval(this.timer);
       clearTimeout(this.nowTimer);
       clearInterval(this.progressTimer);
       this.reminderTimers.forEach((id) => clearTimeout(id));
       this.reminderTimers.clear();
+      // La fenetre de grille vit dans document.body, hors de la tuile :
+      // sans ce retrait explicite, retirer la tuile du tableau
+      // laisserait sa fenetre orpheline dans le DOM.
+      // The grid window lives in document.body, outside the tile:
+      // without this explicit removal, removing the tile from the board
+      // would leave its window orphaned in the DOM.
+      if (this.gridModal && this.gridModal.parentNode) this.gridModal.remove();
+      this.gridModal = null;
     }
   }
 

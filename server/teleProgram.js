@@ -631,6 +631,78 @@ async function fetchFirstAvailable(urls, fetchImpl) {
    (the exact HTML must be observed there). The call and normalization
    machinery is in place; only the chosen site's DOM selectors remain to
    be written in an adapter. */
+/* ---------- Grille horaire complete / full time-grid ----------
+   Contrairement a buildView() qui ne retient qu'UN programme par chaine
+   (celui correspondant a la vue demandee), buildGridRange() retourne
+   TOUS les programmes de chaque chaine qui chevauchent la fenetre
+   [from, to] -- c'est ce qu'attend un affichage en grille facon
+   magazine TV, ou chaque bloc est proportionnel a sa duree.
+
+   Le critere est le CHEVAUCHEMENT, pas l'inclusion : un programme
+   commence avant "from" mais toujours en cours a "from" doit apparaitre
+   (sinon la premiere colonne de la grille serait vide alors que
+   quelque chose est bel et bien a l'antenne), et de meme pour un
+   programme qui deborde apres "to". C'est l'equivalent temporel d'une
+   fenetre glissante sur une frise.
+
+   Les programmes sans heure de fin (<stop> absent, certaines sources
+   n'en fournissent pas) sont conserves avec stop=null : c'est a
+   l'affichage de decider quoi en faire (la tuile leur donne une duree
+   par defaut plutot que de les ecarter, mieux vaut un bloc approximatif
+   qu'un trou). Fonction PURE, testee isolement.
+
+   Unlike buildView() which keeps only ONE program per channel (the one
+   matching the requested view), buildGridRange() returns EVERY program
+   on each channel that overlaps the [from, to] window -- which is what
+   a TV-magazine-style grid display needs, where each block is
+   proportional to its duration.
+
+   The criterion is OVERLAP, not containment: a program that started
+   before "from" but is still airing at "from" must show up (otherwise
+   the grid's first column would be empty while something is genuinely
+   on air), and likewise for a program running past "to". It's the
+   temporal equivalent of a sliding window over a timeline.
+
+   Programs with no end time (<stop> missing, some sources don't
+   provide it) are kept with stop=null: it's up to the display to
+   decide what to do (the tile gives them a default duration rather
+   than dropping them -- an approximate block beats a hole). PURE
+   function, tested in isolation. */
+function buildGridRange(programmes, channelsOrder, from, to) {
+  const fromMs = from instanceof Date ? from.getTime() : new Date(from).getTime();
+  const toMs = to instanceof Date ? to.getTime() : new Date(to).getTime();
+
+  // Index par chaine en une seule passe : evite de reparcourir la liste
+  // complete (potentiellement des dizaines de milliers de programmes sur
+  // un guide 400 chaines) une fois par chaine demandee.
+  // Indexed by channel in a single pass: avoids re-scanning the full
+  // list (potentially tens of thousands of programs on a 400-channel
+  // guide) once per requested channel.
+  const byChannel = new Map();
+  for (const p of (programmes || [])) {
+    const startMs = p.start ? p.start.getTime() : NaN;
+    if (isNaN(startMs)) continue;
+    // Sans heure de fin, on ne peut pas savoir s'il chevauche : on le
+    // retient des lors qu'il commence avant la fin de la fenetre, et on
+    // laisse l'affichage lui donner une duree par defaut.
+    // With no end time we can't tell whether it overlaps: keep it as
+    // long as it starts before the window's end, and let the display
+    // give it a default duration.
+    const stopMs = p.stop ? p.stop.getTime() : null;
+    const overlaps = stopMs != null
+      ? (startMs < toMs && stopMs > fromMs)
+      : (startMs < toMs);
+    if (!overlaps) continue;
+    if (!byChannel.has(p.channelId)) byChannel.set(p.channelId, []);
+    byChannel.get(p.channelId).push(p);
+  }
+
+  return (channelsOrder || []).map((channelId) => ({
+    channelId,
+    programs: (byChannel.get(channelId) || []).sort((a, b) => a.start - b.start)
+  }));
+}
+
 const scrapeAdapters = {
   // Exemple de squelette d'adaptateur, a completer avec les selecteurs
   // reels du site. Retourne le format normalise commun.
@@ -770,6 +842,61 @@ async function getView(config, deps) {
   };
 }
 
+/* Point d'entree de la grille horaire (voir buildGridRange ci-dessus).
+   Meme chargement/cache/resolution de chaines que getView() -- seule la
+   selection des programmes differe. La fenetre est exprimee en heures
+   AVANT et APRES l'instant courant, bornees ici plutot que cote tuile :
+   une fenetre demesuree produirait une reponse enorme (400 chaines x
+   plusieurs jours) pour un affichage de toute facon illisible.
+   Time-grid entry point (see buildGridRange above). Same
+   loading/cache/channel resolution as getView() -- only the program
+   selection differs. The window is expressed in hours BEFORE and AFTER
+   the current instant, clamped here rather than tile-side: an
+   oversized window would produce a huge response (400 channels x
+   several days) for a display that would be unreadable anyway. */
+async function getGrid(config, deps) {
+  const grid = await loadGrid(config, deps);
+  const ref = new Date((deps && deps.now) || Date.now());
+
+  const hoursBefore = Math.min(12, Math.max(0, Number(config.hoursBefore) || 0));
+  const hoursAfter = Math.min(48, Math.max(1, Number(config.hoursAfter) || 6));
+  const from = new Date(ref.getTime() - hoursBefore * 3600000);
+  const to = new Date(ref.getTime() + hoursAfter * 3600000);
+
+  const wanted = (config.channels && config.channels.length)
+    ? config.channels
+    : Array.from(grid.channels.keys());
+  const channelsOrder = wanted.map((entry) => resolveChannelId(entry, grid.channels)).filter(Boolean);
+
+  const rows = buildGridRange(grid.programmes, channelsOrder, from, to);
+
+  return {
+    generatedAt: ref.toISOString(),
+    from: from.toISOString(),
+    to: to.toISOString(),
+    channels: rows.map((r) => {
+      const ch = grid.channels.get(r.channelId);
+      const chName = ch ? ch.name : r.channelId;
+      return {
+        channelId: r.channelId,
+        channelName: chName,
+        channelIcon: ch ? ch.icon : null,
+        channelNumber: (ALIAS_INDEX.get(normalizeChannelKey(chName)) || {}).tntNumber || null,
+        programs: r.programs.map((p) => ({
+          start: p.start.toISOString(),
+          stop: p.stop ? p.stop.toISOString() : null,
+          title: p.title,
+          subtitle: p.subtitle,
+          desc: p.desc,
+          category: p.category,
+          icon: config.showThumbnails === false ? null : p.icon,
+          isNew: p.isNew
+        }))
+      };
+    })
+  };
+}
+
 /* Normalise un libelle pour comparaison souple : minuscules, sans
    accents, sans espaces ni ponctuation. "France 2" ~ "france2". Pure. */
 function normalizeChannelKey(s) {
@@ -828,11 +955,13 @@ module.exports = {
   programDurationMinutes,
   programNearHour,
   buildView,
+  buildGridRange,
   normalizeChannelKey,
   resolveChannelId,
   // chargement / cache
   loadGrid,
   getView,
+  getGrid,
   clearCache,
   scrapeAdapters,
   DEFAULT_CHANNELS

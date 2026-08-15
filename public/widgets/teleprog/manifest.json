@@ -1,6 +1,6 @@
 {
   "id": "teleprog",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "TV guide",
     "fr": "Programme TV"
@@ -377,6 +377,63 @@
       "group": {
         "en": "Display",
         "fr": "Affichage"
+      }
+    },
+    {
+      "key": "showGridButton",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the full-screen grid button",
+        "fr": "Afficher le bouton de grille plein écran"
+      },
+      "hint": {
+        "en": "A bar at the bottom of the tile opens a large TV-magazine-style grid: one row per channel, programs laid out on a time scale, with zoom and search.",
+        "fr": "Un bandeau en bas de la tuile ouvre une grande grille façon magazine TV : une ligne par chaîne, les programmes disposés sur une échelle de temps, avec zoom et recherche."
+      },
+      "group": {
+        "en": "Full-screen grid",
+        "fr": "Grille plein écran"
+      }
+    },
+    {
+      "key": "gridHoursBefore",
+      "type": "number",
+      "default": 1,
+      "min": 0,
+      "max": 12,
+      "step": 1,
+      "label": {
+        "en": "Hours shown before now",
+        "fr": "Heures affichées avant maintenant"
+      },
+      "hint": {
+        "en": "How far back the grid starts. 0 starts at the current time; a small value (1–2 h) helps to see what a program just following on from.",
+        "fr": "Jusqu'où la grille remonte. 0 démarre à l'heure courante ; une petite valeur (1–2 h) aide à voir ce qui vient de passer."
+      },
+      "group": {
+        "en": "Full-screen grid",
+        "fr": "Grille plein écran"
+      }
+    },
+    {
+      "key": "gridHoursAfter",
+      "type": "number",
+      "default": 6,
+      "min": 1,
+      "max": 48,
+      "step": 1,
+      "label": {
+        "en": "Hours shown after now",
+        "fr": "Heures affichées après maintenant"
+      },
+      "hint": {
+        "en": "How far ahead the grid goes. 6 h covers the evening; raise it to plan further ahead — a very wide window makes each block narrower, use the zoom to compensate.",
+        "fr": "Jusqu'où la grille s'étend. 6 h couvrent la soirée ; augmentez pour anticiper davantage — une fenêtre très large rend chaque bloc plus étroit, le zoom permet de compenser."
+      },
+      "group": {
+        "en": "Full-screen grid",
+        "fr": "Grille plein écran"
       }
     },
     {
