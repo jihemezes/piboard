@@ -253,6 +253,15 @@ function startFixtureServer() {
       console.log("  OK");
     }
 
+    console.log("== symbolsFor : symbole boursier connu (utilise pour le logo cote widget), absent sinon ==");
+    {
+      const symbols = crypto.symbolsFor(["bitcoin", "ethereum", "piece-hors-binance"]);
+      assert.strictEqual(symbols.bitcoin, "BTC");
+      assert.strictEqual(symbols.ethereum, "ETH");
+      assert.ok(!("piece-hors-binance" in symbols), "aucune entree pour une piece hors de la table Binance -- le widget n'affichera alors pas de logo");
+      console.log("  OK");
+    }
+
     console.log("== Espacement minimal entre appels CoinGecko UNIQUEMENT (Binance n'y est pas soumis) ==");
     {
       crypto.clearCache(); crypto._resetThrottleForTests();

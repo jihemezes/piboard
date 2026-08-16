@@ -294,6 +294,26 @@ function clearCache() {
   chartCache.clear();
 }
 
+/* Symbole boursier connu (table geree par server/cryptoBinance.js)
+   pour chaque identifiant demande -- utilise cote widget pour afficher
+   un logo a cote du nom dans la fenetre de courbe, sans appel
+   supplementaire a une source externe. Absent (pas de cle) pour une
+   piece hors de cette table : le widget se contente alors de ne pas
+   afficher de logo.
+   Known ticker symbol (table managed by server/cryptoBinance.js) for
+   each requested identifier -- used tile-side to show a logo next to
+   the name in the chart window, without an extra call to an external
+   source. Absent (no key) for a coin outside that table: the widget
+   then simply shows no logo. */
+function symbolsFor(ids) {
+  const out = {};
+  for (const id of ids) {
+    const symbol = binance.SYMBOL_MAP[id];
+    if (symbol) out[id] = symbol;
+  }
+  return out;
+}
+
 /* Reservee aux tests : remet a zero l'etat de la file d'espacement
    CoinGecko (lastCallAt/chain), pour qu'un bloc de test n'herite pas
    de l'attente accumulee par les blocs precedents dans le meme
@@ -314,4 +334,4 @@ function _resetThrottleForTests() {
   lastCallAt = 0;
 }
 
-module.exports = { getPrices, getChart, clearCache, PRICE_TTL_MS, CHART_TTL_MS, MIN_SPACING_MS, _resetThrottleForTests };
+module.exports = { getPrices, getChart, clearCache, symbolsFor, PRICE_TTL_MS, CHART_TTL_MS, MIN_SPACING_MS, _resetThrottleForTests };

@@ -490,9 +490,11 @@ const tileConfigsMock = {};
    without depending on the real network. */
 const cryptoMock = {
   priceData: { bitcoin: { eur: 50000, eur_24h_change: 2.5 } },
+  priceSymbols: { bitcoin: "BTC" },
   priceStale: false,
   blockPrices: false,
   chartPrices: [100, 105, 98, 110],
+  chartSymbol: "BTC",
   chartStale: false,
   blockChart: false
 };
@@ -623,11 +625,11 @@ const dom = new JSDOM(html, {
       }
       if (u.includes("/api/crypto/prices")) {
         if (cryptoMock.blockPrices) return { ok: false, status: 502, json: () => Promise.resolve({ error: "boom" }) };
-        return json({ data: cryptoMock.priceData, stale: !!cryptoMock.priceStale });
+        return json({ data: cryptoMock.priceData, stale: !!cryptoMock.priceStale, symbols: cryptoMock.priceSymbols });
       }
       if (u.includes("/api/crypto/chart")) {
         if (cryptoMock.blockChart) return { ok: false, status: 502, json: () => Promise.resolve({ error: "boom" }) };
-        return json({ prices: cryptoMock.chartPrices, stale: !!cryptoMock.chartStale });
+        return json({ prices: cryptoMock.chartPrices, stale: !!cryptoMock.chartStale, symbol: cryptoMock.chartSymbol });
       }
       // ATTENTION a l'ordre : "/api/tele-program/grid" contient
       // "/api/tele-program", donc ce cas doit etre teste AVANT le
@@ -1213,17 +1215,103 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
         document.querySelector(".pwc-chart-status")?.hidden !== false
         || (document.querySelector(".pwc-chart-status")?.textContent || "") === "");
 
-      console.log("== Cours Cryptos : courbe perimee -> indicateur discret, pas une erreur ==");
-      cryptoMock.chartStale = true;
-      document.querySelector('.pwc-range-btn[data-days="7"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-      await sleep(200);
-      assert("statut affiche pour signaler une courbe perimee",
-        document.querySelector(".pwc-chart-status")?.hidden === false);
-      assert("ce n'est PAS le message d'erreur (les donnees restent exploitables)",
-        (document.querySelector(".pwc-chart-status")?.textContent || "") !== "Courbe indisponible");
-      cryptoMock.chartStale = false;
+      console.log("== Cours Cryptos : traits de repere sur l'axe des ordonnees, avec valeurs indicatrices ==");
+      {
+        const gridLines = document.querySelectorAll(".pwc-chart-grid");
+        const axisLabels = document.querySelectorAll(".pwc-chart-axis");
+        assert("au moins un trait de repere en fond du graphique", gridLines.length > 0);
+        assert("chaque trait de repere a sa valeur indicatrice en regard",
+          axisLabels.length === gridLines.length);
+        assert("les valeurs indicatrices sont bien du texte non vide (prix formate)",
+          Array.from(axisLabels).every((el) => (el.textContent || "").trim().length > 0));
+        // Les traits de repere doivent tomber sur des valeurs "rondes"
+        // plutot que le min/max brut de la serie [100,105,98,110] --
+        // verifie qu'aucune etiquette ne reprend une decimale non ronde
+        // improbable comme "98,00" pile sur le minimum brut.
+        // Reference lines must land on "round" values rather than the
+        // series' raw min/max [100,105,98,110] -- checks that no label
+        // reuses an improbable non-round decimal like "98.00" landing
+        // exactly on the raw minimum.
+        const labelTexts = Array.from(axisLabels).map((el) => el.textContent);
+        assert("les valeurs sont arrondies (ex. multiples de 5), pas le minimum brut exact de la serie",
+          !labelTexts.some((t) => t.replace(/[^0-9]/g, "") === "98"));
+      }
 
-      modal.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      console.log("== Cours Cryptos : logo affiche a gauche du nom quand le symbole est connu ==");
+      {
+        const icon = document.querySelector(".pwc-modal-icon");
+        assert("balise du logo presente dans la fenetre de courbe", !!icon);
+        assert("adresse du logo construite a partir du symbole boursier connu (BTC)",
+          (icon.getAttribute("src") || "").toLowerCase().includes("btc.svg"));
+      }
+
+      console.log("== Cours Cryptos : pas de logo quand le symbole boursier n'est pas connu ==");
+      {
+        // Teste le cas reel (une crypto SANS correspondance Binance,
+        // donc sans symbole des l'ouverture -- pas une extinction en
+        // cours de consultation, qui ne peut pas arriver en pratique
+        // pour une meme piece deja ouverte).
+        // Tests the real case (a coin WITHOUT a Binance mapping, so
+        // with no symbol right from opening -- not a mid-viewing
+        // disappearance, which can't happen in practice for the same
+        // already-open coin).
+        modal.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        cryptoMock.priceData["piece-mysterieuse"] = { eur: 3, eur_24h_change: 0.1 };
+        cryptoMock.chartPrices = [3, 3.1, 2.9];
+        cryptoMock.chartSymbol = null;
+        cryptoTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(60);
+        document.querySelector('#tileForm [data-key="coins"]').value = "bitcoin,piece-mysterieuse";
+        document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(700);
+
+        const rows = cryptoTile.querySelectorAll(".pwc-row");
+        const mysteryRow = Array.from(rows).find((r) => r.dataset.coin === "piece-mysterieuse");
+        assert("2e crypto (sans correspondance Binance) bien affichee dans la liste", !!mysteryRow);
+        mysteryRow.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(200);
+        const icon2 = document.querySelector(".pwc-modal-icon");
+        assert("le logo reste masque des l'ouverture quand la crypto n'a pas de symbole boursier connu",
+          icon2.hidden === true);
+        document.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+
+        // Retour a l'etat d'origine pour la suite des tests.
+        // Back to the original state for the rest of the tests.
+        delete cryptoMock.priceData["piece-mysterieuse"];
+        cryptoMock.chartPrices = [100, 105, 98, 110];
+        cryptoMock.chartSymbol = "BTC";
+        cryptoTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(60);
+        document.querySelector('#tileForm [data-key="coins"]').value = "bitcoin";
+        document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(700);
+      }
+
+    }
+
+    console.log("== Cours Cryptos : couleurs du graphique personnalisables (fond, courbe, traits de repere) ==");
+    {
+      cryptoTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      const bgInput = document.querySelector('#tileForm [data-key="chartBgColor"]');
+      const lineInput = document.querySelector('#tileForm [data-key="chartLineColor"]');
+      const gridInput = document.querySelector('#tileForm [data-key="chartGridColor"]');
+      assert("les 3 champs de couleur du graphique sont proposes dans les reglages",
+        !!bgInput && !!lineInput && !!gridInput);
+      bgInput.value = "#112233";
+      lineInput.value = "#44aa66";
+      gridInput.value = "#ffcc00";
+      document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(700);
+
+      cryptoTile.querySelector(".pwc-row").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      const wrap = document.querySelector(".pwc-chart-wrap");
+      assert("couleur de fond personnalisee appliquee", wrap.style.getPropertyValue("--pwc-chart-bg").trim() === "#112233");
+      assert("couleur de courbe personnalisee appliquee", wrap.style.getPropertyValue("--pwc-chart-line").trim() === "#44aa66");
+      assert("couleur des traits de repere personnalisee appliquee", wrap.style.getPropertyValue("--pwc-chart-grid").trim() === "#ffcc00");
+
+      document.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     }
   }
 

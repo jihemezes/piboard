@@ -65,6 +65,29 @@
    Chart popup (manual close only). Reuses the core modal classes
    (.modal/.modal-card) for visual consistency. The backdrop does not
    close the window on click: only the close button does, as requested. */
+/* Logo de la crypto, a gauche du nom -- voir setModalIcon()/iconUrl()
+   dans widget.js. Reste masque (via l'attribut "hidden" pose/retire en
+   JS) tant que le symbole n'est pas connu ou que l'image echoue a
+   charger : pas de case vide disgracieuse a la place. Le titre garde
+   sa propre place (flex:1) a cote du logo, sans toucher a la mise en
+   page PARTAGEE de .modal-head (utilisee par toutes les fenetres de
+   l'application, pas seulement celle-ci).
+   Crypto logo, left of the name -- see setModalIcon()/iconUrl() in
+   widget.js. Stays hidden (via the "hidden" attribute set/cleared in
+   JS) as long as the symbol isn't known or the image fails to load: no
+   unsightly empty box in its place. The title keeps its own room
+   (flex:1) next to the logo, without touching .modal-head's SHARED
+   layout (used by every window in the application, not just this
+   one). */
+.pwc-modal-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  margin-right: 8px;
+}
+.pwc-modal-title { flex: 1; min-width: 0; }
+
 .pwc-chart-head {
   display: flex;
   align-items: baseline;
@@ -106,15 +129,48 @@
   color: #fff;
 }
 
+/* Couleurs personnalisables (fond, courbe, traits de repere) : voir
+   applyChartColors() dans widget.js, qui pose ces 3 variables sur
+   .pwc-chart-wrap a chaque ouverture et a chaque changement de
+   reglages. Valeur de repli assortie au theme sombre par defaut de
+   PiBoard, au cas ou la fenetre serait affichee avant le premier appel
+   a applyChartColors() (ne devrait normalement jamais arriver).
+   Customizable colors (background, curve, gridlines): see
+   applyChartColors() in widget.js, which sets these 3 variables on
+   .pwc-chart-wrap on every open and every settings change. Fallback
+   value matching PiBoard's default dark theme, in case the window were
+   shown before the first call to applyChartColors() (should normally
+   never happen). */
 .pwc-chart-wrap {
   padding: 0 18px 18px;
   min-height: 200px;
   position: relative;
+  --pwc-chart-bg: #141926;
+  --pwc-chart-line: #D6335C;
+  --pwc-chart-grid: #565E73;
 }
-.pwc-chart-wrap svg { width: 100%; height: 200px; display: block; }
-.pwc-chart-line { fill: none; stroke: var(--accent); stroke-width: 2; }
-.pwc-chart-fill { fill: var(--accent); opacity: 0.12; }
-.pwc-chart-axis { font-family: var(--mono); font-size: 10px; fill: var(--faint); }
+.pwc-chart-wrap svg {
+  width: 100%;
+  height: 200px;
+  display: block;
+  background: var(--pwc-chart-bg);
+  border-radius: 8px;
+}
+.pwc-chart-line { fill: none; stroke: var(--pwc-chart-line); stroke-width: 2; }
+.pwc-chart-fill { fill: var(--pwc-chart-line); opacity: 0.12; }
+
+/* Traits de repere sur l'axe des ordonnees, en fond, avec leur valeur
+   indicatrice -- voir niceTicks()/loadChart() dans widget.js. Discrets
+   (opacite reduite) pour rester secondaires par rapport a la courbe
+   elle-meme, tout en restant assez visibles pour aider a evaluer les
+   fluctuations d'un coup d'oeil, comme demande.
+   Y-axis reference gridlines, in the background, with their value
+   label -- see niceTicks()/loadChart() in widget.js. Discreet (reduced
+   opacity) to stay secondary to the curve itself, while remaining
+   visible enough to help judge fluctuations at a glance, as
+   requested. */
+.pwc-chart-grid { stroke: var(--pwc-chart-grid); stroke-width: 1; opacity: 0.35; }
+.pwc-chart-axis { font-family: var(--mono); font-size: 9.5px; fill: var(--pwc-chart-grid); opacity: 0.85; }
 
 .pwc-chart-status {
   position: absolute;

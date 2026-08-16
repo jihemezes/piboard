@@ -504,22 +504,32 @@
           <p>Suivre le cours de quelques cryptomonnaies sans quitter le tableau de bord.</p>
           <h4>Possibilités</h4>
           <p>La liste des cryptos suivies se personnalise librement (par exemple Bitcoin, Ethereum, une monnaie plus confidentielle) via leurs identifiants CoinGecko. Touchez une ligne pour faire apparaître sa courbe de prix sur plusieurs périodes (24 heures, 7 jours, 30 jours, 1 an), pratique pour évaluer une tendance sans avoir besoin d'ouvrir une application dédiée.</p>
+          <p>La fenêtre de courbe affiche des traits de repère horizontaux en fond, avec une valeur de prix « ronde » en regard de chacun (par exemple des multiples de 5 000 plutôt que les valeurs exactes de la série) — pratique pour évaluer les fluctuations d'un coup d'œil. Le logo de la crypto apparaît à gauche de son nom quand elle fait partie des cryptos les plus courantes (voir la section « Deux sources » ci-dessus) ; absent pour les cryptos plus confidentielles, plutôt que d'afficher un logo générique trompeur.</p>
+          <p>Le fond du graphique, la couleur de la courbe et celle des traits de repère se personnalisent chacun indépendamment dans les réglages de la tuile.</p>
           <p>Les cours passent par le serveur PiBoard (jamais directement par le navigateur), qui interroge deux sources : <b>Binance</b> en priorité (API publique, quota très largement suffisant, aucune configuration requise), et <b>CoinGecko</b> en repli pour les cryptomonnaies plus confidentielles que Binance ne référence pas, ou en cas de panne ponctuelle de Binance. C'est CoinGecko seul, avec son quota gratuit très bas (5 à 15 requêtes par minute, partagées par toute l'adresse IP du foyer), qui provoquait auparavant des échecs fréquents et imprévisibles ; Binance en source principale les rend en pratique exceptionnels pour les cryptos courantes. Le serveur met en cache les cours et les courbes (par cryptomonnaie individuelle), et conserve la dernière valeur connue si les deux sources échouent en même temps — un discret rappel « dernières valeurs connues » apparaît alors, plutôt qu'une tuile vide.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Cryptos</span><span class="help-opt-desc">Liste d'identifiants CoinGecko séparés par des virgules (ex. <code>bitcoin,ethereum,solana</code>). L'identifiant CoinGecko correspond en général au nom complet en minuscules.</span></div>
           <div class="help-opt"><span class="help-opt-name">Devise</span><span class="help-opt-desc">Euro ou dollar US.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour des cours.</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour des cours.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fond du graphique</span><span class="help-opt-desc">Couleur d'arrière-plan de la fenêtre de courbe.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Couleur de la courbe</span><span class="help-opt-desc">Couleur de la ligne et de son remplissage.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Traits de repère et valeurs</span><span class="help-opt-desc">Couleur des traits horizontaux en fond et de leurs valeurs indicatrices.</span></div>`,
         en: `
           <span class="help-size">Size: 3×2 by default, from 1×1 to 6×6</span>
           <h4>Goal</h4>
           <p>Track the price of a few cryptocurrencies without leaving the dashboard.</p>
           <h4>Possibilities</h4>
           <p>The list of tracked coins can be freely customized (for instance Bitcoin, Ethereum, a more niche coin) via their CoinGecko identifiers. Tap a row to bring up its price chart over several periods (24 hours, 7 days, 30 days, 1 year), handy for gauging a trend without needing to open a dedicated app.</p>
+          <p>The chart window shows horizontal reference lines in the background, with a "round" price value next to each (e.g. multiples of 5,000 rather than the series' exact values) — handy for gauging fluctuations at a glance. The coin's logo shows up left of its name when it's among the most common coins (see the "Two sources" section above); absent for more niche coins, rather than showing a misleading generic logo.</p>
+          <p>The chart's background, the curve's color and the reference lines' color can each be customized independently in the tile's settings.</p>
           <p>Prices go through the PiBoard server (never straight from the browser), which queries two sources: <b>Binance</b> first (public API, quota more than generous enough, no configuration needed), and <b>CoinGecko</b> as a fallback for more niche coins Binance doesn't list, or during a momentary Binance outage. It was CoinGecko alone, with its very low free quota (5 to 15 requests per minute, shared by the household's entire IP address), that used to cause frequent, unpredictable failures; having Binance as the main source makes those exceptional in practice for common coins. The server caches prices and charts (per individual coin), and keeps the last known value if both sources fail at once — a discreet "last known values" reminder then appears, rather than an empty tile.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Coins</span><span class="help-opt-desc">Comma-separated list of CoinGecko IDs (e.g. <code>bitcoin,ethereum,solana</code>). The CoinGecko ID is generally the full lowercase name.</span></div>
           <div class="help-opt"><span class="help-opt-name">Currency</span><span class="help-opt-desc">Euro or US dollar.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two price updates.</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two price updates.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Chart background</span><span class="help-opt-desc">Background color of the chart window.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Curve color</span><span class="help-opt-desc">Color of the line and its fill.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Gridlines and value labels</span><span class="help-opt-desc">Color of the background horizontal lines and their reference values.</span></div>`
       }
     },
 

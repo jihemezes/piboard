@@ -591,6 +591,15 @@ app.get("/api/crypto/prices", async (req, res) => {
   if (!ids.length) return res.status(400).json({ error: "missing ids" });
   try {
     const result = await crypto.getPrices(ids, currency);
+    // Symbole boursier connu (ex. "BTC" pour "bitcoin"), quand la piece
+    // fait partie de la table geree par Binance (voir
+    // server/cryptoBinance.js) -- sert cote widget a afficher un logo,
+    // sans appel supplementaire a une source externe.
+    // Known ticker symbol (e.g. "BTC" for "bitcoin"), when the coin is
+    // part of the table managed by Binance (see
+    // server/cryptoBinance.js) -- used tile-side to show a logo,
+    // without an extra call to an external source.
+    result.symbols = crypto.symbolsFor(ids);
     res.set("Cache-Control", "no-store");
     res.json(result);
   } catch (e) {
@@ -606,6 +615,7 @@ app.get("/api/crypto/chart", async (req, res) => {
   if (!id) return res.status(400).json({ error: "missing id" });
   try {
     const result = await crypto.getChart(id, currency, days);
+    result.symbol = crypto.symbolsFor([id])[id] || null;
     res.set("Cache-Control", "no-store");
     res.json(result);
   } catch (e) {

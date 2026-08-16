@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.61.0
+
+- **Cours Cryptos : amélioration de la fenêtre de courbe.**
+  - **Traits de repère sur l'axe des ordonnées**, en fond du
+    graphique, avec une valeur de prix « ronde » en regard de chacun
+    (par exemple des multiples de 5 000 plutôt que les valeurs exactes
+    de la série) — pratique pour évaluer les fluctuations d'un coup
+    d'œil.
+  - **Logo de la crypto** affiché à gauche de son nom, quand elle fait
+    partie des cryptos les plus courantes (celles gérées par Binance,
+    voir 1.60.0) ; absent pour les cryptos plus confidentielles,
+    plutôt qu'un logo générique trompeur.
+  - **Couleurs personnalisables** : fond du graphique, couleur de la
+    courbe et couleur des traits de repère se règlent chacune
+    indépendamment dans les réglages de la tuile.
+
+---
+
+- **Crypto prices: chart window improvements.**
+  - **Y-axis reference lines**, in the chart's background, with a
+    "round" price value next to each (e.g. multiples of 5,000 rather
+    than the series' exact values) — handy for gauging fluctuations at
+    a glance.
+  - **Coin logo** shown left of its name, when it's among the most
+    common coins (the ones managed by Binance, see 1.60.0); absent for
+    more niche coins, rather than a misleading generic logo.
+  - **Customizable colors**: chart background, curve color and
+    reference-line color can each be set independently in the tile's
+    settings.
+
 ## 1.60.0
 
 - **Cours Cryptos : Binance ajouté comme source principale, CoinGecko

@@ -1,6 +1,6 @@
 {
   "id": "crypto",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Crypto prices",
     "fr": "Cours Cryptos"
@@ -67,6 +67,49 @@
       "label": {
         "en": "Refresh (minutes)",
         "fr": "Rafraîchissement (minutes)"
+      }
+    },
+    {
+      "key": "chartBgColor",
+      "type": "color",
+      "default": "#141926",
+      "label": {
+        "en": "Chart background",
+        "fr": "Fond du graphique"
+      },
+      "group": {
+        "en": "Chart",
+        "fr": "Graphique"
+      }
+    },
+    {
+      "key": "chartLineColor",
+      "type": "color",
+      "default": "#D6335C",
+      "label": {
+        "en": "Curve color",
+        "fr": "Couleur de la courbe"
+      },
+      "group": {
+        "en": "Chart",
+        "fr": "Graphique"
+      }
+    },
+    {
+      "key": "chartGridColor",
+      "type": "color",
+      "default": "#565E73",
+      "label": {
+        "en": "Gridlines and value labels",
+        "fr": "Traits de repère et valeurs"
+      },
+      "hint": {
+        "en": "Horizontal lines shown behind the curve, with a price value next to each, to help judge fluctuations at a glance.",
+        "fr": "Traits horizontaux affichés derrière la courbe, avec une valeur de prix en regard de chacun, pour évaluer les fluctuations d'un coup d'œil."
+      },
+      "group": {
+        "en": "Chart",
+        "fr": "Graphique"
       }
     }
   ]
