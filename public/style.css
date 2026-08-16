@@ -520,6 +520,32 @@ body.touch .modal-card { resize: none; }
    General catalog wrapper: same pattern as .config-picker-row below (a
    corner button overlaid, outside the main button -- a <button> can't
    validly contain another one in HTML). */
+/* En-tete de famille : occupe toute la largeur de la grille pour
+   separer visuellement les groupes de tuiles (voir CATALOG_FAMILIES
+   dans app.js). grid-column: 1 / -1 est indispensable ici -- sans
+   cela, l'en-tete serait traite comme une vignette de plus et se
+   glisserait dans une colonne, au milieu des tuiles.
+   Family header: spans the grid's full width to visually separate the
+   tile groups (see CATALOG_FAMILIES in app.js). grid-column: 1 / -1 is
+   essential here -- without it, the header would be treated as just
+   another card and slot into a column, in the middle of the tiles. */
+.catalog-family {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--tile-edge);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+/* Le tout premier en-tete n'a pas besoin de l'espace destine a
+   separer sa famille de la precedente. The very first header doesn't
+   need the space meant to separate its family from the previous
+   one. */
+.catalog-family:first-child { margin-top: 0; }
+
 .catalog-item-wrap { position: relative; display: flex; }
 .catalog-item-wrap .catalog-item { flex: 1; }
 .catalog-item-wrap .ci-info {

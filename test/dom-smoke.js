@@ -897,6 +897,26 @@ function assert(label, cond) {
 
 function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
+/* Retrouve une vignette du catalogue par l'IDENTIFIANT de son widget.
+   Indispensable depuis le regroupement par familles : l'ordre
+   d'affichage ne suit plus celui du tableau "catalog" (voir
+   CATALOG_FAMILIES dans app.js), donc un acces par index y serait
+   faux. Le reperage se fait via le nom affiche, seul lien fiable entre
+   le manifeste et le DOM rendu.
+   Finds a catalog card by its widget's ID. Essential since family
+   grouping was introduced: the display order no longer follows the
+   "catalog" array's order (see CATALOG_FAMILIES in app.js), so
+   index-based access would be wrong. Lookup goes through the displayed
+   name, the only reliable link between the manifest and the rendered
+   DOM. */
+function catalogItemFor(catalog, document, widgetId) {
+  const manifest = catalog.find((m) => m.id === widgetId);
+  if (!manifest) return null;
+  const name = manifest.name.fr || manifest.name.en || manifest.name;
+  return Array.from(document.querySelectorAll("#catalogList .catalog-item"))
+    .find((el) => (el.querySelector(".ci-name")?.textContent || "") === name) || null;
+}
+
 (async () => {
   /* Attendre le boot / wait for boot */
   let tries = 0;
@@ -1806,9 +1826,58 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
   assert("catalogue ouvert avec " + catalog.length + " widgets",
     document.querySelectorAll("#catalogList .catalog-item").length === catalog.length);
 
+  console.log("== Catalogue : regroupement par familles ==");
   {
-    const weatherIdx = catalog.findIndex((m) => m.id === "weather");
-    const weatherItem = document.querySelectorAll("#catalogList .catalog-item-wrap")[weatherIdx];
+    const headers = Array.from(document.querySelectorAll("#catalogList .catalog-family"));
+    const headerTexts = headers.map((h) => h.textContent);
+    assert("des en-tetes de famille sont affiches", headers.length >= 5);
+    assert("familles attendues presentes et traduites en francais",
+      ["Météo", "Informations", "Personnel", "Divertissement", "Sport", "Divers"]
+        .every((f) => headerTexts.includes(f)));
+    assert("l'ordre des familles est celui defini (Meteo en premier, Divers en dernier)",
+      headerTexts[0] === "Météo" && headerTexts[headerTexts.length - 1] === "Divers");
+
+    // AUCUNE tuile ne doit disparaitre du fait du regroupement : le
+    // total affiche doit toujours egaler le catalogue complet (deja
+    // verifie ci-dessus), et chaque vignette doit suivre un en-tete.
+    // NO tile must vanish because of the grouping: the displayed total
+    // must still equal the full catalog (already checked above), and
+    // every card must follow a header.
+    const firstChild = document.querySelector("#catalogList").firstElementChild;
+    assert("le catalogue commence par un en-tete de famille (aucune tuile orpheline en tete)",
+      firstChild && firstChild.classList.contains("catalog-family"));
+
+    // Verifie un classement concret, cote a cote : la tuile Meteo doit
+    // se trouver dans la famille "Meteo", pas ailleurs.
+    // Checks one concrete classification, side by side: the Weather
+    // tile must sit in the "Météo" family, not elsewhere.
+    const weatherCard = catalogItemFor(catalog, document, "weather");
+    let famOfWeather = null;
+    for (let el = weatherCard.closest(".catalog-item-wrap"); el; el = el.previousElementSibling) {
+      if (el.classList.contains("catalog-family")) { famOfWeather = el.textContent; break; }
+    }
+    assert("la tuile Meteo est bien rangee dans la famille 'Météo'", famOfWeather === "Météo");
+
+    const notesCard = catalogItemFor(catalog, document, "notes");
+    let famOfNotes = null;
+    for (let el = notesCard.closest(".catalog-item-wrap"); el; el = el.previousElementSibling) {
+      if (el.classList.contains("catalog-family")) { famOfNotes = el.textContent; break; }
+    }
+    assert("la tuile Bloc-notes est bien rangee dans la famille 'Personnel'", famOfNotes === "Personnel");
+  }
+
+  {
+    // Reperage par NOM plutot que par index dans le tableau "catalog" :
+    // depuis le regroupement par familles, l'ordre d'affichage ne suit
+    // plus l'ordre du tableau (voir CATALOG_FAMILIES dans app.js).
+    // Located by NAME rather than by index in the "catalog" array:
+    // since family grouping was introduced, the display order no longer
+    // follows the array's order (see CATALOG_FAMILIES in app.js).
+    const weatherManifest = catalog.find((m) => m.id === "weather");
+    const weatherName = weatherManifest.name.fr || weatherManifest.name.en || weatherManifest.name;
+    const weatherItem = Array.from(document.querySelectorAll("#catalogList .catalog-item-wrap"))
+      .find((el) => (el.querySelector(".ci-name")?.textContent || "") === weatherName);
+    assert("tuile Meteo retrouvee dans le catalogue", !!weatherItem);
     const desc = weatherItem.querySelector(".ci-desc").textContent;
     assert("description affichee dans la liste : courte (intitule, pas le texte complet)", desc.length < 100);
     assert("l'intitule court evoque bien la fonction premiere (meteo)", /météo|weather/i.test(desc));
@@ -1995,7 +2064,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
     /* 1) Ajouter une tuile "Page web", la nommer et la configurer */
     document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    document.querySelectorAll("#catalogList .catalog-item")[webviewIndex]
+    catalogItemFor(catalog, document, "webview")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(80);
     const newTile = items()[items().length - 1];
@@ -2030,7 +2099,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
     /* 3) Rajouter une tuile du meme type -> le selecteur doit proposer la config enregistree */
     document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    document.querySelectorAll("#catalogList .catalog-item")[webviewIndex]
+    catalogItemFor(catalog, document, "webview")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(80);
     assert("selecteur de configuration ouvert", document.getElementById("configPickerModal").hidden === false);
@@ -2050,7 +2119,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
     /* 4) Verifier que la suppression d'une config depuis le selecteur fonctionne */
     document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    document.querySelectorAll("#catalogList .catalog-item")[webviewIndex]
+    catalogItemFor(catalog, document, "webview")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(80);
     const delBtn = document.querySelector("#configPickerList .config-picker-row .cp-delete");
@@ -2073,7 +2142,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const items = () => Array.from(document.querySelectorAll(".grid-stack-item"));
 
     document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    document.querySelectorAll("#catalogList .catalog-item")[slideshowIndex]
+    catalogItemFor(catalog, document, "slideshow")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(80);
     const newTile = items()[items().length - 1];
@@ -2267,7 +2336,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const items = () => Array.from(document.querySelectorAll(".grid-stack-item"));
 
     document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    document.querySelectorAll("#catalogList .catalog-item")[tpIndex]
+    catalogItemFor(catalog, document, "teleprog")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(120);
     const tile = items()[items().length - 1];
@@ -2564,7 +2633,7 @@ function sleep(ms) { return new Promise((r) => setTimeout(r, ms)); }
     const items = () => Array.from(document.querySelectorAll(".grid-stack-item"));
 
     document.getElementById("btnAdd").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-    document.querySelectorAll("#catalogList .catalog-item")[standingsIndex]
+    catalogItemFor(catalog, document, "standings")
       .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(120);
     const tile = items()[items().length - 1];

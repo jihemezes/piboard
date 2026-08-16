@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.62.0
+
+- **Catalogue de tuiles regroupé par familles.** Le catalogue
+  présentait jusqu'ici une seule longue liste ; les tuiles sont
+  désormais rangées sous six en-têtes : **Météo**, **Informations**,
+  **Personnel**, **Divertissement**, **Sport** et **Divers**. L'ordre
+  des familles, comme celui des tuiles au sein de chacune, est un
+  classement délibéré (les plus courantes d'abord) plutôt qu'un tri
+  alphabétique. Une tuile qui ne serait rattachée à aucune famille
+  rejoint automatiquement « Divers » — ajouter un widget sans toucher
+  au classement reste donc sans danger.
+
+---
+
+- **Tile catalog grouped into families.** The catalog used to be one
+  long list; tiles are now filed under six headers: **Weather**,
+  **Information**, **Personal**, **Entertainment**, **Sport** and
+  **Miscellaneous**. The order of the families, like that of the tiles
+  within each, is a deliberate ordering (most common first) rather
+  than an alphabetical sort. A tile attached to no family
+  automatically joins "Miscellaneous" — adding a widget without
+  touching the classification is therefore harmless.
+
 ## 1.61.0
 
 - **Cours Cryptos : amélioration de la fenêtre de courbe.**

@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.61.0
+   Version 1.62.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2015,62 +2015,131 @@
 
   /* ---------- Catalogue / catalog ---------- */
 
+  /* Familles du catalogue : regroupent les tuiles par usage plutot que
+     de les presenter en une seule longue liste alphabetique. L'ordre
+     des familles ET celui des tuiles a l'interieur de chacune sont
+     ceux definis ici, deliberement -- pas un tri automatique : c'est
+     un classement editorial (les tuiles les plus courantes d'abord au
+     sein de leur famille).
+
+     Une tuile absente de toute famille atterrit automatiquement dans
+     "Divers" (voir openCatalog) : ajouter un widget sans toucher a
+     cette table reste donc sans danger, il apparaitra simplement en
+     fin de catalogue plutot que de disparaitre.
+
+     Catalog families: group tiles by purpose rather than presenting
+     them as one long alphabetical list. The order of the families AND
+     of the tiles within each are the ones defined here, deliberately
+     -- not an automatic sort: this is an editorial ordering (the most
+     common tiles first within their family).
+
+     A tile missing from every family automatically lands in
+     "Miscellaneous" (see openCatalog): adding a widget without
+     touching this table is therefore harmless, it will simply show up
+     at the end of the catalog rather than disappearing. */
+  const CATALOG_FAMILIES = [
+    { key: "weather", ids: ["weather", "radar", "airquality", "astronomy"] },
+    { key: "info", ids: ["rss", "traffic", "commute", "webview", "planes", "crypto", "system"] },
+    { key: "personal", ids: ["calendar", "mailbox", "notes"] },
+    { key: "entertainment", ids: ["teleprog", "iptv", "slideshow"] },
+    { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
+    { key: "misc", ids: ["clock", "countdown", "quote", "networkscan"] }
+  ];
+
   function openCatalog() {
     const list = $("catalogList");
     list.innerHTML = "";
-    for (const m of catalog) {
-      const wrap = document.createElement("div");
-      wrap.className = "catalog-item-wrap";
-      const btn = document.createElement("button");
-      btn.className = "catalog-item";
-      // Intitule court, focalise sur la fonction premiere de la tuile
-      // (voir "tagline" dans chaque manifeste) -- la description
-      // complete, plus longue, reste accessible via l'icone info au
-      // survol/tap plutot que d'etre affichee en permanence dans la
-      // liste, ce qui produisait des paves de texte demesures.
-      // Short blurb, focused on the tile's primary function (see
-      // "tagline" in each manifest) -- the full, longer description
-      // stays available via the info icon on hover/tap rather than
-      // being permanently shown in the list, which produced oversized
-      // text blocks.
-      const tagline = m.tagline ? i18n.fromManifest(m.tagline) : i18n.fromManifest(m.description);
-      btn.innerHTML = `
-        <img src="widgets/${m.dir}/icon.svg" alt="">
-        <span>
-          <span class="ci-name">${i18n.fromManifest(m.name)}</span><br>
-          <span class="ci-desc">${tagline}</span>
-        </span>`;
-      btn.addEventListener("click", () => {
-        $("catalogModal").hidden = true;
-        if (!editing) toggleEdit(true);
-        addTile(m.id);
-      });
-      wrap.appendChild(btn);
 
-      if (m.tagline) {
-        // Bouton separe (pas imbrique dans btn, un <button> ne peut pas
-        // en contenir un autre) positionne par-dessus, dans le coin.
-        // Separate button (not nested inside btn, a <button> can't
-        // contain another one) positioned on top, in the corner.
-        const info = document.createElement("button");
-        info.type = "button";
-        info.className = "ci-info";
-        info.setAttribute("aria-label", i18n.t("catalog.moreInfo"));
-        info.textContent = "ⓘ";
-        info.addEventListener("mouseenter", () => showCatalogTooltip(info, i18n.fromManifest(m.description)));
-        info.addEventListener("mouseleave", hideCatalogTooltip);
-        info.addEventListener("click", (e) => {
-          e.stopPropagation();
-          catalogTooltipEl && !catalogTooltipEl.hidden
-            ? hideCatalogTooltip()
-            : showCatalogTooltip(info, i18n.fromManifest(m.description));
-        });
-        wrap.appendChild(info);
+    // Repartition des manifestes dans les familles, en conservant
+    // l'ordre defini ci-dessus. Toute tuile non classee rejoint
+    // "Divers" plutot que d'etre omise.
+    // Distributes the manifests into families, preserving the order
+    // defined above. Any unclassified tile joins "Miscellaneous"
+    // rather than being dropped.
+    const byId = new Map(catalog.map((m) => [m.id, m]));
+    const placed = new Set();
+    const groups = CATALOG_FAMILIES.map((fam) => {
+      const items = fam.ids.map((id) => byId.get(id)).filter(Boolean);
+      items.forEach((m) => placed.add(m.id));
+      return { key: fam.key, items };
+    });
+    const orphans = catalog.filter((m) => !placed.has(m.id));
+    if (orphans.length) {
+      const misc = groups.find((g) => g.key === "misc");
+      if (misc) misc.items.push(...orphans);
+      else groups.push({ key: "misc", items: orphans });
+    }
+
+    for (const group of groups) {
+      if (!group.items.length) continue;
+      const header = document.createElement("h3");
+      header.className = "catalog-family";
+      header.textContent = i18n.t("catalog.family." + group.key);
+      list.appendChild(header);
+
+      for (const m of group.items) {
+        list.appendChild(buildCatalogItem(m));
       }
-
-      list.appendChild(wrap);
     }
     $("catalogModal").hidden = false;
+  }
+
+  /* Une entree du catalogue (vignette cliquable + bouton d'information).
+     Extraite de openCatalog pour que celle-ci reste lisible une fois le
+     regroupement par familles ajoute.
+     One catalog entry (clickable tile + info button). Extracted from
+     openCatalog so it stays readable now that family grouping was
+     added. */
+  function buildCatalogItem(m) {
+    const wrap = document.createElement("div");
+    wrap.className = "catalog-item-wrap";
+    const btn = document.createElement("button");
+    btn.className = "catalog-item";
+    // Intitule court, focalise sur la fonction premiere de la tuile
+    // (voir "tagline" dans chaque manifeste) -- la description
+    // complete, plus longue, reste accessible via l'icone info au
+    // survol/tap plutot que d'etre affichee en permanence dans la
+    // liste, ce qui produisait des paves de texte demesures.
+    // Short blurb, focused on the tile's primary function (see
+    // "tagline" in each manifest) -- the full, longer description
+    // stays available via the info icon on hover/tap rather than
+    // being permanently shown in the list, which produced oversized
+    // text blocks.
+    const tagline = m.tagline ? i18n.fromManifest(m.tagline) : i18n.fromManifest(m.description);
+    btn.innerHTML = `
+      <img src="widgets/${m.dir}/icon.svg" alt="">
+      <span>
+        <span class="ci-name">${i18n.fromManifest(m.name)}</span><br>
+        <span class="ci-desc">${tagline}</span>
+      </span>`;
+    btn.addEventListener("click", () => {
+      $("catalogModal").hidden = true;
+      if (!editing) toggleEdit(true);
+      addTile(m.id);
+    });
+    wrap.appendChild(btn);
+
+    if (m.tagline) {
+      // Bouton separe (pas imbrique dans btn, un <button> ne peut pas
+      // en contenir un autre) positionne par-dessus, dans le coin.
+      // Separate button (not nested inside btn, a <button> can't
+      // contain another one) positioned on top, in the corner.
+      const info = document.createElement("button");
+      info.type = "button";
+      info.className = "ci-info";
+      info.setAttribute("aria-label", i18n.t("catalog.moreInfo"));
+      info.textContent = "ⓘ";
+      info.addEventListener("mouseenter", () => showCatalogTooltip(info, i18n.fromManifest(m.description)));
+      info.addEventListener("mouseleave", hideCatalogTooltip);
+      info.addEventListener("click", (e) => {
+        e.stopPropagation();
+        catalogTooltipEl && !catalogTooltipEl.hidden
+          ? hideCatalogTooltip()
+          : showCatalogTooltip(info, i18n.fromManifest(m.description));
+      });
+      wrap.appendChild(info);
+    }
+    return wrap;
   }
 
   /* Info-bulle partagee (une seule instance reutilisee, plutot qu'une par
