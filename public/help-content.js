@@ -372,6 +372,8 @@
           <p>Voir d'un coup d'œil les prochains événements de toute la famille, sans ouvrir une application de calendrier.</p>
           <h4>Possibilités</h4>
           <p>Chaque ligne du champ « Calendriers » est une source ICS distincte, fusionnée avec les autres et distinguée par une couleur attribuée automatiquement dans l'ordre des lignes ; une légende apparaît en bas de la tuile dès que plusieurs calendriers sont configurés. Deux vues restent accessibles en un geste directement sur la tuile (onglets), sans passer par les réglages : la liste des prochains événements groupés par jour, ou une grille de la semaine façon calendrier mural avec la colonne du jour mise en évidence. Les événements récurrents sont gérés (quotidien, hebdomadaire, mensuel — y compris « 2e lundi du mois » —, annuel), de même que les occurrences uniques déplacées ou annulées.</p>
+          <p>Dans la grille semaine, les flèches ‹ › déplacent la fenêtre affichée d'une semaine entière à la fois, sans temps de chargement (les événements sont déjà tous en mémoire, seule la fenêtre affichée change). L'étiquette centrale rappelle la période affichée et se met en évidence dès qu'on s'éloigne de la semaine actuelle ; la toucher ramène directement à aujourd'hui. Quitter puis revenir sur l'onglet Semaine réinitialise toujours la navigation.</p>
+          <p>Le réglage « Disposition de la grille semaine » propose, en plus de la semaine calendaire classique, deux fenêtres glissantes toujours ancrées sur aujourd'hui — utile pour ne jamais avoir de jours passés vides à l'écran : aujourd'hui en première colonne, ou centré au milieu du tableau.</p>
           <h4>Ajouter un calendrier iPhone / iCloud</h4>
           <p>Dans l'app Calendrier : appuyez sur un calendrier → <b>Partager le calendrier</b> → <b>Calendrier public</b> → <b>Copier le lien</b>. Le lien commence par <code>webcal://</code> : PiBoard le convertit automatiquement, collez-le tel quel.</p>
           <p>Pour <b>Google Agenda</b> : réglages du calendrier → « Intégrer l'agenda » → « Adresse secrète au format iCal ». Pour <b>Nextcloud</b> ou <b>Outlook</b> : utilisez leur lien de partage public/ICS du calendrier.</p>
@@ -380,7 +382,8 @@
           <div class="help-opt"><span class="help-opt-name">Vue par défaut</span><span class="help-opt-desc">Liste ou grille semaine — les deux restent accessibles en un geste sur la tuile.</span></div>
           <div class="help-opt"><span class="help-opt-name">Vue liste : jours à venir</span><span class="help-opt-desc">Fenêtre de la vue liste, en jours.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher les événements toute la journée</span><span class="help-opt-desc">Anniversaires, jours fériés, etc.</span></div>
-          <div class="help-opt"><span class="help-opt-name">La semaine commence le lundi</span><span class="help-opt-desc">Sinon, dimanche.</span></div>
+          <div class="help-opt"><span class="help-opt-name">La semaine commence le lundi</span><span class="help-opt-desc">Sinon, dimanche. S'applique uniquement à la disposition « Semaine calendaire classique ».</span></div>
+          <div class="help-opt"><span class="help-opt-name">Disposition de la grille semaine</span><span class="help-opt-desc">Semaine calendaire classique, ou fenêtre glissante toujours ancrée sur aujourd'hui (en début ou au milieu du tableau).</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux relectures des calendriers.</span></div>`,
         en: `
           <span class="help-size">Size: 4×4 by default, from 2×2 to 8×8</span>
@@ -388,6 +391,8 @@
           <p>See the whole family's upcoming events at a glance, without opening a calendar app.</p>
           <h4>Possibilities</h4>
           <p>Each line in the "Calendars" field is a separate ICS source, merged with the others and told apart by a color assigned automatically in line order; a legend appears at the bottom of the tile once more than one calendar is configured. Two views stay one tap away right on the tile (tabs), no need to open settings: an upcoming-events list grouped by day, or a week grid in a wall-calendar style with today's column highlighted. Recurring events are handled (daily, weekly, monthly — including "2nd Monday of the month" —, yearly), as well as single moved or cancelled occurrences.</p>
+          <p>In the week grid, the ‹ › arrows move the displayed window a full week at a time, with no loading delay (every event is already in memory, only the displayed window changes). The center label recalls the displayed period and lights up as soon as you've navigated away from the current week; tapping it jumps straight back to today. Leaving and returning to the Week tab always resets the navigation.</p>
+          <p>The "Week grid layout" setting offers, besides the standard calendar week, two sliding windows always anchored on today — handy to never have empty past days on screen: today in the first column, or centered in the middle of the grid.</p>
           <h4>Adding an iPhone / iCloud calendar</h4>
           <p>In the Calendar app: tap a calendar → <b>Share Calendar</b> → <b>Public Calendar</b> → <b>Copy Link</b>. The link starts with <code>webcal://</code>: PiBoard converts it automatically, paste it as is.</p>
           <p>For <b>Google Calendar</b>: calendar settings → "Integrate calendar" → "Secret address in iCal format". For <b>Nextcloud</b> or <b>Outlook</b>: use their calendar's public/ICS sharing link.</p>
@@ -396,7 +401,8 @@
           <div class="help-opt"><span class="help-opt-name">Default view</span><span class="help-opt-desc">List or week grid — both stay one tap away on the tile.</span></div>
           <div class="help-opt"><span class="help-opt-name">List view: days ahead</span><span class="help-opt-desc">The list view's window, in days.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show all-day events</span><span class="help-opt-desc">Birthdays, public holidays, etc.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Week starts on Monday</span><span class="help-opt-desc">Otherwise, Sunday.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Week starts on Monday</span><span class="help-opt-desc">Otherwise, Sunday. Only applies to the "Standard calendar week" layout.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Week grid layout</span><span class="help-opt-desc">Standard calendar week, or a sliding window always anchored on today (at the start or in the middle of the grid).</span></div>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two calendar reads.</span></div>`
       }
     },

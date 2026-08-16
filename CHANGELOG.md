@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.63.0
+
+- **Agenda : navigation dans la vue semaine, et nouvelle option pour
+  ancrer aujourd'hui en début ou au milieu de la grille.**
+  - Des flèches ‹ › déplacent désormais la fenêtre affichée d'une
+    semaine entière à la fois, sans aucun temps de chargement (tous
+    les événements sont déjà en mémoire, seule la fenêtre affichée
+    change). Une étiquette centrale rappelle la période affichée, se
+    met en évidence dès qu'on s'éloigne de la semaine actuelle, et
+    ramène directement à aujourd'hui d'un geste.
+  - Nouveau réglage **« Disposition de la grille semaine »** : en plus
+    de la semaine calendaire classique (comportement inchangé), deux
+    fenêtres glissantes toujours ancrées sur aujourd'hui — en première
+    colonne, ou centrée au milieu du tableau — pour ne jamais avoir de
+    jours passés vides à l'écran.
+  - Quitter puis revenir sur l'onglet Semaine réinitialise toujours la
+    navigation à la semaine actuelle ; un simple re-clic sur l'onglet
+    déjà actif, lui, préserve la position en cours.
+
+---
+
+- **Calendar: navigation in the week view, and a new option to anchor
+  today at the start or in the middle of the grid.**
+  - ‹ › arrows now move the displayed window a full week at a time,
+    with no loading delay at all (every event is already in memory,
+    only the displayed window changes). A center label recalls the
+    displayed period, lights up as soon as you've navigated away from
+    the current week, and jumps straight back to today with one tap.
+  - New **"Week grid layout"** setting: besides the standard calendar
+    week (unchanged behavior), two sliding windows always anchored on
+    today — in the first column, or centered in the middle of the
+    grid — so you never have empty past days on screen.
+  - Leaving and returning to the Week tab always resets navigation
+    back to the current week; a plain re-click on the already-active
+    tab, on the other hand, keeps the current position.
+
 ## 1.62.1
 
 - **Catalogue : segmentation affinée en 8 familles.** L'ancienne

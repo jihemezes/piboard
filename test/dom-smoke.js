@@ -1560,6 +1560,130 @@ function catalogItemFor(catalog, document, widgetId) {
   assert("vue semaine : la colonne d'aujourd'hui est mise en evidence", !!document.querySelector(".pw-calendar .pwc-wk-today"));
   assert("vue semaine : l'evenement toute la journee (aujourd'hui) apparait dans sa colonne", (document.querySelector(".pw-calendar .pwc-wk-today")?.textContent || "").includes("Anniversaire Lea"));
 
+  console.log("== Agenda : navigation semaine precedente/suivante ==");
+  {
+    const calTile = document.querySelector('[data-tile-id="t-f"]');
+    const todayColIndexBefore = [...calTile.querySelectorAll(".pwc-wk-col")].findIndex((c) => c.classList.contains("pwc-wk-today"));
+    assert("navigation : bouton semaine precedente present", !!calTile.querySelector('[data-nav="-1"]'));
+    assert("navigation : bouton semaine suivante present", !!calTile.querySelector('[data-nav="1"]'));
+    assert("navigation : etiquette de periode non mise en avant sur la semaine de reference",
+      !calTile.querySelector(".pwc-wk-navlabel").classList.contains("pwc-wk-navlabel-active"));
+
+    const dayNumsBefore = [...calTile.querySelectorAll(".pwc-wk-daynum")].map((el) => el.textContent);
+    calTile.querySelector('[data-nav="1"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("apres 'semaine suivante' : plus aucune colonne 'aujourd'hui' mise en evidence (on a quitte la semaine de reference)",
+      !calTile.querySelector(".pwc-wk-today"));
+    assert("l'etiquette de periode est mise en avant des qu'on s'eloigne de la semaine de reference",
+      calTile.querySelector(".pwc-wk-navlabel").classList.contains("pwc-wk-navlabel-active"));
+    // La navigation change reellement la fenetre de dates affichee (pas
+    // un simple habillage cosmetique) : verifie via les numeros de jour
+    // affiches plutot que via un evenement precis de la donnee de test,
+    // pour rester valable quel que soit le jour reel d'execution de la
+    // suite (un evenement fixe ne tombe pas toujours dans la meme
+    // semaine calendaire selon le jour du mois ou tourne le test).
+    // Navigation genuinely changes the displayed date window (not mere
+    // cosmetic dressing): checked via the displayed day numbers rather
+    // than a specific test-data event, to stay valid whatever the real
+    // day the suite happens to run on (a fixed event doesn't always fall
+    // in the same calendar week depending on the day of month the test
+    // runs).
+    const dayNumsAfter = [...calTile.querySelectorAll(".pwc-wk-daynum")].map((el) => el.textContent);
+    assert("les numeros de jour affiches changent bien apres la navigation d'une semaine",
+      dayNumsBefore.join(",") !== dayNumsAfter.join(","));
+
+    calTile.querySelector('[data-nav="-1"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("un aller-retour +1/-1 semaine revient exactement a la semaine de reference (aujourd'hui a nouveau visible)",
+      !!calTile.querySelector(".pwc-wk-today"));
+
+    // Navigue de nouveau, puis clique sur l'etiquette elle-meme : doit
+    // ramener directement a la semaine de reference (raccourci "aujourd'hui").
+    // Navigates away again, then clicks the label itself: must jump
+    // straight back to the reference week ("today" shortcut).
+    calTile.querySelector('[data-nav="1"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    calTile.querySelector('[data-nav="1"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("apres avoir avance de 2 semaines, plus de colonne 'aujourd'hui'", !calTile.querySelector(".pwc-wk-today"));
+    calTile.querySelector('[data-nav="today"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("clic sur l'etiquette de periode : retour direct a la semaine de reference",
+      !!calTile.querySelector(".pwc-wk-today"));
+    const todayColIndexAfter = [...calTile.querySelectorAll(".pwc-wk-col")].findIndex((c) => c.classList.contains("pwc-wk-today"));
+    assert("la position de la colonne 'aujourd'hui' apres le retour correspond bien a celle de depart",
+      todayColIndexAfter === todayColIndexBefore);
+
+    console.log("== Agenda : re-clic sur l'onglet Semaine (deja actif) NE reinitialise PAS la navigation ==");
+    calTile.querySelector('[data-nav="1"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const wkTab = [...calTile.querySelectorAll(".pwc-tab")].find((b) => b.dataset.view === "week");
+    wkTab.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("re-clic sur l'onglet Semaine deja actif : la navigation en cours n'est PAS remise a zero",
+      !calTile.querySelector(".pwc-wk-today"));
+
+    console.log("== Agenda : quitter puis revenir sur l'onglet Semaine reinitialise bien la navigation ==");
+    const listTab = [...calTile.querySelectorAll(".pwc-tab")].find((b) => b.dataset.view === "list");
+    listTab.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    wkTab.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("un vrai changement de vue (liste -> semaine) revient a la semaine de reference",
+      !!calTile.querySelector(".pwc-wk-today"));
+  }
+
+  console.log("== Agenda : disposition de la grille semaine (aujourd'hui en debut / au milieu) ==");
+  {
+    const calTile = document.querySelector('[data-tile-id="t-f"]');
+    calTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const layoutSel = document.querySelector('#tileForm [data-key="weekLayout"]');
+    assert("reglage de disposition de la grille semaine present", !!layoutSel);
+    layoutSel.value = "todayStart";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+
+    // L'enregistrement des reglages ramene la tuile a sa vue par defaut
+    // (liste) -- il faut rebasculer sur l'onglet Semaine pour verifier
+    // la grille. Saving settings brings the tile back to its default
+    // view (list) -- switching back to the Week tab is needed to check
+    // the grid.
+    let calTileNow = document.querySelector('[data-tile-id="t-f"]');
+    let wkTabNow = [...calTileNow.querySelectorAll(".pwc-tab")].find((b) => b.dataset.view === "week");
+    wkTabNow.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+
+    let cols = calTileNow.querySelectorAll(".pwc-wk-col");
+    assert("disposition 'aujourd'hui en debut' : 7 colonnes affichees", cols.length === 7);
+    assert("disposition 'aujourd'hui en debut' : la 1ere colonne de la grille est celle d'aujourd'hui",
+      cols[0]?.classList.contains("pwc-wk-today"));
+
+    calTileNow.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    document.querySelector('#tileForm [data-key="weekLayout"]').value = "todayMiddle";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+
+    calTileNow = document.querySelector('[data-tile-id="t-f"]');
+    wkTabNow = [...calTileNow.querySelectorAll(".pwc-tab")].find((b) => b.dataset.view === "week");
+    wkTabNow.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+
+    cols = calTileNow.querySelectorAll(".pwc-wk-col");
+    const todayIdx = [...cols].findIndex((c) => c.classList.contains("pwc-wk-today"));
+    assert("disposition 'aujourd'hui au milieu' : aujourd'hui tombe bien en position centrale (index 3 sur 7)",
+      todayIdx === 3);
+
+    // Retour a la disposition par defaut pour la suite de la suite.
+    // Back to the default layout for the rest of the suite.
+    calTileNow.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    document.querySelector('#tileForm [data-key="weekLayout"]').value = "calendar";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(700);
+  }
+
   console.log("== Radar meteo : widget present, reglages exposes ==");
   // Comme la tuile Trafic (egalement basee sur Leaflet), le rendu carte
   // reel n'est pas simule ici (Leaflet + tuiles distantes hors de portee

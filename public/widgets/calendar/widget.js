@@ -162,6 +162,47 @@
     const offset = (r.getDay() + 6) % 7; // 0 = lundi / Monday
     return addDays(r, -offset);
   }
+
+  /* Premier jour affiche dans la grille semaine, selon la disposition
+     choisie (reglage "weekLayout") et le decalage de navigation
+     (weekOffset, en semaines entieres -- voir navigateWeek()) :
+     - "calendar" : semaine calendaire fixe (lundi ou dimanche selon
+       "weekStartsMonday"), le jour actuel tombant ou il tombe.
+     - "todayStart" : aujourd'hui en 1ere colonne, peu importe le jour
+       de la semaine -- une fenetre glissante de 7 jours qui commence
+       toujours "maintenant".
+     - "todayMiddle" : aujourd'hui centre (3 jours avant, 3 jours
+       apres).
+     Dans les 3 cas, le decalage de navigation deplace ensuite la
+     fenetre par blocs de 7 jours entiers -- seule l'ancre de depart
+     (decalage 0) differe selon la disposition. Fonction PURE, testee
+     isolement.
+     First day shown in the week grid, per the chosen layout (setting
+     "weekLayout") and the navigation offset (weekOffset, in whole
+     weeks -- see navigateWeek()):
+     - "calendar": fixed calendar week (Monday or Sunday per
+       "weekStartsMonday"), today falling wherever it falls.
+     - "todayStart": today in the 1st column, whatever weekday it is --
+       a sliding 7-day window that always starts "now".
+     - "todayMiddle": today centered (3 days before, 3 days after).
+     In all 3 cases, the navigation offset then moves the window in
+     whole 7-day blocks -- only the starting anchor (offset 0) differs
+     per layout. PURE function, tested in isolation. */
+  function computeWeekStart(now, settings, weekOffset) {
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let anchor;
+    if (settings.weekLayout === "todayStart") {
+      anchor = todayStart;
+    } else if (settings.weekLayout === "todayMiddle") {
+      anchor = addDays(todayStart, -3);
+    } else {
+      anchor = settings.weekStartsMonday === false
+        ? addDays(todayStart, -todayStart.getDay())
+        : startOfWeekMonday(todayStart);
+    }
+    return addDays(anchor, (weekOffset || 0) * 7);
+  }
+
   function withTimeOf(dateOnly, ref) {
     return new Date(dateOnly.getFullYear(), dateOnly.getMonth(), dateOnly.getDate(),
       ref.getHours(), ref.getMinutes(), ref.getSeconds());
@@ -361,6 +402,18 @@
       this.view = null; // ecrase par les reglages a l'init / overwritten by settings at init
       this.occurrences = [];
       this.errors = [];
+      // Decalage de la vue semaine, en nombre de semaines entieres par
+      // rapport a la semaine de reference (0 = semaine de reference,
+      // +1 = suivante, -1 = precedente) -- voir navigateWeek() et
+      // computeWeekStart(). La "semaine de reference" elle-meme depend
+      // du reglage weekLayout (voir plus bas).
+      // Week view offset, in whole weeks relative to the reference week
+      // (0 = reference week, +1 = next, -1 = previous) -- see
+      // navigateWeek() and computeWeekStart(). The "reference week"
+      // itself depends on the weekLayout setting (see below).
+      this.weekOffset = 0;
+      // Expose pour les tests (fonction pure) / exposed for tests (pure function)
+      this._computeWeekStart = computeWeekStart;
     }
 
     async init() {
@@ -385,6 +438,7 @@
     onSettingsChanged(settings) {
       this.ctx.settings = settings;
       this.view = settings.defaultView || "list";
+      this.weekOffset = 0; // reglages modifies (ex. disposition de semaine) : repart d'une base connue / settings changed (e.g. week layout): starts from a known baseline
       this.refresh();
       this.arm();
     }
@@ -467,7 +521,21 @@
     }
 
     switchView(view) {
+      // Revient a la semaine de reference a chaque VRAI changement de vue
+      // (pas un re-clic sur l'onglet deja actif) : retrouver l'onglet
+      // Semaine doit toujours montrer "maintenant", jamais l'endroit ou
+      // la navigation avait ete laissee lors d'une precedente visite.
+      // Returns to the reference week on every GENUINE view change (not
+      // a re-click on the already-active tab): switching to the Week tab
+      // must always show "now", never wherever navigation had been left
+      // during a previous visit.
+      if (view === "week" && this.view !== "week") this.weekOffset = 0;
       this.view = view;
+      this.render();
+    }
+
+    navigateWeek(delta) {
+      this.weekOffset += delta;
       this.render();
     }
 
@@ -492,6 +560,14 @@
         btn.addEventListener("click", (e) => {
           e.stopPropagation(); // sinon rouvre les reglages en mode edition / else reopens settings in edit mode
           this.switchView(btn.dataset.view);
+        });
+      });
+
+      this.ctx.el.querySelectorAll("[data-nav]").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation(); // meme raison que les onglets ci-dessus / same reason as the tabs above
+          if (btn.dataset.nav === "today") { this.weekOffset = 0; this.render(); }
+          else this.navigateWeek(Number(btn.dataset.nav));
         });
       });
     }
@@ -560,9 +636,7 @@
       const i18n = this.ctx.i18n;
       const locale = i18n.t("clock.date.format");
       const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const weekStart = s.weekStartsMonday === false
-        ? addDays(todayStart, -todayStart.getDay())
-        : startOfWeekMonday(todayStart);
+      const weekStart = computeWeekStart(now, s, this.weekOffset);
       const weekEnd = addDays(weekStart, 7);
       const occs = buildOccurrences(this.rawEvents, weekStart, weekEnd)
         .filter((o) => s.showAllDay !== false || !o.allDay);
@@ -588,7 +662,24 @@
           </div>`;
       }).join("");
 
-      return `<div class="pwc-week">${cols}</div>`;
+      // Intitule de la periode affichee (ex. "10 - 16 nov.") : repere de
+      // contexte utile des qu'on s'est eloigne de la semaine de
+      // reference. Displayed period label (e.g. "Nov 10 - 16"): a useful
+      // context marker as soon as you've navigated away from the
+      // reference week.
+      const weekLastDay = addDays(weekStart, 6);
+      const rangeLabel = weekStart.getMonth() === weekLastDay.getMonth()
+        ? `${weekStart.getDate()} - ${weekLastDay.toLocaleDateString(locale, { day: "numeric", month: "short" })}`
+        : `${weekStart.toLocaleDateString(locale, { day: "numeric", month: "short" })} - ${weekLastDay.toLocaleDateString(locale, { day: "numeric", month: "short" })}`;
+
+      const nav = `
+        <div class="pwc-wk-nav">
+          <button type="button" class="pwc-wk-navbtn" data-nav="-1" aria-label="${i18n.t("calendar.prevWeek")}">‹</button>
+          <button type="button" class="pwc-wk-navlabel${this.weekOffset !== 0 ? " pwc-wk-navlabel-active" : ""}" data-nav="today" title="${i18n.t("calendar.backToToday")}">${rangeLabel}</button>
+          <button type="button" class="pwc-wk-navbtn" data-nav="1" aria-label="${i18n.t("calendar.nextWeek")}">›</button>
+        </div>`;
+
+      return `<div class="pwc-week">${nav}<div class="pwc-wk-grid">${cols}</div></div>`;
     }
 
     destroy() {

@@ -92,7 +92,38 @@
       "label": {
         "en": "Week starts on Monday",
         "fr": "La semaine commence le lundi"
+      },
+      "hint": {
+        "en": "Only applies to the \"Standard calendar week\" layout below.",
+        "fr": "S'applique uniquement à la disposition « Semaine calendaire classique » ci-dessous."
       }
+    },
+    {
+      "key": "weekLayout",
+      "type": "select",
+      "default": "calendar",
+      "label": {
+        "en": "Week grid layout",
+        "fr": "Disposition de la grille semaine"
+      },
+      "hint": {
+        "en": "\"Standard\" shows a fixed Monday-to-Sunday (or Sunday-to-Saturday) week, today wherever it falls. The other two always start from today, whichever tile refresh it is — handy to always see a full week ahead without empty past days. Either way, the ◀ ▶ arrows on the tile still move a full week at a time.",
+        "fr": "« Classique » affiche une semaine fixe du lundi au dimanche (ou dimanche à samedi), le jour actuel tombant où il tombe. Les deux autres partent toujours d'aujourd'hui, quel que soit le rafraîchissement de la tuile — pratique pour toujours voir une semaine complète à venir sans jours passés vides. Dans tous les cas, les flèches ◀ ▶ de la tuile avancent ou reculent d'une semaine entière."
+      },
+      "options": [
+        {
+          "value": "calendar",
+          "label": { "en": "Standard calendar week", "fr": "Semaine calendaire classique" }
+        },
+        {
+          "value": "todayStart",
+          "label": { "en": "Today at the start", "fr": "Aujourd'hui en début de tableau" }
+        },
+        {
+          "value": "todayMiddle",
+          "label": { "en": "Today in the middle", "fr": "Aujourd'hui au milieu" }
+        }
+      ]
     },
     {
       "key": "refresh",
