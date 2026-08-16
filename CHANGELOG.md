@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.62.1
+
+- **Catalogue : segmentation affinée en 8 familles.** L'ancienne
+  famille « Informations » regroupait 7 tuiles sans grand rapport
+  entre elles (actualités, trafic, avions, finance, diagnostic
+  système…). Deux nouvelles familles en sont extraites : **Déplacements**
+  (Carte de trafic, Trajet domicile-travail, Avions en vue) et
+  **Système & Réseau** (État système, Analyse réseau — ce dernier
+  quittant « Divers »). « Informations » se recentre sur le contenu
+  qu'on consulte (Flux RSS, Page web, Cours Cryptos).
+- **Nettoyage de commentaires résiduels** faisant encore référence à
+  l'ancienne tuile Caméra (retirée du projet il y a plusieurs
+  versions) — aucun code fonctionnel n'était concerné, le catalogue
+  ne l'a jamais proposée depuis son retrait complet.
+
+---
+
+- **Catalog: refined into 8 families.** The old "Information" family
+  grouped 7 largely unrelated tiles (news, traffic, planes, finance,
+  system diagnostics…). Two new families are split out of it: **Getting
+  around** (Traffic map, Home-work commute, Planes nearby) and **System
+  & Network** (System status, Network scan — the latter moving out of
+  "Miscellaneous"). "Information" now focuses on content you consult
+  (RSS feed, Web page, Crypto prices).
+- **Cleaned up leftover comments** still referencing the old Camera
+  tile (removed from the project several versions ago) — no
+  functional code was involved, the catalog has never offered it
+  since its full removal.
+
 ## 1.62.0
 
 - **Catalogue de tuiles regroupé par familles.** Le catalogue

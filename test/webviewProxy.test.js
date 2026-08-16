@@ -10,8 +10,7 @@
    Un serveur HTTP local est demarre pour la duree du test (127.0.0.1,
    port libre attribue par l'OS) afin de simuler ces cas reels sans
    dependre du reseau externe -- deterministe, utilisable sur
-   n'importe quelle machine de developpement/CI. Meme principe que
-   test/cameraStream.test.js.
+   n'importe quelle machine de developpement/CI.
    ============================================================ */
 const assert = require("assert");
 const http = require("http");

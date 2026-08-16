@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.62.0
+   Version 1.62.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2039,11 +2039,13 @@
      at the end of the catalog rather than disappearing. */
   const CATALOG_FAMILIES = [
     { key: "weather", ids: ["weather", "radar", "airquality", "astronomy"] },
-    { key: "info", ids: ["rss", "traffic", "commute", "webview", "planes", "crypto", "system"] },
+    { key: "info", ids: ["rss", "webview", "crypto"] },
+    { key: "commute", ids: ["traffic", "commute", "planes"] },
     { key: "personal", ids: ["calendar", "mailbox", "notes"] },
     { key: "entertainment", ids: ["teleprog", "iptv", "slideshow"] },
     { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
-    { key: "misc", ids: ["clock", "countdown", "quote", "networkscan"] }
+    { key: "system", ids: ["system", "networkscan"] },
+    { key: "misc", ids: ["clock", "countdown", "quote"] }
   ];
 
   function openCatalog() {

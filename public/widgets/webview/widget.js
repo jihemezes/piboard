@@ -152,17 +152,17 @@
 
     /* Liste des sites reellement configures (URL non vide) parmi les
        MAX_SITES emplacements fixes des reglages -- meme principe que
-       les fuseaux additionnels de l'horloge ou les emplacements de la
-       tuile Camera. Le premier emplacement retombe sur l'ancien
-       reglage "url" s'il est vide : compatibilite ascendante pour une
-       tuile configuree avant l'ajout des onglets, qui ne doit pas se
-       retrouver vide a la premiere ouverture apres mise a jour.
+       les fuseaux additionnels de l'horloge. Le premier emplacement
+       retombe sur l'ancien reglage "url" s'il est vide : compatibilite
+       ascendante pour une tuile configuree avant l'ajout des onglets,
+       qui ne doit pas se retrouver vide a la premiere ouverture apres
+       mise a jour.
        List of ACTUALLY configured sites (non-empty URL) among the
        MAX_SITES fixed setting slots -- same principle as the clock's
-       extra zones or the Camera tile's slots. The first slot falls
-       back to the old "url" setting if empty: backward compatibility
-       for a tile configured before tabs were added, which must not end
-       up empty on first open after the update. */
+       extra zones. The first slot falls back to the old "url" setting
+       if empty: backward compatibility for a tile configured before
+       tabs were added, which must not end up empty on first open after
+       the update. */
     sites() {
       const s = this.ctx.settings;
       const list = [];
@@ -374,13 +374,11 @@
 
     /* Mode "image" : la capture prend plusieurs secondes sur un Pi
        (lancement de Chromium). L'image n'est remplacee qu'une fois la
-       nouvelle effectivement chargee -- meme precaution que la tuile
-       Camera : on evite un cadre vide clignotant a chaque
-       rafraichissement.
+       nouvelle effectivement chargee -- evite un cadre vide clignotant
+       a chaque rafraichissement.
        "Image" mode: capturing takes several seconds on a Pi (Chromium
        launch). The image is only swapped once the new one has actually
-       loaded -- same precaution as the Camera tile: avoids a blinking
-       empty frame on every refresh. */
+       loaded -- avoids a blinking empty frame on every refresh. */
     refreshShot(url) {
       const content = this.ctx.el.querySelector(".pwv-content");
       const img = content && content.querySelector(".pwv-shot");

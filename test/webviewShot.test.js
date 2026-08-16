@@ -11,8 +11,7 @@
    lancement de navigateur prendrait plusieurs secondes. Les tests
    portent donc sur ce qui est deterministe -- la construction PURE des
    arguments de capture, et le comportement d'echec propre quand
-   Chromium est introuvable. Meme principe que test/cameraStream.js et
-   test/iptvVlc.test.js.
+   Chromium est introuvable. Meme principe que test/iptvVlc.test.js.
    ============================================================ */
 const assert = require("assert");
 const webviewShot = require("../server/webviewShot");

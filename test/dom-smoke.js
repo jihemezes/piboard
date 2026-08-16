@@ -1830,9 +1830,9 @@ function catalogItemFor(catalog, document, widgetId) {
   {
     const headers = Array.from(document.querySelectorAll("#catalogList .catalog-family"));
     const headerTexts = headers.map((h) => h.textContent);
-    assert("des en-tetes de famille sont affiches", headers.length >= 5);
+    assert("des en-tetes de famille sont affiches", headers.length >= 7);
     assert("familles attendues presentes et traduites en francais",
-      ["Météo", "Informations", "Personnel", "Divertissement", "Sport", "Divers"]
+      ["Météo", "Informations", "Déplacements", "Personnel", "Divertissement", "Sport", "Système & Réseau", "Divers"]
         .every((f) => headerTexts.includes(f)));
     assert("l'ordre des familles est celui defini (Meteo en premier, Divers en dernier)",
       headerTexts[0] === "Météo" && headerTexts[headerTexts.length - 1] === "Divers");
@@ -1851,19 +1851,29 @@ function catalogItemFor(catalog, document, widgetId) {
     // se trouver dans la famille "Meteo", pas ailleurs.
     // Checks one concrete classification, side by side: the Weather
     // tile must sit in the "Météo" family, not elsewhere.
-    const weatherCard = catalogItemFor(catalog, document, "weather");
-    let famOfWeather = null;
-    for (let el = weatherCard.closest(".catalog-item-wrap"); el; el = el.previousElementSibling) {
-      if (el.classList.contains("catalog-family")) { famOfWeather = el.textContent; break; }
-    }
-    assert("la tuile Meteo est bien rangee dans la famille 'Météo'", famOfWeather === "Météo");
-
-    const notesCard = catalogItemFor(catalog, document, "notes");
-    let famOfNotes = null;
-    for (let el = notesCard.closest(".catalog-item-wrap"); el; el = el.previousElementSibling) {
-      if (el.classList.contains("catalog-family")) { famOfNotes = el.textContent; break; }
-    }
-    assert("la tuile Bloc-notes est bien rangee dans la famille 'Personnel'", famOfNotes === "Personnel");
+    const familyOf = (widgetId) => {
+      const card = catalogItemFor(catalog, document, widgetId);
+      for (let el = card.closest(".catalog-item-wrap"); el; el = el.previousElementSibling) {
+        if (el.classList.contains("catalog-family")) return el.textContent;
+      }
+      return null;
+    };
+    assert("la tuile Meteo est bien rangee dans la famille 'Météo'", familyOf("weather") === "Météo");
+    assert("la tuile Bloc-notes est bien rangee dans la famille 'Personnel'", familyOf("notes") === "Personnel");
+    // Segmentation affinee (voir CATALOG_FAMILIES) : Deplacements et
+    // Systeme & Reseau, separees de l'ancien bloc "Informations"
+    // devenu trop heterogene (7 tuiles sans rapport entre elles).
+    // Refined segmentation (see CATALOG_FAMILIES): Getting-around and
+    // System & Network, split out from the old "Informations" bucket
+    // which had become too heterogeneous (7 unrelated tiles).
+    assert("la tuile Trajet domicile-travail est dans 'Déplacements', pas 'Informations'",
+      familyOf("commute") === "Déplacements");
+    assert("la tuile Avions en vue est dans 'Déplacements'", familyOf("planes") === "Déplacements");
+    assert("la tuile Cours Cryptos reste dans 'Informations'", familyOf("crypto") === "Informations");
+    assert("la tuile Etat systeme est dans 'Système & Réseau', pas 'Divers'",
+      familyOf("system") === "Système & Réseau");
+    assert("la tuile Analyse reseau est aussi dans 'Système & Réseau'",
+      familyOf("networkscan") === "Système & Réseau");
   }
 
   {
