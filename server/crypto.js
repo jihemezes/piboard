@@ -53,14 +53,37 @@
    ============================================================ */
 "use strict";
 
-const FETCH_TIMEOUT_MS = 10000;
+const FETCH_TIMEOUT_MS = 15000;
+// Delai plus genereux pour une courbe sur 1 an : la reponse peut
+// contenir bien plus de points qu'une courbe 24h, et un Raspberry Pi
+// sur une connexion domestique plus lente peut avoir besoin de plus
+// de temps pour la recevoir et la traiter en entier.
+// More generous delay for a 1-year chart: the response can contain far
+// more points than a 24h chart, and a Raspberry Pi on a slower home
+// connection may need more time to receive and fully process it.
+const CHART_FETCH_TIMEOUT_MS = 25000;
 const PRICE_TTL_MS = 60 * 1000;        // 1 min : suffisant pour un tableau mural, pas un terminal de trading / enough for a wall dashboard, not a trading terminal
 const CHART_TTL_MS = 10 * 60 * 1000;   // 10 min : une courbe 24h/7j/30j/1an n'a pas besoin d'etre a la seconde pres / a 24h/7d/30d/1y chart doesn't need to-the-second freshness
-// Espacement minimal entre deux appels sortants -- ~13-14/min au pire,
-// sous la fourchette basse (5-15/min) documentee par CoinGecko pour
-// l'acces sans cle. Minimum spacing between two outbound calls -- ~13-14/min
-// worst case, under the low end (5-15/min) CoinGecko documents for keyless access.
-const MIN_SPACING_MS = 4200;
+// Espacement minimal entre deux appels sortants. CoinGecko documente
+// une fourchette de 5 A 15 requetes/minute pour l'acces sans cle,
+// "selon les conditions d'utilisation dans le monde" -- donc
+// potentiellement aussi basse que 5/min pour une adresse IP donnee.
+// Cale ici sur ce PIRE cas documente (~4,8/min) plutot que sur le
+// meilleur : parcourir plusieurs cryptos/durees d'affilee ne doit
+// jamais epuiser le quota au fil de la session, meme si la premiere
+// moitie des requetes s'est bien passee -- exactement le symptome
+// observe (les courbes des deux premieres cryptos testees marchent,
+// celles de la 3e echouent au-dela de la plus courte duree).
+// Minimum spacing between two outbound calls. CoinGecko documents a
+// range of 5 to 15 requests/minute for keyless access, "depending on
+// usage conditions worldwide" -- so potentially as low as 5/min for a
+// given IP address. Calibrated here on that WORST documented case
+// (~4.8/min) rather than the best: browsing through several
+// coins/durations in a row must never exhaust the quota partway
+// through the session, even if the first half of requests went fine
+// -- exactly the symptom observed (the first two tested coins' charts
+// work, the 3rd's fail past the shortest duration).
+const MIN_SPACING_MS = 12500;
 
 const priceCache = new Map(); // "id1,id2::currency" -> { at, data }
 const chartCache = new Map(); // "id::currency::days" -> { at, prices }
@@ -89,9 +112,9 @@ function enqueue(fn) {
   return run;
 }
 
-async function fetchJson(url) {
+async function fetchJson(url, timeoutMs) {
   const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+  const timer = setTimeout(() => controller.abort(), timeoutMs || FETCH_TIMEOUT_MS);
   try {
     const res = await fetch(url, {
       signal: controller.signal,
@@ -152,7 +175,7 @@ async function getChart(coinId, currency, days, deps) {
   try {
     const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId)}/market_chart`
       + `?vs_currency=${encodeURIComponent(currency)}&days=${encodeURIComponent(days)}`;
-    const data = await enqueue(() => fetchJson(url));
+    const data = await enqueue(() => fetchJson(url, CHART_FETCH_TIMEOUT_MS));
     const prices = (data.prices || []).map((p) => p[1]);
     if (!prices.length) throw new Error("no data");
     chartCache.set(key, { at: now, prices });
@@ -168,4 +191,22 @@ function clearCache() {
   chartCache.clear();
 }
 
-module.exports = { getPrices, getChart, clearCache, PRICE_TTL_MS, CHART_TTL_MS, MIN_SPACING_MS };
+/* Reservee aux tests : remet a zero l'etat de la file d'espacement
+   (lastCallAt/chain), pour qu'un bloc de test n'herite pas de
+   l'attente accumulee par les blocs precedents dans le meme fichier.
+   Sans cette remise a zero, chaque appel reellement sortant du fichier
+   de test s'additionnerait a MIN_SPACING_MS (~12,5s), rendant la suite
+   inutilisable au quotidien -- l'espacement lui-meme n'a besoin d'etre
+   exerce "en vrai" que par le test qui le verifie explicitement.
+   Test-only: resets the spacing queue's state (lastCallAt/chain), so a
+   test block doesn't inherit the wait accumulated by earlier blocks in
+   the same file. Without this reset, every genuinely outbound call in
+   the test file would add up to MIN_SPACING_MS (~12.5s), making the
+   suite impractical for everyday use -- the spacing itself only needs
+   to be exercised "for real" by the test that explicitly checks it. */
+function _resetThrottleForTests() {
+  chain = Promise.resolve();
+  lastCallAt = 0;
+}
+
+module.exports = { getPrices, getChart, clearCache, PRICE_TTL_MS, CHART_TTL_MS, MIN_SPACING_MS, _resetThrottleForTests };

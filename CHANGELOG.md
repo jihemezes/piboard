@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.59.2
+
+- **Application de bureau Windows : nouveau menu « Ouvrir le journal ».**
+  Une application Windows installée n'affiche aucune console par
+  défaut — les messages techniques du serveur PiBoard (par exemple un
+  échec d'accès à CoinGecko pour la tuile Cours Cryptos) étaient donc
+  invisibles, y compris via les Outils de développement (qui ne
+  montrent que la fenêtre elle-même, pas le serveur). Un fichier
+  journal est désormais tenu à jour en continu et accessible via
+  `Alt` → **Ouvrir le journal**, remis à zéro à chaque démarrage de
+  l'application.
+
+- **Cours Cryptos : espacement entre requêtes resserré, calé sur le
+  pire cas documenté par CoinGecko (5/min) plutôt que le meilleur
+  (15/min).** Explique un symptôme précis : parcourir plusieurs
+  cryptos à la suite pouvait épuiser le quota en cours de route, la
+  ou les premières cryptos consultées fonctionnant sur toutes les
+  durées tandis que la dernière échouait au-delà de la plus courte.
+  Ce n'est donc pas propre à une crypto en particulier.
+
+---
+
+- **Windows desktop app: new "Open log" menu item.** An installed
+  Windows application shows no console by default — the PiBoard
+  server's technical messages (for instance a failed CoinGecko
+  request for the Crypto prices tile) were therefore invisible, even
+  through Developer Tools (which only show the window itself, not the
+  server). A log file is now kept continuously up to date and
+  reachable via `Alt` → **Open log**, reset on every app launch.
+
+- **Crypto prices: request spacing tightened, calibrated on
+  CoinGecko's worst documented case (5/min) rather than the best
+  (15/min).** Explains a specific symptom: browsing through several
+  coins in a row could exhaust the quota partway through, with the
+  first coin(s) checked working across every duration while the last
+  one failed past the shortest. Not specific to any one coin, then.
+
+## 1.59.1
+
+- **Cours Cryptos : délai d'attente allongé pour les courbes.** 10 s
+  pouvaient être insuffisantes pour une courbe sur 1 an (davantage de
+  points à recevoir et traiter qu'une courbe 24h) sur la connexion
+  parfois plus lente d'un Raspberry Pi — porté à 25 s pour les courbes
+  (15 s pour les cours). Amélioration de robustesse ; si le message
+  « Courbe indisponible » persiste après cette mise à jour, la cause
+  exacte apparaît désormais dans la console du serveur PiBoard (ligne
+  commençant par `[piboard] crypto chart echec ->`).
+
+---
+
+- **Crypto prices: longer timeout for charts.** 10s could be too short
+  for a 1-year chart (more points to receive and process than a 24h
+  one) on a Raspberry Pi's sometimes slower connection — raised to 25s
+  for charts (15s for prices). Robustness improvement; if "Chart
+  unavailable" persists after this update, the exact cause now shows
+  up in the PiBoard server console (line starting with `[piboard]
+  crypto chart echec ->`).
+
 ## 1.59.0
 
 - **Renommage : « Cours de cryptos » devient « Cours Cryptos ».**

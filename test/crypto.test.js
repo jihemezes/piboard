@@ -67,7 +67,7 @@ function startFixtureServer() {
   try {
     console.log("== getPrices : interroge reellement la source au 1er appel ==");
     {
-      crypto.clearCache();
+      crypto.clearCache(); crypto._resetThrottleForTests();
       const r = await crypto.getPrices(["bitcoin"], "eur", { now: T0 });
       assert.strictEqual(r.stale, false, "premier appel : donnee fraiche, pas un repli");
       assert.strictEqual(r.data.bitcoin.eur, 50000);
@@ -87,8 +87,10 @@ function startFixtureServer() {
 
     console.log("== getPrices : cle de cache distincte par devise ET par liste de pieces ==");
     {
+      crypto._resetThrottleForTests();
       const before = state.priceCalls;
       await crypto.getPrices(["bitcoin"], "usd", { now: T0 }); // devise differente -> pas le meme cache
+      crypto._resetThrottleForTests();
       await crypto.getPrices(["bitcoin", "ethereum"], "eur", { now: T0 }); // liste differente -> pas le meme cache
       assert.strictEqual(state.priceCalls, before + 2, "2 nouveaux appels, un par combinaison reellement differente");
       console.log("  OK");
@@ -96,9 +98,10 @@ function startFixtureServer() {
 
     console.log("== getPrices : le TTL expire -> re-interroge reellement la source (donnee toujours fraiche si ca reussit) ==");
     {
-      crypto.clearCache();
+      crypto.clearCache(); crypto._resetThrottleForTests();
       await crypto.getPrices(["bitcoin"], "eur", { now: T0 });
       const before = state.priceCalls;
+      crypto._resetThrottleForTests();
       const r = await crypto.getPrices(["bitcoin"], "eur", { now: T0 + 90 * 1000 }); // +90s > TTL (60s)
       assert.strictEqual(state.priceCalls, before + 1, "TTL depasse : un nouvel appel sortant a bien lieu");
       assert.strictEqual(r.stale, false);
@@ -107,12 +110,13 @@ function startFixtureServer() {
 
     console.log("== getPrices : TTL expire ET source en panne (429) -> repli sur la derniere valeur connue, signale 'stale' ==");
     {
-      crypto.clearCache();
+      crypto.clearCache(); crypto._resetThrottleForTests();
       const fresh = await crypto.getPrices(["bitcoin"], "eur", { now: T0 });
       assert.strictEqual(fresh.stale, false);
       assert.strictEqual(fresh.data.bitcoin.eur, 50000);
 
       state.blockPrices = true;
+      crypto._resetThrottleForTests();
       const r = await crypto.getPrices(["bitcoin"], "eur", { now: T0 + 90 * 1000 }); // TTL depasse -> tente vraiment la source
       state.blockPrices = false;
 
@@ -124,7 +128,7 @@ function startFixtureServer() {
 
     console.log("== getPrices : TTL expire ET source en panne, mais AUCUN cache prealable -> erreur exploitable remontee ==");
     {
-      crypto.clearCache();
+      crypto.clearCache(); crypto._resetThrottleForTests();
       state.blockPrices = true;
       try {
         await crypto.getPrices(["une-piece-jamais-vue"], "eur", { now: T0 });
@@ -138,16 +142,18 @@ function startFixtureServer() {
 
     console.log("== getChart : interroge reellement la source au 1er appel, met en cache par piece+devise+periode ==");
     {
-      crypto.clearCache();
+      crypto.clearCache(); crypto._resetThrottleForTests();
       const r = await crypto.getChart("bitcoin", "eur", 1, { now: T0 });
       assert.strictEqual(r.stale, false);
       assert.deepStrictEqual(r.prices, [100, 101, 99]);
       assert.strictEqual(state.chartCalls, 1);
 
       const before = state.chartCalls;
+      crypto._resetThrottleForTests();
       await crypto.getChart("bitcoin", "eur", 1, { now: T0 + 60 * 1000 }); // dans le TTL (10 min)
       assert.strictEqual(state.chartCalls, before, "meme periode/piece/devise, dans le TTL : servi depuis le cache");
 
+      crypto._resetThrottleForTests();
       await crypto.getChart("bitcoin", "eur", 7, { now: T0 });
       assert.strictEqual(state.chartCalls, before + 1, "periode differente (7j au lieu de 24h) : nouvel appel, cle de cache distincte");
       console.log("  OK");
@@ -155,11 +161,12 @@ function startFixtureServer() {
 
     console.log("== getChart : TTL expire ET source en panne -> repli sur la derniere serie connue, signale 'stale' ==");
     {
-      crypto.clearCache();
+      crypto.clearCache(); crypto._resetThrottleForTests();
       const fresh = await crypto.getChart("bitcoin", "eur", 30, { now: T0 });
       assert.strictEqual(fresh.stale, false);
 
       state.blockCharts = true;
+      crypto._resetThrottleForTests();
       const r = await crypto.getChart("bitcoin", "eur", 30, { now: T0 + 11 * 60 * 1000 }); // +11 min > TTL (10 min)
       state.blockCharts = false;
 
@@ -170,6 +177,7 @@ function startFixtureServer() {
 
     console.log("== getChart : TTL expire ET panne, sans aucun cache -> erreur exploitable, jamais un plantage ==");
     {
+      crypto._resetThrottleForTests();
       state.blockCharts = true;
       try {
         await crypto.getChart("autre-piece-jamais-vue", "eur", 1, { now: T0 });
@@ -183,7 +191,7 @@ function startFixtureServer() {
 
     console.log("== Espacement minimal entre appels sortants (protege le quota CoinGecko en cas de rafale) ==");
     {
-      crypto.clearCache();
+      crypto.clearCache(); crypto._resetThrottleForTests();
       const start = Date.now();
       // Deux entrees JAMAIS VUES (cles de cache distinctes) demandees en
       // parallele : la 2e doit attendre l'espacement minimal avant de

@@ -65,6 +65,59 @@ process.env.PIBOARD_DATA = process.env.PIBOARD_DATA || path.join(app.getPath("us
    avoids the Windows firewall prompt on first launch. */
 process.env.PIBOARD_HOST = "127.0.0.1";
 
+/* ---------- Journal fichier / file log ----------
+   L'application packagee n'a AUCUNE console visible sous Windows par
+   defaut (sous-systeme graphique, sans terminal attache) : les
+   console.log/warn/error du serveur (demarre dans ce meme processus
+   principal, voir le require juste en dessous) partaient donc dans le
+   vide, invisibles pour diagnostiquer un probleme -- par exemple les
+   echecs de la tuile Cours Cryptos vers CoinGecko. Redirige (en plus
+   de la console normale, utile en developpement via `npm run
+   electron` lance depuis un terminal) toute la sortie vers un fichier
+   texte simple, accessible sans outil de developpement : menu Aide ->
+   "Ouvrir le journal", ou directement dans %APPDATA%\PiBoard\logs.
+   Tronque a chaque lancement plutot que de grossir indefiniment -- ce
+   n'est pas un historique, juste de quoi diagnostiquer la session en
+   cours.
+   The packaged app has NO visible console on Windows by default (GUI
+   subsystem, no attached terminal): the server's console.log/warn/
+   error (started in this same main process, see the require right
+   below) used to go nowhere, invisible for diagnosing a problem --
+   for instance the Crypto prices tile's failures reaching CoinGecko.
+   Redirects (in addition to the normal console, useful in development
+   via `npm run electron` launched from a terminal) all output to a
+   plain text file, reachable without any developer tooling: Help menu
+   -> "Open log", or directly in %APPDATA%\PiBoard\logs. Truncated on
+   each launch rather than growing forever -- this isn't a history,
+   just enough to diagnose the current session. */
+const fs = require("fs");
+const LOG_DIR = path.join(app.getPath("userData"), "logs");
+const LOG_FILE = path.join(LOG_DIR, "piboard.log");
+try {
+  fs.mkdirSync(LOG_DIR, { recursive: true });
+  fs.writeFileSync(LOG_FILE, "");
+} catch (e) { /* dossier inaccessible : la console normale reste disponible en repli / unreachable folder: the normal console remains available as a fallback */ }
+
+function installFileLogging() {
+  let stream;
+  try {
+    stream = fs.createWriteStream(LOG_FILE, { flags: "a" });
+  } catch (e) {
+    return; // le journal fichier est une aide en plus, pas une dependance / the file log is a bonus, not a dependency
+  }
+  ["log", "warn", "error"].forEach((level) => {
+    const original = console[level].bind(console);
+    console[level] = (...args) => {
+      original(...args);
+      try {
+        const line = args.map((a) => (typeof a === "string" ? a : JSON.stringify(a))).join(" ");
+        stream.write(`[${new Date().toISOString()}] [${level}] ${line}\n`);
+      } catch (e) { /* une ligne illisible ne doit jamais faire planter l'appli / an unloggable line must never crash the app */ }
+    };
+  });
+}
+installFileLogging();
+
 const server = require("../server/index.js");
 const platform = require("../server/platform");
 const { initAutoUpdate, checkForUpdatesManually } = require("./updater");
@@ -231,6 +284,17 @@ function buildMenu() {
         { label: "Zoom 100 %", accelerator: "CmdOrCtrl+0", role: "resetZoom" },
         { type: "separator" },
         { label: "Outils de developpement / Developer tools", accelerator: "F12", role: "toggleDevTools" },
+        { type: "separator" },
+        {
+          label: "Ouvrir le journal / Open log",
+          click: () => shell.openPath(LOG_FILE).then((err) => {
+            // shell.openPath resout toujours (jamais de rejet), avec une
+            // chaine d'erreur non vide en cas d'echec -- vide sinon.
+            // shell.openPath always resolves (never rejects), with a
+            // non-empty error string on failure -- empty otherwise.
+            if (err) dialog.showErrorBox("PiBoard", "Impossible d'ouvrir le journal / Could not open the log:\n" + err);
+          })
+        },
         { type: "separator" },
         {
           label: "Rechercher une mise a jour / Check for updates",
