@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.60.0
+
+- **Cours Cryptos : Binance ajouté comme source principale, CoinGecko
+  passe en repli.** L'API publique de Binance (données de marché, sans
+  compte ni clé) accepte un débit de 6000 points de « poids » par
+  minute — sans commune mesure avec les 5 à 15 requêtes/minute de
+  CoinGecko sans clé, partagées par toute l'adresse IP du foyer, qui
+  restaient la vraie cause des échecs malgré le cache et l'espacement
+  ajoutés en 1.59.x.
+  - Pour toute cryptomonnaie courante (~150 références : Bitcoin,
+    Ethereum, et la plupart des autres cryptos usuelles), les cours et
+    les courbes passent désormais **exclusivement par Binance** —
+    CoinGecko n'est même plus sollicité.
+  - Pour une cryptomonnaie plus confidentielle que Binance ne
+    référence pas, ou en cas de panne ponctuelle de Binance, **repli
+    automatique et transparent sur CoinGecko**, exactement comme
+    avant.
+  - Le cache passe d'un cache par lot de requête à un **cache par
+    cryptomonnaie individuelle** : dans une liste de plusieurs cours,
+    ceux déjà frais restent servis depuis le cache pendant que seuls
+    les autres sont rafraîchis, quelle que soit la source qui les a
+    fournis.
+  - Aucun réglage à changer : les identifiants saisis dans la tuile
+    restent les mêmes (identifiants CoinGecko), la correspondance vers
+    Binance se fait automatiquement en coulisses.
+
+---
+
+- **Crypto prices: Binance added as the main source, CoinGecko
+  demoted to fallback.** Binance's public API (market data, no
+  account or key needed) allows 6000 "weight" points per minute —
+  nothing like CoinGecko's keyless 5 to 15 requests/minute, shared by
+  the household's entire IP address, which remained the real cause of
+  failures despite the caching and spacing added in 1.59.x.
+  - For any common coin (~150 references: Bitcoin, Ethereum, and most
+    other usual coins), prices and charts now go **exclusively
+    through Binance** — CoinGecko isn't even queried anymore.
+  - For a more niche coin Binance doesn't list, or during a momentary
+    Binance outage, **automatic, transparent fallback to CoinGecko**,
+    exactly as before.
+  - The cache moved from per-request-batch to **per individual coin**:
+    within a list of several prices, the ones already fresh keep being
+    served from cache while only the rest get refreshed, whichever
+    source provided them.
+  - No setting to change: the identifiers typed into the tile stay the
+    same (CoinGecko identifiers), the mapping to Binance happens
+    automatically behind the scenes.
+
 ## 1.59.2
 
 - **Application de bureau Windows : nouveau menu « Ouvrir le journal ».**
