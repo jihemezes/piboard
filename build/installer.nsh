@@ -201,9 +201,22 @@ Function InstallFfmpeg
   ; Internet Explorer), which handles HTTPS and redirects correctly --
   ; it's also the plugin electron-builder itself uses for its own web
   ; installer feature.
-  inetc::get /TIMEOUT=60000 "${FFMPEG_DOWNLOAD_URL}" "$TEMP\ffmpeg-piboard.zip" /END
-  Pop $0
-  ${If} $0 != "OK"
+  !ifndef BUILD_UNINSTALLER
+	  DetailPrint "Telechargement de ffmpeg / Downloading ffmpeg..."
+	  nsExec::ExecToLog '"$SYSDIR\curl.exe" -L --fail --show-error --retry 2 -o "$PLUGINSDIR\ffmpeg.zip" "https://github.com/jihemezes/piboard/releases/download/ffmpeg-win64-v8.1.2/ffmpeg-piboard-win64-gpl.zip"'
+	  Pop $0
+	  ${If} $0 != 0
+		DetailPrint "Echec du telechargement ffmpeg (code $0) / ffmpeg download failed (code $0)"
+	  ${EndIf}
+	!endif
+  !ifndef BUILD_UNINSTALLER
+	  DetailPrint "Telechargement de VLC / Downloading VLC..."
+	  nsExec::ExecToLog '"$SYSDIR\curl.exe" -L --fail --show-error --retry 2 -o "$PLUGINSDIR\vlc.zip" "https://github.com/jihemezes/piboard/releases/download/vlc-win64-v3.0.20/vlc-piboard-win64.zip"'
+	  Pop $0
+	  ${If} $0 != 0
+		DetailPrint "Echec du telechargement VLC (code $0) / VLC download failed (code $0)"
+	  ${EndIf}
+	!endif
     ; Echec du telechargement (pas d'internet, source injoignable...) :
     ; n'empeche JAMAIS l'installation de PiBoard de se terminer. Le
     ; mode de compatibilite video restera simplement indisponible tant
