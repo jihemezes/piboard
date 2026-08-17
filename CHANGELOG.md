@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.63.1
+
+- **Correctif installateur Windows : ffmpeg (et VLC) restaient
+  souvent non installés malgré la case cochée.** Cause identifiée et
+  confirmée (documentation officielle NSIS + retours d'utilisateurs) :
+  le plugin utilisé pour le téléchargement, `NSISdl`, télécharge
+  **toujours en HTTP, même pour une adresse `https://`**, et échoue
+  par délai dépassé dès que le lien redirige de HTTP vers HTTPS —
+  exactement le cas d'un lien de release GitHub, qui redirige vers son
+  service de stockage de fichiers. L'échec passait totalement
+  inaperçu : seul un message technique (`DetailPrint`), jamais
+  consulté en usage normal, en gardait la trace.
+  - Remplacé par `inetc`, le plugin qu'electron-builder utilise
+    lui-même pour sa propre fonctionnalité de téléchargement web — il
+    s'appuie sur WinINet (le moteur réseau de Windows) et gère
+    correctement HTTPS et les redirections.
+  - Une vérification a posteriori confirme désormais que le fichier
+    est bien arrivé à destination après extraction, pour qu'un futur
+    problème à cette étape ne reste plus invisible non plus.
+  - Le même correctif s'applique à VLC (composant optionnel similaire,
+    touché par exactement le même défaut).
+  - Le contenu réel du fichier de release ffmpeg a été vérifié
+    directement (téléchargé et inspecté) pour confirmer que la
+    structure attendue par le script d'installation (fichiers à la
+    racine de l'archive) correspond bien à la réalité.
+
+---
+
+- **Windows installer fix: ffmpeg (and VLC) often stayed uninstalled
+  despite the checkbox being checked.** Root cause identified and
+  confirmed (official NSIS documentation + user reports): the plugin
+  used for downloading, `NSISdl`, **always downloads over HTTP, even
+  for an `https://` address**, and fails with a timeout as soon as the
+  link redirects from HTTP to HTTPS — exactly the case for a GitHub
+  release link, which redirects to its file storage service. The
+  failure went completely unnoticed: only a technical message
+  (`DetailPrint`), never consulted in normal use, kept any trace of
+  it.
+  - Replaced with `inetc`, the plugin electron-builder itself uses for
+    its own web-download installer feature — it relies on WinINet
+    (Windows' network engine) and correctly handles HTTPS and
+    redirects.
+  - A post-download check now confirms the file genuinely landed after
+    extraction, so a future problem at that step won't stay invisible
+    either.
+  - The same fix applies to VLC (a similar optional component, hit by
+    the exact same flaw).
+  - The ffmpeg release file's actual content was directly verified
+    (downloaded and inspected) to confirm the structure the install
+    script expects (files at the archive's root) genuinely matches
+    reality.
+
 ## 1.63.0
 
 - **Agenda : navigation dans la vue semaine, et nouvelle option pour

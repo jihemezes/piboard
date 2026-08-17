@@ -179,9 +179,31 @@ FunctionEnd
 
 Function InstallFfmpeg
   DetailPrint "Telechargement de ffmpeg... / Downloading ffmpeg..."
-  NSISdl::download "${FFMPEG_DOWNLOAD_URL}" "$TEMP\ffmpeg-piboard.zip"
+  ; inetc (pas NSISdl) : NSISdl telecharge TOUJOURS en HTTP, meme pour
+  ; une URL https://, et echoue par delai depasse des lors que le lien
+  ; redirige de HTTP vers HTTPS (comportement documente du plugin) --
+  ; exactement le cas d'un lien de release GitHub (redirection vers le
+  ; CDN de stockage des binaires). C'est la cause identifiee du bug :
+  ; "case cochee mais ffmpeg absent", sans le moindre message d'erreur
+  ; visible puisque le seul signal (DetailPrint) n'est jamais consulte
+  ; en usage normal. inetc utilise WinINet (le meme moteur reseau que
+  ; Windows/Internet Explorer), qui gere HTTPS et les redirections
+  ; correctement -- c'est aussi le plugin qu'electron-builder utilise
+  ; lui-meme pour sa propre fonctionnalite d'installateur web.
+  ; inetc (not NSISdl): NSISdl ALWAYS downloads over HTTP, even for an
+  ; https:// URL, and fails with a timeout as soon as the link
+  ; redirects from HTTP to HTTPS (documented plugin behavior) --
+  ; exactly the case for a GitHub release link (redirects to the
+  ; binary storage CDN). This is the identified cause of the bug: "box
+  ; checked but ffmpeg missing", with no visible error message at all
+  ; since the only signal (DetailPrint) is never consulted in normal
+  ; use. inetc uses WinINet (the same network engine as Windows/
+  ; Internet Explorer), which handles HTTPS and redirects correctly --
+  ; it's also the plugin electron-builder itself uses for its own web
+  ; installer feature.
+  inetc::get /TIMEOUT=60000 "${FFMPEG_DOWNLOAD_URL}" "$TEMP\ffmpeg-piboard.zip" /END
   Pop $0
-  ${If} $0 != "success"
+  ${If} $0 != "OK"
     ; Echec du telechargement (pas d'internet, source injoignable...) :
     ; n'empeche JAMAIS l'installation de PiBoard de se terminer. Le
     ; mode de compatibilite video restera simplement indisponible tant
@@ -209,7 +231,19 @@ Function InstallFfmpeg
     CopyFiles /SILENT "$TEMP\ffmpeg-piboard-extracted\ffmpeg.exe" "$APPDATA\PiBoard\ffmpeg\ffmpeg.exe"
     CopyFiles /SILENT "$TEMP\ffmpeg-piboard-extracted\GPLv3-LICENSE.txt" "$APPDATA\PiBoard\ffmpeg\GPLv3-LICENSE.txt"
     CopyFiles /SILENT "$TEMP\ffmpeg-piboard-extracted\ATTRIBUTION.txt" "$APPDATA\PiBoard\ffmpeg\ATTRIBUTION.txt"
-    DetailPrint "ffmpeg installe / ffmpeg installed."
+    ; Verification a posteriori : CopyFiles /SILENT n'interrompt pas le
+    ; script en cas d'echec silencieux (chemin source inattendu,
+    ; permissions...). Sans ce controle, un probleme a cette etape
+    ; passerait tout aussi inapercu que le bug initial. Post-copy
+    ; verification: CopyFiles /SILENT doesn't halt the script on a
+    ; silent failure (unexpected source path, permissions...). Without
+    ; this check, a problem at this step would go just as unnoticed as
+    ; the original bug.
+    ${If} ${FileExists} "$APPDATA\PiBoard\ffmpeg\ffmpeg.exe"
+      DetailPrint "ffmpeg installe / ffmpeg installed."
+    ${Else}
+      DetailPrint "Echec de la copie de ffmpeg apres extraction (installation de PiBoard non affectee) / ffmpeg copy failed after extraction (PiBoard's own installation unaffected)."
+    ${EndIf}
   ${Else}
     DetailPrint "Echec de l'extraction de ffmpeg (installation de PiBoard non affectee) / ffmpeg extraction failed (PiBoard's own installation unaffected)."
   ${EndIf}
@@ -222,9 +256,13 @@ FunctionEnd
 
 Function InstallVlc
   DetailPrint "Telechargement de VLC... / Downloading VLC..."
-  NSISdl::download "${VLC_DOWNLOAD_URL}" "$TEMP\vlc-piboard.zip"
+  ; inetc, meme raison que pour ffmpeg ci-dessus (NSISdl echoue sur les
+  ; liens https:// avec redirection, comme un lien de release GitHub).
+  ; inetc, same reason as ffmpeg above (NSISdl fails on https:// links
+  ; with a redirect, like a GitHub release link).
+  inetc::get /TIMEOUT=60000 "${VLC_DOWNLOAD_URL}" "$TEMP\vlc-piboard.zip" /END
   Pop $0
-  ${If} $0 != "success"
+  ${If} $0 != "OK"
     ; Meme principe que pour ffmpeg : un echec ici n'affecte jamais
     ; l'installation de PiBoard lui-meme. Same principle as ffmpeg: a
     ; failure here never affects PiBoard's own installation.
@@ -245,7 +283,11 @@ Function InstallVlc
     ; several DLLs to function. The FULL content of the extracted
     ; folder is therefore copied, not just vlc.exe.
     CopyFiles /SILENT "$TEMP\vlc-piboard-extracted\*.*" "$APPDATA\PiBoard\vlc\"
-    DetailPrint "VLC installe / VLC installed."
+    ${If} ${FileExists} "$APPDATA\PiBoard\vlc\vlc.exe"
+      DetailPrint "VLC installe / VLC installed."
+    ${Else}
+      DetailPrint "Echec de la copie de VLC apres extraction (installation de PiBoard non affectee) / VLC copy failed after extraction (PiBoard's own installation unaffected)."
+    ${EndIf}
   ${Else}
     DetailPrint "Echec de l'extraction de VLC (installation de PiBoard non affectee) / VLC extraction failed (PiBoard's own installation unaffected)."
   ${EndIf}
