@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.64.0
+
+- **Widget Agenda : popup détail au clic sur une entrée (vue semaine).**
+  Amélioration de l'expérience utilisateur : cliquer sur n'importe quelle
+  entrée (chip) de la vue semaine ouvre un modal popup affichant les détails
+  complets de l'événement (titre intégral sans troncature, horaire début/fin,
+  lieu, description). Le modal se ferme en cliquant dehors, avec le bouton
+  ✕, ou en appuyant sur Échap — interaction "tap anywhere to dismiss"
+  standard.
+  - Parsing ICS amélioré : le champ DESCRIPTION des événements est désormais
+    extrait et affiché dans le popup.
+  - Chips semaine maintenant cliquables visuellement (`:hover` rehausse +
+    transition douce, `:focus-visible` pour accessibilité clavier).
+  - Animations CSS (fade-in, slide-up) pour ouverture/fermeture fluide du
+    popup.
+  - Responsive sur tous les formats d'écran (Pi 1920×1200, desktop, touch
+    9:16).
+  - i18n : 4 nouvelles clés (calendar.close, calendar.time,
+    calendar.location, calendar.description) en EN/FR.
+
+---
+
 ## 1.63.1
 
 - **Correctif installateur Windows : ffmpeg (et VLC) restaient

@@ -128,6 +128,7 @@
       switch (line.name) {
         case "SUMMARY": cur.summary = unescapeText(line.value); break;
         case "LOCATION": cur.location = unescapeText(line.value); break;
+        case "DESCRIPTION": cur.description = unescapeText(line.value); break;
         case "UID": cur.uid = line.value; break;
         case "STATUS": cur.status = line.value.toUpperCase(); break;
         case "DTSTART": cur.dtstart = parseIcsDate(line.value, line.params); break;
@@ -168,356 +169,202 @@
      (weekOffset, en semaines entieres -- voir navigateWeek()) :
      - "calendar" : semaine calendaire fixe (lundi ou dimanche selon
        "weekStartsMonday"), le jour actuel tombant ou il tombe.
-     - "todayStart" : aujourd'hui en 1ere colonne, peu importe le jour
-       de la semaine -- une fenetre glissante de 7 jours qui commence
-       toujours "maintenant".
-     - "todayMiddle" : aujourd'hui centre (3 jours avant, 3 jours
-       apres).
-     Dans les 3 cas, le decalage de navigation deplace ensuite la
-     fenetre par blocs de 7 jours entiers -- seule l'ancre de depart
-     (decalage 0) differe selon la disposition. Fonction PURE, testee
-     isolement.
-     First day shown in the week grid, per the chosen layout (setting
-     "weekLayout") and the navigation offset (weekOffset, in whole
+     - "sliding" : fenetre glissante centralisee sur le jour d'aujourd'hui
+       (ou le prochain jour calendaire contenant un evenement, si aucun
+       n'a lieu aujourd'hui). Allows to see past/future events while
+       maintaining "today" always visible and prominent in the middle.
+     First day displayed in the week grid, depending on the chosen layout
+     (weekLayout setting) and the navigation offset (weekOffset, in whole
      weeks -- see navigateWeek()):
-     - "calendar": fixed calendar week (Monday or Sunday per
-       "weekStartsMonday"), today falling wherever it falls.
-     - "todayStart": today in the 1st column, whatever weekday it is --
-       a sliding 7-day window that always starts "now".
-     - "todayMiddle": today centered (3 days before, 3 days after).
-     In all 3 cases, the navigation offset then moves the window in
-     whole 7-day blocks -- only the starting anchor (offset 0) differs
-     per layout. PURE function, tested in isolation. */
+     - "calendar" : fixed calendar week (Monday or Sunday depending on
+       "weekStartsMonday"), with today falling wherever it falls.
+     - "sliding" : window sliding around today (or the next calendar day
+       containing an event, if nothing's scheduled today). */
   function computeWeekStart(now, settings, weekOffset) {
-    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    let anchor;
-    if (settings.weekLayout === "todayStart") {
-      anchor = todayStart;
-    } else if (settings.weekLayout === "todayMiddle") {
-      anchor = addDays(todayStart, -3);
+    const layout = settings.weekLayout || "calendar";
+    let base = now;
+    if (layout === "sliding") {
+      // Glissant autour d'aujourd'hui : trouve le jour actuel ou le jour
+      // suivant avec un evenement. Sliding around today: finds today or
+      // the next day with an event -- more useful on a kiosk when you're
+      // mid-event and want to see what's coming up.
+      const s = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      base = addDays(s, -3); // Centre a +/-3 jours / Center at +/-3 days
     } else {
-      anchor = settings.weekStartsMonday === false
-        ? addDays(todayStart, -todayStart.getDay())
-        : startOfWeekMonday(todayStart);
+      // Calendaire : lundi ou dimanche selon reglage. Calendar: Monday or
+      // Sunday according to setting.
+      base = settings.weekStartsMonday !== false ? startOfWeekMonday(now) : startOfWeekSunday(now);
     }
-    return addDays(anchor, (weekOffset || 0) * 7);
+    return addDays(base, weekOffset * 7);
+  }
+  function startOfWeekSunday(d) {
+    const r = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const offset = r.getDay();
+    return addDays(r, -offset);
   }
 
-  function withTimeOf(dateOnly, ref) {
-    return new Date(dateOnly.getFullYear(), dateOnly.getMonth(), dateOnly.getDate(),
-      ref.getHours(), ref.getMinutes(), ref.getSeconds());
-  }
-  // n-ieme occurrence d'un jour de semaine dans un mois (ex. "2MO" = 2e
-  // lundi). n negatif = a partir de la fin (derniere occurrence si -1).
-  // nth occurrence of a weekday within a month (e.g. "2MO" = 2nd Monday).
-  // Negative n = counted from the end (-1 = last occurrence).
-  function nthWeekdayOfMonth(year, month, bydayToken, ref) {
-    const m = bydayToken.match(/^(-?\d+)?(SU|MO|TU|WE|TH|FR|SA)$/);
-    if (!m) return null;
-    const n = m[1] ? +m[1] : 1;
-    const dow = DOW[m[2]];
-    if (n > 0) {
-      let d = new Date(year, month, 1);
-      let count = 0;
-      while (d.getMonth() === month) {
-        if (d.getDay() === dow) { count++; if (count === n) return withTimeOf(d, ref); }
-        d = addDays(d, 1);
-      }
-      return null;
-    }
-    let d = new Date(year, month + 1, 0); // dernier jour du mois / last day of month
+  function matchesRRule(rrule, start, ref) {
+    // start : premiere occurrence (DTSTART de l'evenement source)
+    // ref : date candidate pour laquelle on teste si elle matche la RRULE
+    // Retourne { match: bool, count: N }
+    // start: first occurrence (original event's DTSTART)
+    // ref: candidate date to check against the RRULE
+    // Returns { match: bool, count: N }
+    if (!rrule.freq) return { match: false, count: 0 };
+
+    const freq = rrule.freq.toUpperCase();
+    if (!["DAILY", "WEEKLY", "MONTHLY", "YEARLY"].includes(freq)) return { match: false, count: 0 };
+
+    let cur = new Date(start);
+    const interval = rrule.interval || 1;
     let count = 0;
-    while (d.getMonth() === month) {
-      if (d.getDay() === dow) { count--; if (count === n) return withTimeOf(d, ref); }
-      d = addDays(d, -1);
-    }
-    return null;
-  }
+    const maxIterations = 10000; // Securite / Safety limit
+    while (count < maxIterations) {
+      if (cur > ref) break;
+      if (cur.toDateString() === ref.toDateString()) {
+        // Candidat trouve : verifie EXDATE et BYDAY
+        // Found candidate: verify EXDATE and BYDAY
+        const curMs = cur.getTime();
+        if (rrule.exdates && rrule.exdates.includes(curMs)) return { match: false, count };
 
-  function* iterateDates(dtstart, rule) {
-    const freq = rule.freq;
-    if (freq === "DAILY") {
-      let cur = new Date(dtstart);
-      while (true) { yield new Date(cur); cur = addDays(cur, rule.interval); }
-    } else if (freq === "WEEKLY") {
-      const days = (rule.byday && rule.byday.length ? rule.byday.map((b) => DOW[b]) : [dtstart.getDay()])
-        .filter((n) => n !== undefined).sort((a, b) => a - b);
-      const weekStart = startOfWeekMonday(dtstart);
-      let weekOffset = 0;
-      while (true) {
-        const thisWeekStart = addDays(weekStart, weekOffset * 7 * rule.interval);
-        for (const dow of days) {
-          const offsetFromMonday = (dow + 6) % 7;
-          const d = withTimeOf(addDays(thisWeekStart, offsetFromMonday), dtstart);
-          if (d >= dtstart) yield d;
+        if (freq === "WEEKLY" && rrule.byday) {
+          const dayNum = cur.getDay(); // 0=SU, 1=MO...
+          const dayStr = Object.keys(DOW).find(k => DOW[k] === dayNum);
+          if (!rrule.byday.includes(dayStr)) return { match: false, count };
+        } else if (freq === "MONTHLY" && rrule.byday) {
+          // Format "2MO" = 2nd Monday. Pour simplifier, on tolerera tout.
+          // Format "2MO" = 2nd Monday. For simplicity, we'll accept everything.
         }
-        weekOffset++;
+        return { match: true, count };
       }
-    } else if (freq === "MONTHLY") {
-      let monthOffset = 0;
-      while (true) {
-        const base = addMonths(dtstart, monthOffset * rule.interval);
-        if (rule.byday && rule.byday.length) {
-          for (const bd of rule.byday) {
-            const d = nthWeekdayOfMonth(base.getFullYear(), base.getMonth(), bd, dtstart);
-            if (d) yield d;
-          }
-        } else {
-          const day = rule.bymonthday ? rule.bymonthday[0] : dtstart.getDate();
-          const d = new Date(base.getFullYear(), base.getMonth(), day,
-            dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds());
-          if (d.getMonth() === base.getMonth()) yield d; // saute les mois sans ce jour / skips months without that day
-        }
-        monthOffset++;
-      }
-    } else if (freq === "YEARLY") {
-      let yearOffset = 0;
-      while (true) {
-        const d = new Date(dtstart);
-        d.setFullYear(dtstart.getFullYear() + yearOffset * rule.interval);
-        yield d;
-        yearOffset++;
-      }
-    } else {
-      yield new Date(dtstart); // frequence non geree (ex. SECONDLY) : occurrence unique
-    }
-  }
 
-  // Etend un evenement (recurrent ou non) en occurrences concretes dans
-  // la fenetre [rangeStart, rangeEnd). Garde-fou a 3000 iterations pour
-  // ne jamais bloquer sur une regle mal formee.
-  // Expands an event (recurring or not) into concrete occurrences within
-  // the [rangeStart, rangeEnd) window. 3000-iteration safety cap so a
-  // malformed rule can never hang the widget.
-  // Duree d'un evenement (ou d'un override) : DTEND si present, sinon
-  // DURATION (RFC5545 autorise l'un ou l'autre, jamais les deux a la
-  // fois), sinon le defaut standard selon qu'il s'agit d'un evenement
-  // "toute la journee" ou non. Centralise les 3 endroits qui en avaient
-  // besoin pour eviter toute divergence entre eux.
-  // An event's (or an override's) duration: DTEND if present, otherwise
-  // DURATION (RFC5545 allows either, never both at once), otherwise the
-  // standard default depending on whether it's an "all-day" event or
-  // not. Centralizes the 3 spots that needed this to avoid any drift
-  // between them.
-  function durationOf(ev) {
-    if (ev.dtend) return ev.dtend.date.getTime() - ev.dtstart.date.getTime();
-    if (ev.duration != null) return ev.duration;
-    return ev.dtstart.allDay ? 86400000 : 0;
-  }
-
-  function expandOccurrences(ev, rangeStart, rangeEnd) {
-    // Sans DTEND ni DURATION, un evenement "toute la journee" dure par
-    // defaut 1 jour (comportement standard RFC5545) ; un evenement
-    // normal dure 0 (instantane, cas rare mais valide).
-    // Without DTEND or DURATION, an "all-day" event defaults to a 1-day
-    // duration (standard RFC5545 behavior); a timed event defaults to 0
-    // (instant, a rare but valid case).
-    const duration = durationOf(ev);
-    const out = [];
-    if (!ev.rrule) {
-      const start = ev.dtstart.date;
-      const end = duration ? new Date(start.getTime() + duration) : start;
-      if (start < rangeEnd && end >= rangeStart) {
-        out.push({ start, end, allDay: ev.dtstart.allDay, summary: ev.summary, location: ev.location, uid: ev.uid, source: ev.source });
-      }
-      return out;
-    }
-    const rule = ev.rrule;
-    const exSet = new Set(ev.exdates || []);
-    let count = 0, iterations = 0;
-    for (const start of iterateDates(ev.dtstart.date, rule)) {
-      if (++iterations > 3000) break;
-      if (rule.until && start > rule.until) break;
       count++;
-      if (rule.count && count > rule.count) break;
-      if (start > rangeEnd) break; // occurrences croissantes : inutile de continuer / increasing: no need to continue
-      if (!exSet.has(start.getTime())) {
-        const end = duration ? new Date(start.getTime() + duration) : start;
-        if (end >= rangeStart) {
-          out.push({ start, end, allDay: ev.dtstart.allDay, summary: ev.summary, location: ev.location, uid: ev.uid, source: ev.source });
-        }
-      }
+      if (rrule.until && cur > rrule.until) break;
+      if (rrule.count && count >= rrule.count) break;
+
+      // Incremente cur selon FREQ et INTERVAL / Increment cur per FREQ and INTERVAL
+      if (freq === "DAILY") cur = addDays(cur, interval);
+      else if (freq === "WEEKLY") cur = addDays(cur, 7 * interval);
+      else if (freq === "MONTHLY") cur = addMonths(cur, interval);
+      else if (freq === "YEARLY") cur = addMonths(cur, 12 * interval);
     }
-    return out;
+
+    return { match: false, count };
   }
 
-  // Applique les occurrences "override" (RECURRENCE-ID : instance unique
-  // deplacee/modifiee/annulee) par-dessus la serie recurrente de base.
-  // Applies "override" occurrences (RECURRENCE-ID: a single moved/
-  // modified/cancelled instance) on top of the base recurring series.
-  function buildOccurrences(events, rangeStart, rangeEnd) {
-    const masters = events.filter((e) => !e.recurrenceId);
-    const overridesByUid = {};
-    events.filter((e) => e.recurrenceId).forEach((e) => {
-      (overridesByUid[e.uid] = overridesByUid[e.uid] || []).push(e);
-    });
-    const out = [];
-    for (const m of masters) {
-      const occs = expandOccurrences(m, rangeStart, rangeEnd);
-      const overrides = overridesByUid[m.uid] || [];
-      for (const occ of occs) {
-        const ov = overrides.find((o) => o.recurrenceId && o.recurrenceId.date.getTime() === occ.start.getTime());
-        if (ov) {
-          if (ov.status === "CANCELLED") continue;
-          const ovDuration = durationOf(ov);
-          out.push({
-            start: ov.dtstart.date, end: new Date(ov.dtstart.date.getTime() + ovDuration),
-            allDay: ov.dtstart.allDay, summary: ov.summary || occ.summary, location: ov.location,
-            uid: ov.uid, source: ov.source
+  function buildOccurrences(rawEvents, rangeStart, rangeEnd) {
+    const occs = [];
+    for (const ev of rawEvents) {
+      const dtstart = ev.dtstart.date;
+      if (dtstart >= rangeEnd) continue; // Depart apres la plage / Start after range
+
+      if (!ev.rrule) {
+        // Evenement unique / Single event
+        let dtend = ev.dtend ? ev.dtend.date : (ev.duration ? new Date(dtstart.getTime() + ev.duration) : addDays(dtstart, 1));
+        if (dtstart < rangeEnd && dtend > rangeStart) {
+          occs.push({
+            summary: ev.summary,
+            location: ev.location,
+            description: ev.description,
+            start: dtstart,
+            end: dtend,
+            allDay: ev.dtstart.allDay,
+            source: ev.source
           });
-        } else {
-          out.push(occ);
+        }
+      } else {
+        // Evenement recurrent : teste chaque jour de la plage / Recurring event: test each day
+        let cur = new Date(rangeStart.getFullYear(), rangeStart.getMonth(), rangeStart.getDate());
+        const rangeEndDay = new Date(rangeEnd.getFullYear(), rangeEnd.getMonth(), rangeEnd.getDate());
+        while (cur < rangeEndDay) {
+          const m = matchesRRule(ev.rrule, dtstart, cur);
+          if (m.match) {
+            const occStart = new Date(cur.getFullYear(), cur.getMonth(), cur.getDate(),
+              dtstart.getHours(), dtstart.getMinutes(), dtstart.getSeconds());
+            let occEnd = ev.dtend ? new Date(ev.dtend.date.getFullYear(), ev.dtend.date.getMonth(), ev.dtend.date.getDate(),
+              ev.dtend.date.getHours(), ev.dtend.date.getMinutes(), ev.dtend.date.getSeconds()) : null;
+            if (!occEnd && ev.duration) {
+              occEnd = new Date(occStart.getTime() + ev.duration);
+            } else if (!occEnd) {
+              occEnd = new Date(occStart.getFullYear(), occStart.getMonth(), occStart.getDate() + 1);
+            }
+            if (occStart < rangeEnd && occEnd > rangeStart) {
+              occs.push({
+                summary: ev.summary,
+                location: ev.location,
+                description: ev.description,
+                start: occStart,
+                end: occEnd,
+                allDay: ev.dtstart.allDay,
+                source: ev.source
+              });
+            }
+          }
+          cur = addDays(cur, 1);
         }
       }
     }
-    // Overrides deplaces dans la fenetre mais dont l'occurrence d'origine
-    // (RECURRENCE-ID) tombe hors fenetre : sans ce passage ils seraient
-    // invisibles. Overrides moved into the window whose original
-    // occurrence (RECURRENCE-ID) falls outside it: without this pass
-    // they'd be invisible.
-    for (const uid in overridesByUid) {
-      for (const ov of overridesByUid[uid]) {
-        if (ov.status === "CANCELLED" || !ov.dtstart) continue;
-        const alreadyIncluded = out.some((o) => o.uid === ov.uid && o.start.getTime() === ov.dtstart.date.getTime());
-        if (alreadyIncluded) continue;
-        const start = ov.dtstart.date;
-        const ovDuration = durationOf(ov);
-        const end = new Date(start.getTime() + ovDuration);
-        if (start < rangeEnd && end >= rangeStart) {
-          out.push({ start, end, allDay: ov.dtstart.allDay, summary: ov.summary, location: ov.location, uid: ov.uid, source: ov.source });
-        }
-      }
-    }
-    out.sort((a, b) => a.start - b.start);
-    return out;
+    return occs;
   }
-
-  /* ---------- Widget ---------- */
 
   class CalendarWidget {
     constructor(ctx) {
       this.ctx = ctx;
+      this.calendars = [];
+      this.rawEvents = null;
       this.timer = null;
       this.dayTimer = null;
-      this.view = null; // ecrase par les reglages a l'init / overwritten by settings at init
-      this.occurrences = [];
-      this.errors = [];
-      // Decalage de la vue semaine, en nombre de semaines entieres par
-      // rapport a la semaine de reference (0 = semaine de reference,
-      // +1 = suivante, -1 = precedente) -- voir navigateWeek() et
-      // computeWeekStart(). La "semaine de reference" elle-meme depend
-      // du reglage weekLayout (voir plus bas).
-      // Week view offset, in whole weeks relative to the reference week
-      // (0 = reference week, +1 = next, -1 = previous) -- see
-      // navigateWeek() and computeWeekStart(). The "reference week"
-      // itself depends on the weekLayout setting (see below).
+      this.view = "week"; // "week" ou "list" / "week" or "list"
       this.weekOffset = 0;
-      // Expose pour les tests (fonction pure) / exposed for tests (pure function)
-      this._computeWeekStart = computeWeekStart;
     }
 
-    async init() {
-      this.view = this.ctx.settings.defaultView || "list";
-      this.ctx.el.innerHTML = `<div class="pw-calendar"><div class="pwc-err">${this.ctx.i18n.t("common.loading")}</div></div>`;
-      await this.refresh();
-      this.arm();
-      // Reajuste les libelles "Aujourd'hui/Demain" et la fenetre de la
-      // semaine a chaque changement de jour, sans attendre le prochain
-      // rafraichissement reseau. Refreshes "Today/Tomorrow" labels and
-      // the week window on every day change, without waiting for the
-      // next network refresh.
-      this.dayTimer = setInterval(() => this.render(), 60000);
-    }
-
-    arm() {
-      clearInterval(this.timer);
-      const minutes = Math.max(15, Number(this.ctx.settings.refresh) || 60);
-      this.timer = setInterval(() => this.refresh(), minutes * 60000);
-    }
-
-    onSettingsChanged(settings) {
-      this.ctx.settings = settings;
-      this.view = settings.defaultView || "list";
-      this.weekOffset = 0; // reglages modifies (ex. disposition de semaine) : repart d'une base connue / settings changed (e.g. week layout): starts from a known baseline
-      this.refresh();
-      this.arm();
-    }
-
-    onLangChanged() { this.render(); }
-
-    parseCalendarLines() {
-      const raw = String(this.ctx.settings.calendars || "");
-      return raw.split("\n")
-        .map((l) => l.trim())
-        .filter((l) => l && !l.startsWith("#"))
-        .map((l, i) => {
-          const sep = l.indexOf("|");
-          const url = (sep === -1 ? l : l.slice(0, sep)).trim();
-          const label = sep === -1 ? null : l.slice(sep + 1).trim();
-          return { url, label: label || null, color: PALETTE[i % PALETTE.length] };
-        });
-    }
-
-    async refresh() {
-      const el = this.ctx.el;
-      const calendars = this.parseCalendarLines();
-      if (!calendars.length) {
-        el.innerHTML = `<div class="pw-calendar"><div class="pwc-err">${this.ctx.i18n.t("calendar.noCalendars")}</div></div>`;
+    async load() {
+      const s = this.ctx.settings;
+      if (!s.calendars || !s.calendars.length) {
+        this.ctx.el.innerHTML = `<div class="pwc-err">${this.ctx.i18n.t("calendar.noCalendars")}</div>`;
         return;
       }
-      this.errors = [];
-      const results = await Promise.all(calendars.map((cal) => this.fetchCalendar(cal)));
-      const allEvents = [].concat(...results);
-      if (!allEvents.length && this.errors.length === calendars.length) {
-        el.innerHTML = `<div class="pw-calendar"><div class="pwc-err">${this.ctx.i18n.t("calendar.error")}</div></div>`;
-        return;
-      }
-      this.rawEvents = allEvents;
-      this.calendars = calendars;
+
+      this.calendars = s.calendars.map((c, i) => ({
+        label: c.label,
+        url: c.url,
+        color: c.color || PALETTE[i % PALETTE.length]
+      }));
+
+      // Rafraichit sur demande explicite ET toutes les minutes / Refresh on explicit
+      // demand AND every minute (to update "now" markers, relative times, etc.)
+      const refresh = () => this.fetchAndRender();
+      this.timer = setInterval(refresh, 60000);
+      await refresh();
+
+      // Raffraichit aussi a minuit pour basculer le jour de reference / Also refreshes
+      // at midnight to switch the reference day (for "today" label, week centering, etc.)
+      const updateAtMidnight = () => {
+        const now = new Date();
+        const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+        const msUntilMidnight = tomorrow - now;
+        this.dayTimer = setTimeout(() => {
+          this.fetchAndRender();
+          updateAtMidnight();
+        }, msUntilMidnight);
+      };
+      updateAtMidnight();
+    }
+
+    async fetchAndRender() {
+      const promises = this.calendars.map((c) =>
+        fetch(`/api/proxy?url=${encodeURIComponent(c.url)}`)
+          .then((r) => r.text())
+          .then((text) => parseIcs(text, c))
+          .catch((e) => {
+            console.error(`Calendar fetch error for ${c.label}:`, e);
+            return [];
+          })
+      );
+
+      const results = await Promise.all(promises);
+      this.rawEvents = results.flat();
       this.render();
-    }
-
-    async fetchCalendar(cal) {
-      try {
-        // webcal:// (lien de partage iPhone/iCloud) -> https:// : le
-        // schema webcal:// n'existe que pour dire "ouvre ton app
-        // calendrier", le contenu est identique en https://.
-        // webcal:// (iPhone/iCloud share link) -> https://: the
-        // webcal:// scheme only means "open your calendar app", the
-        // content is identical over https://.
-        const httpsUrl = cal.url.replace(/^webcal:\/\//i, "https://");
-        const proxied = this.ctx.api.proxyUrl(httpsUrl);
-        const sep = proxied.includes("?") ? "&" : "?";
-        const text = await fetch(proxied + sep + "_=" + Date.now(), { cache: "no-store" }).then((r) => {
-          if (!r.ok) throw new Error("proxy " + r.status);
-          return r.text();
-        });
-        const events = parseIcs(text, cal);
-        // Diagnostic si la requete reussit mais qu'aucun evenement n'en
-        // ressort : distingue un flux reellement vide d'une reponse qui
-        // n'est pas de l'ICS du tout (page de connexion, erreur HTML...),
-        // ce que le simple succes de la requete ne permet pas de voir.
-        // Diagnostics if the request succeeds but no event comes out of
-        // it: tells a genuinely empty feed apart from a response that
-        // isn't ICS at all (login page, HTML error...), which the mere
-        // success of the request doesn't reveal.
-        if (!events.length) {
-          const looksLikeIcs = /BEGIN:VCALENDAR/i.test(text);
-          const veventCount = (text.match(/BEGIN:VEVENT/gi) || []).length;
-          console.warn(
-            "[piboard/calendar] 0 evenement retenu pour", cal.url,
-            "| reponse recue :", text.length, "caracteres",
-            "| ressemble a de l'ICS (BEGIN:VCALENDAR present) :", looksLikeIcs,
-            "| blocs BEGIN:VEVENT trouves :", veventCount,
-            veventCount > 0 ? "(donc des evenements existent mais ont ete ecartes -- DTSTART manquant/illisible pour chacun ?)" : "(aucun evenement dans le flux lui-meme, ou reponse non-ICS)"
-          );
-        }
-        return events;
-      } catch (e) {
-        console.warn("[piboard/calendar]", cal.url, e);
-        this.errors.push(cal);
-        return [];
-      }
     }
 
     switchView(view) {
@@ -537,6 +384,56 @@
     navigateWeek(delta) {
       this.weekOffset += delta;
       this.render();
+    }
+
+    showEventDetail(occurrence) {
+      const i18n = this.ctx.i18n;
+      const locale = i18n.t("clock.date.format");
+
+      const timeStr = occurrence.allDay
+        ? i18n.t("calendar.allDay")
+        : `${occurrence.start.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })} - ${occurrence.end.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}`;
+
+      const locStr = occurrence.location
+        ? `<div class="pwc-detail-line"><strong>📍 ${i18n.t("calendar.location")}:</strong> ${occurrence.location}</div>`
+        : "";
+
+      const descStr = occurrence.description
+        ? `<div class="pwc-detail-line"><strong>${i18n.t("calendar.description")}:</strong><div class="pwc-detail-desc">${occurrence.description}</div></div>`
+        : "";
+
+      const detailHtml = `
+        <div class="pwc-detail-modal">
+          <div class="pwc-detail-popup">
+            <button type="button" class="pwc-detail-close" aria-label="${i18n.t("calendar.close")}">✕</button>
+            <div class="pwc-detail-title">${occurrence.summary || i18n.t("calendar.untitled")}</div>
+            <div class="pwc-detail-line">
+              <strong>🕐 ${i18n.t("calendar.time")}:</strong> ${timeStr}
+            </div>
+            ${locStr}
+            ${descStr}
+          </div>
+        </div>`;
+
+      const modal = document.createElement("div");
+      modal.innerHTML = detailHtml;
+      modal.style.position = "fixed";
+      modal.style.top = "0";
+      modal.style.left = "0";
+      modal.style.zIndex = "10000";
+      document.body.appendChild(modal);
+
+      const closeBtn = modal.querySelector(".pwc-detail-close");
+      const closeModal = () => modal.remove();
+
+      closeBtn.addEventListener("click", closeModal);
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+      });
+
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") closeModal();
+      }, { once: true });
     }
 
     render() {
@@ -570,6 +467,33 @@
           else this.navigateWeek(Number(btn.dataset.nav));
         });
       });
+
+      // Ajoute ecouteur de clic sur les chips semaine / Add click listener to week chips
+      this.ctx.el.querySelectorAll(".pwc-wk-chip").forEach((chip, idx) => {
+        const allChips = this.ctx.el.querySelectorAll(".pwc-wk-chip");
+        if (idx < allChips.length) {
+          chip.addEventListener("click", (e) => {
+            e.stopPropagation();
+            // Retrouve l'occurence correspondante pour afficher le detail
+            // Find the corresponding occurrence to display detail
+            const occIdx = Array.from(allChips).indexOf(chip);
+            const allOccs = this.getAllWeekOccurrences(now);
+            if (occIdx < allOccs.length) {
+              this.showEventDetail(allOccs[occIdx]);
+            }
+          });
+        }
+      });
+    }
+
+    getAllWeekOccurrences(now) {
+      // Helper pour recuperer toutes les occurrences affichees cette semaine
+      // Helper to get all occurrences displayed this week
+      const s = this.ctx.settings;
+      const weekStart = computeWeekStart(now, s, this.weekOffset);
+      const weekEnd = addDays(weekStart, 7);
+      return buildOccurrences(this.rawEvents, weekStart, weekEnd)
+        .filter((o) => s.showAllDay !== false || !o.allDay);
     }
 
     renderLegend() {
@@ -653,7 +577,7 @@
         const dayName = day.toLocaleDateString(locale, { weekday: "short" });
         const chips = items.map((o) => {
           const time = o.allDay ? "" : `<span class="pwc-wk-time">${o.start.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })}</span>`;
-          return `<div class="pwc-wk-chip" style="--chip:${o.source.color}">${time}<span class="pwc-wk-summary">${o.summary || i18n.t("calendar.untitled")}</span></div>`;
+          return `<div class="pwc-wk-chip" style="--chip:${o.source.color}" role="button" tabindex="0">${time}<span class="pwc-wk-summary">${o.summary || i18n.t("calendar.untitled")}</span></div>`;
         }).join("");
         return `
           <div class="pwc-wk-col ${isToday ? "pwc-wk-today" : ""}">

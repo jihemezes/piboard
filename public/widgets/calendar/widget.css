@@ -217,6 +217,18 @@ body.touch .pw-calendar .pwc-wk-navlabel { padding: 5px 12px; font-size: 12.5px;
   display: flex;
   flex-direction: column;
   gap: 0;
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.15s ease;
+}
+.pw-calendar .pwc-wk-chip:hover {
+  background: color-mix(in srgb, var(--chip) 32%, transparent);
+  border-left-width: 4px;
+  padding-left: 3px;
+}
+.pw-calendar .pwc-wk-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -1px;
 }
 .pw-calendar .pwc-wk-time { font-family: var(--mono); color: var(--faint); font-size: 8.5px; }
 .pw-calendar .pwc-wk-summary {
@@ -249,4 +261,129 @@ body.touch .pw-calendar .pwc-wk-navlabel { padding: 5px 12px; font-size: 12.5px;
   height: 7px;
   border-radius: 50%;
   display: inline-block;
+}
+
+/* ---------- Popup detail evenement / event detail popup ---------- */
+.pwc-detail-modal {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(2px);
+  animation: pwc-fade-in 0.15s ease;
+}
+
+@keyframes pwc-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.pwc-detail-popup {
+  position: relative;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  padding: 20px;
+  max-width: 480px;
+  width: 85vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+  animation: pwc-slide-up 0.2s ease;
+}
+
+@keyframes pwc-slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pwc-detail-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  background: var(--field-bg);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  font-weight: 300;
+  touch-action: manipulation;
+  transition: all 0.1s ease;
+}
+
+.pwc-detail-close:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+}
+
+.pwc-detail-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 14px;
+  word-break: break-word;
+  padding-right: 30px;
+}
+
+.pwc-detail-line {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  line-height: 1.5;
+}
+
+.pwc-detail-line strong {
+  color: var(--text);
+  font-weight: 600;
+  display: block;
+}
+
+.pwc-detail-desc {
+  color: var(--text);
+  font-size: 12px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-top: 2px;
+}
+
+/* Variantes pour touch */
+body.touch .pwc-detail-popup {
+  width: 90vw;
+  padding: 24px;
+}
+
+body.touch .pwc-detail-close {
+  width: 36px;
+  height: 36px;
+  font-size: 18px;
+}
+
+body.touch .pwc-detail-title {
+  font-size: 18px;
+  margin-bottom: 16px;
+}
+
+body.touch .pwc-detail-line {
+  font-size: 14px;
+  margin-bottom: 14px;
 }
