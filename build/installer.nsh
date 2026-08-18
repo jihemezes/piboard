@@ -177,46 +177,92 @@ Function OptDownloadsPageLeave
   ${EndIf}
 FunctionEnd
 
+; Localise curl.exe, livre avec Windows depuis la version 10 1803.
+; Empile son chemin complet, ou une chaine vide s'il est introuvable.
+; L'installateur NSIS est un binaire 32 bits : sous un Windows 64 bits,
+; la redirection WOW64 fait pointer $SYSDIR vers SysWOW64. curl.exe y est
+; bien present, mais on prevoit aussi $WINDIR\Sysnative (vue 64 bits,
+; visible uniquement depuis un processus 32 bits) puis un repli sur le
+; PATH, pour ne dependre d'aucune de ces subtilites.
+; Locates curl.exe, shipped with Windows since version 10 1803. Pushes
+; its full path, or an empty string if not found. The NSIS installer is a
+; 32-bit binary: on 64-bit Windows, WOW64 redirection makes $SYSDIR point
+; at SysWOW64. curl.exe is indeed there, but $WINDIR\Sysnative (the
+; 64-bit view, visible only from a 32-bit process) and then a PATH
+; fallback are also covered, so as not to depend on any of those
+; subtleties.
+Function ResolveCurl
+  ${If} ${FileExists} "$SYSDIR\curl.exe"
+    Push "$SYSDIR\curl.exe"
+    Return
+  ${EndIf}
+  ${If} ${FileExists} "$WINDIR\Sysnative\curl.exe"
+    Push "$WINDIR\Sysnative\curl.exe"
+    Return
+  ${EndIf}
+  ${If} ${FileExists} "$WINDIR\System32\curl.exe"
+    Push "$WINDIR\System32\curl.exe"
+    Return
+  ${EndIf}
+  ; Dernier recours : laisse Windows resoudre via le PATH. Si curl est
+  ; reellement absent, nsExec renverra un code non nul et le
+  ; telechargement sera signale comme echoue, sans bloquer l'installation.
+  ; Last resort: let Windows resolve it through PATH. If curl really is
+  ; missing, nsExec will return a non-zero code and the download will be
+  ; reported as failed, without blocking the installation.
+  Push "curl.exe"
+FunctionEnd
+
 Function InstallFfmpeg
   DetailPrint "Telechargement de ffmpeg... / Downloading ffmpeg..."
-  ; inetc (pas NSISdl) : NSISdl telecharge TOUJOURS en HTTP, meme pour
-  ; une URL https://, et echoue par delai depasse des lors que le lien
-  ; redirige de HTTP vers HTTPS (comportement documente du plugin) --
-  ; exactement le cas d'un lien de release GitHub (redirection vers le
-  ; CDN de stockage des binaires). C'est la cause identifiee du bug :
-  ; "case cochee mais ffmpeg absent", sans le moindre message d'erreur
-  ; visible puisque le seul signal (DetailPrint) n'est jamais consulte
-  ; en usage normal. inetc utilise WinINet (le meme moteur reseau que
-  ; Windows/Internet Explorer), qui gere HTTPS et les redirections
-  ; correctement -- c'est aussi le plugin qu'electron-builder utilise
-  ; lui-meme pour sa propre fonctionnalite d'installateur web.
-  ; inetc (not NSISdl): NSISdl ALWAYS downloads over HTTP, even for an
-  ; https:// URL, and fails with a timeout as soon as the link
-  ; redirects from HTTP to HTTPS (documented plugin behavior) --
-  ; exactly the case for a GitHub release link (redirects to the
-  ; binary storage CDN). This is the identified cause of the bug: "box
-  ; checked but ffmpeg missing", with no visible error message at all
-  ; since the only signal (DetailPrint) is never consulted in normal
-  ; use. inetc uses WinINet (the same network engine as Windows/
-  ; Internet Explorer), which handles HTTPS and redirects correctly --
-  ; it's also the plugin electron-builder itself uses for its own web
-  ; installer feature.
-  !ifndef BUILD_UNINSTALLER
-	  DetailPrint "Telechargement de ffmpeg / Downloading ffmpeg..."
-	  nsExec::ExecToLog '"$SYSDIR\curl.exe" -L --fail --show-error --retry 2 -o "$PLUGINSDIR\ffmpeg.zip" "https://github.com/jihemezes/piboard/releases/download/ffmpeg-win64-v8.1.2/ffmpeg-piboard-win64-gpl.zip"'
-	  Pop $0
-	  ${If} $0 != 0
-		DetailPrint "Echec du telechargement ffmpeg (code $0) / ffmpeg download failed (code $0)"
-	  ${EndIf}
-	!endif
-  !ifndef BUILD_UNINSTALLER
-	  DetailPrint "Telechargement de VLC / Downloading VLC..."
-	  nsExec::ExecToLog '"$SYSDIR\curl.exe" -L --fail --show-error --retry 2 -o "$PLUGINSDIR\vlc.zip" "https://github.com/jihemezes/piboard/releases/download/vlc-win64-v3.0.20/vlc-piboard-win64.zip"'
-	  Pop $0
-	  ${If} $0 != 0
-		DetailPrint "Echec du telechargement VLC (code $0) / VLC download failed (code $0)"
-	  ${EndIf}
-	!endif
+  ; curl.exe (ni NSISdl, ni inetc) : NSISdl telecharge TOUJOURS en HTTP,
+  ; meme pour une URL https://, et echoue par delai depasse des lors que
+  ; le lien redirige de HTTP vers HTTPS (comportement documente du
+  ; plugin) -- exactement le cas d'un lien de release GitHub
+  ; (redirection vers le CDN de stockage des binaires). C'est la cause
+  ; identifiee du bug : "case cochee mais ffmpeg absent", sans le
+  ; moindre message d'erreur visible puisque le seul signal
+  ; (DetailPrint) n'est jamais consulte en usage normal.
+  ; inetc corrigerait bien ce defaut, mais c'est un plugin tiers ABSENT
+  ; de la distribution NSIS minimale qu'electron-builder telecharge dans
+  ; son propre cache : la compilation echoue alors avec "Plugin not
+  ; found, cannot call inetc::get". Le vendorer imposerait de versionner
+  ; une DLL et de la reinjecter via !addplugindir a chaque nettoyage de
+  ; cache. curl.exe evite tout cela : livre nativement avec Windows
+  ; depuis la version 10 1803, il gere HTTPS et les redirections (-L) et
+  ; ne demande aucune dependance de compilation.
+  ; curl.exe (neither NSISdl nor inetc): NSISdl ALWAYS downloads over
+  ; HTTP, even for an https:// URL, and fails with a timeout as soon as
+  ; the link redirects from HTTP to HTTPS (documented plugin behavior) --
+  ; exactly the case for a GitHub release link (redirects to the binary
+  ; storage CDN). This is the identified cause of the bug: "box checked
+  ; but ffmpeg missing", with no visible error message at all since the
+  ; only signal (DetailPrint) is never consulted in normal use.
+  ; inetc would indeed fix that flaw, but it is a third-party plugin
+  ; ABSENT from the minimal NSIS distribution electron-builder downloads
+  ; into its own cache: compilation then fails with "Plugin not found,
+  ; cannot call inetc::get". Vendoring it would mean versioning a DLL and
+  ; re-injecting it through !addplugindir on every cache wipe. curl.exe
+  ; avoids all of that: shipped natively with Windows since 10 1803, it
+  ; handles HTTPS and redirects (-L) and needs no build-time dependency.
+  Call ResolveCurl
+  Pop $1
+  ${If} $1 == ""
+    DetailPrint "curl.exe introuvable (Windows 10 1803 ou plus recent requis) / curl.exe not found (Windows 10 1803 or newer required)"
+    Return
+  ${EndIf}
+  ; -L suit les redirections, --fail transforme une reponse HTTP 4xx/5xx
+  ; en code de sortie non nul (sans quoi une page d'erreur serait
+  ; enregistree telle quelle dans le .zip), --retry absorbe une coupure
+  ; reseau passagere. nsExec renvoie le code de sortie du processus :
+  ; "0" en cas de succes (et non "OK" comme le faisait inetc).
+  ; -L follows redirects, --fail turns an HTTP 4xx/5xx response into a
+  ; non-zero exit code (otherwise an error page would be saved as-is into
+  ; the .zip), --retry absorbs a transient network glitch. nsExec returns
+  ; the process exit code: "0" on success (not "OK" as inetc did).
+  nsExec::ExecToLog '"$1" -L --fail --silent --show-error --connect-timeout 30 --retry 2 -o "$TEMP\ffmpeg-piboard.zip" "${FFMPEG_DOWNLOAD_URL}"'
+  Pop $0
+  ${If} $0 != "0"
     ; Echec du telechargement (pas d'internet, source injoignable...) :
     ; n'empeche JAMAIS l'installation de PiBoard de se terminer. Le
     ; mode de compatibilite video restera simplement indisponible tant
@@ -269,13 +315,21 @@ FunctionEnd
 
 Function InstallVlc
   DetailPrint "Telechargement de VLC... / Downloading VLC..."
-  ; inetc, meme raison que pour ffmpeg ci-dessus (NSISdl echoue sur les
-  ; liens https:// avec redirection, comme un lien de release GitHub).
-  ; inetc, same reason as ffmpeg above (NSISdl fails on https:// links
-  ; with a redirect, like a GitHub release link).
-  inetc::get /TIMEOUT=60000 "${VLC_DOWNLOAD_URL}" "$TEMP\vlc-piboard.zip" /END
+  ; curl.exe, meme raison que pour ffmpeg ci-dessus (NSISdl echoue sur
+  ; les liens https:// avec redirection comme un lien de release GitHub,
+  ; et inetc est absent de la distribution NSIS d'electron-builder).
+  ; curl.exe, same reason as ffmpeg above (NSISdl fails on https:// links
+  ; with a redirect like a GitHub release link, and inetc is missing from
+  ; electron-builder's NSIS distribution).
+  Call ResolveCurl
+  Pop $1
+  ${If} $1 == ""
+    DetailPrint "curl.exe introuvable (Windows 10 1803 ou plus recent requis) / curl.exe not found (Windows 10 1803 or newer required)"
+    Return
+  ${EndIf}
+  nsExec::ExecToLog '"$1" -L --fail --silent --show-error --connect-timeout 30 --retry 2 -o "$TEMP\vlc-piboard.zip" "${VLC_DOWNLOAD_URL}"'
   Pop $0
-  ${If} $0 != "OK"
+  ${If} $0 != "0"
     ; Meme principe que pour ffmpeg : un echec ici n'affecte jamais
     ; l'installation de PiBoard lui-meme. Same principle as ffmpeg: a
     ; failure here never affects PiBoard's own installation.

@@ -2,23 +2,57 @@
 
 ## 1.64.0
 
-- **Widget Agenda : popup détail au clic sur une entrée (vue semaine).**
-  Amélioration de l'expérience utilisateur : cliquer sur n'importe quelle
-  entrée (chip) de la vue semaine ouvre un modal popup affichant les détails
-  complets de l'événement (titre intégral sans troncature, horaire début/fin,
-  lieu, description). Le modal se ferme en cliquant dehors, avec le bouton
-  ✕, ou en appuyant sur Échap — interaction "tap anywhere to dismiss"
-  standard.
-  - Parsing ICS amélioré : le champ DESCRIPTION des événements est désormais
-    extrait et affiché dans le popup.
-  - Chips semaine maintenant cliquables visuellement (`:hover` rehausse +
-    transition douce, `:focus-visible` pour accessibilité clavier).
-  - Animations CSS (fade-in, slide-up) pour ouverture/fermeture fluide du
-    popup.
-  - Responsive sur tous les formats d'écran (Pi 1920×1200, desktop, touch
-    9:16).
-  - i18n : 4 nouvelles clés (calendar.close, calendar.time,
-    calendar.location, calendar.description) en EN/FR.
+- **Installateur Windows : correctif du correctif 1.63.1 -- la
+  compilation echouait purement et simplement.** Le remplacement de
+  `NSISdl` par `inetc` etait juste sur le fond (WinINet gere HTTPS et
+  les redirections), mais `inetc` est un plugin TIERS, absent de la
+  distribution NSIS minimale qu'electron-builder telecharge dans son
+  propre cache. `npm run publish` s'arretait donc sur
+  `Plugin not found, cannot call inetc::get`, et aucun installateur
+  1.63.1 n'a pu etre produit.
+  - Bascule sur `curl.exe`, livre nativement avec Windows depuis la
+    version 10 1803 : gere HTTPS et les redirections (`-L`), et surtout
+    ne demande AUCUNE dependance a la compilation. Vendorer `INetC.dll`
+    aurait impose de versionner une DLL et de la reinjecter via
+    `!addplugindir` a chaque nettoyage du cache d'electron-builder.
+  - `--fail` transforme une reponse HTTP 4xx/5xx en code de sortie non
+    nul : sans lui, une page d'erreur serait enregistree telle quelle
+    dans le `.zip` et l'echec ne se verrait qu'a l'extraction.
+  - Le test de reussite passe de `$0 != "OK"` (convention `inetc`) a
+    `$0 != "0"` (code de sortie du processus renvoye par `nsExec`) --
+    sans ce changement, un telechargement REUSSI aurait ete lu comme un
+    echec.
+  - Nouvelle fonction `ResolveCurl` : l'installateur NSIS etant un
+    binaire 32 bits, la redirection WOW64 fait pointer `$SYSDIR` vers
+    `SysWOW64`. `$WINDIR\Sysnative`, `$WINDIR\System32` puis le `PATH`
+    sont couverts en repli.
+  - Correctif verifie par compilation reelle : le script echoue bien sur
+    `Plugin not found` avant, et compile sans erreur apres.
+
+- **Agenda : le detail complet d'un evenement s'ouvre au clic sur une
+  pastille de la vue semaine.** Les colonnes de la vue semaine sont
+  etroites et le libelle y est tronque a deux lignes -- le titre entier
+  etait donc souvent illisible. Un clic (ou Entree/Espace au clavier)
+  ouvre desormais une surcouche avec le titre complet, la date et la
+  plage horaire, le lieu et la description.
+  - Le champ `DESCRIPTION` des flux ICS est desormais lu et propage aux
+    occurrences, y compris pour les instances redefinies
+    (`RECURRENCE-ID`), qui heritent de la description de la serie quand
+    elles n'en portent pas.
+  - La surcouche est montee sur `document.body` et non dans la tuile :
+    la grille Gridstack rogne tout ce qui deborde (`overflow: hidden`),
+    une fenetre ancree a l'interieur aurait ete coupee. Elle est fermee
+    explicitement dans `destroy()`, sans quoi elle survivrait au retrait
+    de la tuile.
+  - Fermeture par la croix, par le fond, ou par Echap. Un clic dans la
+    boite ne ferme pas.
+  - Les lignes vides sont omises : un evenement sans lieu ni description
+    n'affiche que sa date et son horaire.
+  - Titre et valeurs inseres via `textContent` et non `innerHTML` : le
+    contenu vient d'un flux externe et peut comporter `<` ou `&`.
+  - Les animations sont desactivees si le systeme demande de les reduire
+    (`prefers-reduced-motion`).
+  - 20 assertions ajoutees a `test/dom-smoke.js`.
 
 ---
 

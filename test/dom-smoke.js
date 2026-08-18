@@ -30,7 +30,7 @@ const AQ_TODAY = new Date();
 const AQ_IN2DAYS = new Date(AQ_TODAY.getFullYear(), AQ_TODAY.getMonth(), AQ_TODAY.getDate() + 2, 14, 0, 0);
 const AQ_IN2DAYS_END = new Date(AQ_IN2DAYS.getTime() + 3600000);
 const FAMILY_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:fam1@test\r\nDTSTART;VALUE=DATE:${icsDateOnly(AQ_TODAY)}\r\nSUMMARY:Anniversaire Lea\r\nEND:VEVENT\r\nEND:VCALENDAR`;
-const WORK_ICS = "\uFEFF" + `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:work1@test\r\nDTSTART:${icsDateTime(AQ_IN2DAYS)}\r\nDURATION:PT1H\r\nSUMMARY:Reunion equipe\r\nLOCATION:Salle B\r\nEND:VEVENT\r\nEND:VCALENDAR`;
+const WORK_ICS = "\uFEFF" + `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:work1@test\r\nDTSTART:${icsDateTime(AQ_IN2DAYS)}\r\nDURATION:PT1H\r\nSUMMARY:Reunion equipe\r\nLOCATION:Salle B\r\nDESCRIPTION:Ordre du jour\\nPoint budget\\; puis planning\r\nEND:VEVENT\r\nEND:VCALENDAR`;
 
 const RSS_FEED_XML = `<?xml version="1.0"?>
 <rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:media="http://search.yahoo.com/mrss/">
@@ -1559,6 +1559,84 @@ function catalogItemFor(catalog, document, widgetId) {
   assert("bascule vers la vue semaine : grille de 7 colonnes affichee", document.querySelectorAll(".pw-calendar .pwc-wk-col").length === 7);
   assert("vue semaine : la colonne d'aujourd'hui est mise en evidence", !!document.querySelector(".pw-calendar .pwc-wk-today"));
   assert("vue semaine : l'evenement toute la journee (aujourd'hui) apparait dans sa colonne", (document.querySelector(".pw-calendar .pwc-wk-today")?.textContent || "").includes("Anniversaire Lea"));
+
+  console.log("== Agenda : detail d'un evenement au clic sur une pastille (vue semaine) ==");
+  {
+    const calTile = document.querySelector('[data-tile-id="t-f"]');
+    // La pastille de "Reunion equipe" porte lieu ET description : c'est
+    // celle qui exerce toutes les lignes du detail. The "Reunion equipe"
+    // chip carries both a location AND a description: it's the one that
+    // exercises every row of the detail view.
+    const chips = [...calTile.querySelectorAll(".pwc-wk-chip")];
+    assert("vue semaine : les pastilles portent un index d'occurrence (data-occ)",
+      chips.length > 0 && chips.every((c) => c.dataset.occ !== undefined));
+    assert("vue semaine : les pastilles sont annoncees comme actionnables (role/tabindex)",
+      chips.every((c) => c.getAttribute("role") === "button" && c.getAttribute("tabindex") === "0"));
+
+    assert("aucune surcouche de detail avant le clic", !document.querySelector(".pwc-detail-overlay"));
+
+    const meetingChip = chips.find((c) => c.textContent.includes("Reunion equipe"));
+    assert("pastille 'Reunion equipe' presente dans la grille semaine", !!meetingChip);
+    meetingChip.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+
+    const overlay = document.querySelector(".pwc-detail-overlay");
+    assert("clic sur la pastille : la surcouche de detail s'ouvre", !!overlay);
+    // Montee sur document.body et non dans la tuile : sinon Gridstack la
+    // rognerait (overflow: hidden). Mounted on document.body rather than
+    // inside the tile: Gridstack would otherwise clip it (overflow: hidden).
+    assert("la surcouche est montee hors de la tuile (sinon rognee par la grille)",
+      !!overlay && overlay.parentElement === document.body);
+    const overlayText = overlay.textContent;
+    assert("detail : titre complet de l'evenement affiche", overlayText.includes("Reunion equipe"));
+    assert("detail : lieu affiche", overlayText.includes("Salle B"));
+    assert("detail : description affichee", overlayText.includes("Ordre du jour"));
+    assert("detail : sequences ICS desechappees (\\; devient ;)", overlayText.includes("Point budget; puis planning"));
+    assert("detail : sauts de ligne de la description preserves",
+      (overlay.querySelector(".pwc-detail-desc")?.textContent || "").includes("\n"));
+
+    // Clic DANS la boite : ne doit pas refermer (seul l'exterieur ferme).
+    // Click INSIDE the box: must not close (only the outside closes).
+    overlay.querySelector(".pwc-detail-box").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("clic a l'interieur de la boite : la surcouche reste ouverte", !!document.querySelector(".pwc-detail-overlay"));
+
+    // Echap ferme. Escape closes.
+    document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    await sleep(20);
+    assert("touche Echap : la surcouche se referme", !document.querySelector(".pwc-detail-overlay"));
+
+    // Reouverture puis fermeture par la croix. Reopen, then close via the cross.
+    meetingChip.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("reouverture possible apres fermeture", !!document.querySelector(".pwc-detail-overlay"));
+    document.querySelector(".pwc-detail-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("clic sur la croix : la surcouche se referme", !document.querySelector(".pwc-detail-overlay"));
+
+    // Reouverture puis clic sur le fond. Reopen, then click the backdrop.
+    meetingChip.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    document.querySelector(".pwc-detail-overlay").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("clic sur le fond : la surcouche se referme", !document.querySelector(".pwc-detail-overlay"));
+
+    // Un evenement sans lieu ni description ne doit pas produire de
+    // lignes vides. An event with neither location nor description must
+    // not produce empty rows.
+    const birthdayChip = chips.find((c) => c.textContent.includes("Anniversaire Lea"));
+    if (birthdayChip) {
+      birthdayChip.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      const rows = document.querySelectorAll(".pwc-detail-overlay .pwc-detail-row");
+      assert("evenement sans lieu ni description : une seule ligne (la date/heure), pas de ligne vide", rows.length === 1);
+      assert("evenement toute la journee : mention 'Toute la journee' dans le detail",
+        (document.querySelector(".pwc-detail-overlay")?.textContent || "").includes("Toute la journ"));
+      document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+      await sleep(20);
+    }
+    assert("aucune surcouche residuelle en fin de scenario", !document.querySelector(".pwc-detail-overlay"));
+  }
 
   console.log("== Agenda : navigation semaine precedente/suivante ==");
   {

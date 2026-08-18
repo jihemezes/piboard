@@ -208,6 +208,8 @@ body.touch .pw-calendar .pwc-wk-navlabel { padding: 5px 12px; font-size: 12.5px;
 }
 .pw-calendar .pwc-wk-chip {
   --chip: #8A98B2;
+  cursor: pointer;
+  touch-action: manipulation;
   background: color-mix(in srgb, var(--chip) 22%, transparent);
   border-left: 3px solid var(--chip);
   border-radius: 3px;
@@ -217,18 +219,6 @@ body.touch .pw-calendar .pwc-wk-navlabel { padding: 5px 12px; font-size: 12.5px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.15s ease;
-}
-.pw-calendar .pwc-wk-chip:hover {
-  background: color-mix(in srgb, var(--chip) 32%, transparent);
-  border-left-width: 4px;
-  padding-left: 3px;
-}
-.pw-calendar .pwc-wk-chip:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -1px;
 }
 .pw-calendar .pwc-wk-time { font-family: var(--mono); color: var(--faint); font-size: 8.5px; }
 .pw-calendar .pwc-wk-summary {
@@ -263,54 +253,69 @@ body.touch .pw-calendar .pwc-wk-navlabel { padding: 5px 12px; font-size: 12.5px;
   display: inline-block;
 }
 
-/* ---------- Popup detail evenement / event detail popup ---------- */
-.pwc-detail-modal {
+/* Pastille survolee/focalisee : indique qu'elle ouvre le detail complet
+   de l'evenement (voir showEventDetail() dans widget.js).
+   Hovered/focused chip: hints that it opens the event's full details
+   (see showEventDetail() in widget.js). */
+.pw-calendar .pwc-wk-chip:hover {
+  background: color-mix(in srgb, var(--chip) 38%, transparent);
+}
+.pw-calendar .pwc-wk-chip:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* ---------- Detail d'un evenement / event detail ----------
+   Monte sur document.body (hors de la tuile, que Gridstack rogne) :
+   les selecteurs ne sont donc PAS prefixes par .pw-calendar.
+   Mounted on document.body (outside the tile, which Gridstack clips):
+   these selectors are therefore NOT prefixed with .pw-calendar. */
+.pwc-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(2px);
-  animation: pwc-fade-in 0.15s ease;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.55);
+  animation: pwc-detail-fade 0.15s ease-out;
 }
-
-@keyframes pwc-fade-in {
+.pwc-detail-box {
+  --chip: var(--accent);
+  position: relative;
+  width: min(440px, 100%);
+  max-height: 80vh;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding: 16px 18px;
+  border: 1px solid var(--tile-edge);
+  border-left: 4px solid var(--chip);
+  border-radius: 10px;
+  background: var(--tile);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+  animation: pwc-detail-rise 0.18s ease-out;
+}
+@keyframes pwc-detail-fade {
   from { opacity: 0; }
   to { opacity: 1; }
 }
-
-.pwc-detail-popup {
-  position: relative;
-  background: var(--tile);
-  border: 1px solid var(--tile-edge);
-  border-radius: 12px;
-  padding: 20px;
-  max-width: 480px;
-  width: 85vw;
-  max-height: 70vh;
-  overflow-y: auto;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-  animation: pwc-slide-up 0.2s ease;
+@keyframes pwc-detail-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-
-@keyframes pwc-slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+/* Pas d'animation si l'utilisateur a demande a les reduire (systeme).
+   No animation if the user asked to reduce them (OS setting). */
+@media (prefers-reduced-motion: reduce) {
+  .pwc-detail-overlay,
+  .pwc-detail-box { animation: none; }
 }
-
 .pwc-detail-close {
   position: absolute;
   top: 10px;
   right: 10px;
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -319,71 +324,42 @@ body.touch .pw-calendar .pwc-wk-navlabel { padding: 5px 12px; font-size: 12.5px;
   border-radius: 6px;
   background: var(--field-bg);
   color: var(--muted);
-  font-size: 16px;
+  font-size: 13px;
   line-height: 1;
   cursor: pointer;
-  font-weight: 300;
   touch-action: manipulation;
-  transition: all 0.1s ease;
 }
-
-.pwc-detail-close:hover {
-  color: var(--accent);
-  border-color: var(--accent);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-}
-
+.pwc-detail-close:hover { color: var(--accent); border-color: var(--accent); }
 .pwc-detail-title {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
+  line-height: 1.3;
   color: var(--text);
-  margin-bottom: 14px;
-  word-break: break-word;
-  padding-right: 30px;
+  /* Reserve la place de la croix pour que le titre ne passe pas dessous.
+     Reserves room for the cross so the title never runs under it. */
+  padding-right: 34px;
+  margin-bottom: 12px;
+  overflow-wrap: anywhere;
 }
-
-.pwc-detail-line {
+.pwc-detail-row { margin-top: 10px; }
+.pwc-detail-key {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 2px;
+}
+.pwc-detail-val {
   font-size: 13px;
   color: var(--text);
-  margin-bottom: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
+/* Description : les sauts de ligne du flux ICS sont significatifs.
+   Description: line breaks from the ICS feed are meaningful. */
+.pwc-detail-desc { white-space: pre-wrap; }
 
-.pwc-detail-line strong {
-  color: var(--text);
-  font-weight: 600;
-  display: block;
-}
-
-.pwc-detail-desc {
-  color: var(--text);
-  font-size: 12px;
-  white-space: pre-wrap;
-  word-break: break-word;
-  margin-top: 2px;
-}
-
-/* Variantes pour touch */
-body.touch .pwc-detail-popup {
-  width: 90vw;
-  padding: 24px;
-}
-
-body.touch .pwc-detail-close {
-  width: 36px;
-  height: 36px;
-  font-size: 18px;
-}
-
-body.touch .pwc-detail-title {
-  font-size: 18px;
-  margin-bottom: 16px;
-}
-
-body.touch .pwc-detail-line {
-  font-size: 14px;
-  margin-bottom: 14px;
-}
+body.touch .pwc-detail-close { width: 34px; height: 34px; font-size: 16px; }
+body.touch .pwc-detail-title { font-size: 17px; padding-right: 42px; }
+body.touch .pwc-detail-key { font-size: 10.5px; }
+body.touch .pwc-detail-val { font-size: 14.5px; }
