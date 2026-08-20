@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.66.1
+
+- **Bloc-notes : cases a cocher desormais alignees verticalement sur leur
+  ligne de texte.** Deux causes se cumulaient :
+  - **Cause racine :** un `<button>` n'herite pas de la police de son
+    parent (regle du navigateur), et aucun `button { font: inherit }`
+    global n'existe dans `style.css`. Les unites `em` de `.pwn-check` se
+    resolvaient donc sur la police par defaut du navigateur (~13.3 px) et
+    non sur celle de la note. La case gardait une taille fixe d'environ
+    14 px quelle que soit la taille du texte, alors que l'ajustement
+    automatique la fait varier de 12 a 30 px : l'alignement etait correct
+    vers 13 px, et de plus en plus decale a mesure que le texte
+    grandissait -- donc d'autant plus visible sur une grande tuile.
+    Corrige par `font: inherit`.
+  - L'ancien `margin-top: 0.22em` etait une valeur ajustee a l'oeil,
+    juste pour une seule combinaison taille/interligne. Elle est
+    remplacee par un centrage structurel : le bouton occupe exactement la
+    hauteur d'une ligne (1.5em, l'interligne de `.pwn-view`) et le carre
+    visible y est centre par flexbox. Plus aucun nombre magique, et le
+    resultat suit automatiquement toute taille de police.
+  - La coche passe de `::after` (positionne en `inset: 0` sur le bouton,
+    qui mesure desormais 1.5em) au fond de `::before`, qui porte le carre.
+  - `.pwn-task` conserve `align-items: flex-start` : sur une tache de
+    plusieurs lignes, la case reste alignee sur la PREMIERE ligne.
+  - Verification faite que le meme piege ne touchait aucun autre widget :
+    `.pwrd-btn` (radar) est dimensionne en px, `.pwrd-time` est un
+    `<span>` qui herite correctement.
+  - Correctif purement CSS, aucun code JS modifie.
+
+---
+
 ## 1.66.0
 
 - **Bloc-notes : plusieurs notes en onglets, avec couleur par note.**

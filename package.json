@@ -1,6 +1,6 @@
 {
   "name": "piboard",
-  "version": "1.66.0",
+  "version": "1.66.1",
   "description": "Tile-based kiosk dashboard for Raspberry Pi / Tableau de bord kiosque a tuiles pour Raspberry Pi",
   "author": "Jean-Michel Ezes (jihemezes)",
   "license": "MIT",

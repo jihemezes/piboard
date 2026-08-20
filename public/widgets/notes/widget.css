@@ -46,27 +46,82 @@
   align-items: flex-start;
   gap: 0.5em;
 }
+/* Alignement vertical de la case sur sa ligne de texte.
+
+   DEUX pieges se cumulaient ici :
+
+   1. Un <button> n'herite PAS de la police de son parent (regle du
+      navigateur), et aucun `button { font: inherit }` global n'existe
+      dans style.css. Les unites `em` de cette regle se resolvaient donc
+      sur la police par defaut du navigateur (~13.3 px) et NON sur celle
+      de la note. La case gardait ainsi une taille fixe d'environ 14 px
+      quelle que soit la taille du texte -- alors que l'ajustement
+      automatique la fait varier de 12 a 30 px. D'ou un decalage nul vers
+      13 px (la taille a laquelle l'ancienne marge avait ete calibree)
+      mais de plus en plus visible a mesure que le texte grandit.
+      `font: inherit` corrige la racine du probleme.
+
+   2. L'ancien `margin-top: 0.22em` etait une valeur ajustee a l'oeil,
+      juste pour une seule combinaison taille/interligne. Elle est
+      remplacee par un centrage structurel : le bouton occupe EXACTEMENT
+      la hauteur d'une ligne (1.5em, l'interligne de .pwn-view) et le
+      carre visible est centre dedans par flexbox. Plus aucun nombre
+      magique, et le resultat suit automatiquement toute taille de police.
+
+   .pwn-task conserve `align-items: flex-start` : sur une tache de
+   plusieurs lignes, la case reste ainsi alignee sur la PREMIERE ligne au
+   lieu d'etre centree sur le bloc entier.
+
+   Vertical alignment of the checkbox against its line of text.
+
+   TWO pitfalls compounded here:
+
+   1. A <button> does NOT inherit its parent's font (browser rule), and
+      no global `button { font: inherit }` exists in style.css. This
+      rule's `em` units therefore resolved against the browser's default
+      font (~13.3 px), NOT the note's. The box thus kept a fixed size of
+      about 14 px whatever the text size -- while auto-fit varies it from
+      12 to 30 px. Hence no offset around 13 px (the size the old margin
+      had been tuned at) but an increasingly visible one as text grows.
+      `font: inherit` fixes the root cause.
+
+   2. The old `margin-top: 0.22em` was an eyeballed value, correct for a
+      single size/line-height combination only. It is replaced by
+      structural centering: the button occupies EXACTLY one line's height
+      (1.5em, .pwn-view's line-height) and the visible square is centered
+      inside it by flexbox. No magic number left, and the result follows
+      any font size automatically.
+
+   .pwn-task keeps `align-items: flex-start`: on a multi-line task, the
+   box therefore stays aligned with the FIRST line instead of being
+   centered on the whole block. */
 .pwn-check {
+  font: inherit;
   flex-shrink: 0;
   width: 1.05em;
-  height: 1.05em;
-  margin-top: 0.22em;
-  border: 0.09em solid var(--muted);
-  border-radius: 0.25em;
+  height: 1.5em; /* exactement une ligne / exactly one line box */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
   background: none;
   cursor: pointer;
   padding: 0;
-  position: relative;
 }
-.pwn-task.pwn-done .pwn-check {
-  border-color: var(--accent);
-  background: var(--accent);
-}
-.pwn-task.pwn-done .pwn-check::after {
+/* Carre visible : porte la bordure, le fond et la coche. Le bouton, lui,
+   ne sert plus qu'a definir la zone d'une ligne dans laquelle le centrer.
+   Visible square: carries the border, background and tick. The button
+   itself now only defines the one-line area to center it within. */
+.pwn-check::before {
   content: "";
-  position: absolute;
-  inset: 0;
-  background: no-repeat center / 80% url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-11"/></svg>');
+  width: 100%;
+  height: 1.05em;
+  border: 0.09em solid var(--muted);
+  border-radius: 0.25em;
+}
+.pwn-task.pwn-done .pwn-check::before {
+  border-color: var(--accent);
+  background: var(--accent) no-repeat center / 80% url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4 10-11"/></svg>');
 }
 .pwn-task.pwn-done .pwn-task-text {
   color: var(--muted);
