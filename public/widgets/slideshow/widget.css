@@ -197,3 +197,37 @@
   color: var(--muted);
   text-align: center;
 }
+
+/* ---------- Deux portraits cote a cote / two portraits side by side ----------
+   Les diapositives sont deja en position absolue avec inset: 0 (une
+   photo par diapositive, superposees). Pour en accoler deux, il suffit
+   donc de redefinir un seul cote de chacune : la moitie gauche s'arrete
+   avant le milieu, la moitie droite commence apres -- l'ecart entre les
+   deux vaut exactement --pws-gap.
+   Aucune modification de la structure HTML n'est necessaire : les deux
+   diapositives portent simplement la classe pws-active en meme temps
+   (voir show() dans widget.js).
+   Slides are already absolutely positioned with inset: 0 (one photo per
+   slide, stacked). To place two side by side it is therefore enough to
+   redefine a single edge of each: the left half stops before the middle,
+   the right half starts after it -- the gap between them is exactly
+   --pws-gap.
+   No HTML structure change is needed: the two slides simply carry the
+   pws-active class at the same time (see show() in widget.js). */
+.pw-slideshow {
+  /* Ecart entre les deux photos : assez pour qu'elles ne se touchent
+     jamais, assez discret pour ne pas devenir une bande a son tour.
+     Gap between the two photos: enough that they never touch, discreet
+     enough not to become a band of its own. */
+  --pws-gap: 8px;
+}
+.pw-slideshow .pws-slide.pws-pair-a { right: calc(50% + var(--pws-gap) / 2); }
+.pw-slideshow .pws-slide.pws-pair-b { left: calc(50% + var(--pws-gap) / 2); }
+
+/* Une diapositive qui sort d'un appairage doit retrouver inset: 0 : sans
+   cette remise a zero explicite, la moitie de largeur resterait figee sur
+   la photo suivante affichee seule.
+   A slide leaving a pairing must return to inset: 0: without this
+   explicit reset, the half width would stay stuck on the next photo
+   shown on its own. */
+.pw-slideshow .pws-slide:not(.pws-pair-a):not(.pws-pair-b) { left: 0; right: 0; }

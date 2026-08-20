@@ -1,5 +1,105 @@
 # Changelog
 
+## 1.66.0
+
+- **Bloc-notes : plusieurs notes en onglets, avec couleur par note.**
+  Une meme tuile peut desormais contenir plusieurs notes, chacune sur son
+  onglet. Le bouton `+` de la barre d'outils en cree une, le bouton de
+  couleur lui affecte une teinte tres pale pour la distinguer de sa
+  voisine.
+  - **Compatibilite ascendante : les deux formats de stockage precedents
+    sont toujours lus** et convertis en une note unique -- la chaine brute
+    du tout premier format, et `{text, updatedAt}` du format a note
+    unique. Une note existante ne peut donc pas disparaitre a la mise a
+    jour. La conversion n'est ecrite qu'a la premiere modification, pour
+    ne pas ecrire en base au simple montage d'une tuile jamais touchee.
+  - `this.text` et `this.updatedAt` sont devenus des accesseurs pointant
+    sur la note active : tout le code existant (`toggleTask`, `render`,
+    `save`, `fit`, `startEdit`/`stopEdit`) fonctionne sans modification.
+  - Le libelle d'onglet est deduit de la premiere ligne non vide,
+    marqueurs de mise en forme retires : aucune etape de nommage n'est
+    imposee a la creation.
+  - L'onglet actif est memorise par identifiant et non par position :
+    supprimer une note ne fait pas glisser la selection sur une autre.
+  - La barre d'onglets n'apparait qu'a partir de deux notes, et defile
+    horizontalement plutot que de se replier sur deux lignes (elle
+    mangerait la note sur une petite tuile).
+  - Changer d'onglet valide d'abord l'edition en cours : le texte tape
+    depuis la derniere sauvegarde differee (800 ms) n'est pas perdu.
+  - Couleurs volontairement bien plus pales que les couleurs post-it de
+    la tuile, dont elles sont independantes : elles s'y superposent et
+    doivent rester lisibles sous du texte. La teinte est reportee sur
+    l'onglet, ce qui permet de distinguer une note sans l'ouvrir.
+  - La palette est une rangee INTERNE au widget et non une fenetre
+    flottante : la grille Gridstack rogne tout ce qui deborde de la tuile
+    (`overflow: hidden`), un menu ancre ici aurait ete coupe.
+  - **Correctif lie :** `applySettings()` reconstruit `root.className`
+    depuis zero. Sans rappel explicite a `applyNoteColor()`, la teinte de
+    la note disparaissait silencieusement au moindre changement de
+    reglages. Les deux appels sont concernes.
+  - Bouton de suppression ajoute : sans lui, on ne pouvait qu'ajouter des
+    notes. Confirmation demandee ; supprimer la derniere note la vide au
+    lieu de la retirer, pour que le bloc-notes reste utilisable.
+  - 25 assertions ajoutees a `test/dom-smoke.js`.
+
+---
+
+## 1.65.0
+
+- **Diaporama : deux photos portrait accolees plutot qu'une seule bordee
+  de deux bandes vides.** Sur une tuile plus large que haute, une photo
+  portrait affichee en entier laissait une large bande de chaque cote.
+  Quand deux photos portrait se suivent, elles sont desormais affichees
+  cote a cote, separees d'un fin espace (8 px) pour qu'elles ne se
+  touchent jamais.
+  - Aucun changement de structure HTML : les diapositives etant deja en
+    position absolue avec `inset: 0`, il suffit de redefinir un seul cote
+    de chacune (`right` pour la gauche, `left` pour la droite) et de leur
+    poser la classe `pws-active` en meme temps.
+  - Trois conditions, toutes necessaires : tuile plus large que haute,
+    deux photos portrait, et orientations deja connues. Une photo dont
+    l'image n'est pas encore chargee n'est jamais appairee -- l'affichage
+    reste alors celui d'avant, jamais casse.
+  - Seules deux photos CONSECUTIVES sont appairees : l'ordre voulu
+    (chronologique ou aleatoire) n'est jamais modifie. Deux portraits
+    separes par un paysage ne sont donc pas rapproches.
+  - `next()` avance de 2 apres une paire, sinon de 1 : sans cela la
+    seconde photo de la paire reapparaissait seule juste apres.
+  - Les deux premieres images sont desormais attendues au demarrage (et
+    non la seule premiere) : l'appairage exige de connaitre l'orientation
+    de la suivante, faute de quoi la toute premiere vue manquait
+    systematiquement son appairage alors que les suivantes l'obtenaient.
+  - Reglage `Accoler deux photos portrait cote a cote` (groupe Cadrage),
+    active par defaut, pour revenir au comportement precedent.
+  - Nouveau fichier `test/slideshowPair.test.js` : 10 scenarios couvrant
+    l'appairage, son absence, la progression et le nettoyage des classes.
+
+- **Bloc-notes : mini barre d'outils de mise en forme.** Cases a cocher,
+  gras, italique, barre, et bascule Titre / Normal. La barre n'apparait
+  qu'en edition : elle agit sur le texte source, elle n'aurait aucun sens
+  sur la vue rendue et volerait de la place a la note le reste du temps.
+  - Piege traite : sans `preventDefault()`, appuyer sur un bouton retirait
+    le focus du `<textarea>`, dont l'evenement `blur` refermait l'editeur
+    AVANT que l'action s'applique -- le bouton aurait semble sans effet,
+    de facon totalement silencieuse. Les boutons ecoutent donc
+    `pointerdown` (et non `click`) avec `preventDefault()`, un seul
+    evenement car sur ecran tactile un `pointerdown` annule n'est pas
+    garanti d'etre suivi d'un `click`.
+  - Le barre `~~texte~~` est ajoute au Markdown leger du widget (il n'y
+    existait pas) et rendu en `<s>`.
+  - Chaque bouton bascule : reappuyer retire le marqueur au lieu de
+    l'empiler. Les cases a cocher s'appliquent a toutes les lignes
+    selectionnees d'un coup, avec bascule groupee.
+  - Les marqueurs de bloc sont exclusifs : un titre transforme en case a
+    cocher perd son prefixe de titre.
+  - Les lignes vides ne recoivent jamais de marqueur.
+  - L'historique d'annulation du navigateur est preserve quand
+    `execCommand("insertText")` est disponible, avec repli sur une
+    affectation directe de `.value`.
+  - 29 assertions ajoutees a `test/dom-smoke.js`.
+
+---
+
 ## 1.64.0
 
 - **Installateur Windows : correctif du correctif 1.63.1 -- la

@@ -930,6 +930,250 @@ function catalogItemFor(catalog, document, widgetId) {
   assert("i18n FR appliquee", document.documentElement.lang === "fr");
   assert("grille statique au depart (verrouillee)", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));
 
+  console.log("== Bloc-notes : barre d'outils de mise en forme ==");
+  {
+    const noteTile = document.querySelector('[data-tile-id="t-c"]');
+    const bar = noteTile.querySelector(".pwn-bar");
+    const view = noteTile.querySelector(".pwn-view");
+    const ta = noteTile.querySelector(".pwn-edit");
+    assert("barre d'outils presente dans le DOM", !!bar);
+    assert("barre masquee hors edition (elle agit sur le texte source)", bar.hidden === true);
+
+    // Passage en edition par un clic sur la vue, comme un utilisateur.
+    // Entering edit mode by clicking the view, like a user would.
+    view.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("clic sur la note : l'editeur s'ouvre", ta.hidden === false);
+    assert("clic sur la note : la barre apparait", bar.hidden === false);
+
+    const press = (act) => {
+      const btn = bar.querySelector('[data-act="' + act + '"]');
+      // pointerdown et non click : c'est l'evenement reellement ecoute
+      // (voir wireToolbar()). pointerdown rather than click: that's the
+      // event actually listened to (see wireToolbar()).
+      const ev = new window.MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+      btn.dispatchEvent(ev);
+      return ev;
+    };
+
+    assert("les 5 boutons demandes sont presents (case, gras, italique, barre, titre)",
+      ["task", "bold", "italic", "strike", "heading"].every((a) => !!bar.querySelector('[data-act="' + a + '"]')));
+    assert("bouton de retour au style normal present", !!bar.querySelector('[data-act="normal"]'));
+
+    // Le point critique : l'appui NE DOIT PAS fermer l'editeur. Sans le
+    // preventDefault() de wireToolbar(), le <textarea> perdrait le focus,
+    // son blur declencherait stopEdit(), et le bouton semblerait sans
+    // effet. The critical point: pressing MUST NOT close the editor.
+    // Without wireToolbar()'s preventDefault(), the <textarea> would lose
+    // focus, its blur would fire stopEdit(), and the button would appear
+    // to do nothing.
+    ta.value = "";
+    ta.setSelectionRange(0, 0);
+    const ev = press("bold");
+    assert("l'appui sur un bouton est bien annule (preventDefault) pour garder le focus", ev.defaultPrevented === true);
+    await sleep(10);
+    assert("l'editeur reste ouvert apres un appui sur un bouton", ta.hidden === false);
+
+    // Gras sans selection : les marqueurs sont poses et le curseur entre
+    // les deux. Bold with no selection: markers inserted, caret between.
+    assert("gras sans selection : marqueurs inseres", ta.value === "****");
+    assert("gras sans selection : curseur place entre les marqueurs", ta.selectionStart === 2);
+
+    // Gras sur une selection, puis bascule inverse.
+    // Bold on a selection, then toggled back off.
+    ta.value = "important";
+    ta.setSelectionRange(0, 9);
+    press("bold");
+    assert("gras sur une selection : texte encadre", ta.value === "**important**");
+    ta.setSelectionRange(0, ta.value.length);
+    press("bold");
+    assert("gras rappuye sur la meme selection : marqueurs retires (bascule)", ta.value === "important");
+
+    ta.value = "mot";
+    ta.setSelectionRange(0, 3);
+    press("italic");
+    assert("italique sur une selection", ta.value === "*mot*");
+
+    ta.value = "fini";
+    ta.setSelectionRange(0, 4);
+    press("strike");
+    assert("barre sur une selection", ta.value === "~~fini~~");
+    ta.setSelectionRange(0, ta.value.length);
+    press("strike");
+    assert("barre rappuye : marqueurs retires (bascule)", ta.value === "fini");
+
+    // Case a cocher sur une seule ligne, puis bascule inverse.
+    // Checkbox on a single line, then toggled back.
+    ta.value = "acheter du pain";
+    ta.setSelectionRange(0, 0);
+    press("task");
+    assert("case a cocher : la ligne recoit le marqueur []", ta.value === "[ ] acheter du pain");
+    ta.setSelectionRange(0, 0);
+    press("task");
+    assert("case a cocher rappuye : marqueur retire (bascule)", ta.value === "acheter du pain");
+
+    // Case a cocher sur plusieurs lignes d'un coup.
+    // Checkbox across several lines at once.
+    ta.value = "pain\nlait\noeufs";
+    ta.setSelectionRange(0, ta.value.length);
+    press("task");
+    assert("case a cocher sur une selection multi-lignes : chaque ligne traitee",
+      ta.value === "[ ] pain\n[ ] lait\n[ ] oeufs");
+    ta.setSelectionRange(0, ta.value.length);
+    press("task");
+    assert("bascule groupee : toutes les lignes deja cochables sont remises a plat",
+      ta.value === "pain\nlait\noeufs");
+
+    // Styles Titre / Normal.
+    ta.value = "Courses";
+    ta.setSelectionRange(0, 0);
+    press("heading");
+    assert("style Titre : prefixe # ajoute", ta.value === "# Courses");
+    ta.setSelectionRange(0, 0);
+    press("heading");
+    assert("style Titre reapplique : pas d'empilement de #", ta.value === "# Courses");
+    ta.setSelectionRange(0, 0);
+    press("normal");
+    assert("style Normal : prefixe # retire", ta.value === "Courses");
+
+    // Marqueurs de bloc exclusifs entre eux : un titre qui devient une
+    // case a cocher ne conserve pas son #. Block markers are mutually
+    // exclusive: a heading turned into a checkbox keeps no #.
+    ta.value = "# Courses";
+    ta.setSelectionRange(0, 0);
+    press("task");
+    assert("un titre transforme en case a cocher perd son prefixe de titre", ta.value === "[ ] Courses");
+
+    // Les lignes vides ne recoivent jamais de marqueur.
+    // Empty lines never receive a marker.
+    ta.value = "un\n\ndeux";
+    ta.setSelectionRange(0, ta.value.length);
+    press("task");
+    assert("les lignes vides sont laissees intactes", ta.value === "[ ] un\n\n[ ] deux");
+
+    // Sortie d'edition : le rendu doit reprendre la main et la barre
+    // disparaitre. Leaving edit mode: the rendered view takes over and
+    // the toolbar disappears.
+    ta.value = "**gras** et *ital* et ~~barre~~";
+    ta.dispatchEvent(new window.Event("input", { bubbles: true }));
+    ta.dispatchEvent(new window.Event("blur", { bubbles: true }));
+    await sleep(30);
+    assert("sortie d'edition : la barre est masquee", bar.hidden === true);
+    assert("rendu : le gras produit un <strong>", !!view.querySelector("strong"));
+    assert("rendu : l'italique produit un <em>", !!view.querySelector("em"));
+    assert("rendu : le barre produit un <s> (nouveau)", !!view.querySelector("s"));
+    assert("rendu : les marqueurs bruts ne sont plus visibles",
+      !view.textContent.includes("**") && !view.textContent.includes("~~"));
+  }
+
+  console.log("== Bloc-notes : plusieurs notes en onglets ==");
+  {
+    const noteTile = document.querySelector('[data-tile-id="t-c"]');
+    const bar = noteTile.querySelector(".pwn-bar");
+    const view = noteTile.querySelector(".pwn-view");
+    const ta = noteTile.querySelector(".pwn-edit");
+    const tabs = noteTile.querySelector(".pwn-tabs");
+    const palette = noteTile.querySelector(".pwn-palette");
+    const press = (act) => {
+      const ev = new window.MouseEvent("pointerdown", { bubbles: true, cancelable: true });
+      bar.querySelector('[data-act="' + act + '"]').dispatchEvent(ev);
+      return ev;
+    };
+
+    // Contenu courant de la note d'origine, capture ici plutot que code
+    // en dur : le bloc de test precedent (barre d'outils) a deja modifie
+    // son texte. Current content of the original note, captured here
+    // rather than hard-coded: the previous test block (toolbar) has
+    // already changed its text.
+    const firstNoteText = view.textContent.trim();
+    assert("migration : la note d'origine est preservee (contenu non vide)", firstNoteText.length > 0);
+    assert("une seule note au depart : barre d'onglets masquee", tabs.hidden === true);
+
+    view.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("boutons de gestion de note presents dans la barre",
+      !!bar.querySelector('[data-act="newNote"]') && !!bar.querySelector('[data-act="deleteNote"]') && !!bar.querySelector('[data-act="color"]'));
+
+    // Ajout d'une seconde note.
+    press("newNote");
+    await sleep(30);
+    assert("nouvelle note : la barre d'onglets apparait", tabs.hidden === false);
+    assert("nouvelle note : deux onglets", tabs.querySelectorAll(".pwn-tab").length === 2);
+    assert("nouvelle note : c'est la nouvelle qui est active",
+      tabs.querySelectorAll(".pwn-tab")[1].classList.contains("pwn-tab-active"));
+    assert("nouvelle note : l'editeur s'ouvre directement dessus", ta.hidden === false && ta.value === "");
+
+    // Le libelle d'onglet suit la premiere ligne du texte.
+    ta.value = "# Courses\nlait";
+    ta.dispatchEvent(new window.Event("input", { bubbles: true }));
+    ta.dispatchEvent(new window.Event("blur", { bubbles: true }));
+    await sleep(30);
+    const tabLabels = [...tabs.querySelectorAll(".pwn-tab")].map((t) => t.textContent);
+    assert("libelle d'onglet deduit de la 1re ligne, marqueur # retire", tabLabels[1] === "Courses");
+    assert("libelle du 1er onglet deduit de SA propre note, pas de la note active",
+      tabLabels[0].length > 0 && tabLabels[0] !== tabLabels[1] && firstNoteText.startsWith(tabLabels[0].replace(/\u2026$/, "")));
+
+    // Les deux notes sont bien distinctes.
+    assert("la note active affiche son propre texte", view.textContent.includes("Courses"));
+    tabs.querySelectorAll(".pwn-tab")[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("bascule d'onglet : l'autre note s'affiche", view.textContent.trim() === firstNoteText);
+    assert("bascule d'onglet : le texte de la 2e note n'est plus affiche", !view.textContent.includes("Courses"));
+    assert("bascule d'onglet : l'onglet clique devient actif",
+      tabs.querySelectorAll(".pwn-tab")[0].classList.contains("pwn-tab-active"));
+
+    // Couleur de note.
+    view.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("palette fermee par defaut", palette.hidden === true);
+    press("color");
+    await sleep(20);
+    assert("bouton couleur : la palette s'ouvre", palette.hidden === false);
+    assert("palette : 7 choix dont 'sans couleur'", palette.querySelectorAll(".pwn-swatch").length === 7);
+
+    const green = palette.querySelector('[data-color="green"]');
+    green.dispatchEvent(new window.MouseEvent("pointerdown", { bubbles: true, cancelable: true }));
+    await sleep(30);
+    assert("choix d'une couleur : la palette se referme", palette.hidden === true);
+    assert("choix d'une couleur : la note est teintee",
+      noteTile.querySelector(".pw-notes").classList.contains("pwn-n-green"));
+    assert("choix d'une couleur : l'onglet porte la couleur (distinction sans ouvrir)",
+      tabs.querySelectorAll(".pwn-tab")[0].classList.contains("pwn-t-green"));
+    assert("l'autre note n'est PAS teintee",
+      !tabs.querySelectorAll(".pwn-tab")[1].classList.contains("pwn-t-green"));
+
+    // Regression : applySettings() reconstruit root.className depuis zero.
+    // Sans le rappel a applyNoteColor(), la teinte disparaitrait au
+    // moindre changement de reglages. Regression: applySettings() rebuilds
+    // root.className from scratch. Without the applyNoteColor() call, the
+    // tint would vanish on any settings change.
+    assert("la teinte survit a un changement de reglages",
+      noteTile.querySelector(".pw-notes").classList.contains("pwn-n-green"));
+
+    // Suppression, avec confirmation.
+    const realConfirm = window.confirm;
+    window.confirm = () => false;
+    press("deleteNote");
+    await sleep(30);
+    assert("suppression refusee : les deux notes sont toujours la", tabs.querySelectorAll(".pwn-tab").length === 2);
+
+    window.confirm = () => true;
+    press("deleteNote");
+    await sleep(30);
+    assert("suppression confirmee : il ne reste qu'une note", tabs.hidden === true);
+    assert("suppression : c'est bien l'autre note qui subsiste", view.textContent.includes("Courses"));
+
+    // Derniere note : elle est videe, jamais supprimee -- sinon le
+    // bloc-notes n'aurait plus rien ou ecrire. Last note: it is emptied,
+    // never removed -- otherwise the notepad would have nowhere left to
+    // write.
+    press("deleteNote");
+    await sleep(30);
+    assert("supprimer la derniere note la vide au lieu de la retirer",
+      !!noteTile.querySelector(".pwn-view") && view.textContent.trim() !== "");
+    window.confirm = realConfirm;
+  }
+
   console.log("== Alerte de tableau : arret au tap n'importe ou sur l'ecran (compte a rebours, alarme horloge, rappel TV) ==");
   {
     // Cible deja passee des le montage (voir tuile t-v) : l'alerte

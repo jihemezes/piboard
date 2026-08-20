@@ -1,6 +1,6 @@
 {
   "id": "slideshow",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Slideshow",
     "fr": "Diaporama"
@@ -239,6 +239,23 @@
           }
         }
       ],
+      "group": {
+        "en": "Framing",
+        "fr": "Cadrage"
+      }
+    },
+    {
+      "key": "pairPortraits",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Pair two portrait photos side by side",
+        "fr": "Accoler deux photos portrait côte à côte"
+      },
+      "hint": {
+        "en": "On a tile wider than tall, a portrait photo leaves a wide empty band on each side. When two portrait photos follow each other, they are shown side by side instead, separated by a thin gap. Only consecutive photos are paired, so the display order is never changed.",
+        "fr": "Sur une tuile plus large que haute, une photo portrait laisse une large bande vide de chaque côté. Quand deux photos portrait se suivent, elles sont alors affichées côte à côte, séparées par un fin espace. Seules des photos consécutives sont accolées : l'ordre d'affichage n'est jamais modifié."
+      },
       "group": {
         "en": "Framing",
         "fr": "Cadrage"

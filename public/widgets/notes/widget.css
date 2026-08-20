@@ -102,3 +102,204 @@
   flex-shrink: 0;
 }
 .pwn-status { color: var(--muted); }
+
+/* ---------- Barre d'outils / toolbar ----------
+   Visible uniquement pendant l'edition (voir startEdit()/stopEdit()).
+   Le conteneur .pw-notes est un flex en colonne : flex-shrink: 0 empeche
+   la barre d'etre comprimee par l'editeur qui, lui, prend flex: 1.
+   Shown only while editing (see startEdit()/stopEdit()).
+   The .pw-notes container is a column flexbox: flex-shrink: 0 keeps the
+   toolbar from being squeezed by the editor, which takes flex: 1. */
+.pwn-bar {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwn-bar[hidden] { display: none; }
+
+.pwn-bar-btn {
+  min-width: 26px;
+  height: 26px;
+  padding: 0 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--tile-edge);
+  border-radius: 5px;
+  background: var(--field-bg);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+  /* Empeche la selection du libelle du bouton quand on enchaine les
+     appuis. Prevents selecting the button's label on repeated taps. */
+  user-select: none;
+  touch-action: manipulation;
+}
+.pwn-bar-btn:hover { color: var(--accent); border-color: var(--accent); }
+.pwn-bar-btn:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+
+/* Chaque bouton porte le style qu'il applique : plus lisible qu'une
+   icone, et sans ambiguite de langue.
+   Each button carries the style it applies: more legible than an icon,
+   and language-agnostic. */
+.pwn-bar-b { font-weight: 800; }
+.pwn-bar-i { font-style: italic; font-family: var(--font); }
+.pwn-bar-s { text-decoration: line-through; }
+.pwn-bar-wide { font-size: 11px; letter-spacing: 0.02em; }
+
+.pwn-bar-sep {
+  width: 1px;
+  height: 16px;
+  margin: 0 2px;
+  background: var(--tile-edge);
+  flex-shrink: 0;
+}
+
+/* Cible tactile agrandie sur ecran tactile (doigt, pas souris).
+   Larger touch target on a touch screen (finger, not mouse). */
+body.touch .pwn-bar-btn { min-width: 34px; height: 34px; font-size: 15px; }
+body.touch .pwn-bar-wide { font-size: 12.5px; }
+body.touch .pwn-bar-sep { height: 22px; }
+
+/* Texte barre dans la vue rendue (~~texte~~).
+   Strikethrough text in the rendered view (~~text~~). */
+.pwn-view s { text-decoration: line-through; opacity: 0.7; }
+
+/* ---------- Notes multiples : onglets, couleurs, palette ----------
+   Multiple notes: tabs, colors, palette */
+
+/* Couleurs de note : bien plus pales que les couleurs post-it de la
+   tuile (--pwn-tint ci-dessus), car elles s'y superposent et doivent
+   rester lisibles sous du texte. Une teinte trop soutenue rendrait le
+   texte penible a lire sur une tuile allumee en permanence.
+   Note colors: much paler than the tile's sticky-note colors
+   (--pwn-tint above), since they layer over them and must stay readable
+   under text. Too strong a tint would make text tiring to read on an
+   always-on tile. */
+.pwn-n-yellow { --pwn-note: rgba(240, 205, 90, 0.10); }
+.pwn-n-green  { --pwn-note: rgba(110, 205, 135, 0.09); }
+.pwn-n-blue   { --pwn-note: rgba(105, 165, 230, 0.10); }
+.pwn-n-pink   { --pwn-note: rgba(235, 130, 180, 0.09); }
+.pwn-n-purple { --pwn-note: rgba(170, 135, 225, 0.09); }
+.pwn-n-orange { --pwn-note: rgba(245, 165, 90, 0.10); }
+
+/* Teinte de la note posee PAR-DESSUS celle de la tuile : les deux
+   reglages restent independants, l'un teinte le bloc-notes entier,
+   l'autre distingue la note courante de ses voisines.
+   The note's tint sits ON TOP of the tile's: both settings stay
+   independent, one tints the whole notepad, the other tells the current
+   note apart from its neighbours. */
+.pw-notes {
+  background-image: linear-gradient(var(--pwn-note, transparent), var(--pwn-note, transparent));
+}
+
+/* Onglets / tabs */
+.pwn-tabs {
+  display: flex;
+  gap: 3px;
+  flex-shrink: 0;
+  overflow-x: auto;
+  /* La rangee ne doit jamais se replier sur deux lignes : sur une petite
+     tuile elle mangerait la note. Elle defile horizontalement a la place.
+     The row must never wrap onto two lines: on a small tile it would eat
+     into the note. It scrolls horizontally instead. */
+  flex-wrap: nowrap;
+  scrollbar-width: none;
+  padding-bottom: 3px;
+}
+.pwn-tabs::-webkit-scrollbar { display: none; }
+.pwn-tabs[hidden] { display: none; }
+
+.pwn-tab {
+  flex: 0 0 auto;
+  max-width: 46%;
+  padding: 2px 8px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px 6px 0 0;
+  border-bottom-color: transparent;
+  background: var(--pwn-tab, transparent);
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwn-tab:hover { color: var(--text); }
+.pwn-tab-active {
+  color: var(--text);
+  font-weight: 600;
+  border-color: var(--accent);
+  border-bottom-color: transparent;
+  box-shadow: inset 0 -2px 0 var(--accent);
+}
+/* Pastille de couleur reportee sur l'onglet : c'est ce qui permet de
+   distinguer une note de sa voisine SANS avoir a l'ouvrir.
+   The color carried onto the tab: this is what tells a note apart from
+   its neighbour WITHOUT having to open it. */
+.pwn-t-yellow { --pwn-tab: rgba(240, 205, 90, 0.22); }
+.pwn-t-green  { --pwn-tab: rgba(110, 205, 135, 0.20); }
+.pwn-t-blue   { --pwn-tab: rgba(105, 165, 230, 0.22); }
+.pwn-t-pink   { --pwn-tab: rgba(235, 130, 180, 0.20); }
+.pwn-t-purple { --pwn-tab: rgba(170, 135, 225, 0.20); }
+.pwn-t-orange { --pwn-tab: rgba(245, 165, 90, 0.22); }
+
+body.touch .pwn-tab { font-size: 12.5px; padding: 4px 10px; }
+
+/* Palette : rangee INTERNE au widget (voir renderPalette() dans
+   widget.js) -- une fenetre flottante serait rognee par Gridstack.
+   Palette: a row INSIDE the widget (see renderPalette() in widget.js) --
+   a floating popup would be clipped by Gridstack. */
+.pwn-palette {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  padding: 4px 0;
+}
+.pwn-palette[hidden] { display: none; }
+
+.pwn-swatch {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--tile-edge);
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwn-swatch-on { border-color: var(--accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
+body.touch .pwn-swatch { width: 28px; height: 28px; }
+
+/* Pastilles : version opaque des teintes, sinon un aplat a 10 %
+   d'opacite serait quasi invisible sur le bouton.
+   Swatches: an opaque version of the tints, otherwise a 10%-opacity fill
+   would be nearly invisible on the button. */
+.pwn-sw-none   { background: transparent; }
+.pwn-sw-yellow { background: rgba(240, 205, 90, 0.75); }
+.pwn-sw-green  { background: rgba(110, 205, 135, 0.7); }
+.pwn-sw-blue   { background: rgba(105, 165, 230, 0.75); }
+.pwn-sw-pink   { background: rgba(235, 130, 180, 0.7); }
+.pwn-sw-purple { background: rgba(170, 135, 225, 0.7); }
+.pwn-sw-orange { background: rgba(245, 165, 90, 0.75); }
+
+/* Pastille temoin dans le bouton de la barre d'outils : montre d'un coup
+   d'oeil la couleur de la note courante. Indicator dot inside the
+   toolbar button: shows the current note's color at a glance. */
+.pwn-bar-color i {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--tile-edge);
+  display: block;
+}
+body.touch .pwn-bar-color i { width: 16px; height: 16px; }

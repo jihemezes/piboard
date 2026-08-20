@@ -77,6 +77,8 @@
       this.urls = [];
       this.index = 0;
       this.modal = null;
+      // -1 = aucune paire affichee / -1 = no pair currently displayed
+      this.pairedWith = -1;
     }
 
     async init() {
@@ -183,8 +185,18 @@
       // The very first photo shown waits for its dimensions (with a
       // delay safety net) to avoid a flash with the wrong fit; later
       // ones have plenty of time to load during the display interval.
-      const firstImg = slideEls.length ? slideEls[0].querySelector(".pws-slide-img") : null;
-      if (firstImg) await waitForImage(firstImg, 1500);
+      // Les DEUX premieres, et non la seule premiere : l'appairage de deux
+      // portraits (voir pairIndexFor()) exige de connaitre l'orientation
+      // de la suivante. Sans cette seconde attente, la toute premiere vue
+      // manquerait systematiquement son appairage, alors que les vues
+      // suivantes l'obtiendraient -- une incoherence visible au demarrage.
+      // The FIRST TWO, not just the first: pairing two portraits (see
+      // pairIndexFor()) requires knowing the next one's orientation.
+      // Without this second wait, the very first view would consistently
+      // miss its pairing while later views would get it -- an
+      // inconsistency visible at startup.
+      const firstImgs = [...slideEls].slice(0, 2).map((el) => el.querySelector(".pws-slide-img")).filter(Boolean);
+      if (firstImgs.length) await Promise.all(firstImgs.map((img) => waitForImage(img, 1500)));
 
       this.show(0, true);
       if (urls.length > 1) {
@@ -210,6 +222,15 @@
       const isPortrait = img.naturalHeight > img.naturalWidth;
       const fit = (isPortrait ? s.fitPortrait : s.fitLandscape) === "cover" ? "cover" : "contain";
       slideEl.dataset.fit = fit;
+      // Orientation memorisee sur la diapositive : c'est ce qui permet a
+      // show() de decider plus tard d'accoler deux portraits (voir
+      // pairIndexFor()). Tant qu'une image n'est pas chargee, l'attribut
+      // est absent et l'appairage est simplement ignore pour elle.
+      // Orientation recorded on the slide: this is what lets show() decide
+      // later whether to place two portraits side by side (see
+      // pairIndexFor()). While an image hasn't loaded, the attribute is
+      // absent and pairing is simply skipped for it.
+      slideEl.dataset.orient = isPortrait ? "portrait" : "landscape";
       img.classList.remove("pws-fit-cover", "pws-fit-contain");
       img.classList.add(fit === "cover" ? "pws-fit-cover" : "pws-fit-contain");
 
@@ -295,13 +316,69 @@
       this.refreshTimer = setInterval(() => this.build(), minutes * 60000);
     }
 
+    /* Deux photos portrait cote a cote plutot qu'une seule bordee de deux
+       larges bandes vides. Renvoie l'index de la diapositive a accoler a
+       la diapositive i, ou -1 s'il n'y a pas lieu d'appairer.
+
+       Trois conditions, toutes necessaires :
+       - la tuile est plus large que haute -- c'est le seul cas ou une
+         photo portrait laisse des bandes sur les cotes ; dans une tuile
+         deja etroite, couper la largeur en deux degraderait l'affichage
+         au lieu de l'ameliorer ;
+       - les deux photos sont en portrait ET leurs dimensions sont deja
+         connues (dataset.orient renseigne par applyFit) ;
+       - la seconde existe : un portrait isole en fin de liste s'affiche
+         seul, normalement.
+       L'appairage ne porte que sur deux diapositives CONSECUTIVES :
+       l'ordre voulu (chronologique, ou l'ordre aleatoire tire au
+       demarrage) est ainsi integralement preserve. Deux portraits separes
+       par une photo paysage ne sont donc pas rapproches.
+
+       Two portrait photos side by side rather than a single one flanked
+       by two wide empty bands. Returns the index of the slide to pair
+       with slide i, or -1 if pairing doesn't apply.
+
+       Three conditions, all required:
+       - the tile is wider than tall -- the only case where a portrait
+         photo leaves bands on the sides; in an already narrow tile,
+         halving the width would degrade the display rather than improve
+         it;
+       - both photos are portrait AND their dimensions are already known
+         (dataset.orient, set by applyFit);
+       - the second one exists: a lone portrait at the end of the list is
+         shown on its own, normally.
+       Pairing only ever applies to two CONSECUTIVE slides: the intended
+       order (chronological, or the random order drawn at startup) is
+       therefore fully preserved. Two portraits separated by a landscape
+       photo are not brought together. */
+    pairIndexFor(i, slides) {
+      if (this.ctx.settings.pairPortraits === false) return -1;
+      const w = this.ctx.el.clientWidth || 0;
+      const h = this.ctx.el.clientHeight || 0;
+      if (w <= h) return -1;
+      const a = slides[i];
+      const b = slides[i + 1];
+      if (!a || !b) return -1;
+      if (a.dataset.orient !== "portrait" || b.dataset.orient !== "portrait") return -1;
+      return i + 1;
+    }
+
     show(i, first) {
       const s = this.ctx.settings;
       const slides = this.ctx.el.querySelectorAll(".pws-slide");
       const dots = this.ctx.el.querySelectorAll("[data-dot]");
+      const pair = this.pairIndexFor(i, slides);
+      // Memorise pour next() : sans cela, la seconde photo de la paire
+      // serait reaffichee seule au pas suivant. Kept for next(): without
+      // it, the pair's second photo would be shown again on its own at
+      // the next step.
+      this.pairedWith = pair;
       slides.forEach((el, idx) => {
-        el.classList.toggle("pws-active", idx === i);
-        if (idx === i && s.kenBurns) {
+        const active = idx === i || idx === pair;
+        el.classList.toggle("pws-active", active);
+        el.classList.toggle("pws-pair-a", pair !== -1 && idx === i);
+        el.classList.toggle("pws-pair-b", pair !== -1 && idx === pair);
+        if (active && s.kenBurns) {
           const img = el.querySelector(".pws-slide-img");
           if (img) {
             // Zoom marque pour une photo qui remplit la tuile (recadree),
@@ -316,15 +393,26 @@
             img.classList.remove("pws-kb", "pws-kb-light", "pws-alt");
             void img.offsetWidth; // relancer l'animation / restart animation
             img.classList.add(light ? "pws-kb-light" : "pws-kb");
-            if (i % 2 === 1) img.classList.add("pws-alt");
+            // Sens du zoom alterne selon l'index de la diapositive : dans
+            // une paire, les deux moities zooment donc en sens opposes,
+            // ce qui evite un effet symetrique un peu mecanique.
+            // Zoom direction alternates with the slide's index: within a
+            // pair, the two halves therefore zoom in opposite directions,
+            // avoiding a somewhat mechanical symmetric effect.
+            if (idx % 2 === 1) img.classList.add("pws-alt");
           }
         }
       });
-      dots.forEach((d, idx) => d.classList.toggle("pws-dot-active", idx === i));
+      dots.forEach((d, idx) => d.classList.toggle("pws-dot-active", idx === i || idx === pair));
     }
 
     next() {
-      this.index = (this.index + 1) % this.urls.length;
+      // Avance de 2 quand une paire est affichee, sinon de 1 : sans cela
+      // la seconde photo de la paire reapparaitrait seule juste apres.
+      // Steps by 2 when a pair is displayed, otherwise by 1: without this
+      // the pair's second photo would reappear on its own right after.
+      const step = this.pairedWith >= 0 ? 2 : 1;
+      this.index = (this.index + step) % this.urls.length;
       this.show(this.index);
     }
 
