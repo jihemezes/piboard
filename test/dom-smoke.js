@@ -2250,6 +2250,77 @@ function catalogItemFor(catalog, document, widgetId) {
   document.querySelector("#tileModal .modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("modale refermee par la croix", document.getElementById("tileModal").hidden === true);
 
+  console.log("== Aide d'un widget depuis sa fenetre de configuration ==");
+  {
+    // Ouvre les reglages de la tuile Horloge par son engrenage.
+    const g = dragItem.querySelector(".tile-gear");
+    g.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    const tileModal = document.getElementById("tileModal");
+    const helpBtn = document.getElementById("tileHelpBtn");
+    const wHelp = document.getElementById("widgetHelpModal");
+    assert("bouton d'aide present dans l'en-tete des reglages", !!helpBtn);
+    assert("bouton d'aide visible (le widget horloge a bien une fiche)", helpBtn.hidden === false);
+    assert("fenetre d'aide du widget fermee au depart", wHelp.hidden === true);
+
+    helpBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("clic sur '?' : la fenetre d'aide s'ouvre", wHelp.hidden === false);
+    // Point central de la demande : la fenetre de configuration reste
+    // ouverte DESSOUS, on ne perd pas ses reglages en consultant l'aide.
+    // Core of the request: the settings window stays open UNDERNEATH, so
+    // its settings aren't lost while reading the help.
+    assert("la fenetre de configuration reste ouverte dessous", tileModal.hidden === false);
+
+    // Et surtout : UNIQUEMENT l'aide de ce widget, sans le sommaire.
+    // And crucially: ONLY this widget's help, with no table of contents.
+    assert("titre de l'aide = nom du widget", document.getElementById("widgetHelpTitle").textContent.length > 0);
+    assert("aucun sommaire dans cette fenetre (aide du seul widget)", !wHelp.querySelector(".help-nav"));
+    const wContent = document.getElementById("widgetHelpContent");
+    assert("contenu de l'aide rempli", wContent.innerHTML.length > 100);
+    // La fiche affichee est bien celle de l'horloge, pas une autre.
+    assert("c'est bien la fiche du widget en cours de configuration",
+      /horloge|clock/i.test(wContent.textContent + document.getElementById("widgetHelpTitle").textContent));
+
+    // Fermeture de l'aide : les reglages restent ouverts.
+    wHelp.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("croix de l'aide : l'aide se ferme", wHelp.hidden === true);
+    assert("croix de l'aide : les reglages restent ouverts", tileModal.hidden === false);
+
+    // Regression : l'aide est une fenetre SOEUR de tileModal, pas une
+    // fenetre fille. Fermer les reglages ne la refermerait donc pas
+    // toute seule -- elle resterait a flotter au-dessus du tableau.
+    // Regression: the help is a SIBLING window of tileModal, not a child.
+    // Closing the settings would therefore not close it on its own -- it
+    // would be left floating above the board.
+    helpBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("aide rouverte pour le test de fermeture conjointe", wHelp.hidden === false);
+    tileModal.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("fermer les reglages ferme aussi l'aide (pas de fenetre orpheline)", wHelp.hidden === true);
+    assert("les reglages sont bien fermes", tileModal.hidden === true);
+  }
+
+  console.log("== Aide : chaque widget du catalogue a bien une fiche ==");
+  {
+    // Le bouton '?' n'apparait que si le widget a une fiche : cette
+    // verification garantit qu'aucun widget n'est laisse sans aide, et
+    // qu'aucune fiche ne survit a un widget supprime.
+    // The '?' button only appears if the widget has a page: this check
+    // ensures no widget is left without help, and no page outlives a
+    // removed widget.
+    const help = window.PIBOARD_HELP || [];
+    const tileHelpIds = help.filter((h) => h.group === "tiles").map((h) => h.id).sort();
+    const catalogIds = [...new Set(help.filter((h) => h.group === "tiles").map((h) => h.id))];
+    assert("chaque fiche de tuile a un identifiant unique", tileHelpIds.length === catalogIds.length);
+    assert("les fiches de tuiles sont nombreuses (couverture reelle)", tileHelpIds.length >= 24);
+    // Toutes les fiches doivent etre bilingues et non vides.
+    const incomplete = help.filter((h) => !h.html || !h.html.fr || !h.html.en || !h.title || !h.title.fr || !h.title.en);
+    assert("toutes les fiches d'aide sont bilingues FR/EN et non vides", incomplete.length === 0);
+  }
+
   console.log("== Configuration d'une tuile ==");
   const gear = dragItem.querySelector(".tile-gear");
   assert("bouton reglages present dans l'en-tete", !!gear);

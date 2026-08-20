@@ -358,6 +358,88 @@
     },
 
     {
+      id: "teleprog",
+      group: "tiles",
+      title: { fr: "Programme TV", en: "TV guide" },
+      sub: {
+        fr: "Le programme du soir des cha\u00eenes fran\u00e7aises, avec grille plein \u00e9cran, recherche et rappels avant le d\u00e9but d'une \u00e9mission.",
+        en: "Tonight's schedule for French channels, with a full-screen grid, search and reminders before a show starts."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 3\u00d78 par d\u00e9faut, de 2\u00d75 \u00e0 6\u00d716</span>
+          <h4>Objectif</h4>
+          <p>Savoir ce qui passe ce soir d'un coup d'\u0153il, sans allumer la t\u00e9l\u00e9vision ni ouvrir un magazine. La tuile est volontairement haute et \u00e9troite : elle se pr\u00eate bien \u00e0 une colonne sur le c\u00f4t\u00e9 du tableau.</p>
+
+          <h4>Possibilit\u00e9s</h4>
+          <p>Les donn\u00e9es proviennent par d\u00e9faut de <b>xmltvfr.fr</b>, un projet communautaire qui publie librement les grilles des cha\u00eenes fran\u00e7aises au format XMLTV. Plusieurs guides y sont propos\u00e9s (TNT, cha\u00eenes du c\u00e2ble/satellite\u2026) ; vous pouvez aussi fournir votre propre URL ou fichier XMLTV si vous disposez d'une autre source.</p>
+          <p>Trois vues sont accessibles directement depuis la tuile :</p>
+          <ul>
+            <li><b>Ce soir</b> \u2014 la premi\u00e8re partie de soir\u00e9e, c'est-\u00e0-dire le programme principal de chaque cha\u00eene.</li>
+            <li><b>2<sup>e</sup> partie</b> \u2014 ce qui suit dans la soir\u00e9e.</li>
+            <li><b>En ce moment</b> \u2014 ce qui passe \u00e0 l'instant, avec une barre de progression indiquant o\u00f9 en est chaque \u00e9mission.</li>
+          </ul>
+          <p>Un bouton ouvre une <b>grille plein \u00e9cran</b> classique (cha\u00eenes en lignes, heures en colonnes), avec zoom, recherche et logos des cha\u00eenes \u2014 pratique pour parcourir la soir\u00e9e enti\u00e8re confortablement. La barre de recherche permet de retrouver une \u00e9mission par son titre.</p>
+
+          <h4>Comment la premi\u00e8re partie de soir\u00e9e est d\u00e9termin\u00e9e</h4>
+          <p>Les cha\u00eenes ne d\u00e9marrent pas toutes leur programme principal \u00e0 la m\u00eame minute, et les grilles publi\u00e9es contiennent quantit\u00e9 de courtes s\u00e9quences (m\u00e9t\u00e9o, bandes-annonces, jeux) qu'il ne faut surtout pas confondre avec le film du soir. PiBoard retient donc, pour chaque cha\u00eene, la premi\u00e8re \u00e9mission qui commence dans une <b>fen\u00eatre horaire accept\u00e9e</b> et qui dure assez longtemps pour \u00eatre un vrai programme.</p>
+          <p>C'est le r\u00f4le des r\u00e9glages \u00ab d\u00e9but au plus t\u00f4t / au plus tard \u00bb et \u00ab dur\u00e9e minimale \u00bb. Si une cha\u00eene affiche syst\u00e9matiquement la mauvaise \u00e9mission, ce sont ces valeurs qu'il faut ajuster : \u00e9largir la fen\u00eatre si son programme d\u00e9marre plus t\u00f4t ou plus tard que la moyenne, ou augmenter la dur\u00e9e minimale si une s\u00e9quence courte est retenue \u00e0 tort.</p>
+
+          <h4>Rappels avant le d\u00e9but d'une \u00e9mission</h4>
+          <p>Touchez une \u00e9mission pour demander \u00e0 en \u00eatre averti avant qu'elle commence. \u00c0 l'heure dite, PiBoard peut faire clignoter tout l'\u00e9cran, jouer un son (des haut-parleurs sur l'\u00e9cran sont alors n\u00e9cessaires), et appeler un webhook pour relayer l'alerte ailleurs \u2014 vers un t\u00e9l\u00e9phone, par exemple. L'alerte s'arr\u00eate d'un appui n'importe o\u00f9 sur l'\u00e9cran.</p>
+
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Source des donn\u00e9es</span><span class="help-opt-desc">xmltvfr.fr (recommand\u00e9), une URL ou un fichier XMLTV personnel, ou une page \u00e0 analyser (exp\u00e9rimental).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Guide xmltvfr.fr</span><span class="help-opt-desc">Quel bouquet r\u00e9cup\u00e9rer : TNT, c\u00e2ble/satellite, etc.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Cha\u00eenes</span><span class="help-opt-desc">Une par ligne, dans l'ordre d'affichage souhait\u00e9. C'est aussi la fa\u00e7on de n'en garder que quelques-unes.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Vue au d\u00e9marrage</span><span class="help-opt-desc">Ce soir, 2<sup>e</sup> partie de soir\u00e9e, ou En ce moment.</span></div>
+          <div class="help-opt"><span class="help-opt-name">1<sup>re</sup> / 2<sup>e</sup> partie de soir\u00e9e \u00e0</span><span class="help-opt-desc">Heure de r\u00e9f\u00e9rence de chaque partie de soir\u00e9e.</span></div>
+          <div class="help-opt"><span class="help-opt-name">D\u00e9but au plus t\u00f4t / au plus tard</span><span class="help-opt-desc">Fen\u00eatre dans laquelle une \u00e9mission est accept\u00e9e comme programme principal \u2014 voir l'explication ci-dessus.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Dur\u00e9e minimale</span><span class="help-opt-desc">\u00c9carte les s\u00e9quences trop courtes (m\u00e9t\u00e9o, bandes-annonces) pour ne retenir qu'un vrai programme.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Vignettes, cat\u00e9gorie, num\u00e9ro de cha\u00eene</span><span class="help-opt-desc">\u00c0 d\u00e9cocher pour alléger l'affichage sur une tuile \u00e9troite.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Barre de recherche, barre de progression, bouton de grille</span><span class="help-opt-desc">Masquent les commandes correspondantes si vous ne vous en servez pas.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Heures affich\u00e9es avant / apr\u00e8s maintenant</span><span class="help-opt-desc">\u00c9tendue de la grille plein \u00e9cran autour de l'heure courante.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafra\u00eechissement</span><span class="help-opt-desc">Intervalle de relecture du guide. \u00ab En ce moment \u00bb a son propre plafond, plus court, puisque cette vue \u00e9volue en continu.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rappels</span><span class="help-opt-desc">D\u00e9lai avant le d\u00e9but, clignotement de l'\u00e9cran, son et sa dur\u00e9e, et webhook optionnel.</span></div>`,
+        en: `
+          <span class="help-size">Size: 3\u00d78 by default, from 2\u00d75 to 6\u00d716</span>
+          <h4>Goal</h4>
+          <p>See what's on tonight at a glance, without turning the TV on or opening a listings magazine. The tile is deliberately tall and narrow: it works well as a column on the side of the board.</p>
+
+          <h4>Possibilities</h4>
+          <p>Data comes by default from <b>xmltvfr.fr</b>, a community project that freely publishes French channel listings in the XMLTV format. Several guides are offered there (terrestrial, cable/satellite\u2026); you can also supply your own XMLTV URL or file if you have another source.</p>
+          <p>Three views are available straight from the tile:</p>
+          <ul>
+            <li><b>Tonight</b> \u2014 the evening's main programme on each channel.</li>
+            <li><b>Late evening</b> \u2014 what follows later that night.</li>
+            <li><b>On now</b> \u2014 what's airing right this minute, with a progress bar showing how far along each show is.</li>
+          </ul>
+          <p>A button opens a classic <b>full-screen grid</b> (channels as rows, hours as columns), with zoom, search and channel logos \u2014 handy for browsing the whole evening comfortably. The search bar finds a show by title.</p>
+
+          <h4>How the evening's main programme is determined</h4>
+          <p>Channels don't all start their main programme at the same minute, and published listings contain plenty of short slots (weather, trailers, quizzes) that must not be mistaken for tonight's film. For each channel, PiBoard therefore keeps the first show that starts within an <b>accepted time window</b> and runs long enough to be a real programme.</p>
+          <p>That's what the \u201cearliest / latest start\u201d and \u201cminimum duration\u201d settings are for. If a channel consistently shows the wrong programme, those are the values to adjust: widen the window if its schedule starts earlier or later than average, or raise the minimum duration if a short slot is being picked by mistake.</p>
+
+          <h4>Reminders before a show starts</h4>
+          <p>Tap a show to be alerted before it begins. At the set time, PiBoard can flash the whole screen, play a sound (speakers on the screen are then required), and call a webhook to relay the alert elsewhere \u2014 to a phone, for instance. The alert stops with a tap anywhere on the screen.</p>
+
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Data source</span><span class="help-opt-desc">xmltvfr.fr (recommended), your own XMLTV URL or file, or a page to scrape (experimental).</span></div>
+          <div class="help-opt"><span class="help-opt-name">xmltvfr.fr guide</span><span class="help-opt-desc">Which bouquet to fetch: terrestrial, cable/satellite, and so on.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Channels</span><span class="help-opt-desc">One per line, in the order you want them shown. This is also how you keep only a few of them.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Startup view</span><span class="help-opt-desc">Tonight, late evening, or on now.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Evening / late evening at</span><span class="help-opt-desc">Reference time for each part of the evening.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Earliest / latest start</span><span class="help-opt-desc">The window within which a show is accepted as the main programme \u2014 see the explanation above.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Minimum duration</span><span class="help-opt-desc">Discards slots that are too short (weather, trailers) so only a real programme is kept.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Thumbnails, category, channel number</span><span class="help-opt-desc">Uncheck to lighten the display on a narrow tile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Search bar, progress bar, grid button</span><span class="help-opt-desc">Hide the matching controls if you don't use them.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Hours shown before / after now</span><span class="help-opt-desc">How far the full-screen grid extends around the current time.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">How often the guide is re-read. \u201cOn now\u201d has its own, shorter ceiling since that view changes continuously.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Reminders</span><span class="help-opt-desc">Lead time before the start, screen flash, sound and its duration, and an optional webhook.</span></div>`
+      }
+    },
+
+    {
       id: "calendar",
       group: "tiles",
       title: { fr: "Agenda", en: "Calendar" },
@@ -377,6 +459,8 @@
           <h4>Ajouter un calendrier iPhone / iCloud</h4>
           <p>Dans l'app Calendrier : appuyez sur un calendrier → <b>Partager le calendrier</b> → <b>Calendrier public</b> → <b>Copier le lien</b>. Le lien commence par <code>webcal://</code> : PiBoard le convertit automatiquement, collez-le tel quel.</p>
           <p>Pour <b>Google Agenda</b> : réglages du calendrier → « Intégrer l'agenda » → « Adresse secrète au format iCal ». Pour <b>Nextcloud</b> ou <b>Outlook</b> : utilisez leur lien de partage public/ICS du calendrier.</p>
+          <h4>Voir le détail d'un événement</h4>
+          <p>Dans la <b>grille semaine</b>, les colonnes sont étroites et le libellé d'un événement y est tronqué à deux lignes. <b>Touchez une pastille</b> pour ouvrir son détail complet : titre entier, jour et plage horaire, lieu et description. Les champs vides sont simplement omis. Refermez d'un appui sur la croix, à l'extérieur de la fenêtre, ou avec la touche Échap.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Calendriers</span><span class="help-opt-desc">Un lien ICS par ligne, avec un libellé optionnel après un <code>|</code> (ex. <code>https://exemple.com/famille.ics|Famille</code>).</span></div>
           <div class="help-opt"><span class="help-opt-name">Vue par défaut</span><span class="help-opt-desc">Liste ou grille semaine — les deux restent accessibles en un geste sur la tuile.</span></div>
@@ -396,6 +480,8 @@
           <h4>Adding an iPhone / iCloud calendar</h4>
           <p>In the Calendar app: tap a calendar → <b>Share Calendar</b> → <b>Public Calendar</b> → <b>Copy Link</b>. The link starts with <code>webcal://</code>: PiBoard converts it automatically, paste it as is.</p>
           <p>For <b>Google Calendar</b>: calendar settings → "Integrate calendar" → "Secret address in iCal format". For <b>Nextcloud</b> or <b>Outlook</b>: use their calendar's public/ICS sharing link.</p>
+          <h4>Seeing an event's details</h4>
+          <p>In the <b>week grid</b>, columns are narrow and an event's label is clipped to two lines there. <b>Tap a chip</b> to open its full details: complete title, day and time range, location and description. Empty fields are simply omitted. Close it with the cross, by tapping outside the window, or with the Escape key.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Calendars</span><span class="help-opt-desc">One ICS link per line, with an optional label after a <code>|</code> (e.g. <code>https://example.com/family.ics|Family</code>).</span></div>
           <div class="help-opt"><span class="help-opt-name">Default view</span><span class="help-opt-desc">List or week grid — both stay one tap away on the tile.</span></div>
@@ -544,8 +630,8 @@
       group: "tiles",
       title: { fr: "Bloc-notes", en: "Notes" },
       sub: {
-        fr: "Bloc-notes avec Markdown léger, listes à cocher interactives, couleurs post-it et texte auto-ajusté. Enregistré sur le serveur, partagé entre les écrans.",
-        en: "Notepad with light Markdown, interactive checklists, sticky-note colors and auto-fitting text. Saved on the server, shared by all screens."
+        fr: "Plusieurs notes en onglets, barre d'outils de mise en forme, listes à cocher interactives, couleur par note et texte auto-ajusté. Enregistré sur le serveur, partagé entre les écrans.",
+        en: "Several notes in tabs, a formatting toolbar, interactive checklists, per-note color and auto-fitting text. Saved on the server, shared by all screens."
       },
       html: {
         fr: `
@@ -553,7 +639,23 @@
           <h4>Objectif</h4>
           <p>Un pense-bête toujours visible, du style liste de courses, mot pour la famille, ou rappel du jour.</p>
           <h4>Possibilités</h4>
-          <p>Le texte accepte un Markdown léger (titres, gras, italique) et surtout des listes à cocher interactives — tapez <code>- [ ] Lait</code> pour créer une case à cocher directement cliquable sur l'écran, très pratique pour une liste de courses partagée à la maison. Le contenu est enregistré côté serveur et donc partagé entre tous les écrans PiBoard de la maison si vous en avez plusieurs. Le style « post-it » (couleur au choix) donne un rendu chaleureux ; la taille du texte s'ajuste automatiquement à la taille de la tuile, ou peut être fixée manuellement.</p>
+          <p>Le texte accepte un Markdown léger (titres, gras, italique, barré) et surtout des listes à cocher interactives — tapez <code>[ ] Lait</code> pour créer une case à cocher directement cliquable sur l'écran, très pratique pour une liste de courses partagée à la maison. Le contenu est enregistré côté serveur et donc partagé entre tous les écrans PiBoard de la maison si vous en avez plusieurs. Le style « post-it » (couleur au choix) donne un rendu chaleureux ; la taille du texte s'ajuste automatiquement à la taille de la tuile, ou peut être fixée manuellement.</p>
+
+          <h4>La barre d'outils</h4>
+          <p>Touchez la note pour passer en édition : une petite barre d'outils apparaît alors en haut de la tuile. Elle ne s'affiche qu'en édition, car elle agit sur le texte source. Chaque bouton fonctionne en <b>bascule</b> : le réappuyer retire la mise en forme au lieu de l'empiler.</p>
+          <div class="help-opt"><span class="help-opt-name">☐</span><span class="help-opt-desc">Transforme la ligne en case à cocher. Sélectionnez plusieurs lignes pour toutes les convertir d'un coup.</span></div>
+          <div class="help-opt"><span class="help-opt-name">B / I / S</span><span class="help-opt-desc">Gras, italique, barré. Sans sélection, les marqueurs sont insérés et le curseur placé entre les deux, prêt à taper.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Titre / Normal</span><span class="help-opt-desc">Bascule la ligne entre le style titre et le texte courant.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Pastille de couleur</span><span class="help-opt-desc">Ouvre une palette de teintes très pâles pour colorer la note courante (voir ci-dessous).</span></div>
+          <div class="help-opt"><span class="help-opt-name">+</span><span class="help-opt-desc">Crée une nouvelle note dans cette même tuile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Corbeille</span><span class="help-opt-desc">Supprime la note courante, après confirmation. Supprimer la dernière note la vide simplement, pour que le bloc-notes reste utilisable.</span></div>
+          <p>Les styles de bloc s'excluent mutuellement : transformer un titre en case à cocher lui retire son préfixe de titre. Les lignes vides ne reçoivent jamais de marqueur.</p>
+
+          <h4>Plusieurs notes dans une seule tuile</h4>
+          <p>Une même tuile peut contenir <b>plusieurs notes</b>, chacune sur son onglet — par exemple une liste de courses, un pense-bête et une liste d'anniversaires. La rangée d'onglets n'apparaît qu'à partir de deux notes ; avec une seule, il n'y a rien vers quoi basculer et cette rangée prendrait de la hauteur pour rien.</p>
+          <p>Le <b>nom d'un onglet est déduit automatiquement</b> de la première ligne non vide de la note (marqueurs de mise en forme retirés) : il n'y a donc aucune étape de nommage à la création, on tape et l'onglet se nomme tout seul. Commencer la note par un titre est le moyen le plus simple de lui donner un nom clair.</p>
+          <p>Le bouton de couleur affecte une <b>teinte très pâle</b> à la note courante, reportée sur son onglet : c'est ce qui permet de distinguer une note de sa voisine <i>sans avoir à l'ouvrir</i>. Cette couleur est indépendante du réglage « Couleur post-it » ci-dessous, qui teinte la tuile entière : les deux se superposent, d'où des teintes de note volontairement très légères pour que le texte reste confortable à lire sur un écran allumé en permanence.</p>
+          <p>Changer d'onglet valide d'abord l'édition en cours : rien de ce qui vient d'être tapé n'est perdu.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Couleur post-it</span><span class="help-opt-desc">Couleur de la tuile elle-même, ou une teinte post-it (jaune, vert, bleu, rose, orange).</span></div>
           <div class="help-opt"><span class="help-opt-name">Ajuster automatiquement</span><span class="help-opt-desc">La taille du texte s'adapte à la taille de la tuile.</span></div>
@@ -565,7 +667,23 @@
           <h4>Goal</h4>
           <p>An always-visible reminder board, for a shopping list, a note to the family, or today's reminder.</p>
           <h4>Possibilities</h4>
-          <p>The text accepts light Markdown (headings, bold, italics) and, most usefully, interactive checklists — type <code>- [ ] Milk</code> to create a checkbox directly clickable on screen, very handy for a shopping list shared at home. The content is saved server-side and therefore shared across every PiBoard screen in the house if you have several. The "sticky note" style (choice of color) gives a warm look; text size adapts automatically to the tile's size, or can be set manually.</p>
+          <p>The text accepts light Markdown (headings, bold, italics, strikethrough) and, most usefully, interactive checklists — type <code>[ ] Milk</code> to create a checkbox directly clickable on screen, very handy for a shopping list shared at home. The content is saved server-side and therefore shared across every PiBoard screen in the house if you have several. The "sticky note" style (choice of color) gives a warm look; text size adapts automatically to the tile's size, or can be set manually.</p>
+
+          <h4>The toolbar</h4>
+          <p>Tap the note to start editing: a small toolbar then appears at the top of the tile. It only shows while editing, since it acts on the source text. Each button is a <b>toggle</b>: pressing it again removes the formatting instead of stacking it.</p>
+          <div class="help-opt"><span class="help-opt-name">☐</span><span class="help-opt-desc">Turns the line into a checkbox. Select several lines to convert them all at once.</span></div>
+          <div class="help-opt"><span class="help-opt-name">B / I / S</span><span class="help-opt-desc">Bold, italic, strikethrough. With no selection, the markers are inserted and the caret placed between them, ready to type.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Heading / Normal</span><span class="help-opt-desc">Toggles the line between heading style and body text.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Color dot</span><span class="help-opt-desc">Opens a palette of very pale tints to color the current note (see below).</span></div>
+          <div class="help-opt"><span class="help-opt-name">+</span><span class="help-opt-desc">Creates a new note inside this same tile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Bin</span><span class="help-opt-desc">Deletes the current note, after confirmation. Deleting the last note simply empties it, so the notepad stays usable.</span></div>
+          <p>Block styles are mutually exclusive: turning a heading into a checkbox strips its heading prefix. Empty lines never receive a marker.</p>
+
+          <h4>Several notes in a single tile</h4>
+          <p>One tile can hold <b>several notes</b>, each on its own tab — a shopping list, a reminder and a birthday list, for instance. The tab row only appears from two notes on; with a single one there is nothing to switch to and that row would eat height for nothing.</p>
+          <p>A <b>tab's name is derived automatically</b> from the note's first non-empty line (formatting markers stripped): there is no naming step at creation, you type and the tab names itself. Starting the note with a heading is the simplest way to give it a clear name.</p>
+          <p>The color button assigns a <b>very pale tint</b> to the current note, carried onto its tab: this is what lets you tell one note from its neighbour <i>without opening it</i>. This color is independent of the "Sticky-note color" setting below, which tints the whole tile: the two layer on top of each other, hence deliberately very light note tints so text stays comfortable to read on an always-on screen.</p>
+          <p>Switching tabs commits the ongoing edit first: nothing just typed is lost.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Sticky-note color</span><span class="help-opt-desc">The tile's own color, or a sticky-note tint (yellow, green, blue, pink, orange).</span></div>
           <div class="help-opt"><span class="help-opt-name">Auto-fit text</span><span class="help-opt-desc">Text size adapts to the tile's size.</span></div>
@@ -729,11 +847,16 @@
           <h4>Objectif</h4>
           <p>Faire défiler des photos de famille, de vacances, ou tout autre album, avec un effet de zoom lent façon cadre photo numérique.</p>
           <h4>Possibilités</h4>
-          <p>Quatre sources possibles : des photos téléversées directement, un dossier local sur le Raspberry Pi ou un NAS, un partage WebDAV (Nextcloud, Synology…), ou une simple liste d'URLs d'images. Le format de chaque photo est détecté automatiquement (paysage ou portrait) et traité séparément : par défaut, une photo paysage remplit la tuile (recadrée), tandis qu'une photo portrait s'affiche en entier pour ne jamais rogner un visage — chaque comportement reste réglable indépendamment. Quand une photo est affichée en entier, l'espace vide autour peut être comblé par une couleur unie ou par la photo elle-même, agrandie et floutée en fond, pour un rendu plus habillé. Un zoom très léger anime les photos affichées en entier (sans jamais déborder du cadre), et un zoom plus marqué anime celles qui remplissent la tuile.</p>
+          <p>Cinq sources possibles : des photos téléversées directement, un dossier local sur le Raspberry Pi ou un NAS, une clé USB branchée sur le Pi (rien à configurer, les photos qu'elle contient s'affichent automatiquement), un partage WebDAV (Nextcloud, Synology…), ou une simple liste d'URLs d'images. Le format de chaque photo est détecté automatiquement (paysage ou portrait) et traité séparément : par défaut, une photo paysage remplit la tuile (recadrée), tandis qu'une photo portrait s'affiche en entier pour ne jamais rogner un visage — chaque comportement reste réglable indépendamment. Quand une photo est affichée en entier, l'espace vide autour peut être comblé par une couleur unie ou par la photo elle-même, agrandie et floutée en fond, pour un rendu plus habillé. Un zoom très léger anime les photos affichées en entier (sans jamais déborder du cadre), et un zoom plus marqué anime celles qui remplissent la tuile.</p>
+
+          <h4>Deux photos portrait côte à côte</h4>
+          <p>Sur une tuile <b>plus large que haute</b>, une photo portrait affichée en entier laisse forcément une large bande vide de chaque côté. Quand deux photos portrait se suivent, PiBoard les affiche alors <b>côte à côte</b>, séparées par un fin espace : la tuile est bien mieux remplie et deux souvenirs sont visibles à la fois.</p>
+          <p>Trois conditions doivent être réunies : la tuile est plus large que haute, les deux photos sont en portrait, et leurs dimensions sont déjà connues (une photo pas encore chargée n'est jamais accolée). Seules deux photos <b>consécutives</b> sont concernées, afin que l'ordre d'affichage — chronologique ou aléatoire — ne soit jamais modifié : deux portraits séparés par une photo paysage ne sont donc pas rapprochés. Si votre collection alterne souvent portrait et paysage, l'effet se déclenchera rarement, ce qui est normal.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Source</span><span class="help-opt-desc">Photos téléversées, dossier local, WebDAV, ou liste d'URLs.</span></div>
           <div class="help-opt"><span class="help-opt-name">Intervalle</span><span class="help-opt-desc">Durée d'affichage de chaque photo, en secondes.</span></div>
           <div class="help-opt"><span class="help-opt-name">Photos au format paysage / portrait</span><span class="help-opt-desc">Remplir la tuile (recadré) ou afficher la photo entière, réglable séparément pour chaque orientation.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Accoler deux photos portrait côte à côte</span><span class="help-opt-desc">Activé par défaut. Décochez pour revenir à une seule photo à la fois, quelle que soit son orientation.</span></div>
           <div class="help-opt"><span class="help-opt-name">Style de bordure</span><span class="help-opt-desc">Couleur unie ou photo floutée automatique, pour l'espace vide autour d'une photo affichée en entier.</span></div>
           <div class="help-opt"><span class="help-opt-name">Couleur de la bordure</span><span class="help-opt-desc">Utilisée seulement si le style de bordure est « Couleur unie ».</span></div>
           <div class="help-opt"><span class="help-opt-name">Ordre aléatoire</span><span class="help-opt-desc">Mélange l'ordre des photos plutôt que de suivre l'ordre de la source.</span></div>
@@ -743,11 +866,16 @@
           <h4>Goal</h4>
           <p>Rotate through family photos, vacation shots, or any other album, with a slow zoom effect like a digital photo frame.</p>
           <h4>Possibilities</h4>
-          <p>Four possible sources: photos uploaded directly, a local folder on the Raspberry Pi or a NAS, a WebDAV share (Nextcloud, Synology…), or a plain list of image URLs. Each photo's orientation is detected automatically (landscape or portrait) and handled separately: by default, a landscape photo fills the tile (cropped), while a portrait photo shows in full so a face is never cut off — each behavior stays adjustable independently. When a photo shows in full, the empty space around it can be filled with a solid color or with the photo itself, enlarged and blurred as a background, for a more polished look. A very light zoom animates fully-shown photos (never spilling past the frame), and a stronger zoom animates ones that fill the tile.</p>
+          <p>Five possible sources: photos uploaded directly, a local folder on the Raspberry Pi or a NAS, a USB key plugged into the Pi (nothing to configure, the photos on it show automatically), a WebDAV share (Nextcloud, Synology…), or a plain list of image URLs. Each photo's orientation is detected automatically (landscape or portrait) and handled separately: by default, a landscape photo fills the tile (cropped), while a portrait photo shows in full so a face is never cut off — each behavior stays adjustable independently. When a photo shows in full, the empty space around it can be filled with a solid color or with the photo itself, enlarged and blurred as a background, for a more polished look. A very light zoom animates fully-shown photos (never spilling past the frame), and a stronger zoom animates ones that fill the tile.</p>
+
+          <h4>Two portrait photos side by side</h4>
+          <p>On a tile that is <b>wider than tall</b>, a portrait photo shown in full inevitably leaves a wide empty band on each side. When two portrait photos follow each other, PiBoard then shows them <b>side by side</b>, separated by a thin gap: the tile is far better filled and two memories are visible at once.</p>
+          <p>Three conditions must be met: the tile is wider than tall, both photos are portrait, and their dimensions are already known (a photo that hasn't loaded yet is never paired). Only two <b>consecutive</b> photos are eligible, so that the display order — chronological or random — is never altered: two portraits separated by a landscape photo are therefore not brought together. If your collection often alternates portrait and landscape, the effect will trigger rarely, which is expected.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Source</span><span class="help-opt-desc">Uploaded photos, local folder, WebDAV, or URL list.</span></div>
           <div class="help-opt"><span class="help-opt-name">Interval</span><span class="help-opt-desc">How long each photo is shown, in seconds.</span></div>
           <div class="help-opt"><span class="help-opt-name">Landscape / portrait photos</span><span class="help-opt-desc">Fill the tile (cropped) or show the entire photo, adjustable separately for each orientation.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Pair two portrait photos side by side</span><span class="help-opt-desc">On by default. Uncheck to go back to a single photo at a time, whatever its orientation.</span></div>
           <div class="help-opt"><span class="help-opt-name">Border style</span><span class="help-opt-desc">Solid color or automatic blurred photo, for the empty space around a fully-shown photo.</span></div>
           <div class="help-opt"><span class="help-opt-name">Border color</span><span class="help-opt-desc">Used only if the border style is "Solid color".</span></div>
           <div class="help-opt"><span class="help-opt-name">Shuffle order</span><span class="help-opt-desc">Randomizes photo order rather than following the source's order.</span></div>

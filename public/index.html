@@ -455,6 +455,16 @@
   <div class="modal-card">
     <header class="modal-head">
       <h2 id="tileModalTitle" data-i18n="tile.settings">Tile settings</h2>
+      <!-- Aide du SEUL widget en cours de configuration : ouvre
+           widgetHelpModal par-dessus cette fenetre, sans passer par
+           l'aide generale ni son sommaire (voir openWidgetHelp() dans
+           app.js). Masque si le widget n'a pas de fiche d'aide.
+           Help for the ONE widget being configured: opens
+           widgetHelpModal on top of this window, without going through
+           the general help or its table of contents (see
+           openWidgetHelp() in app.js). Hidden if the widget has no
+           help page. -->
+      <button class="modal-help" id="tileHelpBtn" data-i18n-title="tile.widgetHelp" title="Widget help" aria-label="Widget help" hidden>?</button>
       <button class="modal-close" data-close aria-label="Close">&times;</button>
     </header>
     <div class="form" id="tileForm"></div>
@@ -464,6 +474,26 @@
       <button class="btn" id="tileSaveConfig" data-i18n="tile.saveConfig">Save this configuration</button>
       <button class="btn primary" id="tileSave" data-i18n="settings.save">Save</button>
     </div>
+  </div>
+</div>
+
+<!-- Aide d'un widget, ouverte PAR-DESSUS sa fenetre de configuration.
+     Fenetre distincte de helpModal (l'aide generale) : elle ne montre
+     qu'une fiche, sans sommaire, et doit pouvoir se superposer a
+     tileModal sans le fermer -- d'ou un z-index superieur (voir
+     .modal-stacked dans style.css).
+     A widget's help, opened ON TOP of its settings window. A separate
+     window from helpModal (the general help): it shows a single page,
+     with no table of contents, and must be able to stack over tileModal
+     without closing it -- hence a higher z-index (see .modal-stacked in
+     style.css). -->
+<div class="modal modal-stacked" id="widgetHelpModal" hidden>
+  <div class="modal-card widget-help-card">
+    <header class="modal-head">
+      <h2 id="widgetHelpTitle">Help</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="help-content" id="widgetHelpContent"></div>
   </div>
 </div>
 

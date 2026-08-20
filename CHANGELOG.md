@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.67.0
+
+- **Aide d'un widget accessible depuis sa fenetre de configuration.** Un
+  bouton `?` apparait dans l'en-tete des reglages d'une tuile et ouvre
+  une seconde fenetre contenant UNIQUEMENT la fiche de ce widget, sans
+  le sommaire ni les autres sections de l'aide generale.
+  - La fenetre de configuration reste ouverte dessous : consulter l'aide
+    ne fait pas perdre les reglages en cours de saisie.
+  - Meme source de contenu que l'aide generale (`window.PIBOARD_HELP`,
+    ou l'identifiant d'une fiche de tuile est celui du widget) : il n'y a
+    qu'un seul contenu a tenir a jour, et une fiche ajoutee la apparait
+    automatiquement ici.
+  - Le bouton est masque si le widget n'a pas de fiche : proposer une
+    aide vide serait pire que ne rien proposer.
+  - `z-index` superieur (`.modal-stacked`) : toutes les fenetres du
+    tableau etant a 1000, l'aide se serait ouverte DERRIERE la fenetre
+    qui l'appelle, l'ordre du DOM tranchant a egalite.
+  - Fermer la configuration referme aussi l'aide : c'est une fenetre
+    SOEUR et non une fenetre fille, elle serait sinon restee a flotter
+    seule au-dessus du tableau. Les trois sorties de la configuration
+    (croix, enregistrement, suppression de la tuile) sont couvertes.
+  - `#tileModal .modal-head h2` passe en `flex: 1` pour que le `?` et la
+    croix restent groupes a droite (l'en-tete est en `space-between`, un
+    troisieme element s'y serait retrouve isole au milieu). Regle
+    limitee a cette fenetre pour ne rien changer aux autres.
+
+- **Aide : mise a jour du contenu, en retard sur plusieurs versions.**
+  - **Fiche Programme TV ajoutee** : elle manquait completement, c'etait
+    le seul widget sans aide. Couvre les trois vues, la grille plein
+    ecran, les rappels, et surtout l'explication du choix de la premiere
+    partie de soiree (fenetre horaire acceptee + duree minimale), qui
+    est le reglage a ajuster quand une chaine affiche la mauvaise
+    emission.
+  - **Bloc-notes** : la fiche ne mentionnait ni la barre d'outils, ni les
+    notes multiples en onglets, ni la couleur par note (1.65 et 1.66).
+  - **Agenda** : ajout du detail complet d'un evenement au clic sur une
+    pastille de la vue semaine (1.64).
+  - **Diaporama** : ajout de l'appairage de deux photos portrait (1.65),
+    et correction d'une erreur ancienne -- la fiche annoncait "quatre
+    sources" alors que la cle USB en fait une cinquieme.
+  - Verification automatisee ajoutee : chaque widget du catalogue doit
+    avoir une fiche, chaque fiche doit correspondre a un widget existant,
+    et toutes doivent etre bilingues et non vides. Correspondance
+    actuelle : 24 widgets, 24 fiches, aucun orphelin.
+  - La section "Nouveautes" lit deja le CHANGELOG en direct : elle etait
+    donc a jour, et le reste.
+  - 17 assertions ajoutees a `test/dom-smoke.js`.
+
+---
+
 ## 1.66.1
 
 - **Bloc-notes : cases a cocher desormais alignees verticalement sur leur

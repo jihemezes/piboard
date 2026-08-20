@@ -1891,3 +1891,67 @@ body.touch .pwt-boost-menu button { padding: 14px 16px; font-size: 17px; min-hei
   cursor: pointer;
 }
 .ss-media-empty { color: var(--muted); font-size: 12.5px; margin: 6px 0; }
+
+/* ---------- Aide d'un widget depuis sa configuration ----------
+   Widget help from its settings window */
+
+/* Fenetre empilee AU-DESSUS d'une autre. Les fenetres du tableau sont
+   toutes a z-index 1000 : sans ce cran supplementaire, l'aide s'ouvrirait
+   DERRIERE la fenetre de configuration qui l'a appelee (a egalite de
+   z-index, c'est l'ordre du DOM qui tranche, et tileModal vient avant).
+   Window stacked ON TOP of another one. The board's windows all sit at
+   z-index 1000: without this extra step, the help would open BEHIND the
+   settings window that called it (on equal z-index, DOM order decides,
+   and tileModal comes first). */
+.modal-stacked { z-index: 1100; }
+
+/* Le titre prend toute la place restante pour que le "?" et la croix
+   restent colles a droite : l'en-tete est en space-between, un troisieme
+   element s'y retrouverait sinon isole au milieu. Regle volontairement
+   limitee a #tileModal pour ne rien changer aux autres fenetres.
+   The title takes all remaining space so that "?" and the cross stay
+   together on the right: the header is space-between, so a third element
+   would otherwise end up stranded in the middle. Rule deliberately
+   limited to #tileModal so no other window is affected. */
+#tileModal .modal-head h2 { flex: 1; }
+
+.modal-help {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--tile-edge);
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.modal-help:hover { color: var(--accent); border-color: var(--accent); }
+.modal-help[hidden] { display: none; }
+body.touch .modal-help { width: 30px; height: 30px; font-size: 16px; }
+
+/* Plus large que les 560 px par defaut d'une fenetre : ces fiches
+   contiennent des listes d'options a deux colonnes, illisibles a
+   l'etroit. Reste bien plus etroite que l'aide generale (1600 px), qui
+   doit loger son sommaire en plus.
+   Wider than a window's default 560px: these pages contain two-column
+   option lists that are unreadable when cramped. Stays much narrower
+   than the general help (1600px), which also has to fit its table of
+   contents. */
+.widget-help-card { width: min(760px, 96vw); }
+/* .help-content est prevu pour vivre dans .help-body (un conteneur flex
+   en ligne) : hors de ce contexte, il lui faut une hauteur bornee pour
+   que son propre defilement fonctionne.
+   .help-content is designed to live inside .help-body (a row flex
+   container): outside that context it needs a bounded height for its own
+   scrolling to work. */
+.widget-help-card .help-content { max-height: calc(90vh - 60px); }

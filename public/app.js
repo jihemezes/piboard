@@ -1772,6 +1772,16 @@
     const form = $("tileForm");
     const fields = rec.manifest.settings || [];
     $("tileModalTitle").textContent = i18n.fromManifest(rec.manifest.name);
+    // Le bouton n'apparait que si ce widget a effectivement une fiche :
+    // proposer une aide vide serait pire que ne rien proposer.
+    // The button only appears if this widget actually has a page:
+    // offering empty help would be worse than offering none.
+    const helpBtn = $("tileHelpBtn");
+    if (helpBtn) {
+      const hasHelp = !!widgetHelpSection(rec.conf.widget);
+      helpBtn.hidden = !hasHelp;
+      helpBtn.onclick = hasHelp ? (e) => { e.stopPropagation(); openWidgetHelp(rec.conf.widget); } : null;
+    }
     const s = rec.conf.settings || {};
     const showTitleNow = s._showTitle != null ? !!s._showTitle : !!rec.manifest.titleBar;
     const textScaleNow = String(s._textScale || "1");
@@ -1974,6 +1984,7 @@
       applyTileFormValues(rec, collectTileFormValues());
     });
     $("tileModal").hidden = true;
+    closeWidgetHelp(); // fenetre soeur, ne se ferme pas seule / sibling window, doesn't close on its own
     vkb.hide();
   }
 
@@ -3287,6 +3298,40 @@
     }).join("");
   }
 
+  /* Aide d'un SEUL widget, ouverte par-dessus sa fenetre de
+     configuration. Reutilise exactement la meme source que l'aide
+     generale (window.PIBOARD_HELP, ou l'identifiant d'une fiche de tuile
+     est celui du widget) : il n'y a donc qu'un seul contenu a tenir a
+     jour, et une fiche ajoutee la apparait automatiquement ici.
+     A SINGLE widget's help, opened on top of its settings window. Reuses
+     exactly the same source as the general help (window.PIBOARD_HELP,
+     where a tile page's id is the widget's id): there is therefore only
+     one body of content to maintain, and a page added there shows up
+     here automatically. */
+  function widgetHelpSection(widgetId) {
+    return (window.PIBOARD_HELP || []).find((sec) => sec.id === widgetId && sec.group === "tiles") || null;
+  }
+
+  function openWidgetHelp(widgetId) {
+    const sec = widgetHelpSection(widgetId);
+    if (!sec) return;
+    $("widgetHelpTitle").textContent = i18n.fromManifest(sec.title);
+    const screenshotHtml = sec.screenshot
+      ? `<img class="help-screenshot" src="${sec.screenshot}" alt="${i18n.fromManifest(sec.title)}" loading="lazy">`
+      : "";
+    const content = $("widgetHelpContent");
+    content.innerHTML =
+      (sec.sub ? `<p class="help-sub">${i18n.fromManifest(sec.sub)}</p>` : "") +
+      screenshotHtml +
+      i18n.fromManifest(sec.html);
+    content.scrollTop = 0;
+    $("widgetHelpModal").hidden = false;
+  }
+
+  function closeWidgetHelp() {
+    $("widgetHelpModal").hidden = true;
+  }
+
   function showHelpSection(id) {
     const sections = window.PIBOARD_HELP || [];
     const sec = sections.find((s) => s.id === id);
@@ -3822,6 +3867,7 @@
     $("tileSaveConfig").addEventListener("click", saveTileConfigForReuse);
     $("tileRemove").addEventListener("click", () => {
       $("tileModal").hidden = true;
+      closeWidgetHelp();
       vkb.hide();
       removeTile(tileModalTarget);
     });
@@ -3831,6 +3877,13 @@
       modal.addEventListener("click", (e) => {
         if (e.target === modal || e.target.hasAttribute("data-close")) {
           modal.hidden = true;
+          // L'aide d'un widget est une fenetre SOEUR de tileModal, pas une
+          // fenetre fille : fermer la configuration ne la refermerait donc
+          // pas, elle resterait a flotter seule au-dessus du tableau.
+          // A widget's help is a SIBLING window of tileModal, not a child:
+          // closing the settings would therefore not close it, and it
+          // would be left floating alone above the board.
+          if (modal.id === "tileModal") closeWidgetHelp();
           vkb.hide();
           hideCatalogTooltip(); // vit hors de la modale (position fixed) : ne se referme pas toute seule / lives outside the modal (fixed position): doesn't close on its own
         }
