@@ -46,12 +46,21 @@ function loadMailDeps() {
 const tileSecrets = require("./tileSecrets");
 
 const CONNECT_TIMEOUT_MS = 15000;
+// Delai d'inactivite SOCKET, distinct des delais d'etablissement : une
+// grosse boite peut mettre plus de 15 s a renvoyer 25 enveloppes, ce qui
+// declenchait un faux timeout en pleine lecture. Etablir la connexion,
+// en revanche, doit rester rapide a echouer.
+// SOCKET inactivity timeout, distinct from the connection ones: a large
+// mailbox can take more than 15 s to return 25 envelopes, which was
+// triggering a false timeout mid-read. Establishing the connection, on
+// the other hand, must still fail fast.
+const SOCKET_TIMEOUT_MS = 40000;
 const MAX_LIMIT = 25;
 
 function clientFor(cfg, pass) {
   loadMailDeps();
   const port = Number(cfg.port) || 993;
-  return new ImapFlow({
+  const client = new ImapFlow({
     host: String(cfg.host || "").trim(),
     port,
     // Le port 993 est chiffre de bout en bout (TLS implicite) ; le 143
@@ -66,10 +75,34 @@ function clientFor(cfg, pass) {
     // Sans cela, un serveur injoignable laisserait la requete pendre
     // jusqu'au delai du navigateur. Without this, an unreachable server
     // would leave the request hanging until the browser times out.
-    socketTimeout: CONNECT_TIMEOUT_MS,
+    socketTimeout: SOCKET_TIMEOUT_MS,
     greetingTimeout: CONNECT_TIMEOUT_MS,
     connectionTimeout: CONNECT_TIMEOUT_MS
   });
+
+  // INDISPENSABLE. ImapFlow etend EventEmitter, et Node relance en
+  // `throw` tout evenement "error" emis sans auditeur. Or imapflow emet
+  // cet evenement depuis emitError(), appelee par le gestionnaire du
+  // timeout socket -- donc depuis un callback de minuterie, hors de
+  // toute pile d'appel `async`. Le `try/catch` des routes /api/mail ne
+  // pouvait structurellement pas l'attraper : l'erreur remontait en
+  // uncaughtException et faisait apparaitre la boite "A JavaScript error
+  // occurred in the main process" sous Electron (et tuait le serveur sur
+  // le Pi). Le rejet de la promesse `await`ee, lui, etait deja gere.
+  //
+  // MANDATORY. ImapFlow extends EventEmitter, and Node rethrows any
+  // "error" event emitted with no listener. imapflow emits it from
+  // emitError(), called by the socket timeout handler -- that is, from a
+  // timer callback, outside any `async` call stack. The /api/mail
+  // routes' `try/catch` structurally could not catch it: the error
+  // surfaced as an uncaughtException and raised the "A JavaScript error
+  // occurred in the main process" dialog under Electron (and killed the
+  // server on the Pi). The awaited promise rejection was already handled.
+  client.on("error", (err) => {
+    console.warn("[piboard] mail socket:", (err && (err.code || err.message)) || err);
+  });
+
+  return client;
 }
 
 function requireConfig(tileId, cfg) {
@@ -120,7 +153,12 @@ async function listHeaders(tileId, cfg) {
     return { messages: out, unseen, total };
   } finally {
     if (lock) lock.release();
-    try { await client.logout(); } catch (e) { /* deja ferme / already closed */ }
+    // Un logout() sur une connexion deja tombee attend une reponse qui
+    // ne viendra pas ; close() est immediat et sans effet si deja ferme.
+    // A logout() on an already-dropped connection waits for a reply that
+    // will never come; close() is immediate and a no-op if already shut.
+    try { if (client.usable) await client.logout(); else client.close(); }
+    catch (e) { /* deja ferme / already closed */ }
   }
 }
 
@@ -175,7 +213,12 @@ async function getMessage(tileId, cfg, uid) {
     };
   } finally {
     if (lock) lock.release();
-    try { await client.logout(); } catch (e) { /* deja ferme / already closed */ }
+    // Un logout() sur une connexion deja tombee attend une reponse qui
+    // ne viendra pas ; close() est immediat et sans effet si deja ferme.
+    // A logout() on an already-dropped connection waits for a reply that
+    // will never come; close() is immediate and a no-op if already shut.
+    try { if (client.usable) await client.logout(); else client.close(); }
+    catch (e) { /* deja ferme / already closed */ }
   }
 }
 

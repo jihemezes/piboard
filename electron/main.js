@@ -118,6 +118,34 @@ function installFileLogging() {
 }
 installFileLogging();
 
+/* Filet de securite de dernier recours. Sans auditeur, Electron affiche
+   une boite modale bloquante "A JavaScript error occurred in the main
+   process" -- et sur le PiBoard mural, personne n'est la pour cliquer
+   sur OK : le tableau reste fige derriere le dialogue. Une exception
+   emise hors pile d'appel (callback de minuterie, evenement de socket)
+   n'est rattrapable NULLE PART ailleurs, d'ou ce garde-fou global.
+
+   Ce filet ne dispense PAS de traiter l'erreur a la source : il est
+   volontairement place APRES installFileLogging() pour que la trace
+   complete atterrisse dans piboard.log et reste diagnosticable.
+
+   Last-resort safety net. With no listener, Electron shows a blocking
+   "A JavaScript error occurred in the main process" dialog -- and on the
+   wall-mounted PiBoard nobody is there to click OK: the board stays
+   frozen behind it. An exception thrown outside any call stack (timer
+   callback, socket event) cannot be caught ANYWHERE else, hence this
+   global guard.
+
+   This net is NOT a substitute for handling errors at their source: it
+   sits deliberately AFTER installFileLogging() so the full stack lands
+   in piboard.log and stays diagnosable. */
+process.on("uncaughtException", (err) => {
+  console.error("[piboard] uncaughtException:", (err && err.stack) || err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[piboard] unhandledRejection:", (reason && reason.stack) || reason);
+});
+
 const server = require("../server/index.js");
 const platform = require("../server/platform");
 const { initAutoUpdate, checkForUpdatesManually } = require("./updater");

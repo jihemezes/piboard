@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.67.1
+
+- **Correctif : la tuile Courriel pouvait faire planter l'application
+  entiere.** Un delai d'attente reseau pendant la lecture de la boite
+  faisait apparaitre la boite modale Windows "A JavaScript error
+  occurred in the main process" (message `Error: Socket timeout`), et
+  vidait la tuile jusqu'au rafraichissement suivant. Les deux symptomes
+  n'etaient pas deux bugs mais un seul evenement sortant par deux
+  chemins.
+  - **Cause racine.** `ImapFlow` etend `EventEmitter`. Lors d'un timeout
+    socket, imapflow appelle `emitError()`, qui se termine par
+    `this.emit("error", err)`. Node relance en `throw` tout evenement
+    `error` emis sans auditeur -- et aucun n'etait pose sur le client.
+    Comme cette emission a lieu dans un callback de minuterie, hors de
+    toute pile d'appel `async`, le `try/catch` des routes `/api/mail`
+    ne pouvait STRUCTURELLEMENT pas l'attraper : il ne voyait que le
+    rejet de la promesse, correctement traite en `502`. L'erreur
+    remontait donc en `uncaughtException` jusqu'au processus principal.
+  - **Correction** : ajout de l'auditeur `client.on("error", ...)`
+    manquant dans `clientFor()`. C'est le correctif de fond ; le reste
+    ci-dessous est du durcissement.
+  - `socketTimeout` dissocie des delais d'etablissement et porte de 15 s
+    a 40 s : les trois options partageaient la meme constante, si bien
+    qu'une grosse boite mettant plus de 15 s a renvoyer 25 enveloppes
+    declenchait un faux timeout en pleine lecture.
+    `connectionTimeout` et `greetingTimeout` restent a 15 s -- une
+    connexion doit toujours echouer vite.
+  - `logout()` remplace par `close()` quand la connexion est deja tombee
+    (`client.usable`) : un `logout()` sur socket mort attend une reponse
+    qui ne viendra jamais.
+
+- **Filet de securite global dans le processus principal Electron.**
+  `uncaughtException` et `unhandledRejection` sont desormais journalises
+  dans `piboard.log` au lieu de faire surgir un dialogue bloquant. Sur un
+  PiBoard mural, personne n'est la pour cliquer sur OK : le tableau
+  restait fige derriere la boite. Ce filet ne remplace pas le traitement
+  des erreurs a la source, il evite qu'un cas non anticipe n'immobilise
+  l'affichage.
+
 ## 1.67.0
 
 - **Aide d'un widget accessible depuis sa fenetre de configuration.** Un
