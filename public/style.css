@@ -2011,3 +2011,112 @@ body.touch .modal-help { width: 30px; height: 30px; font-size: 16px; }
    container): outside that context it needs a bounded height for its own
    scrolling to work. */
 .widget-help-card .help-content { max-height: calc(90vh - 60px); }
+
+/* ---------- Encadre d'avertissement dans l'aide / help warning box ----------
+   Utilise pour les mises en garde qu'il ne faut pas rater dans un pave
+   de texte -- typiquement le rappel que la tuile Chaines TV ne fournit
+   aucun contenu. Volontairement sobre : une bordure laterale plutot
+   qu'un fond criard, pour rester lisible en theme jour comme en theme
+   nuit sans introduire de nouvelle couleur.
+   Used for warnings that must not be missed in a wall of text --
+   typically the reminder that the TV channels tile provides no content.
+   Deliberately restrained: a side border rather than a loud background,
+   to stay readable in both day and night themes without introducing a
+   new colour. */
+.help-warn {
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* ---------- Guide de demarrage rapide / quick start guide ---------- */
+
+.quickstart-card {
+  width: min(860px, 94vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+.quickstart-body {
+  padding: 4px 22px 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  line-height: 1.6;
+}
+.quickstart-body h4 {
+  margin: 20px 0 8px;
+  font-size: 14px;
+  color: var(--text);
+}
+.quickstart-body p { margin: 0 0 10px; color: var(--text); }
+.quickstart-body .qs-lead { color: var(--muted); font-size: 14.5px; margin-bottom: 4px; }
+.quickstart-body .qs-foot {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tile-edge);
+  color: var(--muted);
+  font-size: 13px;
+}
+.quickstart-body .qs-shot {
+  display: block;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--tile-edge);
+  background: var(--tile);
+  padding: 4px;
+  margin: 6px 0 12px;
+}
+/* Legende des icones : deux colonnes tant qu'il y a la place, une seule
+   en dessous -- auto-fit plutot qu'un nombre fixe, pour ne pas casser
+   sur un ecran etroit ou en mode tactile.
+   Icon legend: two columns while there is room, one below -- auto-fit
+   rather than a fixed count, so it doesn't break on a narrow screen or
+   in touch mode. */
+.quickstart-body .qs-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px 18px;
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickstart-body .qs-icons b { color: var(--text); margin-right: 6px; }
+.quickstart-body .qs-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.quickstart-body .qs-two > div {
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickstart-body .qs-two b { color: var(--text); }
+
+.quickstart-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--tile-edge);
+}
+.quickstart-again {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+body.touch .quickstart-again { font-size: 15px; }
+body.touch .quickstart-again input { width: 20px; height: 20px; }

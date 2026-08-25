@@ -274,6 +274,11 @@
           <span data-i18n="settings.multiColumnForms">Multi-column settings windows</span>
         </label>
         <small class="field-hint" data-i18n="settings.multiColumnForms.hint">Spreads a settings window's sections across 2 or 3 columns when there's room, to shorten scrolling. On by default, independently of touch mode. Turn off to always keep a single column.</small>
+        <label class="field checkbox">
+          <input type="checkbox" id="setQuickStart">
+          <span data-i18n="settings.quickStart">Show the quick start guide at every launch</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.quickStart.hint">The short guide shown on first launch. It stays available at any time from the help, under "Quick start".</small>
       </fieldset>
 
       <fieldset class="form-section">
@@ -450,6 +455,24 @@
   </div>
 </div>
 
+<!-- Guide de demarrage rapide / quick start guide -->
+<div class="modal" id="quickStartModal" hidden>
+  <div class="modal-card quickstart-card">
+    <header class="modal-head">
+      <h2 data-i18n="quickstart.title">Getting started</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="quickstart-body" id="quickStartBody"></div>
+    <div class="quickstart-foot">
+      <label class="quickstart-again">
+        <input type="checkbox" id="quickStartAgain">
+        <span data-i18n="quickstart.again">Show this guide at every launch</span>
+      </label>
+      <button class="btn primary" id="quickStartClose" data-i18n="quickstart.close">Get started</button>
+    </div>
+  </div>
+</div>
+
 <!-- Parametres d'une tuile / tile settings -->
 <div class="modal" id="tileModal" hidden>
   <div class="modal-card">
@@ -504,6 +527,7 @@
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="i18n.js"></script>
 <script src="help-content.js"></script>
+<script src="quickstart-content.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,5 +1,66 @@
 # Changelog
 
+## 1.69.0
+
+- **Guide de demarrage rapide au premier lancement.** Nouvelle fenetre
+  ouverte automatiquement au tout premier demarrage, couvrant l'essentiel
+  en une minute : objectif de PiBoard et diaporama, distinction entre les
+  reglages GENERAUX et les reglages de CHAQUE TUILE, ajout d'une tuile,
+  redimensionnement et taille minimale propre a chaque widget, bouton "?"
+  disponible pendant la configuration d'une tuile, et sortie du mode
+  edition. La capture de la barre d'outils y est integree, avec la
+  legende des sept icones.
+  - **Aucun drapeau "premier lancement" a maintenir** : le reglage
+    `quickStartOnLaunch` vaut `true` dans `DEFAULT_SETTINGS`, qui
+    s'applique tant qu'aucun `data/settings.json` n'existe -- le guide
+    s'ouvre donc de lui-meme la premiere fois, et la case a cocher suffit
+    ensuite a decider.
+  - Ouverture en TOUTE FIN de `boot()`, pour que le guide s'affiche
+    par-dessus le tableau deja rendu plutot que devant un ecran vide.
+  - Case "Afficher ce guide a chaque lancement" dans la fenetre, doublee
+    d'une case dans les reglages generaux. La fermeture n'enregistre QUE
+    si la case a reellement change : une consultation depuis l'aide ne
+    reecrit pas les reglages et ne diffuse pas d'evenement SSE inutile
+    vers les autres ecrans.
+  - Acces manuel a tout moment : nouvelle rubrique "Demarrage rapide" en
+    tete du sommaire de l'aide.
+  - **Source unique** : la rubrique d'aide n'a pas de contenu propre,
+    elle reinjecte le texte de `public/quickstart-content.js`, plutot
+    qu'une copie qui divergerait a la premiere retouche. L'assertion
+    existante "toutes les fiches d'aide sont bilingues et non vides" a
+    donc ete rendue plus precise (titre et sous-titre toujours exiges
+    bilingues, seule l'exception de corps injecte est nommee) au lieu
+    d'etre affaiblie, et une assertion verifie que le corps injecte
+    existe vraiment.
+
+- **Tuile Chaines TV : rappel explicite qu'aucun contenu n'est fourni.**
+  Encadre d'avertissement en tete de la fiche d'aide (FR/EN) : PiBoard ne
+  fournit aucune chaine ni aucun contenu, la tuile n'est qu'un lecteur,
+  utilisable uniquement si l'on dispose deja par soi-meme d'un abonnement
+  ou d'un acces a un service IPTV, ou d'une playlist en libre acces.
+  Aucune adresse de service n'est fournie, suggeree ni integree, et la
+  legalite de la source relevee revient a l'utilisateur. Le meme rappel
+  prefixe la description du manifeste, donc **visible des le catalogue**,
+  avant meme d'ajouter la tuile.
+
+- **Fenetre de reglages generaux sur 3 colonnes.**
+  `layoutFormColumns(form, opts)` accepte desormais `preferMax`, utilise
+  par la seule fenetre de reglages generaux : la marge de 8 % qui
+  privilegiait MOINS de colonnes devient 1.0001, si bien que le plus
+  grand nombre de colonnes l'emporte a hauteur egale -- mais **jamais un
+  decoupage qui rendrait le formulaire PLUS haut**. Les fenetres de
+  reglages de TUILE conservent exactement l'ancien comportement, et le
+  repli sur 1 ou 2 colonnes sur ecran etroit est preserve
+  (`minCol = 300`).
+
+- **Aide globale** : capture de la barre d'outils ajoutee a la fiche
+  "Barre d'outils & reglages" ; nouvelle rubrique "Demarrage rapide".
+
+- **Tests** : 16 assertions ajoutees a `dom-smoke.js` (guide bilingue,
+  couverture des points obligatoires du guide, ouverture automatique,
+  case cochee par defaut, capture reellement injectee, fermeture,
+  rubrique d'aide a source unique, double rappel IPTV aide + manifeste).
+
 ## 1.68.0
 
 - **Le tableau devient defilant quand -- et seulement quand -- une tuile

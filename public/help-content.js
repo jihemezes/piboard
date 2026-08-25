@@ -20,6 +20,21 @@
 
     /* ================= PRESENTATION ================= */
     {
+      id: "quickstart",
+      group: "presentation",
+      title: { fr: "Démarrage rapide", en: "Quick start" },
+      sub: {
+        fr: "L'essentiel en une minute — le même guide qu'au premier lancement.",
+        en: "The gist in one minute — the same guide as on first launch."
+      },
+      /* Le corps est injecte par showHelpSection() depuis
+         quickstart-content.js : source unique, aucune copie a resynchroniser.
+         The body is injected by showHelpSection() from
+         quickstart-content.js: single source, no copy to keep in sync. */
+      html: { fr: "", en: "" }
+    },
+
+    {
       id: "intro",
       group: "presentation",
       title: { fr: "Présentation", en: "Overview" },
@@ -107,6 +122,7 @@
     {
       id: "drawer",
       group: "drawer",
+      screenshot: "help-assets/toolbar.png",
       title: { fr: "Barre d'outils & réglages", en: "Toolbar & settings" },
       sub: {
         fr: "Le tiroir escamotable du bas et ses réglages généraux.",
@@ -300,8 +316,9 @@
       html: {
         fr: `
           <span class="help-size">Taille : 5×4 par défaut, de 3×3 à 12×12</span>
+          <div class="help-warn"><b>PiBoard ne fournit aucune chaîne ni aucun contenu.</b> Cette tuile est un simple lecteur : elle ne fonctionne que si vous disposez <b>déjà</b> par vous-même d'un abonnement ou d'un accès à un service IPTV, ou d'une playlist de chaînes en libre accès. Sans playlist de votre part, la tuile reste vide — c'est normal, il n'y a rien à débloquer ni à configurer côté PiBoard. Aucune adresse de service n'est fournie, suggérée ni intégrée par défaut, et il vous revient de vous assurer que la source que vous utilisez est légale dans votre pays.</div>
           <h4>Objectif</h4>
-          <p>Regarder une chaîne directement sur le tableau, depuis une playlist de chaînes au format <code>.m3u</code> — le format standard que lisent VLC et Kodi.</p>
+          <p>Regarder une chaîne directement sur le tableau, depuis une playlist de chaînes au format <code>.m3u</code> que <b>vous fournissez</b> — le format standard que lisent VLC et Kodi.</p>
           <h4>Fonctionnement</h4>
           <p><b>Deux types de playlist sont reconnus automatiquement</b>, sans avoir à choisir un mode :</p>
           <p><b>Xtream Codes</b> — le cas des plateformes IPTV par abonnement (une adresse contenant un identifiant et un mot de passe, typiquement un lien « get.php »). La tuile propose alors une navigation à plusieurs niveaux, comme SmartIPTV ou TiviMate : <b>Direct / Films / Séries</b>, puis les catégories de chaque source (ex. « France HD|OTT »), puis la liste des flux. Une série ajoute un niveau supplémentaire : ses épisodes, regroupés par saison. Le bouton ‹ en haut à gauche remonte d'un niveau.</p>
@@ -333,8 +350,9 @@
           <div class="help-opt"><span class="help-opt-name">Plafond de qualité</span><span class="help-opt-desc">720p recommandé sur un Pi.</span></div>`,
         en: `
           <span class="help-size">Size: 5×4 by default, from 3×3 to 12×12</span>
+          <div class="help-warn"><b>PiBoard provides no channels and no content whatsoever.</b> This tile is a plain player: it only works if you <b>already</b> have, on your own, a subscription or access to an IPTV service, or a freely available channel playlist. With no playlist of yours, the tile stays empty — that is normal, there is nothing to unlock or configure on PiBoard's side. No service address is provided, suggested or bundled by default, and it is up to you to make sure the source you use is legal in your country.</div>
           <h4>Goal</h4>
-          <p>Watch a channel straight from the board, from a channel playlist in <code>.m3u</code> format — the standard format VLC and Kodi read.</p>
+          <p>Watch a channel straight from the board, from a channel playlist in <code>.m3u</code> format that <b>you supply</b> — the standard format VLC and Kodi read.</p>
           <h4>How it works</h4>
           <p><b>Two playlist types are recognized automatically</b>, no need to pick a mode:</p>
           <p><b>Xtream Codes</b> — subscription IPTV platforms (an address containing a username and password, typically a "get.php" link). The tile then offers multi-level navigation, like SmartIPTV or TiviMate: <b>Live / Movies / Series</b>, then each source's categories (e.g. "France HD|OTT"), then the stream list. A series adds one more level: its episodes, grouped by season. The ‹ button top-left goes back one level.</p>

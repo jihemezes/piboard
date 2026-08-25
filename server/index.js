@@ -91,6 +91,20 @@ const DEFAULT_SETTINGS = {
   gridRows: 8,           // hauteur logique de l'ecran en lignes / logical screen height in rows
   touchMode: false,      // interface tactile : cibles agrandies / touch UI: enlarged targets
   multiColumnForms: true, // fenetres de reglages en plusieurs colonnes / settings windows in multiple columns
+  /* Guide de demarrage rapide affiche au lancement. Vaut true au premier
+     demarrage (DEFAULT_SETTINGS s'applique tant que rien n'est
+     enregistre), donc le guide s'ouvre tout seul la premiere fois. La
+     case a cocher du guide bascule ce reglage : le decocher suffit a ne
+     plus le revoir, le recocher a le revoir a chaque lancement. Un seul
+     reglage plutot qu'un couple "deja vu" / "reafficher" : la personne
+     n'a ainsi qu'une seule chose a comprendre.
+     Quick start guide shown at launch. True on first boot
+     (DEFAULT_SETTINGS applies as long as nothing is saved), so the guide
+     opens by itself the first time. The guide's checkbox toggles this
+     setting: unticking is enough never to see it again, re-ticking to
+     see it at every launch. A single setting rather than a "seen" /
+     "show again" pair: the person only has one thing to understand. */
+  quickStartOnLaunch: true,
   colors: {
     dark: { bg: "#0B0E14", tile: "#141926" },
     light: { bg: "#EFEDE7", tile: "#FFFFFF" }

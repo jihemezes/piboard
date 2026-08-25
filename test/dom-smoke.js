@@ -2316,9 +2316,28 @@ function catalogItemFor(catalog, document, widgetId) {
     const catalogIds = [...new Set(help.filter((h) => h.group === "tiles").map((h) => h.id))];
     assert("chaque fiche de tuile a un identifiant unique", tileHelpIds.length === catalogIds.length);
     assert("les fiches de tuiles sont nombreuses (couverture reelle)", tileHelpIds.length >= 24);
-    // Toutes les fiches doivent etre bilingues et non vides.
-    const incomplete = help.filter((h) => !h.html || !h.html.fr || !h.html.en || !h.title || !h.title.fr || !h.title.en);
+    // Toutes les fiches doivent etre bilingues et non vides -- SAUF
+    // "quickstart", dont le corps est volontairement vide dans
+    // help-content.js parce qu'il est injecte a l'affichage depuis
+    // quickstart-content.js (source unique partagee avec la fenetre de
+    // lancement, cf. showHelpSection). Le titre et le sous-titre, eux,
+    // restent exiges bilingues comme partout ailleurs.
+    // Every page must be bilingual and non-empty -- EXCEPT "quickstart",
+    // whose body is deliberately empty in help-content.js because it is
+    // injected at display time from quickstart-content.js (single source
+    // shared with the launch window, see showHelpSection). Its title and
+    // subtitle are still required to be bilingual like everywhere else.
+    const INJECTED_BODY_IDS = ["quickstart"];
+    const incomplete = help.filter((h) =>
+      !h.title || !h.title.fr || !h.title.en ||
+      (!INJECTED_BODY_IDS.includes(h.id) && (!h.html || !h.html.fr || !h.html.en)));
     assert("toutes les fiches d'aide sont bilingues FR/EN et non vides", incomplete.length === 0);
+    // Et le corps injecte doit exister vraiment, sinon la rubrique
+    // s'afficherait vide sans que rien ne le signale.
+    // And the injected body must actually exist, otherwise the section
+    // would render empty with nothing flagging it.
+    assert("le corps injecte de 'quickstart' existe bien dans les deux langues",
+      !!(window.PIBOARD_QUICKSTART && window.PIBOARD_QUICKSTART.fr && window.PIBOARD_QUICKSTART.en));
   }
 
   console.log("== Configuration d'une tuile ==");
@@ -3937,6 +3956,70 @@ function catalogItemFor(catalog, document, widgetId) {
      so updateOverflow() always concludes "no overflow". We fake them to
      check BOTH states, the second one being precisely the one that must
      never happen by mistake. */
+  console.log("== Guide de demarrage rapide ==");
+  {
+    const qs = window.PIBOARD_QUICKSTART;
+    assert("contenu du guide charge dans les DEUX langues",
+      !!(qs && typeof qs.fr === "string" && typeof qs.en === "string" && qs.fr.length > 500 && qs.en.length > 500));
+
+    // Chaque point explicitement demande doit etre couvert, dans les deux
+    // langues. Repere par un marqueur stable du texte plutot que par une
+    // phrase entiere, qui casserait a la moindre reformulation.
+    // Every explicitly requested point must be covered, in both
+    // languages. Spotted via a stable marker rather than a whole
+    // sentence, which would break on the slightest rewording.
+    const musts = [
+      ["diaporama", "slideshow", "diaporama / slideshow"],
+      ["help-assets/toolbar.png", "help-assets/toolbar.png", "capture de la barre d'outils"],
+      ["taille minimale", "minimum size", "taille minimale des tuiles"],
+      ["mode edition", "edit mode", "sortie du mode edition"]
+    ];
+    for (const [fr, en, label] of musts) {
+      const okFr = qs.fr.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").includes(fr);
+      const okEn = qs.en.toLowerCase().includes(en);
+      assert("guide : " + label + " mentionne en FR et EN", okFr && okEn);
+    }
+
+    // Le guide doit s'ouvrir tout seul au premier lancement, et la case
+    // refleter le reglage courant.
+    // The guide must open by itself on first launch, with the checkbox
+    // reflecting the current setting.
+    const qsModal = document.getElementById("quickStartModal");
+    assert("fenetre du guide presente dans le DOM", !!qsModal);
+    assert("guide ouvert automatiquement au lancement (reglage par defaut)",
+      qsModal.hidden === false);
+    assert("case 'afficher a chaque lancement' cochee par defaut",
+      document.getElementById("quickStartAgain").checked === true);
+    assert("capture de la barre d'outils reellement injectee dans la fenetre",
+      !!document.querySelector("#quickStartBody img.qs-shot"));
+
+    // Fermeture : la case non modifiee ne doit rien reecrire.
+    // Closing: an untouched checkbox must not rewrite anything.
+    document.getElementById("quickStartClose")
+      .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("le guide se ferme sur 'C'est parti'", qsModal.hidden === true);
+
+    // La rubrique dediee doit exister dans le sommaire de l'aide, et
+    // reutiliser la MEME source que la fenetre (pas une copie).
+    // The dedicated section must exist in the help's table of contents,
+    // and reuse the SAME source as the window (not a copy).
+    const qsSection = (window.PIBOARD_HELP || []).find((x) => x.id === "quickstart");
+    assert("rubrique 'Demarrage rapide' presente dans le sommaire de l'aide", !!qsSection);
+    assert("rubrique d'aide sans corps propre (source unique, injectee depuis quickstart-content.js)",
+      !!qsSection && qsSection.html.fr === "" && qsSection.html.en === "");
+  }
+
+  console.log("== Chaines TV : rappel d'absence de contenu ==");
+  {
+    const iptv = (window.PIBOARD_HELP || []).find((x) => x.id === "iptv");
+    assert("aide Chaines TV : encadre d'avertissement present en FR et EN",
+      !!iptv && iptv.html.fr.includes("help-warn") && iptv.html.en.includes("help-warn"));
+    assert("aide Chaines TV : precise qu'aucun contenu n'est fourni (FR)",
+      !!iptv && /ne fournit aucune cha/i.test(iptv.html.fr.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+    assert("aide Chaines TV : precise qu'aucun contenu n'est fourni (EN)",
+      !!iptv && /provides no channels/i.test(iptv.html.en));
+  }
+
   console.log("== Tableau : ascenseur strictement conditionnel ==");
   {
     const board = document.querySelector(".board");

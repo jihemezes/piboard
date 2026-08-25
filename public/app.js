@@ -1424,7 +1424,7 @@
      scrolling. At near-equal height, prefer FEWER columns (wider columns =
      more readable fields, longer lines), which avoids e.g. an empty 3rd
      column when 2 suffice (RSS case). */
-  function layoutFormColumns(form) {
+  function layoutFormColumns(form, opts) {
     if (!form) return;
     const modalCardReset = form.closest(".modal-card");
     // Par defaut : pas d'info de colonnes (largeur par defaut du modal).
@@ -1544,13 +1544,41 @@
       return { height: Math.max(...colH), assign };
     }
 
+    /* Deux politiques, selon l'appelant.
+
+       Par defaut (fenetre de reglages d'une TUILE) : preferer MOINS de
+       colonnes tant que la hauteur n'est pas nettement meilleure (marge
+       de 8 %). Des colonnes plus larges restent plus lisibles, et cela
+       evite une 3e colonne quasi vide sur un widget simple.
+
+       Avec `preferMax` (fenetre de reglages GENERAUX, voir
+       openSettings) : preferer AU CONTRAIRE le maximum de colonnes des
+       que la hauteur ne s'en trouve pas degradee. Cette fenetre a six
+       sections d'un coup, toutes consultees en survol plutot que lues en
+       continu ; l'etaler sur trois colonnes supprime pratiquement tout
+       defilement. Le facteur 1.0001 (au lieu de 0.92) fait gagner le
+       plus grand n a hauteur egale, sans jamais retenir un decoupage qui
+       rendrait le formulaire PLUS haut.
+
+       Two policies, depending on the caller.
+
+       By default (a TILE's settings window): prefer FEWER columns unless
+       the height is clearly better (8% margin). Wider columns stay more
+       readable, and this avoids a nearly empty 3rd column on a simple
+       widget.
+
+       With `preferMax` (GENERAL settings window, see openSettings):
+       prefer INSTEAD the maximum number of columns as soon as the height
+       is not made worse by it. That window has six sections at once, all
+       scanned rather than read through; spreading it over three columns
+       removes practically all scrolling. The 1.0001 factor (instead of
+       0.92) lets the largest n win at equal height, without ever picking
+       a split that would make the form TALLER. */
+    const margin = (opts && opts.preferMax) ? 1.0001 : 0.92;
     let best = null;
     for (let n = 1; n <= maxCols; n++) {
       const t = trial(n);
-      // Preferer moins de colonnes si la hauteur n'est pas nettement
-      // meilleure (marge de 8 %). Prefer fewer columns unless the height
-      // is clearly better (8% margin).
-      if (!best || t.height < best.height * 0.92) best = { n, ...t };
+      if (!best || t.height < best.height * margin) best = { n, ...t };
     }
     if (!best) return;
 
@@ -2388,6 +2416,7 @@
     $("setKeyboard").checked = !!settings.keyboardEnabled;
     $("setTouch").checked = !!settings.touchMode;
     $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
+    $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
     // Couverture des tiroirs : lue depuis leur etat reel (persiste via
     // le layout, pas les reglages generaux -- voir le commentaire sur
     // les ecouteurs "change" plus bas) plutot que dupliquee ici.
@@ -2410,7 +2439,7 @@
     fillScreensaverForm();
     fillDesktopAppForm();
     $("settingsModal").hidden = false;
-    requestAnimationFrame(() => layoutFormColumns(document.querySelector("#settingsModal .form")));
+    requestAnimationFrame(() => layoutFormColumns(document.querySelector("#settingsModal .form"), { preferMax: true }));
   }
 
   async function saveSettings() {
@@ -2421,6 +2450,7 @@
       keyboardEnabled: $("setKeyboard").checked,
       touchMode: $("setTouch").checked,
       multiColumnForms: $("setMultiColumnForms").checked,
+      quickStartOnLaunch: $("setQuickStart").checked,
       colors: {
         dark: { bg: $("setDarkBg").value, tile: $("setDarkTile").value },
         light: { bg: $("setLightBg").value, tile: $("setLightTile").value }
@@ -3389,6 +3419,19 @@
       i18n.fromManifest(sec.html);
     content.scrollTop = 0;
 
+    // La rubrique "Demarrage rapide" de l'aide n'a pas de contenu propre :
+    // elle reutilise le MEME texte que la fenetre de lancement (source
+    // unique, voir quickstart-content.js) plutot que d'en maintenir une
+    // copie qui divergerait a la premiere retouche.
+    // The help's "Quick start" section has no content of its own: it
+    // reuses the SAME text as the launch window (single source, see
+    // quickstart-content.js) rather than maintaining a copy that would
+    // drift on the first edit.
+    if (id === "quickstart") {
+      const qs = (window.PIBOARD_QUICKSTART || {})[settings.lang === "fr" ? "fr" : "en"];
+      if (qs) content.innerHTML = `<h3>${i18n.fromManifest(sec.title)}</h3>` + qs;
+    }
+
     if (id === "about") {
       // Meme source que la version affichee dans les reglages generaux
       // (voir plus haut /api/version) : un seul appel reseau au demarrage
@@ -3564,6 +3607,42 @@
     // native behaviour (the scrolling child consumes first, then the
     // board) is exactly the one expected. The Traffic tile thus keeps its
     // wheel zoom, Leaflet calling preventDefault().
+  }
+
+  /* ---------- Guide de demarrage rapide / quick start guide ---------- */
+
+  /* Ouvre le guide. `auto` distingue l'ouverture automatique au lancement
+     de l'ouverture manuelle depuis l'aide : dans le second cas la case
+     "afficher a chaque lancement" reflete toujours le reglage, mais la
+     personne consulte volontairement -- il n'y a rien a enregistrer tant
+     qu'elle ne touche pas a la case.
+     Opens the guide. `auto` tells apart the automatic open at launch from
+     a manual open via the help: in the latter case the "show at every
+     launch" checkbox still reflects the setting, but the person is
+     looking it up on purpose -- there is nothing to save unless they
+     actually touch the checkbox. */
+  function openQuickStart() {
+    const content = (window.PIBOARD_QUICKSTART || {})[settings.lang === "fr" ? "fr" : "en"];
+    if (!content) return;
+    $("quickStartBody").innerHTML = content;
+    $("quickStartAgain").checked = settings.quickStartOnLaunch !== false;
+    $("quickStartModal").hidden = false;
+  }
+
+  function closeQuickStart() {
+    $("quickStartModal").hidden = true;
+    // N'enregistre QUE si la case a change : un guide simplement consulte
+    // depuis l'aide ne doit pas reecrire les reglages, et une ecriture
+    // inutile declencherait un evenement SSE "settings" vers les autres
+    // ecrans pour rien.
+    // Saves ONLY if the checkbox changed: a guide merely consulted from
+    // the help must not rewrite the settings, and a needless write would
+    // fire a "settings" SSE event to the other screens for nothing.
+    const wanted = $("quickStartAgain").checked;
+    if (wanted === (settings.quickStartOnLaunch !== false)) return;
+    settings.quickStartOnLaunch = wanted;
+    apiPut("/api/settings", { quickStartOnLaunch: wanted })
+      .catch((e) => console.warn("[piboard] preference demarrage rapide non enregistree:", e));
   }
 
   function applySettings() {
@@ -3811,6 +3890,15 @@
     onActivate($("btnEdit"), () => toggleEdit());
     onActivate($("btnSettings"), openSettings);
     onActivate($("btnHelp"), openHelp);
+    onActivate($("quickStartClose"), closeQuickStart);
+    // La croix de fermeture du modal passe par le gestionnaire generique
+    // [data-close] : on lui greffe l'enregistrement de la case, sinon
+    // fermer par la croix perdrait le choix qui vient d'etre fait.
+    // The modal's close cross goes through the generic [data-close]
+    // handler: we graft the checkbox save onto it, otherwise closing via
+    // the cross would lose the choice just made.
+    $("quickStartModal").querySelector("[data-close]")
+      .addEventListener("click", closeQuickStart);
     onActivate($("btnScreensaverNow"), () => launchScreensaverNow());
     onActivate($("btnExit"), () => openExitMenu());
     onActivate($("exitOptionReset"), () => resetDashboard());
@@ -4079,6 +4167,20 @@
     );
     checkScreensaver();
     setInterval(checkScreensaver, 15000);
+
+    /* Guide de demarrage rapide, en TOUTE FIN de boot : le tableau est
+       deja rendu derriere, donc la personne voit le guide par-dessus son
+       PiBoard reel plutot que devant un ecran vide. Au tout premier
+       lancement, aucun settings.json n'existe encore et
+       DEFAULT_SETTINGS.quickStartOnLaunch vaut true -- le guide s'ouvre
+       donc de lui-meme, sans drapeau "premier lancement" a maintenir.
+       Quick start guide, at the VERY END of boot: the board is already
+       rendered behind, so the person sees the guide over their actual
+       PiBoard rather than over a blank screen. On the very first launch
+       no settings.json exists yet and DEFAULT_SETTINGS.quickStartOnLaunch
+       is true -- so the guide opens by itself, with no "first launch"
+       flag to maintain. */
+    if (settings.quickStartOnLaunch !== false) openQuickStart();
   }
 
   boot().catch((e) => {

@@ -23,3 +23,11 @@ l'aide intégrée (voir `showHelpSection()` dans `app.js` et le champ
   pour rester lisible une fois réduite dans la fenêtre d'aide.
 - Poids raisonnable (quelques centaines de Ko) : ces images sont
   servies depuis le Raspberry Pi lui-même.
+
+## Captures déjà présentes
+
+- `toolbar.png` — la barre d'outils du bas et ses sept icônes. Utilisée
+  à DEUX endroits : la fiche d'aide « Barre d'outils & réglages » (via le
+  champ `screenshot`) et le guide de démarrage rapide (référencée en dur
+  dans `public/quickstart-content.js`, classe `.qs-shot`). Si vous la
+  remplacez, vérifiez donc les deux rendus.
