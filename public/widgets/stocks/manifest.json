@@ -1,0 +1,87 @@
+{
+  "id": "stocks",
+  "version": "1.0.0",
+  "name": {
+    "en": "Stocks & indices",
+    "fr": "Bourse et indices"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Prices for stock indices, shares, currencies and commodities, one line each with the day's change. Pick from a curated list per exchange, or type any symbol yourself. Click a line for a 1-month to 5-year chart. Quotes are delayed, not real-time. Free sources, no key or account.",
+    "fr": "Cours des indices boursiers, actions, devises et matières premières, une ligne chacun avec la variation du jour. Choisissez dans une liste par place, ou saisissez vous-même n'importe quel symbole. Cliquez une ligne pour une courbe de 1 mois à 5 ans. Cours différés, pas en temps réel. Sources gratuites, sans clé ni compte."
+  },
+  "tagline": {
+    "en": "Indices, shares and currencies at a glance.",
+    "fr": "Indices, actions et devises d'un coup d'œil."
+  },
+  "size": {
+    "w": 3,
+    "h": 3,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 8,
+    "maxH": 8
+  },
+  "settings": [
+    {
+      "key": "lines",
+      "type": "rows",
+      "source": "api/stocks/catalog",
+      "default": "[{\"name\": \"CAC 40\", \"exchange\": \"indices\", \"symbol\": \"^CAC\"}, {\"name\": \"S&P 500\", \"exchange\": \"indices\", \"symbol\": \"^SPX\"}, {\"name\": \"Nasdaq\", \"exchange\": \"indices\", \"symbol\": \"^NDQ\"}, {\"name\": \"DAX\", \"exchange\": \"indices\", \"symbol\": \"^DAX\"}, {\"name\": \"EUR / USD\", \"exchange\": \"fx\", \"symbol\": \"EURUSD\"}]",
+      "label": {
+        "en": "Lines to display",
+        "fr": "Lignes à afficher"
+      },
+      "hint": {
+        "en": "Name, exchange, then instrument. Choose \"Other…\" in the instrument list to type any symbol supported by the source (e.g. NESN.CH).",
+        "fr": "Nom, place, puis instrument. Choisissez « Autre… » dans la liste des instruments pour saisir n'importe quel symbole reconnu par la source (ex. NESN.CH)."
+      }
+    },
+    {
+      "key": "showChange",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the day's change",
+        "fr": "Afficher la variation du jour"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 15,
+      "min": 1,
+      "max": 120,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      }
+    },
+    {
+      "key": "chartBgColor",
+      "type": "color",
+      "default": "#141926",
+      "label": {
+        "en": "Chart background",
+        "fr": "Fond du graphique"
+      },
+      "group": {
+        "en": "Chart",
+        "fr": "Graphique"
+      }
+    },
+    {
+      "key": "chartLineColor",
+      "type": "color",
+      "default": "#D6335C",
+      "label": {
+        "en": "Curve color",
+        "fr": "Couleur de la courbe"
+      },
+      "group": {
+        "en": "Chart",
+        "fr": "Graphique"
+      }
+    }
+  ]
+}

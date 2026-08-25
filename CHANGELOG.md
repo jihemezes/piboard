@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.72.0
+
+- **Nouvelle tuile "Bourse et indices"** : indices, actions, devises et
+  matieres premieres, une ligne chacun avec la variation du jour, sur le
+  modele de la tuile Cryptos. Clic sur une ligne -> courbe 1 mois /
+  6 mois / 1 an / 5 ans. Par defaut : CAC 40, S&P 500, Nasdaq, DAX,
+  EUR/USD.
+  - **DEUX sources**, meme schema que Cryptos : Stooq en principal,
+    Yahoo Finance en repli. Aucune cle, aucun compte.
+  - **Le piege de Stooq** : quand le quota journalier est depasse,
+    l'erreur revient DANS LE CORPS avec un statut HTTP 200. Un simple
+    `res.ok` aurait affiche du texte d'erreur a la place d'un cours.
+    `isStooqError()` valide le contenu et non le statut. Meme traitement
+    pour un symbole inconnu, ou Stooq repond "N/D" partout plutot que
+    d'echouer -- sans quoi la tuile afficherait NaN.
+  - **Cours DIFFERES**, jamais du temps reel : l'aide le dit dans un
+    encadre plutot que de laisser croire au direct.
+  - Repli sur la derniere valeur connue si les deux sources echouent, la
+    ligne s'estompant legerement -- signale, pas camoufle.
+
+- **Nouveau type de reglage `rows`** dans le moteur de formulaires :
+  editeur de lignes repetables a colonnes decrites dans le manifeste.
+  - **Aucune modification de `collectTileFormValues()`** : le tableau
+    ecrit son contenu en JSON dans un `<input type="hidden" data-key>`,
+    et la collecte, qui parcourt simplement `[data-key]`, continue de
+    fonctionner telle quelle. Le type est donc reutilisable par d'autres
+    widgets sans nouvelle plomberie.
+  - Listes dependantes : changer de place recharge les instruments et
+    reinitialise le symbole, plutot que de conserver un symbole
+    inexistant sur la nouvelle place.
+  - Le nom se remplit automatiquement depuis le libelle de l'instrument
+    s'il est vide, sans JAMAIS ecraser un nom saisi par la personne.
+
+- **Entree "Autre..." avec saisie libre** : la source couvre plus de
+  21 000 titres, impossible a loger dans un menu deroulant. Le catalogue
+  cure (`server/stocksCatalog.js`) couvre les cas courants, et "Autre..."
+  ouvre un champ acceptant n'importe quel symbole reconnu.
+
+- **Devise native, sans conversion** : chaque ligne affiche son propre
+  symbole (EUR, USD, GBP, JPY...). Convertir un indice n'aurait aucun
+  sens. Pour un symbole saisi a la main, la devise est DEVINEE d'apres le
+  suffixe -- juste dans la plupart des cas mais pas tous, ce que l'aide
+  precise. Une devise indeterminee reste `null` plutot qu'inventee.
+
+- **Tests** : nouveau `test/stocks.test.js` (22 assertions, sans reseau),
+  dont la detection du quota Stooq en HTTP 200, la ligne "N/D", et le
+  refus de traduire vers Yahoo un indice inconnu (mieux vaut pas de repli
+  qu'un repli sur le mauvais titre).
+
 ## 1.71.0
 
 - **Nouvelle tuile "Couleur Tempo"** : la couleur du jour de l'offre

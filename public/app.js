@@ -1744,6 +1744,37 @@
         }).join("");
         return `<label class="field"><span>${label}</span><select data-key="${f.key}">${body}</select>${hint}</label>`;
       }
+      /* Type "rows" : editeur de lignes repetables (nom + place +
+         instrument), utilise par la tuile Bourse. Generique : les
+         colonnes sont decrites dans le manifeste.
+
+         ASTUCE QUI EVITE DE TOUCHER A LA COLLECTE : le tableau ecrit son
+         contenu en JSON dans un <input type="hidden" data-key="...">.
+         collectTileFormValues(), qui parcourt simplement [data-key],
+         continue donc de fonctionner sans UNE SEULE modification, et le
+         type reste reutilisable par d'autres widgets plus tard.
+
+         Type "rows": repeatable row editor (name + exchange +
+         instrument), used by the Stocks tile. Generic: the columns are
+         described in the manifest.
+
+         THE TRICK THAT AVOIDS TOUCHING COLLECTION: the table writes its
+         contents as JSON into a <input type="hidden" data-key="...">.
+         collectTileFormValues(), which simply walks [data-key], therefore
+         keeps working with NOT A SINGLE change, and the type stays
+         reusable by other widgets later. */
+      case "rows": {
+        let initial = [];
+        try { initial = typeof v === "string" ? JSON.parse(v || "[]") : (Array.isArray(v) ? v : []); }
+        catch (e) { initial = []; }
+        return `<div class="field field-rows" data-rows-field="${f.key}" data-rows-src="${escapeHtmlAttr(f.source || "")}">
+          <span>${label}</span>
+          <div class="rows-body"></div>
+          <button type="button" class="rows-add">+ ${escapeHtmlAttr(i18n.t("rows.add"))}</button>
+          <input type="hidden" data-key="${f.key}" value="${escapeHtmlAttr(JSON.stringify(initial))}">
+          ${hint}
+        </div>`;
+      }
       case "checkbox":
         return `<label class="field checkbox"><input type="checkbox" data-key="${f.key}" ${v ? "checked" : ""}><span>${label}</span></label>${hint}`;
       case "number":
@@ -1945,6 +1976,14 @@
       });
     });
 
+    // Editeurs de lignes (type "rows") : listes dependantes + saisie
+    // libre. Initialises apres l'insertion du formulaire, le catalogue
+    // etant charge depuis le serveur.
+    // Row editors (type "rows"): dependent dropdowns + free text.
+    // Initialised after the form is inserted, the catalog being fetched
+    // from the server.
+    form.querySelectorAll("[data-rows-field]").forEach((el) => initRowsEditor(el));
+
     // Etat de chaque secret ("enregistre" / "non defini") : demande au
     // serveur, jamais devine depuis les reglages -- ils ne le contiennent
     // pas. Each secret's state ("stored" / "not set"): asked of the
@@ -1959,6 +1998,135 @@
     // After display (heights measurable): compute the best column layout.
     // requestAnimationFrame ensures the browser has laid things out.
     requestAnimationFrame(() => layoutFormColumns(form));
+  }
+
+  /* Cache du catalogue : une seule requete par session, quel que soit le
+     nombre d'ouvertures de la fenetre de reglages.
+     Catalog cache: a single request per session, however many times the
+     settings window is opened. */
+  let rowsCatalogCache = null;
+
+  async function loadRowsCatalog(src) {
+    if (!src) return [];
+    if (rowsCatalogCache) return rowsCatalogCache;
+    try {
+      const r = await fetch(src);
+      rowsCatalogCache = (await r.json()).exchanges || [];
+    } catch (e) {
+      console.warn("[piboard] catalogue indisponible", e);
+      rowsCatalogCache = [];
+    }
+    return rowsCatalogCache;
+  }
+
+  async function initRowsEditor(el) {
+    const hidden = el.querySelector("input[type=hidden]");
+    const body = el.querySelector(".rows-body");
+    const exchanges = await loadRowsCatalog(el.dataset.rowsSrc);
+
+    let rows = [];
+    try { rows = JSON.parse(hidden.value || "[]"); } catch (e) { rows = []; }
+    if (!Array.isArray(rows)) rows = [];
+
+    const CUSTOM = "__custom__";
+
+    // Source de verite unique : le tableau `rows`. Le DOM n'est qu'un
+    // reflet, reconstruit a chaque changement. Plus simple a garder
+    // coherent qu'une synchronisation champ par champ, et le nombre de
+    // lignes reste petit.
+    // Single source of truth: the `rows` array. The DOM is just a
+    // reflection, rebuilt on every change. Easier to keep consistent than
+    // field-by-field syncing, and the row count stays small.
+    function commit() {
+      hidden.value = JSON.stringify(rows);
+    }
+
+    function labelOf(x) {
+      return typeof x === "string" ? x : i18n.fromManifest(x);
+    }
+
+    function render() {
+      body.innerHTML = rows.map((row, i) => {
+        const ex = exchanges.find((e) => e.id === row.exchange) || exchanges[0] || { instruments: [] };
+        const known = (ex.instruments || []).some((it) => it.symbol === row.symbol);
+        const isCustom = row.symbol && !known;
+        const exOpts = exchanges.map((e) =>
+          `<option value="${escapeHtmlAttr(e.id)}" ${e.id === row.exchange ? "selected" : ""}>${escapeHtmlAttr(labelOf(e.label))}</option>`).join("");
+        const inOpts = (ex.instruments || []).map((it) =>
+          `<option value="${escapeHtmlAttr(it.symbol)}" ${it.symbol === row.symbol ? "selected" : ""}>${escapeHtmlAttr(labelOf(it.label))}</option>`).join("")
+          + `<option value="${CUSTOM}" ${isCustom ? "selected" : ""}>${escapeHtmlAttr(i18n.t("rows.custom"))}</option>`;
+        return `<div class="rows-row" data-i="${i}">
+          <input class="rows-name" type="text" value="${escapeHtmlAttr(row.name || "")}" placeholder="${escapeHtmlAttr(i18n.t("rows.name"))}">
+          <select class="rows-ex">${exOpts}</select>
+          <select class="rows-in">${inOpts}</select>
+          <input class="rows-custom" type="text" value="${escapeHtmlAttr(isCustom ? row.symbol : "")}" placeholder="${escapeHtmlAttr(i18n.t("rows.symbol"))}" ${isCustom ? "" : "hidden"}>
+          <button type="button" class="rows-del" aria-label="${escapeHtmlAttr(i18n.t("rows.remove"))}">&times;</button>
+        </div>`;
+      }).join("");
+      commit();
+    }
+
+    body.addEventListener("input", (e) => {
+      const rowEl = e.target.closest(".rows-row");
+      if (!rowEl) return;
+      const i = Number(rowEl.dataset.i);
+      if (e.target.classList.contains("rows-name")) { rows[i].name = e.target.value; commit(); }
+      else if (e.target.classList.contains("rows-custom")) { rows[i].symbol = e.target.value.trim(); commit(); }
+    });
+
+    body.addEventListener("change", (e) => {
+      const rowEl = e.target.closest(".rows-row");
+      if (!rowEl) return;
+      const i = Number(rowEl.dataset.i);
+      if (e.target.classList.contains("rows-ex")) {
+        // Changer de place invalide l'instrument : on retombe sur le
+        // premier de la nouvelle place plutot que de garder un symbole
+        // qui n'y existe pas.
+        // Changing exchange invalidates the instrument: we fall back to
+        // the new exchange's first one rather than keeping a symbol that
+        // does not exist there.
+        rows[i].exchange = e.target.value;
+        const ex = exchanges.find((x) => x.id === rows[i].exchange);
+        rows[i].symbol = (ex && ex.instruments[0] && ex.instruments[0].symbol) || "";
+        render();
+      } else if (e.target.classList.contains("rows-in")) {
+        if (e.target.value === CUSTOM) {
+          rows[i].symbol = "";
+          render();
+          const c = body.querySelector(`.rows-row[data-i="${i}"] .rows-custom`);
+          if (c) { c.hidden = false; c.focus(); }
+        } else {
+          rows[i].symbol = e.target.value;
+          // Un nom laisse vide reprend le libelle de l'instrument : on
+          // evite une ligne sans intitule sans jamais ecraser un nom
+          // choisi par la personne.
+          // An empty name adopts the instrument's label: avoids an
+          // unlabelled row without ever overwriting a name the person
+          // chose.
+          if (!rows[i].name) {
+            const ex = exchanges.find((x) => x.id === rows[i].exchange);
+            const it = ex && ex.instruments.find((y) => y.symbol === e.target.value);
+            if (it) rows[i].name = labelOf(it.label);
+          }
+          render();
+        }
+      }
+    });
+
+    body.addEventListener("click", (e) => {
+      const del = e.target.closest(".rows-del");
+      if (!del) return;
+      rows.splice(Number(del.closest(".rows-row").dataset.i), 1);
+      render();
+    });
+
+    el.querySelector(".rows-add").addEventListener("click", () => {
+      const ex = exchanges[0] || { id: "", instruments: [] };
+      rows.push({ name: "", exchange: ex.id, symbol: (ex.instruments[0] || {}).symbol || "" });
+      render();
+    });
+
+    render();
   }
 
   function collectTileFormValues() {

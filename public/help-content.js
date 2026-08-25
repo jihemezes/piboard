@@ -610,6 +610,52 @@
     },
 
     {
+      id: "stocks",
+      group: "tiles",
+      title: { fr: "Bourse et indices", en: "Stocks & indices" },
+      sub: {
+        fr: "Indices, actions, devises et matières premières, avec courbe au clic.",
+        en: "Indices, shares, currencies and commodities, with a chart on click."
+      },
+      html: {
+        fr: `
+          <h4>Objectif</h4>
+          <p>Suivre quelques valeurs qui vous intéressent, une ligne chacune, avec la variation du jour. Un clic sur une ligne ouvre une courbe de 1 mois à 5 ans. Par défaut la tuile affiche le CAC 40, le S&P 500, le Nasdaq, le DAX et l'EUR/USD.</p>
+
+          <div class="help-warn"><b>Les cours sont différés, pas en temps réel.</b> Selon l'instrument et l'heure, la valeur affichée peut être celle de la clôture précédente. C'est sans importance pour un tableau mural, mais ne vous en servez pas pour passer un ordre.</div>
+
+          <h4>Configurer les lignes</h4>
+          <p>Dans les réglages de la tuile, chaque ligne se compose de trois colonnes : un <b>nom</b> libre (celui affiché sur la tuile), la <b>place</b> ou la famille, puis l'<b>instrument</b>. Changer la place recharge la liste des instruments ; le nom se remplit tout seul si vous l'avez laissé vide, sans jamais écraser un nom que vous avez choisi.</p>
+          <p>Les listes ne contiennent qu'une sélection : la source couvre plus de 21 000 titres, impossible à mettre dans un menu déroulant. Pour tout le reste, choisissez <b>« Autre… »</b> en fin de liste d'instruments : un champ de saisie apparaît et accepte n'importe quel symbole reconnu par la source.</p>
+
+          <h4>Écrire un symbole à la main</h4>
+          <p>La convention est celle de la source : suffixe de place (<code>.US</code>, <code>.FR</code>, <code>.DE</code>, <code>.UK</code>, <code>.JP</code>…), indices préfixés de <code>^</code>, paires de change en six lettres (<code>EURUSD</code>). Exemples : <code>NESN.CH</code> pour Nestlé, <code>^SPX</code> pour le S&P 500.</p>
+          <p><b>Attention à la devise</b> : pour un symbole saisi à la main, PiBoard la devine à partir du suffixe. La devinette est juste dans la plupart des cas mais pas toujours ; si le symbole affiché à côté du cours vous semble faux, c'est cela.</p>
+
+          <h4>Sources</h4>
+          <p>Stooq en principal, Yahoo Finance en secours — même principe que la tuile Cryptos avec Binance et CoinGecko. Aucune clé ni compte. Si les deux échouent, la ligne conserve sa dernière valeur connue en s'estompant légèrement, plutôt que de disparaître.</p>
+        `,
+        en: `
+          <h4>Goal</h4>
+          <p>Follow a handful of instruments you care about, one line each, with the day's change. Clicking a line opens a chart from 1 month to 5 years. By default the tile shows the CAC 40, S&P 500, Nasdaq, DAX and EUR/USD.</p>
+
+          <div class="help-warn"><b>Quotes are delayed, not real-time.</b> Depending on the instrument and the hour, the value shown may be the previous close. That does not matter for a wall board, but do not trade on it.</div>
+
+          <h4>Configuring the lines</h4>
+          <p>In the tile's settings, each line has three columns: a free <b>name</b> (the one shown on the tile), the <b>exchange</b> or family, then the <b>instrument</b>. Changing the exchange reloads the instrument list; the name fills itself in if you left it empty, without ever overwriting one you chose.</p>
+          <p>The lists hold a selection only: the source covers more than 21,000 securities, which no dropdown could hold. For everything else, pick <b>"Other…"</b> at the end of the instrument list: a text field appears and accepts any symbol the source recognises.</p>
+
+          <h4>Typing a symbol by hand</h4>
+          <p>The convention is the source's: exchange suffix (<code>.US</code>, <code>.FR</code>, <code>.DE</code>, <code>.UK</code>, <code>.JP</code>…), indices prefixed with <code>^</code>, FX pairs as six letters (<code>EURUSD</code>). Examples: <code>NESN.CH</code> for Nestlé, <code>^SPX</code> for the S&P 500.</p>
+          <p><b>Mind the currency</b>: for a hand-typed symbol, PiBoard guesses it from the suffix. The guess is right in most cases but not all; if the symbol shown next to the price looks wrong, that is why.</p>
+
+          <h4>Sources</h4>
+          <p>Stooq first, Yahoo Finance as backup — the same principle as the Crypto tile with Binance and CoinGecko. No key or account. If both fail, the line keeps its last known value and dims slightly, rather than disappearing.</p>
+        `
+      }
+    },
+
+    {
       id: "tempo",
       group: "tiles",
       title: { fr: "Couleur Tempo", en: "Tempo colour" },

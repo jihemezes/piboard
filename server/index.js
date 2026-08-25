@@ -1142,6 +1142,42 @@ app.delete("/api/tile-secrets/:tileId", (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------- Bourse / stocks ----------
+   Voir server/stocks.js (Stooq puis Yahoo) et server/stocksCatalog.js.
+   See server/stocks.js (Stooq then Yahoo) and server/stocksCatalog.js. */
+const stocks = require("./stocks");
+const stocksCatalog = require("./stocksCatalog");
+
+app.get("/api/stocks/catalog", (req, res) => {
+  res.set("Cache-Control", "public, max-age=3600");
+  res.json({ exchanges: stocksCatalog.EXCHANGES });
+});
+
+app.get("/api/stocks/quotes", async (req, res) => {
+  const symbols = String(req.query.symbols || "").split(",")
+    .map((x) => x.trim()).filter(Boolean).slice(0, 20);
+  if (!symbols.length) return res.status(400).json({ error: "missing symbols" });
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json(await stocks.getQuotes(symbols));
+  } catch (e) {
+    console.warn("[piboard] stocks quotes echec ->", symbols.join(","), e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/stocks/chart", async (req, res) => {
+  const symbol = String(req.query.symbol || "").trim();
+  const range = String(req.query.range || "1y").trim();
+  if (!symbol) return res.status(400).json({ error: "missing symbol" });
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json(await stocks.getChart(symbol, range));
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
 /* ---------- Couleur Tempo / Tempo colour ----------
    Voir server/tempo.js (relais + cache partage de 30 min).
    See server/tempo.js (relay + 30 min shared cache). */
