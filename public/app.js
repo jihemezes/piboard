@@ -1799,6 +1799,20 @@
         let initial = [];
         try { initial = typeof v === "string" ? JSON.parse(v || "[]") : (Array.isArray(v) ? v : []); }
         catch (e) { initial = []; }
+        let def = [];
+        try { def = typeof f.default === "string" ? JSON.parse(f.default || "[]") : (Array.isArray(f.default) ? f.default : []); }
+        catch (e) { def = []; }
+        /* Les donnees passent par une Map cote JS, PAS par des attributs
+           HTML. Meme avec un echappement correct, faire transiter du JSON
+           par un attribut est fragile pour rien : ici la structure reste
+           un objet JavaScript de bout en bout, sans aucun aller-retour
+           par du texte a echapper puis a reparser.
+           The data goes through a JS-side Map, NOT through HTML
+           attributes. Even with correct escaping, routing JSON through an
+           attribute is needlessly fragile: here the structure stays a
+           JavaScript object end to end, with no round trip through text
+           that must be escaped and then re-parsed. */
+        rowsFieldData.set(f.key, { initial, def });
         return `<div class="field field-rows" data-rows-field="${f.key}" data-rows-src="${escapeHtmlAttr(f.source || "")}">
           <span>${label}</span>
           <div class="rows-body"></div>
@@ -1811,9 +1825,9 @@
                  Without this button, the manifest's defaults apply ONLY
                  while the setting has never been saved: once the list
                  was emptied there was no way at all to get it back. -->
-            <button type="button" class="rows-reset" data-default="${escapeHtmlAttr(typeof f.default === "string" ? f.default : JSON.stringify(f.default || []))}">${escapeHtmlAttr(i18n.t("rows.reset"))}</button>
+            <button type="button" class="rows-reset">${escapeHtmlAttr(i18n.t("rows.reset"))}</button>
           </div>
-          <input type="hidden" data-key="${f.key}" value="${escapeHtmlAttr(JSON.stringify(initial))}">
+          <input type="hidden" data-key="${f.key}">
           ${hint}
         </div>`;
       }
@@ -2048,6 +2062,12 @@
      settings window is opened. */
   let rowsCatalogCache = null;
 
+  /* Valeurs des champs "rows" en attente d'initialisation, transmises de
+     fieldMarkup() a initRowsEditor() sans passer par le DOM.
+     "rows" field values awaiting initialisation, handed from
+     fieldMarkup() to initRowsEditor() without going through the DOM. */
+  const rowsFieldData = new Map();
+
   async function loadRowsCatalog(src) {
     if (!src) return [];
     if (rowsCatalogCache) return rowsCatalogCache;
@@ -2064,11 +2084,20 @@
   async function initRowsEditor(el) {
     const hidden = el.querySelector("input[type=hidden]");
     const body = el.querySelector(".rows-body");
-    const exchanges = await loadRowsCatalog(el.dataset.rowsSrc);
 
-    let rows = [];
-    try { rows = JSON.parse(hidden.value || "[]"); } catch (e) { rows = []; }
-    if (!Array.isArray(rows)) rows = [];
+    const data = rowsFieldData.get(el.dataset.rowsField) || { initial: [], def: [] };
+    let rows = Array.isArray(data.initial) ? data.initial.map((r) => ({ ...r })) : [];
+    const defaults = Array.isArray(data.def) ? data.def : [];
+
+    /* Le champ cache est renseigne IMMEDIATEMENT, avant d'attendre le
+       catalogue : enregistrer pendant ce chargement (ou alors qu'il a
+       echoue) enverrait sinon une chaine vide, donc effacerait la liste.
+       The hidden field is filled IMMEDIATELY, before awaiting the
+       catalog: saving during that load (or after it failed) would
+       otherwise send an empty string, and so wipe the list. */
+    hidden.value = JSON.stringify(rows);
+
+    const exchanges = await loadRowsCatalog(el.dataset.rowsSrc);
 
     const CUSTOM = "__custom__";
 
@@ -2162,9 +2191,8 @@
       render();
     });
 
-    el.querySelector(".rows-reset").addEventListener("click", (e) => {
-      let def = [];
-      try { def = JSON.parse(e.currentTarget.dataset.default || "[]"); } catch (ex) { def = []; }
+    el.querySelector(".rows-reset").addEventListener("click", () => {
+      const def = defaults;
       // Fusion et non remplacement : restaurer les indices ne doit pas
       // effacer les valeurs que la personne a ajoutees elle-meme. On
       // n'ajoute que les symboles absents.
@@ -2567,8 +2595,26 @@
     });
   }
 
+  /* Echappement pour un ATTRIBUT HTML. Les guillemets DOIVENT en faire
+     partie : sans eux, la premiere `"` de la valeur ferme l'attribut et
+     tout ce qui suit est perdu ou, pire, interprete comme du balisage.
+     C'etait un bug latent : il ne se voyait pas tant qu'aucune valeur ne
+     contenait de guillemet, puis il a vide silencieusement l'editeur de
+     lignes de la tuile Bourse (le JSON en contient a chaque cle), la
+     valeur relue etant tronquee a `[{`.
+     Escaping for an HTML ATTRIBUTE. Quotes MUST be included: without
+     them, the value's first `"` closes the attribute and everything after
+     it is lost or, worse, parsed as markup. This was a latent bug: it
+     stayed invisible while no value contained a quote, then it silently
+     emptied the Stocks tile's row editor (JSON has one at every key), the
+     value read back being truncated to `[{`. */
   function escapeHtmlAttr(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   function formatSavedDate(iso) {

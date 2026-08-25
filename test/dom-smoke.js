@@ -3956,6 +3956,44 @@ function catalogItemFor(catalog, document, widgetId) {
      so updateOverflow() always concludes "no overflow". We fake them to
      check BOTH states, the second one being precisely the one that must
      never happen by mistake. */
+  /* ---------- Echappement des attributs HTML ----------
+     Ce bloc existe a cause d'un bug reel : escapeHtmlAttr() n'echappait
+     pas le guillemet double. Invisible tant qu'aucune valeur n'en
+     contenait, puis il a vide silencieusement l'editeur de lignes de la
+     tuile Bourse -- le JSON en contient a chaque cle, l'attribut se
+     fermait au premier, et la valeur relue etait tronquee a "[{".
+     This block exists because of a real bug: escapeHtmlAttr() did not
+     escape the double quote. Invisible while no value contained one, it
+     then silently emptied the Stocks tile's row editor -- JSON has one at
+     every key, the attribute closed at the first, and the value read back
+     was truncated to "[{". */
+  console.log("== Echappement des attributs HTML ==");
+  {
+    const src = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    const fn = src.slice(src.indexOf("function escapeHtmlAttr"));
+    const body = fn.slice(0, fn.indexOf("\n  }"));
+    assert("escapeHtmlAttr echappe le guillemet double", /&quot;/.test(body));
+    assert("escapeHtmlAttr echappe l'apostrophe", /&#39;/.test(body));
+    assert("escapeHtmlAttr echappe encore &, < et >",
+      /&amp;/.test(body) && /&lt;/.test(body) && /&gt;/.test(body));
+
+    // Verification par le comportement et non par le code : une valeur
+    // contenant des guillemets doit revenir INTACTE apres un
+    // aller-retour reel par un attribut du DOM.
+    // Behavioural check rather than source inspection: a value containing
+    // quotes must come back INTACT after a real round trip through a DOM
+    // attribute.
+    const esc = (x) => String(x)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    const payload = JSON.stringify([{ name: 'CAC 40 "grand" <b>', symbol: "^CAC" }]);
+    const probe = document.createElement("div");
+    probe.innerHTML = `<input type="hidden" value="${esc(payload)}">`;
+    const readBack = probe.querySelector("input").value;
+    assert("un JSON passe par un attribut revient intact", readBack === payload);
+    assert("le JSON relu reste analysable", JSON.parse(readBack)[0].symbol === "^CAC");
+  }
+
   console.log("== Icone des reglages de tuile ==");
   {
     const gear = document.querySelector(".tile-gear svg");

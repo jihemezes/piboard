@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.73.2
+
+- **Correctif : l'editeur de lignes de la tuile Bourse etait
+  silencieusement vide.** UNE seule cause explique les TROIS symptomes
+  signales (bouton de restauration sans effet, ligne ajoutee absente a la
+  reouverture, contenu efface a l'enregistrement suivant).
+  - **Cause racine** : `escapeHtmlAttr()` echappait `&`, `<` et `>` mais
+    PAS le guillemet double. Le JSON de la liste en contient a chaque
+    cle : l'attribut `value="..."` se fermait donc au premier guillemet du
+    JSON, et la valeur relue etait tronquee a `[{`. `JSON.parse` echouait,
+    le `catch` retombait sur `[]`.
+  - Consequences enchainees : la fenetre de reglages n'a JAMAIS montre la
+    liste (seule la tuile l'affichait, via le defaut du manifeste) ;
+    ajouter une ligne partait donc d'une liste vide et effacait le reste ;
+    a la reouverture la meme troncature revidait tout ; et le bouton
+    "Restaurer la liste par defaut" lisait un `data-default` tronque de
+    la meme facon, donc ne restaurait rien.
+  - **Bug LATENT et generique**, pas propre a la tuile Bourse : n'importe
+    quelle valeur contenant un guillemet (un nom de tuile, un libelle)
+    aurait produit le meme genre de troncature ailleurs dans l'interface.
+    `escapeHtmlAttr()` echappe desormais aussi `"` et `'`.
+
+- **Le JSON ne transite plus par des attributs HTML.** Meme correctement
+  echappe, faire circuler une structure par du texte a echapper puis a
+  reparser est fragile pour rien : les valeurs des champs `rows` passent
+  maintenant par une `Map` cote JavaScript, de `fieldMarkup()` a
+  `initRowsEditor()`, en restant des objets de bout en bout.
+
+- **Le champ cache est renseigne AVANT l'attente du catalogue** :
+  enregistrer pendant ce chargement -- ou apres son echec -- envoyait
+  sinon une chaine vide, et effacait donc la liste.
+
+- **Tests** : 5 assertions ajoutees a `dom-smoke.js`, dont un
+  aller-retour REEL d'un JSON contenant guillemets et chevrons a travers
+  un attribut du DOM. C'est le test qui manquait : les assertions
+  existantes portaient sur la logique metier, aucune ne verifiait que les
+  valeurs survivaient au passage par le HTML.
+
 ## 1.73.1
 
 - **Correctif : AUCUN graphique de la tuile Bourse ne fonctionnait.**
