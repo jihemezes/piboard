@@ -1142,6 +1142,21 @@ app.delete("/api/tile-secrets/:tileId", (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------- Couleur Tempo / Tempo colour ----------
+   Voir server/tempo.js (relais + cache partage de 30 min).
+   See server/tempo.js (relay + 30 min shared cache). */
+const tempo = require("./tempo");
+
+app.get("/api/tempo", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json(await tempo.getTempo({ force: req.query.force === "1" }));
+  } catch (e) {
+    console.warn("[piboard] tempo echec ->", e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
 /* ---------- Quotas des comptes IA / AI account usage ----------
    Voir server/aiUsage.js. Les routes ne renvoient JAMAIS de jeton :
    uniquement des pourcentages et des heures de reinitialisation.

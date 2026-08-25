@@ -610,6 +610,54 @@
     },
 
     {
+      id: "tempo",
+      group: "tiles",
+      title: { fr: "Couleur Tempo", en: "Tempo colour" },
+      sub: {
+        fr: "Bleu, blanc ou rouge : la couleur du jour de l'offre Tempo d'EDF.",
+        en: "Blue, white or red: the colour of the day for EDF's Tempo tariff."
+      },
+      html: {
+        fr: `
+          <div class="help-warn">Cette tuile n'a d'intérêt que si votre contrat d'électricité est l'<b>option Tempo d'EDF</b>. Avec n'importe quelle autre offre, la couleur affichée n'a aucune incidence sur votre facture.</div>
+
+          <h4>Objectif</h4>
+          <p>Savoir d'un coup d'œil, depuis l'autre bout de la pièce, si la journée est bleue, blanche ou rouge — et donc s'il vaut mieux décaler le lave-linge ou baisser le chauffage. Le bandeau occupe toute la tuile : la couleur se reconnaît sans lire le texte.</p>
+
+          <h4>Aujourd'hui et demain</h4>
+          <p>La couleur du lendemain est publiée par RTE <b>une fois par jour, vers 11 h</b>. Avant cette publication, la tuile affiche « pas encore publiée » : c'est un état normal, pas une panne.</p>
+
+          <h4>Une journée Tempo va de 6 h à 6 h</h4>
+          <p>C'est le piège de cette offre : une journée Tempo ne va pas de minuit à minuit, mais de <b>6 h du matin au lendemain 6 h</b>. Entre minuit et 6 h, la couleur réellement applicable est donc encore celle de la veille. Le réglage « utiliser la couleur réellement applicable », actif par défaut, en tient compte — indispensable sur un tableau allumé la nuit. Désactivez-le si vous préférez voir la couleur de la journée calendaire.</p>
+
+          <h4>Jours restants</h4>
+          <p>Trois pastilles indiquent, quand l'API les fournit, le nombre de jours restants pour chaque couleur jusqu'à la fin de la saison (31 août). Une saison compte au maximum 22 jours rouges et 43 jours blancs ; tous les autres sont bleus.</p>
+
+          <h4>Source</h4>
+          <p>L'API publique <code>api-couleur-tempo.fr</code>, gratuite et sans authentification, qui relaie les données officielles de RTE. PiBoard passe par son propre relais et ne l'interroge qu'une fois toutes les 30 minutes, quel que soit le nombre de tuiles ou d'écrans : cette API est hébergée bénévolement, il serait malvenu de la marteler.</p>
+        `,
+        en: `
+          <div class="help-warn">This tile is only of interest if your electricity contract is <b>EDF's Tempo option</b>. On any other tariff, the colour shown has no bearing on your bill.</div>
+
+          <h4>Goal</h4>
+          <p>Know at a glance, from across the room, whether the day is blue, white or red — and therefore whether to postpone the washing machine or turn the heating down. The band fills the whole tile: the colour is recognisable without reading the text.</p>
+
+          <h4>Today and tomorrow</h4>
+          <p>Tomorrow's colour is published by RTE <b>once a day, around 11am</b>. Before that, the tile shows "not published yet": a normal state, not a failure.</p>
+
+          <h4>A Tempo day runs 6am to 6am</h4>
+          <p>This is the tariff's trap: a Tempo day does not run midnight to midnight but from <b>6am to 6am the next morning</b>. Between midnight and 6am, the actually applicable colour is therefore still the previous day's. The "use the currently applicable colour" setting, on by default, accounts for this — essential on a board left on overnight. Turn it off if you would rather see the calendar day's colour.</p>
+
+          <h4>Remaining days</h4>
+          <p>Three pills show, when the API provides them, how many days are left for each colour until the end of the season (31 August). A season has at most 22 red days and 43 white days; all the others are blue.</p>
+
+          <h4>Source</h4>
+          <p>The public <code>api-couleur-tempo.fr</code> API, free and without authentication, relaying RTE's official data. PiBoard goes through its own relay and queries it only once every 30 minutes, however many tiles or screens you have: this API is hosted out of goodwill, and hammering it would be poor form.</p>
+        `
+      }
+    },
+
+    {
       id: "aiusage",
       group: "tiles",
       title: { fr: "Quotas IA", en: "AI usage" },

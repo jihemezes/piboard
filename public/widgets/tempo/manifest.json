@@ -1,0 +1,65 @@
+{
+  "id": "tempo",
+  "version": "1.0.0",
+  "name": {
+    "en": "Tempo colour",
+    "fr": "Couleur Tempo"
+  },
+  "titleBar": false,
+  "description": {
+    "en": "The colour of the day for EDF's Tempo electricity tariff — blue, white or red — as a full-tile band readable across the room, plus tomorrow's colour once RTE publishes it around 11am. Only relevant if you are on the Tempo tariff. Free public API, no account or key needed.",
+    "fr": "La couleur du jour de l'offre d'électricité Tempo d'EDF — bleu, blanc ou rouge — en bandeau pleine tuile lisible à l'autre bout de la pièce, plus la couleur du lendemain dès que RTE la publie vers 11 h. Pertinent uniquement si vous êtes en Tempo. API publique gratuite, sans compte ni clé."
+  },
+  "tagline": {
+    "en": "Blue, white or red — today and tomorrow.",
+    "fr": "Bleu, blanc ou rouge — aujourd'hui et demain."
+  },
+  "size": {
+    "w": 2,
+    "h": 1,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 6,
+    "maxH": 4
+  },
+  "settings": [
+    {
+      "key": "showTomorrow",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show tomorrow's colour",
+        "fr": "Afficher la couleur de demain"
+      }
+    },
+    {
+      "key": "showRemaining",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show remaining days per colour (when the API provides them)",
+        "fr": "Afficher les jours restants par couleur (quand l'API les fournit)"
+      }
+    },
+    {
+      "key": "useNow",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Use the currently applicable colour (a Tempo day runs 6am to 6am)",
+        "fr": "Utiliser la couleur réellement applicable (une journée Tempo va de 6 h à 6 h)"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 240,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      }
+    }
+  ]
+}

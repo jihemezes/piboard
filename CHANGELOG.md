@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.71.0
+
+- **Nouvelle tuile "Couleur Tempo"** : la couleur du jour de l'offre
+  d'electricite Tempo d'EDF, en bandeau PLEINE TUILE (bleu / blanc /
+  rouge) lisible a l'autre bout d'une piece sans avoir a lire le texte.
+  Couleur du lendemain et jours restants par couleur en dessous.
+  - **Une journee Tempo va de 6 h a 6 h**, pas de minuit a minuit. Entre
+    minuit et 6 h, la couleur REELLEMENT applicable est encore celle de
+    la veille. La tuile utilise donc `/api/now` (qui en tient compte)
+    plutot que `/api/today` -- reglable, mais actif par defaut : sur un
+    tableau mural allume la nuit, afficher "today" donnerait la mauvaise
+    couleur pendant six heures chaque nuit.
+  - **`codeJour: 0` est un ETAT NORMAL**, pas une erreur : RTE ne publie
+    la couleur du lendemain que vers 11 h. La tuile affiche "pas encore
+    publiee" plutot qu'un echec.
+  - **Jours restants** : les noms exacts des champs de `/api/stats` ne
+    sont pas documentes publiquement et n'ont pas pu etre verifies en
+    direct. Le module accepte plusieurs graphies plausibles et renvoie
+    `null` si aucune n'est reconnue -- la ligne est alors masquee, plutot
+    que d'afficher des zeros qui feraient croire a tort qu'il ne reste
+    aucun jour rouge.
+  - **Relais serveur avec cache partage de 30 min** (`server/tempo.js`) :
+    le domaine n'envoie pas d'en-tetes CORS permissifs, et l'API est
+    hebergee benevolement -- une seule requete par demi-heure quel que
+    soit le nombre de tuiles ou d'ecrans. La couleur du lendemain ne
+    tombant qu'une fois par jour, interroger plus souvent n'apporte rien.
+  - `Promise.allSettled` et non `all` : la couleur du jour s'affiche meme
+    si la route des statistiques est en panne.
+  - Le texte du bandeau est en couleur fixe et non `var(--text)` : il
+    doit contraster avec le FOND DU BANDEAU, pas avec le theme -- le
+    texte clair du theme nuit serait illisible sur le bandeau blanc.
+  - L'aide precise d'emblee que la tuile n'a d'interet qu'avec un contrat
+    Tempo.
+
+- **Tests** : nouveau `test/tempo.test.js` (15 assertions, sans reseau),
+  dont la verification que des statistiques non reconnues donnent `null`
+  et jamais zero.
+
 ## 1.70.0
 
 - **Nouvelle tuile "Quotas IA"** : barres de progression des limites
