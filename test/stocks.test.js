@@ -99,4 +99,45 @@ check("symbole exotique -> null, jamais un 'ferme' invente",
 check("saisie libre .UK rattachee a Londres",
   c.isMarketOpen("XYZ.UK", null, at("2026-08-25T12:00:00Z")) === true);
 
+console.log("== classement indices / valeurs ==");
+check("un indice du catalogue est classe comme indice", c.kindFor("^CAC") === "index");
+check("une action du catalogue est classee comme valeur", c.kindFor("MC.FR") === "security");
+check("une composition d'indice contient des ACTIONS, pas des indices",
+  c.kindFor("AC.FR") === "security");
+check("le change est classe comme valeur", c.kindFor("EURUSD") === "security");
+// Symbole inconnu : classe en valeur, jamais en indice. Un indice range
+// en bas est anodin ; un titre promu en haut brouillerait la lecture.
+// Unknown symbol: classed as a security, never an index. An index sorted
+// to the bottom is harmless; a share promoted to the top would muddle
+// the reading.
+check("symbole inconnu -> valeur, jamais indice", c.kindFor("ZZZ.XX") === "security");
+check("symbole inconnu prefixe ^ -> indice", c.kindFor("^ZZZ") === "index");
+
+console.log("== compositions d'indices ==");
+const cac = c.EXCHANGES.find((e) => e.id === "cac40");
+check("la composition du CAC 40 compte bien 40 valeurs", cac.instruments.length === 40);
+check("les compositions ne sont pas marquees comme familles d'indices",
+  cac.kind !== "index");
+const dow = c.EXCHANGES.find((e) => e.id === "dow30");
+check("la composition du Dow est presente", !!dow && dow.instruments.length > 20);
+// Toute valeur d'une composition doit avoir des horaires exploitables,
+// sinon la moitie de la liste s'afficherait sans indicateur.
+// Every constituent must have usable hours, otherwise half the list would
+// show with no indicator.
+check("toutes les valeurs du CAC 40 ont un marche identifie",
+  cac.instruments.every((i) => c.isMarketOpen(i.symbol, "cac40", at("2026-08-25T12:00:00Z")) !== null));
+check("toutes les valeurs du Dow ont un marche identifie",
+  dow.instruments.every((i) => c.isMarketOpen(i.symbol, "dow30", at("2026-08-25T18:00:00Z")) !== null));
+check("toutes les valeurs du CAC 40 ont une devise",
+  cac.instruments.every((i) => c.currencyFor(i.symbol) === "EUR"));
+
+// Aucun symbole ne doit apparaitre deux fois dans une meme famille : un
+// doublon donnerait deux entrees identiques dans la liste deroulante.
+// No symbol may appear twice in the same family: a duplicate would give
+// two identical entries in the dropdown.
+for (const ex of c.EXCHANGES) {
+  const syms = ex.instruments.map((i) => i.symbol);
+  check("aucun doublon dans la famille " + ex.id, new Set(syms).size === syms.length);
+}
+
 console.log("\n" + ok + " assertions OK");

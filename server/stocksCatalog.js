@@ -45,6 +45,15 @@
 const EXCHANGES = [
   {
     id: "indices",
+    /* `kind` sert au REGROUPEMENT A L'AFFICHAGE : la tuile trace un
+       separateur entre les indices et les valeurs individuelles, deux
+       natures d'information qu'on ne lit pas de la meme facon. Porte par
+       la famille et non par l'instrument, pour rester declaratif.
+       `kind` drives DISPLAY GROUPING: the tile draws a separator between
+       indices and individual securities, two kinds of information one
+       does not read the same way. Carried by the family, not the
+       instrument, to stay declarative. */
+    kind: "index",
     label: { fr: "Indices mondiaux", en: "World indices" },
     instruments: [
       { symbol: "^CAC", label: "CAC 40", currency: "EUR" },
@@ -103,6 +112,119 @@ const EXCHANGES = [
       { symbol: "SHEL.UK", label: "Shell", currency: "GBP" },
       { symbol: "HSBA.UK", label: "HSBC", currency: "GBP" },
       { symbol: "VOD.UK", label: "Vodafone", currency: "GBP" }
+    ]
+  },
+  /* Compositions d'indices. Repondent au besoin "voir les valeurs qui
+     composent le CAC 40" sans imposer de les chercher une par une dans
+     la famille Euronext Paris. Ce sont bien des ACTIONS (kind par
+     defaut), elles s'affichent donc sous le separateur, avec les autres
+     valeurs individuelles.
+     Les compositions evoluent (entrees et sorties d'indice une a
+     quelques fois par an) : cette liste est un instantane, pas une
+     verite permanente. L'aide le precise.
+     Index constituents. They answer the "see the stocks making up the
+     CAC 40" need without forcing you to hunt them one by one in the
+     Euronext Paris family. These are SHARES (default kind), so they show
+     below the separator with the other individual securities.
+     Constituents change (index entries and exits once to a few times a
+     year): this list is a snapshot, not a permanent truth. The help says
+     so. */
+  {
+    id: "cac40",
+    label: { fr: "Composition du CAC 40", en: "CAC 40 constituents" },
+    instruments: [
+      { symbol: "AC.FR", label: "Accor", currency: "EUR" },
+      { symbol: "AI.FR", label: "Air Liquide", currency: "EUR" },
+      { symbol: "AIR.FR", label: "Airbus", currency: "EUR" },
+      { symbol: "ALO.FR", label: "Alstom", currency: "EUR" },
+      { symbol: "MT.FR", label: "ArcelorMittal", currency: "EUR" },
+      { symbol: "CS.FR", label: "AXA", currency: "EUR" },
+      { symbol: "BNP.FR", label: "BNP Paribas", currency: "EUR" },
+      { symbol: "EN.FR", label: "Bouygues", currency: "EUR" },
+      { symbol: "CAP.FR", label: "Capgemini", currency: "EUR" },
+      { symbol: "CA.FR", label: "Carrefour", currency: "EUR" },
+      { symbol: "ACA.FR", label: "Crédit Agricole", currency: "EUR" },
+      { symbol: "BN.FR", label: "Danone", currency: "EUR" },
+      { symbol: "DSY.FR", label: "Dassault Systèmes", currency: "EUR" },
+      { symbol: "EDEN.FR", label: "Edenred", currency: "EUR" },
+      { symbol: "ENGI.FR", label: "Engie", currency: "EUR" },
+      { symbol: "EL.FR", label: "EssilorLuxottica", currency: "EUR" },
+      { symbol: "ERF.FR", label: "Eurofins Scientific", currency: "EUR" },
+      { symbol: "RMS.FR", label: "Hermès", currency: "EUR" },
+      { symbol: "KER.FR", label: "Kering", currency: "EUR" },
+      { symbol: "LR.FR", label: "Legrand", currency: "EUR" },
+      { symbol: "OR.FR", label: "L'Oréal", currency: "EUR" },
+      { symbol: "MC.FR", label: "LVMH", currency: "EUR" },
+      { symbol: "ML.FR", label: "Michelin", currency: "EUR" },
+      { symbol: "ORA.FR", label: "Orange", currency: "EUR" },
+      { symbol: "RI.FR", label: "Pernod Ricard", currency: "EUR" },
+      { symbol: "PUB.FR", label: "Publicis", currency: "EUR" },
+      { symbol: "RNO.FR", label: "Renault", currency: "EUR" },
+      { symbol: "SAF.FR", label: "Safran", currency: "EUR" },
+      { symbol: "SGO.FR", label: "Saint-Gobain", currency: "EUR" },
+      { symbol: "SAN.FR", label: "Sanofi", currency: "EUR" },
+      { symbol: "SU.FR", label: "Schneider Electric", currency: "EUR" },
+      { symbol: "GLE.FR", label: "Société Générale", currency: "EUR" },
+      { symbol: "STLAP.FR", label: "Stellantis", currency: "EUR" },
+      { symbol: "STMPA.FR", label: "STMicroelectronics", currency: "EUR" },
+      { symbol: "TEP.FR", label: "Teleperformance", currency: "EUR" },
+      { symbol: "HO.FR", label: "Thales", currency: "EUR" },
+      { symbol: "TTE.FR", label: "TotalEnergies", currency: "EUR" },
+      { symbol: "URW.FR", label: "Unibail-Rodamco-Westfield", currency: "EUR" },
+      { symbol: "VIE.FR", label: "Veolia", currency: "EUR" },
+      { symbol: "DG.FR", label: "Vinci", currency: "EUR" }
+    ]
+  },
+  {
+    id: "dax40",
+    label: { fr: "Composition du DAX (principales)", en: "DAX constituents (main)" },
+    instruments: [
+      { symbol: "ADS.DE", label: "Adidas", currency: "EUR" },
+      { symbol: "ALV.DE", label: "Allianz", currency: "EUR" },
+      { symbol: "BAS.DE", label: "BASF", currency: "EUR" },
+      { symbol: "BAYN.DE", label: "Bayer", currency: "EUR" },
+      { symbol: "BMW.DE", label: "BMW", currency: "EUR" },
+      { symbol: "DBK.DE", label: "Deutsche Bank", currency: "EUR" },
+      { symbol: "DTE.DE", label: "Deutsche Telekom", currency: "EUR" },
+      { symbol: "IFX.DE", label: "Infineon", currency: "EUR" },
+      { symbol: "MBG.DE", label: "Mercedes-Benz", currency: "EUR" },
+      { symbol: "MUV2.DE", label: "Munich Re", currency: "EUR" },
+      { symbol: "RWE.DE", label: "RWE", currency: "EUR" },
+      { symbol: "SAP.DE", label: "SAP", currency: "EUR" },
+      { symbol: "SIE.DE", label: "Siemens", currency: "EUR" },
+      { symbol: "VOW3.DE", label: "Volkswagen", currency: "EUR" }
+    ]
+  },
+  {
+    id: "dow30",
+    label: { fr: "Composition du Dow Jones", en: "Dow Jones constituents" },
+    instruments: [
+      { symbol: "AXP.US", label: "American Express", currency: "USD" },
+      { symbol: "AMGN.US", label: "Amgen", currency: "USD" },
+      { symbol: "AAPL.US", label: "Apple", currency: "USD" },
+      { symbol: "BA.US", label: "Boeing", currency: "USD" },
+      { symbol: "CAT.US", label: "Caterpillar", currency: "USD" },
+      { symbol: "CVX.US", label: "Chevron", currency: "USD" },
+      { symbol: "CSCO.US", label: "Cisco", currency: "USD" },
+      { symbol: "KO.US", label: "Coca-Cola", currency: "USD" },
+      { symbol: "DIS.US", label: "Disney", currency: "USD" },
+      { symbol: "GS.US", label: "Goldman Sachs", currency: "USD" },
+      { symbol: "HD.US", label: "Home Depot", currency: "USD" },
+      { symbol: "HON.US", label: "Honeywell", currency: "USD" },
+      { symbol: "IBM.US", label: "IBM", currency: "USD" },
+      { symbol: "JNJ.US", label: "Johnson & Johnson", currency: "USD" },
+      { symbol: "JPM.US", label: "JPMorgan Chase", currency: "USD" },
+      { symbol: "MCD.US", label: "McDonald's", currency: "USD" },
+      { symbol: "MRK.US", label: "Merck", currency: "USD" },
+      { symbol: "MSFT.US", label: "Microsoft", currency: "USD" },
+      { symbol: "NKE.US", label: "Nike", currency: "USD" },
+      { symbol: "PG.US", label: "Procter & Gamble", currency: "USD" },
+      { symbol: "CRM.US", label: "Salesforce", currency: "USD" },
+      { symbol: "TRV.US", label: "Travelers", currency: "USD" },
+      { symbol: "UNH.US", label: "UnitedHealth", currency: "USD" },
+      { symbol: "VZ.US", label: "Verizon", currency: "USD" },
+      { symbol: "V.US", label: "Visa", currency: "USD" },
+      { symbol: "WMT.US", label: "Walmart", currency: "USD" }
     ]
   },
   {
@@ -185,6 +307,7 @@ const MARKETS = {
    CAC and the Nikkei obviously do not close at the same time. */
 const EXCHANGE_MARKET = {
   paris: "euronext", us: "nyse", xetra: "xetra", lse: "lse",
+  cac40: "euronext", dax40: "xetra", dow30: "nyse",
   fx: "fx", commodities: "fx"
 };
 
@@ -291,6 +414,24 @@ function findInstrument(symbol) {
   return null;
 }
 
+/* "index" ou "security" : determine de quel cote du separateur la ligne
+   s'affiche. Un symbole inconnu est traite comme une valeur, jamais
+   comme un indice -- un indice ajoute par erreur en bas est anodin, un
+   titre promu en haut brouillerait la lecture.
+   "index" or "security": decides which side of the separator a row falls
+   on. An unknown symbol is treated as a security, never as an index -- an
+   index wrongly placed at the bottom is harmless, a share promoted to the
+   top would muddle the reading. */
+function kindFor(symbol) {
+  const known = findInstrument(symbol);
+  if (known) {
+    const ex = EXCHANGES.find((e) => e.id === known.exchange);
+    if (ex && ex.kind === "index") return "index";
+    return "security";
+  }
+  return String(symbol || "").trim().startsWith("^") ? "index" : "security";
+}
+
 function currencyFor(symbol) {
   const known = findInstrument(symbol);
   return (known && known.currency) || guessCurrency(symbol) || null;
@@ -303,6 +444,6 @@ function symbolFor(currency) {
 
 module.exports = {
   EXCHANGES, CURRENCY_SYMBOLS, MARKETS,
-  guessCurrency, findInstrument, currencyFor, symbolFor,
+  guessCurrency, findInstrument, currencyFor, symbolFor, kindFor,
   isMarketOpen, marketFor, _localTime: localTime
 };

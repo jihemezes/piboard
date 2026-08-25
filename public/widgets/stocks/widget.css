@@ -124,3 +124,30 @@ body.touch .rows-del { width: 34px; height: 34px; }
   vertical-align: middle;
   white-space: nowrap;
 }
+
+/* Separateur entre indices et valeurs individuelles. Un simple trait :
+   deux natures d'information qu'on ne lit pas de la meme facon, mais qui
+   n'ont pas besoin d'un titre chacune sur une tuile de quelques lignes.
+   Separator between indices and individual securities. Just a rule: two
+   kinds of information one does not read the same way, but which do not
+   each need a heading on a tile of a few rows. */
+.pws-sep {
+  height: 1px;
+  background: var(--tile-edge);
+  margin: 0.25em 0.2em;
+}
+
+.rows-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.rows-reset {
+  margin-top: 8px;
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.rows-reset:hover { color: var(--text); border-color: var(--muted); }

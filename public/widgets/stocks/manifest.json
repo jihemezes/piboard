@@ -33,8 +33,21 @@
         "fr": "Lignes à afficher"
       },
       "hint": {
-        "en": "Name, exchange, then instrument. Choose \"Other…\" in the instrument list to type any symbol supported by the source (e.g. NESN.CH).",
-        "fr": "Nom, place, puis instrument. Choisissez « Autre… » dans la liste des instruments pour saisir n'importe quel symbole reconnu par la source (ex. NESN.CH)."
+        "en": "Name, exchange, then instrument. \"Other…\" lets you type any symbol. The index-constituent families (CAC 40, DAX, Dow Jones) list the shares making up each index. \"Restore the defaults\" adds back the standard indices without removing your own lines.",
+        "fr": "Nom, place, puis instrument. « Autre… » permet de saisir n'importe quel symbole. Les familles de composition (CAC 40, DAX, Dow Jones) listent les valeurs qui composent chaque indice. « Restaurer la liste par défaut » remet les indices standards sans supprimer vos propres lignes."
+      }
+    },
+    {
+      "key": "groupByType",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Separate indices from individual securities",
+        "fr": "Séparer les indices des valeurs individuelles"
+      },
+      "hint": {
+        "en": "Gathers the indices at the top, then draws a line before the shares, currencies and commodities.",
+        "fr": "Rassemble les indices en tête, puis trace un trait avant les actions, devises et matières premières."
       }
     },
     {

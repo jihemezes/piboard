@@ -107,10 +107,33 @@
       const lang = this.ctx.settings._lang || i18n.lang || "fr";
       const showChange = this.ctx.settings.showChange !== false;
 
-      const rows = lines.map((l) => {
+      /* Regroupement indices / valeurs. On ne trie PAS a l'interieur de
+         chaque groupe : l'ordre choisi dans les reglages est intentionnel
+         et doit etre respecte. On se contente de rassembler les indices
+         en tete, puis de tracer un separateur.
+         Grouping indices / securities. We do NOT sort within each group:
+         the order chosen in the settings is intentional and must be
+         respected. We merely gather the indices at the top, then draw a
+         separator. */
+      const group = this.ctx.settings.groupByType !== false;
+      const ordered = group
+        ? [...lines.filter((l) => (quotes[l.symbol] || {}).kind === "index"),
+           ...lines.filter((l) => (quotes[l.symbol] || {}).kind !== "index")]
+        : lines;
+      const firstSecurity = group
+        ? ordered.findIndex((l) => (quotes[l.symbol] || {}).kind !== "index")
+        : -1;
+      // Separateur seulement si les DEUX groupes existent : un trait en
+      // tete ou en pied d'une liste homogene serait du bruit.
+      // Separator only if BOTH groups exist: a rule at the top or bottom
+      // of a homogeneous list would just be noise.
+      const sepAt = (firstSecurity > 0 && firstSecurity < ordered.length) ? firstSecurity : -1;
+
+      const rows = ordered.map((l, idx) => {
+        const sep = idx === sepAt ? `<div class="pws-sep"></div>` : "";
         const q = quotes[l.symbol];
         if (!q) {
-          return `<div class="pws-row pws-dead"><span class="pws-name">${esc(l.name || l.symbol)}</span><span class="pws-val">—</span></div>`;
+          return sep + `<div class="pws-row pws-dead"><span class="pws-name">${esc(l.name || l.symbol)}</span><span class="pws-val">—</span></div>`;
         }
         const dir = q.change == null ? "flat" : q.change > 0 ? "up" : q.change < 0 ? "down" : "flat";
         const chg = (showChange && q.change != null)
@@ -129,7 +152,7 @@
         const mark = closed
           ? `<span class="pws-closed" title="${esc(i18n.t("stocks.closedTitle"))}">${esc(i18n.t("stocks.closed"))}</span>`
           : "";
-        return `<div class="pws-row${q.stale ? " pws-stale" : ""}${closed ? " pws-shut" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || l.symbol)}">
+        return sep + `<div class="pws-row${q.stale ? " pws-stale" : ""}${closed ? " pws-shut" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || l.symbol)}">
           <span class="pws-name">${esc(l.name || l.symbol)}${mark}</span>
           <span class="pws-val">${esc(formatValue(q.price, lang))}<span class="pws-cur">${esc(q.symbolChar || "")}</span></span>
           ${chg}

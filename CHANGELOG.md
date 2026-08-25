@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.73.0
+
+- **Tuile Bourse : les indices ne peuvent plus etre perdus sans recours.**
+  Un defaut de CONCEPTION, pas une corruption de donnees : le
+  round-trip formulaire -> enregistrement -> reouverture a ete verifie et
+  ne perd rien. Le probleme etait que les valeurs par defaut d'un
+  manifeste ne s'appliquent QUE tant que le reglage n'a jamais ete
+  enregistre. Des la premiere sauvegarde, `lines` existe -- supprimer les
+  actions ne pouvait donc pas faire revenir les indices, et il n'existait
+  AUCUN moyen de les recuperer.
+  - **Bouton "Restaurer la liste par defaut"** sur tout champ de type
+    `rows`. Il **fusionne** au lieu de remplacer : les indices standards
+    sont remis, les lignes ajoutees par la personne sont conservees. Seuls
+    les symboles absents sont ajoutes.
+
+- **Indices et valeurs individuelles cohabitent, avec un separateur.**
+  La tuile rassemble les indices en tete, trace un trait, puis affiche
+  actions, devises et matieres premieres.
+  - L'ordre choisi dans les reglages est RESPECTE a l'interieur de chaque
+    groupe : on regroupe, on ne trie pas.
+  - Le trait n'apparait que si les DEUX groupes existent -- un trait en
+    tete ou en pied d'une liste homogene serait du bruit.
+  - Nouveau reglage "Separer les indices des valeurs individuelles",
+    actif par defaut.
+  - Un symbole inconnu est classe en VALEUR, jamais en indice : un indice
+    range en bas est anodin, un titre promu en haut brouillerait la
+    lecture. Un symbole libre prefixe de `^` reste traite comme un indice.
+
+- **Composition des indices** : trois nouvelles familles dans les listes
+  deroulantes -- CAC 40 (les 40 valeurs), DAX (principales) et Dow Jones.
+  Permet d'ajouter quelques composants d'un indice sans les chercher un
+  par un. Ce sont des ACTIONS : elles s'affichent sous le separateur.
+  - **Instantane, pas une verite permanente** : les indices connaissent
+    des entrees et sorties une a quelques fois par an, la liste n'est pas
+    mise a jour automatiquement. L'aide le signale dans un encadre.
+
+- **Tests** : 22 assertions ajoutees a `test/stocks.test.js` (54 au
+  total), dont la verification que le CAC 40 compte bien 40 valeurs, que
+  chaque composant a un marche et une devise identifies, et qu'aucune
+  famille ne contient de symbole en doublon.
+
 ## 1.72.1
 
 - **Indicateur "marche ferme" sur la tuile Bourse.** Hors seance, la

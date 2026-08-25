@@ -222,7 +222,7 @@ async function getQuotes(symbols) {
 
     const cached = quoteCache.get(symbol);
     if (cached && now - cached.at < ttl) {
-      out[symbol] = { ...cached.value, marketOpen: open };
+      out[symbol] = { ...cached.value, marketOpen: open, kind: catalog.kindFor(symbol) };
       return;
     }
 
@@ -239,7 +239,7 @@ async function getQuotes(symbols) {
       const currency = catalog.currencyFor(symbol);
       const value = { ...q, currency, symbolChar: catalog.symbolFor(currency), stale: false };
       quoteCache.set(symbol, { at: now, value });
-      out[symbol] = { ...value, marketOpen: open };
+      out[symbol] = { ...value, marketOpen: open, kind: catalog.kindFor(symbol) };
       return;
     }
 
@@ -249,7 +249,7 @@ async function getQuotes(symbols) {
     // BOTH sources failed: we surface the last known value rather than
     // making a line vanish that was correct five minutes ago. The
     // degraded state is FLAGGED (stale), not hidden.
-    if (cached) out[symbol] = { ...cached.value, stale: true, marketOpen: open };
+    if (cached) out[symbol] = { ...cached.value, stale: true, marketOpen: open, kind: catalog.kindFor(symbol) };
     else out[symbol] = null;
   }));
 

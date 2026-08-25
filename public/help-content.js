@@ -628,6 +628,14 @@
           <p>Dans les réglages de la tuile, chaque ligne se compose de trois colonnes : un <b>nom</b> libre (celui affiché sur la tuile), la <b>place</b> ou la famille, puis l'<b>instrument</b>. Changer la place recharge la liste des instruments ; le nom se remplit tout seul si vous l'avez laissé vide, sans jamais écraser un nom que vous avez choisi.</p>
           <p>Les listes ne contiennent qu'une sélection : la source couvre plus de 21 000 titres, impossible à mettre dans un menu déroulant. Pour tout le reste, choisissez <b>« Autre… »</b> en fin de liste d'instruments : un champ de saisie apparaît et accepte n'importe quel symbole reconnu par la source.</p>
 
+          <h4>Indices et valeurs cohabitent</h4>
+          <p>Les indices et les valeurs individuelles sont deux natures d'information qu'on ne lit pas de la même façon. La tuile rassemble donc les indices en tête, trace un <b>trait de séparation</b>, puis affiche les actions, devises et matières premières. L'ordre que vous avez choisi dans les réglages est respecté à l'intérieur de chaque groupe. Le trait n'apparaît que si les deux groupes existent, et le regroupement se désactive dans les réglages.</p>
+          <p>Le bouton <b>« Restaurer la liste par défaut »</b> remet les grands indices <b>sans supprimer</b> les lignes que vous avez ajoutées : il n'ajoute que ce qui manque. C'est le moyen de retrouver les indices si vous les avez effacés — sans lui, les valeurs par défaut ne s'appliquent que tant que la tuile n'a jamais été configurée, et une liste vidée était définitivement perdue.</p>
+
+          <h4>Composition des indices</h4>
+          <p>Trois familles listent les valeurs qui composent un indice : <b>CAC 40</b> (les 40), <b>DAX</b> et <b>Dow Jones</b>. Pratique pour ajouter quelques valeurs d'un indice sans les chercher une par une. Ce sont des actions : elles s'affichent donc sous le trait de séparation, pas avec les indices.</p>
+          <div class="help-warn">Ces compositions sont un <b>instantané</b>. Les indices connaissent des entrées et des sorties une à quelques fois par an ; la liste n'est donc pas mise à jour automatiquement. Une valeur sortie de l'indice continuera de fonctionner comme action ordinaire.</div>
+
           <h4>Écrire un symbole à la main</h4>
           <p>La convention est celle de la source : suffixe de place (<code>.US</code>, <code>.FR</code>, <code>.DE</code>, <code>.UK</code>, <code>.JP</code>…), indices préfixés de <code>^</code>, paires de change en six lettres (<code>EURUSD</code>). Exemples : <code>NESN.CH</code> pour Nestlé, <code>^SPX</code> pour le S&P 500.</p>
           <p><b>Attention à la devise</b> : pour un symbole saisi à la main, PiBoard la devine à partir du suffixe. La devinette est juste dans la plupart des cas mais pas toujours ; si le symbole affiché à côté du cours vous semble faux, c'est cela.</p>
@@ -649,6 +657,14 @@
           <h4>Configuring the lines</h4>
           <p>In the tile's settings, each line has three columns: a free <b>name</b> (the one shown on the tile), the <b>exchange</b> or family, then the <b>instrument</b>. Changing the exchange reloads the instrument list; the name fills itself in if you left it empty, without ever overwriting one you chose.</p>
           <p>The lists hold a selection only: the source covers more than 21,000 securities, which no dropdown could hold. For everything else, pick <b>"Other…"</b> at the end of the instrument list: a text field appears and accepts any symbol the source recognises.</p>
+
+          <h4>Indices and securities coexist</h4>
+          <p>Indices and individual securities are two kinds of information one does not read the same way. The tile therefore gathers the indices at the top, draws a <b>separator line</b>, then shows shares, currencies and commodities. The order you chose in the settings is respected within each group. The line only appears if both groups exist, and grouping can be turned off in the settings.</p>
+          <p>The <b>"Restore the defaults"</b> button puts the major indices back <b>without removing</b> the lines you added: it only adds what is missing. This is how to get the indices back if you deleted them — without it, the defaults apply only while the tile has never been configured, and an emptied list was lost for good.</p>
+
+          <h4>Index constituents</h4>
+          <p>Three families list the securities making up an index: <b>CAC 40</b> (all 40), <b>DAX</b> and <b>Dow Jones</b>. Handy for adding a few of an index's members without hunting them one by one. These are shares, so they show below the separator, not with the indices.</p>
+          <div class="help-warn">These constituent lists are a <b>snapshot</b>. Indices see entries and exits once to a few times a year, so the list is not updated automatically. A security that has left the index will keep working as an ordinary share.</div>
 
           <h4>Typing a symbol by hand</h4>
           <p>The convention is the source's: exchange suffix (<code>.US</code>, <code>.FR</code>, <code>.DE</code>, <code>.UK</code>, <code>.JP</code>…), indices prefixed with <code>^</code>, FX pairs as six letters (<code>EURUSD</code>). Examples: <code>NESN.CH</code> for Nestlé, <code>^SPX</code> for the S&P 500.</p>

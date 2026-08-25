@@ -1770,7 +1770,17 @@
         return `<div class="field field-rows" data-rows-field="${f.key}" data-rows-src="${escapeHtmlAttr(f.source || "")}">
           <span>${label}</span>
           <div class="rows-body"></div>
-          <button type="button" class="rows-add">+ ${escapeHtmlAttr(i18n.t("rows.add"))}</button>
+          <div class="rows-actions">
+            <button type="button" class="rows-add">+ ${escapeHtmlAttr(i18n.t("rows.add"))}</button>
+            <!-- Sans ce bouton, les valeurs par defaut du manifeste ne
+                 s'appliquent QUE tant que le reglage n'a jamais ete
+                 enregistre : une fois la liste videe, il n'existait
+                 aucun moyen de la retrouver.
+                 Without this button, the manifest's defaults apply ONLY
+                 while the setting has never been saved: once the list
+                 was emptied there was no way at all to get it back. -->
+            <button type="button" class="rows-reset" data-default="${escapeHtmlAttr(typeof f.default === "string" ? f.default : JSON.stringify(f.default || []))}">${escapeHtmlAttr(i18n.t("rows.reset"))}</button>
+          </div>
           <input type="hidden" data-key="${f.key}" value="${escapeHtmlAttr(JSON.stringify(initial))}">
           ${hint}
         </div>`;
@@ -2117,6 +2127,20 @@
       const del = e.target.closest(".rows-del");
       if (!del) return;
       rows.splice(Number(del.closest(".rows-row").dataset.i), 1);
+      render();
+    });
+
+    el.querySelector(".rows-reset").addEventListener("click", (e) => {
+      let def = [];
+      try { def = JSON.parse(e.currentTarget.dataset.default || "[]"); } catch (ex) { def = []; }
+      // Fusion et non remplacement : restaurer les indices ne doit pas
+      // effacer les valeurs que la personne a ajoutees elle-meme. On
+      // n'ajoute que les symboles absents.
+      // Merge, not replace: restoring the indices must not wipe the
+      // securities the person added themselves. We only add symbols that
+      // are missing.
+      const have = new Set(rows.map((r) => r.symbol));
+      for (const d of def) if (!have.has(d.symbol)) rows.push({ ...d });
       render();
     });
 
