@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.68.0
+
+- **Le tableau devient defilant quand -- et seulement quand -- une tuile
+  sort de la zone visible.** Une tuile ajoutee alors que la grille etait
+  pleine etait placee par Gridstack SOUS la derniere ligne visible ;
+  `overflow: hidden` la rendait invisible ET insaisissable, sauf a
+  deplacer une autre tuile vers le bas pour la faire remonter.
+  - **Ascenseur strictement conditionnel.** `updateOverflow()` pose la
+    classe `.has-overflow` sur `.board` uniquement si
+    `scrollHeight > clientHeight + 1`. Sans cette classe, `.board` reste
+    litteralement en `overflow: hidden` : sur un ecran ou tout tient, ce
+    n'est pas un ascenseur discret qui s'affiche, c'est le defilement qui
+    n'existe pas. La gouttiere est a `width: 0` par defaut, pour ne pas
+    decaler les tuiles de quelques pixels.
+  - **Mesure DOM plutot que calcul en lignes.** Comparer
+    `grid.getRow()` a `gridRows` aurait ignore le `padding` de `.board`,
+    la marge des tuiles et l'arrondi `Math.floor` d'`updateCellHeight`.
+    La tolerance de 1px absorbe les arrondis sous-pixel, qui faisaient
+    autrement clignoter l'ascenseur a certains facteurs de zoom.
+  - **Molette** : aucun code. `overflow-y: auto` suffit, et le
+    comportement natif (l'enfant defilant consomme d'abord) est celui
+    attendu. La carte Trafic conserve donc son zoom a la molette,
+    Leaflet appelant `preventDefault()`.
+  - **Tactile : deux doigts.** Un seul doigt reste integralement
+    disponible aux widgets (deplacer la carte, faire defiler la liste
+    des courriels). `touch-action: none` sur `.board.has-overflow`
+    empeche le navigateur de s'approprier le glissement a un doigt --
+    avec sa contrepartie indispensable `touch-action: auto` sur
+    `.grid-stack-item-content`, car `touch-action` se resout en
+    remontant la chaine des ancetres et aurait sinon supprime AUSSI le
+    defilement a un doigt A L'INTERIEUR des tuiles. Ecouteur en
+    `passive: false` (sans quoi `preventDefault()` est ignore) et en
+    capture (pour passer avant les gestionnaires des widgets).
+  - **Defilement automatique vers une tuile posee hors champ**, a
+    l'ajout : sans cela, la personne n'a aucun indice de l'endroit ou sa
+    tuile a atterri -- c'etait exactement le symptome d'origine.
+  - `scrollTop` remis a zero en entrant en mode edition : Gridstack
+    calcule les positions de glisser-deposer par rapport au haut de sa
+    grille, une prise aurait ete decalee du montant du defilement.
+  - `mountTile()` renvoie desormais son enregistrement, pour que
+    `addTile()` puisse agir sur la tuile qui vient d'etre montee.
+
+- **Aucun changement au redimensionnement des tuiles.** Verifie :
+  `updateCellHeight()` derive la hauteur de cellule de
+  `window.innerHeight`, jamais de la hauteur du contenu -- la dependance
+  ne va que dans un sens, il n'y a donc aucune boucle de retour.
+  `updateOverflow()` est appelee APRES le recalcul dans le gestionnaire
+  `resize`, sinon elle mesurerait la hauteur d'avant redimensionnement.
+  Quand la fenetre retrecit, les tuiles rapetissent proportionnellement
+  comme avant et une disposition qui tenait continue de tenir.
+
+- **Aide** : nouvelle rubrique "Quand une tuile ne tient plus a l'ecran"
+  dans la fiche Presentation (FR/EN).
+
+- **Tests** : 9 assertions ajoutees a `dom-smoke.js`, dont la
+  verification que `.board` reste en `overflow: hidden` par defaut et que
+  le defilement a un doigt reste actif dans les tuiles.
+
 ## 1.67.1
 
 - **Correctif : la tuile Courriel pouvait faire planter l'application

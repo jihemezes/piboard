@@ -3928,6 +3928,67 @@ function catalogItemFor(catalog, document, widgetId) {
       multiTile.querySelector(".pwr-source")?.hidden === true);
   }
 
+  /* ---------- Debordement du tableau / board overflow ----------
+     jsdom ne fait aucune mise en page : scrollHeight et clientHeight y
+     valent 0, donc updateOverflow() conclut toujours "pas de
+     debordement". On les simule pour verifier les DEUX etats, le second
+     etant precisement celui qui ne doit jamais se produire par erreur.
+     jsdom performs no layout: scrollHeight and clientHeight are 0 there,
+     so updateOverflow() always concludes "no overflow". We fake them to
+     check BOTH states, the second one being precisely the one that must
+     never happen by mistake. */
+  console.log("== Tableau : ascenseur strictement conditionnel ==");
+  {
+    const board = document.querySelector(".board");
+
+    assert("aucune classe .has-overflow quand tout tient a l'ecran",
+      !board.classList.contains("has-overflow"));
+
+    // Le style par defaut doit rester overflow:hidden : c'est la garantie
+    // structurelle qu'aucun ascenseur ne peut apparaitre sur un ecran
+    // normal, independamment du style de l'ascenseur lui-meme.
+    // The default style must stay overflow:hidden: that is the structural
+    // guarantee that no scrollbar can appear on a normal screen,
+    // regardless of the scrollbar's own styling.
+    const css = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+    assert("regle CSS : .board reste en overflow:hidden par defaut",
+      /\.board\s*\{[^}]*overflow:\s*hidden/.test(css));
+    assert("regle CSS : le defilement n'est ouvert que par .has-overflow",
+      /\.board\.has-overflow\s*\{[^}]*overflow-y:\s*auto/.test(css));
+    assert("regle CSS : aucune gouttiere d'ascenseur reservee sans debordement",
+      /\.board::-webkit-scrollbar\s*\{[^}]*width:\s*0/.test(css));
+    assert("regle CSS : le defilement a un doigt reste actif DANS les tuiles",
+      /\.board\.has-overflow\s+\.grid-stack-item-content\s*\{[^}]*touch-action:\s*auto/.test(css));
+
+    // Debordement simule : le contenu depasse la zone visible.
+    // Simulated overflow: content exceeds the visible area.
+    Object.defineProperty(board, "scrollHeight", { value: 1400, configurable: true });
+    Object.defineProperty(board, "clientHeight", { value: 900, configurable: true });
+    window.dispatchEvent(new window.Event("resize"));
+    assert("classe .has-overflow posee des que le contenu depasse",
+      board.classList.contains("has-overflow"));
+
+    // Retour a la normale : la classe doit repartir, sinon un ascenseur
+    // resterait affiche apres suppression de la tuile fautive.
+    // Back to normal: the class must go away, otherwise a scrollbar would
+    // stay shown after the offending tile is removed.
+    board.scrollTop = 300;
+    Object.defineProperty(board, "scrollHeight", { value: 880, configurable: true });
+    window.dispatchEvent(new window.Event("resize"));
+    assert("classe .has-overflow retiree des que tout retient dans l'ecran",
+      !board.classList.contains("has-overflow"));
+    assert("defilement remis a zero en sortant du debordement (sinon bloque en bas)",
+      board.scrollTop === 0);
+
+    // La tolerance de 1px evite un ascenseur clignotant sur les arrondis
+    // sous-pixel. The 1px tolerance avoids a flickering scrollbar on
+    // sub-pixel rounding.
+    Object.defineProperty(board, "scrollHeight", { value: 901, configurable: true });
+    window.dispatchEvent(new window.Event("resize"));
+    assert("tolerance 1px : un depassement sous-pixel ne declenche pas l'ascenseur",
+      !board.classList.contains("has-overflow"));
+  }
+
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));

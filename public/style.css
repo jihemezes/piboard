@@ -67,7 +67,63 @@ body.hide-cursor, body.hide-cursor * { cursor: none !important; }
   position: absolute;
   inset: 0;
   padding: var(--gap);
+  /* Comportement par defaut INCHANGE : sur un ecran ou tout tient, le
+     tableau ne defile pas et n'affiche aucun ascenseur. Le defilement
+     n'est ouvert que par la classe .has-overflow, posee par
+     updateOverflow() apres mesure reelle du DOM. Garantie structurelle :
+     sans la classe, c'est bien overflow:hidden qui s'applique, pas un
+     ascenseur simplement rendu discret.
+     Default behaviour UNCHANGED: on a screen where everything fits, the
+     board neither scrolls nor shows a scrollbar. Scrolling is opened up
+     only by the .has-overflow class, set by updateOverflow() after an
+     actual DOM measurement. Structural guarantee: without the class it
+     really is overflow:hidden that applies, not a merely discreet
+     scrollbar. */
+  overflow: hidden;
 }
+
+.board.has-overflow {
+  overflow-y: auto;
+  /* Le defilement tactile du TABLEAU est gere a la main (2 doigts, voir
+     app.js) : `none` empeche le navigateur de s'approprier le glissement
+     a un doigt, qui ferait defiler le tableau des qu'on touche une carte
+     ou un diaporama. Uniquement en cas de debordement : sans la classe,
+     rien n'est modifie.
+     The BOARD's touch scrolling is handled manually (2 fingers, see
+     app.js): `none` stops the browser from claiming the one-finger drag,
+     which would scroll the board as soon as a map or slideshow is
+     touched. Only when overflowing: without the class, nothing changes. */
+  touch-action: none;
+}
+
+/* Contrepartie indispensable de la regle ci-dessus : `touch-action` se
+   resout en remontant la chaine des ancetres, donc un `none` sur .board
+   supprimerait AUSSI le defilement a un doigt A L'INTERIEUR des tuiles
+   (liste des courriels, bloc-notes, flux). On le retablit explicitement
+   au niveau du contenu de tuile.
+   Indispensable counterpart to the rule above: `touch-action` resolves by
+   walking up the ancestor chain, so a `none` on .board would ALSO kill
+   one-finger scrolling INSIDE the tiles (mail list, notes, feeds). We
+   restore it explicitly at tile-content level. */
+.board.has-overflow .grid-stack-item-content { touch-action: auto; }
+
+/* Aucune gouttiere reservee tant qu'il n'y a pas de debordement : une
+   largeur non nulle ici decalerait les tuiles de quelques pixels sur un
+   ecran normal, exactement ce qu'il ne faut pas.
+   No gutter reserved as long as there is no overflow: a non-zero width
+   here would shift the tiles by a few pixels on a normal screen, exactly
+   what must not happen. */
+.board::-webkit-scrollbar { width: 0; height: 0; }
+.board.has-overflow::-webkit-scrollbar { width: 8px; }
+.board.has-overflow::-webkit-scrollbar-track { background: transparent; }
+.board.has-overflow::-webkit-scrollbar-thumb {
+  background: var(--tile-edge);
+  border-radius: 4px;
+}
+.board.has-overflow::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* Cibles elargies au doigt / wider target for fingers */
+body.touch .board.has-overflow::-webkit-scrollbar { width: 12px; }
 
 .board-empty {
   position: absolute;

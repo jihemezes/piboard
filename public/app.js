@@ -981,6 +981,12 @@
     // Starts the widget, or leaves it paused from the outset if its
     // schedule excludes it right now (see syncTileSchedule).
     syncTileSchedule(record);
+
+    // Renvoye pour permettre a l'appelant d'agir sur la tuile qui vient
+    // d'etre montee (voir addTile -> scrollTileIntoView).
+    // Returned so the caller can act on the tile just mounted
+    // (see addTile -> scrollTileIntoView).
+    return record;
   }
 
   /* ---------- Planification par tuile / per-tile scheduling ----------
@@ -1176,6 +1182,7 @@
     for (const d of drawers.values()) d.grid.batchUpdate(false);
 
     $("boardEmpty").hidden = layout.tiles.length > 0;
+    updateOverflow();
     for (const d of drawers.values()) {
       let count = 0;
       for (const [, r] of tiles) if (r.zone === d.def.zone) count++;
@@ -1314,9 +1321,17 @@
       w: place.w, h: place.h,
       settings
     };
-    mountTile(conf, zone).then(() => {
+    mountTile(conf, zone).then((rec) => {
       $("boardEmpty").hidden = true;
       if (activeSide) $(drawers.get(activeSide).def.emptyId).hidden = true;
+      updateOverflow();
+      // Tuile posee hors de la zone visible (findPlacement n'a plus
+      // trouve de place, cas de repli) : on l'amene sous les yeux plutot
+      // que de laisser la personne la chercher.
+      // Tile placed outside the visible area (findPlacement ran out of
+      // room, fallback case): bring it into view rather than leaving the
+      // person to hunt for it.
+      if (zone === "board" && rec && rec.el) scrollTileIntoView(rec.el);
       scheduleSave();
     });
   }
@@ -1357,6 +1372,7 @@
     }
     $("boardEmpty").hidden = boardCount > 0;
     for (const d of drawers.values()) $(d.def.emptyId).hidden = (drawerCounts.get(d.def.zone) || 0) > 0;
+    updateOverflow();
     scheduleSave();
   }
 
@@ -2288,6 +2304,18 @@
 
   function toggleEdit(force) {
     editing = force != null ? force : !editing;
+    // Gridstack calcule les positions de glisser-deposer par rapport au
+    // haut de sa grille : entrer en edition avec le tableau defile
+    // decalerait chaque prise du montant du defilement. On remonte donc
+    // en haut avant d'activer les poignees.
+    // Gridstack computes drag-and-drop positions relative to the top of
+    // its grid: entering edit mode with the board scrolled would offset
+    // every grab by the scroll amount. So we return to the top before
+    // enabling the handles.
+    if (editing) {
+      const b = boardEl();
+      if (b) b.scrollTop = 0;
+    }
     document.body.classList.toggle("editing", editing);
     grid.setStatic(!editing);
     drawers.forEach((d) => d.grid.setStatic(!editing));
@@ -3419,6 +3447,125 @@
     }
   }
 
+  /* ---------- Debordement du tableau / board overflow ----------
+
+     Une tuile ajoutee alors que la zone visible est pleine est placee par
+     Gridstack SOUS la derniere ligne visible (voir findPlacement, cas de
+     repli autoPosition). Avec overflow:hidden elle devenait invisible ET
+     insaisissable. On rend cette zone atteignable, sans jamais rien
+     changer sur un ecran ou tout tient.
+
+     A tile added while the visible area is full is placed by Gridstack
+     BELOW the last visible row (see findPlacement, autoPosition fallback).
+     With overflow:hidden it became invisible AND ungrabbable. We make that
+     area reachable, without ever changing anything on a screen where
+     everything fits. */
+
+  let boardOverflowing = false;
+
+  function boardEl() { return document.querySelector(".board"); }
+
+  /* Mesure REELLE du DOM plutot qu'un calcul en lignes
+     (grid.getRow() > gridRows). Le calcul ignorerait le padding de
+     .board, la marge des tuiles et l'arrondi Math.floor d'updateCellHeight,
+     et se tromperait donc d'un ou deux pixels dans les deux sens.
+     ACTUAL DOM measurement rather than a row count
+     (grid.getRow() > gridRows). The row count would ignore .board's
+     padding, the tiles' margin and updateCellHeight's Math.floor
+     rounding, and would therefore be off by a pixel or two either way. */
+  function updateOverflow() {
+    const board = boardEl();
+    if (!board) return;
+    // La tolerance de 1px absorbe les arrondis sous-pixel : sans elle,
+    // certains facteurs de zoom faisaient apparaitre et disparaitre
+    // l'ascenseur en boucle.
+    // The 1px tolerance absorbs sub-pixel rounding: without it, some zoom
+    // factors made the scrollbar flicker in and out.
+    const over = board.scrollHeight > board.clientHeight + 1;
+    if (over === boardOverflowing) return;
+    boardOverflowing = over;
+    board.classList.toggle("has-overflow", over);
+    // Si le debordement disparait (tuile supprimee, gridRows augmente),
+    // on serait reste bloque sur un scrollTop devenu impossible a annuler
+    // puisque le defilement vient d'etre referme.
+    // If the overflow goes away (tile removed, gridRows raised), we would
+    // stay stuck at a scrollTop that can no longer be undone, scrolling
+    // having just been closed off.
+    if (!over) board.scrollTop = 0;
+  }
+
+  /* Fait defiler jusqu'a une tuile posee hors champ. Sans cela, la
+     personne n'a aucun indice de l'endroit ou sa tuile a atterri -- c'est
+     precisement le symptome d'origine.
+     Scrolls to a tile placed off-screen. Without this, the person has no
+     clue where their tile landed -- which is precisely the original
+     symptom. */
+  function scrollTileIntoView(el) {
+    const board = boardEl();
+    if (!board || !el || !boardOverflowing) return;
+    const top = el.offsetTop;
+    const bottom = top + el.offsetHeight;
+    if (top < board.scrollTop) {
+      board.scrollTo({ top: Math.max(0, top - 10), behavior: "smooth" });
+    } else if (bottom > board.scrollTop + board.clientHeight) {
+      board.scrollTo({ top: bottom - board.clientHeight + 10, behavior: "smooth" });
+    }
+  }
+
+  /* Defilement tactile a DEUX doigts. Deux plutot que trois : c'est le
+     geste standard des pavés tactiles, et trois doigts est deja capte par
+     le systeme sur beaucoup d'environnements. Un doigt reste
+     integralement disponible aux widgets.
+     TWO-finger touch scrolling. Two rather than three: it is the standard
+     trackpad gesture, and three fingers is already captured by the system
+     on many environments. One finger stays entirely available to the
+     widgets. */
+  function initBoardScroll() {
+    const board = boardEl();
+    if (!board) return;
+
+    let lastY = null;
+
+    function avgY(touches) {
+      let sum = 0;
+      for (let i = 0; i < touches.length; i++) sum += touches[i].clientY;
+      return sum / touches.length;
+    }
+
+    board.addEventListener("touchstart", (e) => {
+      lastY = e.touches.length >= 2 ? avgY(e.touches) : null;
+    }, { passive: true, capture: true });
+
+    // passive:false est OBLIGATOIRE : un ecouteur passif voit son
+    // preventDefault() ignore, et le navigateur ferait defiler lui-meme.
+    // Capture pour passer AVANT les gestionnaires des widgets, qui
+    // pourraient sinon consommer le geste.
+    // passive:false is MANDATORY: a passive listener has its
+    // preventDefault() ignored, and the browser would scroll by itself.
+    // Capture so we run BEFORE the widgets' handlers, which could
+    // otherwise swallow the gesture.
+    board.addEventListener("touchmove", (e) => {
+      if (!boardOverflowing || e.touches.length < 2 || lastY == null) return;
+      const y = avgY(e.touches);
+      e.preventDefault();
+      board.scrollTop -= (y - lastY);
+      lastY = y;
+    }, { passive: false, capture: true });
+
+    board.addEventListener("touchend", (e) => {
+      lastY = e.touches.length >= 2 ? avgY(e.touches) : null;
+    }, { passive: true, capture: true });
+
+    // La molette n'a besoin d'aucun code : overflow-y:auto suffit, et le
+    // comportement natif (l'enfant defilant consomme d'abord, le tableau
+    // ensuite) est exactement celui attendu. La tuile Trafic conserve
+    // ainsi son zoom a la molette, Leaflet appelant preventDefault().
+    // The wheel needs no code at all: overflow-y:auto is enough, and the
+    // native behaviour (the scrolling child consumes first, then the
+    // board) is exactly the one expected. The Traffic tile thus keeps its
+    // wheel zoom, Leaflet calling preventDefault().
+  }
+
   function applySettings() {
     i18n.setLang(settings.lang);
     // Mode tactile : cibles agrandies via CSS (voir body.touch dans style.css)
@@ -3441,6 +3588,15 @@
     const cell = Math.floor((window.innerHeight - gap) / rows);
     grid.cellHeight(cell);
     drawers.forEach((d) => d.grid.cellHeight(cell));
+    // APRES le recalcul, jamais avant : on mesurerait sinon la hauteur
+    // d'avant redimensionnement. La dependance ne va que dans ce sens --
+    // la hauteur de cellule derive de window.innerHeight, jamais de la
+    // hauteur du contenu -- il n'y a donc aucune boucle de retour.
+    // AFTER the recompute, never before: we would otherwise measure the
+    // pre-resize height. The dependency only goes this way -- cell height
+    // derives from window.innerHeight, never from content height -- so
+    // there is no feedback loop.
+    updateOverflow();
   }
 
   /* ---------- Curseur en kiosque / kiosk cursor ---------- */
@@ -3524,8 +3680,9 @@
     }
 
     updateCellHeight();
+    initBoardScroll();
     window.addEventListener("resize", updateCellHeight);
-    grid.on("change", () => { if (editing) scheduleSave(); });
+    grid.on("change", () => { updateOverflow(); if (editing) scheduleSave(); });
     drawers.forEach((d) => d.grid.on("change", () => { if (editing) scheduleSave(); }));
 
     /* En mode edition : un clic simple sur une tuile ouvre ses parametres.

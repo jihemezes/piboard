@@ -53,6 +53,11 @@
           <h4>Taille des tuiles</h4>
           <p>Chaque widget définit une taille minimale et maximale cohérente avec ce qu'il affiche : par exemple, la carte de trafic ne peut pas descendre en dessous d'une certaine taille, car ses boutons (rafraîchissement, zoom) finiraient par se chevaucher. À l'inverse, le diaporama ou le classement sportif acceptent d'être agrandis largement, utile si vous augmentez la taille du texte dans les réglages d'apparence d'une tuile. Si une tuile déjà en place devient trop petite après une mise à jour de ses contraintes, PiBoard la rétablit automatiquement à sa taille minimale au chargement suivant.</p>
 
+          <h4>Quand une tuile ne tient plus à l'écran</h4>
+          <p>Quand vous ajoutez une tuile alors que la grille visible est déjà pleine, PiBoard réduit d'abord la nouvelle tuile jusqu'à sa taille minimale pour tenter de la faire tenir. Si même ainsi il n'y a plus de place, elle est posée <b>sous</b> la dernière ligne visible. Dans ce cas seulement, le tableau devient défilant et un fin ascenseur apparaît sur le bord droit ; le tableau défile automatiquement jusqu'à la tuile qui vient d'être ajoutée, pour que vous voyiez tout de suite où elle a atterri.</p>
+          <p>Pour défiler : la <b>molette</b> de la souris, ou <b>deux doigts</b> sur un écran tactile. Deux doigts et non un seul, afin qu'un glissement à un doigt reste entièrement disponible aux widgets (déplacer la carte de trafic, faire défiler la liste des courriels…). La molette au-dessus d'une tuile qui défile elle-même, ou au-dessus de la carte de trafic, agit d'abord sur celle-ci : la carte continue donc de zoomer à la molette comme avant.</p>
+          <p>Sur un écran où tout tient, <b>rien ne change</b> : aucun ascenseur n'apparaît et le tableau ne défile pas. Si vous ramenez ensuite la tuile dans la zone visible (en mode édition), ou si vous la supprimez, l'ascenseur disparaît de lui-même.</p>
+
           <h4>Les différentes zones du tableau de bord</h4>
           <ul>
             <li><b>Le tableau principal</b> — la grille visible en permanence, celle que l'on voit à l'écran au quotidien.</li>
@@ -83,6 +88,11 @@
 
           <h4>Tile size</h4>
           <p>Each widget defines a minimum and maximum size consistent with what it displays: for instance, the traffic map can't go below a certain size, since its buttons (refresh, zoom) would end up overlapping. Conversely, the slideshow or the league standings accept being enlarged a lot, useful if you increase the text size in a tile's appearance settings. If a tile already placed becomes too small after its constraints are updated, PiBoard automatically restores it to its minimum size on the next load.</p>
+
+          <h4>When a tile no longer fits on screen</h4>
+          <p>When you add a tile while the visible grid is already full, PiBoard first shrinks the new tile down to its minimum size to try to fit it in. If there is still no room even then, it is placed <b>below</b> the last visible row. In that case only, the board becomes scrollable and a thin scrollbar appears along the right edge; the board scrolls automatically to the tile just added, so you see straight away where it landed.</p>
+          <p>To scroll: the mouse <b>wheel</b>, or <b>two fingers</b> on a touchscreen. Two fingers rather than one, so that a one-finger drag stays entirely available to the widgets (panning the traffic map, scrolling the mail list…). The wheel over a tile that scrolls on its own, or over the traffic map, acts on that first: the map therefore still zooms with the wheel as before.</p>
+          <p>On a screen where everything fits, <b>nothing changes</b>: no scrollbar appears and the board does not scroll. If you later move the tile back into the visible area (in edit mode), or delete it, the scrollbar goes away on its own.</p>
 
           <h4>The dashboard's different areas</h4>
           <ul>
