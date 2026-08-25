@@ -632,6 +632,11 @@
           <p>La convention est celle de la source : suffixe de place (<code>.US</code>, <code>.FR</code>, <code>.DE</code>, <code>.UK</code>, <code>.JP</code>…), indices préfixés de <code>^</code>, paires de change en six lettres (<code>EURUSD</code>). Exemples : <code>NESN.CH</code> pour Nestlé, <code>^SPX</code> pour le S&P 500.</p>
           <p><b>Attention à la devise</b> : pour un symbole saisi à la main, PiBoard la devine à partir du suffixe. La devinette est juste dans la plupart des cas mais pas toujours ; si le symbole affiché à côté du cours vous semble faux, c'est cela.</p>
 
+          <h4>Marché fermé</h4>
+          <p>Contrairement aux cryptomonnaies, la bourse ferme le soir et le week-end. Hors séance, la ligne s'atténue et porte la mention <b>« clôture »</b> : sans cela, une variation figée pendant tout un week-end ressemblerait à une tuile en panne. PiBoard espace aussi ses appels à la source hors séance, un cours fermé ne bougeant plus.</p>
+          <p>Les horaires tiennent compte du <b>fuseau de chaque place</b> : le S&amp;P 500 est encore fermé quand il est 14 h à Paris, et le Nikkei est ouvert quand vous dormez. En revanche, les <b>jours fériés ne sont pas connus</b> — PiBoard ne gère pas les calendriers fériés de sept places. Un 1er janvier, la tuile affichera donc « ouvert » à tort. Le change n'est pas non plus disponible en continu : il ferme aussi le week-end, contrairement aux cryptos.</p>
+          <p>Pour un symbole saisi à la main dont la place n'est pas identifiable, <b>aucune mention n'est affichée</b> : mieux vaut pas d'indicateur qu'un « fermé » faux.</p>
+
           <h4>Sources</h4>
           <p>Stooq en principal, Yahoo Finance en secours — même principe que la tuile Cryptos avec Binance et CoinGecko. Aucune clé ni compte. Si les deux échouent, la ligne conserve sa dernière valeur connue en s'estompant légèrement, plutôt que de disparaître.</p>
         `,
@@ -648,6 +653,11 @@
           <h4>Typing a symbol by hand</h4>
           <p>The convention is the source's: exchange suffix (<code>.US</code>, <code>.FR</code>, <code>.DE</code>, <code>.UK</code>, <code>.JP</code>…), indices prefixed with <code>^</code>, FX pairs as six letters (<code>EURUSD</code>). Examples: <code>NESN.CH</code> for Nestlé, <code>^SPX</code> for the S&P 500.</p>
           <p><b>Mind the currency</b>: for a hand-typed symbol, PiBoard guesses it from the suffix. The guess is right in most cases but not all; if the symbol shown next to the price looks wrong, that is why.</p>
+
+          <h4>Market closed</h4>
+          <p>Unlike cryptocurrencies, stock markets close in the evening and at weekends. Outside trading hours the row dims and carries a <b>"closed"</b> tag: without it, a change frozen for a whole weekend would look like a broken tile. PiBoard also spaces out its calls to the source outside trading hours, a closed price no longer moving.</p>
+          <p>The hours account for <b>each exchange's time zone</b>: the S&amp;P 500 is still closed when it is 2pm in Paris, and the Nikkei is open while you sleep. <b>Public holidays, however, are not known</b> — PiBoard does not track seven exchanges' holiday calendars. On New Year's Day the tile will therefore wrongly show "open". FX is not continuously available either: it too closes at the weekend, unlike crypto.</p>
+          <p>For a hand-typed symbol whose exchange cannot be identified, <b>no tag is shown</b>: no indicator beats a wrong "closed".</p>
 
           <h4>Sources</h4>
           <p>Stooq first, Yahoo Finance as backup — the same principle as the Crypto tile with Binance and CoinGecko. No key or account. If both fail, the line keeps its last known value and dims slightly, rather than disappearing.</p>

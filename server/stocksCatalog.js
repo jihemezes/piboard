@@ -128,6 +128,133 @@ const EXCHANGES = [
   }
 ];
 
+/* ---------- Horaires de marche / market hours ----------
+
+   Un indicateur "marche ferme" n'a d'interet que s'il est JUSTE. D'ou
+   deux precautions :
+
+   1. Chaque place porte son FUSEAU IANA, jamais un decalage fixe. Les
+      passages a l'heure d'ete n'ont pas lieu aux memes dates en Europe,
+      aux Etats-Unis et au Japon : un decalage en dur serait faux
+      plusieurs semaines par an, et le Japon n'a pas d'heure d'ete du
+      tout.
+   2. L'heure locale de la place est obtenue via Intl, la meme API que
+      celle qui alimente deja la tuile Horloge -- pas de calcul maison.
+
+   Les horaires sont ceux de la seance principale, hors enchere de
+   pre-ouverture et hors jours feries : PiBoard ne connait pas les
+   calendriers feries de sept places, et un tableau mural n'a pas besoin
+   de cette exactitude. L'aide le precise.
+
+   A "market closed" indicator is only worth having if it is RIGHT. Hence
+   two precautions:
+
+   1. Each exchange carries its IANA TIME ZONE, never a fixed offset.
+      Daylight-saving switches do not happen on the same dates in Europe,
+      the US and Japan: a hard-coded offset would be wrong several weeks
+      a year, and Japan has no DST at all.
+   2. The exchange's local time comes from Intl, the same API that already
+      drives the Clock tile -- no home-made arithmetic.
+
+   Hours are those of the main session, excluding pre-opening auctions and
+   public holidays: PiBoard does not know seven exchanges' holiday
+   calendars, and a wall board does not need that precision. The help says
+   so. */
+
+const MARKETS = {
+  euronext: { tz: "Europe/Paris", open: "09:00", close: "17:30", days: [1, 2, 3, 4, 5] },
+  xetra:    { tz: "Europe/Berlin", open: "09:00", close: "17:30", days: [1, 2, 3, 4, 5] },
+  lse:      { tz: "Europe/London", open: "08:00", close: "16:30", days: [1, 2, 3, 4, 5] },
+  nyse:     { tz: "America/New_York", open: "09:30", close: "16:00", days: [1, 2, 3, 4, 5] },
+  tokyo:    { tz: "Asia/Tokyo", open: "09:00", close: "15:30", days: [1, 2, 3, 4, 5] },
+  hk:       { tz: "Asia/Hong_Kong", open: "09:30", close: "16:00", days: [1, 2, 3, 4, 5] },
+  six:      { tz: "Europe/Zurich", open: "09:00", close: "17:30", days: [1, 2, 3, 4, 5] },
+  /* Change et matieres premieres : cotation continue du dimanche soir au
+     vendredi soir (heure de New York). Ce n'est pas "24/7" comme les
+     cryptos -- le week-end, ces marches sont bel et bien fermes.
+     FX and commodities: continuous trading from Sunday evening to Friday
+     evening (New York time). This is not "24/7" like crypto -- at the
+     weekend these markets really are closed. */
+  fx:       { tz: "America/New_York", open: "00:00", close: "24:00", days: [0, 1, 2, 3, 4, 5], sundayFrom: "17:00", fridayTo: "17:00" }
+};
+
+/* Place de rattachement par famille du catalogue. Les indices sont
+   traites symbole par symbole : le CAC et le Nikkei ne ferment
+   evidemment pas a la meme heure.
+   Market per catalog family. Indices are handled symbol by symbol: the
+   CAC and the Nikkei obviously do not close at the same time. */
+const EXCHANGE_MARKET = {
+  paris: "euronext", us: "nyse", xetra: "xetra", lse: "lse",
+  fx: "fx", commodities: "fx"
+};
+
+const INDEX_MARKET = {
+  "^CAC": "euronext", "^STOXX50E": "euronext",
+  "^SPX": "nyse", "^NDQ": "nyse", "^DJI": "nyse",
+  "^DAX": "xetra", "^FTM": "lse", "^NKX": "tokyo",
+  "^SMI": "six", "^HSI": "hk"
+};
+
+function toMinutes(hhmm) {
+  const [h, m] = String(hhmm).split(":").map(Number);
+  return h * 60 + (m || 0);
+}
+
+/* Heure locale de la place, via Intl. `weekday: "short"` en anglais
+   donne une valeur stable quelle que soit la langue de PiBoard --
+   s'appuyer sur la locale du systeme casserait l'indicateur en francais.
+   The exchange's local time, via Intl. `weekday: "short"` in English
+   gives a stable value whatever PiBoard's language -- relying on the
+   system locale would break the indicator in French. */
+function localTime(tz, now) {
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false
+  });
+  const parts = {};
+  for (const p of fmt.formatToParts(now || new Date())) parts[p.type] = p.value;
+  const DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return {
+    day: DAYS[parts.weekday],
+    minutes: (Number(parts.hour) % 24) * 60 + Number(parts.minute)
+  };
+}
+
+function marketFor(symbol, exchangeId) {
+  const s = String(symbol || "").toUpperCase().trim();
+  if (INDEX_MARKET[s]) return MARKETS[INDEX_MARKET[s]];
+  const known = findInstrument(s);
+  const id = (known && known.exchange) || exchangeId;
+  const m = EXCHANGE_MARKET[id];
+  if (m) return MARKETS[m];
+  // Saisie libre : on devine d'apres le suffixe, comme pour la devise.
+  // Free entry: guessed from the suffix, as for the currency.
+  if (s.endsWith(".US") || s.endsWith(".F")) return MARKETS.nyse;
+  if (s.endsWith(".UK")) return MARKETS.lse;
+  if (s.endsWith(".DE")) return MARKETS.xetra;
+  if (s.endsWith(".JP")) return MARKETS.tokyo;
+  if (s.endsWith(".HK")) return MARKETS.hk;
+  if (s.endsWith(".CH")) return MARKETS.six;
+  if (s.endsWith(".FR") || s.endsWith(".NL") || s.endsWith(".BE")) return MARKETS.euronext;
+  if (/^[A-Z]{6}$/.test(s) || /^X(AU|AG)USD$/.test(s)) return MARKETS.fx;
+  return null;
+}
+
+/* Renvoie true (ouvert), false (ferme) ou null (horaires inconnus).
+   Le null est important : pour un symbole exotique saisi a la main, mieux
+   vaut n'afficher AUCUN indicateur qu'un "ferme" faux.
+   Returns true (open), false (closed) or null (hours unknown). The null
+   matters: for an exotic hand-typed symbol, showing NO indicator beats a
+   wrong "closed". */
+function isMarketOpen(symbol, exchangeId, now) {
+  const m = marketFor(symbol, exchangeId);
+  if (!m) return null;
+  const t = localTime(m.tz, now);
+  if (!m.days.includes(t.day)) return false;
+  if (m.sundayFrom && t.day === 0) return t.minutes >= toMinutes(m.sundayFrom);
+  if (m.fridayTo && t.day === 5) return t.minutes < toMinutes(m.fridayTo);
+  return t.minutes >= toMinutes(m.open) && t.minutes < toMinutes(m.close);
+}
+
 /* Symboles de devise pour l'affichage. Volontairement minimal : un
    symbole inconnu retombe sur le code ISO, ce qui reste lisible.
    Currency symbols for display. Deliberately minimal: an unknown symbol
@@ -174,4 +301,8 @@ function symbolFor(currency) {
   return CURRENCY_SYMBOLS[String(currency).toUpperCase()] || String(currency).toUpperCase();
 }
 
-module.exports = { EXCHANGES, CURRENCY_SYMBOLS, guessCurrency, findInstrument, currencyFor, symbolFor };
+module.exports = {
+  EXCHANGES, CURRENCY_SYMBOLS, MARKETS,
+  guessCurrency, findInstrument, currencyFor, symbolFor,
+  isMarketOpen, marketFor, _localTime: localTime
+};

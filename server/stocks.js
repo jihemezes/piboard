@@ -37,6 +37,16 @@
 const catalog = require("./stocksCatalog");
 
 const QUOTE_TTL_MS = 5 * 60 * 1000;
+/* Marche ferme : le cours ne bougera plus avant la reouverture. Inutile
+   d'interroger la source toutes les 5 minutes toute la nuit et tout le
+   week-end -- on etire le cache a 2 h. Meme esprit d'economie que le
+   cache Tempo : ces sources sont gratuites, autant ne pas les marteler
+   pour une valeur figee.
+   Market closed: the price will not move before it reopens. No point
+   querying the source every 5 minutes all night and all weekend -- the
+   cache stretches to 2 h. Same frugality as the Tempo cache: these
+   sources are free, so let us not hammer them for a frozen value. */
+const CLOSED_TTL_MS = 2 * 60 * 60 * 1000;
 const CHART_TTL_MS = 60 * 60 * 1000;
 const TIMEOUT_MS = 12000;
 
@@ -201,9 +211,18 @@ async function getQuotes(symbols) {
   const out = {};
 
   await Promise.all(symbols.map(async (symbol) => {
+    // L'etat du marche est recalcule a CHAQUE appel, meme sur un cours
+    // servi depuis le cache : sinon l'indicateur resterait bloque sur
+    // "ouvert" pendant deux heures apres la cloture.
+    // The market state is recomputed on EVERY call, even for a price
+    // served from cache: otherwise the indicator would stay stuck on
+    // "open" for two hours after the close.
+    const open = catalog.isMarketOpen(symbol, null);
+    const ttl = open === false ? CLOSED_TTL_MS : QUOTE_TTL_MS;
+
     const cached = quoteCache.get(symbol);
-    if (cached && now - cached.at < QUOTE_TTL_MS) {
-      out[symbol] = cached.value;
+    if (cached && now - cached.at < ttl) {
+      out[symbol] = { ...cached.value, marketOpen: open };
       return;
     }
 
@@ -220,7 +239,7 @@ async function getQuotes(symbols) {
       const currency = catalog.currencyFor(symbol);
       const value = { ...q, currency, symbolChar: catalog.symbolFor(currency), stale: false };
       quoteCache.set(symbol, { at: now, value });
-      out[symbol] = value;
+      out[symbol] = { ...value, marketOpen: open };
       return;
     }
 
@@ -230,7 +249,7 @@ async function getQuotes(symbols) {
     // BOTH sources failed: we surface the last known value rather than
     // making a line vanish that was correct five minutes ago. The
     // degraded state is FLAGGED (stale), not hidden.
-    if (cached) out[symbol] = { ...cached.value, stale: true };
+    if (cached) out[symbol] = { ...cached.value, stale: true, marketOpen: open };
     else out[symbol] = null;
   }));
 
@@ -259,7 +278,7 @@ function clearCache() { quoteCache.clear(); chartCache.clear(); }
 
 module.exports = {
   getQuotes, getChart, clearCache,
-  QUOTE_TTL_MS, CHART_TTL_MS, RANGE_POINTS,
+  QUOTE_TTL_MS, CLOSED_TTL_MS, CHART_TTL_MS, RANGE_POINTS,
   _parseStooqQuote: parseStooqQuote,
   _parseStooqChart: parseStooqChart,
   _isStooqError: isStooqError,

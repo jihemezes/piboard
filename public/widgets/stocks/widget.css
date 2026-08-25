@@ -102,3 +102,25 @@
   touch-action: manipulation;
 }
 body.touch .rows-del { width: 34px; height: 34px; }
+
+/* Marche ferme : la ligne s'attenue legerement et porte une pastille.
+   Volontairement discret -- l'information est "cette valeur ne bouge
+   pas", pas une alerte. Attenuation plus faible que .pws-stale, qui
+   signale lui un vrai probleme de source.
+   Market closed: the row dims slightly and carries a pill. Deliberately
+   discreet -- the message is "this value is not moving", not an alert.
+   Dimmed less than .pws-stale, which flags an actual source problem. */
+.pws-shut .pws-val,
+.pws-shut .pws-chg { opacity: 0.72; }
+
+.pws-closed {
+  display: inline-block;
+  margin-left: 0.45em;
+  padding: 0.02em 0.4em;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  font-size: 0.62em;
+  color: var(--muted);
+  vertical-align: middle;
+  white-space: nowrap;
+}

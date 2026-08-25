@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.72.1
+
+- **Indicateur "marche ferme" sur la tuile Bourse.** Hors seance, la
+  ligne s'attenue et porte la mention "cloture". Sans cela, une variation
+  figee pendant tout un week-end ressemble a une tuile en panne.
+  - **Fuseau IANA par place, jamais un decalage fixe.** Les passages a
+    l'heure d'ete n'ont pas lieu aux memes dates en Europe, aux
+    Etats-Unis et au Japon, et le Japon n'en a pas du tout : un decalage
+    en dur serait faux plusieurs semaines par an. L'heure locale vient
+    d'`Intl`, la meme API que la tuile Horloge -- aucun calcul maison.
+    Un test verifie qu'au meme instant Paris est ouvert et New York ne
+    l'est pas encore, ce qu'un decalage en dur ne passerait pas.
+  - **`weekday` lu en anglais** et non dans la locale courante : sinon
+    l'indicateur se serait casse des que PiBoard passe en francais.
+  - **Horaires inconnus -> aucun indicateur** (`null`, pas `false`) :
+    pour un symbole exotique saisi a la main, mieux vaut pas
+    d'information qu'un "ferme" faux.
+  - **Le change n'est PAS 24/7** contrairement aux cryptos : il ouvre le
+    dimanche soir et ferme le vendredi soir, heure de New York. Il est
+    donc bien signale ferme le samedi.
+  - **Cache etire a 2 h marche ferme** (au lieu de 5 min) : inutile
+    d'interroger la source toutes les 5 minutes toute la nuit et tout le
+    week-end pour une valeur figee. L'etat du marche est en revanche
+    recalcule a CHAQUE appel, meme sur un cours servi depuis le cache,
+    sans quoi l'indicateur resterait bloque sur "ouvert" deux heures
+    apres la cloture.
+
+- **Limite assumee** : les JOURS FERIES ne sont pas connus -- PiBoard ne
+  gere pas les calendriers feries de sept places. Un 1er janvier, la
+  tuile affichera "ouvert" a tort. L'aide le dit explicitement plutot que
+  de laisser decouvrir la surprise.
+
+- **Tests** : 10 assertions ajoutees a `test/stocks.test.js` (32 au
+  total), dont le decalage Paris / New York, le Nikkei ouvert la nuit
+  europeenne, et le change ferme le samedi.
+
 ## 1.72.0
 
 - **Nouvelle tuile "Bourse et indices"** : indices, actions, devises et

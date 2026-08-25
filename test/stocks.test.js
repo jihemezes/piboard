@@ -62,4 +62,41 @@ check("devise devinee pour une saisie libre", c.currencyFor("NESN.UK") === "GBP"
 check("devise inconnue -> null, jamais une valeur inventee", c.currencyFor("ZZZ.XX") === null);
 check("devise inconnue -> code ISO affiche tel quel", c.symbolFor("SEK") === "SEK");
 
+console.log("== horaires de marche ==");
+const at = (iso) => new Date(iso);
+// Mardi 25/08/2026. 12:00 UTC = 14 h a Paris, 8 h a New York.
+// Tuesday 2026-08-25. 12:00 UTC = 2pm in Paris, 8am in New York.
+check("CAC ouvert un mardi a 14 h heure de Paris",
+  c.isMarketOpen("^CAC", null, at("2026-08-25T12:00:00Z")) === true);
+check("CAC ferme le meme mardi a 23 h heure de Paris",
+  c.isMarketOpen("^CAC", null, at("2026-08-25T21:00:00Z")) === false);
+check("CAC ferme le samedi", c.isMarketOpen("^CAC", null, at("2026-08-29T12:00:00Z")) === false);
+
+// Le vrai test du fuseau : au meme instant, Paris est ouvert et New York
+// ne l'est pas encore. Un decalage en dur se ferait prendre ici.
+// The real time-zone test: at the same instant, Paris is open and New
+// York is not yet. A hard-coded offset would be caught here.
+check("S&P ferme quand il est 14 h a Paris (8 h a New York)",
+  c.isMarketOpen("^SPX", null, at("2026-08-25T12:00:00Z")) === false);
+check("S&P ouvert quand il est 14 h a New York",
+  c.isMarketOpen("^SPX", null, at("2026-08-25T18:00:00Z")) === true);
+check("Nikkei ouvert quand il est 2 h du matin a Paris",
+  c.isMarketOpen("^NKX", null, at("2026-08-25T00:30:00Z")) === true);
+
+check("le change est ouvert en semaine",
+  c.isMarketOpen("EURUSD", null, at("2026-08-25T12:00:00Z")) === true);
+// Le change n'est PAS 24/7 comme les cryptos : le week-end il ferme.
+// FX is NOT 24/7 like crypto: it closes at the weekend.
+check("le change est ferme le samedi",
+  c.isMarketOpen("EURUSD", null, at("2026-08-29T12:00:00Z")) === false);
+
+// Horaires inconnus -> null, pour n'afficher AUCUN indicateur plutot
+// qu'un "ferme" faux.
+// Unknown hours -> null, so NO indicator is shown rather than a wrong
+// "closed".
+check("symbole exotique -> null, jamais un 'ferme' invente",
+  c.isMarketOpen("ZZZ.XX", null, at("2026-08-25T12:00:00Z")) === null);
+check("saisie libre .UK rattachee a Londres",
+  c.isMarketOpen("XYZ.UK", null, at("2026-08-25T12:00:00Z")) === true);
+
 console.log("\n" + ok + " assertions OK");

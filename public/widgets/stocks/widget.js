@@ -119,8 +119,18 @@
         // valeur connue en le signalant plutot que de vider la ligne.
         // stale: both sources failed, we show the last known value and
         // flag it rather than emptying the row.
-        return `<div class="pws-row${q.stale ? " pws-stale" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || l.symbol)}">
-          <span class="pws-name">${esc(l.name || l.symbol)}</span>
+        // marketOpen vaut null pour un symbole dont on ne connait pas
+        // les horaires : on n'affiche alors AUCUN indicateur, un "ferme"
+        // faux etant pire que pas d'information.
+        // marketOpen is null for a symbol whose hours we do not know: we
+        // then show NO indicator, a wrong "closed" being worse than no
+        // information at all.
+        const closed = q.marketOpen === false;
+        const mark = closed
+          ? `<span class="pws-closed" title="${esc(i18n.t("stocks.closedTitle"))}">${esc(i18n.t("stocks.closed"))}</span>`
+          : "";
+        return `<div class="pws-row${q.stale ? " pws-stale" : ""}${closed ? " pws-shut" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || l.symbol)}">
+          <span class="pws-name">${esc(l.name || l.symbol)}${mark}</span>
           <span class="pws-val">${esc(formatValue(q.price, lang))}<span class="pws-cur">${esc(q.symbolChar || "")}</span></span>
           ${chg}
         </div>`;
