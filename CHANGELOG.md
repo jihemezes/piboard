@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.73.1
+
+- **Correctif : AUCUN graphique de la tuile Bourse ne fonctionnait.**
+  Cause racine : `getChart()` n'avait qu'UNE SEULE source. Le moteur a
+  deux sources (Stooq puis Yahoo) avait bien ete construit pour les
+  COURS, mais pas pour les COURBES -- oubli de ma part en 1.72.0. Pire,
+  la source unique retenue etait `stooq.com/q/d/l/`, le point d'entree le
+  plus strictement limite de tous. Aucun repli : echec total.
+  - **Yahoo Finance passe en PRIORITE pour les courbes**, a l'inverse des
+    cours ou Stooq reste premier. Stooq redevient un repli pour les
+    periodes quotidiennes.
+  - Les pas sans transaction (`close: null`, frequents en
+    intrajournalier) sont ecartes : les laisser passer produisait des
+    `NaN` dans les coordonnees et cassait le trace du chemin SVG.
+  - Moins de deux points exploitables -> bascule sur le repli plutot que
+    de tracer un segment vide.
+
+- **Nouvelle periode "1 jour"**, avec un pas de 5 minutes, et desormais
+  celle sur laquelle la courbe s'ouvre. Elle n'est possible QUE via
+  Yahoo : l'historique de Stooq est quotidien, une seule bougie par jour
+  ne fait pas une courbe intrajournaliere -- Stooq n'est donc
+  volontairement pas propose en repli de cette periode, ou il renverrait
+  une courbe fausse.
+  - Cache de la courbe du jour ramene a 5 min (contre 1 h pour les
+    periodes longues) : une courbe intrajournaliere bouge pendant la
+    seance, la garder une heure la figerait.
+
+- **Les fichiers de widgets portent desormais la version de
+  l'application dans leur URL** (`widget.js?v=1.73.1`). Le serveur
+  envoyait deja `no-cache, must-revalidate`, mais revalider suppose que
+  le navigateur INTERROGE le serveur -- ce qui n'arrive pas toujours dans
+  une application Electron empaquetee, ni apres une mise a jour
+  automatique. Une URL qui change a chaque version ne laisse aucune place
+  a l'ambiguite. Sans version disponible, on retombe sur le comportement
+  precedent : degradation, pas panne.
+
+- **Tests** : 12 assertions ajoutees a `test/stocks.test.js` (66 au
+  total), dont le filtrage des `null` intrajournaliers et la
+  verification que Stooq n'est pas propose en repli du "1 jour".
+
 ## 1.73.0
 
 - **Tuile Bourse : les indices ne peuvent plus etre perdus sans recours.**

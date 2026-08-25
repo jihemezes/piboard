@@ -6,7 +6,7 @@
 (function () {
   "use strict";
 
-  const RANGES = ["1m", "6m", "1y", "5y"];
+  const RANGES = ["1d", "1m", "6m", "1y", "5y"];
   const CHART_W = 400, CHART_H = 200;
   const PAD = { left: 54, right: 10, top: 10, bottom: 10 };
 
@@ -173,7 +173,7 @@
     openChart(symbol, name) {
       const i18n = this.ctx.i18n;
       this.activeSymbol = symbol;
-      this.activeRange = "1y";
+      this.activeRange = "1d";
       if (this.modal) this.modal.remove();
 
       const m = document.createElement("div");
@@ -186,7 +186,7 @@
           </header>
           <div class="pws-chart-body">
             <div class="pws-ranges">${RANGES.map((r) =>
-              `<button class="pws-range${r === "1y" ? " active" : ""}" data-r="${r}">${esc(i18n.t("stocks.range." + r))}</button>`).join("")}</div>
+              `<button class="pws-range${r === "1d" ? " active" : ""}" data-r="${r}">${esc(i18n.t("stocks.range." + r))}</button>`).join("")}</div>
             <svg class="pws-chart" viewBox="0 0 ${CHART_W} ${CHART_H}" preserveAspectRatio="none">
               <g class="pws-grid"></g>
               <path class="pws-line" fill="none" stroke-width="2"></path>
@@ -214,7 +214,7 @@
         });
       });
 
-      this.loadChart(symbol, "1y");
+      this.loadChart(symbol, "1d");
     }
 
     async loadChart(symbol, range) {

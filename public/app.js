@@ -700,17 +700,49 @@
 
   /* ---------- Chargement des widgets / widget loading ---------- */
 
+  /* Version de l'application, servie par /api/version et injectee dans
+     l'URL des fichiers de widgets. Le serveur envoie pourtant deja
+     "no-cache, must-revalidate" sur le JS et le CSS ; mais une
+     revalidation suppose que le navigateur INTERROGE le serveur, ce qui
+     n'arrive pas toujours dans une application Electron empaquetee, ni
+     apres une mise a jour automatique ou l'ancien service worker et le
+     cache disque peuvent survivre. Une URL qui CHANGE a chaque version
+     ne laisse aucune place a l'ambiguite : ce n'est plus la meme
+     ressource, elle est forcement rechargee.
+     App version, served by /api/version and injected into widget file
+     URLs. The server already sends "no-cache, must-revalidate" on JS and
+     CSS; but revalidating assumes the browser ASKS the server, which does
+     not always happen in a packaged Electron app, nor after an auto-update
+     where the old service worker and disk cache can survive. A URL that
+     CHANGES with every version leaves no room for ambiguity: it is no
+     longer the same resource, so it must be reloaded. */
+  let assetVersion = "";
+
+  async function loadAssetVersion() {
+    try {
+      const r = await fetch("/api/version");
+      assetVersion = String((await r.json()).version || "");
+    } catch (e) {
+      // Sans version on retombe sur le comportement precedent : pas de
+      // parametre, donc le cache HTTP normal. Degradation, pas panne.
+      // With no version we fall back to the previous behaviour: no
+      // parameter, so plain HTTP caching. Degraded, not broken.
+      assetVersion = "";
+    }
+  }
+
   function loadWidgetAssets(manifest) {
     return new Promise((resolve) => {
       const base = "widgets/" + manifest.dir + "/";
+      const bust = assetVersion ? "?v=" + encodeURIComponent(assetVersion) : "";
       if (manifest.css !== false) {
         const link = document.createElement("link");
         link.rel = "stylesheet";
-        link.href = base + "widget.css";
+        link.href = base + "widget.css" + bust;
         document.head.appendChild(link);
       }
       const script = document.createElement("script");
-      script.src = base + "widget.js";
+      script.src = base + "widget.js" + bust;
       script.onload = () => resolve(true);
       script.onerror = () => { console.warn("[piboard] widget js failed:", manifest.id); resolve(false); };
       document.body.appendChild(script);
@@ -3977,6 +4009,14 @@
       }, "#" + def.gridId);
       drawers.set(def.side, { def, grid: dGrid, el: $(def.elId), sizePct: def.defaultSizePct });
     }
+
+    // AVANT tout chargement de widget : la version doit etre connue au
+    // moment ou les URL sont construites, sinon le premier chargement de
+    // la session passerait encore sans parametre.
+    // BEFORE loading any widget: the version must be known when the URLs
+    // are built, otherwise the session's first load would still go
+    // through without the parameter.
+    await loadAssetVersion();
 
     updateCellHeight();
     initBoardScroll();

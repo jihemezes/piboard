@@ -645,8 +645,12 @@
           <p>Les horaires tiennent compte du <b>fuseau de chaque place</b> : le S&amp;P 500 est encore fermé quand il est 14 h à Paris, et le Nikkei est ouvert quand vous dormez. En revanche, les <b>jours fériés ne sont pas connus</b> — PiBoard ne gère pas les calendriers fériés de sept places. Un 1er janvier, la tuile affichera donc « ouvert » à tort. Le change n'est pas non plus disponible en continu : il ferme aussi le week-end, contrairement aux cryptos.</p>
           <p>Pour un symbole saisi à la main dont la place n'est pas identifiable, <b>aucune mention n'est affichée</b> : mieux vaut pas d'indicateur qu'un « fermé » faux.</p>
 
+          <h4>Les courbes</h4>
+          <p>Un clic sur une ligne ouvre la courbe, qui s'ouvre sur la <b>journée en cours</b> (pas de 5 minutes), avec aussi 1 mois, 6 mois, 1 an et 5 ans. Hors séance, la courbe du jour montre la dernière séance connue.</p>
+          <p>Les courbes viennent en priorité de Yahoo Finance, et non de Stooq comme les cours : Yahoo est la seule des deux à fournir l'intrajournalier, donc le graphique de la journée. Stooq reste en secours pour les périodes longues.</p>
+
           <h4>Sources</h4>
-          <p>Stooq en principal, Yahoo Finance en secours — même principe que la tuile Cryptos avec Binance et CoinGecko. Aucune clé ni compte. Si les deux échouent, la ligne conserve sa dernière valeur connue en s'estompant légèrement, plutôt que de disparaître.</p>
+          <p>Stooq en principal pour les cours, Yahoo Finance en secours — même principe que la tuile Cryptos avec Binance et CoinGecko. Aucune clé ni compte. Si les deux échouent, la ligne conserve sa dernière valeur connue en s'estompant légèrement, plutôt que de disparaître.</p>
         `,
         en: `
           <h4>Goal</h4>
@@ -675,8 +679,12 @@
           <p>The hours account for <b>each exchange's time zone</b>: the S&amp;P 500 is still closed when it is 2pm in Paris, and the Nikkei is open while you sleep. <b>Public holidays, however, are not known</b> — PiBoard does not track seven exchanges' holiday calendars. On New Year's Day the tile will therefore wrongly show "open". FX is not continuously available either: it too closes at the weekend, unlike crypto.</p>
           <p>For a hand-typed symbol whose exchange cannot be identified, <b>no tag is shown</b>: no indicator beats a wrong "closed".</p>
 
+          <h4>The charts</h4>
+          <p>Clicking a row opens the chart, which starts on the <b>current day</b> (5-minute step), with 1 month, 6 months, 1 year and 5 years also available. Outside trading hours, the day chart shows the last known session.</p>
+          <p>Charts come primarily from Yahoo Finance rather than Stooq as the quotes do: Yahoo is the only one of the two to provide intraday data, hence the day chart. Stooq stays as backup for the longer ranges.</p>
+
           <h4>Sources</h4>
-          <p>Stooq first, Yahoo Finance as backup — the same principle as the Crypto tile with Binance and CoinGecko. No key or account. If both fail, the line keeps its last known value and dims slightly, rather than disappearing.</p>
+          <p>Stooq first for quotes, Yahoo Finance as backup — the same principle as the Crypto tile with Binance and CoinGecko. No key or account. If both fail, the line keeps its last known value and dims slightly, rather than disappearing.</p>
         `
       }
     },

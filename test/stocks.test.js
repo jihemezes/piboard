@@ -140,4 +140,49 @@ for (const ex of c.EXCHANGES) {
   check("aucun doublon dans la famille " + ex.id, new Set(syms).size === syms.length);
 }
 
+console.log("== courbes : source Yahoo (intrajournalier) ==");
+const T = Math.floor(Date.parse("2026-08-25T09:00:00Z") / 1000);
+const yc = s._parseYahooChart({ chart: { result: [{
+  timestamp: [T, T + 300, T + 600],
+  indicators: { quote: [{ close: [10, 11, 12] }] } }] } });
+check("serie extraite de la reponse Yahoo", yc.length === 3);
+check("valeurs de cloture reprises telles quelles", yc[2].value === 12);
+
+// Les pas sans transaction valent null en intrajournalier : les laisser
+// passer casserait le trace du chemin SVG (NaN dans les coordonnees).
+// Steps with no trade are null intraday: letting them through would break
+// the SVG path (NaN in the coordinates).
+const holes = s._parseYahooChart({ chart: { result: [{
+  timestamp: [T, T + 300, T + 600],
+  indicators: { quote: [{ close: [10, null, 12] }] } }] } });
+check("les pas sans transaction (null) sont ecartes", holes.length === 2);
+check("aucune valeur non finie ne subsiste", holes.every((p) => Number.isFinite(p.value)));
+
+// Moins de deux points ne fait pas une courbe : mieux vaut basculer sur
+// le repli que tracer un segment vide.
+// Fewer than two points is not a chart: better to fall back than draw an
+// empty segment.
+check("un seul point exploitable -> null (bascule sur le repli)",
+  s._parseYahooChart({ chart: { result: [{ timestamp: [T],
+    indicators: { quote: [{ close: [10] }] } }] } }) === null);
+check("seance non commencee (serie vide) -> null",
+  s._parseYahooChart({ chart: { result: [{ timestamp: [],
+    indicators: { quote: [{ close: [] }] } }] } }) === null);
+check("reponse malformee -> null, sans exception", s._parseYahooChart({}) === null);
+check("reponse nulle -> null, sans exception", s._parseYahooChart(null) === null);
+
+console.log("== courbes : periodes ==");
+check("la periode 1 jour existe", !!s.YAHOO_RANGE["1d"]);
+// Le "1 jour" n'a de sens qu'en intrajournalier : un pas quotidien
+// donnerait un point unique.
+// "1 day" only makes sense intraday: a daily step would give one point.
+check("le 1 jour utilise un pas intrajournalier", s.YAHOO_RANGE["1d"].interval === "5m");
+check("les periodes longues utilisent un pas quotidien ou hebdomadaire",
+  ["1m", "6m", "1y", "5y"].every((r) => /1d|1wk/.test(s.YAHOO_RANGE[r].interval)));
+// Stooq ne fournit que du quotidien : il ne doit PAS etre propose comme
+// repli du 1 jour, ou il renverrait une courbe fausse.
+// Stooq only provides daily data: it must NOT be offered as the 1-day
+// fallback, or it would return a wrong chart.
+check("le repli quotidien ne couvre pas le 1 jour", s.RANGE_POINTS["1d"] === undefined);
+
 console.log("\n" + ok + " assertions OK");

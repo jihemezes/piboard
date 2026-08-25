@@ -204,7 +204,63 @@ async function yahooQuote(symbol) {
 
 /* ---------- API publique du module / module public API ---------- */
 
+/* Nombre de points a conserver, pour le repli Stooq (historique
+   QUOTIDIEN uniquement -- d'ou l'absence de "1d" ici : une seule bougie
+   par jour ne fait pas une courbe intrajournaliere).
+   Number of points to keep, for the Stooq fallback (DAILY history only --
+   hence no "1d" here: one candle per day does not make an intraday
+   chart). */
 const RANGE_POINTS = { "1m": 22, "6m": 130, "1y": 260, "5y": 1300 };
+
+/* Correspondance vers l'API de graphiques Yahoo. C'est elle qui permet
+   le "1 jour" : un pas de 5 minutes sur la seance en cours, ce que
+   l'historique quotidien de Stooq ne peut structurellement pas fournir.
+   Mapping to Yahoo's chart API. This is what makes "1 day" possible: a
+   5-minute step over the current session, which Stooq's daily history
+   structurally cannot provide. */
+const YAHOO_RANGE = {
+  "1d": { range: "1d", interval: "5m" },
+  "1m": { range: "1mo", interval: "1d" },
+  "6m": { range: "6mo", interval: "1d" },
+  "1y": { range: "1y", interval: "1d" },
+  "5y": { range: "5y", interval: "1wk" }
+};
+
+/* Extrait une serie de la reponse de graphique Yahoo.
+   Deux pieges traites ici :
+   - `close` contient des `null` sur les pas sans transaction (frequent
+     en intrajournalier a l'ouverture ou sur une valeur peu liquide) ;
+     les laisser passer casserait le trace du chemin SVG.
+   - une seance non commencee renvoie une structure valide mais vide.
+   Extracts a series from Yahoo's chart reply.
+   Two traps handled here:
+   - `close` holds `null` on steps with no trade (common intraday at the
+     open or on an illiquid security); letting them through would break
+     the SVG path.
+   - a session not yet started returns a valid but empty structure. */
+function parseYahooChart(json) {
+  const r = json && json.chart && json.chart.result && json.chart.result[0];
+  if (!r || !Array.isArray(r.timestamp)) return null;
+  const closes = r.indicators && r.indicators.quote && r.indicators.quote[0] &&
+    r.indicators.quote[0].close;
+  if (!Array.isArray(closes)) return null;
+  const out = [];
+  for (let i = 0; i < r.timestamp.length; i++) {
+    const v = Number(closes[i]);
+    if (!Number.isFinite(v) || v <= 0) continue;
+    out.push({ date: new Date(r.timestamp[i] * 1000).toISOString(), value: v });
+  }
+  return out.length >= 2 ? out : null;
+}
+
+async function yahooChart(symbol, range) {
+  const y = toYahooSymbol(symbol);
+  if (!y) return null;
+  const r = YAHOO_RANGE[range] || YAHOO_RANGE["1y"];
+  const url = "https://query1.finance.yahoo.com/v8/finance/chart/" +
+    encodeURIComponent(y) + "?range=" + r.range + "&interval=" + r.interval;
+  return parseYahooChart(await fetchJson(url));
+}
 
 async function getQuotes(symbols) {
   const now = Date.now();
@@ -259,12 +315,38 @@ async function getQuotes(symbols) {
 async function getChart(symbol, range) {
   const points = RANGE_POINTS[range] || RANGE_POINTS["1y"];
   const key = symbol + ":" + range;
+  // Une courbe intrajournaliere bouge pendant la seance : la garder une
+  // heure en cache la figerait. Les periodes quotidiennes, elles, ne
+  // changent qu'a la cloture.
+  // An intraday chart moves during the session: caching it for an hour
+  // would freeze it. The daily ranges only change at the close.
+  const ttl = range === "1d" ? 5 * 60 * 1000 : CHART_TTL_MS;
   const cached = chartCache.get(key);
-  if (cached && Date.now() - cached.at < CHART_TTL_MS) return cached.value;
+  if (cached && Date.now() - cached.at < ttl) return cached.value;
 
+  /* Yahoo en PRIORITE pour les courbes, contrairement aux cours ou
+     Stooq passe en premier. Deux raisons :
+     1. Seul Yahoo fournit l'intrajournalier, donc le "1 jour".
+     2. Le point d'entree d'historique de Stooq (/q/d/l/) est le plus
+        strictement limite de tous -- c'etait la cause de l'echec total
+        des graphiques en 1.72/1.73, ou il etait l'UNIQUE source.
+     Stooq reste en repli pour les periodes quotidiennes.
+
+     Yahoo FIRST for charts, unlike quotes where Stooq comes first. Two
+     reasons:
+     1. Only Yahoo provides intraday data, hence "1 day".
+     2. Stooq's history endpoint (/q/d/l/) is the most strictly limited of
+        the lot -- it was the cause of charts failing outright in
+        1.72/1.73, where it was the ONLY source.
+     Stooq stays as a fallback for the daily ranges. */
   let series = null;
-  try { series = await stooqChart(symbol, points); }
-  catch (e) { console.warn("[piboard] stooq courbe echec ->", symbol, e.message || e); }
+  try { series = await yahooChart(symbol, range); }
+  catch (e) { console.warn("[piboard] yahoo courbe echec ->", symbol, e.message || e); }
+
+  if (!series && range !== "1d") {
+    try { series = await stooqChart(symbol, points); }
+    catch (e) { console.warn("[piboard] stooq courbe echec ->", symbol, e.message || e); }
+  }
 
   if (!series) throw new Error("chart_unavailable");
 
@@ -282,5 +364,7 @@ module.exports = {
   _parseStooqQuote: parseStooqQuote,
   _parseStooqChart: parseStooqChart,
   _isStooqError: isStooqError,
+  _parseYahooChart: parseYahooChart,
+  YAHOO_RANGE,
   _toYahooSymbol: toYahooSymbol
 };
