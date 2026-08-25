@@ -37,7 +37,7 @@ window.PIBOARD_QUICKSTART = {
     <p>Ne les confondez pas, c'est la source de confusion la plus fréquente :</p>
     <div class="qs-two">
       <div><b>Les réglages généraux</b> (engrenage de la barre d'outils) concernent tout PiBoard : langue, thème jour/nuit, ville, hauteur de la grille, économiseur d'écran, tiroirs…</div>
-      <div><b>Les réglages d'une tuile</b> (engrenage sur la tuile elle-même) ne concernent que celle-ci : sa source de données, son apparence, sa planification.</div>
+      <div><b>Les réglages d'une tuile</b> (icône en forme de <b>curseurs de réglage</b>, sur la tuile elle-même) ne concernent que celle-ci : sa source de données, son apparence, sa planification. Les deux icônes sont volontairement différentes : engrenage = tout PiBoard, curseurs = cette tuile.</div>
     </div>
 
     <h4>Déplacer et redimensionner</h4>
@@ -75,7 +75,7 @@ window.PIBOARD_QUICKSTART = {
     <p>Don't mix them up — this is the most common source of confusion:</p>
     <div class="qs-two">
       <div><b>General settings</b> (gear in the toolbar) apply to all of PiBoard: language, day/night theme, city, grid height, screen saver, drawers…</div>
-      <div><b>A tile's settings</b> (gear on the tile itself) apply to that tile only: its data source, its appearance, its schedule.</div>
+      <div><b>A tile's settings</b> (the <b>sliders</b> icon, on the tile itself) apply to that tile only: its data source, its appearance, its schedule. The two icons are deliberately different: gear = all of PiBoard, sliders = this tile.</div>
     </div>
 
     <h4>Moving and resizing</h4>

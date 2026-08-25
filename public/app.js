@@ -719,13 +719,41 @@
 
   /* ---------- Tuiles / tiles ---------- */
 
+  /* Icone des reglages de tuile : des curseurs, PAS un engrenage.
+
+     L'icone precedente (un cercle entoure de huit rayons droits) etait un
+     engrenage simplifie, mais en supprimant les lobes elle etait devenue
+     le pictogramme d'un soleil -- ce que les utilisateurs lisaient
+     effectivement. Reprendre le vrai engrenage de la barre d'outils ne
+     reglait pas le probleme : il est rendu a 44 px dans le dock contre
+     15 px ici, et ses dents s'agglutinent a cette taille.
+
+     Les curseurs n'ont aucun detail sous 2 px, donc restent francs en
+     15 px. Bonus : deux icones distinctes separent visuellement les deux
+     niveaux de reglages (engrenage = general, curseurs = cette tuile),
+     confusion que le guide de demarrage rapide signale comme la plus
+     frequente. La barre d'outils garde son engrenage inchange.
+
+     Tile settings icon: sliders, NOT a gear.
+
+     The previous icon (a circle ringed by eight straight rays) was a
+     simplified gear, but dropping the lobes turned it into the pictogram
+     of a sun -- which is what users actually read. Reusing the toolbar's
+     real gear would not have fixed it: it renders at 44 px in the dock
+     versus 15 px here, and its teeth clog together at that size.
+
+     Sliders have no detail below 2 px, so they stay crisp at 15 px.
+     Bonus: two distinct icons visually separate the two levels of
+     settings (gear = global, sliders = this tile), the confusion the
+     quick start guide flags as the most common one. The toolbar keeps
+     its gear unchanged. */
   function tileMarkup(conf, manifest) {
     const name = i18n.fromManifest(manifest ? manifest.name : conf.widget);
     return `
       <div class="tile-head">
         <span class="tile-name">${name}</span>
         <button class="tile-btn tile-gear" title="${i18n.t("tile.settings")}">
-          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M3 7h11M18 7h3M3 17h5M12 17h9"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
         </button>
         <button class="tile-btn tile-x" title="${i18n.t("tile.remove")}">
           <svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg>

@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.69.1
+
+- **Nouvelle icone pour les reglages d'une tuile : des curseurs, plus un
+  "soleil".** L'icone precedente etait un cercle entoure de HUIT rayons
+  droits -- un engrenage dont on avait retire les lobes, c'est-a-dire
+  exactement le pictogramme d'un soleil. Ce n'etait pas un artefact de
+  redimensionnement : la tuile et la barre d'outils utilisaient bel et
+  bien deux traces differents.
+  - **Pourquoi pas le vrai engrenage du dock** : il est rendu a 44 px
+    dans la barre d'outils contre 15 px sur une tuile, et ses dents
+    s'agglutinent a cette taille. Les curseurs n'ont aucun detail sous
+    2 px et restent donc francs en 15 px.
+  - **Effet de bord utile** : deux icones distinctes separent desormais
+    visuellement les deux niveaux de reglages (engrenage = tout PiBoard,
+    curseurs = cette tuile), confusion que le guide de demarrage rapide
+    signale comme la plus frequente.
+  - **La barre d'outils est inchangee**, conformement a la demande : son
+    engrenage Feather est conserve tel quel. Une assertion de test le
+    verrouille explicitement, pour qu'une retouche future de l'icone de
+    tuile ne l'emporte pas au passage.
+  - Aide et guide de demarrage rapide mis a jour en FR/EN : les passages
+    qui decrivaient "l'engrenage de la tuile" parlent desormais des
+    curseurs, et explicitent le contraste entre les deux icones. Les
+    mentions de l'engrenage de la BARRE D'OUTILS sont, elles, laissees
+    intactes.
+  - Taille de la cible tactile inchangee (15 px + 2 px de marge
+    interieure) : ce point n'a pas ete demande et reste ouvert.
+
+- **Tests** : 4 assertions ajoutees a `dom-smoke.js`, dont la
+  verification que le motif de rayons diagonaux "soleil" n'est pas revenu
+  et que l'engrenage de la barre d'outils n'a pas bouge.
+
 ## 1.69.0
 
 - **Guide de demarrage rapide au premier lancement.** Nouvelle fenetre

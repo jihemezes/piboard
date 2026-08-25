@@ -3956,6 +3956,33 @@ function catalogItemFor(catalog, document, widgetId) {
      so updateOverflow() always concludes "no overflow". We fake them to
      check BOTH states, the second one being precisely the one that must
      never happen by mistake. */
+  console.log("== Icone des reglages de tuile ==");
+  {
+    const gear = document.querySelector(".tile-gear svg");
+    assert("bouton de reglages present sur la tuile", !!gear);
+
+    // L'ancienne icone etait un cercle entoure de HUIT rayons droits,
+    // lue comme un soleil. On verifie qu'elle n'est pas revenue : le
+    // marqueur sur est la presence des deux pastilles de curseur et
+    // l'absence du faisceau de rayons diagonaux.
+    // The old icon was a circle ringed by EIGHT straight rays, read as a
+    // sun. We check it has not come back: the safe marker is the two
+    // slider knobs plus the absence of the diagonal ray bundle.
+    const d = gear.innerHTML;
+    assert("icone de tuile : deux pastilles de curseur presentes",
+      (d.match(/<circle/g) || []).length === 2);
+    assert("icone de tuile : plus aucun rayon diagonal (motif 'soleil')",
+      !/4\.9 4\.9|19\.1 4\.9/.test(d));
+
+    // La barre d'outils, elle, ne doit PAS avoir change : c'est une
+    // demande explicite. Repere par un fragment du trace du cog Feather.
+    // The toolbar must NOT have changed: that was explicitly asked.
+    // Spotted via a fragment of the Feather cog path.
+    const dock = document.querySelector("#btnSettings svg");
+    assert("barre d'outils : l'engrenage est inchange",
+      !!dock && dock.innerHTML.includes("M19.4 15a1.7 1.7 0 0 0 .34 1.87"));
+  }
+
   console.log("== Guide de demarrage rapide ==");
   {
     const qs = window.PIBOARD_QUICKSTART;
