@@ -1,0 +1,111 @@
+/* PiBoard widget: aiusage / quotas des comptes IA */
+
+.pw-aiu {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 6px 12px;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.pwa-rows { display: flex; flex-direction: column; gap: 0.7em; }
+
+.pwa-row { display: flex; flex-direction: column; gap: 0.22em; }
+
+.pwa-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pwa-label {
+  font-size: 0.85em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pwa-pct { font-size: 0.95em; font-variant-numeric: tabular-nums; }
+
+/* La barre garde une hauteur en em pour suivre l'ajustement automatique
+   de la police de la tuile : en px, elle deviendrait un filet invisible
+   sur une grande tuile et un pavé sur une petite.
+   The bar keeps an em-based height so it follows the tile's automatic
+   font fitting: in px it would become an invisible hairline on a large
+   tile and a slab on a small one. */
+.pwa-bar {
+  height: 0.5em;
+  min-height: 5px;
+  border-radius: 999px;
+  background: var(--tile-edge);
+  overflow: hidden;
+}
+
+.pwa-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+
+.pwa-ok { color: var(--text); }
+.pwa-fill.pwa-ok { background: var(--text); }
+.pwa-warn { color: #E0A155; }
+.pwa-fill.pwa-warn { background: #E0A155; }
+.pwa-danger { color: var(--accent); }
+.pwa-fill.pwa-danger { background: var(--accent); }
+
+.pwa-reset { font-size: 0.72em; color: var(--muted); }
+
+.pwa-msg {
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.9em;
+  padding: 0 6px;
+}
+
+.pwa-connect {
+  margin: 0.7em auto 0;
+  display: block;
+  font: inherit;
+  font-size: 0.85em;
+  padding: 0.45em 1.1em;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: none;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwa-connect:hover { border-color: var(--muted); }
+
+/* ---------- Fenetre d'autorisation / authorization window ---------- */
+
+.pwa-auth-card { width: min(680px, 94vw); }
+.pwa-auth-body { padding: 4px 22px 20px; }
+.pwa-auth-body p { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; }
+
+.pwa-url, .pwa-cb {
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--mono);
+  font-size: 12px;
+  margin-bottom: 14px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--tile-edge);
+  background: var(--bg);
+  color: var(--text);
+  resize: vertical;
+}
+
+.pwa-auth-err {
+  color: var(--accent);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.pwa-auth-foot { display: flex; justify-content: flex-end; }

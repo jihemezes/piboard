@@ -1,0 +1,105 @@
+{
+  "id": "aiusage",
+  "version": "1.0.0",
+  "name": {
+    "en": "AI usage",
+    "fr": "Quotas IA"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Progress bars for your AI account quotas: the 5-hour window, the 7-day window and the weekly Opus window, each with its reset time. Percentages come from the provider itself, so nothing is estimated. Currently supports Claude; the tile is built around a provider system so other services can be added later. Requires a one-time authorization from the tile, which never sees your password.",
+    "fr": "Barres de progression des quotas de vos comptes IA : fenêtre de 5 heures, fenêtre de 7 jours et fenêtre Opus hebdomadaire, chacune avec son heure de réinitialisation. Les pourcentages viennent du service lui-même, rien n'est estimé. Prend en charge Claude pour l'instant ; la tuile est bâtie autour d'un système de fournisseurs pour en ajouter d'autres plus tard. Nécessite une autorisation unique depuis la tuile, qui ne voit jamais votre mot de passe."
+  },
+  "tagline": {
+    "en": "How much of your AI quota is left.",
+    "fr": "Ce qu'il vous reste de quota IA."
+  },
+  "size": {
+    "w": 3,
+    "h": 2,
+    "minW": 2,
+    "minH": 1,
+    "maxW": 8,
+    "maxH": 5
+  },
+  "settings": [
+    {
+      "key": "provider",
+      "type": "select",
+      "default": "claude",
+      "label": {
+        "en": "Provider",
+        "fr": "Fournisseur"
+      },
+      "options": [
+        {
+          "value": "claude",
+          "label": {
+            "en": "Claude (Anthropic)",
+            "fr": "Claude (Anthropic)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "showFiveHour",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the 5-hour window",
+        "fr": "Afficher la fenêtre de 5 heures"
+      }
+    },
+    {
+      "key": "showSevenDay",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the 7-day window",
+        "fr": "Afficher la fenêtre de 7 jours"
+      }
+    },
+    {
+      "key": "showSevenDayOpus",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the weekly Opus window (when the provider reports one)",
+        "fr": "Afficher la fenêtre Opus hebdomadaire (quand le fournisseur en renvoie une)"
+      }
+    },
+    {
+      "key": "warnAt",
+      "type": "number",
+      "default": 75,
+      "min": 1,
+      "max": 99,
+      "label": {
+        "en": "Amber above (%)",
+        "fr": "Orange au-dessus de (%)"
+      }
+    },
+    {
+      "key": "dangerAt",
+      "type": "number",
+      "default": 90,
+      "min": 1,
+      "max": 100,
+      "label": {
+        "en": "Red above (%)",
+        "fr": "Rouge au-dessus de (%)"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 60,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      }
+    }
+  ]
+}

@@ -610,6 +610,54 @@
     },
 
     {
+      id: "aiusage",
+      group: "tiles",
+      title: { fr: "Quotas IA", en: "AI usage" },
+      sub: {
+        fr: "Où en sont vos limites d'usage Claude, et quand elles se réinitialisent.",
+        en: "Where your Claude usage limits stand, and when they reset."
+      },
+      html: {
+        fr: `
+          <h4>Objectif</h4>
+          <p>Voir d'un coup d'œil ce qu'il vous reste de quota sur votre compte IA, sans ouvrir la page d'usage du service. Une barre par fenêtre, avec le temps restant avant réinitialisation.</p>
+
+          <h4>Ce qui est affiché</h4>
+          <p>Le service renvoie deux fenêtres, parfois trois : la <b>fenêtre de 5 heures</b> (la limite de session, glissante), la <b>fenêtre de 7 jours</b> (le plafond hebdomadaire) et, selon le compte, une fenêtre <b>Opus sur 7 jours</b>. Chacune peut être masquée dans les réglages de la tuile.</p>
+          <div class="help-warn"><b>Il n'y a pas de fenêtre « quotidienne ».</b> Le service n'en expose pas : ce qui est parfois appelé « limite du jour » ailleurs correspond en réalité à la fenêtre glissante de 5 heures. La tuile n'invente donc pas de barre journalière.</div>
+          <p>Les pourcentages viennent <b>directement du service</b>. Rien n'est estimé ni calibré par vous : une barre à 62 % signifie que le service lui-même déclare 62 %.</p>
+
+          <h4>Connexion</h4>
+          <p>Une autorisation unique, depuis la tuile. Elle affiche une adresse à ouvrir dans un navigateur ; vous approuvez l'accès, vous atterrissez sur une page <code>localhost</code> qui affiche une erreur — <b>c'est normal et attendu</b>, aucun serveur n'écoute à cette adresse. Vous recopiez alors l'adresse complète depuis la barre du navigateur dans le champ prévu.</p>
+          <p><b>PiBoard ne voit jamais votre mot de passe</b> : vous vous authentifiez chez le service, qui délivre à PiBoard un jeton limité à la lecture de votre profil. Ce jeton est conservé dans le coffre chiffré, séparé de <code>layout.json</code>, et n'est jamais renvoyé au navigateur — les pages n'obtiennent que des pourcentages et des heures.</p>
+
+          <h4>Autres services</h4>
+          <p>La tuile est bâtie autour d'un système de fournisseurs : le widget lui-même ne connaît aucun service, il affiche des fenêtres. Ajouter ChatGPT, Gemini ou Copilot plus tard ne demandera donc pas de refaire la tuile.</p>
+
+          <div class="help-warn"><b>Point d'entrée non officiel.</b> Le service d'usage utilisé n'est pas une API publique documentée : c'est celle qu'emploie le client officiel. Elle peut changer sans préavis. Le jour où cela arrivera, la tuile affichera « Quotas indisponibles » au lieu de se figer ou de faire tomber PiBoard — mais il faudra une mise à jour pour la remettre en service.</div>
+        `,
+        en: `
+          <h4>Goal</h4>
+          <p>See at a glance how much quota is left on your AI account, without opening the service's usage page. One bar per window, with the time left before it resets.</p>
+
+          <h4>What is shown</h4>
+          <p>The service returns two windows, sometimes three: the <b>5-hour window</b> (the rolling session limit), the <b>7-day window</b> (the weekly cap) and, depending on the account, an <b>Opus over 7 days</b> window. Each can be hidden in the tile's settings.</p>
+          <div class="help-warn"><b>There is no "daily" window.</b> The service does not expose one: what is sometimes called a "daily limit" elsewhere is in fact the rolling 5-hour window. So the tile does not invent a daily bar.</div>
+          <p>The percentages come <b>straight from the service</b>. Nothing is estimated or calibrated by you: a bar at 62% means the service itself reports 62%.</p>
+
+          <h4>Connecting</h4>
+          <p>A one-time authorization, from the tile. It shows an address to open in a browser; you approve access and land on a <code>localhost</code> page showing an error — <b>that is normal and expected</b>, nothing is listening at that address. You then copy the full address from the browser's bar into the field provided.</p>
+          <p><b>PiBoard never sees your password</b>: you authenticate with the service, which issues PiBoard a token limited to reading your profile. That token is kept in the encrypted vault, separate from <code>layout.json</code>, and is never returned to the browser — pages only ever get percentages and times.</p>
+
+          <h4>Other services</h4>
+          <p>The tile is built around a provider system: the widget itself knows no service, it displays windows. Adding ChatGPT, Gemini or Copilot later will therefore not require rebuilding the tile.</p>
+
+          <div class="help-warn"><b>Unofficial endpoint.</b> The usage service used is not a documented public API: it is the one the official client uses. It may change without notice. When that happens the tile will show "Usage unavailable" rather than freezing or bringing PiBoard down — but an update will be needed to restore it.</div>
+        `
+      }
+    },
+
+    {
       id: "crypto",
       group: "tiles",
       title: { fr: "Cours Cryptos", en: "Crypto prices" },

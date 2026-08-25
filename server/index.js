@@ -1142,6 +1142,55 @@ app.delete("/api/tile-secrets/:tileId", (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------- Quotas des comptes IA / AI account usage ----------
+   Voir server/aiUsage.js. Les routes ne renvoient JAMAIS de jeton :
+   uniquement des pourcentages et des heures de reinitialisation.
+   See server/aiUsage.js. The routes NEVER return a token: only
+   percentages and reset times. */
+const aiUsage = require("./aiUsage");
+
+app.get("/api/ai-usage/status", (req, res) => {
+  res.json({ connected: aiUsage.isConnected() });
+});
+
+app.post("/api/ai-usage/auth/start", (req, res) => {
+  try {
+    // Seule l'URL est renvoyee. Le verificateur PKCE reste cote serveur,
+    // en memoire : l'exposer au navigateur annulerait l'interet de PKCE.
+    // Only the URL is returned. The PKCE verifier stays server-side, in
+    // memory: exposing it to the browser would defeat the point of PKCE.
+    res.json({ authUrl: aiUsage.startAuth().authUrl });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/ai-usage/auth/finish", async (req, res) => {
+  try {
+    await aiUsage.finishAuth((req.body || {}).callbackUrl);
+    res.json({ ok: true });
+  } catch (e) {
+    // Message court et stable : il est traduit cote client, et ne doit
+    // surtout pas relayer le corps de la reponse du service.
+    // Short, stable message: it is translated client-side, and must not
+    // relay the service's response body.
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/ai-usage/disconnect", (req, res) => {
+  aiUsage.disconnect();
+  res.json({ ok: true });
+});
+
+app.get("/api/ai-usage", async (req, res) => {
+  try {
+    res.json(await aiUsage.getUsage({ force: req.query.force === "1" }));
+  } catch (e) {
+    res.status(502).json({ connected: false, windows: [], error: String(e.message || e) });
+  }
+});
+
 /* ---------- Boite aux lettres / mailbox ----------
    Voir server/mailbox.js : lecture STRICTEMENT seule, rien n'est stocke.
    La configuration non sensible (serveur, identifiant, dossier) arrive

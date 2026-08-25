@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.70.0
+
+- **Nouvelle tuile "Quotas IA"** : barres de progression des limites
+  d'usage du compte Claude, avec l'heure de reinitialisation de chacune.
+  - **Fenetres affichees** : 5 heures (limite de session glissante),
+    7 jours (plafond hebdomadaire) et, selon le compte, Opus sur 7 jours.
+    Chacune peut etre masquee dans les reglages.
+  - **Il n'y a PAS de fenetre "quotidienne"** : le service n'en expose
+    pas. Ce qui est appele "limite du jour" ailleurs est en realite la
+    fenetre glissante de 5 heures. La tuile n'invente donc pas de barre
+    journaliere -- l'aide le precise explicitement.
+  - **Les pourcentages viennent du service**, champ `utilization`. Rien
+    n'est estime ni calibre par l'utilisateur : une barre a 62 % signifie
+    que le service declare 62 %.
+  - **Architecture a fournisseurs** (`server/aiUsage.js`) : chaque
+    fournisseur renvoie des fenetres au format canonique
+    `{ id, label, utilization, resetsAt }`. Le widget ne connait aucun
+    service. Ajouter ChatGPT, Gemini ou Copilot plus tard ne touchera ni
+    au widget, ni aux routes, ni au rendu.
+
+- **Autorisation OAuth autonome, depuis la tuile.** PiBoard fait son
+  propre flux OAuth 2.0 avec PKCE (S256) plutot que de lire les
+  identifiants de Claude Code.
+  - **Aucune dependance a Claude Code** : fonctionne avec un simple
+    abonnement Claude.
+  - **Aucun risque de corrompre l'etat d'identifiants de Claude Code** :
+    PiBoard n'ecrit que dans son propre coffre, jamais dans
+    `~/.claude/.credentials.json`. C'etait le danger de l'approche
+    "lecture du fichier local", ecartee pour cette raison.
+  - **PiBoard ne voit jamais le mot de passe** : l'authentification a
+    lieu chez le service, qui delivre un jeton `user:profile`.
+  - Le verificateur PKCE reste en memoire cote serveur, avec expiration a
+    15 min : il n'est jamais envoye au navigateur, ce qui annulerait
+    l'interet de PKCE. Un `state` protege du CSRF.
+
+- **Securite des jetons.** Conserves dans le coffre chiffre existant
+  (`tileSecrets`, identifiant de tuile reserve), donc absents de
+  `data/layout.json` qui part dans les sauvegardes. Les routes ne
+  renvoient JAMAIS de jeton -- uniquement des pourcentages et des heures.
+  Un jeton de rafraichissement permet de generer des jetons d'acces a
+  distance : il est traite comme un mot de passe.
+
+- **Robustesse.** Le point d'entree d'usage n'est PAS une API publique
+  documentee : c'est celle du client officiel, susceptible de changer
+  sans preavis. Tout le code echoue proprement (tuile "Quotas
+  indisponibles") au lieu de planter. Rafraichissement du jeton tente UNE
+  fois sur 401 sans boucler, cache de 60 s pour ne pas marteler le
+  service, et le dernier etat connu est conserve en cas de coupure reseau
+  plutot que de vider la tuile.
+
+- **Tests** : nouveau `test/aiUsage.test.js` (20 assertions, sans reseau)
+  couvrant la traduction des reponses, la tolerance aux reponses
+  inattendues, le bornage des pourcentages aberrants, la conformite PKCE
+  et l'absence du verificateur dans l'URL d'autorisation.
+
 ## 1.69.1
 
 - **Nouvelle icone pour les reglages d'une tuile : des curseurs, plus un
