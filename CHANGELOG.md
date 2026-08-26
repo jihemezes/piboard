@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.74.1
+
+- **Correctif : le bouton "+" creait un doublon immediat.** Une nouvelle
+  ligne etait pre-remplie avec le PREMIER instrument de la PREMIERE
+  famille -- le CAC 40. Cliquer "+" ajoutait donc aussitot une seconde
+  ligne CAC affichee sur la tuile, avant meme tout choix. Et comme le nom
+  restait vide, la ligne fautive etait quasi invisible dans le formulaire
+  (colonne "Nom" en texte grise) alors qu'elle etait bien presente.
+  - Une nouvelle ligne part desormais avec un symbole VIDE, et le menu
+    affiche une invite explicite "— choisir —" tant qu'aucun instrument
+    n'est retenu.
+  - Changer de place vide le symbole au lieu d'en imposer un autre.
+  - **Les lignes sans instrument ne sont plus enregistrees** : une ligne
+    en cours de saisie ne peut plus produire d'entree fantome.
+  - **Un symbole deja present est refuse** a la selection, avec un
+    message : c'est exactement le doublon qu'on cherche a eviter.
+
+- **Un nom laisse vide affiche le libelle du catalogue, plus le symbole
+  brut.** La ligne s'affichait "^CAC" au lieu de "CAC 40" -- inutilement
+  cryptique. Le serveur renvoie desormais le libelle connu en repli.
+
+- **Correctif : l'or et le petrole restaient vides.** Les contrats a
+  terme sont suffixes ".F" chez Stooq, soit UNE seule lettre -- ils
+  echappaient a l'expression a deux lettres de la traduction vers Yahoo
+  et ne recevaient donc AUCUN repli. Des que Stooq ne repondait pas, les
+  trois lignes de matieres premieres affichaient un tiret. Traduction
+  ajoutee (`GC.F` -> `GC=F`), avec des tests de non-regression pour que
+  `.FR` et `.US` ne soient pas captes par la nouvelle regle.
+
+- **Nombre de decimales selon la NATURE de l'instrument** et non son seul
+  ordre de grandeur. L'ancienne regle affichait une action a 4,49 EUR
+  comme "4,4880" : quatre decimales sur une action sont du bruit, alors
+  qu'une paire de change en a besoin pour rester lisible (1,0847).
+  Desormais : change 4 decimales, valeur >= 1000 aucune, sinon 2 -- et 4
+  sous 1, ou deux decimales ecraseraient l'information.
+
+- **Tests** : 5 assertions ajoutees a `test/stocks.test.js` (71 au
+  total).
+
 ## 1.74.0
 
 - **Nouvelle tuile "Home Assistant", en LECTURE SEULE.** Affiche les

@@ -185,4 +185,22 @@ check("les periodes longues utilisent un pas quotidien ou hebdomadaire",
 // fallback, or it would return a wrong chart.
 check("le repli quotidien ne couvre pas le 1 jour", s.RANGE_POINTS["1d"] === undefined);
 
+console.log("== contrats a terme : repli Yahoo ==");
+// Le suffixe ".F" n'a qu'UNE lettre : il echappait a l'expression a deux
+// lettres et ne recevait donc AUCUN repli, laissant l'or et le petrole
+// vides des que Stooq ne repondait pas.
+// The ".F" suffix has only ONE letter: it slipped past the two-letter
+// pattern and got NO fallback, leaving gold and oil empty whenever Stooq
+// did not answer.
+check("l'or a terme a un repli Yahoo", s._toYahooSymbol("GC.F") === "GC=F");
+check("le petrole a terme a un repli Yahoo", s._toYahooSymbol("CL.F") === "CL=F");
+check("l'or au comptant garde son repli", s._toYahooSymbol("XAUUSD") === "XAUUSD=X");
+// Non-regression : le suffixe .FR ne doit surtout pas etre capte par la
+// nouvelle regle des contrats a terme.
+// Non-regression: the .FR suffix must certainly not be caught by the new
+// futures rule.
+check("le suffixe .FR n'est pas confondu avec un contrat a terme",
+  s._toYahooSymbol("MC.FR") === "MC.PA");
+check("le suffixe .US reste inchange", s._toYahooSymbol("AAPL.US") === "AAPL");
+
 console.log("\n" + ok + " assertions OK");

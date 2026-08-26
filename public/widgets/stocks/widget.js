@@ -20,10 +20,36 @@
      EUR/USD illisible (1 au lieu de 1,0847).
      Indices read with thousands separators, FX pairs with four decimals:
      a single format would make EUR/USD unreadable (1 instead of 1.0847). */
-  function formatValue(v, lang) {
-    const digits = v >= 1000 ? 0 : v >= 100 ? 1 : v >= 10 ? 2 : 4;
+  /* Le nombre de decimales depend de la NATURE de l'instrument, pas
+     seulement de l'ordre de grandeur. Regle precedente, uniquement basee
+     sur la valeur : une action a 4,49 EUR s'affichait "4,4880" -- quatre
+     decimales sur une action, c'est du bruit. Une paire de change, elle,
+     a besoin de ses quatre decimales pour etre lisible (1,0847).
+     The number of decimals depends on the instrument's NATURE, not only
+     on its magnitude. The previous rule, based on value alone, showed a
+     share at EUR 4.49 as "4.4880" -- four decimals on a share is noise.
+     An FX pair, on the other hand, needs its four decimals to be readable
+     (1.0847). */
+  function formatValue(v, lang, isFx) {
+    let digits;
+    if (isFx) digits = 4;
+    else if (v >= 1000) digits = 0;
+    else if (v >= 1) digits = 2;
+    // Sous 1, deux decimales ecraseraient l'information (une valeur a
+    // 0,0042 deviendrait "0,00").
+    // Below 1, two decimals would flatten the information (a value at
+    // 0.0042 would become "0.00").
+    else digits = 4;
     return v.toLocaleString(lang === "fr" ? "fr-FR" : "en-US",
       { minimumFractionDigits: digits, maximumFractionDigits: digits });
+  }
+
+  /* Une paire de change se reconnait a son symbole : six lettres, ou les
+     metaux au comptant (XAUUSD).
+     An FX pair is recognisable from its symbol: six letters, or spot
+     metals (XAUUSD). */
+  function isFxSymbol(sym) {
+    return /^[A-Z]{6}$/.test(String(sym || "").toUpperCase().trim());
   }
 
   function niceTicks(min, max, count) {
@@ -61,6 +87,7 @@
       this._niceTicks = niceTicks;
       this._buildPath = buildPath;
       this._formatValue = formatValue;
+      this._isFxSymbol = isFxSymbol;
     }
 
     lines() {
@@ -152,9 +179,9 @@
         const mark = closed
           ? `<span class="pws-closed" title="${esc(i18n.t("stocks.closedTitle"))}">${esc(i18n.t("stocks.closed"))}</span>`
           : "";
-        return sep + `<div class="pws-row${q.stale ? " pws-stale" : ""}${closed ? " pws-shut" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || l.symbol)}">
-          <span class="pws-name">${esc(l.name || l.symbol)}${mark}</span>
-          <span class="pws-val">${esc(formatValue(q.price, lang))}<span class="pws-cur">${esc(q.symbolChar || "")}</span></span>
+        return sep + `<div class="pws-row${q.stale ? " pws-stale" : ""}${closed ? " pws-shut" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || q.label || l.symbol)}">
+          <span class="pws-name">${esc(l.name || q.label || l.symbol)}${mark}</span>
+          <span class="pws-val">${esc(formatValue(q.price, lang, isFxSymbol(l.symbol)))}<span class="pws-cur">${esc(q.symbolChar || "")}</span></span>
           ${chg}
         </div>`;
       }).join("");

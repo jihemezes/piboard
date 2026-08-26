@@ -174,6 +174,15 @@ function toYahooSymbol(symbol) {
   const s = String(symbol || "").toUpperCase().trim();
   if (YAHOO_INDEX[s]) return YAHOO_INDEX[s];
   if (s.startsWith("^")) return null;
+  // Contrats a terme : Stooq les suffixe ".F", Yahoo "=F". Le suffixe
+  // n'ayant qu'UNE lettre, il echappait a l'expression a deux lettres
+  // plus bas et ne recevait donc AUCUN repli -- c'est ce qui laissait
+  // l'or et le petrole desesperement vides quand Stooq ne repondait pas.
+  // Futures: Stooq suffixes them ".F", Yahoo "=F". The suffix being only
+  // ONE letter, it slipped past the two-letter pattern below and got NO
+  // fallback at all -- which is what left gold and oil hopelessly empty
+  // whenever Stooq did not answer.
+  if (/\.F$/.test(s)) return s.replace(/\.F$/, "=F");
   if (/^[A-Z]{6}$/.test(s)) return s + "=X";           // change / FX
   if (/^X(AU|AG)USD$/.test(s)) return s + "=X";
   const m = s.match(/(\.[A-Z]{2})$/);
@@ -293,7 +302,17 @@ async function getQuotes(symbols) {
 
     if (q) {
       const currency = catalog.currencyFor(symbol);
-      const value = { ...q, currency, symbolChar: catalog.symbolFor(currency), stale: false };
+      const known = catalog.findInstrument(symbol);
+      const value = {
+        ...q, currency, symbolChar: catalog.symbolFor(currency), stale: false,
+        // Libelle du catalogue, sert de repli quand la personne a laisse
+        // la colonne "Nom" vide : afficher "^CAC" plutot que "CAC 40"
+        // etait inutilement cryptique.
+        // Catalog label, used as a fallback when the person left the
+        // "Name" column empty: showing "^CAC" rather than "CAC 40" was
+        // needlessly cryptic.
+        label: known ? (typeof known.label === "string" ? known.label : null) : null
+      };
       quoteCache.set(symbol, { at: now, value });
       out[symbol] = { ...value, marketOpen: open, kind: catalog.kindFor(symbol) };
       return;

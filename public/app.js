@@ -1816,6 +1816,7 @@
         return `<div class="field field-rows" data-rows-field="${f.key}" data-rows-src="${escapeHtmlAttr(f.source || "")}">
           <span>${label}</span>
           <div class="rows-body"></div>
+          <div class="rows-dup" hidden>${escapeHtmlAttr(i18n.t("rows.duplicate"))}</div>
           <div class="rows-actions">
             <button type="button" class="rows-add">+ ${escapeHtmlAttr(i18n.t("rows.add"))}</button>
             <!-- Sans ce bouton, les valeurs par defaut du manifeste ne
@@ -2150,7 +2151,14 @@
     // reflection, rebuilt on every change. Easier to keep consistent than
     // field-by-field syncing, and the row count stays small.
     function commit() {
-      hidden.value = JSON.stringify(rows);
+      // Les lignes sans instrument ne sont PAS enregistrees : une ligne
+      // en cours de saisie ne doit pas produire d'entree fantome sur la
+      // tuile. Elle reste visible dans le formulaire tant qu'il est
+      // ouvert, elle disparait simplement a l'enregistrement.
+      // Rows with no instrument are NOT saved: a row still being filled
+      // in must not produce a phantom entry on the tile. It stays visible
+      // in the form while it is open, it just does not survive saving.
+      hidden.value = JSON.stringify(rows.filter((r) => r && r.symbol));
     }
 
     function labelOf(x) {
@@ -2164,7 +2172,16 @@
         const isCustom = row.symbol && !known;
         const exOpts = exchanges.map((e) =>
           `<option value="${escapeHtmlAttr(e.id)}" ${e.id === row.exchange ? "selected" : ""}>${escapeHtmlAttr(labelOf(e.label))}</option>`).join("");
-        const inOpts = (ex.instruments || []).map((it) =>
+        // Invite explicite tant qu'aucun instrument n'est choisi : sans
+        // elle, le menu afficherait le premier de la liste et laisserait
+        // croire qu'un choix a ete fait.
+        // Explicit prompt while no instrument is chosen: without it the
+        // menu would show the first of the list and suggest a choice had
+        // been made.
+        const placeholder = row.symbol
+          ? ""
+          : `<option value="" selected>${escapeHtmlAttr(i18n.t("rows.choose"))}</option>`;
+        const inOpts = placeholder + (ex.instruments || []).map((it) =>
           `<option value="${escapeHtmlAttr(it.symbol)}" ${it.symbol === row.symbol ? "selected" : ""}>${escapeHtmlAttr(labelOf(it.label))}</option>`).join("")
           + `<option value="${CUSTOM}" ${isCustom ? "selected" : ""}>${escapeHtmlAttr(i18n.t("rows.custom"))}</option>`;
         return `<div class="rows-row" data-i="${i}">
@@ -2198,8 +2215,13 @@
         // the new exchange's first one rather than keeping a symbol that
         // does not exist there.
         rows[i].exchange = e.target.value;
-        const ex = exchanges.find((x) => x.id === rows[i].exchange);
-        rows[i].symbol = (ex && ex.instruments[0] && ex.instruments[0].symbol) || "";
+        // On vide le symbole au lieu d'en imposer un : l'ancien
+        // n'existe pas sur la nouvelle place, et en choisir un d'office
+        // afficherait une valeur que la personne n'a pas demandee.
+        // We clear the symbol rather than forcing one: the old one does
+        // not exist on the new exchange, and picking one automatically
+        // would display a value the person never asked for.
+        rows[i].symbol = "";
         render();
       } else if (e.target.classList.contains("rows-in")) {
         if (e.target.value === CUSTOM) {
@@ -2207,6 +2229,15 @@
           render();
           const c = body.querySelector(`.rows-row[data-i="${i}"] .rows-custom`);
           if (c) { c.hidden = false; c.focus(); }
+        } else if (rows.some((r, j) => j !== i && r.symbol === e.target.value)) {
+          // Ce symbole est deja dans la liste : l'accepter creerait
+          // exactement le doublon qu'on cherche a eviter.
+          // This symbol is already in the list: accepting it would create
+          // precisely the duplicate we are trying to avoid.
+          rows[i].symbol = "";
+          render();
+          const warn = el.querySelector(".rows-dup");
+          if (warn) { warn.hidden = false; setTimeout(() => { warn.hidden = true; }, 4000); }
         } else {
           rows[i].symbol = e.target.value;
           // Un nom laisse vide reprend le libelle de l'instrument : on
@@ -2246,8 +2277,19 @@
     });
 
     el.querySelector(".rows-add").addEventListener("click", () => {
+      // Symbole VIDE, deliberement. Pre-remplir avec le premier
+      // instrument de la premiere famille (le CAC 40) faisait apparaitre
+      // un doublon sur la tuile des le clic sur "+", avant meme que la
+      // personne ait choisi quoi que ce soit -- et comme le nom restait
+      // vide, la ligne fautive etait difficile a reperer dans le
+      // formulaire.
+      // EMPTY symbol, deliberately. Pre-filling with the first instrument
+      // of the first family (the CAC 40) made a duplicate appear on the
+      // tile the moment "+" was clicked, before the person had chosen
+      // anything -- and since the name stayed empty, the offending row was
+      // hard to spot in the form.
       const ex = exchanges[0] || { id: "", instruments: [] };
-      rows.push({ name: "", exchange: ex.id, symbol: (ex.instruments[0] || {}).symbol || "" });
+      rows.push({ name: "", exchange: ex.id, symbol: "" });
       render();
     });
 
