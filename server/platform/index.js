@@ -38,6 +38,8 @@
      parseArp(raw, allowedIps) parseur pur de la table ARP / pure ARP parser
      readArpEntries(allowed)   table ARP -> [{ip, mac}] / ARP table -> [{ip, mac}]
      reverseLookup(ip, msec)   nom d'hote via le systeme / hostname via the system
+     networkDetails()          passerelle, DHCP, DNS par carte (facultatif)
+                               gateway, DHCP, DNS per adapter (optional)
      listRemovableVolumes()    cles USB montees / mounted USB keys
      cpuTemperature()          degres Celsius ou null / degrees Celsius or null
      filesystemRoot()          racine pour l'usage disque / root for disk usage
@@ -219,6 +221,7 @@ function exitToDesktop() {
 
 module.exports = {
   id: impl.id,
+  networkDetails: impl.networkDetails,
   pingArgs: impl.pingArgs,
   pingSucceeded: impl.pingSucceeded,
   parseArp: impl.parseArp,

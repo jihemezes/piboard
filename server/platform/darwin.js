@@ -193,8 +193,66 @@ function vlcInstallHint() {
   return { fr: "brew install --cask vlc", en: "brew install --cask vlc" };
 }
 
+
+/* ---------- Configuration reseau / network configuration ----------
+   macOS n'est PAS une cible de deploiement de PiBoard (Pi et Windows le
+   sont) : cette implementation existe pour respecter le contrat de la
+   couche d'abstraction et rester utilisable en developpement. Elle
+   s'appuie sur `netstat -rn` et `scutil --dns`, presents en standard.
+   macOS is NOT a PiBoard deployment target (the Pi and Windows are):
+   this implementation exists to honour the abstraction layer's contract
+   and stay usable during development. It relies on `netstat -rn` and
+   `scutil --dns`, both present by default. */
+
+const NET_TIMEOUT_MS = 4000;
+
+function runNet(cmd, args) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: NET_TIMEOUT_MS, encoding: "utf8" },
+      (err, stdout) => resolve(err && !stdout ? null : String(stdout || "")));
+  });
+}
+
+function parseNetstatRoutes(raw) {
+  const out = {};
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const m = line.match(/^default\s+(\S+)\s+\S+\s+(\S+)\s*$/);
+    if (m && /^\d{1,3}(\.\d{1,3}){3}$/.test(m[1])) out[m[2]] = m[1];
+  }
+  return out;
+}
+
+function parseScutilDns(raw) {
+  const dns = [];
+  let domain = null;
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const n = line.match(/^\s*nameserver\[\d+\]\s*:\s*(\S+)/);
+    if (n && !dns.includes(n[1])) dns.push(n[1]);
+    const d = line.match(/^\s*(?:search domain\[\d+\]|domain)\s*:\s*(\S+)/);
+    if (d && !domain) domain = d[1];
+  }
+  return { dns, domain };
+}
+
+async function networkDetails() {
+  const [routes, dnsRaw] = await Promise.all([
+    runNet("netstat", ["-rn"]),
+    runNet("scutil", ["--dns"])
+  ]);
+  const gateways = parseNetstatRoutes(routes);
+  const { dns, domain } = parseScutilDns(dnsRaw);
+  const adapters = Object.keys(gateways).map((name) => ({
+    name, gateway: gateways[name], dhcp: null, dhcpServer: null,
+    leaseExpires: null, dns, domain
+  }));
+  return { adapters, domain };
+}
+
 module.exports = {
   id,
+  networkDetails,
+  parseNetstatRoutes,
+  parseScutilDns,
   pingArgs,
   pingSucceeded,
   parseArp,

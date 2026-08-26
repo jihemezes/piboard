@@ -1276,6 +1276,12 @@
           <p>Garder un œil sur la santé du Raspberry Pi (ou de toute autre machine) qui héberge PiBoard, directement depuis le tableau lui-même.</p>
           <h4>Possibilités</h4>
           <p>Utile en particulier sur un Raspberry Pi, où la température et l'usage CPU/RAM peuvent révéler un problème (par exemple un boîtier mal ventilé, ou un processus qui consomme trop) avant qu'il ne devienne gênant. L'espace disque restant permet d'anticiper un plein (photos du diaporama, notes…) avant qu'il ne bloque une sauvegarde.</p>
+          <h4>Adresses réseau</h4>
+          <p>La tuile peut afficher l'adresse IP de chaque carte réseau de la machine. <b>Un clic sur une adresse</b> ouvre une fenêtre détaillant la configuration complète de toutes les cartes : adresse et masque, passerelle, DHCP (avec le serveur et l'expiration du bail le cas échéant), serveurs DNS, suffixe de domaine, adresse MAC et adresses IPv6 publiques. Le nom d'hôte est rappelé en haut.</p>
+          <p><b>Seules les vraies cartes connectées apparaissent.</b> Les cartes virtuelles — Docker, VirtualBox, VMware, Hyper-V, VPN — sont écartées, principalement d'après le préfixe constructeur de leur adresse MAC, qui est le critère le plus fiable. Une carte physique sans adresse IPv4 (câble débranché) est également masquée, puisqu'elle n'est pas réellement connectée.</p>
+          <p>Une information que le système n'a pas pu fournir s'affiche « non disponible » plutôt qu'avec une valeur approchée. En particulier, DHCP reste vide si PiBoard n'a pas pu conclure : afficher « non » laisserait croire à tort à une adresse fixe.</p>
+          <p>Ces informations sont lues une seule fois à l'affichage de la tuile, et non à chaque rafraîchissement : la configuration réseau ne change pratiquement jamais, et exécuter une commande système toutes les cinq secondes n'aurait aucun intérêt.</p>
+
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en secondes entre deux relevés.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher le nom de machine</span><span class="help-opt-desc">Utile si plusieurs machines hébergent chacune une instance PiBoard.</span></div>
@@ -1286,6 +1292,12 @@
           <p>Keep an eye on the health of the Raspberry Pi (or any other machine) hosting PiBoard, directly from the board itself.</p>
           <h4>Possibilities</h4>
           <p>Especially useful on a Raspberry Pi, where temperature and CPU/RAM usage can reveal a problem (e.g. a poorly ventilated case, or a process consuming too much) before it becomes an issue. Remaining disk space lets you anticipate running out (slideshow photos, notes…) before it blocks a save.</p>
+          <h4>Network addresses</h4>
+          <p>The tile can show the IP address of each of the machine's network adapters. <b>Clicking an address</b> opens a window detailing the full configuration of every adapter: address and mask, gateway, DHCP (with the server and lease expiry where applicable), DNS servers, domain suffix, MAC address and public IPv6 addresses. The host name is shown at the top.</p>
+          <p><b>Only real, connected adapters appear.</b> Virtual adapters — Docker, VirtualBox, VMware, Hyper-V, VPN — are filtered out, chiefly from the vendor prefix of their MAC address, which is the most reliable criterion. A physical adapter with no IPv4 address (cable unplugged) is hidden too, since it is not actually connected.</p>
+          <p>Information the system could not supply shows as "not available" rather than as an approximation. In particular, DHCP stays blank when PiBoard could not conclude: showing "no" would wrongly suggest a static address.</p>
+          <p>These details are read once when the tile appears, not on every refresh: network configuration hardly ever changes, and running a system command every five seconds would serve no purpose.</p>
+
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in seconds between two readings.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show hostname</span><span class="help-opt-desc">Useful if several machines each host a PiBoard instance.</span></div>

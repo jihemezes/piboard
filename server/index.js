@@ -1142,6 +1142,24 @@ app.delete("/api/tile-secrets/:tileId", (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------- Configuration reseau locale / local network configuration ----------
+   Voir server/netConfig.js. Aucune donnee sensible : ce sont les
+   adresses de la machine qui execute PiBoard, deja visibles de tout
+   l'appareil.
+   See server/netConfig.js. No sensitive data: these are the addresses of
+   the machine running PiBoard, already visible from the device itself. */
+const netConfig = require("./netConfig");
+
+app.get("/api/network-config", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json(await netConfig.getNetworkConfig());
+  } catch (e) {
+    console.warn("[piboard] config reseau:", e.message || e);
+    res.status(500).json({ error: String(e.message || e), adapters: [] });
+  }
+});
+
 /* ---------- Home Assistant (lecture seule) / read-only ----------
    Voir server/homeAssistant.js. Le jeton vit dans le coffre chiffre
    (tileSecrets) et n'est JAMAIS renvoye au navigateur : les routes ne

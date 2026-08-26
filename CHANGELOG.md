@@ -1,5 +1,65 @@
 # Changelog
 
+## 1.75.0
+
+- **Tuile "Etat systeme" : adresses IP des cartes reseau, et fenetre de
+  configuration complete.** Un clic sur une adresse ou un nom de carte
+  ouvre le detail de TOUTES les cartes : adresse et masque, passerelle,
+  DHCP (serveur et expiration du bail le cas echeant), serveurs DNS,
+  suffixe de domaine, adresse MAC, IPv6 publiques, plus le nom d'hote.
+
+- **Seules les VRAIES cartes connectees sont montrees.** Une carte
+  VirtualBox, VMware, Docker ou Hyper-V porte une adresse IP tout a fait
+  valide : `os.networkInterfaces()` ne permet pas de la distinguer seule.
+  Trois criteres combines, du plus fiable au moins fiable :
+  1. `internal` -- la boucle locale.
+  2. Le **prefixe OUI de la MAC**, critere le plus solide : ces prefixes
+     sont attribues aux editeurs d'hyperviseurs et ne peuvent pas
+     apparaitre sur une vraie carte.
+  3. Le **nom**, en dernier recours et volontairement etroit : un motif
+     trop gourmand ecarterait une vraie carte.
+  Une carte sans adresse IPv4 est egalement ecartee -- non connectee, ce
+  qui couvre aussi le cable debranche.
+
+- **Regroupement par carte.** Node renvoie une entree PAR ADRESSE : une
+  carte ayant une IPv4 et deux IPv6 apparaissait trois fois. Les adresses
+  de lien local (`fe80:`) sont exclues, elles n'apprennent rien.
+
+- **Respect de la couche d'abstraction plateforme.** `networkDetails()`
+  a ete ajoutee a l'interface et implementee dans les TROIS fichiers,
+  conformement a la regle du projet (aucun `process.platform` hors de
+  `server/platform/`).
+  - **Windows** : `ipconfig /all` plutot que PowerShell -- present
+    partout, aucun droit particulier, demarrage instantane. Contrepartie
+    assumee : la sortie est LOCALISEE, donc le parseur se repere sur des
+    motifs independants de la langue et laisse `null` en cas de doute.
+    Les serveurs DNS en ligne de continuation (sans etiquette) sont lus,
+    sans quoi le second serveur serait perdu.
+  - **Linux** : trois sources independantes et facultatives -- `ip route`
+    pour la passerelle, `resolvectl` (repli `/etc/resolv.conf`) pour les
+    DNS, fichiers de bail pour le DHCP. Perdre les DNS ne fait pas perdre
+    la passerelle. Le resolveur local systemd (127.0.0.53) est ecarte :
+    ce n'est pas un vrai serveur.
+  - **macOS** : `netstat -rn` et `scutil --dns`. Ce n'est pas une cible
+    de deploiement, l'implementation existe pour honorer le contrat.
+
+- **Aucune valeur inventee.** Un champ inconnu vaut `null` et s'affiche
+  "non disponible". En particulier DHCP reste vide quand on n'a pas pu
+  conclure : afficher "non" laisserait croire a tort a une adresse fixe,
+  et une passerelle fausse enverrait chercher une panne inexistante.
+
+- **Lecture unique, hors du cycle de rafraichissement.** La configuration
+  reseau ne change pratiquement jamais, alors que `/api/system` est
+  reinterroge toutes les quelques secondes : les lier aurait execute
+  `ipconfig` ou `ip route` a chaque cycle pour un resultat identique.
+
+- **Tests** : nouveau `test/netConfig.test.js`, 41 assertions. Les
+  parseurs etant PURS, la suite valide les TROIS plateformes depuis
+  n'importe quelle machine -- dont une sortie `ipconfig` en francais, et
+  la verification que `networkDetails()` existe bien dans les trois
+  implementations (une absence casserait le deploiement sur une seule
+  plateforme, donc silencieusement).
+
 ## 1.74.1
 
 - **Correctif : le bouton "+" creait un doublon immediat.** Une nouvelle

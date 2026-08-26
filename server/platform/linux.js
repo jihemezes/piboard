@@ -253,8 +253,181 @@ function vlcInstallHint() {
   return { fr: "sudo apt install vlc-bin vlc-plugin-base", en: "sudo apt install vlc-bin vlc-plugin-base" };
 }
 
+
+/* ---------- Configuration reseau / network configuration ----------
+
+   Sous Linux, aucune commande ne donne tout : on assemble trois sources
+   independantes, chacune facultative.
+
+   1. `ip route` -> passerelle par defaut, par carte. Sortie stable et
+      NON localisee, contrairement a `ipconfig` sous Windows.
+   2. `resolvectl status` -> DNS et domaine de recherche quand
+      systemd-resolved est en place (cas de Pi OS Trixie). Repli sur
+      /etc/resolv.conf sinon -- fichier universel, mais qui sur une
+      machine avec systemd-resolved ne contient que 127.0.0.53, d'ou
+      l'ordre.
+   3. Baux DHCP -> presence d'un fichier de bail, serveur et expiration.
+      Les emplacements varient selon le client (dhcpcd sur Pi OS,
+      dhclient ailleurs) : on essaie les deux.
+
+   Chaque etage echoue independamment : perdre les DNS ne doit pas faire
+   perdre la passerelle.
+
+   On Linux no single command gives everything: we assemble three
+   independent sources, each optional.
+
+   1. `ip route` -> default gateway, per adapter. Stable and NOT
+      localised output, unlike Windows' `ipconfig`.
+   2. `resolvectl status` -> DNS and search domain when systemd-resolved
+      is in place (the case on Pi OS Trixie). Falls back to
+      /etc/resolv.conf otherwise -- a universal file, but one that on a
+      systemd-resolved machine holds only 127.0.0.53, hence the order.
+   3. DHCP leases -> lease file presence, server and expiry. Locations
+      vary by client (dhcpcd on Pi OS, dhclient elsewhere): we try both.
+
+   Each layer fails independently: losing DNS must not lose the gateway. */
+
+const NET_TIMEOUT_MS = 4000;
+
+function run(cmd, args) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: NET_TIMEOUT_MS, encoding: "utf8" },
+      (err, stdout) => resolve(err && !stdout ? null : String(stdout || "")));
+  });
+}
+
+/* `ip route` : on ne retient QUE les routes par defaut. Une table de
+   routage complete contient aussi les routes de sous-reseau, qui n'ont
+   pas de passerelle a afficher.
+   `ip route`: we keep ONLY default routes. A full routing table also
+   holds subnet routes, which have no gateway to show. */
+function parseIpRoute(raw) {
+  const out = {};
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const m = line.match(/^default\s+via\s+(\S+)\s+dev\s+(\S+)/);
+    if (m) out[m[2]] = m[1];
+  }
+  return out;
+}
+
+/* `resolvectl status` : sortie par section "Link n (nom)". Les serveurs
+   peuvent tenir sur plusieurs lignes, la premiere seule serait
+   incomplete.
+   `resolvectl status`: output in "Link n (name)" sections. Servers can
+   span several lines; the first one alone would be incomplete. */
+function parseResolvectl(raw) {
+  const out = {};
+  let cur = null;
+  let collecting = false;
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const link = line.match(/^Link\s+\d+\s+\(([^)]+)\)/);
+    if (link) { cur = link[1]; out[cur] = { dns: [], domain: null }; collecting = false; continue; }
+    if (!cur) continue;
+    const dns = line.match(/^\s*(?:Current\s+)?DNS Servers?:\s*(.*)$/i);
+    if (dns) {
+      out[cur].dns.push(...dns[1].split(/\s+/).filter(Boolean));
+      collecting = true;
+      continue;
+    }
+    const dom = line.match(/^\s*DNS Domain:\s*(.*)$/i);
+    if (dom) { out[cur].domain = dom[1].trim() || null; collecting = false; continue; }
+    if (collecting && /^\s{2,}\S/.test(line) && !line.includes(":")) {
+      out[cur].dns.push(...line.trim().split(/\s+/).filter(Boolean));
+      continue;
+    }
+    collecting = false;
+  }
+  return out;
+}
+
+function parseResolvConf(raw) {
+  const dns = [];
+  let domain = null;
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const n = line.match(/^\s*nameserver\s+(\S+)/);
+    if (n) dns.push(n[1]);
+    const d = line.match(/^\s*(?:search|domain)\s+(\S+)/);
+    if (d && !domain) domain = d[1];
+  }
+  // 127.0.0.53 est le resolveur local de systemd, pas un vrai serveur :
+  // l'afficher n'apprendrait rien a personne.
+  // 127.0.0.53 is systemd's local stub, not a real server: showing it
+  // would tell nobody anything.
+  return { dns: dns.filter((x) => x !== "127.0.0.53"), domain };
+}
+
+/* Bail dhcpcd. Le format est `lease {}` facon dhclient chez dhclient, et
+   un fichier binaire chez dhcpcd : on ne lit donc que ce qui est
+   textuel, et on renvoie null sans se plaindre sinon.
+   dhcpcd lease. The format is dhclient-style `lease {}` for dhclient and
+   a binary file for dhcpcd: so we only read what is textual, and return
+   null without complaining otherwise. */
+function parseDhclientLease(raw, iface) {
+  const text = String(raw || "");
+  const blocks = text.split(/\blease\s*\{/).slice(1);
+  let best = null;
+  for (const b of blocks) {
+    if (iface && !new RegExp("interface\\s+\"" + iface + "\"").test(b)) continue;
+    const server = (b.match(/option dhcp-server-identifier\s+(\S+);/) || [])[1] || null;
+    const expire = (b.match(/expire\s+\d+\s+([^;]+);/) || [])[1] || null;
+    best = { dhcpServer: server, leaseExpires: expire ? expire.trim() : null };
+  }
+  return best;
+}
+
+async function networkDetails() {
+  const [routeRaw, resolveRaw] = await Promise.all([
+    run("ip", ["route"]),
+    run("resolvectl", ["status"])
+  ]);
+
+  const gateways = parseIpRoute(routeRaw);
+  const perLink = resolveRaw ? parseResolvectl(resolveRaw) : {};
+
+  let fallbackDns = { dns: [], domain: null };
+  if (!Object.keys(perLink).length) {
+    try { fallbackDns = parseResolvConf(fs.readFileSync("/etc/resolv.conf", "utf8")); }
+    catch (e) { /* fichier absent / file missing */ }
+  }
+
+  const names = new Set([...Object.keys(gateways), ...Object.keys(perLink)]);
+  const adapters = [];
+  for (const name of names) {
+    const link = perLink[name] || {};
+    let lease = null;
+    for (const f of ["/var/lib/dhcp/dhclient." + name + ".leases",
+                     "/var/lib/dhcp/dhclient.leases",
+                     "/var/lib/dhcpcd/" + name + ".lease"]) {
+      try { lease = parseDhclientLease(fs.readFileSync(f, "utf8"), name); if (lease) break; }
+      catch (e) { /* bail absent ou binaire / lease missing or binary */ }
+    }
+    adapters.push({
+      name,
+      gateway: gateways[name] || null,
+      // Presence d'un bail = adresse obtenue en DHCP. En l'absence de
+      // bail lisible on laisse null : affirmer "adresse fixe" sur la
+      // seule absence d'un fichier serait une deduction trop hative.
+      // A lease present = address obtained via DHCP. With no readable
+      // lease we leave null: asserting "static address" purely from a
+      // missing file would be too hasty a deduction.
+      dhcp: lease ? true : null,
+      dhcpServer: lease ? lease.dhcpServer : null,
+      leaseExpires: lease ? lease.leaseExpires : null,
+      dns: (link.dns && link.dns.length ? link.dns : fallbackDns.dns) || [],
+      domain: link.domain || fallbackDns.domain || null
+    });
+  }
+
+  return { adapters, domain: fallbackDns.domain || null };
+}
+
 module.exports = {
   id,
+  networkDetails,
+  parseIpRoute,
+  parseResolvectl,
+  parseResolvConf,
+  parseDhclientLease,
   pingArgs,
   pingSucceeded,
   parseArp,

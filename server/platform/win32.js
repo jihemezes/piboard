@@ -449,8 +449,162 @@ function vlcInstallHint() {
   return { fr: "winget install VideoLAN.VLC", en: "winget install VideoLAN.VLC" };
 }
 
+
+/* ---------- Configuration reseau / network configuration ----------
+
+   On passe par `ipconfig /all` plutot que par PowerShell : la commande
+   est presente sur toutes les versions de Windows, ne demande aucun
+   droit particulier, et demarre instantanement la ou un lancement de
+   PowerShell coute plusieurs centaines de millisecondes.
+
+   Contrepartie : la sortie est LOCALISEE. Les etiquettes sont traduites
+   dans la langue de Windows, ce qui interdit de chercher "Default
+   Gateway" en dur. Le parseur ci-dessous se repere donc sur des motifs
+   INDEPENDANTS DE LA LANGUE -- position, forme des valeurs, mots-cles
+   communs aux localisations les plus repandues -- et laisse `null` en
+   cas de doute plutot que de deviner.
+
+   We use `ipconfig /all` rather than PowerShell: the command exists on
+   every Windows version, needs no special rights, and starts instantly
+   where launching PowerShell costs several hundred milliseconds.
+
+   The trade-off: the output is LOCALISED. Labels are translated into
+   Windows' language, which rules out matching a hard-coded "Default
+   Gateway". The parser below therefore keys on LANGUAGE-INDEPENDENT
+   patterns -- position, value shapes, keywords shared by the most common
+   locales -- and leaves `null` when in doubt rather than guessing. */
+
+const IPCONFIG_TIMEOUT_MS = 5000;
+
+const IPV4_RE = /\b(\d{1,3}(?:\.\d{1,3}){3})\b/;
+
+/* Mots-cles par champ, dans les localisations les plus repandues.
+   Volontairement peu nombreux : mieux vaut un champ `null` qu'un champ
+   faux issu d'une correspondance hasardeuse.
+   Keywords per field, across the most common locales. Deliberately few:
+   a `null` field beats a wrong one from a loose match. */
+const KEYS = {
+  gateway: /passerelle|gateway|gateway|standardgateway|puerta de enlace|gateway predefinito/i,
+  dhcpOn: /dhcp\s*(activ|enabled|aktiviert|habilitado|abilitato)/i,
+  dhcpServer: /serveur dhcp|dhcp server|dhcp-server|servidor dhcp|server dhcp/i,
+  leaseObtained: /bail obtenu|lease obtained|lease erhalten|concesion obtenida/i,
+  leaseExpires: /expiration du bail|lease expires|lease l(a|ä)uft ab|la concesion expira|scadenza/i,
+  dns: /serveurs dns|dns servers|dns-server|servidores dns|server dns/i,
+  suffix: /suffixe dns|dns suffix|dns-suffix|sufijo dns|suffisso dns/i,
+  physical: /adresse physique|physical address|physikalische adresse|direccion fisica|indirizzo fisico/i,
+  yes: /\b(oui|yes|ja|si|s(i|í))\b/i
+};
+
+/* Parseur PUR de la sortie de `ipconfig /all`. Separe de l'execution
+   pour etre testable sur n'importe quelle machine, y compris Linux --
+   c'est la convention deja retenue pour parseArp().
+   PURE parser for `ipconfig /all` output. Separated from execution so it
+   can be tested on any machine, Linux included -- the convention already
+   used for parseArp(). */
+function parseIpconfig(raw) {
+  const text = String(raw || "");
+  if (!text.trim()) return { adapters: [], domain: null };
+
+  const lines = text.split(/\r?\n/);
+  const adapters = [];
+  let cur = null;
+  let globalDomain = null;
+  let collectingDns = false;
+
+  for (const line of lines) {
+    // Une ligne d'en-tete de carte n'est pas indentee et se termine par
+    // " :" -- c'est structurel, donc valable dans toutes les langues.
+    // An adapter header line is not indented and ends with " :" -- that
+    // is structural, hence valid in every language.
+    if (/^\S/.test(line) && /:\s*$/.test(line)) {
+      const label = line.replace(/:\s*$/, "").trim();
+      // La premiere section d'ipconfig est la configuration globale, pas
+      // une carte : elle porte le suffixe DNS principal.
+      // ipconfig's first section is the global configuration, not an
+      // adapter: it carries the primary DNS suffix.
+      if (/^(configuration ip|windows ip|ip-konfiguration|configuraci)/i.test(label)) {
+        cur = null;
+      } else {
+        cur = { name: label.replace(/^(carte|adapter|adaptateur|ethernet adapter|wireless lan adapter)\s*/i, "").trim(),
+                rawLabel: label, mac: null, gateway: null, dhcp: null,
+                dhcpServer: null, leaseExpires: null, dns: [], domain: null, type: null };
+        if (/wi-?fi|sans fil|wireless|wlan/i.test(label)) cur.type = "wifi";
+        else if (/ethernet|local/i.test(label)) cur.type = "wired";
+        adapters.push(cur);
+      }
+      collectingDns = false;
+      continue;
+    }
+
+    if (!/\S/.test(line)) { collectingDns = false; continue; }
+
+    // Ligne de continuation des serveurs DNS : indentee, sans etiquette,
+    // uniquement une adresse. C'est ainsi qu'ipconfig liste le second
+    // serveur, et l'ignorer perdrait la moitie de l'information.
+    // DNS servers continuation line: indented, no label, just an address.
+    // This is how ipconfig lists the second server, and ignoring it would
+    // lose half the information.
+    if (collectingDns && !line.includes(":") && IPV4_RE.test(line)) {
+      if (cur) cur.dns.push(line.match(IPV4_RE)[1]);
+      continue;
+    }
+
+    const sep = line.indexOf(":");
+    if (sep === -1) { collectingDns = false; continue; }
+    const label = line.slice(0, sep);
+    const value = line.slice(sep + 1).trim();
+    collectingDns = false;
+
+    if (KEYS.suffix.test(label)) {
+      const v = value.replace(/^\.+$/, "").trim();
+      if (v) { if (cur) cur.domain = v; else globalDomain = v; }
+      continue;
+    }
+    if (!cur) continue;
+
+    if (KEYS.physical.test(label)) {
+      const m = value.match(/([0-9A-F]{2}(?:[-:][0-9A-F]{2}){5})/i);
+      if (m) cur.mac = m[1].replace(/-/g, ":").toLowerCase();
+    } else if (KEYS.gateway.test(label)) {
+      const m = value.match(IPV4_RE);
+      if (m) cur.gateway = m[1];
+    } else if (KEYS.dhcpServer.test(label)) {
+      const m = value.match(IPV4_RE);
+      if (m) cur.dhcpServer = m[1];
+    } else if (KEYS.dhcpOn.test(label)) {
+      cur.dhcp = KEYS.yes.test(value);
+    } else if (KEYS.leaseExpires.test(label)) {
+      cur.leaseExpires = value || null;
+    } else if (KEYS.dns.test(label)) {
+      const m = value.match(IPV4_RE);
+      if (m) cur.dns.push(m[1]);
+      collectingDns = true;
+    }
+  }
+
+  // Une carte sans la moindre donnee exploitable n'apporte rien a la
+  // fusion et encombrerait la correspondance par nom.
+  // An adapter with no usable data adds nothing to the merge and would
+  // clutter the name matching.
+  const useful = adapters.filter((a) => a.mac || a.gateway || a.dns.length || a.dhcp != null);
+  return { adapters: useful, domain: globalDomain };
+}
+
+function networkDetails() {
+  return new Promise((resolve) => {
+    execFile("ipconfig", ["/all"], { timeout: IPCONFIG_TIMEOUT_MS, windowsHide: true, encoding: "utf8" },
+      (err, stdout) => {
+        if (err && !stdout) return resolve(null);
+        try { resolve(parseIpconfig(stdout)); }
+        catch (e) { resolve(null); }
+      });
+  });
+}
+
 module.exports = {
   id,
+  networkDetails,
+  parseIpconfig,
   pingArgs,
   pingSucceeded,
   parseArp,

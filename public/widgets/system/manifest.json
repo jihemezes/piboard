@@ -45,6 +45,19 @@
       }
     },
     {
+      "key": "showNetwork",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show network adapter IP addresses",
+        "fr": "Afficher les adresses IP des cartes réseau"
+      },
+      "hint": {
+        "en": "Only real, connected adapters (WiFi and Ethernet). Click an address to open the full network configuration.",
+        "fr": "Uniquement les cartes réelles et connectées (WiFi et Ethernet). Cliquez sur une adresse pour ouvrir la configuration réseau complète."
+      }
+    },
+    {
       "key": "showUptime",
       "type": "checkbox",
       "default": true,

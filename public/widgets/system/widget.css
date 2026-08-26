@@ -46,3 +46,83 @@
   font-size: 13px;
   text-align: center;
 }
+
+/* ---------- Adresses des cartes reseau / network adapter addresses ---------- */
+
+.pws-net {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6em;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 5px;
+  padding: 0.05em 0.2em;
+  margin-top: 0.15em;
+}
+.pws-net:hover { background: var(--tile-edge); }
+.pws-net-name {
+  font-size: 0.8em;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pws-net-ip { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* ---------- Fenetre de configuration reseau / network config window ---------- */
+
+.pwn-modal { width: min(900px, 94vw); max-height: 88vh; display: flex; flex-direction: column; }
+.pwn-body { padding: 4px 22px 20px; overflow-y: auto; }
+
+.pwn-host {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--tile-edge);
+  font-size: 14px;
+  color: var(--muted);
+}
+.pwn-host b { color: var(--text); font-size: 16px; }
+.pwn-suffix { font-family: var(--mono); font-size: 12.5px; }
+
+/* Plusieurs cartes tiennent cote a cote quand la largeur le permet, une
+   seule colonne sinon : sur le Pi en portrait, deux colonnes seraient
+   illisibles.
+   Several adapters sit side by side when width allows, a single column
+   otherwise: on the Pi in portrait, two columns would be unreadable. */
+.pwn-card + .pwn-card { margin-top: 16px; }
+@media (min-width: 720px) {
+  .pwn-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .pwn-host, .pwn-partial, .pwn-empty { grid-column: 1 / -1; }
+  .pwn-card + .pwn-card { margin-top: 0; }
+}
+
+.pwn-card { border: 1px solid var(--tile-edge); border-radius: 10px; padding: 12px 14px; }
+.pwn-title { margin: 0 0 10px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+
+.pwn-kind { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.pwn-wifi { background: #3FA96B; }
+.pwn-wired { background: #5B8DEF; }
+
+.pwn-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 12px;
+  font-size: 13px;
+}
+.pwn-list dt { color: var(--muted); white-space: nowrap; }
+.pwn-list dd { margin: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+.pwn-na { color: var(--muted); font-family: inherit; font-style: italic; }
+
+.pwn-partial, .pwn-empty {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  border-left: 3px solid var(--tile-edge);
+  padding-left: 10px;
+}
