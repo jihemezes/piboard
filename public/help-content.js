@@ -1276,6 +1276,11 @@
           <p>Garder un œil sur la santé du Raspberry Pi (ou de toute autre machine) qui héberge PiBoard, directement depuis le tableau lui-même.</p>
           <h4>Possibilités</h4>
           <p>Utile en particulier sur un Raspberry Pi, où la température et l'usage CPU/RAM peuvent révéler un problème (par exemple un boîtier mal ventilé, ou un processus qui consomme trop) avant qu'il ne devienne gênant. L'espace disque restant permet d'anticiper un plein (photos du diaporama, notes…) avant qu'il ne bloque une sauvegarde.</p>
+          <h4>Courbes d'utilisation</h4>
+          <p><b>Un clic sur CPU, RAM ou Disque</b> ouvre une fenêtre à trois onglets, une courbe par ressource, qui se met à jour en direct au rythme de rafraîchissement de la tuile.</p>
+          <p>L'échelle est <b>fixée de 0 à 100 %</b>, jamais ajustée au contenu : une échelle automatique ferait paraître dramatique une variation de deux points en zoomant dessus.</p>
+          <p>L'historique se constitue pendant que le tableau tourne, à partir des relevés que la tuile fait déjà — il n'y a donc aucun coût supplémentaire. En contrepartie, <b>il repart de zéro à chaque rechargement de la page</b> : c'est une lecture d'ambiance sur les dernières dizaines de minutes, pas un historique de longue durée.</p>
+
           <h4>Adresses réseau</h4>
           <p>La tuile peut afficher l'adresse IP de chaque carte réseau de la machine. <b>Un clic sur une adresse</b> ouvre une fenêtre détaillant la configuration complète de toutes les cartes : adresse et masque, passerelle, DHCP (avec le serveur et l'expiration du bail le cas échéant), serveurs DNS, suffixe de domaine, adresse MAC et adresses IPv6 publiques. Le nom d'hôte est rappelé en haut.</p>
           <p><b>Seules les vraies cartes connectées apparaissent.</b> Les cartes virtuelles — Docker, VirtualBox, VMware, Hyper-V, VPN — sont écartées, principalement d'après le préfixe constructeur de leur adresse MAC, qui est le critère le plus fiable. Une carte physique sans adresse IPv4 (câble débranché) est également masquée, puisqu'elle n'est pas réellement connectée.</p>
@@ -1292,6 +1297,11 @@
           <p>Keep an eye on the health of the Raspberry Pi (or any other machine) hosting PiBoard, directly from the board itself.</p>
           <h4>Possibilities</h4>
           <p>Especially useful on a Raspberry Pi, where temperature and CPU/RAM usage can reveal a problem (e.g. a poorly ventilated case, or a process consuming too much) before it becomes an issue. Remaining disk space lets you anticipate running out (slideshow photos, notes…) before it blocks a save.</p>
+          <h4>Usage charts</h4>
+          <p><b>Clicking CPU, RAM or Disk</b> opens a three-tab window, one curve per resource, updating live at the tile's own refresh pace.</p>
+          <p>The scale is <b>fixed from 0 to 100%</b>, never fitted to the content: an auto scale would make a two-point wobble look dramatic by zooming into it.</p>
+          <p>History builds up while the board runs, from the readings the tile already takes — so there is no extra cost. In exchange, <b>it starts again from scratch on every page reload</b>: this is an at-a-glance view of the last few tens of minutes, not a long-term history.</p>
+
           <h4>Network addresses</h4>
           <p>The tile can show the IP address of each of the machine's network adapters. <b>Clicking an address</b> opens a window detailing the full configuration of every adapter: address and mask, gateway, DHCP (with the server and lease expiry where applicable), DNS servers, domain suffix, MAC address and public IPv6 addresses. The host name is shown at the top.</p>
           <p><b>Only real, connected adapters appear.</b> Virtual adapters — Docker, VirtualBox, VMware, Hyper-V, VPN — are filtered out, chiefly from the vendor prefix of their MAC address, which is the most reliable criterion. A physical adapter with no IPv4 address (cable unplugged) is hidden too, since it is not actually connected.</p>

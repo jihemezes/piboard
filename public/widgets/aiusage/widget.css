@@ -10,18 +10,18 @@
   overflow: hidden;
 }
 
-.pwa-rows { display: flex; flex-direction: column; gap: 0.7em; }
+.pwq-rows { display: flex; flex-direction: column; gap: 0.7em; }
 
-.pwa-row { display: flex; flex-direction: column; gap: 0.22em; }
+.pwq-row { display: flex; flex-direction: column; gap: 0.22em; }
 
-.pwa-head {
+.pwq-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 8px;
 }
 
-.pwa-label {
+.pwq-label {
   font-size: 0.85em;
   color: var(--muted);
   white-space: nowrap;
@@ -29,7 +29,7 @@
   text-overflow: ellipsis;
 }
 
-.pwa-pct { font-size: 0.95em; font-variant-numeric: tabular-nums; }
+.pwq-pct { font-size: 0.95em; font-variant-numeric: tabular-nums; }
 
 /* La barre garde une hauteur en em pour suivre l'ajustement automatique
    de la police de la tuile : en px, elle deviendrait un filet invisible
@@ -37,7 +37,7 @@
    The bar keeps an em-based height so it follows the tile's automatic
    font fitting: in px it would become an invisible hairline on a large
    tile and a slab on a small one. */
-.pwa-bar {
+.pwq-bar {
   height: 0.5em;
   min-height: 5px;
   border-radius: 999px;
@@ -45,29 +45,29 @@
   overflow: hidden;
 }
 
-.pwa-fill {
+.pwq-fill {
   height: 100%;
   border-radius: 999px;
   transition: width 0.4s ease;
 }
 
-.pwa-ok { color: var(--text); }
-.pwa-fill.pwa-ok { background: var(--text); }
-.pwa-warn { color: #E0A155; }
-.pwa-fill.pwa-warn { background: #E0A155; }
-.pwa-danger { color: var(--accent); }
-.pwa-fill.pwa-danger { background: var(--accent); }
+.pwq-ok { color: var(--text); }
+.pwq-fill.pwq-ok { background: var(--text); }
+.pwq-warn { color: #E0A155; }
+.pwq-fill.pwq-warn { background: #E0A155; }
+.pwq-danger { color: var(--accent); }
+.pwq-fill.pwq-danger { background: var(--accent); }
 
-.pwa-reset { font-size: 0.72em; color: var(--muted); }
+.pwq-reset { font-size: 0.72em; color: var(--muted); }
 
-.pwa-msg {
+.pwq-msg {
   text-align: center;
   color: var(--muted);
   font-size: 0.9em;
   padding: 0 6px;
 }
 
-.pwa-connect {
+.pwq-connect {
   margin: 0.7em auto 0;
   display: block;
   font: inherit;
@@ -80,15 +80,15 @@
   cursor: pointer;
   touch-action: manipulation;
 }
-.pwa-connect:hover { border-color: var(--muted); }
+.pwq-connect:hover { border-color: var(--muted); }
 
 /* ---------- Fenetre d'autorisation / authorization window ---------- */
 
-.pwa-auth-card { width: min(680px, 94vw); }
-.pwa-auth-body { padding: 4px 22px 20px; }
-.pwa-auth-body p { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; }
+.pwq-auth-card { width: min(680px, 94vw); }
+.pwq-auth-body { padding: 4px 22px 20px; }
+.pwq-auth-body p { margin: 0 0 8px; color: var(--muted); font-size: 13.5px; }
 
-.pwa-url, .pwa-cb {
+.pwq-url, .pwq-cb {
   width: 100%;
   box-sizing: border-box;
   font-family: var(--mono);
@@ -102,10 +102,10 @@
   resize: vertical;
 }
 
-.pwa-auth-err {
+.pwq-auth-err {
   color: var(--accent);
   font-size: 13px;
   margin-bottom: 10px;
 }
 
-.pwa-auth-foot { display: flex; justify-content: flex-end; }
+.pwq-auth-foot { display: flex; justify-content: flex-end; }

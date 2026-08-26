@@ -1,9 +1,9 @@
 /* PiBoard widget: stocks / bourse, indices, change */
 
 .pw-stocks { height: 100%; display: flex; flex-direction: column; padding: 4px 10px; box-sizing: border-box; overflow: hidden; }
-.pws-rows { display: flex; flex-direction: column; gap: 0.35em; overflow-y: auto; }
+.pwb-rows { display: flex; flex-direction: column; gap: 0.35em; overflow-y: auto; }
 
-.pws-row {
+.pwb-row {
   display: grid;
   grid-template-columns: 1fr auto auto;
   align-items: baseline;
@@ -13,31 +13,31 @@
   border-radius: 6px;
   padding: 0.1em 0.2em;
 }
-.pws-row:hover { background: var(--tile-edge); }
-.pws-dead { cursor: default; opacity: 0.5; }
+.pwb-row:hover { background: var(--tile-edge); }
+.pwb-dead { cursor: default; opacity: 0.5; }
 /* Etat degrade : derniere valeur connue, les deux sources ayant echoue.
    Signale discretement plutot que camoufle.
    Degraded state: last known value, both sources having failed. Flagged
    discreetly rather than hidden. */
-.pws-stale { opacity: 0.62; }
+.pwb-stale { opacity: 0.62; }
 
-.pws-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
-.pws-val { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
-.pws-cur { font-size: 0.78em; color: var(--muted); margin-left: 0.15em; }
+.pwb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); }
+.pwb-val { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
+.pwb-cur { font-size: 0.78em; color: var(--muted); margin-left: 0.15em; }
 
-.pws-chg { font-size: 0.8em; font-variant-numeric: tabular-nums; min-width: 4.2em; text-align: right; }
-.pws-up { color: #3FA96B; }
-.pws-down { color: var(--accent); }
-.pws-flat { color: var(--muted); }
+.pwb-chg { font-size: 0.8em; font-variant-numeric: tabular-nums; min-width: 4.2em; text-align: right; }
+.pwb-up { color: #3FA96B; }
+.pwb-down { color: var(--accent); }
+.pwb-flat { color: var(--muted); }
 
-.pws-msg { margin: auto; text-align: center; color: var(--muted); font-size: 0.88em; padding: 0 8px; }
+.pwb-msg { margin: auto; text-align: center; color: var(--muted); font-size: 0.88em; padding: 0 8px; }
 
 /* ---------- Courbe / chart ---------- */
 
-.pws-chart-card { width: min(680px, 94vw); }
-.pws-chart-body { padding: 4px 20px 18px; }
-.pws-ranges { display: flex; gap: 6px; margin-bottom: 10px; }
-.pws-range {
+.pwb-chart-card { width: min(680px, 94vw); }
+.pwb-chart-body { padding: 4px 20px 18px; }
+.pwb-ranges { display: flex; gap: 6px; margin-bottom: 10px; }
+.pwb-range {
   font: inherit;
   font-size: 13px;
   padding: 4px 12px;
@@ -48,9 +48,9 @@
   cursor: pointer;
   touch-action: manipulation;
 }
-.pws-range.active { color: var(--text); border-color: var(--muted); }
-.pws-chart { width: 100%; height: 220px; border-radius: 10px; }
-.pws-chart-status { margin-top: 8px; font-size: 13px; color: var(--muted); text-align: center; }
+.pwb-range.active { color: var(--text); border-color: var(--muted); }
+.pwb-chart { width: 100%; height: 220px; border-radius: 10px; }
+.pwb-chart-status { margin-top: 8px; font-size: 13px; color: var(--muted); text-align: center; }
 
 /* ---------- Editeur de lignes (type de reglage "rows") ----------
    Place ici plutot que dans style.css car la tuile Bourse en est le
@@ -105,15 +105,15 @@ body.touch .rows-del { width: 34px; height: 34px; }
 
 /* Marche ferme : la ligne s'attenue legerement et porte une pastille.
    Volontairement discret -- l'information est "cette valeur ne bouge
-   pas", pas une alerte. Attenuation plus faible que .pws-stale, qui
+   pas", pas une alerte. Attenuation plus faible que .pwb-stale, qui
    signale lui un vrai probleme de source.
    Market closed: the row dims slightly and carries a pill. Deliberately
    discreet -- the message is "this value is not moving", not an alert.
-   Dimmed less than .pws-stale, which flags an actual source problem. */
-.pws-shut .pws-val,
-.pws-shut .pws-chg { opacity: 0.72; }
+   Dimmed less than .pwb-stale, which flags an actual source problem. */
+.pwb-shut .pwb-val,
+.pwb-shut .pwb-chg { opacity: 0.72; }
 
-.pws-closed {
+.pwb-closed {
   display: inline-block;
   margin-left: 0.45em;
   padding: 0.02em 0.4em;
@@ -131,7 +131,7 @@ body.touch .rows-del { width: 34px; height: 34px; }
    Separator between indices and individual securities. Just a rule: two
    kinds of information one does not read the same way, but which do not
    each need a heading on a tile of a few rows. */
-.pws-sep {
+.pwb-sep {
   height: 1px;
   background: var(--tile-edge);
   margin: 0.25em 0.2em;

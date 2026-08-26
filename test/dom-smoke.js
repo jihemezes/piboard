@@ -2406,6 +2406,20 @@ function catalogItemFor(catalog, document, widgetId) {
       familyOf("commute") === "Déplacements");
     assert("la tuile Avions en vue est dans 'Déplacements'", familyOf("planes") === "Déplacements");
     assert("la tuile Cours Cryptos reste dans 'Informations'", familyOf("crypto") === "Informations");
+    // Les tuiles ajoutees depuis la 1.70 tombaient toutes dans "Divers",
+    // le catalogue les ignorant. Chacune est desormais rangee la ou on
+    // la chercherait, la Bourse aux cotes des Cryptos.
+    // Every tile added since 1.70 fell into "Miscellaneous", the catalog
+    // ignoring them. Each now sits where one would look for it, Stocks
+    // alongside Crypto.
+    assert("la tuile Bourse rejoint les Cryptos dans 'Informations'",
+      familyOf("stocks") === "Informations");
+    assert("la tuile Couleur Tempo est dans 'Maison & énergie'",
+      familyOf("tempo") === "Maison & énergie");
+    assert("la tuile Home Assistant est dans 'Maison & énergie'",
+      familyOf("homeassistant") === "Maison & énergie");
+    assert("la tuile Quotas IA est dans 'Système & Réseau'",
+      familyOf("aiusage") === "Système & Réseau");
     assert("la tuile Etat systeme est dans 'Système & Réseau', pas 'Divers'",
       familyOf("system") === "Système & Réseau");
     assert("la tuile Analyse reseau est aussi dans 'Système & Réseau'",
@@ -3967,6 +3981,176 @@ function catalogItemFor(catalog, document, widgetId) {
      then silently emptied the Stocks tile's row editor -- JSON has one at
      every key, the attribute closed at the first, and the value read back
      was truncated to "[{". */
+  /* ---------- Tuile Etat systeme : lisibilite et historique ----------
+     Le premier bloc existe a cause d'un defaut signale : `space-between`
+     sans `gap` ne garantit AUCUN espace, si bien que le libelle et la
+     valeur se touchaient des qu'ils remplissaient la largeur.
+     The first block exists because of a reported defect: `space-between`
+     with no `gap` guarantees NO space, so the label and the value touched
+     as soon as they filled the width. */
+  /* ---------- Cloisonnement des feuilles de style des widgets ----------
+
+     Ce bloc existe a cause d'un bug reel et difficile a voir. Les
+     feuilles de TOUS les widgets sont chargees dans le MEME document :
+     une classe non prefixee par un widget ecrase donc la meme classe
+     chez un autre. Concretement, `.pws-row { align-items: baseline }`
+     ecrit pour la tuile Bourse s'appliquait aussi aux lignes de la tuile
+     Etat systeme. Sur un conteneur `flex-direction: column`, un
+     `align-items` autre que `stretch` empeche les enfants de remplir la
+     largeur : le libelle et la valeur se retrouvaient colles ET la barre
+     de progression, sans contenu propre, tombait a une largeur nulle,
+     donc invisible.
+
+     Le symptome n'apparaissait QUE si les deux tuiles etaient sur le meme
+     tableau -- c'est pourquoi aucun test existant ne l'attrapait : chaque
+     widget etait correct isolement.
+
+     This block exists because of a real and hard-to-see bug. EVERY
+     widget's stylesheet is loaded into the SAME document: a class not
+     namespaced by one widget therefore overrides the same class in
+     another. Concretely, `.pws-row { align-items: baseline }` written for
+     the Stocks tile also applied to the System status tile's rows. On a
+     `flex-direction: column` container, an `align-items` other than
+     `stretch` stops children from filling the width: the label and the
+     value ended up stuck together AND the progress bar, having no content
+     of its own, collapsed to zero width and became invisible.
+
+     The symptom appeared ONLY when both tiles sat on the same board --
+     which is why no existing test caught it: each widget was correct in
+     isolation. */
+  /* ---------- Classement des tuiles dans le catalogue ----------
+     Une tuile non listee dans CATALOG_FAMILIES n'est pas perdue : elle
+     rejoint "Divers". C'est un bon filet, mais un filet SILENCIEUX --
+     les cinq tuiles ajoutees recemment s'y etaient accumulees sans que
+     rien ne le signale. Ce test rend l'oubli visible.
+     A tile missing from CATALOG_FAMILIES is not lost: it joins
+     "Miscellaneous". A good safety net, but a SILENT one -- the five
+     recently added tiles had piled up there with nothing flagging it.
+     This test makes the omission visible. */
+  console.log("== Catalogue : classement des tuiles ==");
+  {
+    const src = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    const block = src.slice(src.indexOf("const CATALOG_FAMILIES"));
+    const decl = block.slice(0, block.indexOf("];"));
+
+    const families = [...decl.matchAll(/key:\s*"([a-z]+)"/g)].map((m) => m[1]);
+    const classified = new Set([...decl.matchAll(/"([a-z]+)"/g)].map((m) => m[1]));
+
+    // Chaque famille doit avoir ses libelles dans les DEUX langues,
+    // sinon la nouvelle rubrique s'afficherait avec sa cle brute.
+    // Every family needs its labels in BOTH languages, otherwise the new
+    // heading would show its raw key.
+    const i18nSrc = fs.readFileSync(path.join(PUB, "i18n.js"), "utf8");
+    for (const fam of families) {
+      const occurrences = (i18nSrc.match(new RegExp('"catalog\\.family\\.' + fam + '"', "g")) || []).length;
+      assert("la famille '" + fam + "' est traduite en FR et EN", occurrences === 2);
+    }
+
+    // Toute tuile livree doit etre classee explicitement.
+    // Every shipped tile must be explicitly classified.
+    const widgetsDir = path.join(PUB, "widgets");
+    const unplaced = fs.readdirSync(widgetsDir).filter((dir) =>
+      fs.existsSync(path.join(widgetsDir, dir, "manifest.json")) && !classified.has(dir));
+    for (const dir of unplaced) console.log("       non classee : " + dir);
+    assert("aucune tuile ne tombe dans 'Divers' par oubli", unplaced.length === 0);
+
+    // Et l'inverse : une famille citant une tuile disparue laisserait un
+    // trou invisible dans le catalogue.
+    // And the reverse: a family naming a removed tile would leave an
+    // invisible hole in the catalog.
+    const ghosts = [...classified].filter((id) =>
+      !families.includes(id) && !fs.existsSync(path.join(widgetsDir, id, "manifest.json")));
+    for (const g of ghosts) console.log("       tuile citee mais absente : " + g);
+    assert("aucune famille ne cite une tuile inexistante", ghosts.length === 0);
+  }
+
+  console.log("== Feuilles de style des widgets : aucune collision ==");
+  {
+    const widgetsDir = path.join(PUB, "widgets");
+    const owners = new Map();
+
+    for (const dir of fs.readdirSync(widgetsDir)) {
+      const file = path.join(widgetsDir, dir, "widget.css");
+      if (!fs.existsSync(file)) continue;
+      // Les commentaires sont retires d'abord : ils contiennent des noms
+      // de classes cites en exemple, qui fausseraient le relevé.
+      // Comments are stripped first: they mention class names as
+      // examples, which would skew the survey.
+      const css = fs.readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      for (const m of css.matchAll(/(^|,)\s*([^{},]+?)\s*(?=[,{])/gm)) {
+        const sel = m[2].trim();
+        if (!sel || sel.startsWith("@")) continue;
+        // Seul le PREMIER element du selecteur compte : c'est lui qui
+        // determine la portee. `.pw-system .pws-row` est cloisonne,
+        // `.pws-row` ne l'est pas.
+        // Only the FIRST element of the selector matters: it determines
+        // the scope. `.pw-system .pws-row` is namespaced, `.pws-row` is
+        // not.
+        const first = sel.split(/[\s>+~]/)[0];
+        if (!first.startsWith(".")) continue;
+        const cls = first.split(/[:.\[]/).filter(Boolean)[0];
+        if (!cls) continue;
+        if (!owners.has(cls)) owners.set(cls, new Set());
+        owners.get(cls).add(dir);
+      }
+    }
+
+    const clashes = [...owners.entries()].filter(([, dirs]) => dirs.size > 1);
+    for (const [cls, dirs] of clashes) {
+      console.log("       ." + cls + " partagee par : " + [...dirs].join(", "));
+    }
+    assert("aucune classe de premier niveau n'est partagee par deux widgets",
+      clashes.length === 0);
+    assert("le relevé a bien parcouru les feuilles de style", owners.size > 20);
+  }
+
+  console.log("== Etat systeme : lisibilite des lignes ==");
+  {
+    const css = fs.readFileSync(path.join(PUB, "widgets/system/widget.css"), "utf8");
+    const head = css.slice(css.indexOf(".pw-system .pws-row-head {"));
+    const block = head.slice(0, head.indexOf("}"));
+    assert("un espace minimal separe le libelle de la valeur", /gap:\s*[^0]/.test(block));
+    assert("la valeur ne se coupe pas sur deux lignes", /white-space:\s*nowrap/.test(
+      css.slice(css.indexOf(".pw-system .pws-row-head .pws-val"),
+                css.indexOf(".pw-system .pws-row-head .pws-val") + 260)));
+    // Si la place manque, c'est le LIBELLE qui cede : le chiffre est
+    // l'information, le libelle se devine.
+    // If space runs short, it is the LABEL that gives way: the figure is
+    // the information, the label can be guessed.
+    assert("c'est le libelle qui se tronque, pas la valeur",
+      /pws-row-head\s*>\s*span:first-child[^}]*text-overflow:\s*ellipsis/.test(css));
+    assert("les lignes cliquables ont un retour visuel au survol",
+      /\.pws-row\.pws-clickable:hover/.test(css));
+  }
+
+  console.log("== Etat systeme : historique des ressources ==");
+  {
+    const src = fs.readFileSync(path.join(PUB, "widgets/system/widget.js"), "utf8");
+    assert("les trois ressources ouvrent une courbe",
+      /data-metric/.test(src) && /"cpu"/.test(src) && /"mem"/.test(src) && /"disk"/.test(src));
+    // Borne dure indispensable : sans elle, une tuile laissee des jours
+    // sur un tableau mural accumulerait indefiniment.
+    // A hard cap is essential: without it, a tile left for days on a wall
+    // board would accumulate indefinitely.
+    assert("l'historique est borne", /MAX_POINTS/.test(src) && /a\.shift\(\)/.test(src));
+    // Echelle fixe : une echelle automatique ferait paraitre dramatique
+    // une variation de 2 % en zoomant dessus.
+    // Fixed scale: an auto scale would make a 2% wobble look dramatic by
+    // zooming into it.
+    assert("l'echelle du graphique est fixee de 0 a 100",
+      /Math\.max\(0,\s*Math\.min\(100,\s*v\)\)/.test(src));
+    assert("un point unique ne trace pas de courbe", /series\.length < 2/.test(src));
+
+    // Verification par le comportement de la geometrie du trace.
+    // Behavioural check of the path geometry.
+    const W = 600, H = 200, PAD = 8;
+    const y = (v) => PAD + (H - 2 * PAD) * (1 - Math.max(0, Math.min(100, v)) / 100);
+    assert("0 % est en bas du graphique", y(0) > y(100));
+    assert("50 % est au milieu", Math.abs(y(50) - (PAD + (H - 2 * PAD) / 2)) < 0.01);
+    assert("une valeur aberrante est bornee et ne sort pas du cadre",
+      y(150) === y(100) && y(-10) === y(0));
+  }
+
   console.log("== Echappement des attributs HTML ==");
   {
     const src = fs.readFileSync(path.join(PUB, "app.js"), "utf8");

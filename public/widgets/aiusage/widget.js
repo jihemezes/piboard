@@ -60,7 +60,7 @@
     }
 
     async init() {
-      this.ctx.el.innerHTML = `<div class="pw-aiu"><div class="pwa-msg">${this.ctx.i18n.t("common.loading")}</div></div>`;
+      this.ctx.el.innerHTML = `<div class="pw-aiu"><div class="pwq-msg">${this.ctx.i18n.t("common.loading")}</div></div>`;
       await this.refresh();
       this.arm();
     }
@@ -97,10 +97,10 @@
       const i18n = this.ctx.i18n;
       this.ctx.el.innerHTML = `
         <div class="pw-aiu">
-          <div class="pwa-msg">${esc(msg)}</div>
-          ${withButton ? `<button class="pwa-connect">${esc(i18n.t("aiusage.connect"))}</button>` : ""}
+          <div class="pwq-msg">${esc(msg)}</div>
+          ${withButton ? `<button class="pwq-connect">${esc(i18n.t("aiusage.connect"))}</button>` : ""}
         </div>`;
-      const btn = this.ctx.el.querySelector(".pwa-connect");
+      const btn = this.ctx.el.querySelector(".pwq-connect");
       if (btn) btn.addEventListener("pointerup", (e) => { e.preventDefault(); this.openAuth(); });
     }
 
@@ -140,19 +140,19 @@
         const lvl = levelFor(pct, warnAt, dangerAt);
         const reset = formatReset(w.resetsAt, i18n);
         return `
-          <div class="pwa-row">
-            <div class="pwa-head">
-              <span class="pwa-label">${esc(i18n.t("aiusage.win." + w.id))}</span>
-              <span class="pwa-pct pwa-${lvl}">${pct}%</span>
+          <div class="pwq-row">
+            <div class="pwq-head">
+              <span class="pwq-label">${esc(i18n.t("aiusage.win." + w.id))}</span>
+              <span class="pwq-pct pwq-${lvl}">${pct}%</span>
             </div>
-            <div class="pwa-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
-              <div class="pwa-fill pwa-${lvl}" style="width:${pct}%"></div>
+            <div class="pwq-bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100">
+              <div class="pwq-fill pwq-${lvl}" style="width:${pct}%"></div>
             </div>
-            <div class="pwa-reset">${esc(reset)}</div>
+            <div class="pwq-reset">${esc(reset)}</div>
           </div>`;
       }).join("");
 
-      this.ctx.el.innerHTML = `<div class="pw-aiu"><div class="pwa-rows">${rows}</div></div>`;
+      this.ctx.el.innerHTML = `<div class="pw-aiu"><div class="pwq-rows">${rows}</div></div>`;
     }
 
     /* ---------- Autorisation / authorization ---------- */
@@ -175,18 +175,18 @@
       // we must sit above it (see style.css).
       m.className = "modal modal-stacked";
       m.innerHTML = `
-        <div class="modal-card pwa-auth-card">
+        <div class="modal-card pwq-auth-card">
           <header class="modal-head">
             <h2>${esc(i18n.t("aiusage.authTitle"))}</h2>
             <button class="modal-close" data-x aria-label="Close">&times;</button>
           </header>
-          <div class="pwa-auth-body">
+          <div class="pwq-auth-body">
             <p>${esc(i18n.t("aiusage.step1"))}</p>
-            <textarea class="pwa-url" readonly rows="3">${esc(authUrl)}</textarea>
+            <textarea class="pwq-url" readonly rows="3">${esc(authUrl)}</textarea>
             <p>${esc(i18n.t("aiusage.step2"))}</p>
-            <input class="pwa-cb" type="text" placeholder="http://localhost:18924/callback?code=...">
-            <div class="pwa-auth-err" hidden></div>
-            <div class="pwa-auth-foot">
+            <input class="pwq-cb" type="text" placeholder="http://localhost:18924/callback?code=...">
+            <div class="pwq-auth-err" hidden></div>
+            <div class="pwq-auth-foot">
               <button class="btn primary" data-ok>${esc(i18n.t("aiusage.validate"))}</button>
             </div>
           </div>
@@ -196,12 +196,12 @@
 
       const close = () => { m.remove(); this.modal = null; };
       m.querySelector("[data-x]").addEventListener("pointerup", (e) => { e.preventDefault(); close(); });
-      m.querySelector(".pwa-url").addEventListener("focus", (e) => e.target.select());
+      m.querySelector(".pwq-url").addEventListener("focus", (e) => e.target.select());
 
       m.querySelector("[data-ok]").addEventListener("pointerup", async (e) => {
         e.preventDefault();
-        const err = m.querySelector(".pwa-auth-err");
-        const val = m.querySelector(".pwa-cb").value.trim();
+        const err = m.querySelector(".pwq-auth-err");
+        const val = m.querySelector(".pwq-cb").value.trim();
         if (!val) {
           err.hidden = false;
           err.textContent = i18n.t("aiusage.errEmpty");

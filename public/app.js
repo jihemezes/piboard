@@ -2457,12 +2457,33 @@
      at the end of the catalog rather than disappearing. */
   const CATALOG_FAMILIES = [
     { key: "weather", ids: ["weather", "radar", "airquality", "astronomy"] },
-    { key: "info", ids: ["rss", "webview", "crypto"] },
+    /* La tuile Bourse rejoint Cryptos dans "Informations" : on cherche
+       les deux au meme endroit. Une famille "Finance" distincte se
+       defendrait, mais elle deplacerait Cryptos, dont la place ici
+       resulte d'une segmentation deliberee anterieure -- ce n'est pas le
+       sujet de cette correction.
+       The Stocks tile joins Crypto in "Information": one looks for both
+       in the same place. A separate "Finance" family would be defensible,
+       but it would move Crypto, whose place here comes from an earlier
+       deliberate segmentation -- not the subject of this fix. */
+    { key: "info", ids: ["rss", "webview", "crypto", "stocks"] },
     { key: "commute", ids: ["traffic", "commute", "planes"] },
+    /* Maison & energie : Tempo et Home Assistant parlent tous deux de ce
+       qui se passe DANS le logement, ce qu'aucune famille existante ne
+       couvrait.
+       Home & energy: Tempo and Home Assistant both speak of what happens
+       INSIDE the home, which no existing family covered. */
+    { key: "home", ids: ["tempo", "homeassistant"] },
     { key: "personal", ids: ["calendar", "mailbox", "notes"] },
     { key: "entertainment", ids: ["teleprog", "iptv", "slideshow"] },
     { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
-    { key: "system", ids: ["system", "networkscan"] },
+    /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
+       systeme, elle surveille une consommation et un seuil, meme si la
+       ressource surveillee n'est pas celle de la machine.
+       The AI usage tile joins "System & Network": like System status, it
+       watches a consumption against a limit, even though the resource
+       watched is not the machine's own. */
+    { key: "system", ids: ["system", "networkscan", "aiusage"] },
     { key: "misc", ids: ["clock", "countdown", "quote"] }
   ];
 

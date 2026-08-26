@@ -18,14 +18,49 @@
 .pw-system .pws-row-head {
   display: flex;
   justify-content: space-between;
+  align-items: baseline;
+  /* `space-between` seul ne garantit AUCUN espace : des que le libelle
+     et la valeur remplissent la largeur, ils se touchent. Sur une tuile
+     etroite, "RAM" et "5,2 / 8 GB" finissaient colles. Le `gap` est un
+     minimum, il ne s'ajoute pas a l'espace deja reparti.
+     `space-between` alone guarantees NO space: as soon as the label and
+     the value fill the width, they touch. On a narrow tile, "RAM" and
+     "5.2 / 8 GB" ended up stuck together. The `gap` is a minimum; it does
+     not add to the space already distributed. */
+  gap: 1em;
   font-size: 12.5px;
   color: var(--text);
+}
+/* Si la place manque vraiment, c'est le LIBELLE qui se tronque : la
+   valeur chiffree est l'information, le libelle se devine.
+   If space really runs out, it is the LABEL that gets truncated: the
+   figure is the information, the label can be guessed. */
+.pw-system .pws-row-head > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pw-system .pws-row-head .pws-val {
   font-variant-numeric: tabular-nums;
   color: var(--muted);
   font-family: var(--mono);
+  white-space: nowrap;
+  flex: 0 0 auto;
 }
+
+/* Lignes cliquables (CPU, RAM, disque) : la zone de clic couvre la
+   ligne entiere, barre comprise, pour rester atteignable au doigt.
+   Clickable rows (CPU, RAM, disk): the hit area covers the whole row,
+   bar included, so it stays reachable with a finger. */
+.pw-system .pws-row.pws-clickable {
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 5px;
+  margin: 0 -0.25em;
+  padding: 0.1em 0.25em;
+}
+.pw-system .pws-row.pws-clickable:hover { background: var(--tile-edge); }
 .pw-system .pws-bar {
   height: 7px;
   border-radius: 4px;
@@ -126,3 +161,41 @@
   border-left: 3px solid var(--tile-edge);
   padding-left: 10px;
 }
+
+/* ---------- Fenetre des graphiques / charts window ---------- */
+
+.pwg-modal { width: min(760px, 94vw); }
+.pwg-body { padding: 4px 22px 20px; }
+
+.pwg-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.pwg-tab {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwg-tab.active { color: var(--text); border-color: var(--muted); }
+body.touch .pwg-tab { font-size: 15px; padding: 8px 20px; }
+
+.pwg-now {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pwg-now-val { font-size: 26px; font-variant-numeric: tabular-nums; color: var(--text); }
+.pwg-now-lbl { font-size: 13px; color: var(--muted); }
+
+.pwg-chart {
+  width: 100%;
+  height: 200px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--tile-edge);
+}
+.pwg-hint { margin-top: 10px; font-size: 12.5px; color: var(--muted); }

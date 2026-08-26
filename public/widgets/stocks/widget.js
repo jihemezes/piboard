@@ -99,7 +99,7 @@
     }
 
     async init() {
-      this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pws-msg">${this.ctx.i18n.t("common.loading")}</div></div>`;
+      this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pwb-msg">${this.ctx.i18n.t("common.loading")}</div></div>`;
       await this.refresh();
       this.arm();
     }
@@ -113,7 +113,7 @@
     async refresh() {
       const lines = this.lines();
       if (!lines.length) {
-        this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pws-msg">${esc(this.ctx.i18n.t("stocks.noLines"))}</div></div>`;
+        this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pwb-msg">${esc(this.ctx.i18n.t("stocks.noLines"))}</div></div>`;
         return;
       }
       try {
@@ -124,7 +124,7 @@
       } catch (e) {
         console.warn("[piboard/stocks]", e);
         if (!this.rendered) {
-          this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pws-msg">${esc(this.ctx.i18n.t("stocks.error"))}</div></div>`;
+          this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pwb-msg">${esc(this.ctx.i18n.t("stocks.error"))}</div></div>`;
         }
       }
     }
@@ -157,14 +157,14 @@
       const sepAt = (firstSecurity > 0 && firstSecurity < ordered.length) ? firstSecurity : -1;
 
       const rows = ordered.map((l, idx) => {
-        const sep = idx === sepAt ? `<div class="pws-sep"></div>` : "";
+        const sep = idx === sepAt ? `<div class="pwb-sep"></div>` : "";
         const q = quotes[l.symbol];
         if (!q) {
-          return sep + `<div class="pws-row pws-dead"><span class="pws-name">${esc(l.name || l.symbol)}</span><span class="pws-val">—</span></div>`;
+          return sep + `<div class="pwb-row pwb-dead"><span class="pwb-name">${esc(l.name || l.symbol)}</span><span class="pwb-val">—</span></div>`;
         }
         const dir = q.change == null ? "flat" : q.change > 0 ? "up" : q.change < 0 ? "down" : "flat";
         const chg = (showChange && q.change != null)
-          ? `<span class="pws-chg pws-${dir}">${q.change > 0 ? "+" : ""}${q.change.toFixed(2)}%</span>` : "";
+          ? `<span class="pwb-chg pwb-${dir}">${q.change > 0 ? "+" : ""}${q.change.toFixed(2)}%</span>` : "";
         // stale : les deux sources ont echoue, on montre la derniere
         // valeur connue en le signalant plutot que de vider la ligne.
         // stale: both sources failed, we show the last known value and
@@ -177,19 +177,19 @@
         // information at all.
         const closed = q.marketOpen === false;
         const mark = closed
-          ? `<span class="pws-closed" title="${esc(i18n.t("stocks.closedTitle"))}">${esc(i18n.t("stocks.closed"))}</span>`
+          ? `<span class="pwb-closed" title="${esc(i18n.t("stocks.closedTitle"))}">${esc(i18n.t("stocks.closed"))}</span>`
           : "";
-        return sep + `<div class="pws-row${q.stale ? " pws-stale" : ""}${closed ? " pws-shut" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || q.label || l.symbol)}">
-          <span class="pws-name">${esc(l.name || q.label || l.symbol)}${mark}</span>
-          <span class="pws-val">${esc(formatValue(q.price, lang, isFxSymbol(l.symbol)))}<span class="pws-cur">${esc(q.symbolChar || "")}</span></span>
+        return sep + `<div class="pwb-row${q.stale ? " pwb-stale" : ""}${closed ? " pwb-shut" : ""}" data-symbol="${esc(l.symbol)}" data-name="${esc(l.name || q.label || l.symbol)}">
+          <span class="pwb-name">${esc(l.name || q.label || l.symbol)}${mark}</span>
+          <span class="pwb-val">${esc(formatValue(q.price, lang, isFxSymbol(l.symbol)))}<span class="pwb-cur">${esc(q.symbolChar || "")}</span></span>
           ${chg}
         </div>`;
       }).join("");
 
-      this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pws-rows">${rows}</div></div>`;
+      this.ctx.el.innerHTML = `<div class="pw-stocks"><div class="pwb-rows">${rows}</div></div>`;
       this.rendered = true;
 
-      this.ctx.el.querySelectorAll(".pws-row[data-symbol]").forEach((el) => {
+      this.ctx.el.querySelectorAll(".pwb-row[data-symbol]").forEach((el) => {
         el.addEventListener("pointerup", (e) => {
           e.preventDefault();
           this.openChart(el.dataset.symbol, el.dataset.name);
@@ -206,19 +206,19 @@
       const m = document.createElement("div");
       m.className = "modal modal-stacked";
       m.innerHTML = `
-        <div class="modal-card pws-chart-card">
+        <div class="modal-card pwb-chart-card">
           <header class="modal-head">
             <h2>${esc(name)}</h2>
             <button class="modal-close" data-x aria-label="Close">&times;</button>
           </header>
-          <div class="pws-chart-body">
-            <div class="pws-ranges">${RANGES.map((r) =>
-              `<button class="pws-range${r === "1d" ? " active" : ""}" data-r="${r}">${esc(i18n.t("stocks.range." + r))}</button>`).join("")}</div>
-            <svg class="pws-chart" viewBox="0 0 ${CHART_W} ${CHART_H}" preserveAspectRatio="none">
-              <g class="pws-grid"></g>
-              <path class="pws-line" fill="none" stroke-width="2"></path>
+          <div class="pwb-chart-body">
+            <div class="pwb-ranges">${RANGES.map((r) =>
+              `<button class="pwb-range${r === "1d" ? " active" : ""}" data-r="${r}">${esc(i18n.t("stocks.range." + r))}</button>`).join("")}</div>
+            <svg class="pwb-chart" viewBox="0 0 ${CHART_W} ${CHART_H}" preserveAspectRatio="none">
+              <g class="pwb-grid"></g>
+              <path class="pwb-line" fill="none" stroke-width="2"></path>
             </svg>
-            <div class="pws-chart-status">${esc(i18n.t("common.loading"))}</div>
+            <div class="pwb-chart-status">${esc(i18n.t("common.loading"))}</div>
           </div>
         </div>`;
       document.body.appendChild(m);
@@ -226,16 +226,16 @@
 
       const bg = this.ctx.settings.chartBgColor || "#141926";
       const line = this.ctx.settings.chartLineColor || "#D6335C";
-      m.querySelector(".pws-chart").style.background = bg;
-      m.querySelector(".pws-line").setAttribute("stroke", line);
+      m.querySelector(".pwb-chart").style.background = bg;
+      m.querySelector(".pwb-line").setAttribute("stroke", line);
 
       m.querySelector("[data-x]").addEventListener("pointerup", (e) => {
         e.preventDefault(); m.remove(); this.modal = null;
       });
-      m.querySelectorAll(".pws-range").forEach((b) => {
+      m.querySelectorAll(".pwb-range").forEach((b) => {
         b.addEventListener("pointerup", (e) => {
           e.preventDefault();
-          m.querySelectorAll(".pws-range").forEach((x) => x.classList.remove("active"));
+          m.querySelectorAll(".pwb-range").forEach((x) => x.classList.remove("active"));
           b.classList.add("active");
           this.loadChart(symbol, b.dataset.r);
         });
@@ -248,7 +248,7 @@
       this.activeRange = range;
       const m = this.modal;
       if (!m) return;
-      const status = m.querySelector(".pws-chart-status");
+      const status = m.querySelector(".pwb-chart-status");
       const lang = this.ctx.i18n.lang || "fr";
       try {
         const r = await fetch(`api/stocks/chart?symbol=${encodeURIComponent(symbol)}&range=${encodeURIComponent(range)}`);
@@ -262,11 +262,11 @@
 
         const values = data.series.map((p) => p.value);
         const domain = niceTicks(Math.min(...values), Math.max(...values), 4);
-        m.querySelector(".pws-line").setAttribute("d", buildPath(data.series, domain));
+        m.querySelector(".pwb-line").setAttribute("d", buildPath(data.series, domain));
 
         const h = CHART_H - PAD.top - PAD.bottom;
         const span = domain.max - domain.min || 1;
-        m.querySelector(".pws-grid").innerHTML = domain.values.map((v) => {
+        m.querySelector(".pwb-grid").innerHTML = domain.values.map((v) => {
           const y = PAD.top + h - ((v - domain.min) / span) * h;
           return `<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${CHART_W - PAD.right}" y2="${y.toFixed(1)}" stroke="#565E73" stroke-width="0.5"/>
                   <text x="${PAD.left - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="#565E73" font-size="9">${esc(formatValue(v, lang))}</text>`;

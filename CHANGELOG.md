@@ -1,5 +1,113 @@
 # Changelog
 
+## 1.75.3
+
+- **Correctif : les cinq tuiles ajoutees depuis la 1.70 s'entassaient
+  dans "Divers".** Elles n'etaient listees dans aucune famille de
+  `CATALOG_FAMILIES`, et le filet de securite du catalogue les envoyait
+  toutes dans "Divers". Un filet utile, mais SILENCIEUX : rien ne
+  signalait l'oubli.
+  - **Nouvelle famille "Maison & energie"** : Couleur Tempo et Home
+    Assistant. Toutes deux parlent de ce qui se passe DANS le logement,
+    ce qu'aucune famille existante ne couvrait.
+  - **Bourse et indices** rejoint les Cryptos dans "Informations" -- on
+    cherche les deux au meme endroit.
+  - **Quotas IA** rejoint "Systeme & Reseau" : comme l'Etat systeme, la
+    tuile surveille une consommation par rapport a un seuil, meme si la
+    ressource surveillee n'est pas celle de la machine.
+  - Une famille "Finance" distincte se defendrait, mais elle deplacerait
+    la tuile Cryptos, dont la place resulte d'une segmentation
+    deliberee anterieure (verrouillee par un test). Hors sujet pour cette
+    correction : le choix existant est conserve.
+
+- **Garde-fou contre la recidive** : `dom-smoke.js` verifie desormais que
+  CHAQUE tuile livree est explicitement classee, et nomme celles qui ne
+  le sont pas. Verifie par retrait volontaire d'une tuile de sa famille :
+  le test echoue bien et la designe.
+  - Verification inverse egalement : une famille citant une tuile
+    inexistante laisserait un trou invisible dans le catalogue.
+  - Chaque famille doit avoir ses libelles dans les DEUX langues, sans
+    quoi la rubrique s'afficherait avec sa cle brute.
+
+## 1.75.2
+
+- **Correctif : la tuile Etat systeme perdait ses barres de progression
+  et collait ses libelles aux valeurs.** Cause racine trouvee, et elle
+  explique les DEUX symptomes d'un coup -- ce n'etait pas un probleme
+  d'espacement.
+  - Les feuilles de style de TOUS les widgets sont chargees dans le MEME
+    document. J'avais ecrit les classes de la tuile Bourse avec le
+    prefixe `.pws-` SANS les cloisonner sous `.pw-stocks`, alors que la
+    tuile Etat systeme utilise ce prefixe depuis toujours.
+  - `.pws-row { align-items: baseline }`, ecrit pour la Bourse,
+    s'appliquait donc aux lignes de l'Etat systeme. Sur un conteneur
+    `flex-direction: column`, un `align-items` autre que `stretch`
+    empeche les enfants de remplir la largeur : le libelle et la valeur
+    se retrouvaient colles, ET la barre de progression -- qui n'a pas de
+    contenu propre -- tombait a une largeur nulle, donc invisible.
+  - **Le symptome n'apparaissait QUE si les deux tuiles etaient sur le
+    meme tableau.** Chaque widget etait correct isolement, ce qui
+    explique qu'aucun test ne l'ait attrape.
+  - Prefixe de la tuile Bourse renomme `.pwb-`. Une SECONDE collision du
+    meme type, egalement de mon fait, a ete trouvee au passage :
+    `.pwa-msg` de la tuile Quotas IA ecrasait celle de la tuile
+    Astronomie, anterieure. Prefixe renomme `.pwq-`.
+
+- **Garde-fou contre la recidive** : `dom-smoke.js` releve desormais la
+  classe de premier niveau de CHAQUE selecteur de CHAQUE feuille de
+  widget et echoue si deux widgets se partagent la meme, en les nommant.
+  Verifie par injection d'une collision volontaire : le test echoue bien,
+  il ne se contente pas de passer.
+
+- **Espacement libelle / valeur** (issu de 1.75.1, conserve) : `gap`
+  minimal de `1em`, et c'est le libelle qui se tronque si la place
+  manque, pas la valeur.
+
+- **Courbes d'utilisation** (issu de 1.75.1, conserve) : clic sur CPU,
+  RAM ou Disque -> fenetre a trois onglets, echelle fixe 0-100 %,
+  historique cote client borne a 360 points.
+
+## 1.75.1
+
+- **Correctif de lisibilite : le libelle et la valeur se touchaient.**
+  `.pws-row-head` utilisait `justify-content: space-between` SANS `gap`.
+  Or `space-between` ne garantit aucun espace : des que le libelle et la
+  valeur remplissent la largeur, ils se collent. Sur une tuile etroite,
+  "RAM" et "5,2 / 8 GB" finissaient accoles.
+  - Espace minimal de `1em` ajoute -- un minimum, qui ne s'ajoute pas a
+    l'espace deja reparti quand la place est suffisante.
+  - Si la place manque vraiment, c'est le LIBELLE qui se tronque et non
+    la valeur : le chiffre est l'information, le libelle se devine.
+
+- **Courbes d'utilisation : un clic sur CPU, RAM ou Disque** ouvre une
+  fenetre a trois onglets, une courbe par ressource, mise a jour en
+  direct au rythme de rafraichissement de la tuile (aucun minuteur
+  supplementaire).
+  - **Echelle FIXE de 0 a 100 %**, jamais ajustee au contenu : une
+    echelle automatique ferait paraitre dramatique une variation de deux
+    points en zoomant dessus. Sur un pourcentage, l'echelle absolue est
+    la seule honnete. Les valeurs sont bornees pour ne pas sortir du
+    cadre.
+  - **Historique tenu COTE CLIENT**, alimente par les releves que la
+    tuile fait deja : aucun echantillonnage supplementaire, aucun
+    stockage. Un historique serveur aurait impose d'echantillonner en
+    permanence, meme quand personne ne regarde.
+  - **Contrepartie assumee et documentee** : l'historique repart de zero
+    au rechargement de la page. La fenetre le dit, plutot que de laisser
+    croire a un historique de longue duree.
+  - Borne dure a 360 points (environ une demi-heure au rythme par
+    defaut) : sans elle, une tuile laissee des jours sur un tableau mural
+    accumulerait indefiniment.
+  - L'onglet Disque n'apparait que si la machine remonte cette donnee.
+  - Un seul point ne trace pas de courbe : on attend d'en avoir deux
+    plutot que d'afficher un chemin vide.
+
+- **Tests** : 11 assertions ajoutees a `dom-smoke.js`, dont la
+  verification que l'espacement existe reellement dans la feuille de
+  style, que c'est bien le libelle qui se tronque, et une verification
+  par le comportement de la geometrie du trace (0 % en bas, 50 % au
+  milieu, valeur aberrante bornee).
+
 ## 1.75.0
 
 - **Tuile "Etat systeme" : adresses IP des cartes reseau, et fenetre de
