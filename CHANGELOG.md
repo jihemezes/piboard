@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.74.0
+
+- **Nouvelle tuile "Home Assistant", en LECTURE SEULE.** Affiche les
+  entites de l'installation domotique : temperatures, portes et fenetres,
+  consommation, humidite, batteries. Un etat qui merite l'attention
+  (porte ouverte, fumee detectee) passe en couleur d'alerte, l'etat
+  normal reste discret.
+  - **Aucun appel de service, aucun moyen d'en faire.** Le module
+    n'expose ni route ni fonction de pilotage. Ce n'est pas un oubli :
+    un ecran tactile mural est accessible aux enfants et aux visiteurs,
+    et le pilotage viendra avec ses protections propres (liste blanche de
+    services, confirmation sur les domaines sensibles).
+
+- **Transport WebSocket, repli REST.** Une porte qui s'ouvre apparait
+  dans la seconde.
+  - **UNE SEULE connexion** vers Home Assistant pour toute
+    l'installation, quel que soit le nombre de tuiles et d'ecrans. Le
+    cache d'etats est cote serveur.
+  - **Auditeur "error" systematique sur le WebSocket** : un EventEmitter
+    qui emet "error" sans auditeur remonte en uncaughtException -- c'est
+    exactement le mecanisme qui a fait planter l'application en 1.67.0
+    avec ImapFlow.
+  - **Reconnexion a delai croissant** (2 s -> 60 s, plafonne) : une
+    reconnexion immediate en boucle sur un HA eteint saturerait journal
+    et reseau. Minuteurs en `unref()` pour ne pas retenir le processus.
+  - L'abonnement se limite a `state_changed` : `subscribe_events` sans
+    filtre deverserait appels de service, minuteries et journal.
+  - Un abonnement ne renvoyant QUE les changements a venir, l'etat
+    courant est charge une fois en REST -- sinon la tuile resterait vide
+    jusqu'a ce que chaque entite bouge d'elle-meme.
+
+- **Le flux SSE existant est rediffuse aux widgets** sous forme
+  d'evenements DOM `piboard:<nom>`. Un widget qui a besoin d'etre pousse
+  n'ouvre donc PAS son propre EventSource, ce qui aurait multiplie les
+  connexions SSE par le nombre de tuiles pour un seul et meme flux.
+
+- **Selecteur d'entites alimente par l'instance de la personne.**
+  Contrairement au catalogue fige de la tuile Bourse, les listes sont
+  construites depuis `GET /api/states` et groupees par domaine.
+  - Le type de champ `rows` accepte desormais une source DYNAMIQUE :
+    `{tileId}` et `{field:cle}` y sont substitues. Generique, reutilisable.
+  - Un catalogue vide alors qu'une source etait prevue affiche un message
+    explicite : sans lui, la personne verrait des listes vides sans
+    savoir si l'adresse est fausse, le jeton refuse ou le service
+    injoignable.
+
+- **Jeton dans le coffre chiffre** (`tileSecrets`), absent de
+  `layout.json`, JAMAIS renvoye au navigateur : les routes ne sortent que
+  des etats d'entites.
+
+- **Tests** : nouveau `test/homeAssistant.test.js`, 30 assertions. Cette
+  tuile ayant ete developpee SANS instance Home Assistant disponible, les
+  tests montent un FAUX Home Assistant en HTTP local (module `http` de
+  Node, aucune dependance ajoutee) et interrogent reellement le module --
+  en-tete Bearer, jeton refuse, regroupement par domaine, entite absente
+  signalee. Le protocole WebSocket est teste via une fonction pure.
+
 ## 1.73.2
 
 - **Correctif : l'editeur de lignes de la tuile Bourse etait

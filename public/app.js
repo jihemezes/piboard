@@ -2068,17 +2068,43 @@
      fieldMarkup() to initRowsEditor() without going through the DOM. */
   const rowsFieldData = new Map();
 
+  /* La source d'un champ "rows" peut etre DYNAMIQUE. Deux substitutions :
+       {tileId}      -> identifiant de la tuile en cours d'edition
+       {field:cle}   -> valeur courante d'un autre champ du formulaire
+     C'est ce qui permet au selecteur de Home Assistant d'interroger
+     l'instance de la personne (son adresse, son jeton) plutot qu'un
+     catalogue fige comme celui de la tuile Bourse.
+     A "rows" field's source can be DYNAMIC. Two substitutions:
+       {tileId}      -> id of the tile being edited
+       {field:key}   -> current value of another field in the form
+     This is what lets the Home Assistant picker query the person's own
+     instance (their address, their token) rather than a fixed catalog
+     like the Stocks tile's. */
+  function resolveRowsSource(src, form) {
+    return String(src || "").replace(/\{tileId\}/g, encodeURIComponent(tileModalTarget || ""))
+      .replace(/\{field:([A-Za-z0-9_]+)\}/g, (_, key) => {
+        const el = form && form.querySelector(`[data-key="${key}"]`);
+        return encodeURIComponent(el ? el.value : "");
+      });
+  }
+
+  /* Cache par URL RESOLUE et non global : deux tuiles Home Assistant
+     pointant des instances differentes ne doivent pas se partager un
+     catalogue.
+     Cached by RESOLVED URL rather than globally: two Home Assistant tiles
+     pointing at different instances must not share a catalog. */
   async function loadRowsCatalog(src) {
     if (!src) return [];
-    if (rowsCatalogCache) return rowsCatalogCache;
+    if (rowsCatalogCache && rowsCatalogCache.src === src) return rowsCatalogCache.data;
     try {
       const r = await fetch(src);
-      rowsCatalogCache = (await r.json()).exchanges || [];
+      const data = (await r.json()).exchanges || [];
+      rowsCatalogCache = { src, data };
+      return data;
     } catch (e) {
       console.warn("[piboard] catalogue indisponible", e);
-      rowsCatalogCache = [];
+      return [];
     }
-    return rowsCatalogCache;
   }
 
   async function initRowsEditor(el) {
@@ -2097,7 +2123,22 @@
        otherwise send an empty string, and so wipe the list. */
     hidden.value = JSON.stringify(rows);
 
-    const exchanges = await loadRowsCatalog(el.dataset.rowsSrc);
+    const exchanges = await loadRowsCatalog(resolveRowsSource(el.dataset.rowsSrc, el.closest(".form")));
+
+    /* Catalogue vide alors qu'une source etait prevue : on le DIT. Sans
+       ce message, la personne verrait des listes deroulantes vides sans
+       savoir si son adresse est fausse, son jeton refuse, ou son service
+       injoignable.
+       Empty catalog although a source was expected: we SAY so. Without
+       this message the person would face empty dropdowns with no way to
+       tell whether their address is wrong, their token refused, or their
+       service unreachable. */
+    if (el.dataset.rowsSrc && !exchanges.length) {
+      const warn = document.createElement("small");
+      warn.className = "field-hint rows-warn";
+      warn.textContent = i18n.t("rows.noCatalog");
+      el.appendChild(warn);
+    }
 
     const CUSTOM = "__custom__";
 
@@ -4000,6 +4041,25 @@
       settings = await apiGet("/api/settings");
       applySettings();
     });
+
+    /* Rediffusion des evenements serveur vers les widgets, sous forme
+       d'evenements DOM "piboard:<nom>". Un widget qui a besoin d'etre
+       pousse (Home Assistant : une porte qui s'ouvre) ecoute donc sur
+       `window` au lieu d'ouvrir SON PROPRE EventSource -- ce qui
+       multiplierait les connexions SSE par le nombre de tuiles, pour le
+       meme flux.
+       Server events are re-broadcast to widgets as DOM events named
+       "piboard:<name>". A widget that needs to be pushed to (Home
+       Assistant: a door opening) therefore listens on `window` instead of
+       opening ITS OWN EventSource -- which would multiply SSE connections
+       by the number of tiles, for one and the same stream. */
+    for (const name of ["ha-states"]) {
+      es.addEventListener(name, (ev) => {
+        let data = {};
+        try { data = JSON.parse(ev.data || "{}"); } catch (e) { /* charge utile vide / empty payload */ }
+        window.dispatchEvent(new CustomEvent("piboard:" + name, { detail: data }));
+      });
+    }
   }
 
   /* ---------- Demarrage / boot ---------- */

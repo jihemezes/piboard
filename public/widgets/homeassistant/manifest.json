@@ -1,0 +1,94 @@
+{
+  "id": "homeassistant",
+  "version": "1.0.0",
+  "name": {
+    "en": "Home Assistant",
+    "fr": "Home Assistant"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Displays entities from your Home Assistant instance: room temperatures, open doors and windows, power consumption, humidity, battery levels. Read-only for now — this tile never calls a service and cannot change anything in your home. Needs a long-lived access token generated from your HA profile. Updates arrive live over WebSocket.",
+    "fr": "Affiche les entités de votre Home Assistant : températures des pièces, portes et fenêtres ouvertes, consommation électrique, humidité, niveaux de batterie. Lecture seule pour l'instant — cette tuile n'appelle aucun service et ne peut rien changer chez vous. Nécessite un jeton d'accès de longue durée généré depuis votre profil HA. Les mises à jour arrivent en direct par WebSocket."
+  },
+  "tagline": {
+    "en": "Your home, at a glance.",
+    "fr": "Votre maison, d'un coup d'œil."
+  },
+  "size": {
+    "w": 3,
+    "h": 3,
+    "minW": 2,
+    "minH": 1,
+    "maxW": 8,
+    "maxH": 8
+  },
+  "settings": [
+    {
+      "key": "url",
+      "type": "text",
+      "default": "http://homeassistant.local:8123",
+      "label": {
+        "en": "Home Assistant address",
+        "fr": "Adresse de Home Assistant"
+      },
+      "hint": {
+        "en": "Including the port, usually 8123. Local address, no cloud involved.",
+        "fr": "Port compris, en général 8123. Adresse locale, aucun passage par le cloud."
+      }
+    },
+    {
+      "key": "haToken",
+      "type": "secret",
+      "label": {
+        "en": "Long-lived access token",
+        "fr": "Jeton d'accès de longue durée"
+      },
+      "hint": {
+        "en": "Created in Home Assistant under your profile, at the bottom of the page. Stored encrypted, never sent back to the browser.",
+        "fr": "À créer dans Home Assistant, dans votre profil, en bas de page. Conservé chiffré, jamais renvoyé au navigateur."
+      }
+    },
+    {
+      "key": "lines",
+      "type": "rows",
+      "source": "api/ha/{tileId}/catalog?url={field:url}",
+      "default": "[]",
+      "label": {
+        "en": "Entities to display",
+        "fr": "Entités à afficher"
+      },
+      "hint": {
+        "en": "Name, domain, then entity. The lists are filled from your own Home Assistant — save the address and token first, then reopen these settings.",
+        "fr": "Nom, domaine, puis entité. Les listes sont remplies depuis votre propre Home Assistant — enregistrez d'abord l'adresse et le jeton, puis rouvrez ces réglages."
+      }
+    },
+    {
+      "key": "showUnavailable",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show unavailable entities",
+        "fr": "Afficher les entités indisponibles"
+      },
+      "hint": {
+        "en": "An entity that is off, unreachable or removed stays visible with its status, rather than silently disappearing.",
+        "fr": "Une entité éteinte, injoignable ou supprimée reste visible avec son état, au lieu de disparaître silencieusement."
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 5,
+      "min": 1,
+      "max": 60,
+      "label": {
+        "en": "Fallback refresh (minutes)",
+        "fr": "Rafraîchissement de secours (minutes)"
+      },
+      "hint": {
+        "en": "Only used if the live connection is down; normally updates arrive instantly.",
+        "fr": "Utilisé seulement si la connexion directe est coupée ; normalement les mises à jour arrivent instantanément."
+      }
+    }
+  ]
+}

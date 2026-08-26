@@ -610,6 +610,68 @@
     },
 
     {
+      id: "homeassistant",
+      group: "tiles",
+      title: { fr: "Home Assistant", en: "Home Assistant" },
+      sub: {
+        fr: "Températures, portes, consommation : les entités de votre maison sur le tableau.",
+        en: "Temperatures, doors, consumption: your home's entities on the board."
+      },
+      html: {
+        fr: `
+          <div class="help-warn"><b>Lecture seule.</b> Cette tuile affiche, elle ne commande rien. Elle n'appelle aucun service Home Assistant et ne peut donc allumer, ouvrir ni déverrouiller quoi que ce soit. Le pilotage viendra dans une version ultérieure, avec les protections qu'il exige — un écran tactile mural est accessible à tout le monde, enfants et visiteurs compris.</div>
+
+          <h4>Objectif</h4>
+          <p>Afficher les entités qui comptent : température de chaque pièce, portes et fenêtres ouvertes, consommation électrique, humidité, niveaux de batterie. Un état qui mérite l'attention — une porte ouverte, une fumée détectée — s'affiche en couleur d'alerte ; l'état normal reste discret.</p>
+
+          <h4>Mise en route</h4>
+          <p>Trois étapes, dans cet ordre :</p>
+          <ol>
+            <li>Dans Home Assistant, ouvrez votre <b>profil</b> (votre nom, en bas de la barre latérale) et descendez jusqu'à « Jetons d'accès de longue durée ». Créez-en un, nommez-le par exemple « PiBoard », et copiez-le <b>en entier</b> — il ne sera plus jamais affiché.</li>
+            <li>Dans les réglages de la tuile, saisissez l'<b>adresse</b> de Home Assistant (port compris, en général <code>:8123</code>) et collez le jeton. <b>Enregistrez.</b></li>
+            <li><b>Rouvrez</b> les réglages : les listes d'entités sont maintenant remplies depuis votre propre installation, groupées par domaine. Ajoutez vos lignes.</li>
+          </ol>
+          <p>Cette réouverture est nécessaire : PiBoard ne peut interroger votre Home Assistant qu'une fois l'adresse et le jeton enregistrés. Si les listes restent vides, un message vous le signale — c'est presque toujours une adresse inexacte ou un jeton tronqué à la copie.</p>
+
+          <h4>Mises à jour instantanées</h4>
+          <p>PiBoard maintient une connexion permanente à Home Assistant : une porte qui s'ouvre apparaît <b>dans la seconde</b>, sans attendre un rafraîchissement. Un point vert discret en haut de la tuile indique que cette connexion directe est active. S'il est absent, la tuile fonctionne quand même, mais en interrogation périodique.</p>
+          <p>Une seule connexion est ouverte pour toute l'installation, quel que soit le nombre de tuiles et d'écrans.</p>
+
+          <h4>Sécurité du jeton</h4>
+          <p>Un jeton de longue durée donne un accès complet à votre Home Assistant. Il est conservé <b>chiffré</b> dans le coffre de PiBoard, à l'écart de <code>layout.json</code> qui part dans les sauvegardes, et n'est <b>jamais</b> renvoyé au navigateur : les pages ne reçoivent que des états d'entités. Si vous avez un doute, révoquez-le depuis votre profil Home Assistant et créez-en un autre.</p>
+
+          <h4>Et MQTT ?</h4>
+          <p>Si vous utilisez Home Assistant, MQTT fait doublon : HA agrège déjà vos appareils MQTT et les expose comme entités. Un accès MQTT direct n'aurait d'intérêt que sans Home Assistant.</p>
+        `,
+        en: `
+          <div class="help-warn"><b>Read only.</b> This tile displays, it does not command. It calls no Home Assistant service and therefore cannot switch on, open or unlock anything. Control will come in a later version, with the protections it demands — a wall-mounted touchscreen is within everyone's reach, children and visitors included.</div>
+
+          <h4>Goal</h4>
+          <p>Show the entities that matter: each room's temperature, open doors and windows, power consumption, humidity, battery levels. A state that deserves attention — an open door, detected smoke — shows in an alert colour; the normal state stays discreet.</p>
+
+          <h4>Getting started</h4>
+          <p>Three steps, in this order:</p>
+          <ol>
+            <li>In Home Assistant, open your <b>profile</b> (your name, at the bottom of the sidebar) and scroll to "Long-lived access tokens". Create one, name it something like "PiBoard", and copy it <b>in full</b> — it will never be shown again.</li>
+            <li>In the tile's settings, enter Home Assistant's <b>address</b> (including the port, usually <code>:8123</code>) and paste the token. <b>Save.</b></li>
+            <li><b>Reopen</b> the settings: the entity lists are now filled from your own installation, grouped by domain. Add your rows.</li>
+          </ol>
+          <p>That reopening is necessary: PiBoard can only query your Home Assistant once the address and token have been saved. If the lists stay empty, a message says so — it is almost always an inexact address or a token truncated when copied.</p>
+
+          <h4>Instant updates</h4>
+          <p>PiBoard keeps a permanent connection to Home Assistant: a door opening appears <b>within the second</b>, with no refresh to wait for. A discreet green dot at the top of the tile shows that this live connection is up. If it is missing, the tile still works, but by periodic polling.</p>
+          <p>A single connection is opened for the whole installation, however many tiles and screens you have.</p>
+
+          <h4>Token security</h4>
+          <p>A long-lived token grants full access to your Home Assistant. It is kept <b>encrypted</b> in PiBoard's vault, away from <code>layout.json</code> which ends up in backups, and is <b>never</b> returned to the browser: pages only ever receive entity states. If in doubt, revoke it from your Home Assistant profile and create another.</p>
+
+          <h4>What about MQTT?</h4>
+          <p>If you use Home Assistant, MQTT is redundant: HA already aggregates your MQTT devices and exposes them as entities. Direct MQTT access would only be of interest without Home Assistant.</p>
+        `
+      }
+    },
+
+    {
       id: "stocks",
       group: "tiles",
       title: { fr: "Bourse et indices", en: "Stocks & indices" },

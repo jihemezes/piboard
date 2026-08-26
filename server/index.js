@@ -1142,6 +1142,65 @@ app.delete("/api/tile-secrets/:tileId", (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------- Home Assistant (lecture seule) / read-only ----------
+   Voir server/homeAssistant.js. Le jeton vit dans le coffre chiffre
+   (tileSecrets) et n'est JAMAIS renvoye au navigateur : les routes ne
+   sortent que des etats d'entites.
+   See server/homeAssistant.js. The token lives in the encrypted vault
+   (tileSecrets) and is NEVER returned to the browser: the routes only
+   emit entity states. */
+const homeAssistant = require("./homeAssistant");
+
+function haTokenFor(tileId) {
+  const t = tileSecrets.get(tileId, "haToken");
+  if (!t) throw new Error("missing_token");
+  return t;
+}
+
+/* Un changement d'etat pousse un evenement SSE plutot que d'attendre le
+   prochain sondage : c'est tout l'interet du WebSocket. On ne transmet
+   PAS l'entite dans l'evenement -- juste un signal -- pour que la tuile
+   redemande ce qui la concerne et qu'aucun etat d'entite non affichee ne
+   transite inutilement.
+   A state change pushes an SSE event rather than waiting for the next
+   poll: that is the whole point of the WebSocket. We do NOT ship the
+   entity in the event -- just a signal -- so the tile re-requests what
+   concerns it and no state of an undisplayed entity travels needlessly. */
+let haNotifyTimer = null;
+function haOnChange() {
+  // Regroupement : au demarrage de HA, des dizaines d'entites changent
+  // en quelques millisecondes. Sans cela on emettrait autant
+  // d'evenements SSE, et chaque tuile rechargerait autant de fois.
+  // Coalescing: when HA starts up, dozens of entities change within
+  // milliseconds. Without this we would emit as many SSE events, and
+  // every tile would reload as many times.
+  if (haNotifyTimer) return;
+  haNotifyTimer = setTimeout(() => {
+    haNotifyTimer = null;
+    broadcast("ha-states", {});
+  }, 400);
+  if (haNotifyTimer.unref) haNotifyTimer.unref();
+}
+
+app.get("/api/ha/:tileId/states", async (req, res) => {
+  try {
+    const ids = String(req.query.ids || "").split(",").map((x) => x.trim()).filter(Boolean);
+    res.set("Cache-Control", "no-store");
+    res.json(await homeAssistant.getStates(req.query.url, haTokenFor(req.params.tileId), ids, haOnChange));
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/ha/:tileId/catalog", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json(await homeAssistant.getCatalog(req.query.url, haTokenFor(req.params.tileId)));
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e), exchanges: [] });
+  }
+});
+
 /* ---------- Bourse / stocks ----------
    Voir server/stocks.js (Stooq puis Yahoo) et server/stocksCatalog.js.
    See server/stocks.js (Stooq then Yahoo) and server/stocksCatalog.js. */
