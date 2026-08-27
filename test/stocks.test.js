@@ -203,4 +203,32 @@ check("le suffixe .FR n'est pas confondu avec un contrat a terme",
   s._toYahooSymbol("MC.FR") === "MC.PA");
 check("le suffixe .US reste inchange", s._toYahooSymbol("AAPL.US") === "AAPL");
 
+console.log("== jours feries ==");
+// Limite assumee en 1.72.1 : la tuile affichait "ouvert" un 1er janvier.
+// Limitation accepted in 1.72.1: the tile showed "open" on 1 January.
+check("le CAC est ferme le 1er janvier", c.isMarketOpen("^CAC", null, at("2027-01-01T12:00:00Z")) === false);
+check("le NYSE est ferme le 4 juillet", c.isMarketOpen("^SPX", null, at("2027-07-05T18:00:00Z")) === true);
+
+// Paques est CALCULE, pas liste annee par annee : une table figee
+// deviendrait fausse au 1er janvier suivant, sans que rien ne le signale.
+// Easter is COMPUTED, not listed year by year: a frozen table would
+// silently become wrong on the following 1 January.
+check("Paques 2026 tombe le 5 avril", c._easterSunday(2026).toISOString().slice(0, 10) === "2026-04-05");
+check("Paques 2027 tombe le 28 mars", c._easterSunday(2027).toISOString().slice(0, 10) === "2027-03-28");
+check("le CAC est ferme le Vendredi saint", c.isMarketOpen("^CAC", null, at("2026-04-03T12:00:00Z")) === false);
+check("le CAC est ferme le Lundi de Paques", c.isMarketOpen("^CAC", null, at("2026-04-06T12:00:00Z")) === false);
+
+// Les deux feries de Paques ne se superposent PAS : le NYSE ferme le
+// Vendredi saint mais ouvre le Lundi de Paques. Les traiter ensemble
+// aurait signale la place fermee un lundi ouvre.
+// The two Easter holidays do NOT overlap: the NYSE closes on Good Friday
+// but opens on Easter Monday. Treating them together would have flagged
+// the exchange closed on a trading Monday.
+check("le NYSE est ferme le Vendredi saint", c.isMarketOpen("^SPX", null, at("2026-04-03T18:00:00Z")) === false);
+check("le NYSE est OUVERT le Lundi de Paques", c.isMarketOpen("^SPX", null, at("2026-04-06T18:00:00Z")) === true);
+
+check("un mardi ordinaire reste ouvert", c.isMarketOpen("^CAC", null, at("2026-08-25T12:00:00Z")) === true);
+check("chaque marche a une table de feries",
+  Object.keys(c.MARKETS).every((id) => Array.isArray(c.FIXED_HOLIDAYS[id])));
+
 console.log("\n" + ok + " assertions OK");

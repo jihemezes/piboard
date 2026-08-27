@@ -1142,6 +1142,105 @@ app.delete("/api/tile-secrets/:tileId", (req, res) => {
   res.json({ ok: true });
 });
 
+/* ---------- Historique des ressources / resource history ----------
+
+   L'historique etait tenu cote client : il repartait de zero a chaque
+   rechargement de page. Il est desormais echantillonne cote serveur,
+   donc il survit aux rechargements ET est partage par tous les ecrans.
+
+   Trois precautions :
+   1. Echantillonnage a la MINUTE, pas a la seconde. Une courbe murale se
+      lit sur des dizaines de minutes ; echantillonner plus finement ne
+      ferait qu'user la carte SD du Pi pour rien.
+   2. Tampon CIRCULAIRE de taille fixe (24 h). Sans borne, le fichier
+      croitrait indefiniment sur une machine allumee en permanence.
+   3. Ecriture disque ESPACEE (5 min) et non a chaque echantillon : sur
+      un Pi, ecrire 1440 fois par jour sur la carte SD est inutilement
+      agressif. Perdre les cinq dernieres minutes apres une coupure
+      brutale est sans consequence ici.
+
+   History used to be kept client-side: it restarted from scratch on every
+   page reload. It is now sampled server-side, so it survives reloads AND
+   is shared by every screen.
+
+   Three precautions:
+   1. Sampling by the MINUTE, not the second. A wall chart is read over
+      tens of minutes; finer sampling would only wear out the Pi's SD card
+      for nothing.
+   2. Fixed-size RING buffer (24 h). Unbounded, the file would grow
+      forever on a permanently powered machine.
+   3. SPACED disk writes (5 min) rather than one per sample: on a Pi,
+      writing to the SD card 1440 times a day is needlessly aggressive.
+      Losing the last five minutes after an abrupt power cut is of no
+      consequence here. */
+const HISTORY_KEY = "system-history";
+const HISTORY_MAX = 24 * 60;           // 24 h a raison d'un point par minute
+const HISTORY_SAMPLE_MS = 60 * 1000;
+const HISTORY_FLUSH_MS = 5 * 60 * 1000;
+
+let history = null;
+let historyDirty = false;
+
+function historyLoad() {
+  if (history) return history;
+  const raw = store.read(HISTORY_KEY, null);
+  history = (raw && Array.isArray(raw.points)) ? raw : { points: [] };
+  // Une taille excedentaire (reglage abaisse entre deux versions) est
+  // ramenee a la borne courante des le chargement.
+  // An oversized buffer (setting lowered between versions) is trimmed to
+  // the current cap as soon as it is loaded.
+  if (history.points.length > HISTORY_MAX) {
+    history.points = history.points.slice(-HISTORY_MAX);
+  }
+  return history;
+}
+
+async function historySample() {
+  try {
+    // Memes sources que /api/system, sans passer par la route : on evite
+    // une requete HTTP du serveur vers lui-meme.
+    // Same sources as /api/system, without going through the route: this
+    // avoids an HTTP request from the server to itself.
+    const [cpu, disk] = await Promise.all([cpuPercent(), platform.diskUsage()]);
+    const totalMem = os.totalmem();
+    const memPercent = ((totalMem - os.freemem()) / totalMem) * 100;
+    const h = historyLoad();
+    h.points.push({
+      t: Date.now(),
+      c: Math.round(cpu),
+      m: Math.round(memPercent),
+      d: (disk && Number.isFinite(disk.pct)) ? Math.round(disk.pct) : null
+    });
+    if (h.points.length > HISTORY_MAX) h.points.shift();
+    historyDirty = true;
+  } catch (e) {
+    // Un releve rate ne doit pas interrompre la serie : on saute ce
+    // point et on reessaie a la minute suivante.
+    // A failed reading must not break the series: we skip this point and
+    // try again next minute.
+  }
+}
+
+function historyFlush() {
+  if (!historyDirty || !history) return;
+  try { store.write(HISTORY_KEY, history); historyDirty = false; }
+  catch (e) { console.warn("[piboard] historique non enregistre:", e.message || e); }
+}
+
+const historyTimer = setInterval(historySample, HISTORY_SAMPLE_MS);
+const historyFlushTimer = setInterval(historyFlush, HISTORY_FLUSH_MS);
+if (historyTimer.unref) historyTimer.unref();
+if (historyFlushTimer.unref) historyFlushTimer.unref();
+historySample();
+
+app.get("/api/system/history", (req, res) => {
+  const h = historyLoad();
+  const minutes = Math.max(5, Math.min(HISTORY_MAX, Number(req.query.minutes) || 120));
+  const since = Date.now() - minutes * 60000;
+  res.set("Cache-Control", "no-store");
+  res.json({ points: h.points.filter((p) => p.t >= since), maxMinutes: HISTORY_MAX });
+});
+
 /* ---------- Configuration reseau locale / local network configuration ----------
    Voir server/netConfig.js. Aucune donnee sensible : ce sont les
    adresses de la machine qui execute PiBoard, deja visibles de tout

@@ -65,6 +65,21 @@
         "en": "Show uptime",
         "fr": "Afficher la disponibilité"
       }
+    },
+    {
+      "key": "historyMinutes",
+      "type": "number",
+      "default": 120,
+      "min": 5,
+      "max": 1440,
+      "label": {
+        "en": "Chart history (minutes)",
+        "fr": "Historique des courbes (minutes)"
+      },
+      "hint": {
+        "en": "How far back the usage charts go. Sampled every minute on the server, so it survives page reloads and is shared by every screen. Up to 24 h.",
+        "fr": "Profondeur des courbes d'utilisation. Échantillonné chaque minute sur le serveur, donc conservé après un rechargement et partagé par tous les écrans. Jusqu'à 24 h."
+      }
     }
   ]
 }

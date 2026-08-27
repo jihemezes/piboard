@@ -27,7 +27,19 @@ function icsDateTime(d) {
   return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
 }
 const AQ_TODAY = new Date();
-const AQ_IN2DAYS = new Date(AQ_TODAY.getFullYear(), AQ_TODAY.getMonth(), AQ_TODAY.getDate() + 2, 14, 0, 0);
+/* Decalage choisi pour rester DANS la semaine courante affichee par la
+   vue semaine (lundi -> dimanche). Un "+2 jours" en dur echouait tous
+   les samedis et dimanches : le samedi, +2 tombe lundi, donc dans la
+   semaine SUIVANTE, et la pastille n'etait pas dans la grille. Le test
+   echouait alors deux jours sur sept, sans rapport avec le code.
+   Offset chosen to stay WITHIN the current week shown by the week view
+   (Monday -> Sunday). A hard-coded "+2 days" failed every Saturday and
+   Sunday: on Saturday, +2 lands on Monday, hence the NEXT week, and the
+   chip was not in the grid. The test then failed two days out of seven,
+   with nothing to do with the code. */
+const AQ_DOW = (AQ_TODAY.getDay() + 6) % 7;          // 0 = lundi / Monday
+const AQ_OFFSET = AQ_DOW <= 4 ? 2 : -(AQ_DOW - 2);   // reste lundi -> dimanche
+const AQ_IN2DAYS = new Date(AQ_TODAY.getFullYear(), AQ_TODAY.getMonth(), AQ_TODAY.getDate() + AQ_OFFSET, 14, 0, 0);
 const AQ_IN2DAYS_END = new Date(AQ_IN2DAYS.getTime() + 3600000);
 const FAMILY_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:fam1@test\r\nDTSTART;VALUE=DATE:${icsDateOnly(AQ_TODAY)}\r\nSUMMARY:Anniversaire Lea\r\nEND:VEVENT\r\nEND:VCALENDAR`;
 const WORK_ICS = "\uFEFF" + `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:work1@test\r\nDTSTART:${icsDateTime(AQ_IN2DAYS)}\r\nDURATION:PT1H\r\nSUMMARY:Reunion equipe\r\nLOCATION:Salle B\r\nDESCRIPTION:Ordre du jour\\nPoint budget\\; puis planning\r\nEND:VEVENT\r\nEND:VCALENDAR`;
@@ -4027,6 +4039,90 @@ function catalogItemFor(catalog, document, widgetId) {
      "Miscellaneous". A good safety net, but a SILENT one -- the five
      recently added tiles had piled up there with nothing flagging it.
      This test makes the omission visible. */
+  /* ---------- README : liste des widgets ----------
+     Le README est la premiere chose que lit un visiteur du depot. Sa
+     liste de widgets avait pris quatre versions de retard sans que rien
+     ne le signale -- exactement le meme angle mort que le classement du
+     catalogue. Ce test le rend visible.
+     The README is the first thing a repository visitor reads. Its widget
+     list had fallen four versions behind with nothing flagging it --
+     exactly the same blind spot as the catalog classification. This test
+     makes it visible. */
+  /* ---------- Ressources statiques indispensables ----------
+
+     Ce bloc existe a cause d'un bug d'EMPAQUETAGE, pas de code. Le motif
+     d'exclusion des archives de livraison (etoile, slash, data, slash,
+     etoile) visait le dossier
+     `data/` d'execution a la racine -- mais il capturait AUSSI
+     `public/data/`. Le calendrier des saints a donc disparu de toutes
+     les livraisons, et l'option "saint du jour" restait sans effet dans
+     les tuiles Horloge et Meteo alors qu'elle etait bien activee.
+
+     Aucun test de code n'aurait pu l'attraper : le code etait correct,
+     c'est le fichier qui manquait. D'ou cette verification de PRESENCE.
+
+     This block exists because of a PACKAGING bug, not a code one. The
+     delivery archives' exclusion pattern (star slash data slash star) targeted the
+     runtime `data/` folder at the root -- but it ALSO caught
+     `public/data/`. The name-day calendar therefore vanished from every
+     delivery, and the "saint of the day" option had no effect in the
+     Clock and Weather tiles even though it was switched on.
+
+     No code test could have caught it: the code was right, the file was
+     missing. Hence this PRESENCE check. */
+  console.log("== Ressources statiques indispensables ==");
+  {
+    const saintsPath = path.join(PUB, "data", "saints-fr.json");
+    assert("le calendrier des saints est present", fs.existsSync(saintsPath));
+
+    let saints = null;
+    try { saints = JSON.parse(fs.readFileSync(saintsPath, "utf8")); } catch (e) { saints = null; }
+    assert("le calendrier des saints est un JSON valide", !!saints);
+    // 366 jours + le 29 fevrier : une annee incomplete laisserait des
+    // dates sans saint, sans que rien ne le signale.
+    // 366 days plus 29 February: an incomplete year would leave dates
+    // with no name, with nothing flagging it.
+    assert("le calendrier couvre l'annee entiere", saints && Object.keys(saints).length >= 366);
+    assert("une date connue renvoie bien un nom", saints && saints["08-27"] === "Monique");
+
+    // Toute ressource chargee par un widget via une URL /data/ doit
+    // exister : c'est exactement le chemin qui avait ete perdu.
+    // Every resource a widget loads through a /data/ URL must exist: that
+    // is precisely the path that had been lost.
+    const widgetsDir = path.join(PUB, "widgets");
+    const missing = [];
+    for (const dir of fs.readdirSync(widgetsDir)) {
+      const js = path.join(widgetsDir, dir, "widget.js");
+      if (!fs.existsSync(js)) continue;
+      const src = fs.readFileSync(js, "utf8");
+      for (const m of src.matchAll(/["'`](\/data\/[A-Za-z0-9._-]+)["'`]/g)) {
+        if (!fs.existsSync(path.join(PUB, m[1].slice(1)))) missing.push(dir + " -> " + m[1]);
+      }
+    }
+    for (const w of missing) console.log("       ressource absente : " + w);
+    assert("chaque ressource /data/ referencee par un widget existe", missing.length === 0);
+  }
+
+  console.log("== README : couverture des widgets ==");
+  {
+    const readme = fs.readFileSync(path.join(ROOT, "README.md"), "utf8").toLowerCase();
+    const widgetsDir = path.join(PUB, "widgets");
+    const missing = [];
+    for (const dir of fs.readdirSync(widgetsDir)) {
+      const mf = path.join(widgetsDir, dir, "manifest.json");
+      if (!fs.existsSync(mf)) continue;
+      const m = JSON.parse(fs.readFileSync(mf, "utf8"));
+      // On cherche le nom FRANCAIS dans la partie francaise du README :
+      // c'est le libelle que verra la personne dans le catalogue.
+      // We look for the FRENCH name in the README's French part: it is
+      // the label the person sees in the catalog.
+      const name = String((m.name && m.name.fr) || "").toLowerCase().split(/\s*[(\/]/)[0].trim();
+      if (name && !readme.includes(name)) missing.push(dir + " (" + name + ")");
+    }
+    for (const w of missing) console.log("       absent du README : " + w);
+    assert("chaque widget livre est cite dans le README", missing.length === 0);
+  }
+
   console.log("== Catalogue : classement des tuiles ==");
   {
     const src = fs.readFileSync(path.join(PUB, "app.js"), "utf8");

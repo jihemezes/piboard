@@ -197,3 +197,26 @@
   touch-action: manipulation;
 }
 .pwmb-show-images:hover { border-color: var(--accent); color: var(--accent); }
+
+/* Badge de non-lus. Pastille pleine plutot qu'un simple nombre : sur un
+   tableau mural, l'information utile est "il y en a", lisible de loin,
+   avant le compte exact.
+   Unread badge. A solid pill rather than a bare number: on a wall board
+   the useful information is "there are some", readable from a distance,
+   before the exact count. */
+.pwmb-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.5em;
+  height: 1.5em;
+  padding: 0 0.4em;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.78em;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  margin-right: auto;
+}

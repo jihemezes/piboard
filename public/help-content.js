@@ -704,7 +704,7 @@
 
           <h4>Marché fermé</h4>
           <p>Contrairement aux cryptomonnaies, la bourse ferme le soir et le week-end. Hors séance, la ligne s'atténue et porte la mention <b>« clôture »</b> : sans cela, une variation figée pendant tout un week-end ressemblerait à une tuile en panne. PiBoard espace aussi ses appels à la source hors séance, un cours fermé ne bougeant plus.</p>
-          <p>Les horaires tiennent compte du <b>fuseau de chaque place</b> : le S&amp;P 500 est encore fermé quand il est 14 h à Paris, et le Nikkei est ouvert quand vous dormez. En revanche, les <b>jours fériés ne sont pas connus</b> — PiBoard ne gère pas les calendriers fériés de sept places. Un 1er janvier, la tuile affichera donc « ouvert » à tort. Le change n'est pas non plus disponible en continu : il ferme aussi le week-end, contrairement aux cryptos.</p>
+          <p>Les horaires tiennent compte du <b>fuseau de chaque place</b> : le S&amp;P 500 est encore fermé quand il est 14 h à Paris, et le Nikkei est ouvert quand vous dormez. Les <b>principaux jours fériés</b> sont désormais pris en compte, y compris les dates mobiles (Vendredi saint, Lundi de Pâques) qui sont calculées et non figées dans une table. Restent hors périmètre : les demi-séances (24 décembre, signalée ouverte — c'est exact), les fériés reportés au lundi quand ils tombent un week-end, et le calendrier lunaire de Hong Kong. Le change n'est pas non plus disponible en continu : il ferme aussi le week-end, contrairement aux cryptos.</p>
           <p>Pour un symbole saisi à la main dont la place n'est pas identifiable, <b>aucune mention n'est affichée</b> : mieux vaut pas d'indicateur qu'un « fermé » faux.</p>
 
           <h4>Les courbes</h4>
@@ -738,7 +738,7 @@
 
           <h4>Market closed</h4>
           <p>Unlike cryptocurrencies, stock markets close in the evening and at weekends. Outside trading hours the row dims and carries a <b>"closed"</b> tag: without it, a change frozen for a whole weekend would look like a broken tile. PiBoard also spaces out its calls to the source outside trading hours, a closed price no longer moving.</p>
-          <p>The hours account for <b>each exchange's time zone</b>: the S&amp;P 500 is still closed when it is 2pm in Paris, and the Nikkei is open while you sleep. <b>Public holidays, however, are not known</b> — PiBoard does not track seven exchanges' holiday calendars. On New Year's Day the tile will therefore wrongly show "open". FX is not continuously available either: it too closes at the weekend, unlike crypto.</p>
+          <p>The hours account for <b>each exchange's time zone</b>: the S&amp;P 500 is still closed when it is 2pm in Paris, and the Nikkei is open while you sleep. The <b>main public holidays</b> are now accounted for, including the moving dates (Good Friday, Easter Monday) which are computed rather than frozen into a table. Out of scope: half sessions (24 December, flagged open — which is correct), holidays shifted to the Monday when they fall at the weekend, and Hong Kong's lunar calendar. FX is not continuously available either: it too closes at the weekend, unlike crypto.</p>
           <p>For a hand-typed symbol whose exchange cannot be identified, <b>no tag is shown</b>: no indicator beats a wrong "closed".</p>
 
           <h4>The charts</h4>
@@ -1279,7 +1279,7 @@
           <h4>Courbes d'utilisation</h4>
           <p><b>Un clic sur CPU, RAM ou Disque</b> ouvre une fenêtre à trois onglets, une courbe par ressource, qui se met à jour en direct au rythme de rafraîchissement de la tuile.</p>
           <p>L'échelle est <b>fixée de 0 à 100 %</b>, jamais ajustée au contenu : une échelle automatique ferait paraître dramatique une variation de deux points en zoomant dessus.</p>
-          <p>L'historique se constitue pendant que le tableau tourne, à partir des relevés que la tuile fait déjà — il n'y a donc aucun coût supplémentaire. En contrepartie, <b>il repart de zéro à chaque rechargement de la page</b> : c'est une lecture d'ambiance sur les dernières dizaines de minutes, pas un historique de longue durée.</p>
+          <p>L'historique est échantillonné <b>chaque minute par le serveur</b> : il survit donc aux rechargements de page et il est <b>partagé par tous vos écrans</b>. La profondeur est réglable jusqu'à 24 h dans les réglages de la tuile.</p><p>L'écriture sur disque est espacée de cinq minutes plutôt qu'à chaque relevé : sur un Raspberry Pi, écrire 1440 fois par jour sur la carte SD serait inutilement agressif. Après une coupure brutale, les dernières minutes peuvent manquer — sans conséquence ici.</p>
 
           <h4>Adresses réseau</h4>
           <p>La tuile peut afficher l'adresse IP de chaque carte réseau de la machine. <b>Un clic sur une adresse</b> ouvre une fenêtre détaillant la configuration complète de toutes les cartes : adresse et masque, passerelle, DHCP (avec le serveur et l'expiration du bail le cas échéant), serveurs DNS, suffixe de domaine, adresse MAC et adresses IPv6 publiques. Le nom d'hôte est rappelé en haut.</p>
@@ -1300,7 +1300,7 @@
           <h4>Usage charts</h4>
           <p><b>Clicking CPU, RAM or Disk</b> opens a three-tab window, one curve per resource, updating live at the tile's own refresh pace.</p>
           <p>The scale is <b>fixed from 0 to 100%</b>, never fitted to the content: an auto scale would make a two-point wobble look dramatic by zooming into it.</p>
-          <p>History builds up while the board runs, from the readings the tile already takes — so there is no extra cost. In exchange, <b>it starts again from scratch on every page reload</b>: this is an at-a-glance view of the last few tens of minutes, not a long-term history.</p>
+          <p>History is sampled <b>every minute by the server</b>: it therefore survives page reloads and is <b>shared across all your screens</b>. The depth is adjustable up to 24 h in the tile's settings.</p><p>Disk writes are spaced five minutes apart rather than one per reading: on a Raspberry Pi, writing to the SD card 1440 times a day would be needlessly aggressive. After an abrupt power cut the last few minutes may be missing — of no consequence here.</p>
 
           <h4>Network addresses</h4>
           <p>The tile can show the IP address of each of the machine's network adapters. <b>Clicking an address</b> opens a window detailing the full configuration of every adapter: address and mask, gateway, DHCP (with the server and lease expiry where applicable), DNS servers, domain suffix, MAC address and public IPv6 addresses. The host name is shown at the top.</p>

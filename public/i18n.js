@@ -172,6 +172,8 @@
       "mailbox.empty": "No message",
       "mailbox.noUnread": "No unread message",
       "mailbox.noSubject": "(no subject)",
+      "mailbox.unreadCount": "Unread messages in this mailbox",
+      "mailbox.unreadCount": "Messages non lus dans cette boîte",
       "mailbox.reload": "Reload",
       "mailbox.showImagesNow": "Show images in this message",
       "field.address.notfound": "No matching address",

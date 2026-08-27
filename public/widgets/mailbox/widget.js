@@ -229,6 +229,11 @@
         if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
         this.messages = data.messages || [];
         this.unseen = data.unseen || 0;
+        // null quand le serveur refuse STATUS : on retombe alors sur le
+        // compte des messages affiches, en le sachant partiel.
+        // null when the server refuses STATUS: we then fall back to the
+        // displayed messages' count, knowing it is partial.
+        this.unseenTotal = data.unseenTotal;
         this.render();
       } catch (e) {
         console.warn("[piboard/mailbox]", e);
@@ -254,6 +259,20 @@
         return;
       }
 
+      /* Badge de non-lus. Affiche le compte de TOUTE la boite quand le
+         serveur le fournit, et non celui des seuls messages visibles :
+         une boite a 80 non-lus qui en annoncerait 25 laisserait croire
+         qu'on a fait le tour. Masque a zero -- un "0" permanent est du
+         bruit sur un tableau mural.
+         Unread badge. Shows the WHOLE mailbox's count when the server
+         provides it, not just the visible messages': a mailbox with 80
+         unread announcing 25 would suggest you had seen them all. Hidden
+         at zero -- a permanent "0" is noise on a wall board. */
+      const count = Number.isFinite(this.unseenTotal) ? this.unseenTotal : this.unseen;
+      const badge = count > 0
+        ? `<div class="pwmb-badge" title="${escapeHtml(i18n.t("mailbox.unreadCount"))}">${count > 99 ? "99+" : count}</div>`
+        : "";
+
       const rows = list.map((m, i) => `
         <li class="pwmb-item ${m.seen ? "" : "pwmb-unread"}" data-idx="${i}">
           <div class="pwmb-line1">
@@ -266,6 +285,7 @@
       this.ctx.el.innerHTML = `
         <div class="pw-mailbox">
           <div class="pwmb-head">
+            ${badge}
             <button type="button" class="pwmb-reload" aria-label="${i18n.t("mailbox.reload")}" title="${i18n.t("mailbox.reload")}">⟳</button>
           </div>
           <ul class="pwmb-list">${rows}</ul>

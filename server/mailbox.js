@@ -149,8 +149,33 @@ async function listHeaders(tileId, cfg) {
       });
     }
     out.reverse(); // plus recent en premier / newest first
-    const unseen = out.filter((m) => !m.seen).length;
-    return { messages: out, unseen, total };
+    /* Deux comptes DIFFERENTS, et la nuance compte.
+       `unseenShown` ne porte que sur les messages affiches (les `limit`
+       derniers). `unseenTotal` porte sur TOUTE la boite : c'est celui
+       qu'on veut annoncer, sans quoi une boite avec 80 non-lus en
+       afficherait 25 -- le maximum affichable -- et laisserait croire
+       qu'on a fait le tour.
+       Two DIFFERENT counts, and the distinction matters. `unseenShown`
+       covers only the displayed messages (the last `limit`).
+       `unseenTotal` covers the WHOLE mailbox: that is the one worth
+       announcing, otherwise a mailbox with 80 unread would show 25 --
+       the display maximum -- and suggest you had seen them all. */
+    const unseenShown = out.filter((m) => !m.seen).length;
+
+    let unseenTotal = null;
+    try {
+      const st = await client.status(folder, { unseen: true });
+      if (st && Number.isFinite(Number(st.unseen))) unseenTotal = Number(st.unseen);
+    } catch (e) {
+      // Certains serveurs refusent STATUS sur le dossier deja
+      // selectionne. On laisse null plutot que d'annoncer un compte
+      // partiel comme s'il etait complet.
+      // Some servers refuse STATUS on the already-selected folder. We
+      // leave null rather than announcing a partial count as a full one.
+      unseenTotal = null;
+    }
+
+    return { messages: out, unseen: unseenShown, unseenTotal, total };
   } finally {
     if (lock) lock.release();
     // Un logout() sur une connexion deja tombee attend une reponse qui

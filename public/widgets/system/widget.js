@@ -220,7 +220,43 @@
         });
       });
 
+      // La fenetre s'ouvre immediatement avec ce qu'on a deja, puis
+      // s'enrichit de l'historique serveur.
+      // The window opens right away with what we already have, then fills
+      // in from the server history.
       this.drawChart();
+      this.loadHistory().then(() => this.drawChart());
+    }
+
+    /* L'historique serveur est charge a l'OUVERTURE de la fenetre
+       seulement : c'est le seul moment ou il sert, et le recharger a
+       chaque cycle de la tuile serait du trafic pur.
+       The server history is loaded when the window OPENS only: that is
+       the only moment it is needed, and re-fetching it on every tile
+       cycle would be pure traffic. */
+    async loadHistory() {
+      try {
+        const r = await fetch("/api/system/history?minutes=" +
+          encodeURIComponent(Math.max(5, Number(this.ctx.settings.historyMinutes) || 120)));
+        if (!r.ok) throw new Error("status " + r.status);
+        const pts = (await r.json()).points || [];
+        if (!pts.length) return;
+        this.history = {
+          cpu: pts.map((p) => p.c),
+          mem: pts.map((p) => p.m),
+          // Une machine sans donnee disque renvoie null : les ecarter
+          // evite un trou dans la courbe.
+          // A machine with no disk reading returns null: dropping those
+          // avoids a gap in the curve.
+          disk: pts.filter((p) => p.d != null).map((p) => p.d)
+        };
+      } catch (e) {
+        // Repli silencieux sur l'historique client : la fenetre reste
+        // utile, simplement plus courte.
+        // Silent fallback to the client history: the window stays useful,
+        // merely shorter.
+        console.warn("[piboard/system] historique serveur", e);
+      }
     }
 
     drawChart() {

@@ -1,5 +1,91 @@
 # Changelog
 
+## 1.77.0
+
+- **CORRECTIF MAJEUR : le saint du jour ne s'affichait plus.** Bug
+  d'EMPAQUETAGE, pas de code -- le code etait correct, c'est le fichier
+  qui manquait.
+  - Le motif d'exclusion de mes archives de livraison visait le dossier
+    `data/` d'execution a la racine, mais il capturait AUSSI
+    `public/data/`. Le calendrier `saints-fr.json` a donc disparu de
+    TOUTES les livraisons depuis la 1.67.1, et l'option "saint du jour"
+    restait sans effet dans les tuiles Horloge et Meteo bien qu'activee.
+  - Fichier restitue (367 entrees, annee bissextile comprise) et motif
+    d'exclusion corrige.
+  - **Garde-fou** : `dom-smoke.js` verifie la presence et la validite du
+    calendrier, ET que chaque ressource `/data/` referencee par un widget
+    existe reellement. Aucun test de code n'aurait pu attraper ceci.
+
+- **Tuile Bourse : les jours feries sont pris en compte.** Limite
+  assumee en 1.72.1, desormais levee.
+  - Les dates MOBILES (Vendredi saint, Lundi de Paques) sont CALCULEES
+    depuis Paques (algorithme de Gauss/Meeus), pas listees annee par
+    annee : une table figee serait devenue fausse au 1er janvier suivant
+    sans que rien ne le signale.
+  - Les deux feries de Paques sont traites SEPAREMENT : le NYSE ferme le
+    Vendredi saint mais ouvre le Lundi de Paques. Les confondre aurait
+    signale la place fermee un lundi ouvre.
+  - Restent hors perimetre, et l'aide le dit : demi-seances (24 decembre,
+    signalee ouverte -- c'est exact), reports au lundi, calendrier
+    lunaire de Hong Kong.
+
+- **Tuile Courriel : pastille de messages non lus.** Le compte etait deja
+  calcule cote client... et jamais affiche.
+  - La pastille porte sur TOUTE la boite (commande IMAP `STATUS`), pas
+    seulement sur les messages affiches : une boite a 80 non-lus en
+    aurait annonce 25 -- le maximum affichable -- laissant croire qu'on
+    avait fait le tour.
+  - Repli sur le compte des messages affiches si le serveur refuse
+    `STATUS`. Masquee a zero : un "0" permanent est du bruit sur un
+    tableau mural.
+
+- **Historique des ressources persistant.** Les courbes CPU/RAM/disque
+  repartaient de zero a chaque rechargement de page.
+  - Echantillonnage cote SERVEUR, une fois par minute : l'historique
+    survit aux rechargements et il est PARTAGE par tous les ecrans.
+  - Tampon CIRCULAIRE borne a 24 h : sans borne, le fichier croitrait
+    indefiniment sur une machine allumee en permanence.
+  - Ecriture disque espacee de 5 minutes et non a chaque echantillon :
+    sur un Pi, ecrire 1440 fois par jour sur la carte SD serait
+    inutilement agressif. Perdre les dernieres minutes apres une coupure
+    brutale est sans consequence.
+  - Profondeur reglable de 5 min a 24 h. Repli silencieux sur
+    l'historique client si la route ne repond pas.
+
+- **Test Agenda : fin de l'echec deux jours sur sept.** La fixture
+  placait l'evenement a "aujourd'hui + 2 jours" en dur ; le samedi, +2
+  tombe lundi, donc dans la semaine SUIVANTE, hors de la grille affichee.
+  Le decalage est desormais calcule pour rester dans la semaine courante
+  -- verifie sur les sept jours.
+
+## 1.76.0
+
+- **README remis a jour.** Sa liste de widgets avait quatre versions de
+  retard : Quotas IA, Couleur Tempo, Bourse et indices, et Chaines TV
+  n'y figuraient pas du tout.
+  - **Liste restructuree par famille**, avec le meme classement que le
+    catalogue. Elle tenait jusqu'ici dans un unique paragraphe de 28
+    widgets, illisible en pratique.
+  - Le point "Collection de widgets" ne citait que 5 tuiles sur 28 : il
+    renvoie desormais a la liste complete.
+  - Fonctionnalites transverses ajoutees : guide de demarrage rapide et
+    tableau defilant, tous deux absents alors qu'ils datent des 1.68 et
+    1.69.
+  - Titre d'installation : "Bookworm ou Trixie", le corps du texte
+    mentionnant deja Trixie.
+  - La tuile Chaines TV est decrite avec son avertissement : PiBoard ne
+    fournit aucune chaine ni aucun contenu.
+
+- **Aide integree : verifiee, rien a corriger.** Les 28 tuiles ont leur
+  fiche, et les neuf fonctionnalites livrees depuis la 1.68 y sont toutes
+  documentees. C'est le README, et lui seul, qui avait derive.
+
+- **Garde-fou contre la recidive** : `dom-smoke.js` verifie desormais que
+  CHAQUE widget livre est cite dans le README, et nomme ceux qui
+  manquent. Le test a d'ailleurs immediatement releve une imprecision de
+  redaction ("cours de cryptos" au lieu du libelle reel "Cours Cryptos"),
+  corrigee.
+
 ## 1.75.3
 
 - **Correctif : les cinq tuiles ajoutees depuis la 1.70 s'entassaient

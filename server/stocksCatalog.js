@@ -318,6 +318,111 @@ const INDEX_MARKET = {
   "^SMI": "six", "^HSI": "hk"
 };
 
+/* ---------- Jours feries / public holidays ----------
+
+   Limite assumee en 1.72.1 : sans cette table, la tuile affichait
+   "ouvert" un 1er janvier. Trois partis pris :
+
+   1. Seules les fermetures TOTALES sont listees. Les demi-seances (24
+      decembre) restent signalees ouvertes : c'est vrai, la place ouvre
+      bien ce jour-la.
+   2. Les dates MOBILES (Vendredi saint, Lundi de Paques) sont calculees
+      depuis Paques, pas listees annee par annee -- une table figee
+      deviendrait fausse au 1er janvier suivant sans que rien ne le
+      signale.
+   3. Les dates FIXES sont exprimees en MM-JJ et valent pour toutes les
+      annees. Une place qui reporte un ferie tombant un week-end au lundi
+      suivant n'est PAS modelisee : trop de regles par pays pour un
+      tableau mural, et se tromper la ne coute qu'un "ouvert" affiche a
+      tort une fois l'an.
+
+   Accepted limitation from 1.72.1: without this table, the tile showed
+   "open" on 1 January. Three deliberate choices:
+
+   1. Only FULL closures are listed. Half sessions (24 December) stay
+      flagged open: that is true, the exchange does open that day.
+   2. MOVING dates (Good Friday, Easter Monday) are computed from Easter,
+      not listed year by year -- a frozen table would silently become
+      wrong on the following 1 January.
+   3. FIXED dates are given as MM-DD and hold for every year. An exchange
+      that shifts a holiday falling at the weekend to the next Monday is
+      NOT modelled: too many per-country rules for a wall board, and
+      getting it wrong there only costs one wrongly shown "open" a year. */
+
+/* Algorithme de Gauss/Meeus. Paques commande Vendredi saint et Lundi de
+   Paques, fermes sur toutes les places europeennes suivies ici.
+   Gauss/Meeus algorithm. Easter drives Good Friday and Easter Monday,
+   closed on every European exchange tracked here. */
+function easterSunday(year) {
+  const a = year % 19, b = Math.floor(year / 100), c = year % 100;
+  const d = Math.floor(b / 4), e = b % 4, f = Math.floor((b + 8) / 25);
+  const g = Math.floor((b - f + 1) / 3);
+  const h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4;
+  const l = (32 + 2 * e + 2 * i - h - k) % 7;
+  const m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const month = Math.floor((h + l - 7 * m + 114) / 31);
+  const day = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function mmdd(date) {
+  return String(date.getUTCMonth() + 1).padStart(2, "0") + "-" +
+    String(date.getUTCDate()).padStart(2, "0");
+}
+
+/* Feries fixes par marche, en MM-JJ. Volontairement limites aux
+   fermetures certaines et durables.
+   Fixed holidays per market, as MM-DD. Deliberately limited to closures
+   that are certain and durable. */
+const FIXED_HOLIDAYS = {
+  euronext: ["01-01", "05-01", "12-25", "12-26"],
+  xetra:    ["01-01", "05-01", "12-24", "12-25", "12-26", "12-31"],
+  six:      ["01-01", "01-02", "05-01", "08-01", "12-24", "12-25", "12-26", "12-31"],
+  lse:      ["01-01", "12-25", "12-26"],
+  nyse:     ["01-01", "06-19", "07-04", "12-25"],
+  tokyo:    ["01-01", "01-02", "01-03", "12-31"],
+  hk:       ["01-01", "12-25", "12-26"],
+  fx:       ["01-01", "12-25"]
+};
+
+/* Les deux feries de Paques ne se superposent PAS. Le NYSE ferme le
+   Vendredi saint mais ouvre normalement le Lundi de Paques : les traiter
+   ensemble aurait signale la place fermee un lundi ouvre. Le Japon ne
+   suit pas Paques du tout ; Hong Kong l'observe, mais son calendrier
+   lunaire (Nouvel An chinois) demanderait une table a part, non
+   modelisee ici.
+   The two Easter holidays do NOT overlap. The NYSE closes on Good Friday
+   but opens as usual on Easter Monday: treating them together would have
+   flagged the exchange closed on a trading Monday. Japan does not follow
+   Easter at all; Hong Kong observes it, but its lunar calendar (Chinese
+   New Year) would need a separate table, not modelled here. */
+const GOOD_FRIDAY_MARKETS = ["euronext", "xetra", "six", "lse", "hk", "nyse"];
+const EASTER_MONDAY_MARKETS = ["euronext", "xetra", "six", "lse", "hk"];
+
+function marketIdOf(market) {
+  for (const [id, m] of Object.entries(MARKETS)) if (m === market) return id;
+  return null;
+}
+
+/* `date` est une Date dans le fuseau de la place (issue de localTime).
+   On raisonne en UTC sur une date reconstruite, pour ne pas reintroduire
+   un decalage la ou on vient de l'eliminer.
+   `date` is a Date in the exchange's time zone (from localTime). We
+   reason in UTC on a rebuilt date, so as not to reintroduce an offset
+   where we have just removed one. */
+function isHoliday(marketId, year, month, day) {
+  const key = String(month).padStart(2, "0") + "-" + String(day).padStart(2, "0");
+  const fixed = FIXED_HOLIDAYS[marketId];
+  if (fixed && fixed.includes(key)) return true;
+  const easter = easterSunday(year);
+  if (GOOD_FRIDAY_MARKETS.includes(marketId) &&
+      key === mmdd(new Date(easter.getTime() - 2 * 86400000))) return true;
+  if (EASTER_MONDAY_MARKETS.includes(marketId) &&
+      key === mmdd(new Date(easter.getTime() + 86400000))) return true;
+  return false;
+}
+
 function toMinutes(hhmm) {
   const [h, m] = String(hhmm).split(":").map(Number);
   return h * 60 + (m || 0);
@@ -331,14 +436,18 @@ function toMinutes(hhmm) {
    system locale would break the indicator in French. */
 function localTime(tz, now) {
   const fmt = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz, weekday: "short", hour: "2-digit", minute: "2-digit", hour12: false
+    timeZone: tz, weekday: "short", year: "numeric", month: "2-digit", day: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false
   });
   const parts = {};
   for (const p of fmt.formatToParts(now || new Date())) parts[p.type] = p.value;
   const DAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
   return {
     day: DAYS[parts.weekday],
-    minutes: (Number(parts.hour) % 24) * 60 + Number(parts.minute)
+    minutes: (Number(parts.hour) % 24) * 60 + Number(parts.minute),
+    year: Number(parts.year),
+    month: Number(parts.month),
+    date: Number(parts.day)
   };
 }
 
@@ -373,6 +482,10 @@ function isMarketOpen(symbol, exchangeId, now) {
   if (!m) return null;
   const t = localTime(m.tz, now);
   if (!m.days.includes(t.day)) return false;
+  // Ferie : ferme quelle que soit l'heure.
+  // Holiday: closed whatever the time.
+  const id = marketIdOf(m);
+  if (id && isHoliday(id, t.year, t.month, t.date)) return false;
   if (m.sundayFrom && t.day === 0) return t.minutes >= toMinutes(m.sundayFrom);
   if (m.fridayTo && t.day === 5) return t.minutes < toMinutes(m.fridayTo);
   return t.minutes >= toMinutes(m.open) && t.minutes < toMinutes(m.close);
@@ -445,5 +558,6 @@ function symbolFor(currency) {
 module.exports = {
   EXCHANGES, CURRENCY_SYMBOLS, MARKETS,
   guessCurrency, findInstrument, currencyFor, symbolFor, kindFor,
-  isMarketOpen, marketFor, _localTime: localTime
+  isMarketOpen, marketFor, _localTime: localTime,
+  _isHoliday: isHoliday, _easterSunday: easterSunday, FIXED_HOLIDAYS
 };
