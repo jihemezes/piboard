@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.78.2
+
+- **CORRECTIF : la tuile Sante Internet ne mesurait RIEN quand elle
+  etait posee dans un tiroir.** Elle restait indefiniment sur "premier
+  releve en cours", sans aucune erreur, ni cote serveur ni cote client.
+
+  - **Cause.** `layout.tiles` ne contient que les tuiles du tableau
+    principal. Une tuile posee dans un tiroir vit ailleurs, sous
+    `layout.drawer.tiles`, `layout.drawerTop.tiles` ou
+    `layout.drawerRight.tiles`. Le serveur ne lisait que `layout.tiles`
+    et ne voyait donc pas la tuile. Or "aucune tuile posee = aucune
+    mesure" est le comportement VOULU quand il n'y en a vraiment pas :
+    le serveur s'arretait silencieusement, exactement comme prevu, mais
+    pour une mauvaise raison.
+
+  - **Correction.** Le serveur balaie desormais toute structure de la
+    disposition portant un tableau `tiles`, plutot qu'une liste de trois
+    noms codes en dur : le jour ou un quatrieme emplacement apparaitra,
+    cette fonction n'aura pas besoin d'etre retouchee.
+
+  - **La cause reelle du temps perdu.** Le bug etait invisible parce que
+    la tuile affichait le meme message dans deux situations qui n'ont
+    RIEN a voir : "le premier releve arrive" (qui se resout tout seul en
+    une minute) et "le serveur ne mesure rien du tout" (qui ne se
+    resoudra jamais). Un message distinct existe desormais pour le
+    second cas, qui aurait rendu le diagnostic immediat au lieu de
+    laisser regarder une attente pendant trois heures.
+
+  - **Garde-fous** : `test/internetHealth.test.js` couvre les tuiles de
+    tiroir (les trois emplacements, plus les dispositions partielles,
+    nulles ou malformees qui ne doivent jamais lever d'exception --
+    sinon l'echantillonneur mourrait a chaque tour), et `dom-smoke.js`
+    verifie que les deux messages restent distincts.
+
+---
+
+- **FIX: the Internet health tile measured NOTHING when placed in a
+  drawer.** It sat forever on "first reading in progress", with no error
+  anywhere. `layout.tiles` only holds the main board's tiles; a tile in
+  a drawer lives under `layout.drawer.tiles` and its siblings, so the
+  server never saw it and stopped silently -- exactly as designed for a
+  board with no such tile, but for the wrong reason. The server now
+  sweeps every structure in the layout carrying a `tiles` array. The bug
+  stayed invisible because one message covered two unrelated situations:
+  "the first reading is coming" and "nothing is being measured at all".
+  These now read differently. Tests cover drawer tiles, malformed
+  layouts, and the distinction between the two messages.
+
 ## 1.78.1
 
 - **CORRECTIF : les cartes affichaient toutes "API KEY REQUIRED".**

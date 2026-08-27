@@ -4313,6 +4313,17 @@ function catalogItemFor(catalog, document, widgetId) {
        doublon : depuis l'ecran mural en kiosque, un telechargement
        atterrit dans un dossier que personne n'ouvrira.
        The CSV download and the archive answer different needs. */
+    /* Regression 1.78.2 : "aucune mesure en cours" et "premier releve en
+       cours" se ressemblent a l'ecran mais n'ont rien a voir -- l'un se
+       resout en une minute, l'autre jamais. Les confondre a fait
+       regarder un message d'attente pendant trois heures en croyant que
+       tout allait bien.
+       Regression 1.78.2: "nothing is being measured" and "first reading
+       in progress" look alike on screen but have nothing in common --
+       one resolves within a minute, the other never. */
+    assert("l'absence de mesure est distinguee du premier releve",
+      /d\.enabled === false/.test(src) && /speed\.notSeen/.test(src));
+
     assert("les deux voies d'export existent (telechargement ET archive sur l'hote)",
       /export\.csv/.test(src) && /internet-health\/archive/.test(src));
 

@@ -473,6 +473,7 @@
       "system.m": "m",
 
       "speed.error": "Internet health unavailable",
+      "speed.notSeen": "The server does not see this tile in the saved layout, so it is measuring nothing. Move the tile, or reload the page, to save the layout again.",
       "speed.warmup": "First reading in progress — the curve fills in as measurements are taken.",
       "speed.status.good": "Good",
       "speed.status.fair": "Fair",
@@ -1070,6 +1071,7 @@
       "system.m": "min",
 
       "speed.error": "Santé Internet indisponible",
+      "speed.notSeen": "Le serveur ne voit pas cette tuile dans la disposition enregistrée, il ne mesure donc rien. Déplacez la tuile, ou rechargez la page, pour réenregistrer la disposition.",
       "speed.warmup": "Premier relevé en cours — la courbe se constitue au fil des mesures.",
       "speed.status.good": "Bonne",
       "speed.status.fair": "Moyenne",

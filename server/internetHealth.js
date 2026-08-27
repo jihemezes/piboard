@@ -404,11 +404,50 @@ function flush() {
    Lecture des reglages depuis la disposition / settings from layout
    ============================================================ */
 
+/* Toutes les tuiles de la disposition, TIROIRS COMPRIS.
+
+   Ce detail a coute une mise a jour entiere : `layout.tiles` ne contient
+   que les tuiles du tableau principal. Celles posees dans un tiroir
+   (gauche, haut, droite) vivent ailleurs, sous `layout.drawer.tiles`,
+   `layout.drawerTop.tiles` et `layout.drawerRight.tiles`. Ne lire que
+   `layout.tiles` rendait donc une tuile de tiroir INVISIBLE au serveur :
+   aucune mesure n'etait jamais lancee, et la tuile restait indefiniment
+   sur son message de premier releve.
+
+   D'ou le balayage generique de toute structure portant un tableau
+   `tiles`, plutot qu'une liste de trois noms codes en dur : le jour ou
+   un quatrieme emplacement apparaitra, cette fonction n'aura pas besoin
+   d'etre retouchee -- et personne n'aura a se souvenir qu'elle existe.
+
+   Every tile in the layout, DRAWERS INCLUDED.
+
+   This detail cost a whole release: `layout.tiles` only holds the main
+   board's tiles. Those placed in a drawer (left, top, right) live
+   elsewhere, under `layout.drawer.tiles`, `layout.drawerTop.tiles` and
+   `layout.drawerRight.tiles`. Reading only `layout.tiles` therefore made
+   a drawer tile INVISIBLE to the server: no measurement was ever
+   started, and the tile sat forever on its first-reading message.
+
+   Hence the generic sweep of any structure carrying a `tiles` array,
+   rather than a list of three hard-coded names: the day a fourth
+   location appears, this function will not need touching -- and nobody
+   will have to remember it exists. */
+function allTiles(layout) {
+  const out = [];
+  if (!layout || typeof layout !== "object") return out;
+  if (Array.isArray(layout.tiles)) out.push(...layout.tiles);
+  for (const value of Object.values(layout)) {
+    if (value && typeof value === "object" && Array.isArray(value.tiles)) {
+      out.push(...value.tiles);
+    }
+  }
+  return out.filter(Boolean);
+}
+
 function readConfig() {
   let layout = null;
   try { layout = store.read("layout", null); } catch (e) { layout = null; }
-  const tiles = (layout && Array.isArray(layout.tiles)) ? layout.tiles : [];
-  const tile = tiles.find((t) => t && t.widget === WIDGET_ID);
+  const tile = allTiles(layout).find((t) => t.widget === WIDGET_ID);
   if (!tile) return null;
   const s = tile.settings || {};
   const num = (v, def, min, max) => {
@@ -788,6 +827,7 @@ module.exports = {
   listArchives,
   archivePath,
   readConfig,
+  _allTiles: allTiles,
   DEFAULTS,
   RETENTION_MS,
   // Fonctions pures exposees pour les tests / pure functions exposed for tests

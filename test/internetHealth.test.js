@@ -177,4 +177,44 @@ console.log("== sante Internet : nom des archives ==");
     /^piboard-internet-[0-9]{8}-[0-9]{6}-[0-9]+h\.csv$/.test(name));
 }
 
+console.log("== sante Internet : tuiles des tiroirs ==");
+{
+  /* Regression 1.78.2. Une tuile posee dans un TIROIR n'est pas dans
+     `layout.tiles` : elle vit sous `layout.drawer.tiles`,
+     `layout.drawerTop.tiles` ou `layout.drawerRight.tiles`. Ne lire que
+     `layout.tiles` rendait la tuile invisible au serveur, qui ne
+     mesurait alors jamais rien -- pendant des heures, sans le moindre
+     message d'erreur.
+     Regression 1.78.2. A tile placed in a DRAWER is not in
+     `layout.tiles`. Reading only `layout.tiles` made the tile invisible
+     to the server, which then measured nothing at all -- for hours,
+     without a single error message. */
+  const layout = {
+    version: 1,
+    tiles: [{ id: "a", widget: "clock" }],
+    drawer: { widthPct: 50, tiles: [{ id: "b", widget: "speedtest" }] },
+    drawerTop: { heightPct: 40, tiles: [] },
+    drawerRight: { widthPct: 38, tiles: [{ id: "c", widget: "rss" }] }
+  };
+  const all = h._allTiles(layout);
+  check("les tuiles du tableau principal sont vues", all.some((t) => t.id === "a"));
+  check("les tuiles d'un tiroir sont vues AUSSI (le bug de la 1.78.1)",
+    all.some((t) => t.id === "b"));
+  check("les trois tiroirs sont balayes, pas seulement le premier",
+    all.some((t) => t.id === "c"));
+  check("une tuile de tiroir est bien retrouvee par son widget",
+    all.filter((t) => t.widget === "speedtest").length === 1);
+
+  // Robustesse : une disposition partielle ou absente ne doit pas lever
+  // d'exception, sinon l'echantillonneur mourrait a chaque tour.
+  // Robustness: a partial or absent layout must not throw, otherwise the
+  // sampler would die on every tick.
+  check("disposition nulle -> liste vide, sans exception", h._allTiles(null).length === 0);
+  check("disposition vide -> liste vide, sans exception", h._allTiles({}).length === 0);
+  check("cle sans tableau tiles ignoree sans exception",
+    h._allTiles({ drawer: { widthPct: 50 } }).length === 0);
+  check("valeurs nulles ecartees",
+    h._allTiles({ tiles: [null, { id: "x", widget: "speedtest" }] }).length === 1);
+}
+
 console.log("\n" + ok + " assertions OK");

@@ -161,6 +161,26 @@
       // No reading recorded yet: this is NOT an error, the first one
       // lands within the minute. Saying so avoids hunting for a problem
       // that does not exist.
+      /* Le serveur ne trouve aucune tuile "Sante Internet" dans la
+         disposition enregistree : il ne mesure donc rien, et attendre
+         n'y changerait rien. Ce cas est distingue du premier releve
+         parce que les deux se ressemblent a l'ecran mais n'ont RIEN a
+         voir -- l'un se resout tout seul en une minute, l'autre jamais.
+         Les confondre, c'est regarder un message d'attente pendant des
+         heures en croyant que tout va bien.
+         The server finds no "Internet health" tile in the saved layout:
+         it is therefore measuring nothing, and waiting will change
+         nothing. This case is told apart from the first reading because
+         the two look alike on screen but have NOTHING in common -- one
+         resolves by itself within a minute, the other never. Confusing
+         them means staring at a waiting message for hours believing all
+         is well. */
+      if (d.enabled === false) {
+        this.ctx.el.innerHTML =
+          `<div class="pw-speed"><div class="pwsp-msg">${esc(i18n.t("speed.notSeen"))}</div></div>`;
+        return;
+      }
+
       if (!d.sample) {
         this.ctx.el.innerHTML =
           `<div class="pw-speed"><div class="pwsp-msg">${esc(i18n.t("speed.warmup"))}</div></div>`;
