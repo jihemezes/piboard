@@ -1,5 +1,78 @@
 # Changelog
 
+## 1.78.1
+
+- **CORRECTIF : les cartes affichaient toutes "API KEY REQUIRED".**
+  Tuiles Carte de trafic, Radar meteo et Avions en vue.
+
+  - **Cause : un changement de politique chez CARTO, pas un bug de
+    PiBoard.** Les fonds raster de `basemaps.cartocdn.com` etaient
+    historiquement servis sans cle ; ils exigent desormais une cle API
+    et sont en cours de retrait. Le filigrane est peint dans le PNG cote
+    serveur, ce qu'aucune modification de notre code ne pouvait changer.
+    Home Assistant a ete touche de la meme facon au meme moment.
+
+  - **Ce n'etait pas propre a macOS et Linux**, contrairement a ce que
+    laissait croire l'observation : le service ne connait pas le systeme
+    du client. Windows paraissait epargne parce qu'Electron conservait
+    en cache les tuiles deja telechargees.
+
+  - **Champ "Cle CARTO des fonds de carte" dans les REGLAGES GENERAUX**,
+    nouvelle section "Cartes". Une seule saisie pour les trois tuiles :
+    elles affichent le meme fond, la redemander trois fois n'aurait
+    aucun sens. Le lien vers la page qui delivre la cle figure juste
+    a cote -- personne ne devine cette adresse.
+
+  - **Application immediate.** Changer la cle remonte les tuiles
+    cartographiques : la couche de fond Leaflet est construite une seule
+    fois, a la creation. Sans remontage, la carte aurait garde ses
+    tuiles filigranees jusqu'au prochain rechargement de page et on
+    aurait cru la cle refusee alors qu'elle etait bonne.
+
+  - **PiBoard n'embarque AUCUNE cle, et c'est definitif.** CARTO delivre
+    des cles par client et interdit de les partager entre projets sans
+    lien. Une cle placee dans le depot serait utilisee par toutes les
+    installations a la fois : quota commun epuise, puis cartes de tout
+    le monde cassees d'un coup a la revocation. Un test verifie qu'aucune
+    cle en dur ne se glisse dans les trois widgets.
+
+  - **La cle n'est PAS rangee dans le coffre chiffre.** Une cle CARTO
+    circule en clair dans l'adresse de chaque tuile d'image, visible
+    dans l'onglet reseau du navigateur : la classer avec les mots de
+    passe donnerait une fausse impression de confidentialite.
+
+  - **Documentation mise a jour** : section "Cartes" detaillee dans
+    l'aide generale (barre d'outils & reglages), mention ajoutee aux
+    trois fiches de tuiles concernees, credits CARTO, README dans les
+    deux langues, et surtout **le guide de demarrage rapide**, qui
+    annonce desormais les besoins en cles des le premier lancement --
+    CARTO pour les fonds de carte, TomTom pour le trafic lui-meme, en
+    precisant bien que ce sont deux choses distinctes.
+
+  - **Garde-fous ajoutes a `dom-smoke.js`** : presence de la cle dans
+    l'URL des trois fonds, absence de cle en dur, lecture a l'appel et
+    non figee au chargement, remontage sur changement, champ et lien
+    presents dans les reglages, mention bilingue dans le guide de
+    demarrage, et traduction FR/EN des quatre nouveaux libelles.
+
+---
+
+- **FIX: every map showed "API KEY REQUIRED".** Traffic map, Weather
+  radar and Planes overhead tiles. The cause was a policy change at
+  CARTO, not a PiBoard bug: its raster base maps now require an API key
+  and the watermark is painted into the PNG server-side. This was not
+  macOS- or Linux-specific -- Windows merely looked spared because
+  Electron still had cached tiles. A "CARTO base map key" field has been
+  added to the GENERAL settings, under a new "Maps" section, with a link
+  to the page issuing the free key; one entry serves all three tiles,
+  and changing it remounts them so it applies immediately. PiBoard ships
+  no key of its own, deliberately and permanently: CARTO issues keys per
+  customer and forbids sharing them across unrelated projects. The key
+  is not filed in the encrypted vault, since it travels in the clear
+  inside every tile URL. The general help, the three tile pages, the
+  credits, the README and the quick start guide were all updated -- the
+  latter now announces the API keys needed, from the very first launch.
+
 ## 1.78.0
 
 - **NOUVELLE TUILE : Sante Internet** (famille "Systeme & Reseau").

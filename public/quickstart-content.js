@@ -50,6 +50,12 @@ window.PIBOARD_QUICKSTART = {
     <h4>Le diaporama</h4>
     <p>L'icône en forme d'image lance un <b>diaporama plein écran</b> à partir de vos photos (un dossier local, une clé USB ou un partage réseau, à indiquer dans les réglages généraux). Touchez l'écran pour en sortir. C'est aussi disponible sous forme de tuile, si vous préférez le garder dans un coin du tableau.</p>
 
+    <h4>Les clés API : deux tuiles seulement</h4>
+    <p>La quasi-totalité des tuiles fonctionne <b>sans aucune inscription</b>. Deux exceptions, à connaître dès maintenant pour ne pas croire à une panne :</p>
+    <p><b>Les fonds de carte</b> (tuiles Carte de trafic, Radar météo et Avions en vue) demandent une clé <b>CARTO</b>, gratuite et obtenue en deux minutes sur <a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener">carto.com/basemaps/apikey</a>. Elle se saisit <b>une seule fois</b>, dans les réglages généraux (l'engrenage), section « Cartes », et sert aux trois tuiles. Sans elle, les cartes s'affichent quand même mais chaque tuile d'image est barrée d'un filigrane « API KEY REQUIRED ».</p>
+    <p><b>Le trafic routier lui-même</b> (flux et incidents, par-dessus le fond de carte) demande en plus une clé <b>TomTom</b>, gratuite également, à saisir dans les réglages de la tuile Trafic.</p>
+    <p>PiBoard n'embarque aucune de ces clés : elles sont délivrées par client et ne doivent pas être partagées entre installations sans lien.</p>
+
     <p class="qs-foot">Tout est détaillé dans l'aide complète (le <b>?</b> de la barre d'outils), avec une fiche par tuile.</p>
   `,
   en: `
@@ -87,6 +93,12 @@ window.PIBOARD_QUICKSTART = {
 
     <h4>The slideshow</h4>
     <p>The picture icon starts a <b>full-screen slideshow</b> from your photos (a local folder, a USB stick or a network share, set in general settings). Touch the screen to leave it. It's also available as a tile, if you'd rather keep it in a corner of the board.</p>
+
+    <h4>API keys: two tiles only</h4>
+    <p>Nearly every tile works <b>with no sign-up at all</b>. Two exceptions, worth knowing now so you don't mistake them for a fault:</p>
+    <p><b>The base maps</b> (Traffic map, Weather radar and Planes overhead tiles) need a <b>CARTO</b> key, free and obtained in two minutes at <a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener">carto.com/basemaps/apikey</a>. You type it <b>once</b>, in the general settings (the gear), under "Maps", and it serves all three tiles. Without it the maps still appear, but every image tile is stamped with an "API KEY REQUIRED" watermark.</p>
+    <p><b>The road traffic itself</b> (flow and incidents, on top of the base map) additionally needs a <b>TomTom</b> key, also free, entered in the Traffic tile's own settings.</p>
+    <p>PiBoard ships neither key: they are issued per customer and must not be shared between unrelated installations.</p>
 
     <p class="qs-foot">Everything is covered in the full help (the <b>?</b> in the toolbar), with a page per tile.</p>
   `

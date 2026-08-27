@@ -105,6 +105,32 @@ const DEFAULT_SETTINGS = {
      see it at every launch. A single setting rather than a "seen" /
      "show again" pair: the person only has one thing to understand. */
   quickStartOnLaunch: true,
+  /* Cle CARTO des fonds de carte (tuiles Trafic, Radar, Avions).
+     Vide par defaut, et il ne peut pas en etre autrement : CARTO
+     delivre des cles PAR CLIENT, a ne pas partager entre projets sans
+     lien. Une cle embarquee dans le depot serait utilisee par toutes
+     les installations, epuiserait le quota commun et, une fois
+     revoquee, casserait les cartes de tout le monde d'un coup.
+
+     Ce n'est PAS un secret et elle ne va donc pas dans le coffre
+     chiffre (tileSecrets) : une cle CARTO circule en clair dans l'URL
+     de chaque tuile d'image, visible dans l'onglet reseau du
+     navigateur. La ranger avec les mots de passe donnerait une fausse
+     impression de confidentialite.
+
+     CARTO base map key (Traffic, Radar, Planes tiles). Empty by
+     default, and it could not be otherwise: CARTO issues PER-CUSTOMER
+     keys, not to be shared across unrelated projects. A key embedded in
+     the repository would be used by every installation, would exhaust
+     the shared quota and, once revoked, would break everyone's maps at
+     once.
+
+     This is NOT a secret and therefore does not belong in the encrypted
+     vault (tileSecrets): a CARTO key travels in the clear inside every
+     image tile's URL, visible in the browser's network tab. Filing it
+     with the passwords would give a false impression of
+     confidentiality. */
+  cartoKey: "",
   colors: {
     dark: { bg: "#0B0E14", tile: "#141926" },
     light: { bg: "#EFEDE7", tile: "#FFFFFF" }

@@ -4330,6 +4330,90 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("chaque libelle de la tuile est traduit en FR et EN", missingKeys.length === 0);
   }
 
+  console.log("== Fonds de carte CARTO : cle partagee, jamais embarquee ==");
+  {
+    /* Ce bloc existe a cause d'une panne REELLE, et surtout d'une panne
+       qui ne venait pas de notre code : CARTO a cesse de servir ses
+       fonds raster sans cle et barre desormais chaque tuile d'image
+       d'un filigrane "API KEY REQUIRED". Les trois tuiles
+       cartographiques se sont donc mises a paraitre cassees du jour au
+       lendemain, sans qu'aucune ligne de PiBoard n'ait bouge.
+
+       This block exists because of a REAL breakage, and above all one
+       that did not come from our code: CARTO stopped serving its raster
+       base maps without a key and now stamps every image tile with an
+       "API KEY REQUIRED" watermark. The three map tiles therefore began
+       to look broken overnight, without a single line of PiBoard having
+       changed. */
+    const MAP_TILES = ["traffic", "radar", "planes"];
+    for (const dir of MAP_TILES) {
+      const src = fs.readFileSync(path.join(PUB, "widgets", dir, "widget.js"), "utf8");
+      assert("la tuile " + dir + " ajoute la cle CARTO a l'URL du fond",
+        /api\.cartoKey\(\)/.test(src) && /\?key=/.test(src));
+      // La cle vient des reglages GENERAUX : trois tuiles affichant le
+      // meme fond ne doivent pas demander trois fois la meme saisie.
+      // The key comes from the GLOBAL settings: three tiles showing the
+      // same base map must not ask for the same input three times.
+      const mf = JSON.parse(fs.readFileSync(path.join(PUB, "widgets", dir, "manifest.json"), "utf8"));
+      assert("la tuile " + dir + " ne redemande pas la cle CARTO dans ses propres reglages",
+        !(mf.settings || []).some((f) => /carto/i.test(f.key)));
+    }
+
+    /* Le garde-fou le plus important du lot : une cle ecrite en dur
+       serait utilisee par TOUTES les installations a la fois. CARTO
+       delivre des cles par client et interdit de les partager entre
+       projets sans lien -- le quota commun serait epuise, et sa
+       revocation casserait les cartes de tout le monde d'un coup.
+       The most important guard here: a hard-coded key would be used by
+       EVERY installation at once. CARTO issues per-customer keys and
+       forbids sharing them across unrelated projects -- the shared
+       quota would run out, and its revocation would break everyone's
+       maps at the same moment. */
+    for (const dir of MAP_TILES) {
+      const src = fs.readFileSync(path.join(PUB, "widgets", dir, "widget.js"), "utf8");
+      assert("aucune cle CARTO en dur dans " + dir,
+        !/key=[A-Za-z0-9_-]{8,}/.test(src));
+    }
+    const appSrc = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    assert("la cle est lue a l'appel, pas figee au chargement",
+      /cartoKey: \(\) =>/.test(appSrc));
+    // Sans remontage, la carte garderait ses tuiles filigranees jusqu'au
+    // prochain rechargement de page et on croirait la cle refusee.
+    // Without a remount the map would keep its watermarked tiles until
+    // the next page reload, and one would think the key was rejected.
+    assert("changer la cle remonte les tuiles cartographiques",
+      /remountMapTiles/.test(appSrc));
+
+    const html = fs.readFileSync(path.join(PUB, "index.html"), "utf8");
+    assert("le champ de cle CARTO existe dans les reglages generaux",
+      /id="setCartoKey"/.test(html));
+    // Le champ serait inutilisable sans le lien vers la page qui delivre
+    // la cle : personne ne devine cette adresse.
+    // The field would be unusable without the link to the page issuing
+    // the key: nobody guesses that address.
+    assert("les reglages indiquent ou obtenir la cle",
+      /carto\.com\/basemaps\/apikey/.test(html));
+    const qs = fs.readFileSync(path.join(PUB, "quickstart-content.js"), "utf8");
+    // Le guide existe en deux langues : la mention doit apparaitre dans
+    // les DEUX, sinon un utilisateur anglophone n'apprendrait jamais
+    // qu'une cle est necessaire. On compte les blocs de langue, pas les
+    // occurrences de l'adresse (elle figure a la fois en href et en
+    // texte de lien).
+    // The guide exists in two languages: the mention must appear in
+    // BOTH, otherwise an English-speaking user would never learn a key
+    // is needed. We count the language blocks, not the occurrences of
+    // the address (it appears both as href and as link text).
+    assert("le guide de demarrage rapide signale les cles necessaires dans les deux langues",
+      /API keys/.test(qs) && /Les cl\u00e9s API/.test(qs) &&
+      (qs.match(/carto\.com\/basemaps\/apikey/g) || []).length >= 4);
+
+    const i18nSrc = fs.readFileSync(path.join(PUB, "i18n.js"), "utf8");
+    for (const key of ["settings.section.maps", "settings.cartoKey", "settings.cartoKey.hint", "settings.cartoKey.link"]) {
+      assert("la cle '" + key + "' est traduite en FR et EN",
+        (i18nSrc.match(new RegExp('"' + key.replace(/\./g, "\\.") + '"', "g")) || []).length === 2);
+    }
+  }
+
   console.log("== Echappement des attributs HTML ==");
   {
     const src = fs.readFileSync(path.join(PUB, "app.js"), "utf8");

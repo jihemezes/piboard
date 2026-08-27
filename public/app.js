@@ -175,6 +175,21 @@
       put: (key, value) => apiPut("/api/state/" + encodeURIComponent(key), { value })
     },
     proxyUrl: (url) => "/api/proxy?url=" + encodeURIComponent(url),
+    /* Cle CARTO des fonds de carte, partagee par les tuiles Trafic,
+       Radar et Avions. Elle vit dans les reglages GENERAUX et non dans
+       chaque tuile : les trois affichent le meme fond, et la ressaisir
+       trois fois n'aurait aucun sens.
+       Lue a l'appel et non capturee : `settings` est remplace a chaque
+       enregistrement, une capture renverrait donc l'ancienne valeur
+       apres modification.
+       CARTO base map key, shared by the Traffic, Radar and Planes
+       tiles. It lives in the GLOBAL settings rather than in each tile:
+       all three show the same base map, and re-typing it three times
+       would make no sense.
+       Read at call time rather than captured: `settings` is replaced on
+       every save, so a capture would return the stale value after a
+       change. */
+    cartoKey: () => (settings && settings.cartoKey ? String(settings.cartoKey).trim() : ""),
     /* Appelle une URL de notification (webhook) via le serveur, pour eviter
        tout probleme de CORS. Utilisable avec ntfy.sh, Voice Monkey (Alexa),
        l'API SMS Free Mobile, Home Assistant, Pushover, IFTTT, etc.
@@ -2819,6 +2834,7 @@
     $("setTouch").checked = !!settings.touchMode;
     $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
     $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
+    $("setCartoKey").value = settings.cartoKey || "";
     // Couverture des tiroirs : lue depuis leur etat reel (persiste via
     // le layout, pas les reglages generaux -- voir le commentaire sur
     // les ecouteurs "change" plus bas) plutot que dupliquee ici.
@@ -2853,6 +2869,7 @@
       touchMode: $("setTouch").checked,
       multiColumnForms: $("setMultiColumnForms").checked,
       quickStartOnLaunch: $("setQuickStart").checked,
+      cartoKey: $("setCartoKey").value.trim(),
       colors: {
         dark: { bg: $("setDarkBg").value, tile: $("setDarkTile").value },
         light: { bg: $("setLightBg").value, tile: $("setLightTile").value }
@@ -2889,12 +2906,48 @@
       }
     }
 
+    /* Un changement de cle CARTO doit se voir tout de suite. Les tuiles
+       cartographiques construisent leur URL de fond une seule fois, a
+       la creation de la couche Leaflet : sans remontage, la carte
+       garderait ses tuiles filigranees jusqu'au prochain rechargement
+       de page, et on croirait la cle refusee alors qu'elle est bonne.
+       A CARTO key change must show immediately. The map tiles build
+       their base URL once, when the Leaflet layer is created: without a
+       remount the map would keep its watermarked tiles until the next
+       page reload, and one would think the key was rejected when it is
+       in fact fine. */
+    const cartoChanged = (settings.cartoKey || "") !== body.cartoKey;
+
     settings = await apiPut("/api/settings", body);
+    if (cartoChanged) remountMapTiles();
     $("settingsModal").hidden = true;
     vkb.hide();
     applySettings();
     vkb.setEnabled(!!settings.keyboardEnabled);
     vkb.setLang(settings.lang);
+  }
+
+  /* Les trois tuiles qui partagent le fond de carte CARTO. Liste
+     explicite plutot qu'une detection : une tuile qui n'affiche pas de
+     carte n'a aucune raison d'etre redemarree, et un remontage inutile
+     relance des appels reseau.
+     The three tiles sharing the CARTO base map. An explicit list rather
+     than detection: a tile showing no map has no reason to be
+     restarted, and a needless remount re-fires network calls. */
+  const MAP_WIDGETS = ["traffic", "radar", "planes"];
+
+  function remountMapTiles() {
+    for (const rec of tiles.values()) {
+      if (!MAP_WIDGETS.includes(rec.conf.widget)) continue;
+      // Remontage COMPLET et non onSettingsChanged : la couche de fond
+      // Leaflet doit etre reconstruite, ce qu'un simple rafraichissement
+      // des reglages ne fait pas.
+      // FULL remount rather than onSettingsChanged: the Leaflet base
+      // layer has to be rebuilt, which merely refreshing the settings
+      // does not do.
+      destroyInstance(rec);
+      startWidget(rec);
+    }
   }
 
   /* Autocompletion de ville (Open-Meteo, comme City Road Traffic)

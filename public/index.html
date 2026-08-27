@@ -258,6 +258,16 @@
       </fieldset>
 
       <fieldset class="form-section">
+        <legend data-i18n="settings.section.maps">Maps</legend>
+        <label class="field">
+          <span data-i18n="settings.cartoKey">CARTO base map key</span>
+          <input type="text" id="setCartoKey" autocomplete="off" spellcheck="false" placeholder="">
+        </label>
+        <small class="field-hint" data-i18n="settings.cartoKey.hint">Needed by the Traffic map, Weather radar and Planes overhead tiles, which share the same base map. Free and takes two minutes: request one at carto.com/basemaps/apikey. Without it, CARTO stamps "API KEY REQUIRED" across every map tile — the maps still work, but they look broken.</small>
+        <p class="hint"><a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener" data-i18n="settings.cartoKey.link">Request a free CARTO key</a></p>
+      </fieldset>
+
+      <fieldset class="form-section">
         <legend data-i18n="settings.section.touch">Touchscreen</legend>
         <label class="field checkbox">
           <input type="checkbox" id="setKeyboard">

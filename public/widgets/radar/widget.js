@@ -177,7 +177,26 @@
       let key = this.ctx.settings.basemap || "voyager";
       if (key === "auto") key = document.body.dataset.theme === "light" ? "light" : "dark";
       const style = BASEMAPS[key] || BASEMAPS.voyager;
-      return `https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png`;
+      /* La cle CARTO est passee en parametre `key`. Sans elle, CARTO
+         sert depuis peu des tuiles barrees d'un filigrane
+         "API KEY REQUIRED" -- la carte fonctionne toujours, mais elle a
+         l'air cassee. La cle est gratuite et se demande sur
+         carto.com/basemaps/apikey ; elle se saisit UNE FOIS dans les
+         reglages generaux, section "Cartes", et sert aux trois tuiles
+         cartographiques.
+         Elle n'est pas embarquee dans PiBoard : CARTO delivre des cles
+         par client, a ne pas partager entre projets sans lien.
+         The CARTO key is passed as a `key` parameter. Without it, CARTO
+         has recently begun serving tiles stamped with an
+         "API KEY REQUIRED" watermark -- the map still works, but it
+         looks broken. The key is free, requested at
+         carto.com/basemaps/apikey; it is typed ONCE in the global
+         settings, "Maps" section, and serves all three map tiles.
+         It is not shipped inside PiBoard: CARTO issues per-customer
+         keys, not to be shared across unrelated projects. */
+      const apiKey = (this.ctx.api && this.ctx.api.cartoKey) ? this.ctx.api.cartoKey() : "";
+      const suffix = apiKey ? "?key=" + encodeURIComponent(apiKey) : "";
+      return `https://{s}.basemaps.cartocdn.com/${style}/{z}/{x}/{y}{r}.png` + suffix;
     }
 
     buildMap() {
