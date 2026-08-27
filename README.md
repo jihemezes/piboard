@@ -11,7 +11,7 @@
 ### Features
 
 - **Tile grid** — 12-column grid, tiles are moved and resized by drag and drop (edit mode), layout is saved on the server so every screen shows the same board.
-- **28 widgets** — weather, clock, calendar, mail, traffic, TV guide, slideshow, stocks, Home Assistant, energy tariff, and more (full list below). Adding a widget to the collection is just adding a folder — see [docs/WIDGETS.md](docs/WIDGETS.md).
+- **29 widgets** — weather, clock, calendar, mail, traffic, TV guide, slideshow, stocks, Home Assistant, energy tariff, and more (full list below). Adding a widget to the collection is just adding a folder — see [docs/WIDGETS.md](docs/WIDGETS.md).
 - **Hidden toolbar** — a discreet pull tab at the bottom edge reveals the toolbar: add tile, edit mode, settings, built-in help, and an "exit dashboard" menu with two choices — reset the dashboard (a plain reload) or return to the Raspberry Pi OS desktop without relaunching it (handy for a one-off task on the touchscreen, no keyboard or SSH needed). Nothing else ever covers the board.
 - **Touch mode** — an opt-in setting that enlarges every interactive target (buttons, handles, pull tabs, form fields) for fingers on a touchscreen. Config windows then automatically arrange into 1–3 columns based on content, to cut down on scrolling.
 - **Screen saver** — up to 5 time slots that turn the screen black (a software overlay — no physical power-off, kept off by design for reliability) or into a photo-frame slideshow, with a manual "start now" toolbar button too, independent of the schedule. Useful overnight or when no one's around. A touch/click/key wakes it up instantly; while still inside a scheduled slot, it goes back to sleep on its own after a configurable idle delay if nothing else happens.
@@ -41,7 +41,7 @@ The catalog groups them by family — the same grouping you see when adding a ti
 
 **Sport** — live scores, motorsport schedule (full F1/MotoGP race-weekend session timetable), league standings (football, rugby, NBA).
 
-**System & network** — system status (CPU/RAM/disk/temperature, network adapter IP addresses with a full configuration window — gateway, DHCP, lease, DNS, domain suffix — and live usage charts on tap), network scan (pings the local subnet, cross-checked against the ARP table, lists active hosts), **AI usage** (progress bars for your Claude account limits — the 5-hour and 7-day windows — with reset times; percentages come from the provider, nothing is estimated).
+**System & network** — system status (CPU/RAM/disk/temperature, network adapter IP addresses with a full configuration window — gateway, DHCP, lease, DNS, domain suffix — and live usage charts on tap), **Internet health** (latency, jitter and packet loss measured continuously by the server, 24 h curve with outages flagged, periodic capped speed tests, and on-demand CSV archiving), network scan (pings the local subnet, cross-checked against the ARP table, lists active hosts), **AI usage** (progress bars for your Claude account limits — the 5-hour and 7-day windows — with reset times; percentages come from the provider, nothing is estimated).
 
 **Miscellaneous** — countdown/timer (screen flash, beep, notification webhook), quote of the day (offline, auto-fit text).
 
@@ -235,7 +235,7 @@ Several widgets call free, keyless public APIs: Open-Meteo (weather, geocoding, 
 ### Fonctionnalités
 
 - **Grille de tuiles** — grille 12 colonnes, tuiles déplaçables et redimensionnables en glisser-déposer (mode édition), disposition enregistrée côté serveur : tous les écrans affichent le même tableau.
-- **28 widgets** — météo, horloge, agenda, courriel, trafic, programme TV, diaporama, bourse, Home Assistant, tarif électrique, et d'autres (liste complète plus bas). Ajouter un widget à la collection = ajouter un dossier — voir [docs/WIDGETS.md](docs/WIDGETS.md).
+- **29 widgets** — météo, horloge, agenda, courriel, trafic, programme TV, diaporama, bourse, Home Assistant, tarif électrique, et d'autres (liste complète plus bas). Ajouter un widget à la collection = ajouter un dossier — voir [docs/WIDGETS.md](docs/WIDGETS.md).
 - **Barre d'outils escamotable** — une languette discrète en bas d'écran révèle la barre : ajout de tuile, mode édition, paramètres, aide intégrée, et un menu « quitter le tableau de bord » à deux choix — réinitialiser le tableau de bord (un simple rechargement) ou revenir au bureau de Raspberry Pi OS sans le relancer (pratique pour une tâche ponctuelle sur l'écran tactile, sans clavier ni SSH). Rien d'autre n'empiète jamais sur le tableau.
 - **Mode tactile** — un réglage optionnel qui agrandit toutes les cibles interactives (boutons, poignées, languettes, champs de formulaire) pour les doigts sur un écran tactile. Les fenêtres de configuration se répartissent alors automatiquement sur 1 à 3 colonnes selon leur contenu, pour limiter le défilement.
 - **Économiseur d'écran** — jusqu'à 5 plages horaires qui font passer l'écran au noir (un calque logiciel — jamais d'extinction physique, volontairement évitée pour la fiabilité) ou en diaporama façon cadre photo, avec aussi un bouton « lancer maintenant » dans la barre d'outils, indépendant du calendrier. Utile la nuit ou quand personne n'est présent. Un tap/clic/touche le réveille instantanément ; tant qu'on reste dans une plage programmée, il repart tout seul en veille après un délai d'inactivité réglable si rien ne se passe.
@@ -265,7 +265,7 @@ Le catalogue les regroupe par famille — le même classement qu'à l'ajout d'un
 
 **Sport** — scores en direct, sports mécaniques (programme complet des séances d'un week-end F1/MotoGP), classements (football, rugby, NBA).
 
-**Système & réseau** — état système (CPU/RAM/disque/température, adresses IP des cartes réseau avec une fenêtre de configuration complète — passerelle, DHCP, bail, DNS, suffixe de domaine — et courbes d'utilisation en direct au clic), analyse réseau (ping du sous-réseau local, recoupé avec la table ARP, liste des hôtes actifs), **quotas IA** (barres de progression des limites de votre compte Claude — fenêtres de 5 heures et de 7 jours — avec les heures de réinitialisation ; les pourcentages viennent du service, rien n'est estimé).
+**Système & réseau** — état système (CPU/RAM/disque/température, adresses IP des cartes réseau avec une fenêtre de configuration complète — passerelle, DHCP, bail, DNS, suffixe de domaine — et courbes d'utilisation en direct au clic), **santé Internet** (latence, gigue et perte de paquets mesurées en continu par le serveur, courbe sur 24 h avec les coupures signalées, tests de débit périodiques et plafonnés, archivage CSV à la demande), analyse réseau (ping du sous-réseau local, recoupé avec la table ARP, liste des hôtes actifs), **quotas IA** (barres de progression des limites de votre compte Claude — fenêtres de 5 heures et de 7 jours — avec les heures de réinitialisation ; les pourcentages viennent du service, rien n'est estimé).
 
 **Divers** — compte à rebours / minuteur (flash d'écran, bip, webhook de notification), citation du jour (hors-ligne, ajustement automatique du texte).
 

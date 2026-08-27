@@ -2483,7 +2483,7 @@
        The AI usage tile joins "System & Network": like System status, it
        watches a consumption against a limit, even though the resource
        watched is not the machine's own. */
-    { key: "system", ids: ["system", "networkscan", "aiusage"] },
+    { key: "system", ids: ["system", "speedtest", "networkscan", "aiusage"] },
     { key: "misc", ids: ["clock", "countdown", "quote"] }
   ];
 

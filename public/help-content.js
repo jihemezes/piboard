@@ -1316,6 +1316,118 @@
     },
 
     {
+      id: "speedtest",
+      group: "tiles",
+      title: { fr: "Santé Internet", en: "Internet health" },
+      sub: {
+        fr: "Latence, gigue et perte de paquets mesurées en continu, avec une courbe sur 24 h, des tests de débit périodiques et l'archivage en CSV.",
+        en: "Latency, jitter and packet loss measured continuously, with a 24 h curve, periodic speed tests and CSV archiving."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 3×3 par défaut, de 2×2 à 8×6</span>
+          <h4>Objectif</h4>
+          <p>Savoir si la connexion Internet <b>a été</b> bonne, et pas seulement si elle l'est à l'instant où l'on regarde. Un test de débit lancé depuis un site quand on soupçonne un problème ne dit rien de la coupure de trois minutes survenue à 4 h du matin — c'est pourtant elle que l'on cherche quand la visio a lâché la veille, ou quand on veut montrer quelque chose de concret à son fournisseur d'accès.</p>
+
+          <h4>Ce qui est mesuré, et pourquoi c'est le serveur qui mesure</h4>
+          <p>Les relevés sont faits <b>par le serveur PiBoard, en continu</b>, qu'un écran soit allumé ou non, et ils sont <b>partagés par tous vos écrans</b>. C'est le point central de cette tuile : une mesure faite par le navigateur n'existerait que tant que la page est ouverte et repartirait de zéro à chaque rechargement, ce qui priverait la courbe de tout intérêt.</p>
+          <p>Chaque relevé (toutes les minutes par défaut) donne trois chiffres :</p>
+          <div class="help-opt"><span class="help-opt-name">Latence</span><span class="help-opt-desc">Le temps d'un aller-retour réseau, en millisecondes. La tuile retient la <b>médiane</b> des sondes, pas leur moyenne : un seul aller-retour ralenti par une retransmission ferait bondir une moyenne et afficherait un pic qui ne reflète pas l'état de la ligne.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Gigue</span><span class="help-opt-desc">La variation de la latence d'une sonde à la suivante. C'est elle, et non la latence moyenne, qui hache un appel visio.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Perte</span><span class="help-opt-desc">La part des sondes restées sans réponse.</span></div>
+          <p>Une pastille de couleur résume les trois en quatre états lisibles de loin — <b>Bonne</b>, <b>Moyenne</b>, <b>Mauvaise</b>, <b>Hors ligne</b> — plutôt qu'un score sur 100 qu'il faudrait interpréter. Les seuils sont ceux de la visioconférence, l'usage le plus exigeant d'un foyer.</p>
+          <p>Une ligne qui ne répond pas affiche « aucune réponse » <b>et pas « 0 ms »</b> : une latence absente n'est pas une latence nulle, et les confondre annoncerait une connexion excellente pendant une panne.</p>
+
+          <h4>Pas de ping système : pourquoi, et ce que ça change</h4>
+          <p>La mesure n'utilise pas la commande <code>ping</code>. ICMP réclame des privilèges administrateur sous Linux, et l'appel de la commande diffère d'un système à l'autre — ce serait du code spécifique à une plateforme, ce que PiBoard s'interdit. PiBoard mesure donc le temps d'établissement d'une <b>connexion TCP</b> vers un résolveur DNS public, sur le port 443. C'est identique sur Raspberry Pi, Windows et macOS, et sans aucun privilège particulier.</p>
+          <p>Conséquence à connaître : le chiffre obtenu est <b>quelques millisecondes au-dessus</b> d'un ping ICMP classique, puisqu'il inclut la poignée de main TCP. Cela n'a aucune importance pour lire une <i>tendance</i>, mais ne comparez pas directement ce chiffre à celui d'un <code>ping</code> en ligne de commande.</p>
+
+          <h4>Tests de débit : rares, et plafonnés</h4>
+          <p>Mesurer un débit <b>consomme</b> du débit. Le faire chaque minute saturerait la ligne en permanence et fausserait au passage la mesure de latence. Les tests de débit sont donc espacés — <b>toutes les 3 heures par défaut</b> — et chacun est plafonné <b>deux fois</b> : en volume (jamais plus que ce qu'annoncent les réglages) et en durée (contre une ligne effondrée où 20 Mo mettraient des minutes à descendre). Aux réglages par défaut, cela représente environ 160 Mo par jour ; régler l'intervalle sur <b>0 désactive complètement</b> les tests de débit, la latence continuant d'être mesurée.</p>
+          <p>Le débit montant est <b>désactivé par défaut</b> : saturer la voie montante ralentit tout le reste du foyer pendant la durée du test.</p>
+          <p>La tuile affiche le <b>dernier débit connu</b>, même s'il date de plusieurs heures, avec son horodatage. Masquer la valeur entre deux mesures laisserait une case vide 99 % du temps, ce qui serait moins utile que de la dater.</p>
+
+          <h4>Aucune tuile, aucun trafic</h4>
+          <p>Le serveur lit ses réglages dans la tuile elle-même. <b>Tant qu'aucune tuile « Santé Internet » n'est posée sur le tableau, absolument rien n'est mesuré</b> et aucune requête n'est émise. Si plusieurs tuiles de ce type coexistent, la première fait foi : l'historique étant unique et partagé, il n'y a qu'un seul rythme de mesure possible.</p>
+          <p>Notez que le réglage « Rafraîchissement de la tuile » ne change <b>que</b> la fréquence à laquelle la tuile relit les relevés. Le rythme de mesure se règle, lui, dans la section « Mesure de la latence ».</p>
+
+          <h4>La fenêtre de détail</h4>
+          <p><b>Un clic n'importe où sur la tuile</b> ouvre une fenêtre avec la courbe complète : choix de la profondeur (1 h, 6 h, 24 h, 72 h) et de la grandeur affichée (latence, gigue, perte, débit), la valeur courante, les minimum / moyenne / maximum, le nombre de relevés et le taux de <b>disponibilité</b> — c'est ce dernier chiffre que l'on montre à un fournisseur d'accès.</p>
+          <p>Les <b>coupures</b> sont signalées par une bande rouge verticale, et le tracé est <b>rompu</b> à cet endroit plutôt que relié : une ligne qui traverse une coupure laisserait croire à une dégradation progressive, alors qu'il n'y avait rien du tout.</p>
+          <p>Pour la perte de paquets, l'échelle est fixée de 0 à 100 % ; pour la latence et le débit, qui n'ont pas de maximum naturel, elle s'ajuste au contenu mais <b>toujours depuis zéro</b>, afin que la hauteur du trait reste proportionnelle à la valeur.</p>
+          <p>Le bouton <b>Tester maintenant</b> lance immédiatement un relevé complet, débit compris, sans attendre le prochain intervalle.</p>
+
+          <h4>Archivage en CSV</h4>
+          <p>Le serveur conserve <b>72 heures</b> de relevés. Cette profondeur est volontairement limitée : le fichier vit dans le dossier de données, et donc dans <i>chaque</i> sauvegarde de configuration. La conservation longue durée se fait par l'export CSV, dans un fichier à vous.</p>
+          <p>Deux boutons, qui ne répondent pas au même besoin :</p>
+          <div class="help-opt"><span class="help-opt-name">Télécharger le CSV</span><span class="help-opt-desc">Téléchargement classique par le navigateur. Pratique depuis un PC qui consulte le tableau à distance.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Archiver sur le PiBoard</span><span class="help-opt-desc">Écrit le fichier sur la machine qui héberge PiBoard, dans <code>data/exports/</code>, sous un nom horodaté. Depuis l'écran mural en mode kiosque, un téléchargement atterrirait dans un dossier que personne n'ira jamais ouvrir ; une archive, elle, se retrouve à un chemin connu, récupérable en SSH ou par un partage réseau. Le chemin complet est affiché après l'écriture, et les dernières archives sont listées dans la fenêtre, retéléchargeables d'un clic.</span></div>
+          <p>Le fichier propose deux dialectes, et c'est un choix offert plutôt qu'un défaut imposé : un tableur configuré en français attend le <b>point-virgule et la virgule décimale</b> (lui donner un fichier « international » afficherait toute la ligne dans une seule cellule), un outil d'analyse attend l'inverse. Un BOM UTF-8 est ajouté pour que les accents s'affichent correctement sous Windows.</p>
+          <p>Colonnes : date ISO, horodatage en millisecondes, latence, gigue, perte, débits descendant et montant, et l'état calculé. Une mesure absente laisse une cellule <b>vide</b>, jamais un zéro : un zéro serait pris pour une mesure réelle.</p>
+
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement de la tuile</span><span class="help-opt-desc">Fréquence de relecture des relevés. Ne change pas la fréquence de mesure.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Profondeur de la courbe</span><span class="help-opt-desc">De 1 à 72 h, la profondeur conservée par le serveur.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Intervalle entre deux relevés</span><span class="help-opt-desc">Le rythme réel de mesure de la latence, de 30 s à 15 min.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Sondes par relevé</span><span class="help-opt-desc">De 3 à 10. Le relevé retient leur médiane ; les sondes sans réponse donnent le pourcentage de perte.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Cibles</span><span class="help-opt-desc">Jusqu'à 5 adresses <code>hôte:port</code>, utilisées à tour de rôle. Résolveurs DNS publics par défaut, port 443 si omis — c'est le seul port qu'un réseau d'entreprise ou un hotspot laisse passer à coup sûr.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Intervalle / volume / durée du test de débit</span><span class="help-opt-desc">0 minute désactive les tests. Le volume et la durée sont deux plafonds fermes appliqués simultanément.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Adresses des tests</span><span class="help-opt-desc">Point de mesure gratuit et sans clé de Cloudflare par défaut, remplaçable par votre propre serveur.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Profondeur exportée / Format du CSV</span><span class="help-opt-desc">Ce que reprennent les deux boutons d'export.</span></div>`,
+        en: `
+          <span class="help-size">Size: 3×3 by default, from 2×2 to 8×6</span>
+          <h4>Goal</h4>
+          <p>To know whether the Internet connection <b>has been</b> good, not merely whether it is good at the moment one looks. A speed test run from a website when a problem is suspected says nothing about the three-minute outage at 4am — yet that is what one is after when a video call dropped the day before, or when one wants to show something concrete to an ISP.</p>
+
+          <h4>What is measured, and why the server measures it</h4>
+          <p>Readings are taken <b>by the PiBoard server, continuously</b>, whether or not a screen is on, and they are <b>shared by all your screens</b>. This is the heart of the tile: a reading taken by the browser would only exist while the page is open and would restart from scratch on every reload, robbing the curve of any point.</p>
+          <p>Each reading (every minute by default) yields three figures:</p>
+          <div class="help-opt"><span class="help-opt-name">Latency</span><span class="help-opt-desc">The time of a network round trip, in milliseconds. The tile keeps the <b>median</b> of the probes, not their mean: a single round trip slowed by a retransmission would make an average jump and would show a spike that does not reflect the state of the line.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Jitter</span><span class="help-opt-desc">The variation of latency from one probe to the next. It is jitter, not average latency, that chops up a video call.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Loss</span><span class="help-opt-desc">The share of probes that got no answer.</span></div>
+          <p>A coloured dot sums the three up in four states readable across a room — <b>Good</b>, <b>Fair</b>, <b>Poor</b>, <b>Offline</b> — rather than a score out of 100 that would need interpreting. The thresholds are those of video calling, the most demanding household use.</p>
+          <p>A line that does not answer shows "no answer" <b>and not "0 ms"</b>: an absent latency is not a zero latency, and confusing the two would announce an excellent connection during an outage.</p>
+
+          <h4>No system ping: why, and what it changes</h4>
+          <p>The measurement does not use the <code>ping</code> command. ICMP requires administrator privileges on Linux, and invoking the command differs from one system to the next — that would be platform-specific code, which PiBoard forbids itself. PiBoard therefore measures the time to establish a <b>TCP connection</b> to a public DNS resolver, on port 443. This is identical on Raspberry Pi, Windows and macOS, and needs no special privilege.</p>
+          <p>Worth knowing: the resulting figure is <b>a few milliseconds above</b> a classic ICMP ping, since it includes the TCP handshake. This does not matter at all for reading a <i>trend</i>, but do not compare this figure directly with a command-line <code>ping</code>.</p>
+
+          <h4>Speed tests: rare, and capped</h4>
+          <p>Measuring throughput <b>consumes</b> throughput. Doing it every minute would saturate the line permanently and skew the latency reading along the way. Speed tests are therefore spaced out — <b>every 3 hours by default</b> — and each is capped <b>twice</b>: in volume (never more than the settings announce) and in duration (against a collapsed line where 20 MB would take minutes to arrive). At the default settings this is about 160 MB a day; setting the interval to <b>0 switches speed tests off entirely</b>, while latency keeps being measured.</p>
+          <p>Upload speed is <b>off by default</b>: saturating the uplink slows down everything else in the home for the duration of the test.</p>
+          <p>The tile shows the <b>last known throughput</b>, even hours old, with its timestamp. Hiding the value between two readings would leave an empty box 99% of the time, which would be less useful than dating it.</p>
+
+          <h4>No tile, no traffic</h4>
+          <p>The server reads its settings from the tile itself. <b>As long as no "Internet health" tile sits on the board, absolutely nothing is measured</b> and no request is issued. If several such tiles coexist, the first one wins: the history being single and shared, there can only be one measurement pace.</p>
+          <p>Note that the "Tile refresh" setting only changes how often the tile re-reads the readings. The measurement pace is set in the "Latency measurement" section.</p>
+
+          <h4>The detail window</h4>
+          <p><b>Clicking anywhere on the tile</b> opens a window with the full curve: choice of depth (1 h, 6 h, 24 h, 72 h) and of the quantity shown (latency, jitter, loss, throughput), the current value, the minimum / average / maximum, the number of readings and the <b>availability</b> rate — that last figure is the one to show an ISP.</p>
+          <p><b>Outages</b> are flagged by a vertical red band, and the stroke is <b>broken</b> there rather than bridged: a line crossing an outage would suggest a gradual degradation, when there was nothing at all.</p>
+          <p>For packet loss the scale is fixed from 0 to 100%; for latency and throughput, which have no natural maximum, it fits the content but <b>always from zero</b>, so the stroke's height stays proportional to the value.</p>
+          <p>The <b>Test now</b> button immediately runs a full reading, throughput included, without waiting for the next interval.</p>
+
+          <h4>CSV archiving</h4>
+          <p>The server keeps <b>72 hours</b> of readings. That depth is deliberately limited: the file lives in the data folder, and therefore inside <i>every</i> configuration backup. Long-term keeping is done through the CSV export, in a file of your own.</p>
+          <p>Two buttons, answering different needs:</p>
+          <div class="help-opt"><span class="help-opt-name">Download the CSV</span><span class="help-opt-desc">A classic browser download. Handy from a PC viewing the board remotely.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Archive on the PiBoard</span><span class="help-opt-desc">Writes the file on the machine hosting PiBoard, under <code>data/exports/</code>, with a timestamped name. From the wall screen in kiosk mode a download would land in a folder nobody will ever open; an archive, by contrast, sits at a known path, retrievable over SSH or through a network share. The full path is shown after writing, and the latest archives are listed in the window, re-downloadable in one click.</span></div>
+          <p>The file offers two dialects, and this is an offered choice rather than an imposed default: a spreadsheet set to French expects the <b>semicolon and the decimal comma</b> (handing it an "international" file would drop the whole row into a single cell), an analysis tool expects the opposite. A UTF-8 BOM is added so accents display correctly on Windows.</p>
+          <p>Columns: ISO date, millisecond timestamp, latency, jitter, loss, download and upload throughput, and the computed status. A missing measurement leaves an <b>empty</b> cell, never a zero: a zero would be taken for a real reading.</p>
+
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Tile refresh</span><span class="help-opt-desc">How often readings are re-read. Does not change how often they are taken.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Curve depth</span><span class="help-opt-desc">From 1 to 72 h, the depth kept by the server.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Interval between two readings</span><span class="help-opt-desc">The actual latency measurement pace, from 30 s to 15 min.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Probes per reading</span><span class="help-opt-desc">From 3 to 10. The reading keeps their median; probes with no answer give the loss percentage.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Targets</span><span class="help-opt-desc">Up to 5 <code>host:port</code> addresses, used in turn. Public DNS resolvers by default, port 443 if omitted — the one port a corporate network or a hotspot is sure to let through.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Speed test interval / volume / duration</span><span class="help-opt-desc">0 minutes switches tests off. Volume and duration are two hard caps applied simultaneously.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Test addresses</span><span class="help-opt-desc">Cloudflare's free, keyless endpoint by default, replaceable with your own server.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Depth exported / CSV format</span><span class="help-opt-desc">What the two export buttons use.</span></div>`
+      }
+    },
+
+    {
       id: "networkscan",
       group: "tiles",
       title: { fr: "Analyse réseau", en: "Network scan" },

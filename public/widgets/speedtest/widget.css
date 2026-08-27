@@ -1,0 +1,256 @@
+/* PiBoard - widgets/speedtest/widget.css
+
+   Toutes les regles partent de `.pw-speed` (la tuile) ou de
+   `.pwih-modal` (la fenetre de detail). C'est la regle de cloisonnement
+   du projet, verifiee par dom-smoke.js : les feuilles de TOUS les
+   widgets sont chargees dans le MEME document, donc une classe non
+   prefixee ecraserait la meme classe chez un autre widget.
+
+   Every rule starts from `.pw-speed` (the tile) or `.pwih-modal` (the
+   detail window). This is the project's namespacing rule, checked by
+   dom-smoke.js: EVERY widget's stylesheet is loaded into the SAME
+   document, so an unprefixed class would override the same class in
+   another widget. */
+
+.pw-speed {
+  /* Couleur des coupures, definie une seule fois et reutilisee par la
+     mini-courbe et par la grande. Deliberement la meme que la pastille
+     "hors ligne" : une bande rouge sur la courbe et la pastille rouge
+     doivent se lire comme la meme information.
+     Outage colour, defined once and reused by both the sparkline and
+     the full chart. Deliberately the same as the "offline" dot: a red
+     band on the curve and the red dot must read as the same
+     information. */
+  --pwsp-down: #E0556F;
+  --pwsp-poor: #E0556F;
+  --pwsp-fair: #E0A63C;
+  --pwsp-good: #3FA96B;
+
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  cursor: pointer;
+  /* Convention tactile du projet : sans cela, Chromium en kiosque
+     retarde le geste de 300 ms pour guetter un double-tap.
+     The project's touch convention: without it, Chromium in kiosk mode
+     delays the gesture by 300 ms watching for a double tap. */
+  touch-action: manipulation;
+}
+
+.pw-speed .pwsp-msg {
+  margin: auto;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  padding: 0 8px;
+}
+
+.pw-speed .pwsp-top {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pw-speed .pwsp-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+  background: var(--muted);
+}
+.pw-speed .pwsp-good { background: var(--pwsp-good); }
+.pw-speed .pwsp-fair { background: var(--pwsp-fair); }
+.pw-speed .pwsp-poor { background: var(--pwsp-poor); }
+.pw-speed .pwsp-down { background: var(--pwsp-down); }
+.pw-speed .pwsp-status {
+  color: var(--text);
+  font-size: 12.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* L'age du releve cede la place en premier quand la tuile est etroite :
+   c'est l'information la moins critique de la ligne.
+   The reading's age is the first to give way on a narrow tile: it is
+   the least critical information on the row. */
+.pw-speed .pwsp-age {
+  margin-left: auto;
+  font-family: var(--mono);
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.pw-speed .pwsp-main {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  line-height: 1;
+}
+.pw-speed .pwsp-big {
+  font-size: 2.4em;
+  font-variant-numeric: tabular-nums;
+  color: var(--text);
+}
+/* Une ligne qui ne repond pas n'affiche pas un chiffre : elle affiche
+   un mot, en rouge. Un "0 ms" serait le contraire de la verite.
+   A line that does not answer shows no figure: it shows a word, in red.
+   A "0 ms" would be the opposite of the truth. */
+.pw-speed .pwsp-off {
+  font-size: 1.3em;
+  color: var(--pwsp-down);
+}
+.pw-speed .pwsp-unit { font-size: 1em; color: var(--muted); }
+
+.pw-speed .pwsp-metrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: 11.5px;
+}
+.pw-speed .pwsp-metric {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  min-width: 0;
+}
+.pw-speed .pwsp-metric > span { color: var(--muted); }
+.pw-speed .pwsp-metric > b {
+  font-weight: 500;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pw-speed .pwsp-spark {
+  width: 100%;
+  height: 40px;
+  flex: 0 1 auto;
+  min-height: 22px;
+}
+
+.pw-speed .pwsp-foot {
+  font-size: 11px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------- Fenetre de detail / detail window ---------- */
+
+.pwih-modal { width: min(860px, 94vw); max-height: 90vh; display: flex; flex-direction: column; }
+.pwih-modal .pwih-body { padding: 4px 22px 20px; overflow-y: auto; }
+
+.pwih-modal .pwih-bars {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.pwih-modal .pwih-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.pwih-modal .pwih-chip {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwih-modal .pwih-chip.active { color: var(--text); border-color: var(--muted); }
+body.touch .pwih-modal .pwih-chip { font-size: 15px; padding: 8px 19px; }
+
+.pwih-modal .pwih-now { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+.pwih-modal .pwih-now-val { font-size: 26px; font-variant-numeric: tabular-nums; color: var(--text); }
+.pwih-modal .pwih-now-lbl { font-size: 13px; color: var(--muted); }
+
+.pwih-modal .pwih-chart {
+  width: 100%;
+  height: 220px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--tile-edge);
+}
+.pwih-modal .pwih-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+  margin-top: 4px;
+}
+
+.pwih-modal .pwih-stats {
+  margin: 14px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+.pwih-modal .pwih-stat {
+  border: 1px solid var(--tile-edge);
+  border-radius: 9px;
+  padding: 8px 10px;
+}
+.pwih-modal .pwih-stat dt { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.pwih-modal .pwih-stat dd {
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.pwih-modal .pwih-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+
+.pwih-modal .pwih-note {
+  margin-top: 10px;
+  font-size: 12.5px;
+  color: var(--muted);
+  /* Le chemin d'archive est long et n'a aucun espace : sans coupure
+     forcee il deborderait de la fenetre.
+     The archive path is long and holds no spaces: without a forced
+     break it would overflow the window. */
+  word-break: break-all;
+}
+.pwih-modal .pwih-note-ok { color: var(--pwsp-good, #3FA96B); }
+.pwih-modal .pwih-note-err { color: var(--pwsp-down, #E0556F); }
+
+.pwih-modal .pwih-archives { margin-top: 14px; }
+.pwih-modal .pwih-archives-title { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.pwih-modal .pwih-archive {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  margin-bottom: 6px;
+  text-decoration: none;
+  color: inherit;
+  touch-action: manipulation;
+}
+.pwih-modal .pwih-archive:hover { background: var(--tile-edge); }
+.pwih-modal .pwih-archive-name {
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwih-modal .pwih-archive-size {
+  font-size: 11.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.pwih-modal .pwih-hint { margin-top: 14px; font-size: 12.5px; color: var(--muted); }

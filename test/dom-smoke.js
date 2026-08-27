@@ -4247,6 +4247,89 @@ function catalogItemFor(catalog, document, widgetId) {
       y(150) === y(100) && y(-10) === y(0));
   }
 
+  console.log("== Sante Internet : mesure serveur, coupures et export ==");
+  {
+    const src = fs.readFileSync(path.join(PUB, "widgets/speedtest/widget.js"), "utf8");
+    const srvSrc = fs.readFileSync(path.join(ROOT, "server/internetHealth.js"), "utf8");
+
+    /* Le point le plus important de cette tuile : elle ne mesure RIEN
+       elle-meme. Si un jour on y glissait une mesure cote client,
+       l'historique repartirait de zero a chaque rechargement de page et
+       la tuile perdrait sa raison d'etre. La tuile ne doit donc lire
+       que les points d'entree du serveur.
+       The most important point of this tile: it measures NOTHING
+       itself. If a client-side measurement ever slipped in, the history
+       would restart from scratch on every page reload and the tile
+       would lose its purpose. So the tile must only read the server's
+       endpoints. */
+    assert("la tuile lit l'etat mesure par le serveur",
+      /\/api\/internet-health/.test(src));
+    assert("la tuile ne mesure rien elle-meme (aucun chronometre de transfert cote client)",
+      !/speed\.cloudflare/.test(src) && !/new WebSocket/.test(src));
+
+    /* Une latence absente n'est PAS une latence nulle. Les confondre
+       afficherait une connexion excellente pendant une panne --
+       exactement le contraire de l'information recherchee.
+       An absent latency is NOT a zero latency. Confusing the two would
+       show an excellent connection during an outage -- exactly the
+       opposite of the information sought. */
+    assert("une ligne sans reponse affiche un mot, pas un chiffre",
+      /speed\.noAnswer/.test(src));
+
+    /* Les coupures rompent le trace au lieu d'etre reliees : une ligne
+       qui traverse une coupure laisserait croire a une degradation
+       progressive alors qu'il n'y avait rien du tout.
+       Outages break the stroke instead of being bridged. */
+    assert("le trace est rompu sur une coupure, pas relie",
+      /pen = false/.test(src) && /pen \? \" L\" : \" M\"/.test(src));
+
+    /* Aucune tuile posee = aucune mesure, donc aucun trafic. C'est la
+       garantie annoncee dans l'aide, et elle repose entierement sur ce
+       repli. No tile on the board = no measurement, hence no traffic. */
+    assert("le serveur ne mesure rien tant qu'aucune tuile n'est posee",
+      /if \(!cfg\) return;/.test(srvSrc));
+
+    /* Double plafond du test de debit : le volume protege un forfait
+       limite, la duree protege d'une ligne effondree. Retirer l'un des
+       deux suffirait a faire des degats sur l'un ou l'autre terrain.
+       Two caps on the speed test: volume protects a metered plan,
+       duration protects against a collapsed line. */
+    assert("le test de debit est plafonne en volume ET en duree",
+      /bytes >= maxBytes/.test(srvSrc) && /throughputMaxSeconds \* 1000/.test(srvSrc));
+
+    /* La socket pose son gestionnaire d'erreur AVANT connect() : une
+       socket qui emet "error" sans auditeur fait tomber tout le
+       processus -- meme classe de defaut que le plantage ImapFlow
+       corrige en 1.77, et ici l'echec est un evenement NORMAL puisque
+       c'est la perte de paquet que l'on mesure.
+       The socket attaches its error handler BEFORE connect(): a socket
+       emitting "error" with no listener brings the whole process down. */
+    const probe = srvSrc.slice(srvSrc.indexOf("function probeOnce"));
+    const probeBody = probe.slice(0, probe.indexOf("\n}"));
+    assert("le gestionnaire d'erreur de la sonde est pose avant connect()",
+      probeBody.indexOf('once("error"') < probeBody.indexOf("sock.connect("));
+
+    /* L'export CSV et l'archive sont deux besoins differents, pas un
+       doublon : depuis l'ecran mural en kiosque, un telechargement
+       atterrit dans un dossier que personne n'ouvrira.
+       The CSV download and the archive answer different needs. */
+    assert("les deux voies d'export existent (telechargement ET archive sur l'hote)",
+      /export\.csv/.test(src) && /internet-health\/archive/.test(src));
+
+    // Toutes les cles i18n employees par la tuile doivent exister dans
+    // les DEUX langues, sinon l'ecran afficherait la cle brute.
+    // Every i18n key the tile uses must exist in BOTH languages.
+    const i18nSrc = fs.readFileSync(path.join(PUB, "i18n.js"), "utf8");
+    const missingKeys = [];
+    for (const m of src.matchAll(/i18n\.t\("([a-z0-9.]+)"\)/gi)) {
+      const key = m[1];
+      const count = (i18nSrc.match(new RegExp('"' + key.replace(/\./g, "\\.") + '"', "g")) || []).length;
+      if (count < 2) missingKeys.push(key);
+    }
+    for (const k of missingKeys) console.log("       cle non bilingue : " + k);
+    assert("chaque libelle de la tuile est traduit en FR et EN", missingKeys.length === 0);
+  }
+
   console.log("== Echappement des attributs HTML ==");
   {
     const src = fs.readFileSync(path.join(PUB, "app.js"), "utf8");

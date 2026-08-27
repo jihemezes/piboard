@@ -1,5 +1,103 @@
 # Changelog
 
+## 1.78.0
+
+- **NOUVELLE TUILE : Sante Internet** (famille "Systeme & Reseau").
+  Latence, gigue et perte de paquets mesurees EN CONTINU, courbe sur
+  24 h (jusqu'a 72 h), tests de debit periodiques et archivage CSV.
+
+  - **La mesure est faite par le SERVEUR, pas par le navigateur.** C'est
+    le coeur de la tuile : ce qu'on cherche n'est pas la valeur de
+    l'instant, c'est la coupure de 4 h du matin. Une mesure faite cote
+    client n'existerait que page ouverte et repartirait de zero a chaque
+    rechargement -- exactement le defaut corrige sur l'Etat systeme.
+    L'historique survit donc aux rechargements et est partage par tous
+    les ecrans.
+
+  - **Aucun `ping` systeme.** ICMP demande root sous Linux et l'appel de
+    la commande differe par OS : ce serait du code specifique a une
+    plateforme, interdit hors de `server/platform/`. On mesure le temps
+    d'etablissement d'une connexion TCP vers un resolveur DNS public sur
+    le port 443 -- Node pur, identique Pi / Windows / macOS, sans aucun
+    privilege. Contrepartie assumee et documentee dans l'aide : le
+    chiffre est quelques millisecondes au-dessus d'un ping ICMP.
+
+  - **Mediane et non moyenne.** Un seul aller-retour ralenti par une
+    retransmission ferait bondir une moyenne de cinq sondes et
+    afficherait un pic qui ne reflete pas l'etat de la ligne.
+
+  - **Une latence absente n'est PAS une latence nulle.** Une ligne qui
+    ne repond pas affiche "aucune reponse" en rouge, jamais "0 ms" --
+    qui annoncerait une connexion excellente pendant une panne. Meme
+    principe dans le CSV : cellule VIDE, jamais un zero qui serait pris
+    pour une mesure reelle.
+
+  - **Les coupures ROMPENT le trace** au lieu d'etre reliees, et sont
+    signalees par une bande rouge. Une ligne qui traverse une coupure
+    laisserait croire a une degradation progressive alors qu'il n'y
+    avait rien du tout. La reduction de courbe conserve le PIRE point de
+    chaque tranche, pas la moyenne : moyenner effacerait justement la
+    micro-coupure qu'on cherche.
+
+  - **Le test de debit est rare et DOUBLEMENT plafonne.** Mesurer un
+    debit consomme du debit : toutes les 3 h par defaut, plafonne en
+    volume (protege un forfait limite) ET en duree (protege d'une ligne
+    effondree). ~160 Mo/jour aux reglages par defaut ; intervalle a 0 =
+    tests desactives, la latence continuant d'etre mesuree. Debit
+    montant desactive par defaut (saturer la voie montante ralentit tout
+    le foyer pendant le test).
+
+  - **Aucune tuile posee = aucune mesure, donc aucun trafic.** Les
+    reglages sont lus dans `data/layout.json` : pas de second endroit de
+    configuration a tenir a jour, et personne ne paie pour une
+    fonctionnalite qu'il n'utilise pas.
+
+  - **Archivage CSV a la demande, par DEUX voies volontairement
+    distinctes** : telechargement navigateur (depuis un PC), et
+    ecriture sur la machine hote dans `data/exports/` sous un nom
+    horodate (depuis l'ecran mural en kiosque, un telechargement
+    atterrirait dans un dossier que personne n'ouvrira jamais). Les
+    archives deja constituees sont listees dans la fenetre, avec leur
+    taille, retelechargeables d'un clic. Nom de fichier strictement
+    valide avant relecture (meme regle que `store.fileFor`).
+
+  - **Deux dialectes CSV, en choix et non en defaut impose** : francais
+    (point-virgule + virgule decimale -- sans quoi un tableur FR met
+    toute la ligne dans une seule cellule) ou international. BOM UTF-8
+    pour les accents sous Windows, fins de ligne CRLF (RFC 4180).
+
+  - **Retention volontairement courte (72 h).** Le fichier vit dans
+    `data/`, donc dans CHAQUE sauvegarde de configuration (`backups.js`
+    embarque tout `data/*.json`). Ecriture compacte et espacee de 5 min
+    plutot qu'a chaque releve, comme pour l'historique systeme : sur un
+    Pi, marteler la carte SD serait inutilement agressif. La
+    conservation longue duree, c'est justement le role du CSV.
+
+  - **Garde-fous ajoutes** : `test/internetHealth.test.js` (56
+    assertions, AUCUN appel reseau -- ces tests doivent passer pendant
+    une coupure, ce qui est justement la situation que la tuile mesure)
+    et un bloc `dom-smoke.js` qui verifie notamment que la sonde pose
+    son gestionnaire d'erreur AVANT `connect()` : une socket qui emet
+    "error" sans auditeur fait tomber tout le processus -- meme classe
+    de defaut que le plantage ImapFlow corrige en 1.77, et ici l'echec
+    est un evenement NORMAL puisque c'est la perte de paquet qu'on
+    mesure.
+
+---
+
+- **NEW TILE: Internet health** ("System & Network" family). Latency,
+  jitter and packet loss measured CONTINUOUSLY, 24 h curve (up to 72 h),
+  periodic speed tests and CSV archiving. Measurement is done by the
+  SERVER, not the browser, so the history survives page reloads and is
+  shared by every screen. No system `ping` (TCP handshake timing
+  instead, identical on every platform, no privileges). Median rather
+  than mean. An absent latency is never shown as zero. Outages break the
+  stroke and are flagged. Speed tests are rare and capped twice, in
+  volume and duration, and can be switched off. No tile on the board
+  means no measurement at all. On-demand CSV archiving through two
+  deliberately distinct routes, browser download and host-side archive,
+  in either a French or an international dialect.
+
 ## 1.77.0
 
 - **CORRECTIF MAJEUR : le saint du jour ne s'affichait plus.** Bug

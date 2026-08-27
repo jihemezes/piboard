@@ -1241,6 +1241,105 @@ app.get("/api/system/history", (req, res) => {
   res.json({ points: h.points.filter((p) => p.t >= since), maxMinutes: HISTORY_MAX });
 });
 
+/* ---------- Sante de la connexion Internet / internet connection health ----------
+
+   Voir server/internetHealth.js pour le raisonnement complet. Deux
+   points a retenir ici :
+
+   1. L'echantillonneur ne demarre RIEN tant qu'aucune tuile `speedtest`
+      n'est posee sur le tableau : les reglages sont lus dans la
+      disposition enregistree. Aucune tuile, aucun trafic.
+   2. Il n'y a qu'UN historique, partage par tous les ecrans -- c'est
+      tout l'interet d'une courbe qui survit aux rechargements.
+
+   See server/internetHealth.js for the full reasoning. Two points to
+   remember here:
+
+   1. The sampler starts NOTHING until a `speedtest` tile sits on the
+      board: its settings are read from the saved layout. No tile, no
+      traffic.
+   2. There is only ONE history, shared by every screen -- the whole
+      point of a curve that survives reloads. */
+const internetHealth = require("./internetHealth");
+internetHealth.start();
+
+app.get("/api/internet-health", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(internetHealth.getCurrent());
+});
+
+app.get("/api/internet-health/history", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json(internetHealth.getHistory(req.query.hours, req.query.points));
+});
+
+/* Mesure immediate a la demande. `full=1` force aussi le debit, ce que
+   le rythme automatique ne fait que toutes les quelques heures : c'est
+   le bouton "Tester maintenant". Une mesure deja en cours renvoie 202
+   plutot qu'une erreur -- ce n'est pas un echec, c'est un doublon.
+   On-demand immediate reading. `full=1` also forces the throughput,
+   which the automatic pace only does every few hours: this is the "Test
+   now" button. A reading already in progress returns 202 rather than an
+   error -- it is not a failure, it is a duplicate. */
+app.post("/api/internet-health/run", async (req, res) => {
+  try {
+    const point = await internetHealth.sample({ withThroughput: String(req.query.full) === "1" });
+    if (!point) return res.status(202).json({ ok: false, reason: "busy_or_disabled" });
+    internetHealth.flush();
+    res.json({ ok: true, point });
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+/* Telechargement direct par le navigateur. Le BOM UTF-8 est ajoute ici
+   comme dans l'archive : sans lui, un tableur sous Windows abime les
+   accents de l'en-tete.
+   Direct browser download. The UTF-8 BOM is added here as in the
+   archive: without it, a spreadsheet on Windows mangles the header's
+   accents. */
+app.get("/api/internet-health/export.csv", (req, res) => {
+  try {
+    const out = internetHealth.exportCsv(req.query.hours, req.query.dialect);
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="piboard-internet-${stamp}.csv"`);
+    res.send("\uFEFF" + out.csv);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/* Archivage sur la machine hote (data/exports/). Complementaire du
+   telechargement : depuis l'ecran mural en kiosque, un telechargement
+   atterrit dans un dossier que personne n'ouvrira jamais.
+   Archiving on the host machine (data/exports/). Complementary to the
+   download: from the wall screen in kiosk mode, a download lands in a
+   folder nobody will ever open. */
+app.post("/api/internet-health/archive", (req, res) => {
+  try {
+    res.json(internetHealth.archive(req.query.hours, req.query.dialect));
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/internet-health/archives", (req, res) => {
+  res.set("Cache-Control", "no-store");
+  res.json({ archives: internetHealth.listArchives() });
+});
+
+app.get("/api/internet-health/archives/:name", (req, res) => {
+  try {
+    const file = internetHealth.archivePath(req.params.name);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="${req.params.name}"`);
+    res.sendFile(file);
+  } catch (e) {
+    res.status(404).json({ error: "archive not found" });
+  }
+});
+
 /* ---------- Configuration reseau locale / local network configuration ----------
    Voir server/netConfig.js. Aucune donnee sensible : ce sont les
    adresses de la machine qui execute PiBoard, deja visibles de tout

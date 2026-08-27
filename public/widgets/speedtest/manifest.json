@@ -1,0 +1,277 @@
+{
+  "id": "speedtest",
+  "version": "0.1.0",
+  "name": {
+    "en": "Internet health",
+    "fr": "Santé Internet"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Latency, jitter and packet loss measured continuously, with a 24 h curve, periodic speed tests and CSV archiving.",
+    "fr": "Latence, gigue et perte de paquets mesurées en continu, avec une courbe sur 24 h, des tests de débit périodiques et l'archivage en CSV."
+  },
+  "tagline": {
+    "en": "Health of your Internet connection over time.",
+    "fr": "Santé de votre connexion Internet dans la durée."
+  },
+  "size": {
+    "w": 3,
+    "h": 3,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 8,
+    "maxH": 6
+  },
+  "settings": [
+    {
+      "key": "refreshSeconds",
+      "type": "number",
+      "default": 30,
+      "min": 10,
+      "max": 300,
+      "step": 5,
+      "label": {
+        "en": "Tile refresh (seconds)",
+        "fr": "Rafraîchissement de la tuile (secondes)"
+      },
+      "hint": {
+        "en": "How often the tile re-reads the server's readings. This does NOT change how often the connection is measured — see below.",
+        "fr": "Fréquence à laquelle la tuile relit les relevés du serveur. Cela ne change PAS la fréquence de mesure de la connexion — voir plus bas."
+      }
+    },
+    {
+      "key": "chartHours",
+      "type": "number",
+      "default": 24,
+      "min": 1,
+      "max": 72,
+      "label": {
+        "en": "Curve depth (hours)",
+        "fr": "Profondeur de la courbe (heures)"
+      },
+      "hint": {
+        "en": "Up to 72 h, the depth kept by the server. Beyond that, archive to CSV.",
+        "fr": "Jusqu'à 72 h, la profondeur conservée par le serveur. Au-delà, archivez en CSV."
+      }
+    },
+    {
+      "key": "showThroughput",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the last speed test on the tile",
+        "fr": "Afficher le dernier test de débit sur la tuile"
+      }
+    },
+    {
+      "key": "showSparkline",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the latency curve on the tile",
+        "fr": "Afficher la courbe de latence sur la tuile"
+      }
+    },
+
+    {
+      "key": "latencySeconds",
+      "type": "number",
+      "default": 60,
+      "min": 30,
+      "max": 900,
+      "step": 10,
+      "group": {
+        "en": "Latency measurement",
+        "fr": "Mesure de la latence"
+      },
+      "label": {
+        "en": "Interval between two readings (seconds)",
+        "fr": "Intervalle entre deux relevés (secondes)"
+      },
+      "hint": {
+        "en": "Measured by the server, continuously, whether or not a screen is on. One reading costs a few hundred bytes.",
+        "fr": "Mesuré par le serveur, en continu, qu'un écran soit allumé ou non. Un relevé coûte quelques centaines d'octets."
+      }
+    },
+    {
+      "key": "probeCount",
+      "type": "number",
+      "default": 5,
+      "min": 3,
+      "max": 10,
+      "group": {
+        "en": "Latency measurement",
+        "fr": "Mesure de la latence"
+      },
+      "label": {
+        "en": "Probes per reading",
+        "fr": "Sondes par relevé"
+      },
+      "hint": {
+        "en": "The reading keeps the median of the probes, so an isolated spike does not distort the curve. The packet loss percentage comes from the probes that got no answer.",
+        "fr": "Le relevé retient la médiane des sondes, si bien qu'un pic isolé ne déforme pas la courbe. Le pourcentage de perte vient des sondes restées sans réponse."
+      }
+    },
+    {
+      "key": "targets",
+      "type": "text",
+      "default": "1.1.1.1:443, 8.8.8.8:443, 9.9.9.9:443",
+      "group": {
+        "en": "Latency measurement",
+        "fr": "Mesure de la latence"
+      },
+      "label": {
+        "en": "Targets (host:port, comma-separated)",
+        "fr": "Cibles (hôte:port, séparées par des virgules)"
+      },
+      "hint": {
+        "en": "Public DNS resolvers by default. Up to 5, used in turn. Port 443 if omitted.",
+        "fr": "Résolveurs DNS publics par défaut. 5 au maximum, utilisées à tour de rôle. Port 443 si omis."
+      }
+    },
+
+    {
+      "key": "throughputMinutes",
+      "type": "number",
+      "default": 180,
+      "min": 0,
+      "max": 1440,
+      "step": 10,
+      "group": {
+        "en": "Speed test",
+        "fr": "Test de débit"
+      },
+      "label": {
+        "en": "Interval between two speed tests (minutes)",
+        "fr": "Intervalle entre deux tests de débit (minutes)"
+      },
+      "hint": {
+        "en": "0 switches speed tests off entirely — latency keeps being measured. A speed test CONSUMES bandwidth: at the default settings it is about 160 MB a day.",
+        "fr": "0 désactive complètement les tests de débit — la latence continue d'être mesurée. Un test de débit CONSOMME de la bande passante : environ 160 Mo par jour aux réglages par défaut."
+      }
+    },
+    {
+      "key": "throughputMB",
+      "type": "number",
+      "default": 20,
+      "min": 5,
+      "max": 100,
+      "step": 5,
+      "group": {
+        "en": "Speed test",
+        "fr": "Test de débit"
+      },
+      "label": {
+        "en": "Volume per test (MB)",
+        "fr": "Volume par test (Mo)"
+      },
+      "hint": {
+        "en": "Hard cap: a test will never download more than this. A larger volume gives a more accurate figure on a fast line.",
+        "fr": "Plafond ferme : un test ne téléchargera jamais plus que cela. Un volume plus élevé donne un chiffre plus juste sur une ligne rapide."
+      }
+    },
+    {
+      "key": "throughputMaxSeconds",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 30,
+      "group": {
+        "en": "Speed test",
+        "fr": "Test de débit"
+      },
+      "label": {
+        "en": "Time limit per test (seconds)",
+        "fr": "Durée maximale d'un test (secondes)"
+      },
+      "hint": {
+        "en": "Second cap, against a collapsed line where the volume above would take minutes to arrive.",
+        "fr": "Second plafond, contre une ligne effondrée où le volume ci-dessus mettrait des minutes à arriver."
+      }
+    },
+    {
+      "key": "measureUpload",
+      "type": "checkbox",
+      "default": false,
+      "group": {
+        "en": "Speed test",
+        "fr": "Test de débit"
+      },
+      "label": {
+        "en": "Also measure upload speed",
+        "fr": "Mesurer aussi le débit montant"
+      },
+      "hint": {
+        "en": "Off by default: saturating the uplink slows down everything else in the home for the duration of the test.",
+        "fr": "Désactivé par défaut : saturer la voie montante ralentit tout le reste du foyer pendant la durée du test."
+      }
+    },
+    {
+      "key": "downloadUrl",
+      "type": "text",
+      "default": "https://speed.cloudflare.com/__down?bytes=200000000",
+      "group": {
+        "en": "Speed test",
+        "fr": "Test de débit"
+      },
+      "label": {
+        "en": "Download test address",
+        "fr": "Adresse du test descendant"
+      },
+      "hint": {
+        "en": "Cloudflare's free, keyless speed endpoint. Replace it with your own server if you prefer.",
+        "fr": "Point de mesure gratuit et sans clé de Cloudflare. Remplacez-le par votre propre serveur si vous préférez."
+      }
+    },
+    {
+      "key": "uploadUrl",
+      "type": "text",
+      "default": "https://speed.cloudflare.com/__up",
+      "group": {
+        "en": "Speed test",
+        "fr": "Test de débit"
+      },
+      "label": {
+        "en": "Upload test address",
+        "fr": "Adresse du test montant"
+      }
+    },
+
+    {
+      "key": "exportHours",
+      "type": "number",
+      "default": 24,
+      "min": 1,
+      "max": 72,
+      "group": {
+        "en": "CSV archiving",
+        "fr": "Archivage CSV"
+      },
+      "label": {
+        "en": "Depth exported (hours)",
+        "fr": "Profondeur exportée (heures)"
+      }
+    },
+    {
+      "key": "csvDialect",
+      "type": "select",
+      "default": "french",
+      "options": [
+        { "value": "french", "label": { "en": "French (semicolon, decimal comma)", "fr": "Français (point-virgule, virgule décimale)" } },
+        { "value": "international", "label": { "en": "International (comma, decimal point)", "fr": "International (virgule, point décimal)" } }
+      ],
+      "group": {
+        "en": "CSV archiving",
+        "fr": "Archivage CSV"
+      },
+      "label": {
+        "en": "CSV format",
+        "fr": "Format du CSV"
+      },
+      "hint": {
+        "en": "A spreadsheet set to French needs the first option, otherwise the whole row lands in a single cell.",
+        "fr": "Un tableur configuré en français a besoin de la première option, sinon toute la ligne atterrit dans une seule cellule."
+      }
+    }
+  ]
+}
