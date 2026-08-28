@@ -42,6 +42,7 @@ const media = require("./media");
 const localFolder = require("./localFolder");
 const usbMedia = require("./usbMedia");
 const networkScan = require("./networkScan");
+const netHosts = require("./netHosts");
 const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
@@ -313,18 +314,52 @@ app.get("/api/system", async (req, res) => {
 app.get("/api/network-scan", async (req, res) => {
   const forceRescan = req.query.rescan === "1";
   const cidrOverride = req.query.cidr ? String(req.query.cidr) : undefined;
+  // Les noms personnalises sont appliques a la volee sur le resultat du
+  // scan (jamais stockes dans le cache de scan) : renommer un appareil
+  // se voit donc immediatement, sans relancer d'analyse de ~15 s.
+  // Custom names are applied on the fly to the scan result (never
+  // stored in the scan cache): renaming a device therefore shows up
+  // immediately, without re-running a ~15 s scan.
+  const aliases = netHosts.loadAliases();
   const cached = networkScan.getState();
   if (!forceRescan && cached.result) {
     return res.json({
       scanning: cached.scanning,
-      hosts: cached.result.hosts,
+      hosts: netHosts.applyAliases(cached.result.hosts, aliases),
       cidr: cached.result.cidr,
       scannedAt: cached.result.scannedAt
     });
   }
   try {
     const result = await networkScan.scanNetwork(cidrOverride);
-    res.json({ scanning: false, hosts: result.hosts, cidr: result.cidr, scannedAt: result.scannedAt });
+    res.json({
+      scanning: false,
+      hosts: netHosts.applyAliases(result.hosts, aliases),
+      cidr: result.cidr,
+      scannedAt: result.scannedAt
+    });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+/* ---------- Noms personnalises des hotes (voir server/netHosts.js) ----------
+   Persistes dans data/netHosts.json, donc conserves d'une mise a jour
+   ou d'une reinstallation a l'autre, et embarques dans les sauvegardes.
+   Persisted in data/netHosts.json, hence kept across updates and
+   reinstalls, and included in backups. */
+app.get("/api/network-hosts", (req, res) => {
+  res.json({ aliases: netHosts.loadAliases() });
+});
+
+app.post("/api/network-hosts", (req, res) => {
+  try {
+    const body = req.body || {};
+    // Un nom vide supprime l'entree et redonne le nom detecte
+    // automatiquement. An empty name deletes the entry and restores
+    // the auto-detected name.
+    const out = netHosts.renameHost({ mac: body.mac, ip: body.ip }, body.name);
+    res.json({ ok: true, key: out.key, aliases: out.aliases });
   } catch (e) {
     res.status(400).json({ error: String(e.message || e) });
   }

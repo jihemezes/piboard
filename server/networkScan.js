@@ -398,7 +398,16 @@ async function performScan(cidrOverride) {
     // Vendor deduced from the MAC, only to complement a missing name
     // -- never shown alongside a real hostname.
     const vendor = !hostname && !isSelf ? vendorForMac(macByIp.get(ip)) : null;
-    return { ip, hostname, isSelf, vendor };
+    // La MAC est desormais remontee telle quelle : elle sert de cle
+    // stable pour les noms personnalises (server/netHosts.js), une IP
+    // pouvant changer a chaque bail DHCP. Elle ne quitte jamais le
+    // reseau local, comme le reste des donnees de cette tuile.
+    // The MAC is now reported as-is: it is the stable key for custom
+    // names (server/netHosts.js), since an IP can change with every
+    // DHCP lease. It never leaves the local network, like the rest of
+    // this tile's data.
+    const mac = macByIp.get(ip) || null;
+    return { ip, hostname, isSelf, vendor, mac };
   });
 
   return { cidr, hosts, scannedAt: new Date().toISOString(), addressCount: ips.length };

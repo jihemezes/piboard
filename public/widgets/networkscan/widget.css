@@ -78,3 +78,59 @@
   padding: 8px;
 }
 .pw-netscan .pwn-err { color: #E0556F; }
+
+/* --- Noms personnalises des hotes / custom host names ---
+   Le bouton de renommage reste discret (peu contraste) tant que la
+   ligne n'est pas survolee/touchee, pour ne pas encombrer la liste.
+   The rename button stays discreet (low contrast) until the row is
+   hovered/touched, so it doesn't clutter the list. */
+.pw-netscan .pwn-rename-btn {
+  flex: 0 0 auto;
+  margin-left: 8px;
+  padding: 0 4px;
+  min-width: 26px;
+  font-size: 13px;
+  line-height: 1.4;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  opacity: 0.45;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pw-netscan .pwn-row:hover .pwn-rename-btn { opacity: 1; }
+.pw-netscan .pwn-orig {
+  flex: 0 1 auto;
+  font-size: 11px;
+  color: var(--muted);
+  opacity: 0.8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pw-netscan .pwn-row.pwn-aliased .pwn-name { font-weight: 600; }
+.pw-netscan .pwn-row.pwn-editing { gap: 4px; }
+.pw-netscan .pwn-edit-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 13px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+.pw-netscan .pwn-edit-ok,
+.pw-netscan .pwn-edit-cancel {
+  flex: 0 0 auto;
+  min-width: 28px;
+  font-size: 13px;
+  padding: 3px 6px;
+  border-radius: 6px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pw-netscan .pwn-edit-ok { color: var(--accent); }

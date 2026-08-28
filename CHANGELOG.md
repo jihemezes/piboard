@@ -1,5 +1,65 @@
 # Changelog
 
+## 1.79.0
+
+- **NOUVEAU : noms personnalises des appareils dans la tuile Analyse
+  reseau.** L'analyse remonte toujours une adresse IP et, le plus
+  souvent, une adresse MAC, mais le nom d'hote est frequemment absent
+  (telephones Android, objets connectes) ou illisible
+  ("DESKTOP-4K7J1QA"). Chaque ligne de la liste porte desormais un
+  bouton de renommage : on saisit le nom voulu ("Imprimante bureau",
+  "Chaudiere"), on valide, c'est fini. Vider le champ puis valider
+  supprime le nom personnalise et redonne le nom detecte
+  automatiquement.
+
+  - **Cle = adresse MAC, pas adresse IP.** Le nom est associe a
+    l'adresse MAC de l'appareil des qu'elle est connue. Une IP change a
+    chaque nouveau bail DHCP ; un nom rattache a l'IP se serait retrouve
+    sur le mauvais appareil au premier redemarrage du routeur. Repli sur
+    l'IP uniquement pour les hotes repérés par le seul ping, sans entree
+    ARP exploitable.
+
+  - **Normalisation des adresses MAC.** Les tables ARP des trois
+    plateformes ne s'accordent ni sur la casse (Windows en majuscules,
+    Linux en minuscules) ni sur le separateur ("-" contre ":"), et
+    macOS omet les zeros de tete ("a:1b:..."). Sans normalisation
+    canonique, le meme appareil aurait recu deux cles differentes selon
+    la plateforme. Les six formes sont ramenees a
+    "aa:bb:cc:dd:ee:ff".
+
+  - **Conservation apres reinstallation.** Les noms sont ecrits dans
+    `data/netHosts.json` via `server/store.js`, donc hors de
+    l'arborescence livree par les ZIP de mise a jour : ils survivent a
+    une mise a jour comme a une reinstallation complete. Ils sont aussi
+    embarques dans les sauvegardes/restaurations de configuration, qui
+    recopient tout `data/*.json` sans modification a apporter a
+    `server/backups.js`.
+
+  - **Le nom detecte n'est jamais perdu.** L'alias ne remplace pas
+    `hostname` cote serveur : il s'y ajoute. La tuile rappelle le nom
+    d'origine en second plan a cote du nom personnalise, et l'effacement
+    de l'alias redonne le nom reseau immediatement, sans relancer une
+    analyse de ~15 secondes.
+
+  - **Detail d'implementation.** L'application des alias se fait a la
+    volee dans la route `/api/network-scan`, jamais dans le cache de
+    scan : un renommage se voit donc instantanement. Le scan expose
+    desormais le champ `mac` de chaque hote (il ne quitte pas le reseau
+    local, comme le reste des donnees de cette tuile).
+
+  - **Echappement des attributs.** Le champ de saisie utilise
+    `escapeHtmlAttr()` (guillemets doubles ET simples echappes), pour ne
+    pas rejouer la classe de bug corrigee dans l'editeur de rangees en
+    1.77 : un nom contenant un guillemet aurait tronque l'attribut
+    `value=`.
+
+  - **Tests.** Nouveau `test/netHosts.test.js` : normalisation MAC des
+    trois plateformes, stabilite de la cle a travers un changement
+    d'IP, upsert/suppression sans mutation des tables d'entree, rejet
+    des cles douteuses a la relecture du fichier, plafonnement du
+    nombre d'entrees, et application des alias sans ecraser le nom
+    detecte.
+
 ## 1.78.2
 
 - **CORRECTIF : la tuile Sante Internet ne mesurait RIEN quand elle

@@ -518,6 +518,10 @@
       "netscan.error": "Scan failed:",
       "netscan.hostsSingular": "host",
       "netscan.hostsPlural": "hosts",
+      "netscan.rename": "Rename this device",
+      "netscan.namePlaceholder": "Custom name",
+      "netscan.save": "Save",
+      "netscan.cancel": "Cancel",
 
       "teleprog.now": "On now",
       "teleprog.evening": "Tonight",
@@ -1116,6 +1120,10 @@
       "netscan.error": "Échec de l'analyse :",
       "netscan.hostsSingular": "hôte",
       "netscan.hostsPlural": "hôtes",
+      "netscan.rename": "Renommer cet appareil",
+      "netscan.namePlaceholder": "Nom personnalisé",
+      "netscan.save": "Enregistrer",
+      "netscan.cancel": "Annuler",
 
       "teleprog.now": "En ce moment",
       "teleprog.evening": "Ce soir",
