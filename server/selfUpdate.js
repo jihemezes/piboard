@@ -13,12 +13,19 @@
    tar.gz des sources.
 
    CYCLE COMPLET :
-     1. check()  : GET /repos/<owner>/<repo>/releases/latest -> tag_name,
-                   compare a package.json (semver). Une release en
-                   brouillon ou marquee pre-release n'est PAS renvoyee par
-                   cet appel : exactement le meme comportement
-                   qu'electron-updater sous Windows, qui n'installe que
-                   les releases effectivement publiees.
+     1. check()  : deux canaux, selon le reglage "updateChannel".
+                   - "stable" (defaut) : GET /releases/latest, qui ne
+                     renvoie QUE la release marquee "Latest" sur GitHub.
+                     Brouillons et pre-releases sont ignores par GitHub
+                     lui-meme -- meme comportement qu'electron-updater
+                     sous Windows.
+                   - "preview" : GET /releases (liste), d'ou l'on retient
+                     la version la plus HAUTE parmi les releases publiees,
+                     pre-releases comprises. Les brouillons restent
+                     exclus : un brouillon n'a pas d'archive telechargeable
+                     et n'est visible que de son auteur.
+                   Dans les deux cas, le tag est compare a package.json
+                   (semver).
      2. apply()  : telecharge l'archive tar.gz du tag dans data/updates/,
                    l'extrait dans data/updates/staging/, puis REMPLACE le
                    code par un jeu de renommages : chaque dossier/fichier
@@ -64,11 +71,19 @@
    tag: a tar.gz archive of the sources.
 
    FULL CYCLE:
-     1. check()  : GET /repos/<owner>/<repo>/releases/latest -> tag_name,
-                   compared with package.json (semver). A draft or
-                   pre-release is NOT returned by that call: exactly the
-                   same behaviour as electron-updater on Windows, which
-                   only installs actually published releases.
+     1. check()  : two channels, per the "updateChannel" setting.
+                   - "stable" (default): GET /releases/latest, which
+                     returns ONLY the release marked "Latest" on GitHub.
+                     Drafts and pre-releases are filtered by GitHub
+                     itself -- same behaviour as electron-updater on
+                     Windows.
+                   - "preview": GET /releases (the list), from which we
+                     keep the HIGHEST version among published releases,
+                     pre-releases included. Drafts stay excluded: a draft
+                     has no downloadable archive and is visible only to
+                     its author.
+                   Either way, the tag is compared with package.json
+                   (semver).
      2. apply()  : downloads the tag's tar.gz into data/updates/, extracts
                    it into data/updates/staging/, then REPLACES the code
                    through a set of renames: every top-level folder/file
@@ -273,6 +288,11 @@ function createUpdater(options) {
     dataDir: null,
     currentVersion: "0.0.0",
     repo: DEFAULT_REPO,
+    // "stable" | "preview". Fonction ou valeur : le reglage peut changer
+    // sans redemarrer le serveur, il est donc relu a chaque verification.
+    // "stable" | "preview". Function or value: the setting can change
+    // without restarting the server, so it is re-read on every check.
+    channel: "stable",
     apiBase: DEFAULT_API_BASE,
     fetchImpl: typeof fetch === "function" ? fetch : null,
     support: { supported: false, reason: "unknown" },   // objet ou fonction / object or function
@@ -300,6 +320,7 @@ function createUpdater(options) {
     publishedAt: null,
     notes: null,
     htmlUrl: null,
+    prerelease: false,
     tarballUrl: null,
     error: null
   };
@@ -363,6 +384,8 @@ function createUpdater(options) {
       publishedAt: info.publishedAt,
       notes: info.notes,
       htmlUrl: info.htmlUrl,
+      prerelease: info.prerelease,
+      channel: channel(),
       checkedAt: info.checkedAt,
       checkError: info.error,
       busy: isBusy(),
@@ -381,9 +404,47 @@ function createUpdater(options) {
 
   /* ---------- Verification / check ---------- */
 
+  function channel() {
+    const c = typeof opts.channel === "function" ? opts.channel() : opts.channel;
+    return c === "preview" ? "preview" : "stable";
+  }
+
+  /* Parmi une liste de releases, la version la plus HAUTE publiee.
+     Deux precautions :
+     - les brouillons (`draft`) sont ecartes : leur archive n'est pas
+       telechargeable et ils ne sont visibles que de leur auteur ;
+     - on compare les VERSIONS, pas les dates de publication. Republier
+       un correctif sur une ancienne branche apres une pre-release plus
+       recente ne doit pas faire "reculer" le tableau.
+     Fonction pure, testee dans test/selfUpdate.test.js.
+     Among a list of releases, the HIGHEST published version. Two
+     precautions:
+     - drafts are dropped: their archive is not downloadable and they are
+       visible only to their author;
+     - we compare VERSIONS, not publication dates. Republishing a fix on
+       an older branch after a more recent pre-release must not make the
+       board "go backwards".
+     Pure function, tested in test/selfUpdate.test.js. */
+  function pickLatest(releases, includePrerelease) {
+    let best = null;
+    let bestVersion = null;
+    for (const rel of (Array.isArray(releases) ? releases : [])) {
+      if (!rel || rel.draft) continue;
+      if (rel.prerelease && !includePrerelease) continue;
+      const v = parseVersionTag(rel.tag_name);
+      if (!v) continue;
+      if (!bestVersion || compareVersions(v, bestVersion) > 0) { best = rel; bestVersion = v; }
+    }
+    return best;
+  }
+
   async function doCheck() {
     if (!opts.fetchImpl) throw new Error("fetch unavailable (Node >= 18 required)");
-    const url = `${opts.apiBase.replace(/\/$/, "")}/repos/${opts.repo}/releases/latest`;
+    const base = opts.apiBase.replace(/\/$/, "");
+    const preview = channel() === "preview";
+    const url = preview
+      ? `${base}/repos/${opts.repo}/releases?per_page=30`
+      : `${base}/repos/${opts.repo}/releases/latest`;
     const ctrl = new AbortController();
     const timer = setTimeout(() => ctrl.abort(), CHECK_TIMEOUT_MS);
     let res;
@@ -406,7 +467,15 @@ function createUpdater(options) {
       throw new Error("no-release");
     }
     if (!res.ok) throw new Error("GitHub HTTP " + res.status);
-    const rel = await res.json();
+    const body = await res.json();
+    const rel = preview ? pickLatest(body, true) : body;
+    // En canal "preview", un depot dont toutes les releases sont des
+    // brouillons renvoie une liste vide plutot qu'un 404 : meme cause,
+    // meme message qu'au-dessus.
+    // On the "preview" channel, a repo whose releases are all drafts
+    // returns an empty list rather than a 404: same cause, same message
+    // as above.
+    if (!rel) throw new Error("no-release");
     const version = parseVersionTag(rel && rel.tag_name);
     if (!version) throw new Error("unrecognized tag: " + (rel && rel.tag_name));
     info.latestVersion = version;
@@ -414,6 +483,11 @@ function createUpdater(options) {
     info.publishedAt = rel.published_at || null;
     info.notes = typeof rel.body === "string" && rel.body.trim() ? rel.body.trim() : null;
     info.htmlUrl = rel.html_url || null;
+    // Signale a l'interface qu'il s'agit d'une pre-release : la fenetre
+    // de confirmation le dit clairement avant d'installer.
+    // Tells the interface this is a pre-release: the confirmation window
+    // says so plainly before installing.
+    info.prerelease = !!rel.prerelease;
     info.tarballUrl = rel.tarball_url
       || `https://github.com/${opts.repo}/archive/refs/tags/${encodeURIComponent(rel.tag_name)}.tar.gz`;
   }
@@ -625,7 +699,7 @@ function createUpdater(options) {
     timers = [];
   }
 
-  return { status, check, apply, startAutoCheck, stopAutoCheck, paths: { updatesDir, stagingDir, previousDir, manifestPath } };
+  return { status, check, apply, startAutoCheck, stopAutoCheck, _pickLatest: pickLatest, paths: { updatesDir, stagingDir, previousDir, manifestPath } };
 }
 
 module.exports = {

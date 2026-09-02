@@ -313,6 +313,14 @@
            goes through electron-updater, see electron/updater.js). -->
       <fieldset class="form-section" id="secUpdates" hidden>
         <legend data-i18n="settings.section.updates">Updates</legend>
+        <label class="field">
+          <span data-i18n="settings.updateChannel">Updates to install</span>
+          <select id="setUpdateChannel">
+            <option value="stable" data-i18n="settings.updateChannel.stable">Stable versions only</option>
+            <option value="preview" data-i18n="settings.updateChannel.preview">Also install pre-releases</option>
+          </select>
+          <small class="field-hint" data-i18n="settings.updateChannel.hint">"Stable" installs only the version marked "Latest" on GitHub. "Pre-releases" also takes the ones marked "Pre-release": newer, but less tested.</small>
+        </label>
         <p class="update-status" id="updStatusText"></p>
         <p class="update-meta" id="updMetaText"></p>
         <div class="update-actions">

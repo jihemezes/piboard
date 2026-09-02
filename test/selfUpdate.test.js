@@ -63,7 +63,12 @@ const TMP = fs.mkdtempSync(path.join(os.tmpdir(), "piboard-update-"));
 const REPO = "test/piboard";
 let release = null;       // reponse de /releases/latest (null -> 404)
 let archivePath = null;   // tar.gz servi par /tarball
+let releaseList = null;   // reponse de /releases (canal "preview")
 const server = http.createServer((req, res) => {
+  if (req.url.startsWith(`/repos/${REPO}/releases?`)) {
+    res.writeHead(200, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(releaseList || []));
+  }
   if (req.url === `/repos/${REPO}/releases/latest`) {
     if (!release) { res.writeHead(404); return res.end("{}"); }
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -221,6 +226,66 @@ async function waitRestart(updater, spy, timeoutMs) {
       noSup.status().supported === false && noSup.status().reason === "electron-updater" && noSup.apply().reason === "not-supported");
     check("support fourni sous forme de fonction (evalue a la demande)",
       makeUpdater(appDir, "1.0.0", spy, { support: () => ({ supported: true }) }).status().supported === true);
+  }
+
+  console.log("== canal des mises a jour : stable (Latest) ou preview (pre-releases comprises) ==");
+  {
+    const appDir = makeAppDir("app-channel", LOCK_A);
+    const spy = { calls: [] };
+    /* Ce que GitHub renvoie reellement : /releases/latest ne renvoie que
+       la release marquee "Latest", tandis que /releases liste tout, y
+       compris les pre-releases et les brouillons.
+       What GitHub actually returns: /releases/latest only returns the
+       release marked "Latest", while /releases lists everything,
+       including pre-releases and drafts. */
+    release = { tag_name: "v1.1.0", tarball_url: base + "/tarball", prerelease: false };
+    releaseList = [
+      { tag_name: "v1.3.0-brouillon", draft: true, prerelease: true, tarball_url: base + "/tarball" },
+      { tag_name: "v1.2.0", draft: false, prerelease: true, tarball_url: base + "/tarball", body: "Version d'essai" },
+      { tag_name: "v1.1.0", draft: false, prerelease: false, tarball_url: base + "/tarball" },
+      { tag_name: "nightly", draft: false, prerelease: true, tarball_url: base + "/tarball" }
+    ];
+
+    const stable = makeUpdater(appDir, "1.0.0", spy, { channel: "stable" });
+    let st = await stable.check();
+    check("canal stable : s'en tient a la release marquee Latest", st.latestVersion === "1.1.0" && st.available === true);
+    check("canal stable : la pre-release 1.2.0 est ignoree", st.latestVersion !== "1.2.0");
+    check("canal stable : signale son canal et l'absence de pre-release", st.channel === "stable" && st.prerelease === false);
+
+    const preview = makeUpdater(appDir, "1.0.0", spy, { channel: "preview" });
+    st = await preview.check();
+    check("canal preview : retient la version la plus haute, pre-release comprise", st.latestVersion === "1.2.0");
+    check("canal preview : la pre-release est signalee comme telle", st.prerelease === true && st.channel === "preview");
+    check("canal preview : les notes de la pre-release sont reprises", st.notes === "Version d'essai");
+    check("canal preview : les brouillons restent exclus", st.latestVersion !== "1.3.0");
+
+    // Le reglage est relu a CHAQUE verification : le changer dans les
+    // reglages generaux ne doit pas demander de redemarrer le serveur.
+    let chosen = "stable";
+    const dynamic = makeUpdater(appDir, "1.0.0", spy, { channel: () => chosen });
+    check("canal fourni sous forme de fonction : lu a la demande", (await dynamic.check()).latestVersion === "1.1.0");
+    chosen = "preview";
+    check("changement de reglage pris en compte sans redemarrage", (await dynamic.check()).latestVersion === "1.2.0");
+    chosen = "stable";
+    check("retour au canal stable : la pre-release n'est plus proposee", (await dynamic.check()).latestVersion === "1.1.0");
+
+    // Choix par les VERSIONS et non par les dates : republier un
+    // correctif ancien apres une pre-release ne doit pas faire reculer.
+    const pick = preview._pickLatest;
+    check("la version la plus haute gagne, pas la plus recemment publiee",
+      pick([{ tag_name: "v2.0.0", published_at: "2026-01-01" },
+            { tag_name: "v1.9.9", published_at: "2026-08-01" }], true).tag_name === "v2.0.0");
+    check("tag non versionne ignore dans la selection",
+      pick([{ tag_name: "nightly" }, { tag_name: "v1.0.0" }], true).tag_name === "v1.0.0");
+    check("liste vide -> aucune release", pick([], true) === null && pick(null, true) === null);
+    check("liste de brouillons uniquement -> aucune release",
+      pick([{ tag_name: "v9.0.0", draft: true }], true) === null);
+
+    releaseList = [];
+    const empty = makeUpdater(appDir, "1.0.0", spy, { channel: "preview" });
+    check("canal preview sans aucune release publiee : erreur claire, pas d'exception",
+      (await empty.check()).checkError === "no-release");
+    releaseList = null;
   }
 
   console.log("== installation : verrou inchange -> npm ignore, fichiers remplaces, data/ intact ==");

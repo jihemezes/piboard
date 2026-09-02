@@ -544,6 +544,7 @@ const UPDATE_STATE = {
   supported: true, reason: null, currentVersion: "9.9.9-test", latestVersion: "9.10.0", available: true,
   tag: "v9.10.0", publishedAt: "2026-09-01T10:00:00Z", notes: "Notes de test pour la 9.10.0",
   htmlUrl: null, checkedAt: "2026-09-02T08:00:00Z", checkError: null, busy: false,
+  prerelease: false, channel: "stable",
   job: { phase: "idle", version: null, startedAt: null, finishedAt: null, progress: null, error: null, rolledBack: false, log: [] }
 };
 const UPDATE_CALLS = { check: 0, apply: 0 };
@@ -4867,6 +4868,32 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("bandeau : la version proposee est nommee", document.getElementById("updateBannerText").textContent.includes("v9.10.0"));
     assert("bandeau : texte en francais", document.getElementById("updateBannerText").textContent.includes("disponible"));
     assert("rien n'a ete installe sans confirmation", UPDATE_CALLS.apply === 0);
+
+    // Pre-version : annoncee comme telle des le bandeau, pour ne pas
+    // decouvrir apres coup qu'on installe une version d'essai.
+    // Pre-release: announced as such from the banner on, so as not to
+    // find out afterwards that a trial version is being installed.
+    UPDATE_STATE.prerelease = true;
+    UPDATE_STATE.channel = "preview";
+    document.getElementById("updCheckBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    assert("pre-version signalee dans l'etat des reglages",
+      /Pré-version/.test(document.getElementById("updStatusText").textContent));
+    UPDATE_STATE.prerelease = false;
+    UPDATE_STATE.channel = "stable";
+    document.getElementById("updCheckBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    assert("version stable : aucune mention de pre-version",
+      !/Pré-version/.test(document.getElementById("updStatusText").textContent));
+    assert("selecteur de canal present et par defaut sur stable",
+      !!document.getElementById("setUpdateChannel") && document.getElementById("setUpdateChannel").value === "stable");
+    document.getElementById("settingsModal").hidden = true;
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    // Les deux verifications ci-dessus servaient a ce bloc : on remet le
+    // compteur a zero pour que la suite compte les siennes.
+    // The two checks above served this block: reset the counter so the
+    // rest counts its own.
+    UPDATE_CALLS.check = 0;
 
     // "Plus tard" : le bandeau disparait pour la session
     document.getElementById("updateBannerLater").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));

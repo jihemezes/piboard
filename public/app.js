@@ -2894,13 +2894,23 @@
        after a "Later" on this very version. */
     const showBanner = sup && st.available && st.latestVersion !== updateDismissedVersion && !updateBusy() && updateMode === null;
     $("updateBanner").hidden = !showBanner;
-    if (showBanner) $("updateBannerText").textContent = tf("update.available", { v: "v" + st.latestVersion });
+    if (showBanner) {
+      // Une pre-version est annoncee comme telle des le bandeau : on ne
+      // decouvre pas apres coup qu'on installe une version d'essai.
+      // A pre-release is announced as such from the banner on: one does
+      // not find out afterwards that a trial version is being installed.
+      $("updateBannerText").textContent = tf("update.available", { v: "v" + st.latestVersion })
+        + (st.prerelease ? " (" + i18n.t("update.prerelease") + ")" : "");
+    }
 
     if (!sup) return;
     let text;
     if (updateChecking) text = i18n.t("update.checking");
     else if (updateBusy()) text = i18n.t("update.inProgress");
-    else if (st.available) text = tf("update.available", { v: "v" + st.latestVersion });
+    else if (st.available) {
+      text = tf("update.available", { v: "v" + st.latestVersion })
+        + (st.prerelease ? " (" + i18n.t("update.prerelease") + ")" : "");
+    }
     else if (st.checkError) {
       const why = st.checkError === "no-release" ? i18n.t("update.checkFailed.noRelease") : st.checkError;
       text = tf("update.checkFailed", { e: why });
@@ -2960,7 +2970,8 @@
     const st = updateStatus;
     if (!st.available) return;
     $("updateBanner").hidden = true;
-    $("updConfirmText").textContent = tf("update.confirm.text", { v: "v" + st.latestVersion, c: "v" + st.currentVersion });
+    $("updConfirmText").textContent = tf("update.confirm.text", { v: "v" + st.latestVersion, c: "v" + st.currentVersion })
+      + (st.prerelease ? " " + i18n.t("update.confirm.prerelease") : "");
     $("updNotesWrap").hidden = !st.notes;
     $("updNotes").textContent = st.notes || "";
     $("updLog").textContent = "";
@@ -3118,6 +3129,21 @@
     renderUpdateState();
   }
 
+  /* Changer de canal ne sert a rien tant que la verification n'a pas ete
+     refaite : la version affichee viendrait encore de l'ancien canal.
+     On relance donc une verification a l'enregistrement, mais SEULEMENT
+     si le reglage a change -- sinon chaque enregistrement des reglages
+     generaux irait solliciter GitHub sans raison.
+     Switching channel is useless until the check has been re-run: the
+     version shown would still come from the old channel. So we re-run a
+     check on save, but ONLY if the setting changed -- otherwise every
+     save of the general settings would hit GitHub for nothing. */
+  function onUpdateChannelSaved(previous, next) {
+    if (previous === next) return;
+    updateDismissedVersion = null;
+    checkForUpdatesNow();
+  }
+
   function openSettings() {
     $("setLang").value = settings.lang;
     $("setTheme").value = settings.theme;
@@ -3127,6 +3153,7 @@
     $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
     $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
     $("setCartoKey").value = settings.cartoKey || "";
+    $("setUpdateChannel").value = settings.updateChannel === "preview" ? "preview" : "stable";
     // Couverture des tiroirs : lue depuis leur etat reel (persiste via
     // le layout, pas les reglages generaux -- voir le commentaire sur
     // les ecouteurs "change" plus bas) plutot que dupliquee ici.
@@ -3154,6 +3181,7 @@
   }
 
   async function saveSettings() {
+    const previousChannel = settings.updateChannel === "preview" ? "preview" : "stable";
     const body = {
       lang: $("setLang").value,
       theme: $("setTheme").value,
@@ -3163,6 +3191,7 @@
       multiColumnForms: $("setMultiColumnForms").checked,
       quickStartOnLaunch: $("setQuickStart").checked,
       cartoKey: $("setCartoKey").value.trim(),
+      updateChannel: $("setUpdateChannel").value === "preview" ? "preview" : "stable",
       colors: {
         dark: { bg: $("setDarkBg").value, tile: $("setDarkTile").value },
         light: { bg: $("setLightBg").value, tile: $("setLightTile").value }
@@ -3213,6 +3242,7 @@
 
     settings = await apiPut("/api/settings", body);
     if (cartoChanged) remountMapTiles();
+    onUpdateChannelSaved(previousChannel, body.updateChannel);
     $("settingsModal").hidden = true;
     vkb.hide();
     applySettings();

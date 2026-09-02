@@ -180,4 +180,17 @@ console.log("== Axe des abscisses temporel documente (1.84.0) ==");
 }
 console.log("  OK");
 
+console.log("== Canal des mises a jour documente (1.85.0) ==");
+{
+  const e = entryById("linux-update");
+  for (const [lang, html] of [["fr", e.html.fr], ["en", e.html.en]]) {
+    assert.ok(/Latest/.test(html), `${lang} : le libelle GitHub "Latest" doit etre cite tel quel`);
+    assert.ok(/Pre-release/.test(html), `${lang} : le libelle GitHub "Pre-release" doit etre cite tel quel`);
+    assert.ok(/(brouillon|draft)/.test(html), `${lang} : l'exclusion des brouillons doit etre dite`);
+  }
+  assert.ok(/Versions stables uniquement/.test(e.html.fr) && /Stable versions only/.test(e.html.en),
+    "les deux choix doivent etre nommes comme dans l'interface");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");

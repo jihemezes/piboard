@@ -1,5 +1,79 @@
 # Changelog
 
+## 1.85.0
+
+- **Choix du niveau des mises a jour** (reglages generaux -> Mises a
+  jour, Raspberry Pi / Linux). Deux canaux, correspondant exactement aux
+  etiquettes que GitHub propose au moment de publier une release :
+  - **Versions stables uniquement** (defaut) : seule la release marquee
+    « Latest » est proposee. Le defaut compte : une installation qui n'a
+    jamais touche a ce reglage ne doit pas se retrouver a installer des
+    versions d'essai.
+  - **Installer aussi les pre-versions** : les releases marquees
+    « Pre-release » le sont egalement.
+
+- **Une pre-version est annoncee comme telle** dans le bandeau, dans
+  l'etat des reglages et dans la fenetre de confirmation : on ne
+  decouvre jamais apres coup qu'on installe une version d'essai.
+
+- **Mise en oeuvre** (`server/selfUpdate.js`) : le canal stable
+  interroge `/releases/latest`, ou GitHub filtre lui-meme brouillons et
+  pre-releases ; le canal preview interroge `/releases` et retient la
+  version la plus haute parmi les releases publiees. Deux precautions :
+  les **brouillons** restent exclus dans les deux cas (pas d'archive
+  telechargeable, visibles du seul auteur), et la selection se fait sur
+  le **numero de version**, pas sur la date de publication -- republier
+  un correctif ancien apres une pre-release plus recente ne doit pas
+  faire reculer le tableau.
+
+- Le reglage est **relu a chaque verification** : le changer prend effet
+  sans redemarrer le serveur, et l'enregistrer relance immediatement une
+  verification (sinon la version affichee viendrait encore de l'ancien
+  canal). Cette verification n'est relancee que si le reglage a
+  reellement change.
+
+- **Tests** : `selfUpdate.test.js` (84 verifications) couvre les deux
+  canaux sur une meme liste de releases, l'exclusion des brouillons, le
+  choix par version et non par date, le canal fourni sous forme de
+  fonction relu a la demande, et un depot sans aucune release publiee ;
+  `dom-smoke.js` verifie le selecteur et la mention « Pre-version » dans
+  l'interface ; aide FR/EN.
+
+---
+
+- **Update level choice** (general settings -> Updates, Raspberry Pi /
+  Linux). Two channels, matching exactly the labels GitHub offers when
+  publishing a release:
+  - **Stable versions only** (default): only the release marked "Latest"
+    is offered. The default matters: an installation that never touched
+    this setting must not end up installing trial versions.
+  - **Also install pre-releases**: releases marked "Pre-release" are
+    offered too.
+
+- **A pre-release is announced as such** in the banner, in the settings
+  state and in the confirmation window: you never find out afterwards
+  that you are installing a trial version.
+
+- **Implementation** (`server/selfUpdate.js`): the stable channel queries
+  `/releases/latest`, where GitHub itself filters drafts and
+  pre-releases; the preview channel queries `/releases` and keeps the
+  highest version among published releases. Two precautions: **drafts**
+  stay excluded either way (no downloadable archive, visible only to
+  their author), and the pick is made on the **version number**, not the
+  publication date -- republishing an old fix after a more recent
+  pre-release must not make the board go backwards.
+
+- The setting is **re-read on every check**: changing it takes effect
+  without restarting the server, and saving it immediately re-runs a
+  check (otherwise the version shown would still come from the old
+  channel). That check is only re-run if the setting actually changed.
+
+- **Tests**: `selfUpdate.test.js` (84 checks) covers both channels over
+  the same release list, draft exclusion, picking by version rather than
+  date, the channel supplied as a function and re-read on demand, and a
+  repo with no published release at all; `dom-smoke.js` checks the
+  selector and the "Pre-release" mention in the interface; FR/EN help.
+
 ## 1.84.0
 
 - **Axe des abscisses temporel sur TOUS les graphiques** : Etat systeme

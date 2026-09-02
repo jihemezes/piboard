@@ -106,6 +106,21 @@ const DEFAULT_SETTINGS = {
      see it at every launch. A single setting rather than a "seen" /
      "show again" pair: the person only has one thing to understand. */
   quickStartOnLaunch: true,
+  /* Niveau des mises a jour proposees (Raspberry Pi / Linux, voir
+     server/selfUpdate.js) :
+       "stable"  : uniquement la release marquee "Latest" sur GitHub.
+       "preview" : accepte aussi les releases marquees "Pre-release".
+     "stable" par defaut, et ce defaut compte : une installation qui n'a
+     jamais touche a ce reglage ne doit pas se retrouver a installer des
+     versions d'essai.
+     Level of the offered updates (Raspberry Pi / Linux, see
+     server/selfUpdate.js):
+       "stable"  : only the release marked "Latest" on GitHub.
+       "preview" : also accepts releases marked "Pre-release".
+     "stable" by default, and that default matters: an installation that
+     never touched this setting must not end up installing trial
+     versions. */
+  updateChannel: "stable",
   /* Cle CARTO des fonds de carte (tuiles Trafic, Radar, Avions).
      Vide par defaut, et il ne peut pas en etre autrement : CARTO
      delivre des cles PAR CLIENT, a ne pas partager entre projets sans
@@ -1169,6 +1184,15 @@ const updater = selfUpdate.createUpdater({
   // kiosk controller is registered AFTER this module loads, and it is
   // what makes server-side updating irrelevant.
   support: () => platform.updateSupport(),
+  /* Canal choisi dans les reglages generaux : "stable" n'installe que
+     les releases marquees "Latest" sur GitHub, "preview" accepte aussi
+     les pre-releases. Relu a chaque verification, pour qu'un changement
+     de reglage prenne effet sans redemarrer le serveur.
+     Channel chosen in the general settings: "stable" installs only the
+     releases marked "Latest" on GitHub, "preview" also accepts
+     pre-releases. Re-read on every check, so a settings change takes
+     effect without restarting the server. */
+  channel: () => (store.read("settings", {}) || {}).updateChannel || DEFAULT_SETTINGS.updateChannel,
   restart: (version) => platform.restartServer(version),
   checkIntervalMs: process.env.PIBOARD_UPDATE_CHECK === "0" ? 0 : undefined,
   // Chaque changement d'etat (nouvelle version detectee, progression
