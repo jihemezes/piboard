@@ -14,7 +14,7 @@
 "use strict";
 
 const fs = require("fs");
-const { execFile, exec } = require("child_process");
+const { execFile, exec, spawn } = require("child_process");
 const { isValidIp, normalizeMac } = require("../ipv4");
 
 const id = "linux";
@@ -185,6 +185,66 @@ function exitKiosk() {
 function exitToDesktop() {
   exec("pkill -x lwrespawn; pkill -x chromium", () => {});
   return { ok: true };
+}
+
+/* ---------- Mise a jour automatique / self-update ----------
+   Sur Linux, le serveur peut se mettre a jour lui-meme depuis les
+   releases GitHub (voir server/selfUpdate.js) : `tar` est present sur
+   toute distribution Debian/Ubuntu/Pi OS, et le dossier de
+   l'application appartient a l'utilisateur du service. C'est la
+   contrepartie d'electron-updater sous Windows.
+   On Linux the server can update itself from GitHub releases (see
+   server/selfUpdate.js): `tar` ships with every Debian/Ubuntu/Pi OS
+   distribution, and the application folder belongs to the service user.
+   This is the counterpart of electron-updater on Windows. */
+function updateSupport() {
+  return { supported: true, method: "github-archive" };
+}
+
+/* Redemarrage apres mise a jour. Deux situations :
+     - service systemd (INVOCATION_ID est pose par systemd >= 232 pour
+       chaque unite) : on quitte avec un code NON NUL. Le fichier
+       install/piboard.service declare Restart=on-failure : un code 0
+       ne relancerait PAS le service, un code non nul si. Les
+       installations plus recentes ont Restart=always, ou les deux
+       marchent. Le processus n'a pas le droit d'appeler
+       `systemctl restart` lui-meme (utilisateur sans privileges,
+       NoNewPrivileges=true) : cette sortie volontaire est le seul
+       levier disponible, et il suffit.
+     - lance a la main (node server/index.js, npm start, pm2 sans
+       relance...) : personne ne nous relancera. On demarre un remplacant
+       detache qui attend une seconde (le temps que ce processus libere
+       le port), puis on quitte.
+   Restart after an update. Two situations:
+     - systemd service (INVOCATION_ID is set by systemd >= 232 for every
+       unit): exit with a NON-ZERO code. install/piboard.service declares
+       Restart=on-failure: a 0 code would NOT relaunch the service, a
+       non-zero one does. Newer installs have Restart=always, where both
+       work. The process is not allowed to call `systemctl restart`
+       itself (unprivileged user, NoNewPrivileges=true): this deliberate
+       exit is the only lever available, and it is enough.
+     - started by hand (node server/index.js, npm start, pm2 without
+       relaunch...): nobody will bring us back. We spawn a detached
+       replacement that waits one second (for this process to free the
+       port), then exit. */
+function restartServer() {
+  const underSystemd = !!process.env.INVOCATION_ID;
+  if (!underSystemd) {
+    try {
+      const script = process.argv[1] || "server/index.js";
+      const child = spawn("/bin/sh", ["-c", "sleep 1; exec \"$0\" \"$1\"", process.execPath, script], {
+        cwd: process.cwd(),
+        env: process.env,
+        detached: true,
+        stdio: "ignore"
+      });
+      child.unref();
+    } catch (e) {
+      return { ok: false, reason: String(e.message || e) };
+    }
+  }
+  setTimeout(() => process.exit(underSystemd ? 3 : 0), 200);
+  return { ok: true, method: underSystemd ? "systemd" : "respawn" };
 }
 
 /* Emplacements ou chercher ffmpeg, par ordre de priorite. Sur un Pi OS
@@ -438,6 +498,8 @@ module.exports = {
   filesystemRoot,
   exitKiosk,
   exitToDesktop,
+  updateSupport,
+  restartServer,
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,

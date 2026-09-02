@@ -1175,7 +1175,7 @@
           <h4>Possibilités</h4>
           <p>Une sélection de compétitions courantes (Coupe du monde, Ligue des champions, principaux championnats de football européens, Top 14) est proposée directement dans la liste. Pour toute autre compétition suivie par ESPN — un championnat américain par exemple — un code personnalisé permet de cibler n'importe quelle ligue (voir la méthode de recherche du code dans les options du widget Classement, identique ici). Le filtre par équipe permet de ne garder que les matchs d'un club précis, pratique pour une tuile compacte dédiée à votre équipe favorite plutôt qu'à toute la compétition. Pour un match à venir programmé un autre jour, l'heure et la date (jj/mm) alternent automatiquement toutes les quelques secondes — pour un match du jour même, seule l'heure est affichée, la date étant déjà évidente.</p>
           <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">Compétition</span><span class="help-opt-desc">Liste des compétitions courantes préconfigurées.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compétition</span><span class="help-opt-desc">Liste des compétitions courantes préconfigurées, y compris les championnats F1 et MotoGP (pilotes et équipes).</span></div>
           <div class="help-opt"><span class="help-opt-name">Code ESPN personnalisé</span><span class="help-opt-desc">Prend le pas sur la liste ci-dessus pour cibler n'importe quelle compétition couverte par ESPN (format <code>sport:ligue</code>, ex. <code>football:nfl</code>).</span></div>
           <div class="help-opt"><span class="help-opt-name">Filtrer par équipe</span><span class="help-opt-desc">N'affiche que les matchs impliquant le nom saisi (ex. « Toulouse »).</span></div>
           <div class="help-opt"><span class="help-opt-name">Nombre de matchs affichés</span><span class="help-opt-desc">Combien de rencontres afficher au maximum.</span></div>
@@ -1187,7 +1187,7 @@
           <h4>Possibilities</h4>
           <p>A selection of common competitions (World Cup, Champions League, major European football leagues, Top 14) is offered directly in the list. For any other ESPN-covered competition — an American league for instance — a custom code lets you target any league (see the code lookup method in the League standings widget's options, identical here). The team filter lets you keep only a specific club's matches, handy for a compact tile dedicated to your favorite team rather than the whole competition. For an upcoming match scheduled on another day, the time and date (DD/MM) alternate automatically every few seconds — for a match happening today, only the time is shown, since the date is already obvious.</p>
           <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">Competition</span><span class="help-opt-desc">List of preconfigured common competitions.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Competition</span><span class="help-opt-desc">List of preconfigured common competitions, including the F1 and MotoGP championships (drivers and teams).</span></div>
           <div class="help-opt"><span class="help-opt-name">Custom ESPN code</span><span class="help-opt-desc">Takes precedence over the list above to target any ESPN-covered competition (format <code>sport:league</code>, e.g. <code>football:nfl</code>).</span></div>
           <div class="help-opt"><span class="help-opt-name">Filter by team</span><span class="help-opt-desc">Only shows matches involving the entered name (e.g. "Toulouse").</span></div>
           <div class="help-opt"><span class="help-opt-name">Max matches shown</span><span class="help-opt-desc">How many matches to show at most.</span></div>
@@ -1240,8 +1240,8 @@
       group: "tiles",
       title: { fr: "Classement", en: "League standings" },
       sub: {
-        fr: "Classement actuel de football, rugby (Top 14), basketball, ou toute autre compétition couverte par ESPN via son code.",
-        en: "Current league table for football, rugby (Top 14), basketball, or any other ESPN-covered competition via its code."
+        fr: "Classement actuel de football, rugby (Top 14), basketball, Formule 1 et MotoGP, ou toute autre compétition couverte par ESPN via son code.",
+        en: "Current league table for football, rugby (Top 14), basketball, Formula 1 and MotoGP, or any other ESPN-covered competition via its code."
       },
       html: {
         fr: `
@@ -1250,9 +1250,14 @@
           <p>Afficher le classement à jour d'un championnat, avec la possibilité de mettre en valeur une équipe en particulier.</p>
           <h4>Possibilités</h4>
           <p>Comme pour les scores en direct, une liste de compétitions courantes est proposée, et un code ESPN personnalisé permet d'en cibler n'importe quelle autre. Pour trouver ce code : ouvrez la page de classement de la compétition sur espn.com (ex. <code>espn.com/nfl/scoreboard</code>), ouvrez les outils de développement du navigateur → onglet Réseau, rechargez la page, et repérez une requête vers <code>site.api.espn.com/apis/site/v2/sports/&lt;sport&gt;/&lt;ligue&gt;/scoreboard</code> — les deux segments après <code>/sports/</code> forment le code à saisir, séparés par deux-points (ex. NHL → <code>hockey:nhl</code>). La tuile s'agrandit largement (jusqu'à 12×12) pour que les noms de clubs complets restent lisibles même avec une grande police — élargissez-la si un nom est tronqué. Mettre en valeur une équipe (via son nom) la fait ressortir visuellement dans le tableau, pratique pour repérer d'un coup d'œil la position de votre équipe.</p>
+          <h4>Lire le tableau</h4>
+          <p>Les colonnes affichées s'adaptent à ce que publie la source pour le sport concerné, dans l'ordre conventionnel d'un tableau de championnat : <b>J</b> matchs joués, <b>G</b> gagnés, <b>N</b> nuls, <b>P</b> perdus, <b>Diff</b> différence de points ou de buts, <b>%V</b> pourcentage de victoires (sports américains), et <b>Pts</b> les points, toujours en dernière colonne et mis en valeur. Si la tuile est étroite, les colonnes les moins essentielles sont retirées en premier — les points, eux, sont toujours conservés. En Formule 1 et en MotoGP, la colonne <b>V</b> compte les victoires.</p>
+          <h4>Sports mécaniques</h4>
+          <p>La liste des compétitions propose également les championnats de Formule 1 et de MotoGP, pilotes comme équipes. Ils n'utilisent pas ESPN mais les mêmes sources publiques que la tuile « Sports mécaniques » : Jolpica (reprise de l'API Ergast) pour la F1, le flux public de motogp.com pour le MotoGP. Pour la F1, le nombre de victoires est affiché à côté des points, et l'écurie de chaque pilote apparaît sous son nom. Le champ « code ESPN personnalisé » ne s'applique pas à ces championnats : s'il est rempli, il reprend la main et renvoie vers ESPN.</p>
+          <p>Une réserve sur le classement des équipes MotoGP : le flux public ne publie que le classement des pilotes. Le total par équipe est donc <b>calculé</b> en additionnant les points de ses pilotes, ce que la tuile indique explicitement sous le tableau. Le résultat correspond au classement officiel tant qu'une écurie n'aligne que ses deux titulaires ; un pilote remplaçant ou une wild card peut créer un écart.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Compétition</span><span class="help-opt-desc">Liste des compétitions courantes préconfigurées.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Code ESPN personnalisé</span><span class="help-opt-desc">Prend le pas sur la liste ci-dessus. Voir la méthode de recherche ci-dessus.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Code ESPN personnalisé</span><span class="help-opt-desc">Prend le pas sur la liste ci-dessus, y compris sur les championnats F1 et MotoGP : laissez ce champ vide pour les utiliser. Voir la méthode de recherche ci-dessus.</span></div>
           <div class="help-opt"><span class="help-opt-name">Équipes affichées par groupe</span><span class="help-opt-desc">Combien de lignes du classement afficher.</span></div>
           <div class="help-opt"><span class="help-opt-name">Mettre en valeur une équipe</span><span class="help-opt-desc">Fait ressortir visuellement la ligne de l'équipe nommée.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour du classement.</span></div>`,
@@ -1262,9 +1267,14 @@
           <p>Show a league's current standings, with the option to highlight a specific team.</p>
           <h4>Possibilities</h4>
           <p>As with live scores, a list of common competitions is offered, and a custom ESPN code lets you target any other. To find that code: open the competition's standings page on espn.com (e.g. <code>espn.com/nfl/scoreboard</code>), open the browser's developer tools → Network tab, reload the page, and look for a request to <code>site.api.espn.com/apis/site/v2/sports/&lt;sport&gt;/&lt;league&gt;/scoreboard</code> — the two segments after <code>/sports/</code> form the code to enter, separated by a colon (e.g. NHL → <code>hockey:nhl</code>). The tile scales up generously (up to 12×12) so full club names stay readable even with a large font — widen it if a name gets truncated. Highlighting a team (by name) makes it visually stand out in the table, handy for spotting your team's position at a glance.</p>
+          <h4>Reading the table</h4>
+          <p>The columns shown adapt to what the source publishes for that sport, in the conventional order of a league table: <b>P</b> games played, <b>W</b> won, <b>D</b> drawn, <b>L</b> lost, <b>Diff</b> point or goal difference, <b>Pct</b> win percentage (US sports), and <b>Pts</b> the points, always in the last column and emphasised. If the tile is narrow, the least essential columns are dropped first — points are always kept. In Formula 1 and MotoGP, the <b>Wins</b> column counts race victories.</p>
+          <h4>Motorsport</h4>
+          <p>The competition list also offers the Formula 1 and MotoGP championships, drivers as well as teams. These don't use ESPN but the same public sources as the "Motorsport" tile: Jolpica (the continuation of the Ergast API) for F1, motogp.com's public feed for MotoGP. For F1 the number of wins is shown next to the points, and each driver's team appears under their name. The "custom ESPN code" field does not apply to these championships: if filled, it takes over and goes back to ESPN.</p>
+          <p>One caveat on the MotoGP team standings: the public feed only publishes the rider standings. Each team's total is therefore <b>computed</b> by adding up its riders' points, which the tile states explicitly under the table. The result matches the official standings as long as a team fields only its two regular riders; a stand-in rider or a wild card can create a discrepancy.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Competition</span><span class="help-opt-desc">List of preconfigured common competitions.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Custom ESPN code</span><span class="help-opt-desc">Takes precedence over the list above. See the lookup method above.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Custom ESPN code</span><span class="help-opt-desc">Takes precedence over the list above, including over the F1 and MotoGP championships: leave this field empty to use them. See the lookup method above.</span></div>
           <div class="help-opt"><span class="help-opt-name">Teams shown per group</span><span class="help-opt-desc">How many standings rows to show.</span></div>
           <div class="help-opt"><span class="help-opt-name">Highlight a team</span><span class="help-opt-desc">Visually highlights the named team's row.</span></div>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two standings updates.</span></div>`
@@ -1457,6 +1467,7 @@
           <p>Le nom est associé à l'<b>adresse MAC</b> de l'appareil quand elle est connue, et non à son adresse IP : il reste donc correct même si le routeur attribue une IP différente au prochain redémarrage. Ces noms sont enregistrés côté serveur dans <code>data/netHosts.json</code>, en dehors des fichiers livrés par les mises à jour : ils sont <b>conservés lors d'une mise à jour comme d'une réinstallation complète</b>, et sont inclus dans les sauvegardes/restaurations de configuration.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Sous-réseau à analyser (CIDR)</span><span class="help-opt-desc">Laissez vide pour détecter automatiquement le réseau du Pi (recommandé). Exemple pour le forcer : 192.168.1.0/24. Limité à /22 (1024 adresses) au maximum.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Renommer un appareil</span><span class="help-opt-desc">Ne se règle pas ici mais directement sur la tuile : le bouton ✎ de chaque ligne. Les noms sont conservés lors des mises à jour et des réinstallations.</span></div>
           <div class="help-opt"><span class="help-opt-name">Réanalyser automatiquement</span><span class="help-opt-desc">En minutes ; 0 (par défaut) désactive l'analyse automatique, seul le bouton de la tuile déclenche une analyse.</span></div>`,
         en: `
           <span class="help-size">Size: 4×4 by default, from 3×2 to 8×10</span>
@@ -1469,6 +1480,7 @@
           <p>The name is tied to the device's <b>MAC address</b> when known, not to its IP address: it therefore stays correct even if the router hands out a different IP on the next reboot. These names are stored server-side in <code>data/netHosts.json</code>, outside the files shipped by updates: they are <b>kept across updates as well as full reinstalls</b>, and are included in configuration backups/restores.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Subnet to scan (CIDR)</span><span class="help-opt-desc">Leave empty to auto-detect the Pi's own network (recommended). Example to force it: 192.168.1.0/24. Limited to /22 (1024 addresses) at most.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rename a device</span><span class="help-opt-desc">Not set here but directly on the tile: the ✎ button on each row. Names are kept across updates and reinstalls.</span></div>
           <div class="help-opt"><span class="help-opt-name">Auto-rescan</span><span class="help-opt-desc">In minutes; 0 (default) disables automatic scanning, only the tile's button triggers a scan.</span></div>`
       }
     },
@@ -1803,7 +1815,7 @@
       html: {
         fr: `
           <h4>Uniquement pertinent sur PC Windows</h4>
-          <p>Cette section ne concerne que l'installation de PiBoard en tant qu'application de bureau Windows (via l'installeur <code>.exe</code>). Sur Raspberry Pi, l'affichage est un navigateur en kiosque et rien de ce qui suit ne s'applique.</p>
+          <p>Cette section ne concerne que l'installation de PiBoard en tant qu'application de bureau Windows (via l'installeur <code>.exe</code>). Sur Raspberry Pi, l'affichage est un navigateur en kiosque et rien de ce qui suit ne s'applique — voir la fiche « Mises à jour sur Raspberry Pi / Linux » pour l'équivalent.</p>
 
           <h4>Le menu caché</h4>
           <p>La fenêtre est volontairement épurée : sa barre de menu est <b>masquée par défaut</b> et rien à l'écran n'indique qu'elle existe. Pour la faire apparaître, <b>appuyez sur la touche <code>Alt</code></b> (seule, sans la maintenir avec une autre touche). Un second appui, ou un clic ailleurs dans la fenêtre, la referme.</p>
@@ -1823,7 +1835,7 @@
           <p>Les réglages, la disposition des tuiles, les clés API et les photos téléversées sont stockés dans <code>%APPDATA%\\PiBoard</code>. Ce dossier est conservé lors d'une mise à jour ou d'une désinstallation — une réinstallation retrouve tout tel quel.</p>`,
         en: `
           <h4>Only relevant on a Windows PC</h4>
-          <p>This section only concerns PiBoard installed as a Windows desktop application (via the <code>.exe</code> installer). On Raspberry Pi, the display is a kiosk browser and none of the following applies.</p>
+          <p>This section only concerns PiBoard installed as a Windows desktop application (via the <code>.exe</code> installer). On Raspberry Pi, the display is a kiosk browser and none of the following applies — see the "Updates on Raspberry Pi / Linux" topic for the equivalent.</p>
 
           <h4>The hidden menu</h4>
           <p>The window is deliberately clean: its menu bar is <b>hidden by default</b> and nothing on screen hints that it exists. To reveal it, <b>press the <code>Alt</code> key</b> (alone, not held with another key). Pressing it again, or clicking elsewhere in the window, closes it.</p>
@@ -1841,6 +1853,52 @@
 
           <h4>Data location</h4>
           <p>Settings, tile layout, API keys and uploaded photos are stored in <code>%APPDATA%\\PiBoard</code>. This folder is kept across an update or an uninstall — a reinstall finds everything back as it was.</p>`
+      }
+    },
+
+    {
+      id: "linux-update",
+      group: "platform",
+      title: { fr: "Mises à jour sur Raspberry Pi / Linux", en: "Updates on Raspberry Pi / Linux" },
+      sub: {
+        fr: "Vérification automatique, installation en un geste, retour arrière.",
+        en: "Automatic check, one-tap install, rollback."
+      },
+      html: {
+        fr: `
+          <h4>Uniquement pertinent sur Raspberry Pi ou PC Linux</h4>
+          <p>Cette section concerne PiBoard installé comme serveur sur Raspberry Pi OS, Debian, Ubuntu, ZorinOS ou toute distribution Linux. Sous Windows, l'application de bureau se met à jour par son propre mécanisme (voir la fiche « Application de bureau Windows ») et la section « Mises à jour » des réglages n'apparaît pas.</p>
+
+          <h4>Vérification automatique</h4>
+          <p>Le serveur consulte les versions publiées sur GitHub une vingtaine de secondes après son démarrage, puis toutes les six heures — silencieusement s'il est déjà à jour. Seules les versions <b>effectivement publiées</b> comptent : un brouillon ou une pré-version est ignoré, exactement comme sous Windows. Quand une nouvelle version existe, un <b>bandeau discret</b> apparaît en haut de l'écran : « Mettre à jour » lance l'installation, « Plus tard » le referme jusqu'au prochain démarrage de l'affichage. Pour vérifier à tout moment : réglages généraux (engrenage du tiroir du bas) → section <b>Mises à jour</b> → « Vérifier maintenant ».</p>
+          <div class="help-opt"><span class="help-opt-name">Depuis un autre appareil</span><span class="help-opt-desc">La section fonctionne aussi depuis un téléphone ou un PC du réseau local ouvert sur l'adresse du PiBoard : pratique pour un kiosque mural sans clavier. L'écran du kiosque se recharge tout seul une fois la mise à jour terminée.</span></div>
+
+          <h4>Ce qui se passe à l'installation</h4>
+          <p>L'archive de la version est téléchargée depuis GitHub, extraite dans <code>data/updates/</code>, puis mise en place : chaque dossier de l'ancienne version est <b>déplacé</b> dans <code>data/updates/previous/</code> avant que le nouveau prenne sa place. Les fichiers supprimés d'une version à l'autre disparaissent donc réellement, contrairement à une archive décompressée par-dessus l'ancienne. Si les dépendances ont changé (fichier <code>package-lock.json</code> différent), <code>npm install</code> est lancé ; sinon cette étape est sautée — un simple correctif s'installe en quelques secondes. Le serveur redémarre ensuite, et le tableau de bord se recharge de lui-même dès que la nouvelle version répond.</p>
+          <p><b>Jamais touché :</b> le dossier <code>data/</code> (réglages, disposition, clés, photos), <code>node_modules/</code> (hors action de npm lui-même), et <code>.git/</code> si vous aviez installé par <code>git clone</code>.</p>
+
+          <h4>En cas d'échec</h4>
+          <p>Si <code>npm install</code> échoue (pas de réseau vers npm, ou <code>npm</code> absent du système), la version précédente est <b>remise en place automatiquement</b> et le serveur continue de tourner sans redémarrer. La fenêtre indique la cause exacte ; « Réessayer » relance le cycle. Le dossier <code>previous/</code> reste disponible jusqu'à la mise à jour suivante pour une restauration manuelle.</p>
+
+          <h4>Prérequis</h4>
+          <p>Le dossier de PiBoard doit appartenir à l'utilisateur qui lance le serveur (c'est le cas après <code>install.sh</code>), et <code>tar</code> doit être présent (toujours vrai sur Debian et dérivés). Le redémarrage automatique s'appuie sur le service <code>systemd</code> installé par <code>install.sh</code> ; si PiBoard a été lancé à la main, il se relance lui-même. Pour désactiver la vérification périodique : variable d'environnement <code>PIBOARD_UPDATE_CHECK=0</code> dans le service (la vérification manuelle reste possible).</p>`,
+        en: `
+          <h4>Only relevant on a Raspberry Pi or a Linux PC</h4>
+          <p>This section concerns PiBoard installed as a server on Raspberry Pi OS, Debian, Ubuntu, ZorinOS or any Linux distribution. On Windows, the desktop application updates through its own mechanism (see the "Windows desktop app" topic) and the "Updates" settings section does not appear.</p>
+
+          <h4>Automatic check</h4>
+          <p>The server looks up the versions published on GitHub about twenty seconds after starting, then every six hours — silently if already up to date. Only <b>actually published</b> versions count: a draft or a pre-release is ignored, exactly as on Windows. When a new version exists, a <b>discreet banner</b> appears at the top of the screen: "Update" starts the install, "Later" closes it until the display next starts. To check at any time: general settings (gear in the bottom drawer) → <b>Updates</b> section → "Check now".</p>
+          <div class="help-opt"><span class="help-opt-name">From another device</span><span class="help-opt-desc">The section also works from a phone or PC on the local network opened on the PiBoard's address: handy for a keyboard-less wall kiosk. The kiosk screen reloads by itself once the update is done.</span></div>
+
+          <h4>What happens during the install</h4>
+          <p>The version's archive is downloaded from GitHub, extracted into <code>data/updates/</code>, then put in place: every folder of the old version is <b>moved</b> into <code>data/updates/previous/</code> before the new one takes its place. Files removed between versions therefore really disappear, unlike an archive extracted on top of the old one. If dependencies changed (different <code>package-lock.json</code>), <code>npm install</code> runs; otherwise that step is skipped — a plain fix installs in a few seconds. The server then restarts, and the dashboard reloads on its own as soon as the new version answers.</p>
+          <p><b>Never touched:</b> the <code>data/</code> folder (settings, layout, keys, photos), <code>node_modules/</code> (except by npm itself), and <code>.git/</code> if you had installed through <code>git clone</code>.</p>
+
+          <h4>If it fails</h4>
+          <p>If <code>npm install</code> fails (no network to npm, or <code>npm</code> missing from the system), the previous version is <b>put back automatically</b> and the server keeps running without restarting. The window states the exact cause; "Retry" runs the cycle again. The <code>previous/</code> folder stays available until the next update for a manual restore.</p>
+
+          <h4>Requirements</h4>
+          <p>The PiBoard folder must belong to the user running the server (the case after <code>install.sh</code>), and <code>tar</code> must be present (always true on Debian and derivatives). The automatic restart relies on the <code>systemd</code> service installed by <code>install.sh</code>; if PiBoard was started by hand, it relaunches itself. To disable the periodic check: environment variable <code>PIBOARD_UPDATE_CHECK=0</code> in the service (manual checks remain possible).</p>`
       }
     },
 

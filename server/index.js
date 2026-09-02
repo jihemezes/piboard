@@ -1063,6 +1063,85 @@ app.post("/api/system/exit-to-desktop", (req, res) => {
   res.json(result);
 });
 
+/* ---------- Mise a jour automatique du serveur / server self-update ----------
+   Contrepartie, pour le Raspberry Pi et tout Linux (Debian, Ubuntu,
+   ZorinOS...), de la mise a jour automatique de l'application Windows :
+   le serveur interroge GitHub Releases, signale une nouvelle version a
+   l'interface, et l'installe sur demande -- voir server/selfUpdate.js
+   pour le detail complet du cycle (telechargement de l'archive du tag,
+   remplacement par renommage, npm install si les dependances ont change,
+   retour arriere automatique en cas d'echec, redemarrage).
+
+   Contrairement aux routes exit-* ci-dessus, l'installation N'EST PAS
+   reservee aux requetes locales : mettre a jour le Pi depuis un
+   telephone ou un PC du reseau est precisement l'un des usages voulus
+   (le kiosque n'a souvent ni clavier ni souris). Le risque est nul : le
+   code installe est toujours celui de la release officielle du depot,
+   jamais un contenu fourni par le client. Le reste de l'interface
+   (disposition, reglages) est de toute facon deja modifiable depuis le
+   reseau local sans authentification.
+
+   Variables d'environnement : PIBOARD_UPDATE_CHECK=0 desactive la
+   verification periodique (la verification manuelle reste possible) ;
+   PIBOARD_UPDATE_REPO permet de viser un fork.
+
+   Counterpart, for the Raspberry Pi and any Linux (Debian, Ubuntu,
+   ZorinOS...), of the Windows application's automatic update: the
+   server queries GitHub Releases, reports a new version to the
+   interface, and installs it on request -- see server/selfUpdate.js for
+   the full cycle (tag archive download, replacement by rename, npm
+   install if dependencies changed, automatic rollback on failure,
+   restart).
+
+   Unlike the exit-* routes above, installing is NOT restricted to local
+   requests: updating the Pi from a phone or a PC on the network is
+   precisely one of the intended uses (the kiosk often has neither
+   keyboard nor mouse). The risk is nil: the installed code is always the
+   repository's official release, never client-supplied content. The rest
+   of the interface (layout, settings) is already editable from the LAN
+   without authentication anyway.
+
+   Environment variables: PIBOARD_UPDATE_CHECK=0 disables the periodic
+   check (manual checks remain possible); PIBOARD_UPDATE_REPO targets a
+   fork. */
+const selfUpdate = require("./selfUpdate");
+const updater = selfUpdate.createUpdater({
+  appDir: path.join(__dirname, ".."),
+  dataDir: store.DATA_DIR,
+  currentVersion: APP_VERSION,
+  repo: process.env.PIBOARD_UPDATE_REPO || undefined,
+  // Fonction plutot que valeur : dans l'application de bureau, le
+  // controleur de kiosque est enregistre APRES le chargement de ce
+  // module, et c'est lui qui rend la mise a jour serveur non pertinente.
+  // A function rather than a value: in the desktop application, the
+  // kiosk controller is registered AFTER this module loads, and it is
+  // what makes server-side updating irrelevant.
+  support: () => platform.updateSupport(),
+  restart: (version) => platform.restartServer(version),
+  checkIntervalMs: process.env.PIBOARD_UPDATE_CHECK === "0" ? 0 : undefined,
+  // Chaque changement d'etat (nouvelle version detectee, progression
+  // d'une installation) est pousse a tous les affichages connectes, qui
+  // n'ont donc pas a interroger le serveur en boucle.
+  // Every state change (new version found, install progress) is pushed
+  // to all connected displays, which therefore don't have to poll.
+  onChange: (st) => broadcast("update", { available: st.available, latestVersion: st.latestVersion, phase: st.job.phase })
+});
+
+app.get("/api/update/status", (req, res) => {
+  res.json(updater.status());
+});
+
+app.post("/api/update/check", async (req, res) => {
+  res.json(await updater.check());
+});
+
+app.post("/api/update/apply", (req, res) => {
+  const r = updater.apply();
+  if (r.ok) return res.status(202).json(r.status);
+  const code = r.reason === "busy" ? 409 : r.reason === "not-supported" ? 403 : 400;
+  res.status(code).json(Object.assign({ error: r.reason }, r.status));
+});
+
 
 /* ---------- Compteur de requetes trafic (widget "traffic") ---------- */
 const trafficQuota = require("./trafficQuota");
@@ -2016,6 +2095,10 @@ function start(options) {
       // must be read back rather than assuming "port".
       const actual = server.address().port;
       console.log(`[piboard] listening on http://${host}:${actual}  (data: ${store.DATA_DIR})`);
+      // Verification differee des mises a jour (Linux) : le tableau
+      // d'abord, GitHub ensuite. Deferred update check (Linux): the
+      // board first, GitHub later.
+      updater.startAutoCheck();
       resolve({ server, port: actual, host });
     });
   });

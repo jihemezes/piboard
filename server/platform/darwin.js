@@ -15,7 +15,7 @@
 
 const path = require("path");
 const fs = require("fs");
-const { execFile } = require("child_process");
+const { execFile, spawn } = require("child_process");
 const { isValidIp, normalizeMac } = require("../ipv4");
 
 const id = "darwin";
@@ -130,6 +130,33 @@ function exitKiosk() {
 
 function exitToDesktop() {
   return { ok: false, reason: "not-supported" };
+}
+
+/* ---------- Mise a jour automatique / self-update ----------
+   Meme mecanisme que Linux (archive GitHub + tar, present sur macOS).
+   Pas de systemd : le serveur se relance en lancant un remplacant
+   detache avant de quitter -- suffisant pour un poste de developpement,
+   seul cas d'usage de macOS ici.
+   Same mechanism as Linux (GitHub archive + tar, present on macOS). No
+   systemd: the server relaunches itself by spawning a detached
+   replacement before quitting -- enough for a development machine, the
+   only macOS use case here. */
+function updateSupport() {
+  return { supported: true, method: "github-archive" };
+}
+
+function restartServer() {
+  try {
+    const script = process.argv[1] || "server/index.js";
+    const child = spawn("/bin/sh", ["-c", "sleep 1; exec \"$0\" \"$1\"", process.execPath, script], {
+      cwd: process.cwd(), env: process.env, detached: true, stdio: "ignore"
+    });
+    child.unref();
+  } catch (e) {
+    return { ok: false, reason: String(e.message || e) };
+  }
+  setTimeout(() => process.exit(0), 200);
+  return { ok: true, method: "respawn" };
 }
 
 /* Sur macOS, ffmpeg n'est jamais fourni par le systeme : il s'installe
@@ -264,6 +291,8 @@ module.exports = {
   filesystemRoot,
   exitKiosk,
   exitToDesktop,
+  updateSupport,
+  restartServer,
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,

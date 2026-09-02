@@ -2826,6 +2826,298 @@
     $("setAutoStart").checked = supported && !!appIntegration.autoStart.enabled;
   }
 
+  /* ---------- Mise a jour automatique du serveur / server self-update ----------
+     Raspberry Pi et Linux uniquement (le serveur dit s'il le supporte :
+     sous Windows, c'est electron-updater qui s'en charge et la section
+     reste masquee). Trois surfaces :
+       - la section "Mises a jour" des reglages generaux : etat, bouton
+         de verification, bouton d'installation ;
+       - un bandeau discret en haut de l'ecran quand une version est
+         disponible -- l'equivalent kiosque de la boite de dialogue
+         Windows, refermable pour la session ("Plus tard") ;
+       - une fenetre de progression, qui attend ensuite le retour du
+         serveur et recharge la page toute seule.
+     Le serveur pousse ses changements d'etat par SSE ("update"), ce qui
+     permet a un kiosque sans clavier de se recharger de lui-meme quand
+     la mise a jour a ete lancee depuis un autre appareil du reseau.
+
+     Raspberry Pi and Linux only (the server says whether it supports
+     it: on Windows electron-updater does the job and the section stays
+     hidden). Three surfaces:
+       - the "Updates" section of general settings: state, check button,
+         install button;
+       - a discreet banner at the top of the screen when a version is
+         available -- the kiosk's equivalent of the Windows dialog,
+         dismissable for the session ("Later");
+       - a progress window, which then waits for the server to come back
+         and reloads the page by itself.
+     The server pushes its state changes over SSE ("update"), which lets
+     a keyboard-less kiosk reload itself when the update was started from
+     another device on the network. */
+  let updateStatus = { supported: false, available: false, currentVersion: null, latestVersion: null, job: { phase: "idle", log: [] } };
+  let updateDismissedVersion = null;   // "Plus tard" ne vaut que pour la session / "Later" only lasts the session
+  let updateChecking = false;
+  let updateMode = null;               // null | "confirm" | "progress" | "wait" | "error"
+  let updatePollTimer = null;
+  let updateWaitTimer = null;
+
+  function tf(key, vars) {
+    let text = i18n.t(key);
+    for (const [k, v] of Object.entries(vars || {})) text = text.split("{" + k + "}").join(String(v));
+    return text;
+  }
+
+  function updateBusy() {
+    const ph = (updateStatus.job && updateStatus.job.phase) || "idle";
+    return ["downloading", "extracting", "installing", "restarting"].includes(ph);
+  }
+
+  async function refreshUpdateStatus() {
+    try {
+      const r = await fetch("/api/update/status", { cache: "no-store" });
+      if (!r.ok) return;
+      updateStatus = await r.json();
+    } catch (e) {
+      // Serveur plus ancien : la section reste masquee / older server: section stays hidden
+      return;
+    }
+    renderUpdateState();
+  }
+
+  function renderUpdateState() {
+    const st = updateStatus;
+    const sup = !!st.supported;
+    $("secUpdates").hidden = !sup;
+
+    /* Bandeau : uniquement hors installation, et pas apres un "Plus tard"
+       sur cette meme version. Banner: only outside an install, and not
+       after a "Later" on this very version. */
+    const showBanner = sup && st.available && st.latestVersion !== updateDismissedVersion && !updateBusy() && updateMode === null;
+    $("updateBanner").hidden = !showBanner;
+    if (showBanner) $("updateBannerText").textContent = tf("update.available", { v: "v" + st.latestVersion });
+
+    if (!sup) return;
+    let text;
+    if (updateChecking) text = i18n.t("update.checking");
+    else if (updateBusy()) text = i18n.t("update.inProgress");
+    else if (st.available) text = tf("update.available", { v: "v" + st.latestVersion });
+    else if (st.checkError) {
+      const why = st.checkError === "no-release" ? i18n.t("update.checkFailed.noRelease") : st.checkError;
+      text = tf("update.checkFailed", { e: why });
+    } else if (st.checkedAt) text = i18n.t("update.upToDate");
+    else text = i18n.t("update.neverChecked");
+    $("updStatusText").textContent = text;
+
+    const meta = [tf("update.installed", { v: "v" + (st.currentVersion || "?") })];
+    if (st.checkedAt) {
+      const d = new Date(st.checkedAt);
+      meta.push(tf("update.lastCheck", { t: d.toLocaleString(i18n.lang === "fr" ? "fr-FR" : "en-GB", { dateStyle: "short", timeStyle: "short" }) }));
+    }
+    $("updMetaText").textContent = meta.join(" — ");
+
+    const applyBtn = $("updApplyBtn");
+    applyBtn.hidden = !(st.available && !updateBusy());
+    applyBtn.textContent = tf("update.install", { v: "v" + st.latestVersion });
+    $("updCheckBtn").disabled = updateChecking || updateBusy();
+  }
+
+  async function checkForUpdatesNow() {
+    if (updateChecking || updateBusy()) return;
+    updateChecking = true;
+    renderUpdateState();
+    try {
+      const r = await fetch("/api/update/check", { method: "POST" });
+      if (r.ok) updateStatus = await r.json();
+    } catch (e) {
+      // L'etat precedent reste affiche / previous state stays shown
+    }
+    updateChecking = false;
+    // Une verification manuelle re-propose la version, meme apres un
+    // "Plus tard". A manual check offers the version again, even after a
+    // "Later".
+    updateDismissedVersion = null;
+    renderUpdateState();
+  }
+
+  function dismissUpdateBanner() {
+    updateDismissedVersion = updateStatus.latestVersion;
+    $("updateBanner").hidden = true;
+  }
+
+  function setUpdateMode(mode) {
+    updateMode = mode;
+    const confirm = mode === "confirm";
+    $("updConfirm").hidden = !confirm;
+    $("updProgress").hidden = confirm;
+    $("updCancelBtn").hidden = !confirm;
+    $("updGoBtn").hidden = !confirm;
+    $("updRetryBtn").hidden = mode !== "error";
+    $("updCloseBtn").hidden = !(mode === "error" || mode === "wait-failed");
+    $("updateModalClose").hidden = (mode === "progress" || mode === "wait");
+  }
+
+  function openUpdateModal() {
+    const st = updateStatus;
+    if (!st.available) return;
+    $("updateBanner").hidden = true;
+    $("updConfirmText").textContent = tf("update.confirm.text", { v: "v" + st.latestVersion, c: "v" + st.currentVersion });
+    $("updNotesWrap").hidden = !st.notes;
+    $("updNotes").textContent = st.notes || "";
+    $("updLog").textContent = "";
+    $("updBarFill").style.width = "0%";
+    $("updBarFill").classList.remove("indeterminate");
+    setUpdateMode(updateBusy() ? "progress" : "confirm");
+    $("updateModal").hidden = false;
+    if (updateBusy()) startUpdatePolling();
+  }
+
+  function closeUpdateModal() {
+    $("updateModal").hidden = true;
+    stopUpdatePolling();
+    // Un job en cours continue cote serveur ; on garde l'etat visible
+    // dans les reglages et on se fie au SSE pour le recharge final.
+    // A running job goes on server-side; state stays visible in settings
+    // and SSE is relied upon for the final reload.
+    updateMode = null;
+    renderUpdateState();
+  }
+
+  async function startUpdate() {
+    setUpdateMode("progress");
+    $("updPhaseText").textContent = tf("update.phase.downloading", { v: "v" + updateStatus.latestVersion });
+    try {
+      const r = await fetch("/api/update/apply", { method: "POST" });
+      const body = await r.json().catch(() => null);
+      if (body && body.job) updateStatus = body;
+      if (!r.ok && r.status !== 409) {
+        showUpdateError((body && body.error) || ("HTTP " + r.status), false);
+        return;
+      }
+    } catch (e) {
+      showUpdateError(String(e.message || e), false);
+      return;
+    }
+    startUpdatePolling();
+  }
+
+  function startUpdatePolling() {
+    stopUpdatePolling();
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/update/status", { cache: "no-store" });
+        if (r.ok) updateStatus = await r.json();
+      } catch (e) {
+        // Le serveur redemarre peut-etre deja / the server may already be restarting
+        if (updateStatus.job && updateStatus.job.phase === "restarting") { stopUpdatePolling(); waitForServerRestart(false); return; }
+      }
+      renderUpdateProgress();
+    };
+    updatePollTimer = setInterval(tick, 700);
+    tick();
+  }
+
+  function stopUpdatePolling() {
+    if (updatePollTimer) clearInterval(updatePollTimer);
+    updatePollTimer = null;
+  }
+
+  function renderUpdateProgress() {
+    const job = updateStatus.job || {};
+    const fill = $("updBarFill");
+    let text = "";
+    if (job.phase === "downloading") {
+      text = tf("update.phase.downloading", { v: "v" + job.version });
+      const p = job.progress;
+      if (p && p.total) { fill.classList.remove("indeterminate"); fill.style.width = Math.min(100, Math.round(100 * p.bytes / p.total)) + "%"; }
+      else fill.classList.add("indeterminate");
+      if (p && p.bytes) text += " " + (p.bytes / 1048576).toFixed(1) + " Mo";
+    } else if (job.phase === "extracting" || job.phase === "installing") {
+      text = i18n.t("update.phase." + job.phase);
+      fill.classList.add("indeterminate");
+    } else if (job.phase === "restarting") {
+      fill.classList.remove("indeterminate");
+      fill.style.width = "100%";
+      stopUpdatePolling();
+      waitForServerRestart(false);
+      return;
+    } else if (job.phase === "error") {
+      stopUpdatePolling();
+      showUpdateError(job.error, !!job.rolledBack);
+      return;
+    }
+    $("updPhaseText").textContent = text;
+    $("updLog").textContent = (job.log || []).slice(-15).join("\n");
+    $("updLog").scrollTop = $("updLog").scrollHeight;
+  }
+
+  function showUpdateError(message, rolledBack) {
+    setUpdateMode("error");
+    $("updateModal").hidden = false;
+    $("updBarFill").classList.remove("indeterminate");
+    $("updPhaseText").textContent = tf("update.phase.error", { e: message || "?" })
+      + (rolledBack ? " " + i18n.t("update.phase.rolledBack") : "");
+    $("updLog").textContent = ((updateStatus.job && updateStatus.job.log) || []).slice(-15).join("\n");
+    renderUpdateState();
+  }
+
+  /* Attente du retour du serveur apres la coupure volontaire. La version
+     doit CHANGER : c'est la preuve que le nouveau code tourne. Un serveur
+     qui revient avec la meme version n'a pas ete redemarre (lancement a
+     la main sans superviseur, par exemple) et l'utilisateur doit le
+     savoir plutot que de voir la page se recharger sur l'ancien code.
+     `silent` : declenche par le SSE sur un affichage qui n'a pas lance
+     la mise a jour (kiosque mural) -- pas de fenetre, juste le
+     rechargement final.
+     Waiting for the server after its deliberate shutdown. The version
+     must CHANGE: that's the proof the new code is running. A server that
+     comes back with the same version was not restarted (manual launch
+     without a supervisor, for instance) and the user must know rather
+     than see the page reload on the old code. `silent`: triggered by SSE
+     on a display that didn't start the update (wall kiosk) -- no window,
+     just the final reload. */
+  function waitForServerRestart(silent) {
+    if (updateWaitTimer) return;
+    if (!silent) {
+      setUpdateMode("wait");
+      $("updateModal").hidden = false;
+    }
+    const oldVersion = updateStatus.currentVersion;
+    const target = updateStatus.job && updateStatus.job.version;
+    const started = Date.now();
+    let sawDown = false;
+    const MAX_S = 180;
+    const finish = (text) => {
+      clearInterval(updateWaitTimer); updateWaitTimer = null;
+      if (!silent) { setUpdateMode("wait-failed"); $("updPhaseText").textContent = text; }
+    };
+    updateWaitTimer = setInterval(async () => {
+      const elapsed = Math.round((Date.now() - started) / 1000);
+      if (!silent) $("updPhaseText").textContent = tf("update.waiting", { s: elapsed });
+      let version = null;
+      try {
+        const r = await fetch("/api/version", { cache: "no-store" });
+        if (r.ok) version = (await r.json()).version || null;
+      } catch (e) {
+        sawDown = true;
+      }
+      if (version && version !== oldVersion) {
+        clearInterval(updateWaitTimer); updateWaitTimer = null;
+        if (!silent) $("updPhaseText").textContent = tf("update.reloading", { v: "v" + (target || version) });
+        setTimeout(() => location.reload(), 800);
+        return;
+      }
+      if (version && version === oldVersion && (sawDown || elapsed > 40)) {
+        finish(tf("update.sameVersion", { v: "v" + version }));
+        return;
+      }
+      if (elapsed >= MAX_S) finish(tf("update.noReturn", { s: MAX_S }));
+    }, 1500);
+  }
+
+  function fillUpdatesForm() {
+    renderUpdateState();
+  }
+
   function openSettings() {
     $("setLang").value = settings.lang;
     $("setTheme").value = settings.theme;
@@ -2856,6 +3148,7 @@
     $("setLightTile").value = colors.light.tile;
     fillScreensaverForm();
     fillDesktopAppForm();
+    fillUpdatesForm();
     $("settingsModal").hidden = false;
     requestAnimationFrame(() => layoutFormColumns(document.querySelector("#settingsModal .form"), { preferMax: true }));
   }
@@ -4169,6 +4462,28 @@
        Assistant: a door opening) therefore listens on `window` instead of
        opening ITS OWN EventSource -- which would multiply SSE connections
        by the number of tiles, for one and the same stream. */
+    /* Mise a jour serveur : nouvelle version trouvee par la verification
+       periodique, ou installation lancee depuis un autre appareil. En
+       phase "restarting", CET affichage attend le retour du serveur et se
+       recharge sur le nouveau code, meme s'il n'a rien demande.
+       Server update: new version found by the periodic check, or install
+       started from another device. In the "restarting" phase, THIS
+       display waits for the server to come back and reloads on the new
+       code, even though it asked for nothing. */
+    es.addEventListener("update", async (ev) => {
+      let data = {};
+      try { data = JSON.parse(ev.data || "{}"); } catch (e) { /* charge utile vide / empty payload */ }
+      if (data.phase === "restarting" && updateMode !== "wait" && updateMode !== "progress") {
+        if (!updateStatus.job) updateStatus.job = {};
+        updateStatus.job.phase = "restarting";
+        updateStatus.job.version = data.latestVersion || null;
+        renderUpdateState();
+        waitForServerRestart(true);
+        return;
+      }
+      if (updateMode === null || updateMode === "error") refreshUpdateStatus();
+    });
+
     for (const name of ["ha-states"]) {
       es.addEventListener(name, (ev) => {
         let data = {};
@@ -4183,6 +4498,7 @@
   async function boot() {
     settings = await apiGet("/api/settings");
     await refreshAppIntegration();
+    refreshUpdateStatus();
     i18n.setLang(settings.lang);
     vkb.attach();
     vkb.setLang(settings.lang);
@@ -4385,6 +4701,15 @@
     onActivate($("btnExit"), () => openExitMenu());
     onActivate($("exitOptionReset"), () => resetDashboard());
     onActivate($("exitOptionDesktop"), () => exitToDesktop());
+    onActivate($("updCheckBtn"), () => checkForUpdatesNow());
+    onActivate($("updApplyBtn"), () => openUpdateModal());
+    onActivate($("updateBannerInstall"), () => openUpdateModal());
+    onActivate($("updateBannerLater"), () => dismissUpdateBanner());
+    onActivate($("updGoBtn"), () => startUpdate());
+    onActivate($("updCancelBtn"), () => closeUpdateModal());
+    onActivate($("updCloseBtn"), () => closeUpdateModal());
+    onActivate($("updateModalClose"), () => closeUpdateModal());
+    onActivate($("updRetryBtn"), () => openUpdateModal());
 
     /* Boutons "Afficher/Masquer" des champs mot de passe : delegue sur
        document car ces boutons existent aussi bien dans le formulaire
@@ -4611,6 +4936,11 @@
           // closing the settings would therefore not close it, and it
           // would be left floating alone above the board.
           if (modal.id === "tileModal") closeWidgetHelp();
+          // Fermee par le fond : remettre l'etat interne d'aplomb (le
+          // bandeau, notamment, depend de savoir si la fenetre est ouverte).
+          // Closed via the backdrop: resync internal state (the banner,
+          // notably, depends on knowing whether the window is open).
+          if (modal.id === "updateModal") closeUpdateModal();
           vkb.hide();
           hideCatalogTooltip(); // vit hors de la modale (position fixed) : ne se referme pas toute seule / lives outside the modal (fixed position): doesn't close on its own
         }

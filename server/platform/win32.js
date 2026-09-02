@@ -335,6 +335,23 @@ function exitToDesktop() {
   return { ok: false, reason: "no-kiosk-controller" };
 }
 
+/* ---------- Mise a jour automatique / self-update ----------
+   Sous Windows, c'est electron-updater qui gere les mises a jour
+   (electron/updater.js) ; le mecanisme d'archive de server/selfUpdate.js
+   n'a pas de sens ici (pas de tar, dossier d'installation en lecture
+   seule dans l'asar, relance geree par l'installeur).
+   On Windows, electron-updater handles updates (electron/updater.js);
+   the archive mechanism of server/selfUpdate.js makes no sense here (no
+   tar, install folder read-only inside the asar, relaunch handled by the
+   installer). */
+function updateSupport() {
+  return { supported: false, reason: "electron-updater" };
+}
+
+function restartServer() {
+  return { ok: false, reason: "not-supported" };
+}
+
 /* Sous Windows, ffmpeg n'est PAS fourni par le systeme et n'est que
    tres rarement dans le PATH -- c'est la plateforme ou la detection
    compte le plus. Les emplacements couverts correspondent aux methodes
@@ -617,6 +634,8 @@ module.exports = {
   filesystemRoot,
   exitKiosk,
   exitToDesktop,
+  updateSupport,
+  restartServer,
   ffmpegCandidates,
   ffmpegInstallHint,
   chromiumCandidates,

@@ -863,6 +863,82 @@ body.touch .modal-card { resize: none; }
 }
 .about a { color: var(--muted); }
 
+/* ---------- Mise a jour du serveur / server self-update ----------
+   Section des reglages, bandeau de notification et fenetre de
+   progression (Raspberry Pi / Linux). Le bandeau est fixe en haut, hors
+   du flux : il ne doit deplacer aucune tuile, et reste sous les modales.
+   Settings section, notification banner and progress window (Raspberry
+   Pi / Linux). The banner is fixed at the top, out of flow: it must not
+   shift any tile, and stays below the modals. */
+.update-status { margin: 4px 0 2px; font-size: 13.5px; }
+.update-meta { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+.update-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+
+.update-banner {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 16px;
+  border-radius: 999px;
+  background: var(--tile);
+  border: 1px solid var(--accent);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  font-size: 13.5px;
+  max-width: 94vw;
+}
+.update-banner[hidden] { display: none; }
+.update-banner-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.update-card { width: min(640px, 96vw); }
+.update-body { padding: 4px 18px 8px; }
+.update-body p { margin: 6px 0 10px; line-height: 1.5; }
+.update-notes-title { font-weight: 600; margin-bottom: 4px !important; }
+.update-notes,
+.update-log {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  color: var(--muted);
+}
+.update-phase { font-weight: 600; }
+.update-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tile-edge);
+  overflow: hidden;
+  margin: 4px 0 12px;
+  position: relative;
+}
+.update-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.update-bar-fill.indeterminate {
+  width: 30% !important;
+  animation: update-slide 1.2s ease-in-out infinite;
+}
+@keyframes update-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(340%); }
+}
+
 /* ---------- Tiroir lateral gauche / left side drawer ----------
    Une seconde grille de widgets, tiree depuis le bord gauche. Les widgets
    y tournent en permanence (le tiroir est seulement translate hors ecran,

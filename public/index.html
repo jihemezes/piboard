@@ -114,6 +114,54 @@
      bouton dock-bar "btnExit". "Exit" menu: choice between resetting the
      dashboard or returning to the Raspberry Pi OS desktop without
      relaunching it. Opened from the "btnExit" dock-bar button. -->
+<!-- Bandeau "nouvelle version disponible" (Raspberry Pi / Linux).
+     Equivalent, pour le kiosque, de la boite de dialogue
+     qu'electron-updater affiche sous Windows au demarrage : discret,
+     refermable, sans jamais rien installer de lui-meme.
+     "New version available" banner (Raspberry Pi / Linux). The kiosk's
+     equivalent of the dialog electron-updater shows on Windows at
+     startup: discreet, dismissable, never installing anything on its
+     own. -->
+<div class="update-banner" id="updateBanner" hidden>
+  <span class="update-banner-text" id="updateBannerText"></span>
+  <button type="button" class="btn small primary" id="updateBannerInstall" data-i18n="update.banner.install">Update</button>
+  <button type="button" class="btn small" id="updateBannerLater" data-i18n="update.banner.later">Later</button>
+</div>
+
+<!-- Fenetre de mise a jour : confirmation, puis progression, puis
+     attente du redemarrage du serveur. Update window: confirmation,
+     then progress, then waiting for the server to come back. -->
+<div class="modal modal-stacked" id="updateModal" hidden>
+  <div class="modal-card update-card">
+    <header class="modal-head">
+      <h2 data-i18n="update.modal.title">PiBoard update</h2>
+      <button class="modal-close" id="updateModalClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="update-body">
+      <div id="updConfirm">
+        <p id="updConfirmText"></p>
+        <div id="updNotesWrap" hidden>
+          <p class="update-notes-title" data-i18n="update.confirm.notes">Release notes</p>
+          <pre class="update-notes" id="updNotes"></pre>
+        </div>
+      </div>
+      <div id="updProgress" hidden>
+        <p class="update-phase" id="updPhaseText"></p>
+        <div class="update-bar"><div class="update-bar-fill" id="updBarFill"></div></div>
+        <pre class="update-log" id="updLog"></pre>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <div class="form-actions">
+        <button type="button" class="btn" id="updCancelBtn" data-i18n="update.confirm.cancel">Cancel</button>
+        <button type="button" class="btn primary" id="updGoBtn" data-i18n="update.confirm.go">Install</button>
+        <button type="button" class="btn" id="updRetryBtn" hidden data-i18n="update.retry">Retry</button>
+        <button type="button" class="btn" id="updCloseBtn" hidden data-i18n="common.close">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="exitMenuModal" hidden>
   <div class="modal-card">
     <header class="modal-head">
@@ -255,6 +303,23 @@
           <span data-i18n="settings.autostart">Launch PiBoard when the session starts</span>
         </label>
         <small class="field-hint" data-i18n="settings.autostart.hint">Opens the dashboard automatically when you log in to Windows. This section only appears in the desktop application.</small>
+      </fieldset>
+
+      <!-- Mise a jour automatique du serveur (Raspberry Pi / Linux) :
+           section masquee tant que le serveur ne la declare pas
+           supportee (Windows passe par electron-updater, voir
+           electron/updater.js). Server self-update (Raspberry Pi /
+           Linux): hidden until the server declares it supported (Windows
+           goes through electron-updater, see electron/updater.js). -->
+      <fieldset class="form-section" id="secUpdates" hidden>
+        <legend data-i18n="settings.section.updates">Updates</legend>
+        <p class="update-status" id="updStatusText"></p>
+        <p class="update-meta" id="updMetaText"></p>
+        <div class="update-actions">
+          <button type="button" class="btn small" id="updCheckBtn" data-i18n="update.check">Check now</button>
+          <button type="button" class="btn small primary" id="updApplyBtn" hidden></button>
+        </div>
+        <small class="field-hint" data-i18n="update.hint">New versions are fetched from the releases published on GitHub. Your settings, tiles and photos (the data/ folder) are kept. The server restarts at the end and the dashboard reloads by itself.</small>
       </fieldset>
 
       <fieldset class="form-section">

@@ -150,6 +150,7 @@ console.log("== interface : les trois implementations exposent les memes fonctio
     "id", "pingArgs", "pingSucceeded", "parseArp", "readArpEntries",
     "reverseLookup", "listRemovableVolumes", "cpuTemperature",
     "filesystemRoot", "exitKiosk", "exitToDesktop",
+    "updateSupport", "restartServer",
     "ffmpegCandidates", "ffmpegInstallHint", "vlcCandidates", "vlcInstallHint"
   ];
   for (const [name, impl] of [["linux", linux], ["win32", win32], ["darwin", darwin]]) {

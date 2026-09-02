@@ -1,5 +1,219 @@
 # Changelog
 
+## 1.81.0
+
+- **NOUVEAU : mise a jour automatique sur Raspberry Pi et Linux**
+  (Debian, Ubuntu, ZorinOS...), comme pour l'application Windows. Le
+  serveur interroge les versions publiees sur GitHub une vingtaine de
+  secondes apres son demarrage puis toutes les six heures ; une nouvelle
+  version fait apparaitre un bandeau discret en haut de l'ecran
+  (« Mettre a jour » / « Plus tard ») et une section « Mises a jour »
+  dans les reglages generaux (« Verifier maintenant », « Installer »).
+  Rien n'est jamais installe sans confirmation. Seules les releases
+  effectivement publiees comptent (brouillons et pre-versions ignores),
+  exactement comme electron-updater sous Windows.
+
+- **Comment ca marche** (`server/selfUpdate.js`) : l'archive tar.gz du
+  tag est telechargee dans `data/updates/`, extraite, puis mise en place
+  par **renommage** -- chaque entree de premier niveau de l'ancienne
+  version est deplacee dans `data/updates/previous/` avant que la
+  nouvelle prenne sa place. Consequence voulue : les fichiers supprimes
+  d'une version a l'autre disparaissent reellement (un dossier `server/`
+  entier est remplace, pas fusionne), contrairement a un ZIP decompresse
+  par-dessus. Un manifeste retient les entrees installees pour retirer,
+  a la mise a jour suivante, un dossier disparu en amont.
+  `npm install --omit=dev` n'est lance **que si `package-lock.json` a
+  change** : un correctif de code s'installe en quelques secondes, sans
+  reseau npm et meme sans `npm` (absent d'un `apt install nodejs`
+  Debian). Si npm echoue, **retour arriere automatique** : la version
+  precedente est remise en place et le serveur continue sans redemarrer.
+  `data/`, `node_modules/` et `.git/` ne sont jamais touches.
+
+- **Redemarrage** : sous systemd, le processus sort avec un code non nul
+  pour que `Restart=on-failure` du service existant le relance -- il n'a
+  pas le droit d'appeler `systemctl` (`NoNewPrivileges=true`). Lance a
+  la main, il demarre un remplacant avant de quitter. Le tableau de bord
+  ne se recharge que lorsque `/api/version` repond avec une version
+  **differente** : un serveur revenu avec la meme version, ou absent
+  apres 180 s, produit un message explicite plutot qu'un rechargement
+  sur l'ancien code. Un kiosque qui n'a pas lance la mise a jour (faite
+  depuis un telephone du reseau) se recharge tout seul via le SSE.
+
+- **Couche plateforme** : `updateSupport()` et `restartServer()` ajoutes
+  aux trois implementations. Dans l'application de bureau (controleur
+  de kiosque Electron enregistre), la mise a jour serveur est declaree
+  non supportee quelle que soit la plateforme : electron-updater reste
+  seul maitre sous Windows.
+
+- **Routes** : `GET /api/update/status`, `POST /api/update/check`,
+  `POST /api/update/apply`. Accessibles depuis le reseau local (pas
+  reservees a localhost) : mettre a jour un kiosque mural sans clavier
+  depuis un autre appareil est l'un des usages vises, et le code
+  installe est toujours celui de la release officielle. Variables :
+  `PIBOARD_UPDATE_CHECK=0` desactive la verification periodique,
+  `PIBOARD_UPDATE_REPO` vise un fork.
+
+- **Aide** : nouvelle fiche « Mises a jour sur Raspberry Pi / Linux »
+  (FR/EN) ; groupe d'aide renomme « Plateformes & donnees » ;
+  `INSTALL.md` reecrit sur la mise a jour.
+
+- **Tests** : nouveau `test/selfUpdate.test.js` (69 verifications) qui
+  joue le cycle entier contre un faux GitHub HTTP, un faux npm et une
+  archive tar.gz fabriquee : detection, installation, npm ignore ou
+  appele, retour arriere, archive de mauvaise version refusee,
+  manifeste. `platform.test.js`, `helpContent.test.js` et
+  `dom-smoke.js` (829 assertions : bandeau, reglages, confirmation,
+  progression, attente du redemarrage) etendus.
+
+---
+
+- **NEW: automatic updates on Raspberry Pi and Linux** (Debian, Ubuntu,
+  ZorinOS...), like the Windows application. The server looks up the
+  versions published on GitHub about twenty seconds after starting,
+  then every six hours; a new version shows a discreet banner at the
+  top of the screen ("Update" / "Later") and an "Updates" section in
+  general settings ("Check now", "Install"). Nothing is ever installed
+  without confirmation. Only actually published releases count (drafts
+  and pre-releases ignored), exactly like electron-updater on Windows.
+
+- **How it works** (`server/selfUpdate.js`): the tag's tar.gz archive
+  is downloaded into `data/updates/`, extracted, then put in place by
+  **rename** -- every top-level entry of the old version is moved into
+  `data/updates/previous/` before the new one takes its place. Intended
+  consequence: files removed between versions really disappear (a whole
+  `server/` folder is replaced, not merged), unlike a ZIP extracted on
+  top. A manifest remembers installed entries so a folder gone upstream
+  is removed at the next update. `npm install --omit=dev` runs **only
+  if `package-lock.json` changed**: a code-only fix installs in seconds,
+  with no npm network and even without `npm` (missing from a Debian
+  `apt install nodejs`). If npm fails, **automatic rollback**: the
+  previous version is put back and the server keeps running without a
+  restart. `data/`, `node_modules/` and `.git/` are never touched.
+
+- **Restart**: under systemd, the process exits with a non-zero code so
+  the existing service's `Restart=on-failure` brings it back -- it is
+  not allowed to call `systemctl` (`NoNewPrivileges=true`). Started by
+  hand, it spawns a replacement before quitting. The dashboard only
+  reloads once `/api/version` answers with a **different** version: a
+  server back with the same version, or absent after 180 s, yields an
+  explicit message rather than a reload on the old code. A kiosk that
+  didn't start the update (done from a phone on the LAN) reloads by
+  itself through SSE.
+
+- **Platform layer**: `updateSupport()` and `restartServer()` added to
+  all three implementations. Inside the desktop application (Electron
+  kiosk controller registered), server-side updating is declared
+  unsupported whatever the platform: electron-updater stays in sole
+  charge on Windows.
+
+- **Routes**: `GET /api/update/status`, `POST /api/update/check`,
+  `POST /api/update/apply`. Reachable from the LAN (not localhost-only):
+  updating a keyboard-less wall kiosk from another device is one of the
+  intended uses, and the installed code is always the official release.
+  Variables: `PIBOARD_UPDATE_CHECK=0` disables the periodic check,
+  `PIBOARD_UPDATE_REPO` targets a fork.
+
+- **Help**: new "Updates on Raspberry Pi / Linux" topic (FR/EN); help
+  group renamed "Platforms & data"; `INSTALL.md` update section
+  rewritten.
+
+- **Tests**: new `test/selfUpdate.test.js` (69 checks) playing the whole
+  cycle against a fake GitHub HTTP server, a fake npm and a built
+  tar.gz archive: detection, install, npm skipped or run, rollback,
+  wrong-version archive refused, manifest. `platform.test.js`,
+  `helpContent.test.js` and `dom-smoke.js` (829 assertions: banner,
+  settings, confirmation, progress, restart wait) extended.
+
+## 1.80.1
+
+- **CORRIGE : la section d'aide francaise sur les sports mecaniques,
+  ajoutee en 1.80.0, se trouvait sous la mauvaise fiche.** Elle avait
+  ete inseree dans la fiche « Scores en direct » au lieu de la fiche
+  « Classement ». Cause : l'ancre d'insertion (un intitule d'option
+  « Competition ») existe a l'identique dans les deux fiches, et la
+  premiere occurrence rencontree appartenait a la fiche voisine. La
+  version anglaise, elle, etait au bon endroit -- ce qui rendait
+  l'incoherence invisible tant qu'on ne comparait pas les deux langues.
+
+- **Aide completee** pour les deux dernieres versions :
+  - Classement : nouvelle section « Lire le tableau » (FR/EN)
+    expliquant chaque colonne (J G N P Diff %V Pts), le fait que les
+    points restent toujours affiches quand la tuile est etroite, et la
+    colonne des victoires en F1/MotoGP.
+  - Classement : les descriptions des options « Competition » et « Code
+    ESPN personnalise » precisent desormais que les championnats F1 et
+    MotoGP figurent dans la liste, et que remplir le code personnalise
+    reprend la main sur eux.
+  - Analyse reseau : le renommage des appareils apparait maintenant
+    aussi dans la liste des options de la fiche, avec le rappel qu'il se
+    fait sur la tuile et non dans les reglages.
+
+- **Nouveau `test/helpContent.test.js`.** L'aide n'etait couverte que
+  par son mecanisme d'affichage, pas par son contenu. Le test verifie
+  desormais : parite FR/EN de toutes les fiches (avec detection d'un
+  desequilibre de volume, symptome d'une section ajoutee d'un seul
+  cote), presence effective des fonctionnalites des 1.79.0 et 1.80.0
+  dans les deux langues, et surtout **exclusivite** -- une section
+  caracteristique ne doit apparaitre que dans sa propre fiche et dans le
+  bloc de sa propre langue. C'est precisement ce controle qui aurait
+  attrape le defaut ci-dessus ; sa capacite a le detecter a ete verifiee
+  en le reintroduisant volontairement.
+
+## 1.80.0
+
+- **CORRIGE : la colonne des points manquait en Ligue 1 et en Top 14.**
+  Le tableau affichait le rang, les matchs gagnes/nuls/perdus et le
+  pourcentage, mais pas les points -- l'information centrale d'un
+  classement. Cause : la selection des colonnes ne comparait qu'au champ
+  `abbreviation` d'ESPN, en cherchant litteralement "PTS". Or ESPN
+  n'abrege pas les points de la meme facon selon le sport : "PTS" en
+  NBA, mais simplement "P" au football et au rugby. La colonne n'etait
+  donc jamais reconnue pour ces competitions ; et comme le code se
+  limitait par ailleurs aux quatre premieres colonnes trouvees,
+  l'affichage retombait exactement sur G / N / P / %V.
+  La correspondance s'appuie desormais en priorite sur le champ `name`,
+  stable d'un sport a l'autre chez ESPN ("points", "gamesPlayed",
+  "wins"), l'abreviation ne servant plus que de repli -- et jamais pour
+  le "P" isole, ambigu par nature. Les points sont en outre exemptes du
+  plafond de colonnes : ils ne peuvent plus etre la statistique
+  sacrifiee quand la place manque.
+
+- **Colonnes dans l'ordre conventionnel** d'un tableau de championnat
+  (J G N P Diff Pts) au lieu de l'ordre d'apparition dans la reponse, et
+  balayage de toutes les lignes pour determiner les colonnes -- une
+  equipe promue a qui une statistique manque n'ampute plus le tableau
+  entier.
+
+- **NOUVEAU : classements Formule 1 et MotoGP**, pilotes et equipes,
+  ajoutes a la liste des competitions :
+  - **F1 pilotes** et **F1 constructeurs** via api.jolpi.ca (reprise
+    maintenue de l'API Ergast), deja utilisee par la tuile Sports
+    mecaniques. Victoires affichees a cote des points, ecurie du pilote
+    rappelee sous son nom. Repli automatique sur la saison precedente en
+    debut d'annee civile, tant que la nouvelle saison n'a pas de
+    classement.
+  - **MotoGP pilotes** via le flux public de motogp.com. Le classement
+    exige deux identifiants prealables (UUID de saison puis UUID de
+    categorie) : trois appels en cascade, comme le fait le site
+    lui-meme.
+  - **MotoGP equipes** : le flux public ne publie que le classement
+    pilotes. Le total par equipe est donc CALCULE en additionnant les
+    points de ses pilotes, ce que la tuile indique explicitement sous le
+    tableau. Le resultat correspond au classement officiel tant qu'une
+    ecurie n'aligne que ses deux titulaires ; un remplacant ou une wild
+    card peut creer un ecart.
+
+- **Refonte interne du widget** : les trois familles de sources
+  alimentent desormais un modele de tableau unique, l'affichage ignorant
+  completement la provenance des donnees. Echappement HTML applique a
+  toutes les valeurs affichees, y compris les noms venant des API.
+
+- **Tests.** Nouveau `test/standingsColumns.test.js` (11 blocs) :
+  reconnaissance des points quelle que soit l'abreviation, refus de
+  deviner un "P" isole, non-regression NBA, ordre conventionnel des
+  colonnes, survie des points au plafonnement, balayage de toutes les
+  lignes, et reformatage du pourcentage americain ".692" en "69.2%".
+
 ## 1.79.0
 
 - **NOUVEAU : noms personnalises des appareils dans la tuile Analyse

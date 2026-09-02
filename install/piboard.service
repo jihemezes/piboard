@@ -11,7 +11,15 @@ WorkingDirectory=@APP_DIR@
 Environment=PIBOARD_PORT=@PORT@
 Environment=NODE_ENV=production
 ExecStart=/usr/bin/node server/index.js
-Restart=on-failure
+# "always" plutot que "on-failure" : la mise a jour automatique (voir
+# server/selfUpdate.js) termine volontairement le processus pour etre
+# relancee sur le nouveau code. Elle sort avec un code non nul, ce qui
+# fonctionne aussi avec les services plus anciens restes en on-failure.
+# "always" rather than "on-failure": the automatic update (see
+# server/selfUpdate.js) deliberately ends the process to be relaunched on
+# the new code. It exits with a non-zero code, which also works with older
+# services still on on-failure.
+Restart=always
 RestartSec=5
 
 # Durcissement raisonnable / reasonable hardening

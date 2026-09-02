@@ -198,6 +198,38 @@ sudo journalctl -u piboard -f          # logs en direct
 
 ### Mise à jour
 
+**Automatique (depuis la 1.81.0, recommandé).** Le serveur vérifie
+lui-même les versions publiées sur GitHub (une vingtaine de secondes
+après le démarrage, puis toutes les six heures). Quand une nouvelle
+version existe, un bandeau apparaît en haut du tableau de bord
+(« Mettre à jour » / « Plus tard ») et la section **Mises à jour** des
+réglages généraux permet de vérifier et d'installer à tout moment — y
+compris depuis un téléphone ou un PC du réseau local ouvert sur
+l'adresse du PiBoard. Rien n'est installé sans confirmation.
+
+Ce qui se passe : l'archive de la version est téléchargée dans
+`data/updates/`, l'ancienne version est déplacée dans
+`data/updates/previous/` (retour arrière possible), la nouvelle est mise
+en place, `npm install` n'est lancé que si les dépendances ont changé,
+puis le serveur redémarre et la page se recharge toute seule. Si `npm`
+échoue, la version précédente est rétablie automatiquement. `data/`,
+`node_modules/` et `.git/` ne sont jamais touchés.
+
+Prérequis : le dossier de PiBoard doit appartenir à l'utilisateur du
+service (c'est le cas après `install.sh`) ; `tar` doit être présent
+(toujours vrai sur Debian et dérivés). Le redémarrage s'appuie sur le
+service systemd (`Restart=` dans `piboard.service`). Pour désactiver la
+vérification périodique, ajoutez `Environment=PIBOARD_UPDATE_CHECK=0`
+au service (la vérification manuelle reste possible).
+
+Si vous aviez installé par `git clone` : après une mise à jour
+automatique, les fichiers correspondent au tag installé mais `.git/` n'a
+pas bougé ; un `git status` montrera des modifications. Pour resynchroniser
+sans rien perdre : `git fetch --tags && git reset --hard vX.Y.Z` (la
+version affichée dans les réglages).
+
+**Manuelle (toujours possible).**
+
 ```bash
 cd piboard
 git pull
@@ -428,6 +460,36 @@ sudo journalctl -u piboard -f          # live logs
 
 ### Updating
 
+**Automatic (since 1.81.0, recommended).** The server checks the
+versions published on GitHub by itself (about twenty seconds after
+startup, then every six hours). When a new version exists, a banner
+appears at the top of the dashboard ("Update" / "Later") and the
+**Updates** section of general settings lets you check and install at
+any time — including from a phone or a PC on the LAN opened on the
+PiBoard's address. Nothing is installed without confirmation.
+
+What happens: the version's archive is downloaded into `data/updates/`,
+the old version is moved into `data/updates/previous/` (rollback
+possible), the new one is put in place, `npm install` only runs if
+dependencies changed, then the server restarts and the page reloads by
+itself. If `npm` fails, the previous version is restored automatically.
+`data/`, `node_modules/` and `.git/` are never touched.
+
+Requirements: the PiBoard folder must belong to the service user (the
+case after `install.sh`); `tar` must be present (always true on Debian
+and derivatives). The restart relies on the systemd service (`Restart=`
+in `piboard.service`). To disable the periodic check, add
+`Environment=PIBOARD_UPDATE_CHECK=0` to the service (manual checks stay
+possible).
+
+If you had installed through `git clone`: after an automatic update the
+files match the installed tag but `.git/` didn't move; `git status` will
+show changes. To resync without losing anything:
+`git fetch --tags && git reset --hard vX.Y.Z` (the version shown in
+settings).
+
+**Manual (still possible).**
+
 ```bash
 cd piboard
 git pull
@@ -436,10 +498,10 @@ sudo systemctl restart piboard
 ```
 
 If you deploy by overwriting files rather than `git pull` (e.g. copying
-a zip), a `sudo systemctl restart piboard` is enough for server-side
-changes (`server/*.js`); for browser-side changes only (`public/*`), a
-plain page reload (or restarting the kiosk, see above) is enough — no
-need to restart the service.
+a zip), `sudo systemctl restart piboard` is enough for server-side
+changes (`server/*.js`); for browser-side-only changes (`public/*`), a
+plain page reload (or a kiosk restart, see above) is enough — no need to
+restart the service.
 
 ### Troubleshooting
 

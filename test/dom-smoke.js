@@ -538,6 +538,17 @@ vc.on("jsdomError", (e) => console.log("  [jsdomError]", String(e.message || e).
 
 const html = fs.readFileSync(path.join(PUB, "index.html"), "utf8");
 
+/* Etat de la mise a jour serveur, modifie par le test au fil du scenario
+   Server self-update state, mutated by the test along the scenario */
+const UPDATE_STATE = {
+  supported: true, reason: null, currentVersion: "9.9.9-test", latestVersion: "9.10.0", available: true,
+  tag: "v9.10.0", publishedAt: "2026-09-01T10:00:00Z", notes: "Notes de test pour la 9.10.0",
+  htmlUrl: null, checkedAt: "2026-09-02T08:00:00Z", checkError: null, busy: false,
+  job: { phase: "idle", version: null, startedAt: null, finishedAt: null, progress: null, error: null, rolledBack: false, log: [] }
+};
+const UPDATE_CALLS = { check: 0, apply: 0 };
+let UPDATE_VERSION_SERVED = "9.9.9-test";
+
 const dom = new JSDOM(html, {
   url: "http://localhost:8090/",
   runScripts: "dangerously",
@@ -592,8 +603,27 @@ const dom = new JSDOM(html, {
           return json({ ok: true });
         }
       }
+      /* Mise a jour serveur (Linux) : etat pilote par le test, qui fait
+         evoluer la phase pour verifier la fenetre de progression sans
+         jamais couper de serveur. Server self-update (Linux): state
+         driven by the test, which advances the phase to check the
+         progress window without ever shutting a server down. */
+      if (u.includes("/api/update/status")) {
+        return json(UPDATE_STATE);
+      }
+      if (u.includes("/api/update/check") && method === "POST") {
+        UPDATE_CALLS.check++;
+        UPDATE_STATE.checkedAt = new Date().toISOString();
+        return json(UPDATE_STATE);
+      }
+      if (u.includes("/api/update/apply") && method === "POST") {
+        UPDATE_CALLS.apply++;
+        UPDATE_STATE.job = { phase: "downloading", version: UPDATE_STATE.latestVersion, progress: { bytes: 512000, total: 1024000 }, error: null, rolledBack: false, log: ["Telechargement…"] };
+        UPDATE_STATE.busy = true;
+        return Promise.resolve({ ok: true, status: 202, json: () => Promise.resolve(UPDATE_STATE) });
+      }
       if (u.includes("/api/version")) {
-        return json({ version: "9.9.9-test" });
+        return json({ version: UPDATE_VERSION_SERVED });
       }
       const cfgMatch = u.match(/\/api\/tile-configs\/([^/?]+)(?:\/([^/?]+))?/);
       if (cfgMatch) {
@@ -4593,6 +4623,121 @@ function catalogItemFor(catalog, document, widgetId) {
     window.dispatchEvent(new window.Event("resize"));
     assert("tolerance 1px : un depassement sous-pixel ne declenche pas l'ascenseur",
       !board.classList.contains("has-overflow"));
+  }
+
+  console.log("== Mise a jour serveur (Linux) : bandeau, reglages, fenetre de progression ==");
+  {
+    // Etat charge au demarrage : une version est disponible -> bandeau
+    // visible, sans rien installer. State loaded at boot: a version is
+    // available -> banner shown, nothing installed.
+    let tries = 0;
+    while (document.getElementById("updateBanner").hidden && tries++ < 40) await sleep(50);
+    const banner = document.getElementById("updateBanner");
+    assert("bandeau 'nouvelle version' affiche au demarrage", banner.hidden === false);
+    assert("bandeau : la version proposee est nommee", document.getElementById("updateBannerText").textContent.includes("v9.10.0"));
+    assert("bandeau : texte en francais", document.getElementById("updateBannerText").textContent.includes("disponible"));
+    assert("rien n'a ete installe sans confirmation", UPDATE_CALLS.apply === 0);
+
+    // "Plus tard" : le bandeau disparait pour la session
+    document.getElementById("updateBannerLater").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("'Plus tard' masque le bandeau", banner.hidden === true);
+
+    // Reglages generaux : section visible et coherente
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const sec = document.getElementById("secUpdates");
+    assert("section 'Mises a jour' visible (plateforme supportee)", sec.hidden === false);
+    assert("etat : version disponible nommee", document.getElementById("updStatusText").textContent.includes("v9.10.0"));
+    assert("version installee rappelee", document.getElementById("updMetaText").textContent.includes("v9.9.9-test"));
+    const applyBtn = document.getElementById("updApplyBtn");
+    assert("bouton d'installation visible et libelle avec la version", applyBtn.hidden === false && applyBtn.textContent.includes("v9.10.0"));
+    assert("section Windows (application de bureau) toujours masquee", document.getElementById("secDesktopApp").hidden === true);
+
+    // Verification manuelle : appelle /api/update/check et rearme le bandeau
+    document.getElementById("updCheckBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (UPDATE_CALLS.check === 0 && tries++ < 40) await sleep(25);
+    await sleep(60);
+    assert("'Verifier maintenant' interroge le serveur", UPDATE_CALLS.check === 1);
+    // Le modal des reglages est ouvert : le bandeau n'est pas reaffiche
+    // par-dessus tant qu'une fenetre n'est pas fermee... il est toutefois
+    // rearme (updateDismissedVersion remis a zero) -- on le verifie via
+    // son etat apres fermeture des reglages plus bas.
+
+    // Ouverture de la fenetre de confirmation depuis le bouton
+    applyBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const modal = document.getElementById("updateModal");
+    assert("fenetre de mise a jour ouverte", modal.hidden === false);
+    assert("etape de confirmation affichee", document.getElementById("updConfirm").hidden === false && document.getElementById("updProgress").hidden === true);
+    assert("texte de confirmation : nouvelle ET ancienne version", /v9\.10\.0/.test(document.getElementById("updConfirmText").textContent) && /v9\.9\.9-test/.test(document.getElementById("updConfirmText").textContent));
+    assert("notes de version affichees quand elles existent", document.getElementById("updNotesWrap").hidden === false && document.getElementById("updNotes").textContent.includes("Notes de test"));
+    assert("toujours rien d'installe", UPDATE_CALLS.apply === 0);
+
+    // Annuler ferme sans installer
+    document.getElementById("updCancelBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("'Annuler' referme la fenetre", modal.hidden === true);
+    assert("'Annuler' n'installe rien", UPDATE_CALLS.apply === 0);
+
+    // Installation : confirmation -> progression -> redemarrage -> rechargement
+    applyBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    document.getElementById("updGoBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (UPDATE_CALLS.apply === 0 && tries++ < 40) await sleep(25);
+    assert("'Installer' declenche /api/update/apply", UPDATE_CALLS.apply === 1);
+    tries = 0;
+    while (document.getElementById("updProgress").hidden && tries++ < 40) await sleep(25);
+    assert("etape de progression affichee", document.getElementById("updProgress").hidden === false);
+    assert("bouton de confirmation masque pendant l'installation", document.getElementById("updGoBtn").hidden === true);
+    await sleep(800);
+    assert("phase de telechargement nommee", /Téléchargement/.test(document.getElementById("updPhaseText").textContent));
+    assert("barre de progression a 50 %", document.getElementById("updBarFill").style.width === "50%");
+
+    UPDATE_STATE.job.phase = "installing";
+    UPDATE_STATE.job.log.push("npm ignore / skipped");
+    await sleep(800);
+    assert("phase d'installation nommee", /Installation/.test(document.getElementById("updPhaseText").textContent));
+    assert("journal serveur repris dans la fenetre", document.getElementById("updLog").textContent.includes("npm ignore"));
+
+    // Redemarrage : la page attend une NOUVELLE version de /api/version
+    // avant de se recharger. jsdom ne permet pas d'intercepter
+    // location.reload() (voir la remarque dans la section Sauvegarde) :
+    // on observe le message "Rechargement…" qui le precede immediatement.
+    // Restart: the page waits for a NEW version from /api/version before
+    // reloading. jsdom offers no way to intercept location.reload() (see
+    // the note in the Backup section): we observe the "Reloading…"
+    // message that immediately precedes it.
+    UPDATE_STATE.job.phase = "restarting";
+    UPDATE_STATE.busy = true;
+    await sleep(2400);
+    assert("phase d'attente du serveur affichee", /attente|Redémarrage/.test(document.getElementById("updPhaseText").textContent));
+    assert("pas de rechargement tant que la version servie est l'ancienne", !/Rechargement/.test(document.getElementById("updPhaseText").textContent));
+    UPDATE_VERSION_SERVED = "9.10.0";
+    tries = 0;
+    while (!/Rechargement/.test(document.getElementById("updPhaseText").textContent) && tries++ < 120) await sleep(50);
+    assert("rechargement declenche des que la nouvelle version repond", /Rechargement/.test(document.getElementById("updPhaseText").textContent));
+    assert("message de rechargement avec la nouvelle version", document.getElementById("updPhaseText").textContent.includes("v9.10.0"));
+
+    // Fermer les reglages pour ne pas gener la suite
+    document.getElementById("updateModal").hidden = true;
+    document.getElementById("settingsModal").hidden = true;
+
+    // Serveur qui ne supporte pas la mise a jour (Windows / app de bureau)
+    // : section et bandeau masques. Server without update support
+    // (Windows / desktop app): section and banner hidden.
+    UPDATE_STATE.supported = false;
+    UPDATE_STATE.reason = "electron-updater";
+    UPDATE_STATE.busy = false;
+    UPDATE_STATE.job = { phase: "idle", version: null, progress: null, error: null, rolledBack: false, log: [] };
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(100);
+    // fillUpdatesForm() ne relit pas le serveur : on force un rafraichissement
+    // comme le ferait le SSE. fillUpdatesForm() doesn't re-read the server:
+    // force a refresh as SSE would.
+    document.getElementById("updCheckBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    tries = 0;
+    while (document.getElementById("secUpdates").hidden === false && tries++ < 40) await sleep(50);
+    assert("plateforme non supportee : section masquee", document.getElementById("secUpdates").hidden === true);
+    assert("plateforme non supportee : bandeau masque", document.getElementById("updateBanner").hidden === true);
+    document.getElementById("settingsModal").hidden = true;
   }
 
   console.log("== Sortie du mode edition ==");

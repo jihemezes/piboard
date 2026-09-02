@@ -7,8 +7,8 @@
   },
   "titleBar": true,
   "description": {
-    "en": "Current league table for football, rugby (Top 14), basketball, or any other ESPN-covered competition via its code.",
-    "fr": "Classement actuel de football, rugby (Top 14), basketball, ou toute autre compétition couverte par ESPN via son code."
+    "en": "Current league table for football, rugby (Top 14), basketball, Formula 1 and MotoGP (drivers and teams), or any other ESPN-covered competition via its code.",
+    "fr": "Classement actuel de football, rugby (Top 14), basketball, Formule 1 et MotoGP (pilotes et équipes), ou toute autre compétition couverte par ESPN via son code."
   },
   "tagline": {
     "en": "Current standings of a sports competition.",
@@ -83,6 +83,34 @@
           "label": {
             "en": "🏀 NBA",
             "fr": "🏀 NBA"
+          }
+        },
+        {
+          "value": "f1:drivers",
+          "label": {
+            "en": "🏎️ F1 — Drivers",
+            "fr": "🏎️ F1 — Pilotes"
+          }
+        },
+        {
+          "value": "f1:constructors",
+          "label": {
+            "en": "🏎️ F1 — Constructors",
+            "fr": "🏎️ F1 — Constructeurs"
+          }
+        },
+        {
+          "value": "motogp:riders",
+          "label": {
+            "en": "🏍️ MotoGP — Riders",
+            "fr": "🏍️ MotoGP — Pilotes"
+          }
+        },
+        {
+          "value": "motogp:teams",
+          "label": {
+            "en": "🏍️ MotoGP — Teams",
+            "fr": "🏍️ MotoGP — Équipes"
           }
         }
       ]

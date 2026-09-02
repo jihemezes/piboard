@@ -45,6 +45,8 @@
      filesystemRoot()          racine pour l'usage disque / root for disk usage
      exitKiosk()               reinitialiser l'affichage / reset the display
      exitToDesktop()           quitter vers le bureau / quit to the desktop
+     updateSupport()           mise a jour auto possible ? / self-update possible?
+     restartServer(version)    relancer apres mise a jour / relaunch after update
    ============================================================ */
 "use strict";
 
@@ -219,6 +221,24 @@ function exitToDesktop() {
   return impl.exitToDesktop();
 }
 
+/* ---------- Mise a jour automatique / self-update ----------
+   Dans l'application de bureau, la mise a jour est du ressort
+   d'electron-updater : on la declare non supportee cote serveur meme si
+   la plateforme sous-jacente (macOS en developpement, par exemple) le
+   permettrait, pour ne jamais avoir deux mecanismes concurrents.
+   Inside the desktop application, updating is electron-updater's job:
+   we declare it unsupported on the server side even if the underlying
+   platform (macOS in development, for instance) would allow it, so as
+   never to have two competing mechanisms. */
+function updateSupport() {
+  if (kioskController !== null) return { supported: false, reason: "desktop-app" };
+  return impl.updateSupport();
+}
+
+function restartServer(version) {
+  return impl.restartServer(version);
+}
+
 module.exports = {
   id: impl.id,
   networkDetails: impl.networkDetails,
@@ -238,6 +258,8 @@ module.exports = {
   setAutoStart,
   exitKiosk,
   exitToDesktop,
+  updateSupport,
+  restartServer,
   ffmpegCandidates: impl.ffmpegCandidates,
   ffmpegInstallHint: impl.ffmpegInstallHint,
   chromiumCandidates: impl.chromiumCandidates,
