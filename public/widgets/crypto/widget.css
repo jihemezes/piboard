@@ -183,3 +183,6 @@
   background: var(--tile);
 }
 .pwc-chart-status[hidden] { display: none; }
+
+/* Axe temporel commun sous la courbe / shared time axis under the curve */
+.pwc-taxis { margin-bottom: 4px; }

@@ -32,8 +32,17 @@ function startFixtureServer() {
       state.klineCalls++;
       state.lastKlineUrl = req.url;
       const rows = [];
+      // Une bougie dont la cloture est illisible (champ vide chez
+      // Binance quand la bougie vient de s'ouvrir) sert a verifier que
+      // prix et instants sont filtres ensemble.
+      // A candle with an unreadable close (empty field at Binance when
+      // the candle has just opened) checks that prices and times are
+      // filtered together.
+      if (state.injectBadRow) rows.push([1756796400000, "0", "0", "0", "", "0", 0, "0", 0, "0", "0", "0"]);
       for (let i = 0; i < 12; i++) {
-        rows.push([0, "0", "0", "0", String(100 + i), "0", 0, "0", 0, "0", "0", "0"]);
+        // Index 0 = instant d'ouverture de la bougie, index 4 = cloture.
+        // Index 0 = the candle's open time, index 4 = close.
+        rows.push([1756800000000 + i * 3600000, "0", "0", "0", String(100 + i), "0", 0, "0", 0, "0", "0", "0"]);
       }
       res.writeHead(200, { "Content-Type": "application/json" });
       res.end(JSON.stringify(rows));
@@ -98,9 +107,17 @@ function startFixtureServer() {
 
     console.log("== fetchChart : cloture de chaque bougie extraite (index 4 de la reponse Binance) ==");
     {
-      const prices = await binance.fetchChart("bitcoin", "eur", 1);
+      const got = await binance.fetchChart("bitcoin", "eur", 1);
       assert.strictEqual(state.klineCalls, 1);
-      assert.deepStrictEqual(prices, [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111]);
+      assert.deepStrictEqual(got.prices, [100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111]);
+      // Les instants accompagnent desormais les prix : ils portent l'axe
+      // des abscisses du graphique (voir public/chart-time-axis.js).
+      // Times now travel with the prices: they carry the chart's X axis
+      // (see public/chart-time-axis.js).
+      assert.strictEqual(got.times.length, got.prices.length,
+        "autant d'instants que de prix -- une desynchronisation decalerait toute la courbe");
+      assert.strictEqual(got.times[0], 1756800000000);
+      assert.strictEqual(got.times[11], 1756800000000 + 11 * 3600000);
       console.log("  OK");
     }
 
@@ -124,6 +141,18 @@ function startFixtureServer() {
       }
       console.log("  OK");
     }
+
+    console.log("== fetchChart : bougie incomplete ecartee SANS desynchroniser prix et instants ==");
+    {
+      state.injectBadRow = true;
+      const got = await binance.fetchChart("bitcoin", "eur", 1);
+      state.injectBadRow = false;
+      assert.strictEqual(got.prices.length, got.times.length,
+        "filtrage conjoint : une cloture illisible retire aussi son instant");
+      assert.ok(!got.prices.some((v) => !Number.isFinite(v)), "aucune cloture illisible ne passe");
+      assert.strictEqual(got.times[0], 1756800000000, "les instants restent alignes sur leurs prix");
+    }
+    console.log("  OK");
 
     console.log("== fetchChart : crypto non reconnue -> null (PAS d'exception), signal de repli explicite ==");
     {

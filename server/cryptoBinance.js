@@ -194,10 +194,40 @@ async function fetchChart(coinId, currency, days) {
     + "&interval=" + profile.interval + "&limit=" + profile.limit;
   const rows = await fetchJson(url);
   if (!Array.isArray(rows) || !rows.length) return null;
-  // Index 4 d'une bougie Binance = prix de cloture (voir la doc citee
-  // en tete de fichier). Index 4 of a Binance candle = close price
-  // (see the doc cited at the top of the file).
-  return rows.map((r) => Number(r[4])).filter((v) => Number.isFinite(v));
+  /* Index 4 d'une bougie Binance = prix de cloture, index 0 = instant
+     d'ouverture (voir la doc citee en tete de fichier). L'instant est
+     conserve pour que le graphique puisse porter un axe des abscisses
+     date -- il etait jete jusqu'ici, et la courbe ne disait pas a quelle
+     heure correspondait ce qu'on regardait. Les deux tableaux sont
+     filtres ENSEMBLE : filtrer les prix seuls les aurait desynchronises
+     des instants des la premiere bougie incomplete.
+     Index 4 of a Binance candle = close price, index 0 = open time (see
+     the doc cited at the top of the file). The time is kept so the chart
+     can carry a dated X axis -- it used to be thrown away, and the curve
+     did not say what time what you were looking at corresponded to. Both
+     arrays are filtered TOGETHER: filtering prices alone would have
+     desynchronised them from the times at the first incomplete candle. */
+  /* ATTENTION : Number("") vaut 0, pas NaN. Binance renvoie une chaine
+     VIDE pour la cloture d'une bougie qui vient tout juste de s'ouvrir ;
+     sans le test de chaine non vide ci-dessous, ce champ devenait un
+     prix de 0 et la courbe plongeait a zero sur son dernier point.
+     CAREFUL: Number("") is 0, not NaN. Binance returns an EMPTY string
+     for the close of a candle that has only just opened; without the
+     non-empty check below, that field became a price of 0 and the curve
+     dived to zero on its last point. */
+  const prices = [];
+  const times = [];
+  for (const r of rows) {
+    const raw = r && r[4];
+    if (raw == null || String(raw).trim() === "") continue;
+    const v = Number(raw);
+    const t = Number(r[0]);
+    if (!Number.isFinite(v)) continue;
+    prices.push(v);
+    times.push(Number.isFinite(t) ? t : null);
+  }
+  if (!prices.length) return null;
+  return { prices, times };
 }
 
 module.exports = { fetchPrices, fetchChart, pairFor, SYMBOL_MAP, CHART_PROFILES };

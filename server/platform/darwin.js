@@ -120,6 +120,24 @@ function cpuTemperature() {
   return null; // pas de source simple et fiable / no simple, reliable source
 }
 
+/* ---------- Charge du GPU / GPU usage ----------
+   macOS n'expose la charge du GPU qu'a travers `powermetrics`, qui exige
+   les privileges root : impossible depuis un serveur lance par un
+   utilisateur ordinaire, et hors de question de reclamer sudo pour une
+   barre de tuile. `ioreg` publie bien des compteurs pour les cartes
+   AMD/Intel discretes, mais rien de stable sur Apple Silicon. On renvoie
+   donc null, et la tuile masque la ligne -- macOS n'est de toute facon
+   qu'une plateforme de developpement ici.
+   macOS only exposes GPU load through `powermetrics`, which requires
+   root: impossible from a server run by an ordinary user, and out of the
+   question to demand sudo for a tile bar. `ioreg` does publish counters
+   for discrete AMD/Intel cards, but nothing stable on Apple Silicon. We
+   therefore return null and the tile hides the row -- macOS is only a
+   development platform here anyway. */
+function gpuUsage() {
+  return Promise.resolve(null);
+}
+
 function filesystemRoot() {
   return "/";
 }
@@ -293,6 +311,7 @@ module.exports = {
   exitToDesktop,
   updateSupport,
   restartServer,
+  gpuUsage,
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,

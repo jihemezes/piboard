@@ -142,6 +142,22 @@
             ${s.showUptime ? `<span>${i18n.t("system.uptime")} ${formatUptime(d.uptimeSec, i18n)}</span>` : ""}
           </div>` : "";
 
+        /* GPU : la ligne n'apparait que si la machine expose reellement
+           sa charge (d.gpu non nul). Sur un Raspberry Pi, elle reste
+           masquee -- afficher "GPU 0 %" laisserait croire a un GPU au
+           repos alors qu'on ne mesure rien du tout.
+           GPU: the row only appears if the machine actually exposes its
+           load (d.gpu non-null). On a Raspberry Pi it stays hidden --
+           showing "GPU 0%" would suggest an idle GPU when we are
+           measuring nothing at all. */
+        const gpu = d.gpu && Number.isFinite(d.gpu.percent) ? d.gpu : null;
+        const showGpu = gpu && s.showGpu !== false;
+        // La courbe est optionnelle : sans elle, la barre reste affichee
+        // mais n'est plus cliquable. The chart is optional: without it,
+        // the bar stays shown but is no longer clickable.
+        const gpuChart = showGpu && s.gpuChart !== false;
+        const gpuLabel = i18n.t("system.gpu") + (gpu && gpu.tempC != null ? ` ${gpu.tempC.toFixed(0)}°C` : "");
+
         const tempRow = d.tempC != null
           ? `<div class="pws-row-head"><span>${i18n.t("system.temp")}</span><span class="pws-val">${d.tempC.toFixed(1)}°C</span></div>`
           : "";
@@ -151,6 +167,7 @@
             ${head}
             ${this.row(i18n.t("system.cpu"), d.cpuPercent.toFixed(0) + "%", d.cpuPercent, "cpu")}
             ${this.row(i18n.t("system.ram"), d.memUsedGB + " / " + d.memTotalGB + " GB", d.memPercent, "mem")}
+            ${showGpu ? this.row(gpuLabel, gpu.percent.toFixed(0) + "%", gpu.percent, gpuChart ? "gpu" : null) : ""}
             ${d.diskPercent != null ? this.row(i18n.t("system.disk"), d.diskUsedGB + " / " + d.diskTotalGB + " GB", d.diskPercent, "disk") : ""}
             ${tempRow}
             ${this.netRows()}
@@ -196,7 +213,7 @@
        reloads. That is fine for an at-a-glance reading, and the window
        says so rather than implying a long history. */
     record(d) {
-      if (!this.history) this.history = { cpu: [], mem: [], disk: [] };
+      if (!this.history) this.history = { cpu: [], mem: [], disk: [], gpu: [], t: [] };
       const push = (k, v) => {
         if (v == null || !Number.isFinite(Number(v))) return;
         const a = this.history[k];
@@ -210,6 +227,17 @@
       push("cpu", d.cpuPercent);
       push("mem", d.memPercent);
       push("disk", d.diskPercent);
+      push("gpu", d.gpu ? d.gpu.percent : null);
+      /* Instant du releve, pour l'axe des abscisses. L'historique client
+         (celui qui sert avant que l'historique serveur soit charge) n'en
+         gardait aucun : la courbe ne disait pas de quand elle datait.
+         Il est indexe sur la serie CPU, la seule toujours presente.
+         Reading time, for the X axis. The client history (the one used
+         before the server history is loaded) kept none: the curve did
+         not say when it dated from. It is indexed on the CPU series, the
+         only one always present. */
+      this.history.t.push(Date.now());
+      if (this.history.t.length > MAX_POINTS) this.history.t.shift();
       this.lastSample = d;
     }
 
@@ -227,8 +255,19 @@
       if (this.chartModal) this.chartModal.remove();
       this.chart = metric;
 
-      const tabs = [["cpu", "system.cpu"], ["mem", "system.ram"], ["disk", "system.disk"]]
-        .filter(([k]) => k !== "disk" || (this.history && this.history.disk.length));
+      // Un onglet n'apparait que s'il a de quoi tracer : pas de disque
+       // mesurable, pas d'onglet Disque ; GPU non expose ou courbe
+       // desactivee dans les reglages, pas d'onglet GPU.
+       // A tab only appears when it has something to draw: no measurable
+       // disk, no Disk tab; GPU not exposed or chart disabled in the
+       // settings, no GPU tab.
+      const has = (k) => this.history && this.history[k] && this.history[k].length;
+      const tabs = [["cpu", "system.cpu"], ["gpu", "system.gpu"], ["mem", "system.ram"], ["disk", "system.disk"]]
+        .filter(([k]) => {
+          if (k === "disk") return has("disk");
+          if (k === "gpu") return has("gpu") && this.ctx.settings.gpuChart !== false;
+          return true;
+        });
 
       const m = document.createElement("div");
       m.className = "modal modal-stacked";
@@ -248,6 +287,7 @@
               <path class="pwg-line" fill="none" stroke-width="2"
                     stroke-linejoin="round" stroke-linecap="round"></path>
             </svg>
+            <div class="pb-taxis pwg-taxis"></div>
             <div class="pwg-hint">${esc(i18n.t("system.chartHint"))}</div>
           </div>
         </div>`;
@@ -298,7 +338,24 @@
           // evite un trou dans la courbe.
           // A machine with no disk reading returns null: dropping those
           // avoids a gap in the curve.
-          disk: pts.filter((p) => p.d != null).map((p) => p.d)
+          disk: pts.filter((p) => p.d != null).map((p) => p.d),
+          // Les points enregistres avant la version qui a introduit le
+          // GPU n'ont pas de champ "g" : les ecarter fait commencer la
+          // courbe a la mise a jour plutot que de la faire plonger a
+          // zero sur tout le passe.
+          // Points recorded before the version that introduced the GPU
+          // have no "g" field: dropping them starts the curve at the
+          // update rather than dragging it to zero across all the past.
+          gpu: pts.filter((p) => p.g != null).map((p) => p.g),
+          t: pts.map((p) => p.t),
+          // Les series filtrees (disque, GPU) n'ont pas le meme nombre de
+          // points que "t" : leurs instants sont donc conserves a part,
+          // sans quoi l'axe serait decale pour ces deux onglets.
+          // The filtered series (disk, GPU) do not hold the same number
+          // of points as "t": their times are therefore kept separately,
+          // otherwise the axis would be offset for those two tabs.
+          tDisk: pts.filter((p) => p.d != null).map((p) => p.t),
+          tGpu: pts.filter((p) => p.g != null).map((p) => p.t)
         };
       } catch (e) {
         // Repli silencieux sur l'historique client : la fenetre reste
@@ -332,7 +389,9 @@
       nowEl.textContent = now == null ? "—" : now.toFixed(0) + " %";
       nowEl.style.color = now == null ? "" : levelColor(now, lv);
       m.querySelector(".pwg-now-lbl").textContent =
-        i18n.t(this.chart === "cpu" ? "system.cpu" : this.chart === "mem" ? "system.ram" : "system.disk");
+        i18n.t(this.chart === "cpu" ? "system.cpu"
+          : this.chart === "gpu" ? "system.gpu"
+          : this.chart === "mem" ? "system.ram" : "system.disk");
 
       // Echelle FIXE de 0 a 100. Une echelle automatique ferait paraitre
       // dramatique une variation de 2 % en zoomant dessus : sur un
@@ -354,7 +413,30 @@
       if (series.length < 2) {
         m.querySelector(".pwg-line").setAttribute("d", "");
         m.querySelector(".pwg-area").setAttribute("d", "");
+        const emptyAxis = m.querySelector(".pwg-taxis");
+        if (emptyAxis) emptyAxis.innerHTML = "";
         return;
+      }
+
+      /* Axe des abscisses. Chaque onglet a ses propres instants quand sa
+         serie est filtree (disque et GPU peuvent avoir moins de points
+         que le CPU) ; sinon on retombe sur la serie commune.
+         X axis. Each tab has its own times when its series is filtered
+         (disk and GPU may hold fewer points than the CPU); otherwise we
+         fall back on the common series. */
+      const axis = window.PiBoardTimeAxis;
+      const axisEl = m.querySelector(".pwg-taxis");
+      const times = (this.chart === "disk" && this.history.tDisk)
+        || (this.chart === "gpu" && this.history.tGpu)
+        || this.history.t || [];
+      if (axis && axisEl && times.length >= series.length && series.length > 1) {
+        const t0 = times[times.length - series.length];
+        const t1 = times[times.length - 1];
+        const ticks = axis.timeTicks(t0, t1, { locale: i18n.lang === "en" ? "en-GB" : "fr-FR", maxTicks: 5 });
+        m.querySelector(".pwg-grid").innerHTML += axis.gridLines(ticks, 0, W, PAD, H - PAD);
+        axisEl.innerHTML = axis.axisHtml(ticks, 0, 0);
+      } else if (axisEl) {
+        axisEl.innerHTML = "";
       }
 
       const step = W / (series.length - 1);

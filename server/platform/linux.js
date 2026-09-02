@@ -247,6 +247,135 @@ function restartServer() {
   return { ok: true, method: underSystemd ? "systemd" : "respawn" };
 }
 
+/* ---------- Charge du GPU / GPU usage ----------
+
+   Aucune interface unique sous Linux : chaque famille de carte expose
+   sa charge a un endroit different, et le Raspberry Pi ne l'expose pas
+   du tout. Trois sources sont donc essayees dans l'ordre, de la moins
+   couteuse a la plus couteuse :
+
+   1. `/sys/class/drm/cardN/device/gpu_busy_percent` -- fichier fourni
+      par le pilote amdgpu (cartes AMD). Simple lecture de fichier, pas
+      de processus lance : c'est la source ideale quand elle existe.
+   2. `nvidia-smi --query-gpu=... --format=csv,noheader,nounits` --
+      cartes NVIDIA (y compris un Jetson). Sortie CSV STABLE et non
+      localisee, contrairement a la sortie par defaut de l'outil.
+   3. `/sys/class/drm/cardN/gt_act_freq_mhz` (Intel) donne une
+      FREQUENCE, pas une charge : la convertir en pourcentage serait une
+      invention. On ne l'utilise donc PAS -- mieux vaut annoncer
+      "indisponible" qu'un chiffre faux.
+
+   RASPBERRY PI : le VideoCore n'expose nulle part sa charge. `vcgencmd`
+   donne la temperature (deja lue comme temperature CPU sur cette
+   machine, le capteur est le meme SoC) et des frequences, jamais un
+   pourcentage d'occupation. Sur un Pi, cette fonction renvoie donc
+   `null` et la tuile masque simplement la ligne GPU : c'est la seule
+   reponse honnete.
+
+   No single interface on Linux: each card family exposes its load
+   somewhere different, and the Raspberry Pi does not expose it at all.
+   Three sources are tried in order, cheapest first:
+
+   1. `/sys/class/drm/cardN/device/gpu_busy_percent` -- file provided by
+      the amdgpu driver (AMD cards). A plain file read, no process
+      spawned: the ideal source when present.
+   2. `nvidia-smi --query-gpu=... --format=csv,noheader,nounits` --
+      NVIDIA cards (including a Jetson). STABLE, non-localised CSV
+      output, unlike the tool's default output.
+   3. `/sys/class/drm/cardN/gt_act_freq_mhz` (Intel) gives a FREQUENCY,
+      not a load: turning it into a percentage would be making things
+      up. So it is NOT used -- announcing "unavailable" beats a wrong
+      figure.
+
+   RASPBERRY PI: the VideoCore exposes its load nowhere. `vcgencmd`
+   gives the temperature (already read as the CPU temperature on this
+   machine, the sensor is the same SoC) and frequencies, never an
+   occupancy percentage. On a Pi this function therefore returns `null`
+   and the tile simply hides the GPU row: the only honest answer. */
+
+/* Sortie attendue : "23, 45, 1024, 2048, NVIDIA GeForce RTX 3060"
+   (utilisation %, temperature C, memoire utilisee Mio, memoire totale,
+   nom). Fonction pure, testable sans carte NVIDIA.
+   Expected output: "23, 45, 1024, 2048, NVIDIA GeForce RTX 3060"
+   (utilisation %, temperature C, used memory MiB, total, name). Pure
+   function, testable without an NVIDIA card. */
+function parseNvidiaSmi(raw) {
+  const line = String(raw || "").split(/\r?\n/).find((l) => l.trim());
+  if (!line) return null;
+  const cols = line.split(",").map((c) => c.trim());
+  const pct = Number(cols[0]);
+  if (!Number.isFinite(pct)) return null;
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  const memUsed = num(cols[2]);
+  const memTotal = num(cols[3]);
+  return {
+    percent: Math.max(0, Math.min(100, Math.round(pct))),
+    tempC: num(cols[1]),
+    memPercent: memTotal ? Math.round((memUsed / memTotal) * 1000) / 10 : null,
+    name: cols[4] || null
+  };
+}
+
+/* Le fichier amdgpu contient un entier seul ("37\n").
+   The amdgpu file holds a bare integer ("37\n"). */
+function parseGpuBusyPercent(raw) {
+  const text = String(raw == null ? "" : raw).trim();
+  // Number("") vaut 0, pas NaN : sans ce test, un fichier vide ou
+  // tronque se lirait comme un GPU parfaitement au repos.
+  // Number("") is 0, not NaN: without this check, an empty or truncated
+  // file would read as a perfectly idle GPU.
+  if (!/^\d+$/.test(text)) return null;
+  const n = Number(text);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function readAmdGpu() {
+  let cards;
+  try { cards = fs.readdirSync("/sys/class/drm"); } catch (e) { return null; }
+  for (const card of cards) {
+    if (!/^card\d+$/.test(card)) continue;
+    let pct = null;
+    try { pct = parseGpuBusyPercent(fs.readFileSync("/sys/class/drm/" + card + "/device/gpu_busy_percent", "utf8")); }
+    catch (e) { continue; }
+    if (pct == null) continue;
+    let tempC = null;
+    // La temperature vit dans le sous-dossier hwmon, dont le numero
+    // varie : on prend le premier trouve.
+    // The temperature lives in the hwmon subfolder, whose number varies:
+    // we take the first one found.
+    try {
+      const base = "/sys/class/drm/" + card + "/device/hwmon";
+      for (const h of fs.readdirSync(base)) {
+        const raw = Number(fs.readFileSync(base + "/" + h + "/temp1_input", "utf8").trim());
+        if (Number.isFinite(raw)) { tempC = Math.round(raw / 100) / 10; break; }
+      }
+    } catch (e) { /* pas de capteur expose / no sensor exposed */ }
+    return { percent: pct, tempC, memPercent: null, name: null, source: "amdgpu" };
+  }
+  return null;
+}
+
+const GPU_TIMEOUT_MS = 4000;
+const NVIDIA_QUERY = "utilization.gpu,temperature.gpu,memory.used,memory.total,name";
+
+function gpuUsage() {
+  const amd = readAmdGpu();
+  if (amd) return Promise.resolve(amd);
+  return new Promise((resolve) => {
+    execFile("nvidia-smi", ["--query-gpu=" + NVIDIA_QUERY, "--format=csv,noheader,nounits"],
+      { timeout: GPU_TIMEOUT_MS, encoding: "utf8" }, (err, stdout) => {
+        // nvidia-smi absent (cas de loin le plus courant : pas de carte
+        // NVIDIA) : ce n'est pas une erreur, juste une absence.
+        // nvidia-smi missing (by far the most common case: no NVIDIA
+        // card): not an error, merely an absence.
+        if (err && !stdout) return resolve(null);
+        const parsed = parseNvidiaSmi(stdout);
+        resolve(parsed ? Object.assign(parsed, { source: "nvidia-smi" }) : null);
+      });
+  });
+}
+
 /* Emplacements ou chercher ffmpeg, par ordre de priorite. Sur un Pi OS
    ou un PC Linux, ffmpeg s'installe via le gestionnaire de paquets et
    se retrouve dans le PATH : le simple nom suffit presque toujours. Les
@@ -500,6 +629,9 @@ module.exports = {
   exitToDesktop,
   updateSupport,
   restartServer,
+  gpuUsage,
+  parseNvidiaSmi,
+  parseGpuBusyPercent,
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,

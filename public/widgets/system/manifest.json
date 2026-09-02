@@ -1,14 +1,14 @@
 {
   "id": "system",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "System status",
     "fr": "État système"
   },
   "titleBar": true,
   "description": {
-    "en": "CPU, RAM, disk usage, temperature, uptime and network addresses (including the public IP) of the machine hosting PiBoard.",
-    "fr": "CPU, RAM, espace disque, température, disponibilité et adresses réseau (IP publique comprise) de la machine qui héberge PiBoard."
+    "en": "CPU, GPU, RAM, disk usage, temperature, uptime and network addresses (including the public IP) of the machine hosting PiBoard.",
+    "fr": "CPU, GPU, RAM, espace disque, température, disponibilité et adresses réseau (IP publique comprise) de la machine qui héberge PiBoard."
   },
   "tagline": {
     "en": "Health status of the machine hosting PiBoard.",
@@ -68,6 +68,32 @@
       "hint": {
         "en": "The address your local network shows on the Internet (the one websites see). Looked up by the PiBoard server through an external service, refreshed every ten minutes. Off by default: it is a piece of information you may not want on a wall display.",
         "fr": "L'adresse sous laquelle votre réseau local apparaît sur Internet (celle que voient les sites web). Obtenue par le serveur PiBoard via un service externe, rafraîchie toutes les dix minutes. Désactivé par défaut : c'est une information que l'on ne souhaite pas forcément sur un écran mural."
+      }
+    },
+    {
+      "key": "showGpu",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show GPU load",
+        "fr": "Afficher la charge du GPU"
+      },
+      "hint": {
+        "en": "A bar like CPU and RAM. Only appears if the machine exposes its GPU load: NVIDIA (nvidia-smi), AMD on Linux, or any card on Windows 10+. A Raspberry Pi does not expose it — the row then stays hidden.",
+        "fr": "Une barre comme le CPU et la RAM. N'apparaît que si la machine expose la charge de son GPU : NVIDIA (nvidia-smi), AMD sous Linux, ou n'importe quelle carte sous Windows 10+. Un Raspberry Pi ne l'expose pas — la ligne reste alors masquée."
+      }
+    },
+    {
+      "key": "gpuChart",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "GPU usage chart",
+        "fr": "Courbe d'utilisation du GPU"
+      },
+      "hint": {
+        "en": "Adds a GPU tab to the charts window and makes the GPU bar clickable. Uncheck to keep the bar without the chart.",
+        "fr": "Ajoute un onglet GPU à la fenêtre des courbes et rend la barre GPU cliquable. Décochez pour garder la barre sans la courbe."
       }
     },
     {

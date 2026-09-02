@@ -1,5 +1,223 @@
 # Changelog
 
+## 1.84.0
+
+- **Axe des abscisses temporel sur TOUS les graphiques** : Etat systeme
+  (CPU, GPU, RAM, disque), Cryptos, Bourse et Sante Internet. Jusqu'ici
+  les courbes se lisaient sans aucun repere de temps : on voyait un
+  creux sans pouvoir dire s'il datait de dix minutes ou de six heures.
+
+- **Un module commun** (`public/chart-time-axis.js`), plutot que quatre
+  implementations qui auraient donne quatre facons d'arrondir les heures
+  et quatre formats de date. Deux principes :
+  - Les graduations tombent sur des instants **ronds** (heure pleine,
+    quart d'heure, minuit), jamais sur des divisions egales de la
+    periode : diviser en cinq une fenetre de 47 minutes donnerait
+    « 14:03, 14:12, 14:21… ». Le pas est choisi dans une echelle usuelle
+    (1, 2, 5, 10, 15, 30 min ; 1, 2, 3, 6, 12 h ; 1, 2, 7 j ; puis par
+    mois avec un pas de 1, 2, 3, 6, 12 ou 24 mois), et l'alignement se
+    fait en heure **locale** : aligne en UTC, un pas de 6 h tomberait a
+    02:00 et 08:00 dans un fuseau a +2.
+  - Les etiquettes sont posees en **HTML sous le graphique**, pas dans le
+    SVG : tous les graphiques utilisent `preserveAspectRatio="none"` et
+    etireraient le texte horizontalement. Les traits verticaux, eux,
+    restent dans le SVG -- une ligne verticale etiree reste droite.
+  - Le format suit l'etendue affichee : heure et minute en deca d'une
+    journee, jour de la semaine au-dela, date au-dela d'une semaine, mois
+    et annee au-dela d'un an. Toujours dans la langue du tableau.
+
+- **Sante Internet** : les deux bornes de la periode, seule indication de
+  temps jusqu'ici, sont remplacees par l'axe complet -- un creux au
+  milieu de « 24 h » etait impossible a dater.
+
+- **Instants conserves cote serveur pour les cryptos** : Binance et
+  CoinGecko fournissent tous deux l'instant de chaque point, qui etait
+  **jete** a l'extraction (`server/cryptoBinance.js`, `server/crypto.js`).
+  Il accompagne desormais les prix. Prix et instants sont filtres
+  **ensemble** : filtrer les prix seuls les aurait desynchronises des la
+  premiere bougie incomplete, decalant toute la courbe.
+
+- **Bug attrape par les tests** : `Number("")` vaut `0`, et Binance
+  renvoie une chaine **vide** pour la cloture d'une bougie qui vient de
+  s'ouvrir. Ce champ devenait donc un prix de 0 et la courbe plongeait a
+  zero sur son dernier point. Les deux extracteurs exigent maintenant une
+  valeur non vide. (Meme piege que celui corrige en 1.83.0 sur le GPU.)
+
+- **Etat systeme** : l'historique client garde desormais l'instant de
+  chaque releve, et les series filtrees (disque, GPU, qui peuvent avoir
+  moins de points que le CPU) gardent leurs propres instants -- sans quoi
+  l'axe aurait ete decale sur ces deux onglets.
+
+- **Tests** : `dom-smoke.js` couvre l'alignement sur des instants ronds a
+  toutes les echelles (2 h, 24 h, 5 j, 30 j, 2 ans, 10 ans), la densite
+  bornee des etiquettes, l'alignement en heure locale, les cas degrades
+  (periode nulle, inversee, non numerique), le recalage des etiquettes de
+  bord, l'echappement du texte, et verifie que les quatre widgets
+  utilisent bien le module commun ; `cryptoBinance.test.js` verifie que
+  les instants accompagnent les prix et que le filtrage conjoint ne les
+  desynchronise pas.
+
+---
+
+- **Time X axis on EVERY chart**: System status (CPU, GPU, RAM, disk),
+  Crypto, Stocks and Internet health. Until now the curves were read
+  with no time reference at all: you saw a dip with no way to tell
+  whether it was ten minutes or six hours old.
+
+- **One shared module** (`public/chart-time-axis.js`), rather than four
+  implementations that would have given four ways of rounding hours and
+  four date formats. Two principles:
+  - Ticks land on **round** instants (whole hour, quarter, midnight),
+    never on equal divisions of the period: splitting a 47-minute window
+    into five would give "14:03, 14:12, 14:21…". The step is picked from
+    a usual ladder (1, 2, 5, 10, 15, 30 min; 1, 2, 3, 6, 12 h; 1, 2, 7 d;
+    then monthly with a 1, 2, 3, 6, 12 or 24-month stride), and alignment
+    happens in **local** time: aligned in UTC, a 6 h step would land on
+    02:00 and 08:00 in a +2 zone.
+  - Labels are laid out in **HTML below the chart**, not inside the SVG:
+    every chart uses `preserveAspectRatio="none"` and would stretch the
+    text horizontally. Vertical lines do stay in the SVG -- a stretched
+    vertical line is still straight.
+  - The format follows the displayed span: hour and minute below a day,
+    weekday beyond, date beyond a week, month and year beyond a year.
+    Always in the board's language.
+
+- **Internet health**: the period's two bounds, the only time indication
+  so far, are replaced by the full axis -- a dip in the middle of "24 h"
+  was impossible to date.
+
+- **Times kept server-side for crypto**: Binance and CoinGecko both
+  supply each point's time, which was **thrown away** during extraction
+  (`server/cryptoBinance.js`, `server/crypto.js`). It now travels with
+  the prices. Prices and times are filtered **together**: filtering
+  prices alone would have desynchronised them at the first incomplete
+  candle, offsetting the whole curve.
+
+- **Bug caught by the tests**: `Number("")` is `0`, and Binance returns
+  an **empty** string for the close of a candle that has just opened.
+  That field therefore became a price of 0 and the curve dived to zero on
+  its last point. Both extractors now require a non-empty value. (The
+  same trap as the one fixed in 1.83.0 on the GPU.)
+
+- **System status**: the client history now keeps each reading's time,
+  and the filtered series (disk, GPU, which may hold fewer points than
+  the CPU) keep their own times -- otherwise the axis would have been
+  offset on those two tabs.
+
+- **Tests**: `dom-smoke.js` covers alignment on round instants at every
+  scale (2 h, 24 h, 5 d, 30 d, 2 years, 10 years), bounded label density,
+  local-time alignment, degraded cases (zero, inverted, non-numeric
+  period), edge-label pull-in, text escaping, and checks all four widgets
+  do use the shared module; `cryptoBinance.test.js` checks times travel
+  with prices and that joint filtering does not desynchronise them.
+
+## 1.83.0
+
+- **Etat systeme : charge du GPU**, barre au meme titre que le CPU et la
+  RAM, avec la temperature de la carte dans le libelle quand la source
+  la fournit, et **courbe optionnelle** (reglage « Courbe d'utilisation
+  du GPU » : decoche, la barre reste mais n'est plus cliquable et
+  l'onglet GPU disparait de la fenetre des courbes).
+
+- **Sources, par plateforme** (`gpuUsage()` ajoute aux trois
+  implementations de `server/platform/`) :
+  - Linux : `/sys/class/drm/cardN/device/gpu_busy_percent` (amdgpu,
+    simple lecture de fichier, aucun processus lance), sinon
+    `nvidia-smi` en sortie CSV. La frequence Intel
+    (`gt_act_freq_mhz`) n'est PAS utilisee : ce n'est pas une charge, la
+    convertir en pourcentage serait une invention.
+  - Windows : `nvidia-smi`, sinon les compteurs de performance
+    « GPU Engine » (universels depuis Windows 10). Windows publie un
+    compteur par moteur ET par processus : la charge de la carte est la
+    SOMME des moteurs 3D et Compute, les moteurs Copy et VideoDecode
+    etant volontairement ecartes (une simple lecture video les fait
+    monter tres haut sans que la carte travaille). Le jeu de compteurs
+    est designe par son identifiant numerique, invariable d'une langue
+    de Windows a l'autre.
+  - macOS : null assume (`powermetrics` exige les droits root).
+
+- **Sur un Raspberry Pi, la ligne reste masquee.** Le VideoCore n'expose
+  nulle part son taux d'occupation -- `vcgencmd` donne des temperatures
+  et des frequences, jamais un pourcentage. Afficher « GPU 0 % »
+  laisserait croire a un GPU au repos alors que rien n'est mesure :
+  l'absence de ligne est la seule reponse honnete.
+
+- **Mise en cache de quatre secondes, partagee par tous les ecrans.**
+  Contrairement au CPU (lecture d'un fichier systeme, gratuite), lire la
+  charge du GPU lance un processus : sans cache, trois tuiles sur trois
+  ecrans en lanceraient des dizaines par minute pour un chiffre
+  identique.
+
+- **Historique** : nouveau champ `g` dans les points echantillonnes
+  chaque minute. Les points enregistres par les versions precedentes
+  n'en ont pas et sont ecartes a la lecture -- la courbe GPU demarre
+  donc a la mise a jour, plutot que de plonger a zero sur tout le passe.
+
+- **Bug attrape par les tests** : `Number("")` vaut `0` et non `NaN`, si
+  bien qu'un fichier `gpu_busy_percent` vide ou tronque se serait lu
+  comme un GPU parfaitement au repos. Le parseur exige desormais une
+  suite de chiffres.
+
+- **Tests** : nouveau `test/gpu.test.js` (parseurs des trois
+  plateformes verifiables depuis un Pi sans carte graphique : sortie
+  CSV nvidia-smi complete et partielle, plusieurs cartes, fichier
+  amdgpu, compteurs Windows avec somme des moteurs 3D/Compute,
+  exclusion de VideoDecode, plafonnement a 100 %, formes JSON objet et
+  tableau) ; `dom-smoke.js` couvre la regle d'affichage (aucune ligne
+  sans mesure reelle, 0 % affiche, options), le rendu de la ligne et
+  l'historique ; `platform.test.js` verifie que les trois
+  implementations exposent `gpuUsage`.
+
+---
+
+- **System status: GPU load**, a bar alongside CPU and RAM, with the
+  card's temperature in the label when the source provides it, and an
+  **optional chart** ("GPU usage chart" setting: unticked, the bar stays
+  but is no longer clickable and the GPU tab disappears from the charts
+  window).
+
+- **Sources, per platform** (`gpuUsage()` added to all three
+  `server/platform/` implementations):
+  - Linux: `/sys/class/drm/cardN/device/gpu_busy_percent` (amdgpu, a
+    plain file read, no process spawned), otherwise `nvidia-smi` with
+    CSV output. Intel's frequency (`gt_act_freq_mhz`) is NOT used: it is
+    not a load, turning it into a percentage would be making things up.
+  - Windows: `nvidia-smi`, otherwise the "GPU Engine" performance
+    counters (universal since Windows 10). Windows publishes one counter
+    per engine AND per process: the card's load is the SUM of the 3D and
+    Compute engines, with Copy and VideoDecode deliberately excluded
+    (plain video playback sends them very high without the card really
+    working). The counter set is designated by its numeric id, invariant
+    across Windows languages.
+  - macOS: null by design (`powermetrics` requires root).
+
+- **On a Raspberry Pi the row stays hidden.** The VideoCore exposes its
+  occupancy nowhere -- `vcgencmd` gives temperatures and frequencies,
+  never a percentage. Showing "GPU 0%" would suggest an idle GPU when
+  nothing is measured: no row at all is the only honest answer.
+
+- **Four-second cache, shared by every screen.** Unlike the CPU (a free
+  system file read), reading GPU load spawns a process: without a cache,
+  three tiles on three screens would spawn dozens a minute for an
+  identical figure.
+
+- **History**: new `g` field in the points sampled every minute. Points
+  recorded by previous versions have none and are dropped when read --
+  the GPU curve therefore starts at the update rather than diving to
+  zero across all the past.
+
+- **Bug caught by the tests**: `Number("")` is `0`, not `NaN`, so an
+  empty or truncated `gpu_busy_percent` file would have read as a
+  perfectly idle GPU. The parser now requires a run of digits.
+
+- **Tests**: new `test/gpu.test.js` (all three platforms' parsers
+  verifiable from a Pi with no graphics card: full and partial
+  nvidia-smi CSV, several cards, amdgpu file, Windows counters with the
+  3D/Compute sum, VideoDecode exclusion, 100% cap, both JSON object and
+  array shapes); `dom-smoke.js` covers the display rule (no row without
+  a real reading, 0% shown, options), row rendering and history;
+  `platform.test.js` checks all three implementations expose `gpuUsage`.
+
 ## 1.82.0
 
 - **Etat systeme : le rouge n'est plus la couleur de l'usage normal.**

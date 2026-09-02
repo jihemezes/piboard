@@ -2196,3 +2196,26 @@ body.touch .modal-help { width: 30px; height: 30px; font-size: 16px; }
 }
 body.touch .quickstart-again { font-size: 15px; }
 body.touch .quickstart-again input { width: 20px; height: 20px; }
+
+/* ---------- Axe des abscisses temporel / time X axis ----------
+   Commun a tous les graphiques (voir public/chart-time-axis.js). Les
+   etiquettes sont positionnees en pourcentage sous le graphique plutot
+   que dans le SVG, qui est etire horizontalement
+   (`preserveAspectRatio="none"`) et deformerait le texte.
+   Shared by every chart (see public/chart-time-axis.js). Labels are
+   positioned by percentage under the chart rather than inside the SVG,
+   which is stretched horizontally (`preserveAspectRatio="none"`) and
+   would distort the text. */
+.pb-taxis {
+  position: relative;
+  height: 15px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.pb-taxis-tick {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}

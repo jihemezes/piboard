@@ -316,7 +316,7 @@
               <path class="pwih-line" fill="none" stroke="var(--accent)" stroke-width="2"
                     stroke-linejoin="round" stroke-linecap="round"></path>
             </svg>
-            <div class="pwih-axis"><span data-role="from"></span><span data-role="to"></span></div>
+            <div class="pb-taxis pwih-taxis"></div>
 
             <dl class="pwih-stats"></dl>
 
@@ -428,18 +428,30 @@
          <text x="4" y="${(y(v) - 3).toFixed(1)}" fill="var(--muted)" font-size="10">${
            Math.round(v * 10) / 10}</text>`).join("");
 
-      // Bornes temporelles sous le graphique : sans elles, "24 h"
-      // resterait abstrait et on ne saurait pas ou tombe le creux qu'on
-      // regarde. Time bounds under the chart: without them "24 h" stays
-      // abstract and one cannot tell where the dip being looked at
-      // falls.
-      const timeOpts = { hour: "2-digit", minute: "2-digit" };
-      const dateOpts = { weekday: "short", hour: "2-digit", minute: "2-digit" };
-      const opts = (this.range || 24) > 12 ? dateOpts : timeOpts;
-      m.querySelector("[data-role=from]").textContent =
-        pts.length ? new Date(pts[0].t).toLocaleString(this.locale, opts) : "";
-      m.querySelector("[data-role=to]").textContent =
-        pts.length ? new Date(pts[pts.length - 1].t).toLocaleString(this.locale, opts) : "";
+      /* Axe des abscisses. Cette fenetre affichait deja les deux bornes
+         de la periode, mais rien entre les deux : un creux au milieu de
+         "24 h" restait impossible a dater. L'axe commun
+         (public/chart-time-axis.js) place des graduations sur des heures
+         rondes, avec les memes regles que les autres graphiques du
+         tableau. Traits verticaux dans le SVG, etiquettes en HTML sous
+         lui -- ce SVG est etire (`preserveAspectRatio="none"`) et
+         deformerait le texte.
+         X axis. This window already showed the period's two bounds, but
+         nothing in between: a dip in the middle of "24 h" stayed
+         impossible to date. The shared axis
+         (public/chart-time-axis.js) puts ticks on round hours, with the
+         same rules as every other chart on the board. Vertical lines in
+         the SVG, labels in HTML below it -- this SVG is stretched
+         (`preserveAspectRatio="none"`) and would distort the text. */
+      const axis = window.PiBoardTimeAxis;
+      const axisEl = m.querySelector(".pwih-taxis");
+      if (axis && axisEl && pts.length > 1) {
+        const ticks = axis.timeTicks(pts[0].t, pts[pts.length - 1].t, { locale: this.locale, maxTicks: 6 });
+        m.querySelector(".pwih-grid").innerHTML += axis.gridLines(ticks, 0, W, PAD, H - PAD);
+        axisEl.innerHTML = axis.axisHtml(ticks, 0, 0);
+      } else if (axisEl) {
+        axisEl.innerHTML = "";
+      }
 
       this.renderStats(data);
 

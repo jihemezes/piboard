@@ -4344,6 +4344,169 @@ function catalogItemFor(catalog, document, widgetId) {
       && manifest.settings.find((f) => f.key === "chartColor").default === D.chartColor);
   }
 
+  console.log("== Etat systeme : barre et courbe GPU ==");
+  {
+    const vm = require("vm");
+    const src = fs.readFileSync(path.join(PUB, "widgets/system/widget.js"), "utf8");
+    let Klass = null;
+    const sb = { window: { PiBoard: { registerWidget: (id, k) => { if (id === "system") Klass = k; } } }, console, document: undefined };
+    vm.createContext(sb);
+    vm.runInContext(src, sb);
+
+    /* La ligne GPU se construit dans refresh(), qui a besoin d'un DOM et
+       du reseau. On rejoue donc ici la MEME logique de decision que le
+       widget (les trois conditions qui la gouvernent), et on verifie
+       separement que le rendu d'une ligne fonctionne. Ce qu'on protege,
+       c'est la regle : pas de ligne GPU sans mesure reelle.
+       The GPU row is built in refresh(), which needs a DOM and the
+       network. So we replay the SAME decision logic as the widget (the
+       three conditions governing it) here, and separately check that a
+       row renders. What is protected is the rule: no GPU row without a
+       real measurement. */
+    const decide = (d, s) => {
+      const gpu = d.gpu && Number.isFinite(d.gpu.percent) ? d.gpu : null;
+      const showGpu = !!(gpu && s.showGpu !== false);
+      return { showGpu, gpuChart: showGpu && s.gpuChart !== false };
+    };
+    // Raspberry Pi : le serveur renvoie gpu: null -> aucune ligne. C'est
+    // le point essentiel : "GPU 0 %" laisserait croire a un GPU au repos
+    // alors que rien n'est mesure.
+    assert("machine sans GPU lisible (Pi) : pas de ligne GPU",
+      decide({ gpu: null }, {}).showGpu === false);
+    assert("gpu present mais pourcentage non fini : pas de ligne",
+      decide({ gpu: { percent: null } }, {}).showGpu === false);
+    assert("GPU expose : ligne affichee par defaut",
+      decide({ gpu: { percent: 12 } }, {}).showGpu === true);
+    assert("GPU a 0 % : ligne affichee (0 est une mesure, pas une absence)",
+      decide({ gpu: { percent: 0 } }, {}).showGpu === true);
+    assert("option decochee : pas de ligne meme si le GPU est expose",
+      decide({ gpu: { percent: 40 } }, { showGpu: false }).showGpu === false);
+    assert("courbe optionnelle : barre gardee, clic retire",
+      decide({ gpu: { percent: 40 } }, { gpuChart: false }).showGpu === true
+      && decide({ gpu: { percent: 40 } }, { gpuChart: false }).gpuChart === false);
+    assert("courbe active par defaut", decide({ gpu: { percent: 40 } }, {}).gpuChart === true);
+
+    // Rendu : la ligne GPU suit les memes couleurs par niveau que le
+    // reste, et n'est cliquable que si la courbe est demandee.
+    const w = new Klass({ settings: {}, i18n: { t: (k) => k }, el: null });
+    assert("ligne GPU chargee peinte en rouge comme les autres", /background:#E0556F/.test(w.row("GPU", "92%", 92, "gpu")));
+    assert("ligne GPU au repos peinte en vert", /background:#3FA96B/.test(w.row("GPU", "5%", 5, "gpu")));
+    assert("courbe demandee : la ligne est cliquable", /data-metric="gpu"/.test(w.row("GPU", "40%", 40, "gpu")));
+    assert("courbe non demandee : la ligne n'est pas cliquable",
+      !/data-metric/.test(w.row("GPU", "40%", 40, null)) && !/pws-clickable/.test(w.row("GPU", "40%", 40, null)));
+
+    // Historique : le GPU est enregistre comme les autres ressources, et
+    // borne de la meme facon.
+    const w2 = new Klass({ settings: {}, i18n: { t: (k) => k }, el: null });
+    w2.record({ cpuPercent: 10, memPercent: 20, diskPercent: 30, gpu: { percent: 44 } });
+    assert("charge GPU enregistree dans l'historique", w2.history.gpu.length === 1 && w2.history.gpu[0] === 44);
+    w2.record({ cpuPercent: 10, memPercent: 20, diskPercent: 30, gpu: null });
+    assert("releve sans GPU : aucun point ajoute (pas de zero invente)", w2.history.gpu.length === 1);
+
+    assert("le champ 'g' de l'historique serveur est filtre quand il manque",
+      /p\.g != null/.test(src));
+    assert("l'onglet GPU n'apparait pas si la courbe est desactivee",
+      /gpuChart !== false/.test(src));
+
+    const manifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/system/manifest.json"), "utf8"));
+    const keys = manifest.settings.map((f) => f.key);
+    assert("reglage 'showGpu' declare", keys.includes("showGpu"));
+    assert("reglage 'gpuChart' declare (courbe optionnelle)", keys.includes("gpuChart"));
+    assert("les deux options sont actives par defaut",
+      manifest.settings.find((f) => f.key === "showGpu").default === true
+      && manifest.settings.find((f) => f.key === "gpuChart").default === true);
+  }
+
+  console.log("== Axe des abscisses temporel : module commun a tous les graphiques ==");
+  {
+    const vm = require("vm");
+    const axisSrc = fs.readFileSync(path.join(PUB, "chart-time-axis.js"), "utf8");
+    const sb = { window: {}, Intl, Date, Math, Number, String };
+    vm.createContext(sb);
+    vm.runInContext(axisSrc, sb);
+    const A = sb.window.PiBoardTimeAxis;
+    assert("le module expose son interface", !!A && typeof A.timeTicks === "function" && typeof A.axisHtml === "function");
+
+    const HOUR = 3600000, DAY = 24 * HOUR;
+    // Instant volontairement NON rond (14:47) : c'est tout l'interet des
+    // graduations alignees. A deliberately NON-round instant (14:47):
+    // that is the whole point of aligned ticks.
+    const now = new Date("2026-09-02T14:47:31").getTime();
+
+    const twoHours = A.timeTicks(now - 2 * HOUR, now, { maxTicks: 6, locale: "fr-FR" });
+    assert("2 h : des graduations sont produites", twoHours.length >= 3);
+    assert("2 h : toutes les graduations tombent sur une demi-heure ronde",
+      twoHours.every((t) => { const d = new Date(t.t); return d.getSeconds() === 0 && (d.getMinutes() % 30) === 0; }));
+    assert("2 h : etiquettes en heures et minutes", /^\d{2}:\d{2}$/.test(twoHours[0].label));
+    assert("les graduations restent dans le cadre", twoHours.every((t) => t.at >= 0 && t.at <= 1));
+    assert("les graduations sont ordonnees", twoHours.every((t, i, a) => i === 0 || t.t > a[i - 1].t));
+
+    const day = A.timeTicks(now - DAY, now, { maxTicks: 6, locale: "fr-FR" });
+    assert("24 h : graduations sur des heures pleines",
+      day.every((t) => { const d = new Date(t.t); return d.getMinutes() === 0 && d.getSeconds() === 0; }));
+    assert("24 h : pas plus de graduations que demande", day.length <= 6);
+
+    const week = A.timeTicks(now - 5 * DAY, now, { maxTicks: 6, locale: "fr-FR" });
+    assert("5 jours : le jour de la semaine apparait, sinon 03:00 serait ambigu",
+      week.length > 0 && /[a-zA-Zé]/.test(week[0].label));
+
+    const month = A.timeTicks(now - 30 * DAY, now, { maxTicks: 6, locale: "fr-FR" });
+    assert("30 jours : etiquettes datees, sans heure", month.length > 0 && !/:/.test(month[0].label));
+
+    // Deux ans : sans pas mensuel, on obtenait vingt-sept etiquettes
+    // superposees. Two years: without a monthly stride, twenty-seven
+    // overlapping labels came out.
+    const twoYears = A.timeTicks(now - 800 * DAY, now, { maxTicks: 6, locale: "fr-FR" });
+    assert("2 ans : le nombre d'etiquettes reste lisible", twoYears.length > 1 && twoYears.length <= 6);
+    assert("2 ans : mois et annee affiches", /\d{4}/.test(twoYears[0].label));
+    const decade = A.timeTicks(now - 4000 * DAY, now, { maxTicks: 6, locale: "fr-FR" });
+    assert("10 ans : toujours borne", decade.length <= 6);
+
+    // Alignement en heure LOCALE et non UTC : un pas de 6 h aligne en UTC
+    // tomberait a des heures batardes dans un fuseau decale.
+    const sixHourly = A.timeTicks(now - 18 * HOUR, now, { maxTicks: 4, locale: "fr-FR" });
+    assert("alignement en heure locale, pas UTC",
+      sixHourly.every((t) => new Date(t.t).getMinutes() === 0));
+
+    // Cas degrades : un graphique sans donnee ne doit pas lever.
+    assert("periode nulle -> aucune graduation", A.timeTicks(now, now).length === 0);
+    assert("periode inversee -> aucune graduation", A.timeTicks(now, now - HOUR).length === 0);
+    assert("valeurs non numeriques -> aucune graduation",
+      A.timeTicks(NaN, now).length === 0 && A.timeTicks(null, undefined).length === 0);
+    assert("etiquettes d'un axe vide -> chaine vide", A.axisHtml([], 0, 0) === "" && A.axisHtml(null, 0, 0) === "");
+
+    // Positionnement : marges converties en pourcentage, bords recales
+    // vers l'interieur pour ne pas deborder du cadre.
+    const html = A.axisHtml([{ at: 0, label: "A" }, { at: 0.5, label: "B" }, { at: 1, label: "C" }], 10, 5);
+    assert("premiere etiquette calee a gauche, pas centree hors cadre", /left:10\.00%;transform:translateX\(0\)/.test(html));
+    assert("etiquette centrale centree sur son trait", /left:52\.50%;transform:translateX\(-50%\)/.test(html));
+    assert("derniere etiquette calee a droite", /left:95\.00%;transform:translateX\(-100%\)/.test(html));
+    assert("le texte des etiquettes est echappe",
+      /&lt;b&gt;/.test(A.axisHtml([{ at: 0.5, label: "<b>" }], 0, 0)));
+
+    const lines = A.gridLines([{ at: 0 }, { at: 1 }], 50, 250, 10, 190);
+    assert("traits verticaux places aux bornes de la zone tracee",
+      /x1="50\.0"/.test(lines) && /x1="250\.0"/.test(lines) && /y1="10"/.test(lines));
+
+    /* Tous les graphiques du tableau doivent porter l'axe : c'est le
+       point de la version. Un widget qui trace une courbe temporelle
+       sans axe serait une regression silencieuse.
+       Every chart on the board must carry the axis: that is the point of
+       this version. A widget drawing a time curve without an axis would
+       be a silent regression. */
+    for (const w of ["system", "crypto", "stocks", "speedtest"]) {
+      const src = fs.readFileSync(path.join(PUB, "widgets", w, "widget.js"), "utf8");
+      assert(w + " : utilise l'axe temporel commun", /PiBoardTimeAxis/.test(src));
+      assert(w + " : reserve un emplacement pour les etiquettes", /pb-taxis/.test(src));
+    }
+    const html5 = fs.readFileSync(path.join(PUB, "index.html"), "utf8");
+    assert("le module d'axe est charge avant app.js",
+      html5.indexOf("chart-time-axis.js") > 0 && html5.indexOf("chart-time-axis.js") < html5.indexOf("app.js\"></script>"));
+    const styles = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+    assert("la classe commune .pb-taxis est definie une seule fois, dans la feuille globale",
+      /\.pb-taxis\s*\{/.test(styles));
+  }
+
   console.log("== Sante Internet : mesure serveur, coupures et export ==");
   {
     const src = fs.readFileSync(path.join(PUB, "widgets/speedtest/widget.js"), "utf8");

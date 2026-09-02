@@ -1286,8 +1286,8 @@
       group: "tiles",
       title: { fr: "État système", en: "System status" },
       sub: {
-        fr: "CPU, RAM, espace disque, température et disponibilité de la machine qui héberge PiBoard.",
-        en: "CPU, RAM, disk usage, temperature and uptime of the machine hosting PiBoard."
+        fr: "CPU, GPU, RAM, espace disque, température et disponibilité de la machine qui héberge PiBoard.",
+        en: "CPU, GPU, RAM, disk usage, temperature and uptime of the machine hosting PiBoard."
       },
       html: {
         fr: `
@@ -1296,9 +1296,16 @@
           <p>Garder un œil sur la santé du Raspberry Pi (ou de toute autre machine) qui héberge PiBoard, directement depuis le tableau lui-même.</p>
           <h4>Possibilités</h4>
           <p>Utile en particulier sur un Raspberry Pi, où la température et l'usage CPU/RAM peuvent révéler un problème (par exemple un boîtier mal ventilé, ou un processus qui consomme trop) avant qu'il ne devienne gênant. L'espace disque restant permet d'anticiper un plein (photos du diaporama, notes…) avant qu'il ne bloque une sauvegarde.</p>
+          <h4>Charge du GPU</h4>
+          <p>Une barre supplémentaire, affichée <b>uniquement si la machine expose réellement la charge de son GPU</b> : cartes NVIDIA (via <code>nvidia-smi</code>, fourni avec le pilote), cartes AMD sous Linux (fichier <code>gpu_busy_percent</code> du pilote amdgpu), et n'importe quelle carte sous Windows 10 ou plus récent (compteurs de performance « GPU Engine »). La température de la carte est ajoutée au libellé quand la source la fournit.</p>
+          <p><b>Sur un Raspberry Pi, la ligne reste masquée</b> : le VideoCore n'expose nulle part son taux d'occupation — <code>vcgencmd</code> donne des températures et des fréquences, jamais un pourcentage de charge. Afficher « GPU 0 % » laisserait croire à un GPU au repos alors que rien n'est mesuré ; l'absence de ligne est la seule réponse honnête. C'est le même choix que pour macOS, où la charge n'est lisible que par <code>powermetrics</code>, qui exige les droits administrateur.</p>
+          <p>La mesure est <b>mise en cache quelques secondes et partagée par tous les écrans</b> : contrairement au CPU (simple lecture d'un fichier système), lire la charge du GPU lance un processus. Sans ce cache, trois tuiles sur trois écrans en lanceraient des dizaines par minute pour un chiffre identique.</p>
+          <p>La <b>courbe est optionnelle</b> (réglage « Courbe d'utilisation du GPU ») : décochée, la barre reste affichée mais n'est plus cliquable et l'onglet GPU disparaît de la fenêtre des courbes. L'historique GPU démarre à l'installation de cette version — les points enregistrés avant n'ont pas cette information et sont écartés, plutôt que de faire plonger la courbe à zéro sur tout le passé.</p>
+
           <h4>Courbes d'utilisation</h4>
-          <p><b>Un clic sur CPU, RAM ou Disque</b> ouvre une fenêtre à trois onglets, une courbe par ressource, qui se met à jour en direct au rythme de rafraîchissement de la tuile.</p>
-          <p>L'échelle est <b>fixée de 0 à 100 %</b>, jamais ajustée au contenu : une échelle automatique ferait paraître dramatique une variation de deux points en zoomant dessus.</p>
+          <p><b>Un clic sur CPU, GPU, RAM ou Disque</b> ouvre une fenêtre à trois onglets, une courbe par ressource, qui se met à jour en direct au rythme de rafraîchissement de la tuile.</p>
+          <p>L'axe des abscisses porte des <b>graduations horaires</b> alignées sur des instants ronds (heure pleine, quart d'heure, minuit selon la profondeur affichée) : un creux se date d'un coup d'œil. C'est le même axe sur tous les graphiques du tableau — cryptos, bourse, santé Internet.</p>
+          <p>L'échelle verticale est <b>fixée de 0 à 100 %</b>, jamais ajustée au contenu : une échelle automatique ferait paraître dramatique une variation de deux points en zoomant dessus.</p>
           <p>L'historique est échantillonné <b>chaque minute par le serveur</b> : il survit donc aux rechargements de page et il est <b>partagé par tous vos écrans</b>. La profondeur est réglable jusqu'à 24 h dans les réglages de la tuile.</p><p>L'écriture sur disque est espacée de cinq minutes plutôt qu'à chaque relevé : sur un Raspberry Pi, écrire 1440 fois par jour sur la carte SD serait inutilement agressif. Après une coupure brutale, les dernières minutes peuvent manquer — sans conséquence ici.</p>
 
           <h4>Adresses réseau</h4>
@@ -1317,6 +1324,8 @@
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en secondes entre deux relevés.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher le nom de machine</span><span class="help-opt-desc">Utile si plusieurs machines hébergent chacune une instance PiBoard.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la charge du GPU</span><span class="help-opt-desc">La barre GPU. Sans effet si la machine n'expose pas cette information (Raspberry Pi).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Courbe d'utilisation du GPU</span><span class="help-opt-desc">Ajoute l'onglet GPU aux courbes et rend la barre cliquable. Décochez pour garder la barre seule.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher l'adresse IP publique</span><span class="help-opt-desc">Voir ci-dessus. Désactivée par défaut.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher la disponibilité</span><span class="help-opt-desc">Depuis combien de temps la machine tourne sans interruption.</span></div>
           <div class="help-opt"><span class="help-opt-name">Seuils « élevé » et « critique »</span><span class="help-opt-desc">Pourcentages à partir desquels la barre change de couleur. Communs au CPU, à la RAM et au disque.</span></div>
@@ -1328,9 +1337,16 @@
           <p>Keep an eye on the health of the Raspberry Pi (or any other machine) hosting PiBoard, directly from the board itself.</p>
           <h4>Possibilities</h4>
           <p>Especially useful on a Raspberry Pi, where temperature and CPU/RAM usage can reveal a problem (e.g. a poorly ventilated case, or a process consuming too much) before it becomes an issue. Remaining disk space lets you anticipate running out (slideshow photos, notes…) before it blocks a save.</p>
+          <h4>GPU load</h4>
+          <p>An extra bar, shown <b>only if the machine actually exposes its GPU load</b>: NVIDIA cards (through <code>nvidia-smi</code>, shipped with the driver), AMD cards on Linux (the amdgpu driver's <code>gpu_busy_percent</code> file), and any card on Windows 10 or newer ("GPU Engine" performance counters). The card's temperature is appended to the label when the source provides it.</p>
+          <p><b>On a Raspberry Pi the row stays hidden</b>: the VideoCore exposes its occupancy nowhere — <code>vcgencmd</code> gives temperatures and frequencies, never a load percentage. Showing "GPU 0%" would suggest an idle GPU when nothing is being measured; no row at all is the only honest answer. Same choice as on macOS, where the load is only readable through <code>powermetrics</code>, which requires administrator rights.</p>
+          <p>The reading is <b>cached for a few seconds and shared by every screen</b>: unlike the CPU (a plain system file read), reading the GPU load spawns a process. Without that cache, three tiles on three screens would spawn dozens a minute for an identical figure.</p>
+          <p>The <b>chart is optional</b> ("GPU usage chart" setting): unticked, the bar stays shown but is no longer clickable and the GPU tab disappears from the charts window. GPU history starts when this version is installed — points recorded earlier hold no such information and are dropped, rather than dragging the curve to zero across all the past.</p>
+
           <h4>Usage charts</h4>
-          <p><b>Clicking CPU, RAM or Disk</b> opens a three-tab window, one curve per resource, updating live at the tile's own refresh pace.</p>
-          <p>The scale is <b>fixed from 0 to 100%</b>, never fitted to the content: an auto scale would make a two-point wobble look dramatic by zooming into it.</p>
+          <p><b>Clicking CPU, GPU, RAM or Disk</b> opens a three-tab window, one curve per resource, updating live at the tile's own refresh pace.</p>
+          <p>The X axis carries <b>time ticks</b> aligned on round instants (whole hour, quarter, midnight depending on the depth shown): a dip can be dated at a glance. It is the same axis on every chart of the board — crypto, stocks, Internet health.</p>
+          <p>The vertical scale is <b>fixed from 0 to 100%</b>, never fitted to the content: an auto scale would make a two-point wobble look dramatic by zooming into it.</p>
           <p>History is sampled <b>every minute by the server</b>: it therefore survives page reloads and is <b>shared across all your screens</b>. The depth is adjustable up to 24 h in the tile's settings.</p><p>Disk writes are spaced five minutes apart rather than one per reading: on a Raspberry Pi, writing to the SD card 1440 times a day would be needlessly aggressive. After an abrupt power cut the last few minutes may be missing — of no consequence here.</p>
 
           <h4>Network addresses</h4>
@@ -1349,6 +1365,8 @@
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in seconds between two readings.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show hostname</span><span class="help-opt-desc">Useful if several machines each host a PiBoard instance.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show GPU load</span><span class="help-opt-desc">The GPU bar. No effect if the machine does not expose this information (Raspberry Pi).</span></div>
+          <div class="help-opt"><span class="help-opt-name">GPU usage chart</span><span class="help-opt-desc">Adds the GPU tab to the charts and makes the bar clickable. Untick to keep the bar alone.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show the public IP address</span><span class="help-opt-desc">See above. Off by default.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show uptime</span><span class="help-opt-desc">How long the machine has been running without interruption.</span></div>
           <div class="help-opt"><span class="help-opt-name">"High" and "critical" thresholds</span><span class="help-opt-desc">Percentages from which the bar changes color. Shared by CPU, RAM and disk.</span></div>

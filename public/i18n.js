@@ -496,6 +496,7 @@
       "slideshow.uploadError": "Upload failed. Check the file size and format (jpg, png, gif, webp).",
 
       "system.cpu": "CPU",
+      "system.gpu": "GPU",
       "system.ram": "RAM",
       "system.disk": "Disk",
       "system.temp": "Temperature",
@@ -1136,6 +1137,7 @@
       "slideshow.uploadError": "Échec de l'envoi. Vérifiez la taille et le format du fichier (jpg, png, gif, webp).",
 
       "system.cpu": "CPU",
+      "system.gpu": "GPU",
       "system.ram": "RAM",
       "system.disk": "Disque",
       "system.temp": "Température",

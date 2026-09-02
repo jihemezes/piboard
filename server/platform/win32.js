@@ -301,6 +301,123 @@ function cpuTemperature() {
   return null;
 }
 
+/* ---------- Charge du GPU / GPU usage ----------
+
+   Deux sources, dans cet ordre :
+
+   1. `nvidia-smi` en sortie CSV -- disponible avec tout pilote NVIDIA
+      recent, et la seule qui fournisse aussi la temperature et la
+      memoire de la carte.
+   2. Le compteur de performance Windows "GPU Engine" via PowerShell --
+      universel (Intel, AMD, NVIDIA) depuis Windows 10, mais il ne donne
+      QUE l'occupation. Windows publie un compteur par moteur et par
+      processus : la charge de la carte est la SOMME des moteurs 3D de
+      tous les processus, pas la valeur d'un compteur unique -- c'est le
+      piege de cette source, et la raison pour laquelle le calcul vit
+      dans une fonction pure testee.
+
+   Le nom du compteur est passe en ANGLAIS a `Get-Counter` via
+   `-Counter "\GPU Engine(*)\..."`, ce qui echouerait sur un Windows
+   localise. On utilise donc l'identifiant NUMERIQUE du jeu de
+   compteurs, invariable d'une langue a l'autre -- meme principe que le
+   reste de ce fichier.
+
+   Two sources, in this order:
+
+   1. `nvidia-smi` with CSV output -- available with any recent NVIDIA
+      driver, and the only one also providing the card's temperature and
+      memory.
+   2. Windows's "GPU Engine" performance counter through PowerShell --
+      universal (Intel, AMD, NVIDIA) since Windows 10, but it gives ONLY
+      occupancy. Windows publishes one counter per engine and per
+      process: the card's load is the SUM of every process's 3D engines,
+      not a single counter's value -- that is this source's trap, and
+      why the computation lives in a tested pure function.
+
+   The counter name would have to be passed in ENGLISH to `Get-Counter`,
+   which would fail on a localised Windows. We therefore use the
+   counter set's NUMERIC identifier, invariant across languages -- the
+   same principle as the rest of this file. */
+
+function parseNvidiaSmi(raw) {
+  const line = String(raw || "").split(/\r?\n/).find((l) => l.trim());
+  if (!line) return null;
+  const cols = line.split(",").map((c) => c.trim());
+  const pct = Number(cols[0]);
+  if (!Number.isFinite(pct)) return null;
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  const memUsed = num(cols[2]);
+  const memTotal = num(cols[3]);
+  return {
+    percent: Math.max(0, Math.min(100, Math.round(pct))),
+    tempC: num(cols[1]),
+    memPercent: memTotal ? Math.round((memUsed / memTotal) * 1000) / 10 : null,
+    name: cols[4] || null
+  };
+}
+
+/* Entree : le JSON produit par
+   Get-Counter ... | Select -Expand CounterSamples | Select Path,CookedValue
+   Chaque echantillon porte un chemin du type
+   "\\pc\gpu engine(pid_1234_luid_...engtype_3D)\utilization percentage".
+   On additionne les moteurs 3D et Compute (ceux qui portent la charge
+   utile), en ignorant Copy et VideoDecode qui gonfleraient le total
+   pendant une simple lecture video.
+   Input: the JSON produced by the Get-Counter pipeline above. Each
+   sample carries a path like the one above. We sum the 3D and Compute
+   engines (the ones carrying real work), ignoring Copy and VideoDecode
+   which would inflate the total during plain video playback. */
+function parseGpuCounters(raw) {
+  let data;
+  try { data = JSON.parse(String(raw || "")); } catch (e) { return null; }
+  const samples = Array.isArray(data) ? data : [data];
+  let total = 0;
+  let seen = 0;
+  for (const s of samples) {
+    if (!s || typeof s.Path !== "string") continue;
+    const path = s.Path.toLowerCase();
+    if (!/engtype_(3d|compute)/.test(path)) continue;
+    const v = Number(s.CookedValue);
+    if (!Number.isFinite(v)) continue;
+    seen++;
+    total += v;
+  }
+  if (!seen) return null;
+  // Plusieurs processus peuvent depasser 100 % cumules sur des moteurs
+  // distincts : on plafonne plutot que d'afficher 137 %.
+  // Several processes can exceed a cumulative 100% across distinct
+  // engines: cap rather than display 137%.
+  return { percent: Math.max(0, Math.min(100, Math.round(total))), tempC: null, memPercent: null, name: null };
+}
+
+const GPU_TIMEOUT_MS = 8000;
+const NVIDIA_QUERY = "utilization.gpu,temperature.gpu,memory.used,memory.total,name";
+/* 4142 = identifiant du jeu de compteurs "GPU Engine", identique quelle
+   que soit la langue de Windows ; 4144 = "Utilization Percentage".
+   4142 = the "GPU Engine" counter set id, identical whatever Windows's
+   language; 4144 = "Utilization Percentage". */
+const GPU_PS = "$ErrorActionPreference='Stop';" +
+  "$n=(New-Object System.Diagnostics.PerformanceCounterCategory((Get-Counter -ListSet * | Where-Object {$_.CounterSetName -match 'GPU Engine|GPU-Engine|Moteur GPU'} | Select-Object -First 1).CounterSetName)).CategoryName;" +
+  "(Get-Counter -Counter (\"\\\" + $n + \"(*)\\*\") -ErrorAction Stop).CounterSamples | " +
+  "Select-Object Path,CookedValue | ConvertTo-Json -Compress";
+
+function gpuUsage() {
+  return new Promise((resolve) => {
+    execFile("nvidia-smi", ["--query-gpu=" + NVIDIA_QUERY, "--format=csv,noheader,nounits"],
+      { timeout: GPU_TIMEOUT_MS, windowsHide: true, encoding: "utf8" }, (err, stdout) => {
+        const nv = err && !stdout ? null : parseNvidiaSmi(stdout);
+        if (nv) return resolve(Object.assign(nv, { source: "nvidia-smi" }));
+        execFile("powershell", ["-NoProfile", "-NonInteractive", "-Command", GPU_PS],
+          { timeout: GPU_TIMEOUT_MS, windowsHide: true, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 },
+          (err2, out2) => {
+            if (err2 && !out2) return resolve(null);
+            const parsed = parseGpuCounters(out2);
+            resolve(parsed ? Object.assign(parsed, { source: "perf-counter" }) : null);
+          });
+      });
+  });
+}
+
 /* ---------- Racine du systeme de fichiers / filesystem root ----------
    Le lecteur sur lequel l'application est installee, et non un \"C:\\\"
    code en dur : PiBoard peut parfaitement tourner depuis un autre
@@ -636,6 +753,9 @@ module.exports = {
   exitToDesktop,
   updateSupport,
   restartServer,
+  gpuUsage,
+  parseNvidiaSmi,
+  parseGpuCounters,
   ffmpegCandidates,
   ffmpegInstallHint,
   chromiumCandidates,

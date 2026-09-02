@@ -218,6 +218,7 @@
               <g class="pwb-grid"></g>
               <path class="pwb-line" fill="none" stroke-width="2"></path>
             </svg>
+            <div class="pb-taxis pwb-taxis"></div>
             <div class="pwb-chart-status">${esc(i18n.t("common.loading"))}</div>
           </div>
         </div>`;
@@ -271,6 +272,27 @@
           return `<line x1="${PAD.left}" y1="${y.toFixed(1)}" x2="${CHART_W - PAD.right}" y2="${y.toFixed(1)}" stroke="#565E73" stroke-width="0.5"/>
                   <text x="${PAD.left - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end" fill="#565E73" font-size="9">${esc(formatValue(v, lang))}</text>`;
         }).join("");
+        /* Axe des abscisses : chaque point de la serie porte deja sa
+           date ISO (voir server/stocks.js:parseYahooChart). Traits dans
+           le SVG, etiquettes en HTML sous lui -- le SVG est etire et
+           deformerait le texte.
+           X axis: every point of the series already carries its ISO date
+           (see server/stocks.js:parseYahooChart). Lines in the SVG,
+           labels in HTML below it -- the SVG is stretched and would
+           distort the text. */
+        const axis = window.PiBoardTimeAxis;
+        const axisEl = m.querySelector(".pwb-taxis");
+        const t0 = data.series.length ? Date.parse(data.series[0].date) : NaN;
+        const t1 = data.series.length ? Date.parse(data.series[data.series.length - 1].date) : NaN;
+        if (axis && axisEl && Number.isFinite(t0) && Number.isFinite(t1) && t1 > t0) {
+          const ticks = axis.timeTicks(t0, t1, { locale: lang === "en" ? "en-GB" : "fr-FR", maxTicks: 5 });
+          m.querySelector(".pwb-grid").innerHTML += axis.gridLines(ticks, PAD.left, CHART_W - PAD.right,
+            PAD.top, CHART_H - PAD.bottom, 'stroke="#565E73" stroke-width="0.5"');
+          axisEl.innerHTML = axis.axisHtml(ticks, (PAD.left / CHART_W) * 100, (PAD.right / CHART_W) * 100);
+        } else if (axisEl) {
+          axisEl.innerHTML = "";
+        }
+
         status.textContent = "";
         status.hidden = true;
       } catch (e) {

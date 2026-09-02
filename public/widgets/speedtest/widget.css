@@ -179,14 +179,13 @@ body.touch .pwih-modal .pwih-chip { font-size: 15px; padding: 8px 19px; }
   background: var(--bg);
   border: 1px solid var(--tile-edge);
 }
-.pwih-modal .pwih-axis {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--muted);
-  font-family: var(--mono);
-  margin-top: 4px;
-}
+/* Les deux bornes de la periode ont ete remplacees par l'axe temporel
+   commun (public/chart-time-axis.js, classe .pb-taxis) : mêmes
+   graduations et meme format que les autres graphiques du tableau.
+   The period's two bounds were replaced by the shared time axis
+   (public/chart-time-axis.js, .pb-taxis class): same ticks and same
+   format as every other chart on the board. */
+.pwih-modal .pwih-taxis { margin-bottom: 6px; }
 
 .pwih-modal .pwih-stats {
   margin: 14px 0 0;

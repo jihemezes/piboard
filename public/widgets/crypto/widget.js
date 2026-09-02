@@ -225,6 +225,7 @@
               <path class="pwc-chart-fill" d=""></path>
               <path class="pwc-chart-line" d=""></path>
             </svg>
+            <div class="pb-taxis pwc-taxis"></div>
             <div class="pwc-chart-status"></div>
           </div>
         </div>`;
@@ -330,6 +331,8 @@
       lineEl.setAttribute("d", "");
       fillEl.setAttribute("d", "");
       gridGroup.innerHTML = "";
+      const oldAxis = modal.querySelector(".pwc-taxis");
+      if (oldAxis) oldAxis.innerHTML = "";
 
       const cacheKey = coinId + ":" + days;
       try {
@@ -372,6 +375,33 @@
           return `<line class="pwc-chart-grid" x1="${CHART_PAD.left}" x2="${CHART_W - CHART_PAD.right}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"></line>
             <text class="pwc-chart-axis" x="${CHART_PAD.left - 6}" y="${(y + 3).toFixed(1)}" text-anchor="end">${formatPrice(v, s.currency)}${symbolChar}</text>`;
         }).join("");
+        /* Axe des abscisses : les instants viennent desormais de la
+           source (Binance ou CoinGecko), voir server/crypto.js. Les
+           traits verticaux vont dans le SVG, les etiquettes en HTML sous
+           lui -- le SVG est etire, il deformerait le texte. Les marges
+           gauche/droite du viewBox sont converties en pourcentage pour
+           que chaque etiquette tombe sous son trait.
+           X axis: the times now come from the source (Binance or
+           CoinGecko), see server/crypto.js. Vertical lines go into the
+           SVG, labels into HTML below it -- the SVG is stretched and
+           would distort the text. The viewBox's left/right margins are
+           converted to percentages so each label lands under its line. */
+        const times = cached.times || [];
+        const axis = window.PiBoardTimeAxis;
+        const axisEl = modal.querySelector(".pwc-taxis");
+        if (axis && axisEl && times.length > 1 && times[0] != null && times[times.length - 1] != null) {
+          const ticks = axis.timeTicks(times[0], times[times.length - 1], {
+            locale: i18n.lang === "en" ? "en-GB" : "fr-FR",
+            maxTicks: 5
+          });
+          gridGroup.innerHTML += axis.gridLines(ticks, CHART_PAD.left, CHART_W - CHART_PAD.right,
+            CHART_PAD.top, CHART_H - CHART_PAD.bottom, 'class="pwc-chart-grid"');
+          axisEl.innerHTML = axis.axisHtml(ticks,
+            (CHART_PAD.left / CHART_W) * 100, (CHART_PAD.right / CHART_W) * 100);
+        } else if (axisEl) {
+          axisEl.innerHTML = "";
+        }
+
         lineEl.setAttribute("d", line);
         fillEl.setAttribute("d", fill);
         status.hidden = !cached.stale;

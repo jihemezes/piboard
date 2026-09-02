@@ -157,3 +157,6 @@ body.touch .rows-del { width: 34px; height: 34px; }
   font-size: 12.5px;
   color: var(--accent);
 }
+
+/* Axe temporel commun sous la courbe / shared time axis under the curve */
+.pwb-taxis { margin-bottom: 4px; }

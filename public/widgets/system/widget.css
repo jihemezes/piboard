@@ -211,3 +211,6 @@ body.touch .pwg-tab { font-size: 15px; padding: 8px 20px; }
   border: 1px solid var(--tile-edge);
 }
 .pwg-hint { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+
+/* Axe temporel commun sous la courbe / shared time axis under the curve */
+.pwg-taxis { margin-bottom: 2px; }

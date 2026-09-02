@@ -275,9 +275,47 @@ function cpuPercent() {
    sense on Linux -- elsewhere the temperature is null and the "System"
    widget simply hides the matching row. */
 
+/* ---------- Charge du GPU / GPU usage ----------
+   Mise en cache quelques secondes et partagee par tous les ecrans :
+   contrairement au CPU (lu dans /proc, gratuit), la releve du GPU peut
+   lancer un processus (nvidia-smi, PowerShell). Trois tuiles sur trois
+   ecrans rafraichissant toutes les cinq secondes lanceraient sinon des
+   dizaines de processus par minute pour un chiffre identique.
+
+   L'absence de GPU lisible (Raspberry Pi, macOS) est memorisee de la
+   meme facon : on continue de reessayer, mais au rythme du cache, sans
+   jamais faire echouer /api/system.
+
+   Cached for a few seconds and shared by every screen: unlike the CPU
+   (read from /proc, free), reading the GPU may spawn a process
+   (nvidia-smi, PowerShell). Three tiles on three screens refreshing
+   every five seconds would otherwise spawn dozens of processes a minute
+   for an identical figure.
+
+   The absence of a readable GPU (Raspberry Pi, macOS) is remembered the
+   same way: we keep retrying, but at the cache's pace, and never let
+   /api/system fail. */
+const GPU_CACHE_MS = 4000;
+let gpuCache = { at: 0, value: null };
+let gpuInflight = null;
+
+function gpuRead() {
+  if (Date.now() - gpuCache.at < GPU_CACHE_MS) return Promise.resolve(gpuCache.value);
+  if (gpuInflight) return gpuInflight;
+  gpuInflight = Promise.resolve()
+    .then(() => platform.gpuUsage())
+    .catch(() => null)
+    .then((v) => {
+      gpuCache = { at: Date.now(), value: v && Number.isFinite(v.percent) ? v : null };
+      gpuInflight = null;
+      return gpuCache.value;
+    });
+  return gpuInflight;
+}
+
 app.get("/api/system", async (req, res) => {
   try {
-    const [cpu, disk] = await Promise.all([cpuPercent(), platform.diskUsage()]);
+    const [cpu, disk, gpu] = await Promise.all([cpuPercent(), platform.diskUsage(), gpuRead()]);
     const totalMemGB = os.totalmem() / 1073741824;
     const freeMemGB = os.freemem() / 1073741824;
     const usedMemGB = totalMemGB - freeMemGB;
@@ -292,7 +330,12 @@ app.get("/api/system", async (req, res) => {
       diskTotalGB: disk ? Math.round(disk.totalGB * 10) / 10 : null,
       diskUsedGB: disk ? Math.round(disk.usedGB * 10) / 10 : null,
       diskPercent: disk ? Math.round(disk.pct * 10) / 10 : null,
-      tempC: platform.cpuTemperature()
+      tempC: platform.cpuTemperature(),
+      // null quand la machine n'expose pas la charge de son GPU : c'est
+      // le cas normal sur un Raspberry Pi, pas une erreur.
+      // null when the machine does not expose its GPU load: the normal
+      // case on a Raspberry Pi, not an error.
+      gpu: gpu || null
     });
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
@@ -1350,7 +1393,7 @@ async function historySample() {
     // une requete HTTP du serveur vers lui-meme.
     // Same sources as /api/system, without going through the route: this
     // avoids an HTTP request from the server to itself.
-    const [cpu, disk] = await Promise.all([cpuPercent(), platform.diskUsage()]);
+    const [cpu, disk, gpu] = await Promise.all([cpuPercent(), platform.diskUsage(), gpuRead()]);
     const totalMem = os.totalmem();
     const memPercent = ((totalMem - os.freemem()) / totalMem) * 100;
     const h = historyLoad();
@@ -1358,7 +1401,14 @@ async function historySample() {
       t: Date.now(),
       c: Math.round(cpu),
       m: Math.round(memPercent),
-      d: (disk && Number.isFinite(disk.pct)) ? Math.round(disk.pct) : null
+      d: (disk && Number.isFinite(disk.pct)) ? Math.round(disk.pct) : null,
+      // Champ absent des points enregistres avant cette version : la
+      // courbe GPU commence donc a la mise a jour, sans trou artificiel
+      // (les points sans "g" sont ecartes a la lecture).
+      // Field missing from points recorded before this version: the GPU
+      // curve therefore starts at the update, with no artificial gap
+      // (points without "g" are dropped when read).
+      g: (gpu && Number.isFinite(gpu.percent)) ? Math.round(gpu.percent) : null
     });
     if (h.points.length > HISTORY_MAX) h.points.shift();
     historyDirty = true;

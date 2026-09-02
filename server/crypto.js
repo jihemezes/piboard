@@ -149,9 +149,27 @@ async function fetchChartFromCoinGecko(coinId, currency, days) {
   const url = `https://api.coingecko.com/api/v3/coins/${encodeURIComponent(coinId)}/market_chart`
     + `?vs_currency=${encodeURIComponent(currency)}&days=${encodeURIComponent(days)}`;
   const data = await enqueueCoinGecko(() => fetchJson(url, CHART_FETCH_TIMEOUT_MS));
-  const prices = (data.prices || []).map((p) => p[1]);
+  /* CoinGecko renvoie des couples [instant, prix] : on garde les deux.
+     L'instant sert a l'axe des abscisses du graphique ; il etait jete
+     jusqu'ici. Filtrage conjoint, meme raison que dans
+     server/cryptoBinance.js.
+     CoinGecko returns [time, price] pairs: we keep both. The time feeds
+     the chart's X axis; it used to be thrown away. Joint filtering, same
+     reason as in server/cryptoBinance.js. */
+  const prices = [];
+  const times = [];
+  for (const p of (data.prices || [])) {
+    // Meme precaution que dans server/cryptoBinance.js : Number("") vaut
+    // 0 et ferait plonger la courbe. Same precaution as in
+    // server/cryptoBinance.js: Number("") is 0 and would dive the curve.
+    if (!p || p[1] == null || String(p[1]).trim() === "") continue;
+    const v = Number(p[1]);
+    if (!Number.isFinite(v)) continue;
+    prices.push(v);
+    times.push(Number.isFinite(Number(p[0])) ? Number(p[0]) : null);
+  }
   if (!prices.length) throw new Error("no data");
-  return prices;
+  return { prices, times };
 }
 
 /* Cours actuels d'une liste de pieces. "data" reprend le format
@@ -264,13 +282,13 @@ async function getChart(coinId, currency, days, deps) {
   const now = (deps && deps.now) || Date.now();
   const key = coinId + "::" + currency + "::" + days;
   const hit = chartCache.get(key);
-  if (hit && (now - hit.at) < CHART_TTL_MS) return { prices: hit.prices, stale: false };
+  if (hit && (now - hit.at) < CHART_TTL_MS) return { prices: hit.prices, times: hit.times, stale: false };
 
   try {
-    const prices = await binance.fetchChart(coinId, currency, days);
-    if (prices && prices.length) {
-      chartCache.set(key, { at: now, prices });
-      return { prices, stale: false };
+    const got = await binance.fetchChart(coinId, currency, days);
+    if (got && got.prices && got.prices.length) {
+      chartCache.set(key, { at: now, prices: got.prices, times: got.times });
+      return { prices: got.prices, times: got.times, stale: false };
     }
   } catch (e) {
     // Binance a echoue (pas seulement "piece non reconnue", qui renvoie
@@ -280,11 +298,11 @@ async function getChart(coinId, currency, days, deps) {
   }
 
   try {
-    const prices = await fetchChartFromCoinGecko(coinId, currency, days);
-    chartCache.set(key, { at: now, prices });
-    return { prices, stale: false };
+    const got = await fetchChartFromCoinGecko(coinId, currency, days);
+    chartCache.set(key, { at: now, prices: got.prices, times: got.times });
+    return { prices: got.prices, times: got.times, stale: false };
   } catch (e) {
-    if (hit) return { prices: hit.prices, stale: true };
+    if (hit) return { prices: hit.prices, times: hit.times, stale: true };
     throw e;
   }
 }

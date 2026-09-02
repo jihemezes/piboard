@@ -47,6 +47,7 @@
      exitToDesktop()           quitter vers le bureau / quit to the desktop
      updateSupport()           mise a jour auto possible ? / self-update possible?
      restartServer(version)    relancer apres mise a jour / relaunch after update
+     gpuUsage()                charge du GPU ou null / GPU load or null
    ============================================================ */
 "use strict";
 
@@ -260,6 +261,13 @@ module.exports = {
   exitToDesktop,
   updateSupport,
   restartServer,
+  /* Renvoie null sur toute machine dont le GPU n'expose pas sa charge --
+     un Raspberry Pi, notamment. Les appelants doivent traiter ce cas :
+     c'est le cas NORMAL, pas une panne.
+     Returns null on any machine whose GPU does not expose its load -- a
+     Raspberry Pi, notably. Callers must handle that case: it is the
+     NORMAL case, not a failure. */
+  gpuUsage: impl.gpuUsage,
   ffmpegCandidates: impl.ffmpegCandidates,
   ffmpegInstallHint: impl.ffmpegInstallHint,
   chromiumCandidates: impl.chromiumCandidates,

@@ -155,4 +155,29 @@ console.log("== Etat systeme : IP publique et couleurs/seuils documentees (1.82.
 }
 console.log("  OK");
 
+console.log("== Etat systeme : charge GPU documentee, y compris son absence sur Pi (1.83.0) ==");
+{
+  const e = entryById("system");
+  for (const [lang, html] of [["fr", e.html.fr], ["en", e.html.en]]) {
+    assert.ok(/nvidia-smi/.test(html), `${lang} : la source NVIDIA doit etre nommee`);
+    assert.ok(/gpu_busy_percent/.test(html), `${lang} : la source AMD doit etre nommee`);
+    assert.ok(/vcgencmd/.test(html), `${lang} : l'absence de mesure sur Pi doit etre expliquee, pas passee sous silence`);
+    assert.ok(/help-opt-name">(Courbe d'utilisation du GPU|GPU usage chart)</.test(html),
+      `${lang} : la courbe optionnelle doit figurer dans les options`);
+  }
+}
+console.log("  OK");
+
+console.log("== Axe des abscisses temporel documente (1.84.0) ==");
+{
+  const e = entryById("system");
+  assert.ok(/graduations horaires/.test(e.html.fr), "fr : l'axe temporel doit etre explique");
+  assert.ok(/time ticks/.test(e.html.en), "en : l'axe temporel doit etre explique");
+  assert.ok(/échelle verticale est <b>fixée de 0 à 100/.test(e.html.fr),
+    "fr : l'echelle verticale reste distinguee de l'axe des abscisses");
+  assert.ok(/vertical scale is <b>fixed from 0 to 100/.test(e.html.en),
+    "en : l'echelle verticale reste distinguee de l'axe des abscisses");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");
