@@ -4277,6 +4277,73 @@ function catalogItemFor(catalog, document, widgetId) {
       y(150) === y(100) && y(-10) === y(0));
   }
 
+  console.log("== Etat systeme : couleurs par niveau, seuils et IP publique ==");
+  {
+    /* Le widget est evalue dans un bac a sable avec un faux registre :
+       on recupere sa classe et ses fonctions pures sans monter de tuile.
+       The widget is evaluated in a sandbox with a fake registry: we get
+       its class and pure functions without mounting a tile. */
+    const vm = require("vm");
+    const src = fs.readFileSync(path.join(PUB, "widgets/system/widget.js"), "utf8");
+    let Klass = null;
+    const sb = { window: { PiBoard: { registerWidget: (id, k) => { if (id === "system") Klass = k; } } }, console, document: undefined };
+    vm.createContext(sb);
+    vm.runInContext(src, sb);
+    assert("classe du widget capturee", !!Klass && typeof Klass.levels === "function");
+
+    const D = Klass.DEFAULTS;
+    const lv = Klass.levels({});
+    assert("par defaut : usage normal en VERT, pas en rouge d'accent",
+      lv.normal === "#3FA96B" && lv.normal.toLowerCase() !== "#d6335c");
+    assert("par defaut : le rouge est reserve au niveau critique",
+      lv.critical === "#E0556F" && lv.high !== lv.critical && lv.normal !== lv.critical);
+    assert("seuils par defaut 65 / 85", lv.warn === 65 && lv.crit === 85);
+    assert("40 % -> couleur normale", Klass.levelColor(40, lv) === lv.normal);
+    assert("65 % -> couleur elevee (seuil inclus)", Klass.levelColor(65, lv) === lv.high);
+    assert("85 % -> couleur critique (seuil inclus)", Klass.levelColor(85, lv) === lv.critical);
+
+    const custom = Klass.levels({ thresholdWarn: 50, thresholdCrit: 70, colorNormal: "#112233", colorWarn: "#445566", colorCrit: "#778899", chartColor: "#aabbcc" });
+    assert("seuils et couleurs personnalises appliques",
+      Klass.levelColor(55, custom) === "#445566" && Klass.levelColor(75, custom) === "#778899" && Klass.levelColor(10, custom) === "#112233" && custom.chart === "#aabbcc");
+    const crossed = Klass.levels({ thresholdWarn: 80, thresholdCrit: 60 });
+    assert("seuil critique < seuil eleve : aligne, jamais ignore", crossed.crit === 80 && crossed.warn === 80);
+    const bad = Klass.levels({ colorNormal: "red", colorCrit: "#12", thresholdWarn: "abc" });
+    assert("couleur ou seuil invalide -> valeur par defaut", bad.normal === D.colorNormal && bad.critical === D.colorCrit && bad.warn === D.thresholdWarn);
+
+    /* Rendu d'une ligne : la couleur est posee en ligne, plus par classe
+       CSS. Row rendering: the color is set inline, no longer by CSS class. */
+    const fakeCtx = (settings) => ({ settings, i18n: { t: (k) => k }, el: null });
+    const w = new Klass(fakeCtx({ thresholdWarn: 65, thresholdCrit: 85 }));
+    assert("barre a 30 % peinte en vert", /background:#3FA96B/.test(w.row("CPU", "30%", 30, "cpu")));
+    assert("barre a 90 % peinte en rouge", /background:#E0556F/.test(w.row("CPU", "90%", 90, "cpu")));
+    assert("plus aucune classe pws-warn/pws-crit dans le rendu", !/pws-(warn|crit)/.test(w.row("CPU", "90%", 90, "cpu")));
+    assert("les courbes n'utilisent plus la couleur d'accent du theme", !/var\(--accent\)/.test(src));
+    const css = fs.readFileSync(path.join(PUB, "widgets/system/widget.css"), "utf8");
+    assert("la feuille de style n'utilise plus l'accent pour la barre", !/pws-bar-fill\s*\{[^}]*var\(--accent\)/.test(css));
+
+    /* IP publique : masquee par defaut, affichee sur demande, perimee signalee.
+       Public IP: hidden by default, shown on demand, stale flagged. */
+    const w2 = new Klass(fakeCtx({ showNetwork: false }));
+    w2.publicIp = { ip: "82.66.10.5", stale: false };
+    assert("IP publique absente par defaut (option decochee)", w2.netRows() === "");
+    w2.ctx.settings.showPublicIp = true;
+    assert("IP publique affichee quand l'option est cochee", /82\.66\.10\.5/.test(w2.netRows()) && /system\.publicIp/.test(w2.netRows()));
+    w2.publicIp = { ip: "82.66.10.5", stale: true };
+    assert("adresse perimee marquee", /pws-stale/.test(w2.netRows()));
+    w2.publicIp = { ip: null, error: "down" };
+    assert("adresse inconnue : 'non disponible', pas de vide", /system\.netUnknown/.test(w2.netRows()));
+    const manifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/system/manifest.json"), "utf8"));
+    const keys = manifest.settings.map((f) => f.key);
+    for (const k of ["showPublicIp", "thresholdWarn", "thresholdCrit", "colorNormal", "colorWarn", "colorCrit", "chartColor", "chartByLevel"]) {
+      assert("reglage '" + k + "' declare dans le manifeste", keys.includes(k));
+    }
+    assert("IP publique desactivee par defaut dans le manifeste", manifest.settings.find((f) => f.key === "showPublicIp").default === false);
+    assert("couleurs du manifeste alignees sur les valeurs par defaut du code",
+      manifest.settings.find((f) => f.key === "colorNormal").default === D.colorNormal
+      && manifest.settings.find((f) => f.key === "colorCrit").default === D.colorCrit
+      && manifest.settings.find((f) => f.key === "chartColor").default === D.chartColor);
+  }
+
   console.log("== Sante Internet : mesure serveur, coupures et export ==");
   {
     const src = fs.readFileSync(path.join(PUB, "widgets/speedtest/widget.js"), "utf8");

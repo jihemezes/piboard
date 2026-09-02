@@ -299,6 +299,15 @@ app.get("/api/system", async (req, res) => {
   }
 });
 
+/* ---------- IP publique (widget "system", option) / public IP ----------
+   Voir server/publicIp.js. ?refresh=1 force une nouvelle interrogation
+   malgre le cache. See server/publicIp.js. ?refresh=1 forces a fresh
+   query despite the cache. */
+const publicIp = require("./publicIp").createPublicIpLookup();
+app.get("/api/public-ip", async (req, res) => {
+  res.json(await publicIp.lookup(req.query.refresh === "1"));
+});
+
 /* ---------- Analyse reseau (widget "network scan") ----------
    Sans "rescan=1" : renvoie immediatement le dernier resultat connu (ou
    lance un premier scan s'il n'y en a encore jamais eu), pour que

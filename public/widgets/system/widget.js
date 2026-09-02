@@ -25,10 +25,51 @@
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   }
 
-  function barClass(pct) {
-    if (pct >= 85) return "pws-crit";
-    if (pct >= 65) return "pws-warn";
-    return "";
+  /* ---------- Couleurs par niveau / level colors ----------
+     Trois etats, trois couleurs, deux seuils -- tous reglables. Le rouge
+     n'est utilise QUE pour l'etat critique : l'ancienne version peignait
+     l'usage normal avec la couleur d'accent du theme (un rouge
+     framboise), ce qui faisait passer un Pi au repos pour une machine en
+     surchauffe. Three states, three colors, two thresholds -- all
+     adjustable. Red is used ONLY for the critical state: the previous
+     version painted normal usage with the theme's accent color (a
+     raspberry red), which made an idle Pi look like an overheating
+     machine. */
+  const DEFAULTS = {
+    thresholdWarn: 65, thresholdCrit: 85,
+    colorNormal: "#3FA96B", colorWarn: "#E0A63C", colorCrit: "#E0556F",
+    chartColor: "#5B8DEF"
+  };
+
+  function hexColor(v, fallback) {
+    return /^#[0-9a-fA-F]{6}$/.test(String(v || "")) ? String(v) : fallback;
+  }
+
+  function levels(settings) {
+    const s = settings || {};
+    let warn = Number(s.thresholdWarn);
+    let crit = Number(s.thresholdCrit);
+    if (!Number.isFinite(warn)) warn = DEFAULTS.thresholdWarn;
+    if (!Number.isFinite(crit)) crit = DEFAULTS.thresholdCrit;
+    // Un seuil critique en dessous du seuil eleve n'a pas de sens : on
+    // aligne plutot que d'ignorer l'un des deux en silence.
+    // A critical threshold below the high one is meaningless: align
+    // rather than silently ignore one of the two.
+    if (crit < warn) crit = warn;
+    return {
+      warn, crit,
+      normal: hexColor(s.colorNormal, DEFAULTS.colorNormal),
+      high: hexColor(s.colorWarn, DEFAULTS.colorWarn),
+      critical: hexColor(s.colorCrit, DEFAULTS.colorCrit),
+      chart: hexColor(s.chartColor, DEFAULTS.chartColor),
+      chartByLevel: !!s.chartByLevel
+    };
+  }
+
+  function levelColor(pct, lv) {
+    if (pct >= lv.crit) return lv.critical;
+    if (pct >= lv.warn) return lv.high;
+    return lv.normal;
   }
 
   function formatUptime(sec, i18n) {
@@ -53,6 +94,7 @@
       // Loaded BEFORE the first render, otherwise the tile would show once
       // without its addresses then jump on the next refresh.
       await this.loadNetwork();
+      await this.loadPublicIp();
       await this.refresh();
       this.arm();
     }
@@ -64,8 +106,13 @@
     }
 
     onSettingsChanged(settings) {
+      const wanted = !!settings.showPublicIp;
       this.ctx.settings = settings;
-      this.refresh();
+      // L'IP publique n'est demandee que si l'option vient d'etre cochee :
+      // la charger sans raison solliciterait un service externe pour rien.
+      // The public IP is only fetched when the option was just enabled:
+      // loading it for no reason would hit an external service needlessly.
+      (wanted && !this.publicIp ? this.loadPublicIp() : Promise.resolve()).then(() => this.refresh());
       this.arm();
     }
 
@@ -75,7 +122,7 @@
       return `
         <div class="pws-row${key ? " pws-clickable" : ""}"${key ? ` data-metric="${key}" role="button" tabindex="0" title="${esc(this.ctx.i18n.t("system.chartOpen"))}"` : ""}>
           <div class="pws-row-head"><span>${label}</span><span class="pws-val">${value}</span></div>
-          <div class="pws-bar"><div class="pws-bar-fill ${barClass(pct)}" style="width:${Math.max(2, Math.min(100, pct))}%"></div></div>
+          <div class="pws-bar"><div class="pws-bar-fill" style="width:${Math.max(2, Math.min(100, pct))}%;background:${levelColor(pct, levels(this.ctx.settings))}"></div></div>
         </div>`;
     }
 
@@ -109,6 +156,9 @@
             ${this.netRows()}
           </div>`;
 
+        if (s.showPublicIp && (!this.publicIpAt || Date.now() - this.publicIpAt > 10 * 60 * 1000)) {
+          this.loadPublicIp().then(() => { if (this.ctx.el.isConnected) this.refresh(); });
+        }
         this.wireNetwork();
         this.record(d);
         this.wireMetrics();
@@ -194,8 +244,8 @@
             <div class="pwg-now"><span class="pwg-now-val"></span><span class="pwg-now-lbl"></span></div>
             <svg class="pwg-chart" viewBox="0 0 600 200" preserveAspectRatio="none">
               <g class="pwg-grid"></g>
-              <path class="pwg-area" fill="var(--accent)" fill-opacity="0.12"></path>
-              <path class="pwg-line" fill="none" stroke="var(--accent)" stroke-width="2"
+              <path class="pwg-area" fill-opacity="0.14"></path>
+              <path class="pwg-line" fill="none" stroke-width="2"
                     stroke-linejoin="round" stroke-linecap="round"></path>
             </svg>
             <div class="pwg-hint">${esc(i18n.t("system.chartHint"))}</div>
@@ -267,7 +317,20 @@
       const W = 600, H = 200, PAD = 8;
 
       const now = series.length ? series[series.length - 1] : null;
-      m.querySelector(".pwg-now-val").textContent = now == null ? "—" : now.toFixed(0) + " %";
+      // Couleur de la courbe : celle du reglage, ou celle du niveau du
+      // dernier releve si l'utilisateur l'a demande. Le chiffre courant
+      // prend toujours la couleur de son niveau -- c'est un signal utile
+      // meme quand la courbe reste d'une couleur neutre.
+      // Curve color: the setting's, or the latest reading's level color
+      // when the user asked for it. The current figure always takes its
+      // level color -- a useful signal even when the curve stays neutral.
+      const lv = levels(this.ctx.settings);
+      const color = lv.chartByLevel && now != null ? levelColor(now, lv) : lv.chart;
+      m.querySelector(".pwg-line").setAttribute("stroke", color);
+      m.querySelector(".pwg-area").setAttribute("fill", color);
+      const nowEl = m.querySelector(".pwg-now-val");
+      nowEl.textContent = now == null ? "—" : now.toFixed(0) + " %";
+      nowEl.style.color = now == null ? "" : levelColor(now, lv);
       m.querySelector(".pwg-now-lbl").textContent =
         i18n.t(this.chart === "cpu" ? "system.cpu" : this.chart === "mem" ? "system.ram" : "system.disk");
 
@@ -312,15 +375,47 @@
        re-queried every few seconds. Tying them together would have run
        `ipconfig` or `ip route` on every refresh, for an identical result. */
     netRows() {
-      if (this.ctx.settings.showNetwork === false) return "";
-      const nets = this.net && this.net.adapters ? this.net.adapters : [];
-      if (!nets.length) return "";
-      return nets.map((a) => `
+      const i18n = this.ctx.i18n;
+      const rows = [];
+      if (this.ctx.settings.showNetwork !== false) {
+        const nets = this.net && this.net.adapters ? this.net.adapters : [];
+        for (const a of nets) rows.push(`
         <div class="pws-net" data-net="1" role="button" tabindex="0"
-             title="${esc(this.ctx.i18n.t("system.netDetails"))}">
+             title="${esc(i18n.t("system.netDetails"))}">
           <span class="pws-net-name">${esc(a.name)}</span>
           <span class="pws-net-ip">${esc(a.ipv4)}</span>
-        </div>`).join("");
+        </div>`);
+      }
+      if (this.ctx.settings.showPublicIp) {
+        const p = this.publicIp;
+        const value = p && p.ip ? esc(p.ip) : `<span class="pws-net-na">${esc(i18n.t("system.netUnknown"))}</span>`;
+        rows.push(`
+        <div class="pws-net pws-net-public${p && p.stale ? " pws-stale" : ""}" data-net="1" role="button" tabindex="0"
+             title="${esc(p && p.stale ? i18n.t("system.publicIpStale") : i18n.t("system.netDetails"))}">
+          <span class="pws-net-name">${esc(i18n.t("system.publicIp"))}</span>
+          <span class="pws-net-ip">${value}</span>
+        </div>`);
+      }
+      return rows.join("");
+    }
+
+    /* Chargee a l'affichage puis rafraichie a la meme cadence que le
+       cache serveur (dix minutes) : le serveur ne reinterroge Internet
+       que si son cache a expire, la tuile ne fait que relire.
+       Loaded on display then refreshed at the server cache's own pace
+       (ten minutes): the server only re-queries the Internet if its
+       cache expired, the tile merely re-reads. */
+    async loadPublicIp() {
+      if (!this.ctx.settings.showPublicIp) return;
+      try {
+        const r = await fetch("/api/public-ip");
+        if (!r.ok) throw new Error("status " + r.status);
+        this.publicIp = await r.json();
+      } catch (e) {
+        console.warn("[piboard/system] ip publique", e);
+        this.publicIp = this.publicIp || { ip: null, error: String(e.message || e) };
+      }
+      this.publicIpAt = Date.now();
     }
 
     async loadNetwork() {
@@ -396,6 +491,7 @@
               <span>${esc(i18n.t("system.netHostname"))}</span>
               <b>${esc(d.hostname || "")}</b>
               ${d.domain ? `<span class="pwn-suffix">${esc(d.domain)}</span>` : ""}
+              ${this.ctx.settings.showPublicIp ? `<span class="pwn-public"><span>${esc(i18n.t("system.publicIp"))}</span> <b>${this.publicIp && this.publicIp.ip ? esc(this.publicIp.ip) : na}</b>${this.publicIp && this.publicIp.stale ? ` <span class="pwn-stale">${esc(i18n.t("system.publicIpStale"))}</span>` : ""}</span>` : ""}
             </div>
             ${cards || `<div class="pwn-empty">${esc(i18n.t("system.netNone"))}</div>`}
             ${d.partial ? `<div class="pwn-partial">${esc(i18n.t("system.netPartial"))}</div>` : ""}
@@ -414,6 +510,12 @@
       if (this.chartModal) this.chartModal.remove();
     }
   }
+
+  // Exposes pour les tests (fonctions pures, sans DOM) / exposed for tests
+  // (pure functions, no DOM)
+  SystemWidget.levels = levels;
+  SystemWidget.levelColor = levelColor;
+  SystemWidget.DEFAULTS = DEFAULTS;
 
   window.PiBoard.registerWidget("system", SystemWidget);
 })();

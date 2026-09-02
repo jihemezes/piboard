@@ -142,4 +142,17 @@ console.log("== Mises a jour Linux : la fiche existe et couvre le cycle dans les
   assert.ok(!/latest\.yml|electron-updater/.test(e.html.fr) && !/latest\.yml|electron-updater/.test(e.html.en), "la fiche Linux ne decrit pas le mecanisme Windows");
 }
 console.log("  OK");
+
+console.log("== Etat systeme : IP publique et couleurs/seuils documentees (1.82.0) ==");
+{
+  const e = entryById("system");
+  for (const [lang, html] of [["fr", e.html.fr], ["en", e.html.en]]) {
+    assert.ok(/help-opt-name">(Afficher l'adresse IP publique|Show the public IP address)</.test(html), `${lang} : option IP publique listee`);
+    assert.ok(/help-opt-name">(Couleur des courbes|Chart color)</.test(html), `${lang} : couleur des courbes listee`);
+    assert.ok(/65\s?%/.test(html) && /85\s?%/.test(html), `${lang} : seuils par defaut cites`);
+    assert.ok(/(réservé|reserved)/.test(html), `${lang} : le rouge reserve au critique est dit`);
+  }
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");

@@ -1307,10 +1307,21 @@
           <p>Une information que le système n'a pas pu fournir s'affiche « non disponible » plutôt qu'avec une valeur approchée. En particulier, DHCP reste vide si PiBoard n'a pas pu conclure : afficher « non » laisserait croire à tort à une adresse fixe.</p>
           <p>Ces informations sont lues une seule fois à l'affichage de la tuile, et non à chaque rafraîchissement : la configuration réseau ne change pratiquement jamais, et exécuter une commande système toutes les cinq secondes n'aurait aucun intérêt.</p>
 
+          <h4>Adresse IP publique</h4>
+          <p>En option, la tuile affiche aussi l'adresse sous laquelle votre réseau local apparaît sur Internet — celle que voient les sites web, différente des adresses locales des cartes. Elle est obtenue <b>par le serveur PiBoard</b> auprès d'un service externe (trois services indépendants sont essayés à tour de rôle), et gardée en cache dix minutes : un seul appel pour tous vos écrans, jamais toutes les cinq secondes. Si le service devient injoignable, la dernière adresse connue reste affichée, atténuée, plutôt qu'un vide. <b>Désactivée par défaut</b> : c'est une information que l'on ne souhaite pas forcément sur un écran mural.</p>
+
+          <h4>Couleurs et seuils</h4>
+          <p>Chaque barre (CPU, RAM, disque) prend l'une de trois couleurs selon le niveau : <b>normal</b> (vert par défaut), <b>élevé</b> (ambre) et <b>critique</b> (rouge). <b>Le rouge est réservé au niveau critique</b> — les versions précédentes peignaient l'usage normal avec la couleur d'accent du thème, un rouge framboise qui faisait passer un Pi au repos pour une machine en surchauffe. Les deux seuils (65 % et 85 % par défaut) et les trois couleurs se règlent dans la section « Couleurs & seuils ». Un seuil critique placé sous le seuil élevé est aligné dessus plutôt qu'ignoré en silence.</p>
+          <p>Les courbes ont leur propre couleur (bleu par défaut), ou peuvent suivre le niveau du dernier relevé si vous cochez l'option correspondante. Le chiffre courant en tête de la fenêtre prend toujours la couleur de son niveau.</p>
+
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en secondes entre deux relevés.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher le nom de machine</span><span class="help-opt-desc">Utile si plusieurs machines hébergent chacune une instance PiBoard.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Afficher la disponibilité</span><span class="help-opt-desc">Depuis combien de temps la machine tourne sans interruption.</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Afficher l'adresse IP publique</span><span class="help-opt-desc">Voir ci-dessus. Désactivée par défaut.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la disponibilité</span><span class="help-opt-desc">Depuis combien de temps la machine tourne sans interruption.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Seuils « élevé » et « critique »</span><span class="help-opt-desc">Pourcentages à partir desquels la barre change de couleur. Communs au CPU, à la RAM et au disque.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Couleurs normal / élevé / critique</span><span class="help-opt-desc">Couleur des barres pour chaque niveau.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Couleur des courbes</span><span class="help-opt-desc">Trait et zone ombrée des graphiques. Ignorée si « suit le niveau d'utilisation » est coché.</span></div>`,
         en: `
           <span class="help-size">Size: 3×3 by default, from 2×1 to 6×6</span>
           <h4>Goal</h4>
@@ -1328,10 +1339,21 @@
           <p>Information the system could not supply shows as "not available" rather than as an approximation. In particular, DHCP stays blank when PiBoard could not conclude: showing "no" would wrongly suggest a static address.</p>
           <p>These details are read once when the tile appears, not on every refresh: network configuration hardly ever changes, and running a system command every five seconds would serve no purpose.</p>
 
+          <h4>Public IP address</h4>
+          <p>Optionally, the tile also shows the address your local network presents on the Internet — the one websites see, distinct from the adapters' local addresses. It is obtained <b>by the PiBoard server</b> from an external service (three independent services are tried in turn), and cached for ten minutes: a single call for all your screens, never every five seconds. If the service becomes unreachable, the last known address stays shown, dimmed, rather than a blank. <b>Off by default</b>: it is a piece of information you may not want on a wall display.</p>
+
+          <h4>Colors and thresholds</h4>
+          <p>Every bar (CPU, RAM, disk) takes one of three colors by level: <b>normal</b> (green by default), <b>high</b> (amber) and <b>critical</b> (red). <b>Red is reserved for the critical level</b> — previous versions painted normal usage with the theme's accent color, a raspberry red that made an idle Pi look like an overheating machine. Both thresholds (65% and 85% by default) and the three colors are set in the "Colors & thresholds" section. A critical threshold placed below the high one is aligned to it rather than silently ignored.</p>
+          <p>The charts have their own color (blue by default), or can follow the latest reading's level if you tick the matching option. The current figure at the top of the window always takes its level color.</p>
+
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in seconds between two readings.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show hostname</span><span class="help-opt-desc">Useful if several machines each host a PiBoard instance.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Show uptime</span><span class="help-opt-desc">How long the machine has been running without interruption.</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Show the public IP address</span><span class="help-opt-desc">See above. Off by default.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show uptime</span><span class="help-opt-desc">How long the machine has been running without interruption.</span></div>
+          <div class="help-opt"><span class="help-opt-name">"High" and "critical" thresholds</span><span class="help-opt-desc">Percentages from which the bar changes color. Shared by CPU, RAM and disk.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Normal / high / critical colors</span><span class="help-opt-desc">Bar color for each level.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Chart color</span><span class="help-opt-desc">Line and shaded area of the charts. Ignored if "follows the current usage level" is ticked.</span></div>`
       }
     },
 

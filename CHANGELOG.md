@@ -1,5 +1,80 @@
 # Changelog
 
+## 1.82.0
+
+- **Etat systeme : le rouge n'est plus la couleur de l'usage normal.**
+  Cause : les barres CPU/RAM/disque et les courbes utilisaient
+  `var(--accent)`, la couleur d'accent du theme (#D6335C, un rouge
+  framboise), pour l'etat NORMAL -- seuls les niveaux eleve (ambre) et
+  critique (rouge) changeaient de couleur. Un Pi au repos avait donc
+  l'air en surchauffe. Desormais trois couleurs par niveau, toutes
+  reglables : normal (vert #3FA96B), eleve (ambre #E0A63C), critique
+  (rouge #E0556F) -- **le rouge est reserve au niveau critique**.
+
+- **Seuils et couleurs personnalisables** (nouvelle section « Couleurs &
+  seuils » des reglages de la tuile) : seuil « eleve » (65 % par
+  defaut) et « critique » (85 %), couleurs des trois niveaux, couleur
+  des courbes (bleu #5B8DEF par defaut) et option « la couleur des
+  courbes suit le niveau d'utilisation actuel ». Le chiffre courant en
+  tete de la fenetre des courbes prend toujours la couleur de son
+  niveau. Un seuil critique place sous le seuil eleve est aligne dessus
+  plutot qu'ignore ; une couleur ou un seuil invalide retombe sur la
+  valeur par defaut.
+
+- **Adresse IP publique** (option, desactivee par defaut) : l'adresse
+  sous laquelle le reseau local apparait sur Internet, affichee parmi
+  les adresses reseau de la tuile et dans l'en-tete de la fenetre de
+  configuration reseau. Obtenue **cote serveur** (`server/publicIp.js`,
+  route `GET /api/public-ip`) aupres de trois services independants
+  essayes a tour de role (ipify, icanhazip, ifconfig.me), avec cache de
+  dix minutes : un seul appel pour tous les ecrans. Si le service est
+  injoignable, la derniere adresse connue reste affichee, attenuee et
+  signalee perimee, plutot qu'un vide. `?refresh=1` force une nouvelle
+  interrogation.
+
+- **Tests** : nouveau `test/publicIp.test.js` (analyse texte/JSON, repli
+  entre services, cache, adresse conservee apres echec) ; `dom-smoke.js`
+  verifie les couleurs par defaut (vert normal, rouge reserve au
+  critique), les seuils, les personnalisations, l'alignement des seuils
+  croises, le rendu inline des barres, l'absence de `var(--accent)`
+  dans le widget, et l'IP publique masquee/affichee/perimee ; aide FR/EN
+  couverte par `helpContent.test.js`.
+
+---
+
+- **System status: red is no longer the normal-usage color.** Cause:
+  the CPU/RAM/disk bars and the charts used `var(--accent)`, the theme's
+  accent color (#D6335C, a raspberry red), for the NORMAL state -- only
+  the high (amber) and critical (red) levels changed color. An idle Pi
+  therefore looked like it was overheating. Now three colors by level,
+  all adjustable: normal (green #3FA96B), high (amber #E0A63C), critical
+  (red #E0556F) -- **red is reserved for the critical level**.
+
+- **Adjustable thresholds and colors** (new "Colors & thresholds"
+  section in the tile's settings): "high" threshold (65% by default)
+  and "critical" (85%), the three level colors, chart color (blue
+  #5B8DEF by default) and a "chart color follows the current usage
+  level" option. The current figure at the top of the charts window
+  always takes its level color. A critical threshold placed below the
+  high one is aligned to it rather than ignored; an invalid color or
+  threshold falls back to the default.
+
+- **Public IP address** (option, off by default): the address the local
+  network presents on the Internet, shown among the tile's network
+  addresses and in the network configuration window's header. Obtained
+  **server-side** (`server/publicIp.js`, `GET /api/public-ip`) from three
+  independent services tried in turn (ipify, icanhazip, ifconfig.me),
+  with a ten-minute cache: a single call for every screen. If the
+  service is unreachable, the last known address stays shown, dimmed and
+  flagged stale, rather than a blank. `?refresh=1` forces a new query.
+
+- **Tests**: new `test/publicIp.test.js` (text/JSON parsing, fallback
+  across services, cache, address kept after failure); `dom-smoke.js`
+  checks the default colors (green normal, red reserved for critical),
+  thresholds, customisations, crossed-threshold alignment, inline bar
+  rendering, absence of `var(--accent)` in the widget, and the public IP
+  hidden/shown/stale; FR/EN help covered by `helpContent.test.js`.
+
 ## 1.81.0
 
 - **NOUVEAU : mise a jour automatique sur Raspberry Pi et Linux**
