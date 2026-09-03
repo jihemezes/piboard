@@ -237,4 +237,18 @@ console.log("== Bouton de recherche et soleil de demain documentes (1.88.0) ==")
 }
 console.log("  OK");
 
+console.log("== Defilement automatique des pages documente (1.89.0) ==")
+{
+  const e = entryById("dashboard");
+  assert.ok(/désactivée par défaut/.test(e.html.fr) && /off by default/.test(e.html.en),
+    "le defaut (arret) doit etre dit : un tableau qui tourne seul sans qu'on l'ait demande surprendrait");
+  assert.ok(/chaque page peut fixer la sienne/.test(e.html.fr) && /each page may set its own/.test(e.html.en),
+    "la duree propre a chaque page doit etre expliquee");
+  assert.ok(/mode édition/.test(e.html.fr) && /edit mode/.test(e.html.en),
+    "la suspension pendant l'edition doit etre dite");
+  assert.ok(/repart de zéro/.test(e.html.fr) && /restarts from zero/.test(e.html.en),
+    "la remise a zero apres navigation manuelle doit etre dite");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");

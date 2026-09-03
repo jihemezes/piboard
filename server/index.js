@@ -136,6 +136,18 @@ const DEFAULT_SETTINGS = {
      "classic" by default: an existing installation must not change
      appearance just because it was updated. */
   displayMode: "classic",
+  /* Defilement automatique des pages du mode tableau de bord, et duree
+     passee sur chaque page. Desactive par defaut : un tableau qui se met
+     a tourner tout seul sans qu'on l'ait demande serait deroutant. La
+     duree sert de valeur generale ; chaque page peut la remplacer par la
+     sienne (voir layout.pages[].dwellSeconds).
+     Automatic cycling of the dashboard mode's pages, and time spent on
+     each page. Off by default: a board starting to cycle on its own
+     without being asked would be baffling. The duration is the general
+     value; each page may replace it with its own (see
+     layout.pages[].dwellSeconds). */
+  pageAutoAdvance: false,
+  pageAutoSeconds: 30,
   /* Cle CARTO des fonds de carte (tuiles Trafic, Radar, Avions).
      Vide par defaut, et il ne peut pas en etre autrement : CARTO
      delivre des cles PAR CLIENT, a ne pas partager entre projets sans

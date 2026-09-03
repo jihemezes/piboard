@@ -384,6 +384,15 @@
           <small class="field-hint" data-i18n="settings.displayMode.hint">Dashboard mode replaces the drawers and the toolbar with a thin bar at the bottom of the screen, revealed by moving the mouse there (a permanent tab in touch mode). Your board becomes page 1: nothing is lost, and switching back to classic mode finds it intact.</small>
         </label>
         <div id="pagesEditor" hidden>
+          <label class="field checkbox">
+            <input type="checkbox" id="setPageAuto">
+            <span data-i18n="settings.pageAuto">Move to the next page automatically</span>
+          </label>
+          <label class="field">
+            <span data-i18n="settings.pageAutoSeconds">Time on each page (seconds)</span>
+            <input type="number" id="setPageAutoSeconds" min="3" max="3600" step="1">
+            <small class="field-hint" data-i18n="settings.pageAutoSeconds.hint">Applies to every page that does not set its own duration below. Minimum 3 seconds. Cycling pauses while you are in edit mode or while a window is open, and restarts from zero after you change page yourself.</small>
+          </label>
           <div class="pages-list" id="pagesList"></div>
           <button type="button" class="btn small" id="pageAddBtn" data-i18n="settings.pages.add">Add a page</button>
           <small class="field-hint" data-i18n="settings.pages.hint">Each page describes how it comes in: the direction the eye travels, and the effect. Deleting a page also deletes its tiles.</small>

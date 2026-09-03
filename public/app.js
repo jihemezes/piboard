@@ -1018,6 +1018,19 @@
   let activePageIndex = 0;        // 0 = page 1 (le plateau) / 0 = page 1 (the board)
   let pageAnimating = false;
 
+  /* Duree propre a une page : null quand elle suit la valeur generale.
+     Une duree sous le minimum est ramenee a null plutot que corrigee en
+     silence -- un champ vide ou un 0 saisi par erreur veut dire "pas de
+     duree propre", pas "trois secondes".
+     A page's own duration: null when it follows the general value. A
+     duration below the minimum falls back to null rather than being
+     silently corrected -- an empty field or a 0 typed by mistake means
+     "no own duration", not "three seconds". */
+  function normalizeDwell(v) {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 3 ? Math.round(n) : null;
+  }
+
   function normalizeTransition(t) {
     const src = t && typeof t === "object" ? t : {};
     return {
@@ -1143,7 +1156,15 @@
     // Wrap-around: from the last page, "next" returns to the first --
     // what one expects from a cycling board.
     const target = ((index % total) + total) % total;
-    if (target === activePageIndex || pageAnimating) return;
+    if (target === activePageIndex) {
+      // Rester sur place remet malgre tout le compte a zero : cliquer le
+      // numero de la page affichee est une facon de dire "je la regarde".
+      // Staying put still resets the count: clicking the displayed
+      // page's number is a way of saying "I am looking at it".
+      if (!(options && options.auto)) scheduleAutoAdvance();
+      return;
+    }
+    if (pageAnimating) return;
 
     const from = pageAt(activePageIndex);
     const to = pageAt(target);
@@ -1228,6 +1249,7 @@
      those that size themselves (Quote, Text) were mounted in a hidden
      container, hence of zero size, and would stay tiny. */
   function finishPageSwitch(from, to) {
+    scheduleAutoAdvance();
     updateCellHeight();
     window.dispatchEvent(new Event("resize"));
     document.dispatchEvent(new CustomEvent("piboard:page", { detail: { index: to.index, id: to.id } }));
@@ -1253,6 +1275,88 @@
     // Un tableau d'une seule page n'a pas de navigation a montrer.
     // A single-page board has no navigation to show.
     wrap.hidden = total < 2;
+  }
+
+  /* ---------- Defilement automatique / automatic page cycling ----------
+     Un tableau de bord mural n'a personne pour tourner les pages : sans
+     ce defilement, les pages 2 et suivantes ne seraient jamais vues.
+
+     LA DUREE EST PAR PAGE, avec une valeur generale par defaut. Une page
+     dense (un tableau de valeurs) demande plus de temps de lecture
+     qu'une page portant une grande horloge ; imposer la meme duree a
+     toutes aurait rendu l'option inutilisable des que les pages ne se
+     ressemblent pas.
+
+     LE DEFILEMENT SE SUSPEND des qu'il generait : en mode edition (on
+     deplace des tuiles, la page ne doit pas se derober), quand une
+     fenetre est ouverte (reglages, aide, details d'une tuile), et
+     pendant une transition. Il repart de zero apres toute navigation
+     manuelle : quelqu'un qui vient de choisir une page veut la regarder,
+     pas la voir disparaitre une seconde plus tard.
+
+     A wall dashboard has nobody to turn its pages: without this cycling,
+     pages 2 and beyond would never be seen.
+
+     THE DURATION IS PER PAGE, with a general default. A dense page (a
+     table of figures) needs more reading time than one carrying a large
+     clock; forcing the same duration on all of them would have made the
+     option unusable as soon as pages differ.
+
+     CYCLING SUSPENDS ITSELF whenever it would get in the way: in edit
+     mode (tiles are being moved, the page must not slip away), while a
+     window is open (settings, help, a tile's details), and during a
+     transition. It restarts from zero after any manual navigation:
+     someone who just picked a page wants to look at it, not see it
+     vanish a second later. */
+  const AUTO_MIN_SECONDS = 3;
+  const AUTO_DEFAULT_SECONDS = 30;
+  let autoTimer = null;
+
+  function autoAdvanceSeconds(index) {
+    const p = pageAt(index);
+    // Duree propre a la page si elle en a une, sinon la valeur generale.
+    // Page's own duration if it has one, otherwise the general value.
+    const own = Number(p && p.dwellSeconds);
+    if (Number.isFinite(own) && own >= AUTO_MIN_SECONDS) return own;
+    const global = Number(settings && settings.pageAutoSeconds);
+    return Number.isFinite(global) && global >= AUTO_MIN_SECONDS ? global : AUTO_DEFAULT_SECONDS;
+  }
+
+  function autoAdvanceBlocked() {
+    if (!dashboardMode()) return true;
+    if (!settings || !settings.pageAutoAdvance) return true;
+    if (pageCount() < 2) return true;
+    if (editing || pageAnimating) return true;
+    // Une fenetre ouverte veut dire que quelqu'un est en train de faire
+    // quelque chose. An open window means somebody is doing something.
+    if (document.querySelector(".modal:not([hidden])")) return true;
+    return false;
+  }
+
+  function stopAutoAdvance() {
+    clearTimeout(autoTimer);
+    autoTimer = null;
+  }
+
+  /* Reprogramme le prochain passage. Appelee apres chaque changement de
+     page, chaque modification de reglage et chaque ouverture/fermeture de
+     fenetre -- c'est la seule fonction qui arme le minuteur, de sorte
+     qu'il ne peut pas y en avoir deux en vol.
+     Schedules the next advance. Called after every page change, every
+     settings change and every window open/close -- it is the only
+     function arming the timer, so there cannot be two in flight. */
+  function scheduleAutoAdvance() {
+    stopAutoAdvance();
+    if (autoAdvanceBlocked()) return;
+    autoTimer = setTimeout(() => {
+      autoTimer = null;
+      // L'etat a pu changer pendant l'attente (edition ouverte, fenetre
+      // ouverte) : on revalide au lieu d'avancer aveuglement.
+      // State may have changed while waiting (edit mode, a window
+      // opened): revalidate instead of advancing blindly.
+      if (autoAdvanceBlocked()) { scheduleAutoAdvance(); return; }
+      goToPage(activePageIndex + 1, { auto: true });
+    }, autoAdvanceSeconds(activePageIndex) * 1000);
   }
 
   function gridForZone(zone) {
@@ -1597,7 +1701,8 @@
     const saved = Array.isArray(layout.pages) ? layout.pages : [];
     mainPage = {
       name: (layout.mainPage && typeof layout.mainPage.name === "string") ? layout.mainPage.name : "",
-      transition: normalizeTransition(layout.mainPage && layout.mainPage.transition)
+      transition: normalizeTransition(layout.mainPage && layout.mainPage.transition),
+      dwellSeconds: normalizeDwell(layout.mainPage && layout.mainPage.dwellSeconds)
     };
     const existing = new Map(pages.map((p) => [p.id, p]));
     const next = [];
@@ -1607,6 +1712,7 @@
       existing.delete(id);
       page.name = typeof raw.name === "string" ? raw.name : "";
       page.transition = normalizeTransition(raw.transition);
+      page.dwellSeconds = normalizeDwell(raw.dwellSeconds);
       page.tiles = Array.isArray(raw.tiles) ? raw.tiles : [];
       next.push(page);
     }
@@ -1636,6 +1742,7 @@
       for (const p of pages) if (p.el) p.el.hidden = true;
       $("board").hidden = false;
       activePageIndex = 0;
+      stopAutoAdvance();
       return;
     }
     // En mode tableau de bord, les tiroirs n'existent pas : on les ferme
@@ -1648,6 +1755,7 @@
       if (p && p.el) p.el.hidden = i !== activePageIndex;
     }
     renderPageIndicator();
+    scheduleAutoAdvance();
   }
 
   async function renderLayout(layout) {
@@ -1703,7 +1811,8 @@
   function serializeLayout() {
     const out = {
       tiles: serializeZone(grid, "board"),
-      mainPage: { name: mainPage.name, transition: mainPage.transition },
+      mainPage: { name: mainPage.name, transition: mainPage.transition,
+        dwellSeconds: mainPage.dwellSeconds != null ? mainPage.dwellSeconds : null },
       /* Les pages sont enregistrees meme en mode classique : basculer
          d'un mode a l'autre ne doit rien detruire, et une bascule faite
          par erreur doit pouvoir etre annulee sans perte.
@@ -1714,6 +1823,7 @@
         id: p.id,
         name: p.name || "",
         transition: p.transition,
+        dwellSeconds: p.dwellSeconds != null ? p.dwellSeconds : null,
         tiles: p.grid ? serializeZone(p.grid, "page:" + p.id) : (p.tiles || [])
       }))
     };
@@ -3665,6 +3775,10 @@
         <select data-role="fx">
           ${fxLabels.map(([v, l]) => `<option value="${v}" ${p.transition.effect === v ? "selected" : ""}>${l}</option>`).join("")}
         </select>
+        <input type="number" class="page-dwell" data-role="dwell" min="3" max="3600" step="1"
+               value="${p.dwellSeconds != null ? p.dwellSeconds : ""}"
+               placeholder="${escapeHtmlAttr(String(autoAdvanceSeconds(i)))}"
+               title="${escapeHtmlAttr(i18n.t("settings.pages.dwell"))}">
         <button type="button" class="btn small page-del" data-role="del"
                 title="${escapeHtmlAttr(i18n.t("settings.pages.delete"))}">&times;</button>`;
       const target = i === 0 ? mainPage : pages[i - 1];
@@ -3681,6 +3795,14 @@
         target.transition = normalizeTransition({ direction: target.transition.direction, effect: e.target.value });
         scheduleSave();
       });
+      row.querySelector("[data-role=dwell]").addEventListener("change", (e) => {
+        // Champ vide = la page suit la duree generale. Empty field = the
+        // page follows the general duration.
+        target.dwellSeconds = normalizeDwell(e.target.value);
+        e.target.value = target.dwellSeconds != null ? target.dwellSeconds : "";
+        scheduleAutoAdvance();
+        scheduleSave();
+      });
       if (i > 0) {
         onActivate(row.querySelector("[data-role=del]"), () => deletePage(i));
       }
@@ -3692,6 +3814,7 @@
     const page = createPageElement({ id: newPageId() });
     page.name = "";
     page.transition = normalizeTransition(null);
+    page.dwellSeconds = null;
     page.tiles = [];
     pages.push(page);
     applyDisplayMode();
@@ -3759,6 +3882,8 @@
     $("setCartoKey").value = settings.cartoKey || "";
     $("setUpdateChannel").value = settings.updateChannel === "preview" ? "preview" : "stable";
     $("setDisplayMode").value = settings.displayMode === "dashboard" ? "dashboard" : "classic";
+    $("setPageAuto").checked = !!settings.pageAutoAdvance;
+    $("setPageAutoSeconds").value = settings.pageAutoSeconds || 30;
     renderPagesEditor();
     // Couverture des tiroirs : lue depuis leur etat reel (persiste via
     // le layout, pas les reglages generaux -- voir le commentaire sur
@@ -3799,6 +3924,8 @@
       cartoKey: $("setCartoKey").value.trim(),
       updateChannel: $("setUpdateChannel").value === "preview" ? "preview" : "stable",
       displayMode: $("setDisplayMode").value === "dashboard" ? "dashboard" : "classic",
+      pageAutoAdvance: $("setPageAuto").checked,
+      pageAutoSeconds: Math.max(3, Math.min(3600, Number($("setPageAutoSeconds").value) || 30)),
       colors: {
         dark: { bg: $("setDarkBg").value, tile: $("setDarkTile").value },
         light: { bg: $("setLightBg").value, tile: $("setLightTile").value }
@@ -3850,6 +3977,7 @@
     settings = await apiPut("/api/settings", body);
     if (cartoChanged) remountMapTiles();
     onUpdateChannelSaved(previousChannel, body.updateChannel);
+    scheduleAutoAdvance();
     $("settingsModal").hidden = true;
     vkb.hide();
     applySettings();

@@ -2408,7 +2408,7 @@ body.editing .grid-stack-item-content.tile-transparent {
 .pages-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 10px; }
 .page-row {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto;
   gap: 6px;
   align-items: center;
   padding: 6px 8px;
@@ -2451,3 +2451,9 @@ body.editing .grid-stack-item-content.tile-transparent {
   letter-spacing: 0.02em;
   opacity: 0.85;
 }
+
+/* Duree propre a une page, laissee vide quand la page suit la duree
+   generale : la valeur generale s'affiche alors en filigrane.
+   A page's own duration, left empty when the page follows the general
+   one: the general value then shows as a placeholder. */
+.page-dwell { width: 5.5em; text-align: right; }

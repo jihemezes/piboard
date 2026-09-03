@@ -1,5 +1,81 @@
 # Changelog
 
+## 1.89.0
+
+- **Mode tableau de bord : defilement automatique des pages.** Un
+  tableau mural n'a personne pour tourner ses pages : sans cela, les
+  pages 2 et suivantes n'etaient jamais vues. La nouvelle option
+  « Passer a la page suivante automatiquement » (reglages generaux ->
+  Mode d'affichage) les fait defiler en boucle. **Desactivee par
+  defaut** : un tableau qui se met a tourner tout seul sans qu'on l'ait
+  demande serait deroutant.
+
+- **La duree est reglable PAR PAGE**, avec une valeur generale par
+  defaut. Une page dense (un tableau de valeurs) demande plus de temps de
+  lecture qu'une page portant une grande horloge ; imposer la meme duree
+  a toutes aurait rendu l'option inutilisable des que les pages ne se
+  ressemblent pas. Le champ de chaque page reste vide tant qu'elle suit
+  la duree generale, qui s'affiche alors en filigrane. Minimum 3
+  secondes ; une valeur inferieure (ou un 0 saisi par erreur) est lue
+  comme « pas de duree propre » plutot que corrigee en silence.
+
+- **Le defilement se suspend tout seul** quand il generait : en mode
+  edition (des tuiles sont en cours de deplacement, la page ne doit pas
+  se derober), tant qu'une fenetre est ouverte (reglages, aide, details
+  d'une tuile) et pendant une transition. L'etat est **revalide au
+  moment d'avancer**, pas seulement au moment d'armer le minuteur : une
+  fenetre ouverte pendant l'attente suspend donc bien le passage.
+
+- **Il repart de zero apres toute navigation manuelle**, y compris un
+  clic sur le numero de la page deja affichee -- c'est une facon de dire
+  « je la regarde ». Quelqu'un qui vient de choisir une page ne doit pas
+  la voir disparaitre une seconde plus tard.
+
+- **Tests** : `dom-smoke.js` verifie l'arret par defaut, la presence d'un
+  champ de duree par page avec la valeur generale en filigrane, le
+  passage effectif a la page suivante apres le delai, l'absence de
+  defilement tant qu'une fenetre est ouverte, et l'arret complet quand
+  l'option est decochee. Le scenario leve explicitement le mode edition
+  et le guide de demarrage avant de tester, puis **remet l'etat tel
+  qu'il l'a trouve** -- les sections suivantes reposent dessus.
+
+---
+
+- **Dashboard mode: automatic page cycling.** A wall board has nobody to
+  turn its pages: without this, pages 2 and beyond were never seen. The
+  new "Move to the next page automatically" option (general settings ->
+  Display mode) cycles them in a loop. **Off by default**: a board
+  starting to cycle on its own without being asked would be baffling.
+
+- **The duration is adjustable PER PAGE**, with a general default. A
+  dense page (a table of figures) needs more reading time than one
+  carrying a large clock; forcing the same duration on all of them would
+  have made the option unusable as soon as pages differ. Each page's
+  field stays empty while it follows the general duration, which then
+  shows as a placeholder. Minimum 3 seconds; a lower value (or a 0 typed
+  by mistake) reads as "no own duration" rather than being silently
+  corrected.
+
+- **Cycling suspends itself** whenever it would get in the way: in edit
+  mode (tiles are being moved, the page must not slip away), while a
+  window is open (settings, help, a tile's details) and during a
+  transition. State is **revalidated at the moment of advancing**, not
+  only when arming the timer: a window opened while waiting therefore
+  does hold the advance back.
+
+- **It restarts from zero after any manual navigation**, including a
+  click on the already displayed page's number -- that is a way of
+  saying "I am looking at it". Someone who just picked a page must not
+  see it vanish a second later.
+
+- **Tests**: `dom-smoke.js` checks the off-by-default state, the presence
+  of a per-page duration field with the general value as a placeholder,
+  the actual move to the next page after the delay, the absence of
+  cycling while a window is open, and the complete stop when the option
+  is unticked. The scenario explicitly clears edit mode and the quick
+  start window before testing, then **restores the state as it found
+  it** -- the following sections rely on it.
+
 ## 1.88.2
 
 - **Tuile Logo/Image : l'aide situait mal le bouton.** Elle annoncait un

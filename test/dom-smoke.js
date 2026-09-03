@@ -4781,6 +4781,90 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("la languette (tactile) ouvre le bandeau sans survol", document.body.classList.contains("dash-open"));
     document.body.classList.remove("dash-open");
 
+    /* ---------- Defilement automatique ----------
+       Duree ramenee a 3 s (le minimum) pour que le test s'execute en un
+       temps raisonnable ; effets deja regles sur "aucun" plus haut, les
+       transitions animees n'etant pas testables de facon fiable en jsdom.
+       Duration set to 3 s (the minimum) so the test runs in a reasonable
+       time; effects already set to "none" above, animated transitions
+       not being reliably testable in jsdom. */
+    /* Le scenario precedent a laisse le mode edition actif et le guide de
+       demarrage ouvert : ce sont precisement les deux situations ou le
+       defilement doit rester suspendu. On les leve donc avant de tester
+       qu'il fonctionne -- et on verifie plus bas qu'il se resuspend bien
+       des qu'une fenetre se rouvre.
+       The previous scenario left edit mode on and the quick start window
+       open: precisely the two situations where cycling must stay
+       suspended. So we clear them before testing that it works -- and we
+       check below that it does suspend again as soon as a window
+       reopens. */
+    const quickStartWasOpen = !document.getElementById("quickStartModal").hidden;
+    const wasEditing = document.body.classList.contains("editing");
+    document.getElementById("quickStartModal").hidden = true;
+    if (wasEditing) {
+      document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(120);
+    }
+    assert("le mode edition est bien quitte avant ce test",
+      !document.body.classList.contains("editing"));
+
+    document.getElementById("settingsModal").hidden = true;
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    assert("le defilement est desactive par defaut",
+      document.getElementById("setPageAuto").checked === false);
+    assert("une duree generale est proposee",
+      Number(document.getElementById("setPageAutoSeconds").value) > 0);
+    assert("chaque page peut fixer sa propre duree",
+      document.getElementById("pagesList").querySelectorAll("[data-role=dwell]").length
+        === document.getElementById("pagesList").querySelectorAll(".page-row").length);
+    const dwell0 = document.getElementById("pagesList").querySelector("[data-role=dwell]");
+    assert("le champ d'une page est vide tant qu'elle suit la duree generale", dwell0.value === "");
+    assert("la duree generale s'affiche alors en filigrane", Number(dwell0.placeholder) > 0);
+
+    document.getElementById("setPageAuto").checked = true;
+    document.getElementById("setPageAutoSeconds").value = "3";
+    document.getElementById("settingsSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(200);
+    const startIndex = Array.from(dots.querySelectorAll(".dash-page-dot"))
+      .findIndex((b) => b.classList.contains("active"));
+    await sleep(3400);
+    const afterIndex = Array.from(dots.querySelectorAll(".dash-page-dot"))
+      .findIndex((b) => b.classList.contains("active"));
+    assert("la page suivante arrive toute seule apres la duree fixee", afterIndex !== startIndex);
+
+    /* Le defilement doit se suspendre tant qu'une fenetre est ouverte :
+       sinon la page se deroberait pendant qu'on lit ses reglages.
+       Cycling must suspend while a window is open: otherwise the page
+       would slip away while its settings are being read. */
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    const heldIndex = Array.from(dots.querySelectorAll(".dash-page-dot"))
+      .findIndex((b) => b.classList.contains("active"));
+    await sleep(4200);
+    assert("aucun changement de page tant qu'une fenetre est ouverte",
+      Array.from(dots.querySelectorAll(".dash-page-dot"))
+        .findIndex((b) => b.classList.contains("active")) === heldIndex);
+
+    // Remise a l'arret pour ne pas perturber la suite du scenario.
+    document.getElementById("setPageAuto").checked = false;
+    document.getElementById("settingsSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(200);
+    const stoppedAt = Array.from(dots.querySelectorAll(".dash-page-dot"))
+      .findIndex((b) => b.classList.contains("active"));
+    await sleep(4200);
+    assert("option decochee : plus aucun defilement",
+      Array.from(dots.querySelectorAll(".dash-page-dot"))
+        .findIndex((b) => b.classList.contains("active")) === stoppedAt);
+
+    // Etat rendu tel qu'on l'a trouve : les sections suivantes reposent
+    // dessus. State restored as found: the following sections rely on it.
+    if (wasEditing && !document.body.classList.contains("editing")) {
+      document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(120);
+    }
+    if (quickStartWasOpen) document.getElementById("quickStartModal").hidden = false;
+
     // Le bandeau donne acces aux reglages generaux : c'est le seul chemin
     // en mode tableau de bord, la barre d'outils etant masquee.
     document.getElementById("dashSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));

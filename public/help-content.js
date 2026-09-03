@@ -2009,6 +2009,11 @@
           <p>Le réglage appartient à la page <b>qui arrive</b> : chaque page décrit la façon dont elle entre. Une tuile ajoutée pendant qu'une page est affichée atterrit <b>sur cette page</b>, pas sur le plateau principal.</p>
           <p><b>Supprimer une page supprime aussi ses tuiles</b> — elles n'existent nulle part ailleurs. Une confirmation est demandée si la page n'est pas vide. La page 1 ne peut pas être supprimée : c'est le plateau principal.</p>
 
+          <h4>Défilement automatique</h4>
+          <p>Un tableau mural n'a personne pour tourner ses pages : sans défilement, les pages 2 et suivantes ne seraient jamais vues. L'option <b>« Passer à la page suivante automatiquement »</b> (réglages généraux → Mode d'affichage) fait défiler les pages en boucle. Elle est <b>désactivée par défaut</b> : un tableau qui se met à tourner tout seul sans qu'on l'ait demandé serait déroutant.</p>
+          <p>La durée générale s'applique à toutes les pages, mais <b>chaque page peut fixer la sienne</b> dans la colonne de droite de la liste des pages (laissez le champ vide pour suivre la durée générale — celle-ci apparaît alors en filigrane). C'est utile dès que les pages ne se ressemblent pas : un tableau de valeurs demande plus de temps de lecture qu'une page portant une grande horloge. Minimum 3 secondes.</p>
+          <p>Le défilement <b>se suspend tout seul</b> quand il gênerait : en mode édition (vous déplacez des tuiles, la page ne doit pas se dérober) et tant qu'une fenêtre est ouverte (réglages, aide, détails d'une tuile). Il <b>repart de zéro</b> dès que vous changez de page vous-même : quelqu'un qui vient de choisir une page veut la regarder, pas la voir disparaître une seconde plus tard.</p>
+
           <h4>Ce qu'il faut savoir sur les performances</h4>
           <p><b>Toutes les pages tournent en même temps</b>, pas seulement celle que vous regardez : une tuile Météo en page 3 doit avoir ses données à jour quand la page arrive, pas commencer à les charger à ce moment-là. C'est ce qu'on attend d'un tableau de bord qui défile, mais cela veut dire qu'ajouter des pages consomme des ressources. Sur un Raspberry Pi, si l'affichage devient poussif, la <b>planification horaire</b> de chaque tuile (réglages de la tuile) permet d'endormir ce qui n'a pas besoin de tourner en permanence.</p>`,
         en: `
@@ -2032,6 +2037,11 @@
           <div class="help-opt"><span class="help-opt-name">Effect</span><span class="help-opt-desc"><b>Push</b>: both pages slide together, like a film strip. <b>Cover</b>: the new one passes over, the old one does not move. <b>Uncover</b>: the old one leaves and reveals the new one. <b>Fade</b>: no movement. <b>None</b>: immediate replacement.</span></div>
           <p>The setting belongs to the <b>incoming</b> page: each page describes how it enters. A tile added while a page is displayed lands <b>on that page</b>, not on the main board.</p>
           <p><b>Deleting a page also deletes its tiles</b> — they exist nowhere else. A confirmation is asked if the page is not empty. Page 1 cannot be deleted: it is the main board.</p>
+
+          <h4>Automatic cycling</h4>
+          <p>A wall board has nobody to turn its pages: without cycling, pages 2 and beyond would never be seen. The <b>"Move to the next page automatically"</b> option (general settings → Display mode) cycles the pages in a loop. It is <b>off by default</b>: a board starting to cycle on its own without being asked would be baffling.</p>
+          <p>The general duration applies to every page, but <b>each page may set its own</b> in the right-hand column of the page list (leave the field empty to follow the general duration — it then shows as a placeholder). This matters as soon as pages differ: a table of figures needs more reading time than a page carrying a large clock. Minimum 3 seconds.</p>
+          <p>Cycling <b>suspends itself</b> whenever it would get in the way: in edit mode (you are moving tiles, the page must not slip away) and while a window is open (settings, help, a tile's details). It <b>restarts from zero</b> as soon as you change page yourself: someone who just picked a page wants to look at it, not see it vanish a second later.</p>
 
           <h4>What to know about performance</h4>
           <p><b>All pages run at the same time</b>, not only the one you are looking at: a Weather tile on page 3 must have fresh data when the page arrives, not start loading then. That is what one expects from a cycling dashboard, but it does mean adding pages costs resources. On a Raspberry Pi, if the display becomes sluggish, each tile's <b>schedule</b> (tile settings) lets you put to sleep whatever does not need to run permanently.</p>`
