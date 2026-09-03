@@ -111,3 +111,94 @@ body.editing .pw-image-change { display: inline-flex; }
 /* Le bouton est positionne par rapport a la tuile, pas a la page.
    The button is positioned relative to the tile, not to the page. */
 .pw-image { position: relative; }
+
+/* ---------- Recadrage direct sur l'image / direct crop overlay ----------
+   Présent uniquement en mode edition : sur un tableau en fonctionnement,
+   des poignees par-dessus l'image n'auraient rien a faire la.
+   Only present in edit mode: on a running board, handles over the image
+   would have no business being there. */
+.pw-image-crop { display: none; }
+body.editing .pw-image-crop {
+  display: block;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  /* Le curseur annonce le geste possible avant meme qu'on l'essaie.
+     The cursor announces the possible gesture before it is even tried. */
+  cursor: move;
+  touch-action: none;
+}
+/* Cadrage autre que « Recadrer » : les poignees n'auraient aucun effet,
+   on les retire plutot que de les laisser mentir.
+   Framing other than "Crop": the handles would have no effect, so we
+   remove them rather than let them lie. */
+body.editing .pw-image-crop.pw-image-crop-off { display: none; }
+
+.pw-image-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.pw-image-handle-nw { top: 3px; left: 3px; cursor: nwse-resize; }
+.pw-image-handle-ne { top: 3px; right: 3px; cursor: nesw-resize; }
+.pw-image-handle-sw { bottom: 3px; left: 3px; cursor: nesw-resize; }
+.pw-image-handle-se { bottom: 3px; right: 3px; cursor: nwse-resize; }
+
+.pw-image-croptools {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+.pw-image-croptools button {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pw-image-croptools button:hover { background: rgba(255, 255, 255, 0.18); }
+.pw-image-croptools span { min-width: 3.4em; text-align: center; }
+
+.pw-image-crophint {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 60px);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+/* Sur une petite tuile, l'indication et les boutons se marcheraient
+   dessus : l'indication s'efface, les poignees suffisent.
+   On a small tile the hint and the buttons would overlap: the hint goes,
+   the handles are enough. */
+@container (max-height: 120px) {
+  .pw-image-crophint { display: none; }
+}

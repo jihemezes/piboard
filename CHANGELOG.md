@@ -1,5 +1,98 @@
 # Changelog
 
+## 1.91.0
+
+- **Tuile Logo/Image : le recadrage se fait desormais SUR l'image.**
+  Regler le zoom et le cadrage par des champs numeriques revenait a
+  travailler a l'aveugle : les valeurs saisies n'atteignaient l'image
+  qu'apres enregistrement des reglages, si bien qu'on ne voyait pas ce
+  qu'on faisait au moment ou on le faisait. En **mode edition**, la tuile
+  porte maintenant :
+  - **quatre poignees d'angle** : tirer en diagonale vers l'exterieur
+    agrandit, vers l'interieur reduit ;
+  - **le glissement sur l'image** pour la deplacer dans son cadre ;
+  - **une petite barre d'outils** avec le zoom courant, deux boutons pas
+    a pas et une remise a zero.
+
+- **L'affichage suit le geste, l'enregistrement attend le relachement.**
+  Ecrire le layout a chaque pixel parcouru aurait declenche des centaines
+  d'ecritures pour un seul glissement ; l'image, elle, est remise en
+  forme a chaque mouvement.
+
+- **Deux details qui font tout** : glisser vers la droite fait venir la
+  partie GAUCHE de l'image, comme lorsqu'on pousse une photo sous un
+  cache -- l'inverse aurait paru casse. Et l'amplitude du deplacement
+  depend du zoom : a 100 % l'image affleure exactement le cadre, il n'y a
+  rien hors champ et le geste ne fait donc rien ; plus on zoome, moins un
+  meme geste deplace le cadrage. Sans cette dependance, le recadrage
+  aurait ete brutal a faible zoom et interminable a fort zoom. Le zoom
+  par les angles est mis a l'echelle de la diagonale de la tuile, pour
+  qu'un meme geste produise le meme effet sur une petite comme sur une
+  grande tuile.
+
+- **Gridstack demarre son glissement sur `mousedown`/`touchstart`** : ce
+  sont ces evenements-la que la surcouche intercepte, en phase de
+  capture, et non le seul `pointerdown`. Sans cela, glisser sur l'image
+  aurait deplace la tuile sur la grille au lieu de recadrer.
+
+- La surcouche n'apparait qu'en mode edition, et s'efface si le cadrage
+  choisi n'est pas « Recadrer » : des poignees sans effet auraient
+  menti. Les champs numeriques restent dans les reglages, pour poser une
+  valeur exacte ou reproduire a l'identique le recadrage d'une autre
+  tuile.
+
+- **Tests** : `dom-smoke.js` couvre le sens du deplacement, sa symetrie,
+  son absence d'effet a 100 %, sa decroissance quand le zoom augmente, le
+  bornage du cadrage et du zoom, l'equivalence d'un geste proportionnel
+  entre petite et grande tuile, ainsi que la presence des poignees, de la
+  barre d'outils, de l'interception des evenements de Gridstack en phase
+  de capture et de la separation affichage/enregistrement.
+
+---
+
+- **Logo/Image tile: cropping now happens ON the image.** Setting zoom
+  and framing through numeric fields meant working blind: the typed
+  values only reached the image once the settings were saved, so one
+  could not see what one was doing while doing it. In **edit mode** the
+  tile now carries:
+  - **four corner handles**: pulling diagonally outwards enlarges,
+    inwards reduces;
+  - **dragging on the image** to move it within its frame;
+  - **a small toolbar** with the current zoom, two step buttons and a
+    reset.
+
+- **The display follows the gesture, saving waits for release.** Writing
+  the layout at every pixel travelled would have triggered hundreds of
+  writes for a single drag; the image itself is re-laid out on every
+  movement.
+
+- **Two details that make it work**: dragging right brings in the LEFT
+  part of the image, as when pushing a photo under a mask -- the
+  opposite would have felt broken. And the pan amplitude depends on the
+  zoom: at 100% the image exactly meets the frame, nothing is off-screen
+  and the gesture therefore does nothing; the more you zoom, the less a
+  same gesture moves the framing. Without that dependency, cropping would
+  have been brutal at low zoom and interminable at high zoom. Corner
+  zooming is scaled by the tile's diagonal, so a same gesture has the
+  same effect on a small tile as on a large one.
+
+- **Gridstack starts its drag on `mousedown`/`touchstart`**: those are
+  the events the overlay intercepts, in the capture phase, not
+  `pointerdown` alone. Without that, dragging on the image would have
+  moved the tile on the grid instead of cropping.
+
+- The overlay only appears in edit mode, and vanishes if the chosen
+  framing is not "Crop": handles with no effect would have lied. The
+  numeric fields stay in the settings, to set an exact value or to
+  reproduce another tile's crop identically.
+
+- **Tests**: `dom-smoke.js` covers the pan direction, its symmetry, its
+  absence of effect at 100%, its decrease as zoom rises, the bounding of
+  framing and zoom, the equivalence of a proportional gesture between
+  small and large tiles, plus the presence of the handles, the toolbar,
+  the capture-phase interception of Gridstack's events and the
+  display/save separation.
+
 ## 1.90.1
 
 - **Correctif majeur : en mode tableau de bord, aucune tuile des pages 2

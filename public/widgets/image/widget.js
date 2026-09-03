@@ -52,6 +52,14 @@
      A link is only opened if it points to the web or to the board
      itself. "javascript:" is the case that matters: typed into the link
      field, it would run code on click. */
+  function escAttr(v) {
+    // Les guillemets doubles DOIVENT etre echappes : un intitule traduit
+    // en contenant un tronquerait l'attribut.
+    // Double quotes MUST be escaped: a translated label containing one
+    // would truncate the attribute.
+    return esc(v);
+  }
+
   function safeLink(url) {
     const raw = String(url || "").trim();
     if (!raw) return null;
@@ -162,6 +170,7 @@
 
       this.root.innerHTML = "";
       this.root.appendChild(change);
+      this.root.appendChild(this.buildCropOverlay());
       if (link) {
         const a = document.createElement("a");
         a.href = link;
@@ -297,9 +306,222 @@
       }
     }
 
+    /* ---------- Recadrage direct sur l'image / direct crop overlay ----------
+       La surcouche n'est presente dans le document qu'en mode edition
+       (CSS), et n'agit que si le cadrage « Recadrer » est choisi. Elle
+       intercepte les evenements de pointeur AVANT Gridstack : sans cela,
+       un glissement sur l'image deplacerait la tuile sur la grille au
+       lieu de recadrer.
+       The overlay is only present in the document in edit mode (CSS),
+       and only acts if the "Crop" framing is chosen. It intercepts
+       pointer events BEFORE Gridstack: without that, a drag on the image
+       would move the tile on the grid instead of cropping. */
+    buildCropOverlay() {
+      const i18n = this.ctx.i18n;
+      const wrap = document.createElement("div");
+      wrap.className = "pw-image-crop";
+      wrap.innerHTML =
+        ['nw', 'ne', 'sw', 'se'].map((c) =>
+          `<span class="pw-image-handle pw-image-handle-${c}" data-corner="${c}"></span>`).join("")
+        + '<div class="pw-image-croptools">'
+        + `<button type="button" data-act="out" title="${escAttr(i18n.t("image.zoomOut"))}">&minus;</button>`
+        + '<span data-role="zoom"></span>'
+        + `<button type="button" data-act="in" title="${escAttr(i18n.t("image.zoomIn"))}">+</button>`
+        + `<button type="button" data-act="reset" title="${escAttr(i18n.t("image.cropReset"))}">&#8634;</button>`
+        + "</div>"
+        + `<div class="pw-image-crophint">${esc(i18n.t("image.cropHint"))}</div>`;
+
+      const zoomLabel = wrap.querySelector("[data-role=zoom]");
+      const refresh = () => {
+        const s = this.ctx.settings || {};
+        // La surcouche ne sert a rien hors du cadrage « Recadrer » : on
+        // la neutralise plutot que de laisser des poignees sans effet.
+        // The overlay is useless outside the "Crop" framing: we
+        // neutralise it rather than leave handles with no effect.
+        wrap.classList.toggle("pw-image-crop-off", s.fit !== "crop");
+        zoomLabel.textContent = clampZoom(s.zoom) + " %";
+      };
+      this.refreshCropTools = refresh;
+      refresh();
+
+      const commit = (patch, persist) => {
+        this.ctx.settings = Object.assign({}, this.ctx.settings, patch);
+        const img = this.root.querySelector("img");
+        if (img) applyFit(img, this.ctx.settings.fit, this.ctx.settings);
+        refresh();
+        // Enregistrement au relachement seulement : ecrire le layout a
+        // chaque pixel parcouru en produirait des centaines par geste.
+        // Saved on release only: writing the layout at every pixel
+        // travelled would produce hundreds per gesture.
+        if (persist && typeof this.ctx.updateSettings === "function") this.ctx.updateSettings(patch);
+      };
+      this.commitCrop = commit;
+
+      for (const act of ["in", "out", "reset"]) {
+        const b = wrap.querySelector('[data-act="' + act + '"]');
+        b.addEventListener("pointerdown", (e) => e.stopPropagation());
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          const s = this.ctx.settings || {};
+          if (act === "reset") commit({ zoom: 100, focusX: 50, focusY: 50 }, true);
+          else commit({ zoom: clampZoom(clampZoom(s.zoom) + (act === "in" ? 10 : -10)) }, true);
+        });
+      }
+
+      /* Gridstack demarre son glissement sur `mousedown`/`touchstart` :
+         il faut donc arreter ces evenements-la, pas seulement
+         `pointerdown`. En phase de capture, pour passer avant lui.
+         Gridstack starts its drag on `mousedown`/`touchstart`: those are
+         the events to stop, not just `pointerdown`. In the capture
+         phase, so as to come before it. */
+      for (const type of ["mousedown", "touchstart", "pointerdown"]) {
+        wrap.addEventListener(type, (e) => {
+          if ((this.ctx.settings || {}).fit !== "crop") return;
+          e.stopPropagation();
+        }, true);
+      }
+
+      let drag = null;
+      wrap.addEventListener("pointerdown", (e) => {
+        const s = this.ctx.settings || {};
+        if (s.fit !== "crop") return;
+        if (e.target.closest(".pw-image-croptools")) return;
+        const box = this.ctx.el.getBoundingClientRect();
+        const corner = e.target.closest(".pw-image-handle");
+        drag = {
+          x: e.clientX, y: e.clientY, w: box.width, h: box.height,
+          zoom: clampZoom(s.zoom), focusX: pct(s.focusX, 50), focusY: pct(s.focusY, 50),
+          corner: corner ? corner.dataset.corner : null
+        };
+        e.preventDefault();
+        try { wrap.setPointerCapture(e.pointerId); } catch (err) { /* pointeur deja relache / already released */ }
+      });
+
+      wrap.addEventListener("pointermove", (e) => {
+        if (!drag) return;
+        const dx = e.clientX - drag.x;
+        const dy = e.clientY - drag.y;
+        if (drag.corner) {
+          const sx = drag.corner[1] === "e" ? 1 : -1;
+          const sy = drag.corner[0] === "s" ? 1 : -1;
+          commit({ zoom: zoomFromDrag(drag.zoom, dx, dy, sx, sy, drag.w, drag.h) }, false);
+        } else {
+          commit({
+            focusX: panFocus(drag.focusX, dx, drag.w, drag.zoom),
+            focusY: panFocus(drag.focusY, dy, drag.h, drag.zoom)
+          }, false);
+        }
+      });
+
+      const end = () => {
+        if (!drag) return;
+        drag = null;
+        const s = this.ctx.settings || {};
+        // Un seul enregistrement pour tout le geste.
+        // A single save for the whole gesture.
+        commit({ zoom: clampZoom(s.zoom), focusX: pct(s.focusX, 50), focusY: pct(s.focusY, 50) }, true);
+      };
+      wrap.addEventListener("pointerup", end);
+      wrap.addEventListener("pointercancel", end);
+      return wrap;
+    }
+
     destroy() {
       if (this.modal) this.modal.remove();
     }
+  }
+
+  /* ============================================================
+     RECADRAGE DIRECT / DIRECT CROPPING
+
+     Regler le recadrage par des champs numeriques revenait a travailler
+     a l'aveugle : les valeurs saisies n'etaient reportees sur l'image
+     qu'apres enregistrement des reglages, si bien qu'on ne voyait pas ce
+     qu'on faisait au moment ou on le faisait. Le recadrage se manipule
+     donc desormais SUR l'image, en mode edition :
+
+       - glisser sur l'image la deplace dans son cadre (recadrage) ;
+       - glisser une des quatre poignees d'angle, en diagonale, zoome ;
+       - une petite barre d'outils donne le zoom courant, deux boutons
+         d'increment et une remise a zero.
+
+     Les champs numeriques restent dans les reglages : ils servent a
+     poser une valeur exacte, ou a reproduire a l'identique le reglage
+     d'une autre tuile.
+
+     L'affichage est mis a jour A CHAQUE mouvement, mais l'enregistrement
+     n'a lieu qu'au RELACHEMENT : enregistrer a chaque pixel parcouru
+     aurait declenche des centaines d'ecritures du layout pour un seul
+     glissement.
+
+     Setting the crop through numeric fields meant working blind: the
+     typed values only reached the image once the settings were saved, so
+     one could not see what one was doing while doing it. Cropping is
+     therefore now handled ON the image, in edit mode:
+
+       - dragging on the image moves it within its frame (cropping);
+       - dragging one of the four corner handles, diagonally, zooms;
+       - a small toolbar shows the current zoom, two step buttons and a
+         reset.
+
+     The numeric fields stay in the settings: they are there to set an
+     exact value, or to reproduce another tile's setting identically.
+
+     The display updates on EVERY movement, but saving only happens on
+     RELEASE: saving at every pixel travelled would have triggered
+     hundreds of layout writes for a single drag. */
+
+  const ZOOM_MIN = 100;
+  const ZOOM_MAX = 500;
+
+  function clampZoom(v) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return ZOOM_MIN;
+    return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.round(n)));
+  }
+
+  /* Deplacement : un glissement vers la DROITE doit faire venir la partie
+     GAUCHE de l'image, comme lorsqu'on pousse une photo sous un cache.
+     Le point de mire evolue donc a l'inverse du geste.
+
+     L'amplitude depend du zoom : a 100 % l'image affleure exactement le
+     cadre, il n'y a rien a deplacer et le geste ne doit rien faire. Plus
+     on zoome, plus il y a de matiere hors cadre, et plus un meme geste
+     doit parcourir de pourcentage. Sans cette dependance, le deplacement
+     serait ridiculement lent a fort zoom et brutal a faible zoom.
+
+     Panning: a drag to the RIGHT must bring in the LEFT part of the
+     image, as when pushing a photo under a mask. The focal point
+     therefore moves opposite to the gesture.
+
+     The amplitude depends on the zoom: at 100% the image exactly meets
+     the frame, there is nothing to move and the gesture must do nothing.
+     The more you zoom, the more material sits outside the frame, and the
+     further a same gesture must travel in percentage terms. Without that
+     dependency, panning would be absurdly slow at high zoom and brutal
+     at low zoom. */
+  function panFocus(focus, deltaPx, sizePx, zoom) {
+    const z = clampZoom(zoom);
+    const from = pct(focus, 50);
+    if (!sizePx || z <= ZOOM_MIN) return from;
+    const overflow = sizePx * (z / 100 - 1);
+    if (overflow <= 0) return from;
+    return pct(from - (deltaPx / overflow) * 100, from);
+  }
+
+  /* Zoom par une poignee d'angle. `sx`/`sy` valent -1 ou 1 selon l'angle
+     saisi : tirer VERS L'EXTERIEUR agrandit, quel que soit l'angle. La
+     diagonale de la tuile sert d'echelle, pour qu'un meme geste produise
+     le meme effet sur une petite comme sur une grande tuile.
+     Zoom through a corner handle. `sx`/`sy` are -1 or 1 depending on the
+     grabbed corner: pulling OUTWARDS enlarges, whatever the corner. The
+     tile's diagonal is the scale, so a same gesture has the same effect
+     on a small tile as on a large one. */
+  function zoomFromDrag(startZoom, dx, dy, sx, sy, widthPx, heightPx) {
+    const diag = Math.sqrt(widthPx * widthPx + heightPx * heightPx) || 1;
+    const along = (dx * sx + dy * sy) / diag;
+    return clampZoom(clampZoom(startZoom) + along * 200);
   }
 
   function pct(v, fallback) {
@@ -389,6 +611,9 @@
   ImageWidget._safeLink = safeLink;
   ImageWidget._applyFit = applyFit;
   ImageWidget._pct = pct;
+  ImageWidget._panFocus = panFocus;
+  ImageWidget._zoomFromDrag = zoomFromDrag;
+  ImageWidget._clampZoom = clampZoom;
 
   window.PiBoard.registerWidget("image", ImageWidget);
 })();

@@ -261,4 +261,16 @@ console.log("== Tuile Image : recadrage documente (1.90.0) ==")
 }
 console.log("  OK");
 
+console.log("== Tuile Image : recadrage direct documente (1.91.0) ==")
+{
+  const e = entryById("image");
+  assert.ok(/recadrer directement sur l'image/.test(e.html.fr) && /crop directly on the image/.test(e.html.en),
+    "la manipulation directe doit etre presentee comme le chemin principal");
+  assert.ok(/mode édition/.test(e.html.fr) && /edit mode/.test(e.html.en),
+    "le fait qu'elle n'existe qu'en mode edition doit etre dit");
+  assert.ok(/pendant<\/b> le geste/.test(e.html.fr) && /while<\/b> you drag/.test(e.html.en),
+    "l'affichage en direct est justement ce qui manquait : il doit etre dit");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");

@@ -5061,6 +5061,82 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("l'ancien cadrage 'remplir' reste disponible et distinct",
       (Image._applyFit(crop, "cover", {}), crop.style.objectFit === "cover" && crop.style.transform === ""));
 
+    /* ---------- Recadrage direct : calculs ----------
+       Regler le recadrage par des champs numeriques revenait a
+       travailler a l'aveugle, les valeurs n'atteignant l'image qu'apres
+       enregistrement. Le recadrage se fait desormais sur l'image ; ce
+       sont ces calculs qui traduisent le geste.
+       Setting the crop through numeric fields meant working blind, the
+       values only reaching the image once saved. Cropping now happens on
+       the image; these computations translate the gesture. */
+    // Glisser vers la DROITE doit faire venir la partie GAUCHE, comme
+    // lorsqu'on pousse une photo sous un cache.
+    assert("glisser a droite deplace le cadrage vers la gauche",
+      Image._panFocus(50, 40, 200, 200) < 50);
+    assert("glisser a gauche fait l'inverse",
+      Image._panFocus(50, -40, 200, 200) > 50);
+    assert("le geste est symetrique",
+      Math.abs((50 - Image._panFocus(50, 40, 200, 200)) - (Image._panFocus(50, -40, 200, 200) - 50)) < 0.001);
+    /* A 100 %, l'image affleure exactement le cadre : il n'y a rien hors
+       champ, donc rien a deplacer. Un geste doit rester sans effet plutot
+       que de decaler une image qui ne peut pas l'etre.
+       At 100% the image exactly meets the frame: nothing is off-screen,
+       so there is nothing to move. A gesture must have no effect rather
+       than shifting an image that cannot be shifted. */
+    assert("a 100 %, le deplacement ne fait rien", Image._panFocus(50, 80, 200, 100) === 50);
+    // Plus le zoom est fort, plus il y a de matiere hors cadre : un meme
+    // geste doit parcourir MOINS de pourcentage, pas plus.
+    const at150 = 50 - Image._panFocus(50, 30, 200, 150);
+    const at400 = 50 - Image._panFocus(50, 30, 200, 400);
+    assert("a fort zoom, le meme geste deplace moins le cadrage", at400 < at150);
+    assert("le cadrage ne sort jamais du cadre",
+      Image._panFocus(50, 99999, 200, 200) === 0 && Image._panFocus(50, -99999, 200, 200) === 100);
+    assert("une tuile de taille nulle ne produit pas de valeur absurde",
+      Image._panFocus(50, 40, 0, 200) === 50);
+
+    // Tirer VERS L'EXTERIEUR agrandit, quel que soit l'angle saisi.
+    assert("angle bas-droit tire vers l'exterieur : zoom", Image._zoomFromDrag(150, 60, 60, 1, 1, 200, 200) > 150);
+    assert("angle haut-gauche tire vers l'exterieur : zoom aussi", Image._zoomFromDrag(150, -60, -60, -1, -1, 200, 200) > 150);
+    assert("tirer vers l'interieur reduit", Image._zoomFromDrag(300, -60, -60, 1, 1, 200, 200) < 300);
+    assert("le zoom reste borne",
+      Image._zoomFromDrag(100, -9999, -9999, 1, 1, 200, 200) === 100
+      && Image._zoomFromDrag(400, 9999, 9999, 1, 1, 200, 200) === 500);
+    /* Un meme geste doit produire le meme effet sur une petite comme sur
+       une grande tuile : sans mise a l'echelle par la diagonale, le zoom
+       serait incontrolable sur une petite tuile.
+       A same gesture must have the same effect on a small tile as on a
+       large one: without scaling by the diagonal, zooming would be
+       uncontrollable on a small tile. */
+    const smallTile = Image._zoomFromDrag(200, 20, 20, 1, 1, 100, 100);
+    const largeTile = Image._zoomFromDrag(200, 40, 40, 1, 1, 200, 200);
+    assert("un geste proportionnel produit le meme zoom quelle que soit la taille",
+      Math.abs(smallTile - largeTile) < 0.001);
+
+    // ---------- Recadrage direct : surcouche ----------
+    const imgSrc = fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8");
+    assert("quatre poignees d'angle sont posees", /\['nw', 'ne', 'sw', 'se'\]/.test(imgSrc));
+    assert("une barre d'outils donne zoom, increments et remise a zero",
+      /data-act="in"/.test(imgSrc) && /data-act="out"/.test(imgSrc) && /data-act="reset"/.test(imgSrc));
+    /* Gridstack demarre son glissement sur mousedown/touchstart : ne
+       stopper que pointerdown aurait laisse la tuile se deplacer sur la
+       grille au lieu de recadrer.
+       Gridstack starts its drag on mousedown/touchstart: stopping only
+       pointerdown would have let the tile move on the grid instead of
+       cropping. */
+    assert("les evenements que Gridstack ecoute sont interceptes",
+      /\["mousedown", "touchstart", "pointerdown"\]/.test(imgSrc));
+    assert("ils le sont en phase de capture, donc avant Gridstack",
+      /\}, true\);/.test(imgSrc));
+    // L'affichage suit le geste, l'enregistrement attend le relachement.
+    assert("le rendu est rafraichi a chaque mouvement", /pointermove[\s\S]{0,600}?commit\(/.test(imgSrc));
+    assert("l'enregistrement n'a lieu qu'au relachement",
+      /if \(persist && typeof this\.ctx\.updateSettings === "function"\)/.test(imgSrc));
+    assert("un mouvement n'enregistre pas", /commit\(\{[\s\S]{0,220}?\}, false\)/.test(imgSrc));
+    const imgCss = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
+    assert("la surcouche n'apparait qu'en mode edition", /body\.editing \.pw-image-crop \{/.test(imgCss));
+    assert("elle disparait si le cadrage n'est pas 'Recadrer'",
+      /\.pw-image-crop\.pw-image-crop-off \{[^}]*display:\s*none/.test(imgCss));
+
     const imgManifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/image/manifest.json"), "utf8"));
     const fitField = imgManifest.settings.find((f) => f.key === "fit");
     assert("le recadrage est propose parmi les cadrages",
