@@ -99,7 +99,8 @@
       <svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="m14 6 4 4"/></svg>
     </button>
     <button class="dash-btn" id="dashSettings" data-i18n-title="toolbar.settings" title="Settings" aria-label="Settings">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1-1.55 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09a1.7 1.7 0 0 0 1.55-1 1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.55 1z"/></svg>
     </button>
     <button class="dash-btn" id="dashHelp" data-i18n-title="toolbar.help" title="Help" aria-label="Help">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.2-1.2.9-1.2 1.6v.5"/><path d="M12 17h.01"/></svg>
@@ -399,13 +400,23 @@
           </select>
           <small class="field-hint" data-i18n="settings.updateChannel.hint">"Stable" installs only the version marked "Latest" on GitHub. "Pre-releases" also takes the ones marked "Pre-release": newer, but less tested.</small>
         </label>
+        <!-- Bouton de recherche TOUJOURS present, quel que soit le mode
+             de mise a jour : sur le Pi il interroge GitHub depuis le
+             serveur, dans l'application de bureau il declenche
+             electron-updater. Le bouton du bloc serveur ci-dessous
+             faisait defaut la ou le serveur ne gere pas ses mises a jour.
+             Check button ALWAYS present, whatever the update mechanism:
+             on the Pi it queries GitHub from the server, in the desktop
+             application it triggers electron-updater. The button in the
+             server block below was missing wherever the server does not
+             handle its own updates. -->
+        <div class="update-actions">
+          <button type="button" class="btn small" id="updCheckBtn" data-i18n="update.check">Check for updates</button>
+          <button type="button" class="btn small primary" id="updApplyBtn" hidden></button>
+        </div>
         <div id="updServerControls" hidden>
           <p class="update-status" id="updStatusText"></p>
           <p class="update-meta" id="updMetaText"></p>
-          <div class="update-actions">
-            <button type="button" class="btn small" id="updCheckBtn" data-i18n="update.check">Check now</button>
-            <button type="button" class="btn small primary" id="updApplyBtn" hidden></button>
-          </div>
         </div>
         <small class="field-hint" id="updDesktopHint" hidden data-i18n="update.desktopHint">In the Windows desktop application, updates are handled by the application itself: it checks on startup and offers to install. The setting above chooses which versions it offers.</small>
         <small class="field-hint" id="updServerHint" data-i18n="update.hint">New versions are fetched from the releases published on GitHub. Your settings, tiles and photos (the data/ folder) are kept. The server restarts at the end and the dashboard reloads by itself.</small>

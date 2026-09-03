@@ -135,11 +135,27 @@ console.log("== Mises a jour Linux : la fiche existe et couvre le cycle dans les
     assert.ok(/<code>data\/<\/code>/.test(html), `${lang} : la conservation de data/ doit etre dite`);
   }
   assert.ok(/Plus tard/.test(e.html.fr) && /Later/.test(e.html.en), "le bouton du bandeau est nomme dans les deux langues");
-  // Exclusivite : la fiche Windows ne doit pas decrire le mecanisme Linux, et inversement.
-  // Exclusivity: the Windows topic must not describe the Linux mechanism, and vice versa.
+  /* Exclusivite : la fiche Windows ne doit pas decrire le MECANISME
+     Linux (archive, retour arriere), et la fiche Linux ne doit pas
+     decrire celui de Windows.
+     Nuance apportee en 1.88.0 : depuis que le reglage de canal et le
+     bouton de recherche valent pour les DEUX, la fiche Linux doit
+     pouvoir nommer electron-updater pour dire ce que fait le bouton dans
+     l'application de bureau -- l'ancienne regle l'interdisait et aurait
+     force a taire la moitie de la reponse. Ce qui reste interdit, c'est
+     de decrire le mecanisme lui-meme : latest.yml, l'installeur NSIS.
+     Exclusivity: the Windows topic must not describe the Linux
+     MECHANISM (archive, rollback), and the Linux topic must not describe
+     Windows's.
+     Nuance introduced in 1.88.0: now that the channel setting and the
+     check button apply to BOTH, the Linux topic must be able to name
+     electron-updater to say what the button does in the desktop
+     application -- the old rule forbade it and would have forced half
+     the answer to go unsaid. What stays forbidden is describing the
+     mechanism itself: latest.yml, the NSIS installer. */
   const win = entryById("windows-app");
   assert.ok(!/previous\//.test(win.html.fr) && !/previous\//.test(win.html.en), "la fiche Windows ne decrit pas le retour arriere Linux");
-  assert.ok(!/latest\.yml|electron-updater/.test(e.html.fr) && !/latest\.yml|electron-updater/.test(e.html.en), "la fiche Linux ne decrit pas le mecanisme Windows");
+  assert.ok(!/latest\.yml|NSIS/.test(e.html.fr) && !/latest\.yml|NSIS/.test(e.html.en), "la fiche Linux ne decrit pas le mecanisme Windows");
 }
 console.log("  OK");
 
@@ -205,6 +221,19 @@ console.log("== Meteo : lever/coucher du soleil documente (1.86.0) ==");
     "fr : la portee du reglage de canal (serveur ET application Windows) doit etre dite");
   assert.ok(/Windows desktop application, which reads the same setting/.test(u.html.en),
     "en : la portee du reglage de canal doit etre dite");
+}
+console.log("  OK");
+
+console.log("== Bouton de recherche et soleil de demain documentes (1.88.0) ==");
+{
+  const u = entryById("linux-update");
+  assert.ok(/Rechercher des mises à jour/.test(u.html.fr) && /electron-updater/.test(u.html.fr),
+    "fr : le bouton doit etre dit disponible dans les deux cas");
+  assert.ok(/Check for updates/.test(u.html.en) && /electron-updater/.test(u.html.en),
+    "en : le bouton doit etre dit disponible dans les deux cas");
+  const w = entryById("weather");
+  assert.ok(/demain/.test(w.html.fr), "fr : la ligne du soleil sur demain doit etre dite");
+  assert.ok(/tomorrow's/.test(w.html.en), "en : la ligne du soleil sur demain doit etre dite");
 }
 console.log("  OK");
 

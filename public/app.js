@@ -3361,6 +3361,13 @@
        to. */
     const sup = !!st.supported;
     $("updServerControls").hidden = !sup;
+    // Le bouton d'installation n'a de sens que si le serveur installe
+    // lui-meme : dans l'application de bureau, c'est electron-updater qui
+    // s'en charge apres sa propre boite de dialogue.
+    // The install button only makes sense if the server installs by
+    // itself: in the desktop application, electron-updater does it after
+    // its own dialog.
+    $("updApplyBtn").hidden = true;
     $("updServerHint").hidden = !sup;
     $("updDesktopHint").hidden = sup;
 
@@ -3407,6 +3414,30 @@
   }
 
   async function checkForUpdatesNow() {
+    /* Application de bureau : le serveur ne gere pas ses mises a jour,
+       c'est electron-updater qui cherche et qui affiche sa propre boite
+       de dialogue. Le bouton doit donc l'appeler, sinon il ne ferait
+       rien du tout la ou il est pourtant le seul chemin vers une
+       verification manuelle depuis l'interface.
+       Desktop application: the server does not handle its own updates,
+       electron-updater does the looking and shows its own dialog. The
+       button must therefore call it, otherwise it would do nothing at
+       all where it is nonetheless the only path to a manual check from
+       the interface. */
+    if (!updateStatus.supported) {
+      const btn = $("updCheckBtn");
+      btn.disabled = true;
+      try {
+        await fetch("/api/update/check-desktop", { method: "POST" });
+      } catch (e) {
+        // La boite de dialogue d'electron-updater rapporte elle-meme
+        // l'echec ; rien a afficher ici.
+        // electron-updater's own dialog reports the failure; nothing to
+        // show here.
+      }
+      btn.disabled = false;
+      return;
+    }
     if (updateChecking || updateBusy()) return;
     updateChecking = true;
     renderUpdateState();

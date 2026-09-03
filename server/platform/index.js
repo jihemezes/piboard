@@ -47,6 +47,7 @@
      exitToDesktop()           quitter vers le bureau / quit to the desktop
      updateSupport()           mise a jour auto possible ? / self-update possible?
      restartServer(version)    relancer apres mise a jour / relaunch after update
+     checkDesktopUpdates()     recherche via electron-updater / check via electron-updater
      gpuUsage()                charge du GPU ou null / GPU load or null
    ============================================================ */
 "use strict";
@@ -238,6 +239,24 @@ function updateSupport() {
 
 function restartServer(version) {
   return impl.restartServer(version);
+}
+
+/* Declenche la recherche de mise a jour propre a l'application de
+   bureau (electron-updater). Renvoie { ok: false } partout ailleurs :
+   sur le Pi, c'est le serveur qui cherche ses mises a jour lui-meme, via
+   server/selfUpdate.js.
+   Triggers the desktop application's own update check
+   (electron-updater). Returns { ok: false } everywhere else: on the Pi
+   the server looks for its own updates, through server/selfUpdate.js. */
+function checkDesktopUpdates() {
+  if (kioskController && typeof kioskController.checkUpdates === "function") {
+    try {
+      return kioskController.checkUpdates() || { ok: true };
+    } catch (e) {
+      return { ok: false, reason: String(e.message || e) };
+    }
+  }
+  return { ok: false, reason: "not-desktop-app" };
 }
 
 module.exports = {

@@ -547,7 +547,7 @@ const UPDATE_STATE = {
   prerelease: false, channel: "stable",
   job: { phase: "idle", version: null, startedAt: null, finishedAt: null, progress: null, error: null, rolledBack: false, log: [] }
 };
-const UPDATE_CALLS = { check: 0, apply: 0 };
+const UPDATE_CALLS = { check: 0, apply: 0, checkDesktop: 0 };
 let UPDATE_VERSION_SERVED = "9.9.9-test";
 
 const dom = new JSDOM(html, {
@@ -611,6 +611,10 @@ const dom = new JSDOM(html, {
          progress window without ever shutting a server down. */
       if (u.includes("/api/update/status")) {
         return json(UPDATE_STATE);
+      }
+      if (u.includes("/api/update/check-desktop") && method === "POST") {
+        UPDATE_CALLS.checkDesktop++;
+        return json({ ok: true });
       }
       if (u.includes("/api/update/check") && method === "POST") {
         UPDATE_CALLS.check++;
@@ -4246,6 +4250,94 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("le relevé a bien parcouru les feuilles de style", owners.size > 20);
   }
 
+  console.log("== Meteo : lever/coucher du soleil sur aujourd'hui ET demain ==");
+  {
+    const src = fs.readFileSync(path.join(PUB, "widgets/weather/widget.js"), "utf8");
+    /* Un seul generateur pour les deux jours : ecrire le balisage deux
+       fois garantirait qu'une correction n'en atteigne qu'une moitie --
+       c'est exactement ce qui s'est produit avec la couleur en 1.87.1.
+       One single generator for both days: writing the markup twice would
+       guarantee that a fix reaches only half of it -- exactly what
+       happened with the colour in 1.87.1. */
+    assert("un seul generateur produit la ligne du soleil", /const sunLineFor = \(index\) =>/.test(src));
+    assert("il n'y a qu'un endroit qui compose le balisage de cette ligne",
+      (src.match(/class="pww-sun"/g) || []).length === 1);
+    assert("la ligne est posee sur aujourd'hui", /sunLineFor\(0\)/.test(src));
+    assert("la ligne est posee sur demain", /sunLineFor\(1\)/.test(src));
+    assert("elle reste sous condition de l'option", /if \(!s\.showSun/.test(src));
+    // Les donnees de demain existent deja : la requete etendue demande
+    // sept jours. Activer l'option n'ajoute donc aucun appel reseau.
+    assert("la requete etendue couvre plusieurs jours", /forecast_days=7/.test(src));
+    assert("elle demande bien lever et coucher", /daily=[^`]*sunrise,sunset/.test(src));
+    // Un jour sans donnee (fournisseur incomplet) ne doit pas produire
+    // une ligne vide ou des tirets.
+    assert("un jour sans donnee n'affiche aucune ligne", /if \(!rise \|\| !set\) return "";/.test(src));
+  }
+
+  console.log("== Meteo : icones lever/coucher reellement distinctes ==");
+  {
+    const src = fs.readFileSync(path.join(PUB, "widgets/weather/widget.js"), "utf8");
+    const grab = (name) => {
+      const at = src.indexOf("const " + name + " = ");
+      return src.slice(at, src.indexOf("</svg>'", at));
+    };
+    const up = grab("SUN_UP_SVG");
+    const down = grab("SUN_DOWN_SVG");
+    assert("les deux pictogrammes existent", up.length > 40 && down.length > 40);
+    /* La version precedente dessinait le MEME demi-disque sur la MEME
+       ligne d'horizon et ne les distinguait que par le sens d'une petite
+       fleche : indiscernables a la taille d'une tuile. Ce qui est
+       verifie ici, c'est que les deux reposent sur des FORMES
+       differentes, pas sur une orientation.
+       The previous version drew the SAME half-disc on the SAME horizon
+       line and told them apart only by an arrow's direction:
+       indistinguishable at a tile's size. What is checked here is that
+       the two rest on different SHAPES, not on an orientation. */
+    const shapes = (svg) => {
+      const body = svg.replace(/const \w+ = /, "");
+      return {
+        disc: /<circle/.test(body),
+        crescent: /a6\.4 6\.4|a6\.9 6\.9|A6\.4 6\.4/i.test(body)
+      };
+    };
+    assert("le lever repose sur un disque (soleil)", shapes(up).disc === true);
+    assert("le coucher ne reutilise pas ce disque", shapes(down).disc === false);
+    assert("le coucher repose sur un croissant (lune)", shapes(down).crescent === true);
+    // Comparaison brute des trajets : deux dessins identiques a
+    // l'orientation pres repasseraient ici sans etre distinguables.
+    const paths = (svg) => (svg.match(/d="[^"]+"/g) || []).map((d) => d.replace(/[-\d.]/g, ""));
+    const common = paths(up).filter((p) => paths(down).includes(p));
+    assert("aucun trajet n'est partage a l'identique entre les deux", common.length === 0);
+    assert("le lever porte une fleche montante en confirmation", /M21 9\.5V4\.2|v-|V4\.2/.test(up));
+    assert("le coucher porte une fleche descendante en confirmation", /M19\.8 4\.2v5\.3/.test(down));
+  }
+
+  console.log("== Meteo : la ligne du soleil est dimensionnee comme les autres ==");
+  {
+    /* Elle etait absente de la routine d'ajustement : elle gardait donc
+       une taille relative fixe que rien ne reduisait quand la place se
+       resserrait, et debordait du bloc centre de la colonne "Demain" --
+       plus etroite et affectee du facteur de compacite. Elle etait bien
+       dans le document, mais hors champ.
+       It was missing from the fitting routine: it kept a fixed relative
+       size that nothing shrank as room got tighter, and overflowed the
+       centred block of the narrower "Tomorrow" column. It was in the
+       document, but out of view. */
+    const src = fs.readFileSync(path.join(PUB, "widgets/weather/widget.js"), "utf8");
+    const fit = src.slice(src.indexOf("const blockH = stacked"));
+    for (const cls of ["pww-icon", "pww-temp", "pww-city", "pww-extra", "pww-saint", "pww-sun"]) {
+      assert("la routine d'ajustement dimensionne '." + cls + "'",
+        fit.includes('querySelectorAll(".' + cls + '")'));
+    }
+    const css = fs.readFileSync(path.join(PUB, "widgets/weather/widget.css"), "utf8");
+    const block = css.slice(css.indexOf(".pw-weather .pww-sun {"), css.indexOf("}", css.indexOf(".pw-weather .pww-sun {")));
+    assert("la feuille de style n'impose plus de taille relative figee", !/font-size:\s*[\d.]+em/.test(block));
+    assert("les deux heures peuvent passer a la ligne dans une colonne etroite",
+      /flex-wrap:\s*wrap/.test(block));
+    assert("mais une heure ne se coupe pas en deux",
+      /\.pww-sun-item\s*\{[^}]*white-space:\s*nowrap/.test(css));
+  }
+
   console.log("== Meteo : lisibilite du lever/coucher du soleil ==");
   {
     /* La ligne du soleil n'avait AUCUNE couleur declaree : elle heritait
@@ -4652,6 +4744,21 @@ function catalogItemFor(catalog, document, widgetId) {
     await sleep(80);
     assert("le bandeau ouvre les reglages generaux",
       document.getElementById("settingsModal").hidden === false);
+    /* L'icone des reglages du bandeau etait un cercle cerne de huit
+       rayons DROITS : le pictogramme d'un soleil, pas d'un engrenage --
+       exactement la confusion deja documentee pour l'icone de reglages
+       des tuiles. Elle reprend desormais le vrai engrenage lobe de la
+       barre d'outils classique.
+       The bar's settings icon was a circle ringed by eight STRAIGHT
+       rays: the pictogram of a sun, not a gear -- exactly the confusion
+       already documented for the tile settings icon. It now reuses the
+       classic toolbar's real lobed gear. */
+    const dashGear = document.getElementById("dashSettings").innerHTML;
+    const dockGear = document.getElementById("btnSettings").innerHTML;
+    assert("l'icone de reglages du bandeau est le meme engrenage que la barre d'outils",
+      dashGear.replace(/\s+/g, "") === dockGear.replace(/\s+/g, ""));
+    assert("ce n'est plus un cercle cerne de rayons droits (un soleil)",
+      !/M12 3v3M12 18v3/.test(dashGear));
 
     // Suppression d'une page vide : pas de confirmation attendue.
     const delRow = document.getElementById("pagesList").querySelectorAll(".page-row")[2];
@@ -5108,6 +5215,8 @@ function catalogItemFor(catalog, document, widgetId) {
       !!document.getElementById("setUpdateChannel") && document.getElementById("setUpdateChannel").value === "stable");
     assert("boutons serveur visibles quand le serveur gere ses mises a jour",
       document.getElementById("updServerControls").hidden === false);
+    assert("le bouton de recherche n'est pas enferme dans le bloc serveur",
+      document.getElementById("updCheckBtn").closest("#updServerControls") === null);
     document.getElementById("settingsModal").hidden = true;
     document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     // Les deux verifications ci-dessus servaient a ce bloc : on remet le
@@ -5226,8 +5335,23 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("plateforme non supportee : le selecteur de canal RESTE visible",
       document.getElementById("secUpdates").hidden === false
       && document.getElementById("setUpdateChannel").closest("[hidden]") === null);
-    assert("plateforme non supportee : boutons de verification masques",
+    assert("plateforme non supportee : l'etat serveur est masque",
       document.getElementById("updServerControls").hidden === true);
+    /* ... mais le bouton de recherche RESTE accessible : dans
+       l'application de bureau il declenche electron-updater, et c'est le
+       seul chemin vers une verification manuelle depuis l'interface.
+       ... but the check button STAYS reachable: in the desktop
+       application it triggers electron-updater, and it is the only path
+       to a manual check from the interface. */
+    assert("le bouton de recherche reste visible dans l'application de bureau",
+      document.getElementById("updCheckBtn").closest("[hidden]") === null);
+    assert("le bouton d'installation, lui, est masque (electron-updater installe)",
+      document.getElementById("updApplyBtn").hidden === true);
+    const beforeDesktop = UPDATE_CALLS.checkDesktop;
+    document.getElementById("updCheckBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    assert("il appelle la recherche propre a l'application de bureau",
+      UPDATE_CALLS.checkDesktop === beforeDesktop + 1);
     assert("plateforme non supportee : explication propre a l'application de bureau affichee",
       document.getElementById("updDesktopHint").hidden === false
       && document.getElementById("updServerHint").hidden === true);

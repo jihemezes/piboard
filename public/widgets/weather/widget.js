@@ -51,14 +51,35 @@
     return UV_BANDS.find((b) => uv <= b.max) || UV_BANDS[UV_BANDS.length - 1];
   }
 
-  /* Fleches lever / coucher : le meme disque, la fleche vers le haut ou
-     vers le bas. Deux pictogrammes distincts (soleil levant / couchant)
-     seraient indiscernables a la taille de la tuile.
-     Sunrise / sunset arrows: the same disc, the arrow up or down. Two
-     distinct pictograms (rising / setting sun) would be
-     indistinguishable at the tile's size. */
-  const SUN_UP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v5"/><path d="m9 6 3-3 3 3"/><path d="M4 18h16"/><path d="M7 18a5 5 0 0 1 10 0"/></svg>';
-  const SUN_DOWN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V3"/><path d="m9 5 3 3 3-3"/><path d="M4 18h16"/><path d="M7 18a5 5 0 0 1 10 0"/></svg>';
+  /* Lever : un SOLEIL rayonnant, avec une fleche montante.
+     Coucher : un CROISSANT DE LUNE, avec une fleche descendante.
+
+     La version precedente dessinait le meme demi-disque sur la meme
+     ligne d'horizon dans les deux cas, et ne les distinguait que par le
+     sens d'une petite fleche de trois pixels : a la taille ou ces
+     pictogrammes s'affichent sur une tuile, les deux etaient
+     indiscernables. Deux FORMES differentes (disque plein rayonnant
+     contre croissant) se lisent instantanement, meme minuscules et meme
+     de loin sur un ecran mural ; les fleches ne font plus que confirmer
+     une lecture deja acquise, au lieu de la porter a elles seules.
+
+     Sunrise: a radiating SUN, with an upward arrow.
+     Sunset: a CRESCENT MOON, with a downward arrow.
+
+     The previous version drew the same half-disc on the same horizon
+     line in both cases, telling them apart only by the direction of a
+     three-pixel arrow: at the size these pictograms are displayed on a
+     tile, the two were indistinguishable. Two different SHAPES (a
+     radiating full disc versus a crescent) read instantly, even tiny and
+     even from across a room; the arrows now merely confirm a reading
+     already acquired, instead of carrying it on their own. */
+  const SUN_UP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
+    + '<circle cx="11" cy="12" r="4"/>'
+    + '<path d="M11 4v1.6M11 18.4V20M3 12h1.6M17.4 12H19M5.3 6.3l1.1 1.1M15.6 16.6l1.1 1.1M16.7 6.3l-1.1 1.1M6.4 16.6l-1.1 1.1"/>'
+    + '<path d="M21 9.5V4.2M18.9 6.3 21 4.2l2.1 2.1" transform="translate(-1.2 0)"/></svg>';
+  const SUN_DOWN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M17 13.2A6.4 6.4 0 0 1 8.8 5a6.9 6.9 0 1 0 8.2 8.2z" transform="translate(-2 2)"/>'
+    + '<path d="M19.8 4.2v5.3M17.7 7.4l2.1 2.1 2.1-2.1"/></svg>';
 
   function fmtTime(iso, locale) {
     return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
@@ -369,10 +390,26 @@
          absent as long as that request has not succeeded (a custom
          provider not supplying them, a passing outage) -- the line is
          then simply omitted rather than showing dashes. */
-      const sunLine = (s.showSun && d.dayExt && d.dayExt.sunrise && d.dayExt.sunrise[0] && d.dayExt.sunset && d.dayExt.sunset[0])
-        ? `<div class="pww-sun"><span class="pww-sun-item">${SUN_UP_SVG}${fmtTime(d.dayExt.sunrise[0], d.lang === "fr" ? "fr-FR" : "en-GB")}</span>`
-          + `<span class="pww-sun-item">${SUN_DOWN_SVG}${fmtTime(d.dayExt.sunset[0], d.lang === "fr" ? "fr-FR" : "en-GB")}</span></div>`
-        : "";
+      /* La meme ligne sert aujourd'hui (indice 0) et demain (indice 1) :
+         la requete etendue renvoie un tableau par jour. Ecrire deux fois
+         le meme balisage aurait garanti qu'une correction n'en atteigne
+         qu'une seule -- c'est exactement ce qui s'est produit avec la
+         couleur en 1.87.1.
+         The same line serves today (index 0) and tomorrow (index 1): the
+         extended request returns one array per day. Writing the same
+         markup twice would have guaranteed that a fix reaches only one of
+         them -- exactly what happened with the colour in 1.87.1. */
+      const sunLineFor = (index) => {
+        const ext = d.dayExt;
+        if (!s.showSun || !ext || !ext.sunrise || !ext.sunset) return "";
+        const rise = ext.sunrise[index];
+        const set = ext.sunset[index];
+        if (!rise || !set) return "";
+        const loc = d.lang === "fr" ? "fr-FR" : "en-GB";
+        return `<div class="pww-sun"><span class="pww-sun-item">${SUN_UP_SVG}${fmtTime(rise, loc)}</span>`
+          + `<span class="pww-sun-item">${SUN_DOWN_SVG}${fmtTime(set, loc)}</span></div>`;
+      };
+      const sunLine = sunLineFor(0);
 
       const rainSoonLine = rainSoonMinutes
         ? `<div class="pww-rainsoon">🌧 ${this.ctx.i18n.t("weather.rainSoon").replace("{n}", rainSoonMinutes)}</div>`
@@ -399,6 +436,7 @@
             <div class="pww-icon">${iconSvg(tom.icon)}</div>
             <div class="pww-temp pww-temp-range">${Math.round(day.temperature_2m_min[1])}° / ${Math.round(day.temperature_2m_max[1])}°</div>
             <div class="pww-city">${tom.label}</div>
+            ${sunLineFor(1)}
             ${tomorrowSaintLine}
           </div>`;
       }
@@ -609,6 +647,22 @@
         n.style.fontSize = Math.max(9, Math.floor(blockH * 0.08 * k)) + "px";
       });
       el.querySelectorAll(".pww-saint").forEach((n) => {
+        n.style.fontSize = Math.max(9, Math.floor(blockH * 0.075 * k)) + "px";
+      });
+      /* La ligne du soleil doit etre dimensionnee ICI comme les autres.
+         Sans cette boucle, elle gardait une taille relative fixe
+         (0.82em) que rien ne reduisait quand la place se resserrait :
+         dans la colonne "Demain", plus etroite et affectee du facteur de
+         compacite, la ligne debordait du bloc centre et se retrouvait
+         hors champ -- donc invisible, alors qu'elle etait bien presente
+         dans le document.
+         The sun line must be sized HERE like the others. Without this
+         loop it kept a fixed relative size (0.82em) that nothing shrank
+         as room got tighter: in the narrower "Tomorrow" column, which
+         also carries the compactness factor, the line overflowed the
+         centred block and ended up out of view -- invisible, although it
+         was very much present in the document. */
+      el.querySelectorAll(".pww-sun").forEach((n) => {
         n.style.fontSize = Math.max(9, Math.floor(blockH * 0.075 * k)) + "px";
       });
     }

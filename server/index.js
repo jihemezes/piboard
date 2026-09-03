@@ -1237,6 +1237,21 @@ app.post("/api/update/check", async (req, res) => {
   res.json(await updater.check());
 });
 
+/* Recherche de mise a jour dans l'APPLICATION DE BUREAU. Distincte de
+   /api/update/check, qui interroge GitHub depuis le serveur : ici, c'est
+   electron-updater qui cherche et qui affichera sa propre boite de
+   dialogue. Reservee aux requetes locales, comme les autres actions qui
+   pilotent la fenetre de l'application.
+   Update check in the DESKTOP APPLICATION. Distinct from
+   /api/update/check, which queries GitHub from the server: here
+   electron-updater does the looking and will show its own dialog.
+   Restricted to local requests, like the other actions driving the
+   application's window. */
+app.post("/api/update/check-desktop", (req, res) => {
+  if (!isLocalRequest(req)) return res.status(403).json({ ok: false, reason: "not-local" });
+  res.json(platform.checkDesktopUpdates());
+});
+
 app.post("/api/update/apply", (req, res) => {
   const r = updater.apply();
   if (r.ok) return res.status(202).json(r.status);

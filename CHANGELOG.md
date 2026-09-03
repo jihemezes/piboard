@@ -1,5 +1,152 @@
 # Changelog
 
+## 1.88.1
+
+- **Correctif : lever et coucher invisibles dans la colonne « Demain ».**
+  Cause : la ligne etait absente de la routine d'ajustement des tailles
+  (`fit()`), qui dimensionne toutes les autres lignes de la tuile en
+  fonction de la place disponible. Elle gardait donc une taille relative
+  figee que rien ne reduisait ; dans la colonne « Demain » -- plus
+  etroite et affectee en plus du facteur de compacite -- elle debordait
+  du bloc centre et se retrouvait hors champ. Elle etait bien presente
+  dans le document, simplement invisible. Elle est desormais
+  dimensionnee comme les autres, et les deux heures peuvent passer a la
+  ligne dans une colonne etroite (sans jamais couper une heure en deux).
+
+- **Correctif : les icones du lever et du coucher etaient
+  indiscernables.** Elles dessinaient le MEME demi-disque sur la MEME
+  ligne d'horizon et ne differaient que par le sens d'une fleche de
+  quelques pixels -- illisible a la taille ou ces pictogrammes
+  s'affichent. Le lever utilise maintenant un **soleil rayonnant**, le
+  coucher un **croissant de lune** : deux FORMES differentes, qui se
+  lisent instantanement meme minuscules et de loin. Les fleches montante
+  et descendante sont conservees, mais elles ne font plus que confirmer
+  une lecture deja acquise au lieu de la porter a elles seules.
+
+- **Correctif : l'icone des reglages du bandeau ressemblait a un
+  soleil.** C'etait un cercle cerne de huit rayons DROITS -- exactement
+  la confusion deja documentee pour l'icone de reglages des tuiles, ou
+  un engrenage simplifie de la sorte se lit comme un soleil. Le bandeau
+  reprend desormais le vrai engrenage lobe de la barre d'outils
+  classique, garantissant au passage que les deux acces aux reglages
+  generaux portent le meme pictogramme.
+
+- **Tests** : `dom-smoke.js` verifie que les deux pictogrammes reposent
+  sur des formes differentes et ne partagent aucun trajet identique
+  (deux dessins ne differant que par une orientation echoueraient), que
+  la ligne du soleil figure bien dans la routine d'ajustement au meme
+  titre que les autres lignes, et que l'icone du bandeau est identique a
+  celle de la barre d'outils.
+
+---
+
+- **Fix: sunrise and sunset invisible in the "Tomorrow" column.** Cause:
+  the line was missing from the size-fitting routine (`fit()`), which
+  sizes every other line of the tile according to the available room. It
+  therefore kept a frozen relative size that nothing shrank; in the
+  "Tomorrow" column -- narrower and additionally carrying the
+  compactness factor -- it overflowed the centred block and ended up out
+  of view. It was very much present in the document, merely invisible. It
+  is now sized like the others, and the two times may wrap in a narrow
+  column (without ever splitting a time in two).
+
+- **Fix: the sunrise and sunset icons were indistinguishable.** They drew
+  the SAME half-disc on the SAME horizon line and differed only by the
+  direction of a few-pixel arrow -- unreadable at the size these
+  pictograms are displayed. Sunrise now uses a **radiating sun**, sunset
+  a **crescent moon**: two different SHAPES, read instantly even tiny and
+  from a distance. The upward and downward arrows are kept, but they now
+  merely confirm a reading already acquired instead of carrying it on
+  their own.
+
+- **Fix: the bar's settings icon looked like a sun.** It was a circle
+  ringed by eight STRAIGHT rays -- exactly the confusion already
+  documented for the tile settings icon, where a gear simplified that way
+  reads as a sun. The bar now reuses the classic toolbar's real lobed
+  gear, guaranteeing along the way that both paths to the general
+  settings carry the same pictogram.
+
+- **Tests**: `dom-smoke.js` checks that the two pictograms rest on
+  different shapes and share no identical path (two drawings differing
+  only by an orientation would fail), that the sun line does appear in
+  the fitting routine like the other lines, and that the bar's icon is
+  identical to the toolbar's.
+
+## 1.88.0
+
+- **Meteo : lever et coucher du soleil aussi sur demain.** Quand
+  l'option est activee, la ligne apparait desormais sous les
+  informations du jour ET sous celles de demain, quand la colonne de
+  demain est affichee. Les donnees etaient deja la : la requete etendue
+  demande sept jours, activer l'option n'ajoute donc **aucun appel
+  reseau**. Un jour dont le fournisseur ne donne pas ces heures
+  n'affiche pas de ligne, plutot qu'une ligne de tirets.
+  Le balisage est produit par **un seul generateur** pour les deux jours :
+  l'ecrire deux fois aurait garanti qu'une correction n'en atteigne
+  qu'une moitie -- exactement ce qui s'est produit avec la couleur en
+  1.87.1.
+
+- **Bouton « Rechercher des mises a jour » toujours accessible.** Il
+  etait enferme dans le bloc masque des que le serveur ne gere pas ses
+  propres mises a jour -- c'est-a-dire dans l'application de bureau
+  Windows, ou il est pourtant le seul chemin vers une verification
+  manuelle depuis l'interface (le menu de l'application restait la seule
+  possibilite). Il est desormais hors de ce bloc : sur le Pi il
+  interroge GitHub depuis le serveur, dans l'application de bureau il
+  declenche la recherche d'electron-updater, qui affiche ensuite sa
+  propre fenetre. Le bouton d'installation, lui, reste masque dans
+  l'application de bureau : c'est electron-updater qui installe.
+
+- **Mise en oeuvre** : la nouvelle route `POST /api/update/check-desktop`
+  (reservee aux requetes locales) passe par le **controleur de kiosque**
+  deja en place -- le point de contact unique entre Electron et le reste
+  du code -- plutot que par un pont IPC dedie, qui aurait ouvert un canal
+  supplementaire entre la page et le processus principal pour une action
+  dont le canal existait deja. Libelle du bouton precise : « Rechercher
+  des mises a jour » au lieu de « Verifier maintenant ».
+
+- **Tests** : `dom-smoke.js` verifie qu'un seul endroit compose la ligne
+  du soleil et qu'elle est posee sur les deux jours, que le bouton de
+  recherche n'est pas enferme dans le bloc serveur, qu'il reste visible
+  et appelle bien la recherche de l'application de bureau quand le
+  serveur ne gere pas ses mises a jour.
+
+---
+
+- **Weather: sunrise and sunset on tomorrow too.** When the option is on,
+  the line now appears under today's information AND under tomorrow's,
+  when the tomorrow column is shown. The data was already there: the
+  extended request asks for seven days, so turning the option on adds
+  **no network call**. A day whose provider does not give those times
+  shows no line, rather than a line of dashes.
+  The markup is produced by **one single generator** for both days:
+  writing it twice would have guaranteed that a fix reaches only half of
+  it -- exactly what happened with the colour in 1.87.1.
+
+- **"Check for updates" button always reachable.** It was locked inside
+  the block hidden as soon as the server does not handle its own updates
+  -- that is, in the Windows desktop application, where it is
+  nonetheless the only path to a manual check from the interface (the
+  application menu remained the only option). It now sits outside that
+  block: on the Pi it queries GitHub from the server, in the desktop
+  application it triggers electron-updater's check, which then shows its
+  own window. The install button stays hidden in the desktop
+  application: electron-updater is what installs.
+
+- **Implementation**: the new `POST /api/update/check-desktop` route
+  (local requests only) goes through the **kiosk controller** already in
+  place -- the single contact point between Electron and the rest of the
+  code -- rather than a dedicated IPC bridge, which would have opened one
+  more channel between the page and the main process for an action whose
+  channel already existed. Button label clarified: "Check for updates"
+  instead of "Check now".
+
+- **Tests**: `dom-smoke.js` checks that a single place composes the sun
+  line and that it is placed on both days, that the check button is not
+  locked inside the server block, and that it stays visible and does call
+  the desktop application's check when the server does not handle its
+  updates.
+
 ## 1.87.1
 
 - **Correctif : lever et coucher du soleil illisibles sur la tuile

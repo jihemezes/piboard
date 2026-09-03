@@ -357,6 +357,25 @@ function registerController() {
     quit: () => {
       app.quit();
     },
+    /* "Rechercher des mises a jour" depuis les reglages generaux de
+       l'interface web. Le meme point d'entree que l'element de menu
+       ci-dessus : sous Windows, c'est electron-updater qui gere les
+       mises a jour, et le serveur n'a aucun moyen de les declencher
+       lui-meme. Passer par le controleur de kiosque plutot que par un
+       pont IPC dedie evite d'ouvrir un canal supplementaire entre la page
+       et le processus principal, alors qu'il en existe deja un pour
+       exactement ce genre d'action.
+       "Check for updates" from the web interface's general settings. The
+       same entry point as the menu item above: on Windows,
+       electron-updater handles updates and the server has no way of
+       triggering them itself. Going through the kiosk controller rather
+       than a dedicated IPC bridge avoids opening one more channel
+       between the page and the main process, when one already exists for
+       exactly this kind of action. */
+    checkUpdates: () => {
+      checkForUpdatesManually(mainWindow);
+      return { ok: true };
+    },
     getAutoStart: () => app.getLoginItemSettings().openAtLogin,
     setAutoStart: (enabled) => {
       app.setLoginItemSettings({

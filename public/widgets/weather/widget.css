@@ -278,7 +278,19 @@
   justify-content: center;
   align-items: center;
   margin-top: 2px;
-  font-size: 0.82em;
+  /* La taille est posee par la routine d'ajustement (voir fit() dans
+     widget.js), comme pour les autres lignes de la tuile. Une taille
+     relative fixe ici la rendait insensible au resserrement de la place.
+     The size is set by the fitting routine (see fit() in widget.js), as
+     for the tile's other lines. A fixed relative size here made it
+     insensitive to the room getting tighter. */
+  font-size: 11px;
+  /* La colonne "Demain" est plus etroite : les deux heures doivent
+     pouvoir passer a la ligne plutot que de deborder du bloc.
+     The "Tomorrow" column is narrower: the two times must be allowed to
+     wrap rather than overflow the block. */
+  flex-wrap: wrap;
+  max-width: 100%;
   /* MEME couleur que la ligne d'informations principale (.pww-extra).
      Sans cette regle, la ligne heritait de la couleur de texte generale
      de la tuile, qui n'est pas celle des informations meteo : selon le
@@ -290,9 +302,8 @@
      colour or a background photo, it could become unreadable. */
   color: var(--faint);
   font-variant-numeric: tabular-nums;
-  white-space: nowrap;
 }
-.pw-weather .pww-sun-item { display: inline-flex; align-items: center; gap: 3px; }
+.pw-weather .pww-sun-item { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
 .pw-weather .pww-sun-item svg { width: 1.05em; height: 1.05em; flex: none; }
 /* Photo de fond : le texte sombre deviendrait illisible dessus. On
    reprend exactement le traitement des autres lignes d'information.
