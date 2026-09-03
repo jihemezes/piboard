@@ -268,16 +268,34 @@
 
 /* Lever / coucher du soleil sur la tuile (option "showSun").
    Sunrise / sunset on the tile ("showSun" option). */
-.pww-sun {
+/* Selecteurs cloisonnes sous .pw-weather comme le reste du fichier : la
+   version qui a introduit cette ligne les avait laisses a la racine.
+   Selectors namespaced under .pw-weather like the rest of the file: the
+   version that introduced this line had left them at the root. */
+.pw-weather .pww-sun {
   display: flex;
   gap: 10px;
   justify-content: center;
   align-items: center;
   margin-top: 2px;
   font-size: 0.82em;
-  opacity: 0.9;
+  /* MEME couleur que la ligne d'informations principale (.pww-extra).
+     Sans cette regle, la ligne heritait de la couleur de texte generale
+     de la tuile, qui n'est pas celle des informations meteo : selon le
+     theme, la couleur de tuile personnalisee ou une photo de fond, elle
+     pouvait devenir illisible.
+     The SAME colour as the main information line (.pww-extra). Without
+     this rule the line inherited the tile's general text colour, which is
+     not the weather information's: depending on the theme, a custom tile
+     colour or a background photo, it could become unreadable. */
+  color: var(--faint);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.pww-sun-item { display: inline-flex; align-items: center; gap: 3px; }
-.pww-sun-item svg { width: 1.05em; height: 1.05em; flex: none; }
+.pw-weather .pww-sun-item { display: inline-flex; align-items: center; gap: 3px; }
+.pw-weather .pww-sun-item svg { width: 1.05em; height: 1.05em; flex: none; }
+/* Photo de fond : le texte sombre deviendrait illisible dessus. On
+   reprend exactement le traitement des autres lignes d'information.
+   Background photo: dark text would become unreadable on it. We reuse
+   exactly the treatment of the other information lines. */
+.pw-weather.pww-has-photo .pww-sun { color: #fff; text-shadow: 0 1px 6px rgba(0, 0, 0, 0.4); }

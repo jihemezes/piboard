@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.87.1
+
+- **Correctif : lever et coucher du soleil illisibles sur la tuile
+  Meteo.** Cause : la ligne ajoutee en 1.86.0 ne declarait AUCUNE
+  couleur. Elle heritait donc de la couleur de texte generale de la
+  tuile, qui n'est pas celle des informations meteo -- ces dernieres
+  utilisent `var(--faint)`. Selon le theme, une couleur de tuile
+  personnalisee ou une photo de fond, le contraste pouvait devenir
+  insuffisant. La ligne reprend desormais exactement la couleur de la
+  ligne d'informations principale, et bascule en blanc avec ombre portee
+  sur une photo de fond, comme les autres lignes. Ses selecteurs sont au
+  passage cloisonnes sous `.pw-weather`, comme le reste du fichier.
+
+- **Test** : `dom-smoke.js` compare la couleur declaree de la ligne du
+  soleil a celle de la ligne d'informations principale et verifie le
+  traitement sur photo de fond -- une regle de couleur absente ou
+  divergente echoue desormais.
+
+---
+
+- **Fix: unreadable sunrise and sunset on the Weather tile.** Cause: the
+  line added in 1.86.0 declared NO colour. It therefore inherited the
+  tile's general text colour, which is not the weather information's --
+  those use `var(--faint)`. Depending on the theme, a custom tile colour
+  or a background photo, the contrast could become insufficient. The line
+  now takes exactly the main information line's colour, and switches to
+  white with a shadow over a background photo, like the other lines. Its
+  selectors are namespaced under `.pw-weather` along the way, like the
+  rest of the file.
+
+- **Test**: `dom-smoke.js` compares the sun line's declared colour with
+  the main information line's and checks the background-photo treatment
+  -- a missing or diverging colour rule now fails.
+
 ## 1.87.0
 
 - **NOUVEAU : mode tableau de bord.** Une seconde facon d'afficher

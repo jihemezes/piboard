@@ -4246,6 +4246,39 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("le relevé a bien parcouru les feuilles de style", owners.size > 20);
   }
 
+  console.log("== Meteo : lisibilite du lever/coucher du soleil ==");
+  {
+    /* La ligne du soleil n'avait AUCUNE couleur declaree : elle heritait
+       de la couleur de texte generale de la tuile, qui n'est pas celle
+       des informations meteo. Selon le theme, une couleur de tuile
+       personnalisee ou une photo de fond, elle devenait illisible. Elle
+       doit porter la meme couleur que la ligne d'informations principale
+       (.pww-extra), et le meme traitement qu'elle sur photo de fond.
+       The sun line had NO declared colour: it inherited the tile's
+       general text colour, which is not the weather information's.
+       Depending on the theme, a custom tile colour or a background
+       photo, it became unreadable. It must carry the same colour as the
+       main information line (.pww-extra), and the same treatment as it
+       over a background photo. */
+    const css = fs.readFileSync(path.join(PUB, "widgets/weather/widget.css"), "utf8");
+    const blockOf = (selector) => {
+      const at = css.indexOf(selector + " {");
+      return at < 0 ? "" : css.slice(at, css.indexOf("}", at));
+    };
+    const sun = blockOf(".pw-weather .pww-sun");
+    const extra = blockOf(".pw-weather .pww-extra");
+    assert("la ligne du soleil declare une couleur", /color:/.test(sun));
+    const colorOf = (block) => (block.match(/(^|[;{\s])color:\s*([^;]+)/) || [])[2];
+    assert("elle utilise la MEME couleur que les autres informations de la tuile",
+      !!colorOf(sun) && colorOf(sun).trim() === colorOf(extra).trim());
+    const photo = blockOf(".pw-weather.pww-has-photo .pww-sun");
+    assert("sur photo de fond, elle bascule en clair comme les autres lignes",
+      /color:\s*#fff/.test(photo));
+    assert("et recoit l'ombre qui la detache de la photo", /text-shadow/.test(photo));
+    assert("ses selecteurs sont cloisonnes sous .pw-weather",
+      !/(^|\n)\.pww-sun[\s{]/.test(css));
+  }
+
   console.log("== Etat systeme : lisibilite des lignes ==");
   {
     const css = fs.readFileSync(path.join(PUB, "widgets/system/widget.css"), "utf8");
