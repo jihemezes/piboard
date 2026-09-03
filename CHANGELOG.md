@@ -1,5 +1,65 @@
 # Changelog
 
+## 1.90.1
+
+- **Correctif majeur : en mode tableau de bord, aucune tuile des pages 2
+  et suivantes ne pouvait etre deplacee ni redimensionnee.** Cause : le
+  passage en mode edition deverrouillait deux listes de grilles -- le
+  plateau principal et les tiroirs -- mais les grilles de PAGES, creees
+  apres coup et une par page, ne figuraient dans aucune des deux. Elles
+  restaient donc `staticGrid: true` en permanence. Aucun message, aucune
+  erreur en console : les poignees ne repondaient simplement pas.
+
+- **Deux autres oublis de la meme famille, corriges dans la foulee** :
+  les grilles de pages n'etaient pas videes par `unmountAll()` -- leurs
+  elements survivaient au rechargement du layout et les tuiles s'y
+  seraient accumulees en double a chaque nouveau rendu -- et une page
+  ajoutee PENDANT le mode edition naissait verrouillee, seule page figee
+  de la session.
+
+- **Cause commune, traitee a la racine** : trois endroits enumeraient les
+  grilles a la main (`grid`, puis les tiroirs), et il fallait penser a
+  chacun en ajoutant une zone. Ils passent desormais tous par une
+  fonction unique `allGrids()`, qui balaie plateau, tiroirs ET pages --
+  une zone ajoutee plus tard ne pourra plus etre oubliee a moitie.
+
+- **Test** : `dom-smoke.js` verifie qu'en mode edition les grilles de
+  pages sont deverrouillees comme le plateau, qu'elles se reverrouillent
+  en sortie, et qu'une page creee en cours d'edition nait deverrouillee.
+  Le test observe la classe `grid-stack-static` posee sur la grille
+  plutot que `opts.staticGrid` : dans Gridstack 10.3.1, `setStatic()`
+  bascule bien la classe -- qui commande reellement les poignees -- mais
+  ne reecrit pas toujours l'option.
+
+---
+
+- **Major fix: in dashboard mode, no tile on page 2 or beyond could be
+  moved or resized.** Cause: entering edit mode unlocked two lists of
+  grids -- the main board and the drawers -- but the PAGE grids, created
+  afterwards and one per page, were in neither. They therefore stayed
+  `staticGrid: true` for good. No message, no console error: the handles
+  simply did not respond.
+
+- **Two other oversights of the same family, fixed along the way**: the
+  page grids were not emptied by `unmountAll()` -- their items survived a
+  layout reload and tiles would have piled up in duplicate on every new
+  render -- and a page added WHILE in edit mode was born locked, the only
+  frozen page of the session.
+
+- **Common cause, treated at the root**: three places enumerated the
+  grids by hand (`grid`, then the drawers), and each had to be remembered
+  when adding a zone. They all now go through a single `allGrids()`
+  function sweeping board, drawers AND pages -- a zone added later can no
+  longer be half-forgotten.
+
+- **Test**: `dom-smoke.js` checks that in edit mode the page grids are
+  unlocked like the board, that they lock again on exit, and that a page
+  created while editing is born unlocked. The test watches the
+  `grid-stack-static` class set on the grid rather than
+  `opts.staticGrid`: in Gridstack 10.3.1, `setStatic()` does toggle the
+  class -- which actually drives the handles -- but does not always
+  rewrite the option.
+
 ## 1.90.0
 
 - **Tuile Logo/Image : recadrage.** Nouveau cadrage « Recadrer », qui

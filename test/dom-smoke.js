@@ -4738,6 +4738,76 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("chaque page a sa propre grille",
       Array.from(pageEls).every((el) => !!el.querySelector(".grid-stack")));
 
+    /* ---------- Edition sur les pages ----------
+       Les grilles de pages sont creees apres coup, une par page : elles
+       n'etaient dans aucune des deux listes deverrouillees en mode
+       edition (plateau, tiroirs) et restaient donc figees en
+       permanence. Aucun message, aucune erreur : les poignees ne
+       repondaient simplement pas, et il etait impossible de deplacer ou
+       de redimensionner la moindre tuile sur une page 2 ou 3.
+       Page grids are created afterwards, one per page: they were in
+       neither of the two lists unlocked in edit mode (board, drawers)
+       and therefore stayed frozen for good. No message, no error: the
+       handles simply did not respond, and it was impossible to move or
+       resize any tile on a page 2 or 3. */
+    /* On observe la classe posee sur la grille plutot que `opts.staticGrid` :
+       dans Gridstack 10.3.1, setStatic() bascule bien la classe
+       "grid-stack-static" mais ne reecrit pas toujours l'option. La
+       classe est de toute facon ce qui commande reellement les poignees.
+       We watch the class set on the grid rather than `opts.staticGrid`:
+       in Gridstack 10.3.1, setStatic() does toggle the "grid-stack-static"
+       class but does not always rewrite the option. The class is what
+       actually drives the handles anyway. */
+    const locked = (el) => el.classList.contains("grid-stack-static");
+    const pageGrids = () => Array.from(document.querySelectorAll(".board-page .grid-stack"));
+    const mainGrid = () => document.querySelector("#grid");
+    assert("les grilles de pages sont accessibles au test", pageGrids().length === 2);
+
+    // Le scenario a pu laisser l'edition active : on part d'un etat connu,
+    // et on le remettra tel qu'on l'a trouve a la fin de ce bloc.
+    // The scenario may have left editing on: start from a known state,
+    // and restore it as found at the end of this block.
+    const editingBefore = document.body.classList.contains("editing");
+    if (editingBefore) {
+      document.getElementById("dashEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(150);
+    }
+    assert("hors edition, les pages sont verrouillees comme le plateau",
+      pageGrids().every(locked) && locked(mainGrid()));
+
+    document.getElementById("dashEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    assert("le mode edition est actif", document.body.classList.contains("editing"));
+    assert("le plateau principal est deverrouille", !locked(mainGrid()));
+    assert("LES PAGES AUSSI sont deverrouillees (tuiles deplacables et redimensionnables)",
+      pageGrids().every((g) => !locked(g)));
+
+    // Une page ajoutee PENDANT l'edition doit naitre deverrouillee, sinon
+    // elle serait la seule page figee de la session.
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    document.getElementById("pageAddBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    assert("une page creee en cours d'edition nait deverrouillee",
+      pageGrids().length === 3 && pageGrids().every((g) => !locked(g)));
+    // On la retire pour laisser le scenario dans l'etat attendu ensuite.
+    document.getElementById("pagesList").querySelectorAll(".page-row")[3]
+      .querySelector("[data-role=del]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    document.getElementById("settingsModal").hidden = true;
+
+    document.getElementById("dashEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    assert("sortie d'edition : les pages sont reverrouillees",
+      pageGrids().every(locked));
+
+    // Etat rendu tel qu'on l'a trouve : la suite du fichier en depend.
+    // State restored as found: the rest of the file depends on it.
+    if (editingBefore) {
+      document.getElementById("dashEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(150);
+    }
+
     // Changement de page : effet "aucun" pour un basculement immediat,
     // les transitions animees etant intestables de facon fiable en jsdom.
     const rows = document.getElementById("pagesList").querySelectorAll(".page-row");

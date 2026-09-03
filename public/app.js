@@ -1095,6 +1095,11 @@
       resizable: { handles: "e,se,s,sw,w" },
       alwaysShowResizeHandle: "mobile"
     }, "#" + gs.id);
+    // Une page ajoutee PENDANT le mode edition doit naitre deverrouillee :
+    // sinon elle serait la seule page figee de la session.
+    // A page added WHILE in edit mode must be born unlocked: otherwise it
+    // would be the only frozen page of the session.
+    pgGrid.setStatic(!editing);
     pgGrid.on("change", () => { if (editing) scheduleSave(); });
     gs.addEventListener("click", (e) => {
       if (!editing) return;
@@ -1357,6 +1362,22 @@
       if (autoAdvanceBlocked()) { scheduleAutoAdvance(); return; }
       goToPage(activePageIndex + 1, { auto: true });
     }, autoAdvanceSeconds(activePageIndex) * 1000);
+  }
+
+  /* Toutes les grilles du tableau, quelle que soit la zone : plateau,
+     tiroirs et pages. Passer par cette liste plutot que d'enumerer les
+     zones a la main evite qu'une zone ajoutee plus tard soit oubliee --
+     c'est exactement ce qui est arrive aux grilles de pages, restees
+     verrouillees en mode edition.
+     Every grid of the board, whatever the zone: board, drawers and
+     pages. Going through this list rather than enumerating zones by hand
+     prevents a zone added later from being forgotten -- exactly what
+     happened to the page grids, which stayed locked in edit mode. */
+  function allGrids() {
+    const out = [grid];
+    for (const d of drawers.values()) if (d.grid) out.push(d.grid);
+    for (const p of pages) if (p.grid) out.push(p.grid);
+    return out;
   }
 
   function gridForZone(zone) {
@@ -1683,8 +1704,13 @@
       try { rec.instance && rec.instance.destroy && rec.instance.destroy(); } catch (e) { /* noop */ }
     }
     tiles.clear();
-    grid.removeAll();
-    for (const d of drawers.values()) d.grid.removeAll();
+    /* Les grilles de pages doivent etre videes elles aussi : oubliees
+       ici, leurs elements survivaient au rechargement du layout et les
+       tuiles s'y accumulaient en double a chaque nouveau rendu.
+       The page grids must be emptied too: left out here, their items
+       survived a layout reload and the tiles piled up in duplicate on
+       every new render. */
+    for (const g of allGrids()) g.removeAll();
   }
 
   /* Aligne les pages en memoire sur celles du layout : cree les
@@ -1761,9 +1787,7 @@
   async function renderLayout(layout) {
     unmountAll();
     syncPages(layout);
-    grid.batchUpdate();
-    for (const d of drawers.values()) d.grid.batchUpdate();
-    for (const p of pages) p.grid.batchUpdate();
+    for (const g of allGrids()) g.batchUpdate();
 
     for (const conf of layout.tiles) await mountTile(conf, "board");
     for (const p of pages) {
@@ -1776,9 +1800,7 @@
       for (const conf of saved.tiles || []) { await mountTile(conf, d.def.zone); anyDrawerTiles = true; }
     }
 
-    grid.batchUpdate(false);
-    for (const d of drawers.values()) d.grid.batchUpdate(false);
-    for (const p of pages) p.grid.batchUpdate(false);
+    for (const g of allGrids()) g.batchUpdate(false);
 
     renderPageIndicator();
     applyDisplayMode();
@@ -3326,8 +3348,19 @@
       if (b) b.scrollTop = 0;
     }
     document.body.classList.toggle("editing", editing);
-    grid.setStatic(!editing);
-    drawers.forEach((d) => d.grid.setStatic(!editing));
+    /* Toutes les grilles doivent etre deverrouillees, pas seulement le
+       plateau et les tiroirs. Les grilles de PAGES sont creees apres
+       coup, une par page du mode tableau de bord : oubliees ici, elles
+       restaient `staticGrid: true` en permanence et il devenait
+       impossible de deplacer ou de redimensionner la moindre tuile sur
+       une page 2 ou 3, sans le moindre message -- les poignees ne
+       repondaient simplement pas.
+       Every grid must be unlocked, not just the board and the drawers.
+       The PAGE grids are created afterwards, one per dashboard mode
+       page: left out here, they stayed `staticGrid: true` for good and
+       it became impossible to move or resize any tile on a page 2 or 3,
+       with no message at all -- the handles simply did not respond. */
+    for (const g of allGrids()) g.setStatic(!editing);
     $("btnEdit").classList.toggle("active", editing);
     // Barre visible en permanence pendant l'edition ; minuterie au retour
     // Toolbar stays visible while editing; timer re-armed on exit
