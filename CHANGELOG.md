@@ -1,5 +1,69 @@
 # Changelog
 
+## 1.90.0
+
+- **Tuile Logo/Image : recadrage.** Nouveau cadrage « Recadrer », qui
+  s'ajoute aux quatre existants : l'image couvre la tuile, un **zoom**
+  (100 a 500 %) l'agrandit, et deux **positions de recadrage**
+  choisissent la partie qui reste visible. Les bords qui sortent de la
+  tuile sont coupes. Utile pour garder un visage ou un logo dans le
+  cadre plutot que le milieu de l'image.
+
+- **Le fichier n'est jamais modifie.** Zoomer et deplacer ne changent que
+  la partie affichee : on peut revenir en arriere a tout moment, et deux
+  tuiles peuvent recadrer differemment la meme image. Rogner reellement
+  le fichier aurait impose une etape de traitement d'image cote serveur
+  et rendu l'operation irreversible -- pour un resultat visuellement
+  identique.
+
+- **Mise en oeuvre** : `object-fit: cover` couvre deja la tuile en
+  rognant ce qui depasse et `object-position` choisit la partie
+  conservee ; `transform: scale()` agrandit au-dela. L'origine du zoom
+  est calee sur le MEME point de mire que la position, sans quoi le zoom
+  partirait du centre et deplacerait le cadrage a chaque changement de
+  zoom. Un zoom sous 100 % est ramene a 100 % : en dessous, l'image ne
+  couvrirait plus la tuile et laisserait des bandes vides -- ce n'est
+  plus un recadrage. Changer de cadrage **efface** les reglages de
+  recadrage, sans quoi une image repassee en « Image entiere » serait
+  restee zoomee.
+
+- **Tests** : `dom-smoke.js` verifie que le point de mire pilote a la
+  fois la partie conservee et l'origine du zoom, le bornage du zoom et
+  des positions, la remise a zero au changement de cadrage, et que les
+  trois nouveaux reglages precisent dans les deux langues qu'ils ne
+  servent qu'au recadrage -- ce dernier controle a d'ailleurs attrape un
+  intitule incomplet avant la livraison.
+
+---
+
+- **Logo/Image tile: cropping.** A new "Crop" framing joins the four
+  existing ones: the image covers the tile, a **zoom** (100 to 500%)
+  enlarges it, and two **crop positions** choose the part that stays
+  visible. The edges leaving the tile are cut off. Useful to keep a face
+  or a logo in frame rather than the middle of the picture.
+
+- **The file is never modified.** Zooming and moving only change the
+  displayed part: one can go back at any time, and two tiles may crop the
+  same image differently. Actually cropping the file would have required
+  a server-side image-processing step and made the operation
+  irreversible -- for a visually identical result.
+
+- **Implementation**: `object-fit: cover` already covers the tile by
+  cropping the overflow and `object-position` picks the kept part;
+  `transform: scale()` enlarges beyond that. The zoom's origin is pinned
+  to the SAME focal point as the position, otherwise the zoom would start
+  from the centre and shift the framing on every zoom change. A zoom
+  below 100% is raised to 100%: under that the image would no longer
+  cover the tile and would leave empty bands -- that is no longer
+  cropping. Switching framing **clears** the crop settings, without which
+  an image switched back to "Whole image" would have stayed zoomed.
+
+- **Tests**: `dom-smoke.js` checks that the focal point drives both the
+  kept part and the zoom's origin, the bounding of zoom and positions,
+  the reset on framing change, and that the three new settings state in
+  both languages that they only serve the crop -- that last check did
+  catch an incomplete label before delivery.
+
 ## 1.89.0
 
 - **Mode tableau de bord : defilement automatique des pages.** Un

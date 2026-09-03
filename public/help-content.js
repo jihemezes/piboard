@@ -1025,6 +1025,7 @@
 
           <h4>Cadrage</h4>
           <div class="help-opt"><span class="help-opt-name">Image entière</span><span class="help-opt-desc">Par défaut, et le seul choix qui ne rogne ni ne déforme jamais. Pour un logo, gardez celui-ci : des marges valent mieux qu'un logo tronqué.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Recadrer</span><span class="help-opt-desc">L'image couvre la tuile et vous choisissez la partie visible : le <b>zoom</b> l'agrandit (100 % remplit exactement la tuile, au-delà les bords sortent du cadre et sont coupés) et les deux <b>positions du recadrage</b> décident de ce qui reste en vue — utile pour garder un visage ou un logo dans le cadre plutôt que le milieu de l'image. Le <b>fichier n'est pas modifié</b> : vous pouvez revenir en arrière à tout moment, et deux tuiles peuvent recadrer différemment la même image.</span></div>
           <div class="help-opt"><span class="help-opt-name">Remplir la tuile</span><span class="help-opt-desc">L'image couvre toute la tuile, quitte à en rogner les bords. Pour une illustration de fond.</span></div>
           <div class="help-opt"><span class="help-opt-name">Étirer</span><span class="help-opt-desc">L'image est déformée pour remplir exactement la tuile. Rarement souhaitable.</span></div>
           <div class="help-opt"><span class="help-opt-name">Taille d'origine</span><span class="help-opt-desc">Aucun redimensionnement.</span></div>
@@ -1041,6 +1042,7 @@
 
           <h4>Framing</h4>
           <div class="help-opt"><span class="help-opt-name">Whole image</span><span class="help-opt-desc">The default, and the only choice that never crops nor distorts. For a logo, keep this one: margins beat a truncated logo.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Crop</span><span class="help-opt-desc">The image covers the tile and you choose the visible part: <b>zoom</b> enlarges it (100% fills the tile exactly, beyond that the edges leave the frame and are cut off) and the two <b>crop positions</b> decide what stays in view — useful to keep a face or a logo in frame rather than the middle of the picture. The <b>file is not modified</b>: you can go back at any time, and two tiles may crop the same image differently.</span></div>
           <div class="help-opt"><span class="help-opt-name">Fill the tile</span><span class="help-opt-desc">The image covers the whole tile, cropping its edges if need be. For a background illustration.</span></div>
           <div class="help-opt"><span class="help-opt-name">Stretch</span><span class="help-opt-desc">The image is distorted to fill the tile exactly. Rarely desirable.</span></div>
           <div class="help-opt"><span class="help-opt-name">Original size</span><span class="help-opt-desc">No resizing at all.</span></div>

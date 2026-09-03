@@ -4950,6 +4950,60 @@ function catalogItemFor(catalog, document, widgetId) {
     Image._applyFit(img, "n'importe quoi");
     assert("cadrage inconnu : repli sur 'image entiere'", img.style.objectFit === "contain");
 
+    /* ---------- Recadrage / cropping ----------
+       Le recadrage ne touche PAS au fichier : il ne fait que choisir la
+       partie visible. Ce qui est verifie ici, c'est que le point de mire
+       pilote a la fois la partie conservee et l'origine du zoom -- sans
+       quoi le zoom partirait du centre et deplacerait le cadrage a
+       chaque changement de zoom.
+       Cropping does NOT touch the file: it only picks the visible part.
+       What is checked here is that the focal point drives both the kept
+       part and the zoom's origin -- otherwise the zoom would start from
+       the centre and shift the framing on every zoom change. */
+    const crop = { style: {} };
+    Image._applyFit(crop, "crop", { zoom: 200, focusX: 25, focusY: 75 });
+    assert("le recadrage couvre toute la tuile", crop.style.objectFit === "cover");
+    assert("le point de mire choisit la partie conservee", crop.style.objectPosition === "25% 75%");
+    assert("le zoom part du meme point de mire", crop.style.transformOrigin === "25% 75%");
+    assert("le zoom est applique", crop.style.transform === "scale(2)");
+
+    Image._applyFit(crop, "crop", { zoom: 100, focusX: 50, focusY: 50 });
+    assert("a 100 %, aucune transformation inutile n'est posee", crop.style.transform === "");
+    // Sous 100 %, l'image ne couvrirait plus la tuile et laisserait des
+    // bandes vides : ce n'est plus un recadrage.
+    Image._applyFit(crop, "crop", { zoom: 40 });
+    assert("un zoom sous 100 % est ramene a 100 %", crop.style.transform === "");
+    Image._applyFit(crop, "crop", { zoom: 9000 });
+    assert("un zoom demesure est borne", crop.style.transform === "scale(5)");
+    Image._applyFit(crop, "crop", {});
+    assert("sans reglage, le recadrage part du centre", crop.style.objectPosition === "50% 50%");
+    Image._applyFit(crop, "crop", { focusX: -80, focusY: 300 });
+    assert("un point de mire hors bornes est ramene dans le cadre", crop.style.objectPosition === "0% 100%");
+
+    /* Changer de cadrage doit effacer le recadrage : sans cette remise a
+       zero, une image passee de "Recadrer" a "Image entiere" resterait
+       zoomee. Switching framing must clear the crop: without this reset,
+       an image switched from "Crop" to "Whole image" would stay zoomed. */
+    Image._applyFit(crop, "crop", { zoom: 300, focusX: 10, focusY: 10 });
+    Image._applyFit(crop, "contain", { zoom: 300, focusX: 10, focusY: 10 });
+    assert("passer a 'image entiere' efface le zoom", crop.style.transform === "");
+    assert("et efface le point de mire", crop.style.objectPosition === "");
+    assert("l'ancien cadrage 'remplir' reste disponible et distinct",
+      (Image._applyFit(crop, "cover", {}), crop.style.objectFit === "cover" && crop.style.transform === ""));
+
+    const imgManifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/image/manifest.json"), "utf8"));
+    const fitField = imgManifest.settings.find((f) => f.key === "fit");
+    assert("le recadrage est propose parmi les cadrages",
+      fitField.options.some((o) => o.value === "crop"));
+    for (const k of ["zoom", "focusX", "focusY"]) {
+      const f = imgManifest.settings.find((x) => x.key === k);
+      assert("le reglage '" + k + "' est declare", !!f);
+      assert("il dit dans les deux langues qu'il ne sert qu'au recadrage",
+        /Recadrer/.test(f.hint.fr) && /Crop/.test(f.hint.en));
+    }
+    assert("le zoom ne peut pas descendre sous 100 % dans le formulaire",
+      imgManifest.settings.find((x) => x.key === "zoom").min === 100);
+
     // Les deux tuiles sont bien au catalogue, dans la famille Mise en page.
     const appSrc = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
     assert("les tuiles de style ont leur famille dans le catalogue",

@@ -60,7 +60,7 @@
     return null;
   }
 
-  const FITS = new Set(["contain", "cover", "fill", "none"]);
+  const FITS = new Set(["contain", "crop", "cover", "fill", "none"]);
 
   class ImageWidget {
     constructor(ctx) { this.ctx = ctx; }
@@ -123,7 +123,7 @@
       img.alt = "";
       img.style.opacity = String(Math.max(10, Math.min(100, Number(s.opacity) || 100)) / 100);
       img.style.borderRadius = (Number(s.radius) || 0) + "px";
-      applyFit(img, s.fit);
+      applyFit(img, s.fit, s);
       /* Fichier absent (supprime depuis le gestionnaire, ou dossier
          data/ restaure sans ses medias) : on retombe sur l'invite plutot
          que de laisser l'icone de lien casse du navigateur.
@@ -302,9 +302,53 @@
     }
   }
 
-  function applyFit(img, fit) {
+  function pct(v, fallback) {
+    const n = Number(v);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : fallback;
+  }
+
+  /* Cadrage, recadrage compris.
+
+     LE RECADRAGE NE TOUCHE PAS AU FICHIER. Zoomer et deplacer ne font
+     que changer la partie de l'image qui reste visible : le fichier
+     televerse reste intact, on peut donc revenir en arriere a tout
+     moment, et deux tuiles peuvent recadrer differemment la meme image.
+     Rogner reellement le fichier aurait impose une etape de traitement
+     d'image cote serveur et rendu l'operation irreversible -- pour un
+     resultat visuellement identique.
+
+     Il repose sur deux mecanismes complementaires :
+       - `object-fit: cover` fait deja couvrir toute la tuile en rognant
+         ce qui depasse, et `object-position` choisit QUELLE partie est
+         conservee (c'est le point de mire) ;
+       - `transform: scale()` agrandit au-dela, pour zoomer dans l'image.
+         Son origine est calee sur le meme point de mire, sans quoi le
+         zoom partirait du centre et deplacerait le cadrage a chaque
+         changement de zoom.
+     Le debordement est coupe par `.pw-image`, qui masque ce qui sort.
+
+     Framing, cropping included.
+
+     CROPPING DOES NOT TOUCH THE FILE. Zooming and moving only change
+     which part of the image stays visible: the uploaded file remains
+     intact, so one can go back at any time, and two tiles may crop the
+     same image differently. Actually cropping the file would have
+     required a server-side image-processing step and made the operation
+     irreversible -- for a visually identical result.
+
+     It rests on two complementary mechanisms:
+       - `object-fit: cover` already covers the whole tile by cropping
+         the overflow, and `object-position` picks WHICH part is kept
+         (that is the focal point);
+       - `transform: scale()` enlarges beyond that, to zoom into the
+         image. Its origin is pinned to the same focal point, otherwise
+         the zoom would start from the centre and shift the framing on
+         every zoom change.
+     The overflow is cut by `.pw-image`, which hides what sticks out. */
+  function applyFit(img, fit, settings) {
+    const s = settings || {};
     const mode = FITS.has(fit) ? fit : "contain";
-    img.style.objectFit = mode;
+
     if (mode === "none") {
       img.style.width = "auto";
       img.style.height = "auto";
@@ -312,10 +356,39 @@
       img.style.width = "100%";
       img.style.height = "100%";
     }
+
+    if (mode === "crop") {
+      const x = pct(s.focusX, 50);
+      const y = pct(s.focusY, 50);
+      const zoomRaw = Number(s.zoom);
+      // Sous 100 %, l'image ne couvrirait plus la tuile et laisserait
+      // des bandes vides : ce n'est pas un recadrage, c'est le cadrage
+      // "image entiere". Below 100% the image would no longer cover the
+      // tile and would leave empty bands: that is not cropping, that is
+      // the "whole image" framing.
+      const zoom = Number.isFinite(zoomRaw) ? Math.max(100, Math.min(500, zoomRaw)) : 100;
+      img.style.objectFit = "cover";
+      img.style.objectPosition = x + "% " + y + "%";
+      img.style.transformOrigin = x + "% " + y + "%";
+      img.style.transform = zoom === 100 ? "" : "scale(" + (zoom / 100) + ")";
+      return;
+    }
+
+    img.style.objectFit = mode;
+    // Les reglages de recadrage ne doivent pas survivre a un changement
+    // de cadrage : sans cette remise a zero, une image passee de
+    // "Recadrer" a "Image entiere" resterait zoomee.
+    // The crop settings must not survive a framing change: without this
+    // reset, an image switched from "Crop" to "Whole image" would stay
+    // zoomed.
+    img.style.objectPosition = "";
+    img.style.transformOrigin = "";
+    img.style.transform = "";
   }
 
   ImageWidget._safeLink = safeLink;
   ImageWidget._applyFit = applyFit;
+  ImageWidget._pct = pct;
 
   window.PiBoard.registerWidget("image", ImageWidget);
 })();

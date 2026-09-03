@@ -251,4 +251,14 @@ console.log("== Defilement automatique des pages documente (1.89.0) ==")
 }
 console.log("  OK");
 
+console.log("== Tuile Image : recadrage documente (1.90.0) ==")
+{
+  const e = entryById("image");
+  assert.ok(/help-opt-name">Recadrer</.test(e.html.fr) && /help-opt-name">Crop</.test(e.html.en),
+    "le cadrage \"Recadrer\" doit figurer parmi les cadrages");
+  assert.ok(/fichier n'est pas modifié/.test(e.html.fr) && /file is not modified/.test(e.html.en),
+    "le fait que le fichier reste intact doit etre dit : c'est ce qui rend l'operation reversible");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");
