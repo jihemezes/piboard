@@ -1,0 +1,40 @@
+/* PiBoard - tuile Texte / Text tile.
+   Toutes les classes sont prefixees .pw-text : regle du projet, une
+   classe non cloisonnee finirait par percuter celle d'une autre tuile.
+   Every class is prefixed .pw-text: project rule, an unscoped class
+   eventually collides with another tile's. */
+.pw-text {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+}
+.pw-text-inner {
+  width: 100%;
+  line-height: 1.15;
+  /* Les retours a la ligne saisis dans les reglages sont conserves, et
+     un mot trop long est coupe plutot que de deborder de la tuile.
+     Line breaks typed in the settings are kept, and an over-long word is
+     broken rather than overflowing the tile. */
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pw-text-placeholder {
+  color: var(--faint);
+  font-style: italic;
+  font-size: 13px;
+  line-height: 1.4;
+  white-space: normal;
+}
+.pw-text.pw-text-shadow .pw-text-inner { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
+
+/* Positions horizontale et verticale / horizontal and vertical positions */
+.pw-text-h-left { justify-content: flex-start; }
+.pw-text-h-center { justify-content: center; }
+.pw-text-h-right { justify-content: flex-end; }
+.pw-text-v-top { align-items: flex-start; }
+.pw-text-v-middle { align-items: center; }
+.pw-text-v-bottom { align-items: flex-end; }
+.pw-text-h-left .pw-text-inner { text-align: left; }
+.pw-text-h-center .pw-text-inner { text-align: center; }
+.pw-text-h-right .pw-text-inner { text-align: right; }

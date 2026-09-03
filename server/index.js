@@ -121,6 +121,21 @@ const DEFAULT_SETTINGS = {
      never touched this setting must not end up installing trial
      versions. */
   updateChannel: "stable",
+  /* Mode d'affichage du tableau :
+       "classic"   : le mode historique -- un plateau, trois tiroirs
+                     escamotables, la barre d'outils en bas.
+       "dashboard" : une suite de pages qui se remplacent en glissant,
+                     sans tiroirs, avec un fin bandeau au bas de l'ecran.
+     "classic" par defaut : une installation existante ne doit pas
+     changer d'aspect a la faveur d'une mise a jour.
+     Board display mode:
+       "classic"   : the historical mode -- one board, three retractable
+                     drawers, the toolbar at the bottom.
+       "dashboard" : a series of pages replacing each other by sliding,
+                     no drawers, with a thin bar at the bottom.
+     "classic" by default: an existing installation must not change
+     appearance just because it was updated. */
+  displayMode: "classic",
   /* Cle CARTO des fonds de carte (tuiles Trafic, Radar, Avions).
      Vide par defaut, et il ne peut pas en etre autrement : CARTO
      delivre des cles PAR CLIENT, a ne pas partager entre projets sans
@@ -188,7 +203,18 @@ const DEFAULT_SETTINGS = {
   }
 };
 
-const DEFAULT_LAYOUT = { version: 1, tiles: [] };
+/* `tiles` est la page 1 (le plateau principal) ; `pages` contient les
+   pages suivantes du mode tableau de bord, chacune avec ses propres
+   tuiles. La page 1 n'est PAS recopiee dans `pages` : elle resterait
+   sinon dupliquee, avec la certitude qu'un jour les deux copies
+   divergent. Voir le commentaire du gestionnaire de pages dans
+   public/app.js.
+   `tiles` is page 1 (the main board); `pages` holds the dashboard mode's
+   following pages, each with its own tiles. Page 1 is NOT copied into
+   `pages`: it would otherwise stay duplicated, with the certainty that
+   one day the two copies diverge. See the page manager's comment in
+   public/app.js. */
+const DEFAULT_LAYOUT = { version: 1, tiles: [], pages: [] };
 
 /* ---------- Catalogue des widgets / widget catalog ---------- */
 

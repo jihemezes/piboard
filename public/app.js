@@ -852,6 +852,20 @@
     const content = rec.el.querySelector(".grid-stack-item-content");
     if (!content) return;
     const s = rec.conf.settings || {};
+    /* Tuile transparente : elle prend le fond de la page au lieu du
+       sien. Elle l'emporte sur la couleur personnalisee -- les deux sont
+       contradictoires, et c'est la transparence qui a ete demandee en
+       dernier dans ce cas.
+       Transparent tile: it takes the page's background instead of its
+       own. It wins over the custom color -- the two contradict each
+       other, and transparency is what was asked for last in that case. */
+    content.classList.toggle("tile-transparent", !!s._transparent);
+    if (s._transparent) {
+      content.style.backgroundColor = "";
+      content.style.color = "";
+      for (const prop of OVERRIDE_PROPS) content.style.removeProperty(prop);
+      return;
+    }
     if (s._customColor && s._bgColor) {
       content.style.backgroundColor = s._bgColor;
       // Le texte bascule automatiquement en clair ou en sombre selon la
@@ -931,8 +945,322 @@
      endroit. Target Gridstack grid for a given zone ("board" or
      "drawer-<side>"). Single entry point reused by mountTile,
      removeTile, etc. -- avoids rewriting the same lookup everywhere. */
+  /* ============================================================
+     MODE TABLEAU DE BORD : pages qui se remplacent en glissant
+     DASHBOARD MODE: pages that replace each other by sliding
+     ============================================================
+
+     DEUX MODES D'AFFICHAGE, choisis dans les reglages generaux :
+
+       "classic"   : le mode historique, inchange. Un seul plateau, trois
+                     tiroirs escamotables, la barre d'outils en bas.
+       "dashboard" : une suite de pages qui se remplacent, sans tiroirs,
+                     avec un fin bandeau en bas d'ecran.
+
+     COMMENT LES PAGES SONT RANGEES, et pourquoi ainsi. La page 1 EST le
+     plateau existant (`layout.tiles`) : elle n'est pas recopiee ailleurs.
+     Les pages suivantes vivent dans `layout.pages`, chacune avec ses
+     propres tuiles. Consequence voulue : un tableau existant devient une
+     page 1 sans aucune migration, et repasser en mode classique le
+     retrouve intact. L'inverse -- inventer un tableau `pages` contenant
+     AUSSI la page 1 -- aurait duplique la source de verite du plateau
+     principal, avec la garantie qu'un jour les deux divergent.
+
+     Les metadonnees de la page 1 (nom, transition) vivent dans
+     `layout.mainPage`, faute de pouvoir les ranger dans `layout.tiles`
+     qui est un tableau.
+
+     TOUTES LES PAGES SONT MONTEES en meme temps, pas seulement celle
+     qu'on regarde : une tuile Meteo de la page 3 doit avoir ses donnees
+     a jour quand la page arrive, pas commencer a les charger a ce
+     moment-la. C'est le comportement attendu d'un tableau de bord qui
+     defile. En contrepartie, ajouter des pages coute des ressources --
+     c'est un choix de l'utilisateur, et la planification horaire des
+     tuiles reste disponible pour endormir ce qui doit l'etre.
+
+     TWO DISPLAY MODES, chosen in the general settings:
+
+       "classic"   : the historical mode, unchanged. One board, three
+                     retractable drawers, the toolbar at the bottom.
+       "dashboard" : a series of pages replacing each other, no drawers,
+                     with a thin bar at the bottom of the screen.
+
+     HOW PAGES ARE STORED, and why this way. Page 1 IS the existing board
+     (`layout.tiles`): it is not copied anywhere else. Following pages
+     live in `layout.pages`, each with its own tiles. Intended
+     consequence: an existing board becomes page 1 with no migration at
+     all, and switching back to classic mode finds it intact. The
+     opposite -- inventing a `pages` array ALSO holding page 1 -- would
+     have duplicated the main board's source of truth, with the guarantee
+     that one day the two diverge.
+
+     Page 1's metadata (name, transition) lives in `layout.mainPage`,
+     for lack of anywhere to put it inside `layout.tiles`, which is an
+     array.
+
+     ALL PAGES ARE MOUNTED at once, not only the one being looked at: a
+     Weather tile on page 3 must have fresh data when the page arrives,
+     not start loading then. That is the expected behaviour of a
+     dashboard that cycles. In exchange, adding pages costs resources --
+     that is the user's choice, and per-tile scheduling remains available
+     to put to sleep whatever should be. */
+
+  const PAGE_DIRECTIONS = ["left", "right", "up", "down"];
+  const PAGE_EFFECTS = ["push", "cover", "uncover", "fade", "none"];
+  const PAGE_ANIM_MS = 520;
+
+  /* Pages secondaires (2..N) telles qu'enregistrees. La page 1 n'y est
+     pas : voir le commentaire ci-dessus.
+     Secondary pages (2..N) as saved. Page 1 is not in there: see the
+     comment above. */
+  let pages = [];                 // [{ id, name, transition, grid, el }]
+  let mainPage = { name: "", transition: { direction: "left", effect: "push" } };
+  let activePageIndex = 0;        // 0 = page 1 (le plateau) / 0 = page 1 (the board)
+  let pageAnimating = false;
+
+  function normalizeTransition(t) {
+    const src = t && typeof t === "object" ? t : {};
+    return {
+      direction: PAGE_DIRECTIONS.includes(src.direction) ? src.direction : "left",
+      effect: PAGE_EFFECTS.includes(src.effect) ? src.effect : "push"
+    };
+  }
+
+  function dashboardMode() {
+    return !!settings && settings.displayMode === "dashboard";
+  }
+
+  function pageCount() { return 1 + pages.length; }
+
+  /* Descripteur d'une page par son index : l'index 0 designe le plateau
+     principal, dont la zone est "board" et non "page:<id>".
+     Page descriptor by index: index 0 is the main board, whose zone is
+     "board" and not "page:<id>". */
+  function pageAt(index) {
+    if (index <= 0) {
+      return { index: 0, id: "main", zone: "board", el: $("board"), grid,
+        name: mainPage.name, transition: mainPage.transition };
+    }
+    const p = pages[index - 1];
+    return p ? { index, id: p.id, zone: "page:" + p.id, el: p.el, grid: p.grid,
+      name: p.name, transition: p.transition } : null;
+  }
+
+  function currentZone() {
+    if (!dashboardMode()) return null;
+    const p = pageAt(activePageIndex);
+    return p ? p.zone : "board";
+  }
+
+  function newPageId() {
+    return "pg-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+  }
+
+  /* Conteneur DOM + grille Gridstack d'une page secondaire. Cree une
+     seule fois par page, puis reutilise : reconstruire la grille a
+     chaque changement de page detruirait les tuiles montees dessus.
+     DOM container + Gridstack grid for a secondary page. Created once
+     per page, then reused: rebuilding the grid on every page change
+     would destroy the tiles mounted on it. */
+  function createPageElement(page) {
+    const el = document.createElement("main");
+    el.className = "board board-page";
+    el.id = "page-" + page.id;
+    el.dataset.pageId = page.id;
+    el.hidden = true;
+    const gs = document.createElement("div");
+    gs.className = "grid-stack";
+    gs.id = "pageGrid-" + page.id;
+    el.appendChild(gs);
+    document.body.insertBefore(el, $("dock"));
+
+    const pgGrid = GridStack.init({
+      column: COLS,
+      margin: 5,
+      float: true,
+      staticGrid: true,
+      resizable: { handles: "e,se,s,sw,w" },
+      alwaysShowResizeHandle: "mobile"
+    }, "#" + gs.id);
+    pgGrid.on("change", () => { if (editing) scheduleSave(); });
+    gs.addEventListener("click", (e) => {
+      if (!editing) return;
+      if (e.target.closest(".tile-btn")) return;
+      const item = e.target.closest(".grid-stack-item");
+      if (item && item.dataset.tileId) openTileSettings(item.dataset.tileId);
+    });
+    page.el = el;
+    page.grid = pgGrid;
+    return page;
+  }
+
+  function destroyPageElement(page) {
+    if (page.grid) { try { page.grid.destroy(false); } catch (e) { /* deja detruite / already destroyed */ } }
+    if (page.el && page.el.parentNode) page.el.parentNode.removeChild(page.el);
+    page.grid = null;
+    page.el = null;
+  }
+
+  /* ---------- Changement de page / page switch ----------
+     L'animation est portee par les DEUX conteneurs : la page qui part et
+     celle qui arrive. Les cinq effets se ramenent a deux transformations
+     et une opacite, ce qui evite cinq chemins de code separes :
+       push    : les deux glissent ensemble, comme une pellicule ;
+       cover   : la nouvelle glisse PAR-DESSUS l'ancienne, qui ne bouge pas ;
+       uncover : la nouvelle est deja dessous, l'ancienne s'en va ;
+       fade    : fondu, sans deplacement ;
+       none    : remplacement immediat.
+     La direction est celle du DEPLACEMENT DU REGARD : "vers la gauche"
+     veut dire que la nouvelle page arrive par la droite, comme quand on
+     tourne une page.
+
+     The animation is carried by BOTH containers: the outgoing page and
+     the incoming one. The five effects boil down to two transforms and
+     an opacity, which avoids five separate code paths:
+       push    : both slide together, like a film strip;
+       cover   : the new one slides OVER the old one, which stays put;
+       uncover : the new one is already underneath, the old one leaves;
+       fade    : cross-fade, no movement;
+       none    : immediate replacement.
+     The direction is the one the EYE travels: "to the left" means the
+     new page arrives from the right, like turning a page. */
+  function offsetFor(direction, sign) {
+    switch (direction) {
+      case "right": return `translateX(${-sign * 100}%)`;
+      case "up": return `translateY(${sign * 100}%)`;
+      case "down": return `translateY(${-sign * 100}%)`;
+      default: return `translateX(${sign * 100}%)`;   // "left"
+    }
+  }
+
+  function goToPage(index, options) {
+    const opts = options || {};
+    if (!dashboardMode()) return;
+    const total = pageCount();
+    if (total < 1) return;
+    // Bouclage : depuis la derniere page, "suivant" revient a la
+    // premiere -- c'est ce qu'on attend d'un tableau qui defile.
+    // Wrap-around: from the last page, "next" returns to the first --
+    // what one expects from a cycling board.
+    const target = ((index % total) + total) % total;
+    if (target === activePageIndex || pageAnimating) return;
+
+    const from = pageAt(activePageIndex);
+    const to = pageAt(target);
+    if (!from || !to) return;
+
+    /* La transition appliquee est celle de la page qui ARRIVE : chaque
+       page decrit la facon dont elle entre, ce qui rend le reglage
+       previsible quand on le modifie depuis cette page.
+       The applied transition is that of the INCOMING page: each page
+       describes how it enters, which makes the setting predictable when
+       edited from that page. */
+    const tr = normalizeTransition(to.transition);
+    // Reculer inverse le sens, sinon revenir en arriere donnerait
+    // l'impression d'avancer. Going back reverses the direction,
+    // otherwise stepping back would feel like moving forward.
+    const backwards = opts.backwards === true;
+    const dir = backwards ? oppositeDirection(tr.direction) : tr.direction;
+
+    activePageIndex = target;
+    renderPageIndicator();
+
+    if (tr.effect === "none" || opts.instant) {
+      from.el.hidden = true;
+      to.el.hidden = false;
+      finishPageSwitch(from, to);
+      return;
+    }
+
+    pageAnimating = true;
+    to.el.hidden = false;
+    const enterFrom = offsetFor(dir, 1);
+    const leaveTo = offsetFor(dir, -1);
+
+    // Etat de depart, sans transition : sinon le navigateur animerait
+    // aussi la MISE EN PLACE. Starting state, with no transition:
+    // otherwise the browser would also animate the SETUP.
+    for (const el of [from.el, to.el]) el.style.transition = "none";
+    from.el.style.zIndex = tr.effect === "cover" ? "1" : "2";
+    to.el.style.zIndex = tr.effect === "cover" ? "2" : "1";
+    to.el.style.transform = tr.effect === "fade" ? "none" : enterFrom;
+    to.el.style.opacity = tr.effect === "fade" ? "0" : "1";
+    from.el.style.transform = "none";
+    from.el.style.opacity = "1";
+    // Force le navigateur a prendre en compte l'etat de depart avant
+    // d'enchainer. Forces the browser to take the starting state into
+    // account before chaining. */
+    void to.el.offsetWidth;
+
+    for (const el of [from.el, to.el]) {
+      el.style.transition = `transform ${PAGE_ANIM_MS}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${PAGE_ANIM_MS}ms ease`;
+    }
+    to.el.style.transform = "none";
+    to.el.style.opacity = "1";
+    if (tr.effect === "push") from.el.style.transform = leaveTo;
+    else if (tr.effect === "uncover") from.el.style.transform = leaveTo;
+    else if (tr.effect === "fade") from.el.style.opacity = "0";
+    // "cover" : la page sortante ne bouge pas, la nouvelle passe dessus.
+    // "cover": the outgoing page does not move, the new one passes over.
+
+    setTimeout(() => {
+      for (const el of [from.el, to.el]) {
+        el.style.transition = "";
+        el.style.transform = "";
+        el.style.opacity = "";
+        el.style.zIndex = "";
+      }
+      from.el.hidden = true;
+      pageAnimating = false;
+      finishPageSwitch(from, to);
+    }, PAGE_ANIM_MS + 30);
+  }
+
+  function oppositeDirection(d) {
+    return { left: "right", right: "left", up: "down", down: "up" }[d] || "right";
+  }
+
+  /* Apres un changement de page, les tuiles de la page arrivee doivent
+     etre remesurees : celles qui se dimensionnent elles-memes (Citation,
+     Texte) ont ete montees dans un conteneur masque, donc de taille
+     nulle, et resteraient minuscules.
+     After a page switch, the arrived page's tiles must be re-measured:
+     those that size themselves (Quote, Text) were mounted in a hidden
+     container, hence of zero size, and would stay tiny. */
+  function finishPageSwitch(from, to) {
+    updateCellHeight();
+    window.dispatchEvent(new Event("resize"));
+    document.dispatchEvent(new CustomEvent("piboard:page", { detail: { index: to.index, id: to.id } }));
+  }
+
+  function renderPageIndicator() {
+    const wrap = $("dashPages");
+    if (!wrap) return;
+    const total = pageCount();
+    wrap.innerHTML = "";
+    for (let i = 0; i < total; i++) {
+      const p = pageAt(i);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "dash-page-dot" + (i === activePageIndex ? " active" : "");
+      b.dataset.pageIndex = String(i);
+      b.title = p && p.name ? p.name : i18n.t("dash.page") + " " + (i + 1);
+      b.setAttribute("aria-label", b.title);
+      b.innerHTML = `<span>${i + 1}</span>`;
+      onActivate(b, () => goToPage(i, { backwards: i < activePageIndex }));
+      wrap.appendChild(b);
+    }
+    // Un tableau d'une seule page n'a pas de navigation a montrer.
+    // A single-page board has no navigation to show.
+    wrap.hidden = total < 2;
+  }
+
   function gridForZone(zone) {
     if (!zone || zone === "board") return grid;
+    if (zone.startsWith("page:")) {
+      const p = pages.find((x) => x.id === zone.slice(5));
+      return p && p.grid ? p.grid : grid;
+    }
     const d = drawers.get(zone.replace(/^drawer-/, ""));
     return d ? d.grid : grid;
   }
@@ -1174,6 +1502,21 @@
         instanceId: rec.conf.id,
         manifest: rec.manifest,
         api: widgetApi,
+        /* Permet a une tuile d'ecrire l'un de SES PROPRES reglages, et
+           qu'il soit enregistre comme n'importe quel autre. Utilise par
+           la tuile Logo/Image, dont le choix du fichier se fait dans un
+           gestionnaire ouvert depuis la tuile, pas dans le formulaire de
+           reglages. Sans cela, le choix serait perdu au rechargement.
+           Lets a tile write one of ITS OWN settings, and have it saved
+           like any other. Used by the Logo/Image tile, whose file choice
+           happens in a manager opened from the tile, not in the settings
+           form. Without this the choice would be lost on reload. */
+        updateSettings(patch) {
+          if (!patch || typeof patch !== "object") return;
+          rec.conf.settings = Object.assign({}, rec.conf.settings, patch);
+          if (rec.instance) rec.instance.ctx.settings = Object.assign({}, rec.instance.ctx.settings, patch);
+          scheduleSave();
+        },
         i18n
       });
       rec.instance = instance;
@@ -1240,12 +1583,84 @@
     for (const d of drawers.values()) d.grid.removeAll();
   }
 
+  /* Aligne les pages en memoire sur celles du layout : cree les
+     conteneurs manquants, detruit ceux des pages disparues, et remet les
+     pages dans l'ordre enregistre. Les pages deja presentes sont
+     CONSERVEES telles quelles -- les recreer a chaque enregistrement
+     ferait clignoter tout le tableau a chaque deplacement de tuile.
+     Aligns the in-memory pages with the layout's: creates missing
+     containers, destroys those of vanished pages, and puts the pages
+     back in the saved order. Pages already present are KEPT as they are
+     -- recreating them on every save would flash the whole board on
+     every tile move. */
+  function syncPages(layout) {
+    const saved = Array.isArray(layout.pages) ? layout.pages : [];
+    mainPage = {
+      name: (layout.mainPage && typeof layout.mainPage.name === "string") ? layout.mainPage.name : "",
+      transition: normalizeTransition(layout.mainPage && layout.mainPage.transition)
+    };
+    const existing = new Map(pages.map((p) => [p.id, p]));
+    const next = [];
+    for (const raw of saved) {
+      const id = String(raw && raw.id || "").trim() || newPageId();
+      const page = existing.get(id) || createPageElement({ id });
+      existing.delete(id);
+      page.name = typeof raw.name === "string" ? raw.name : "";
+      page.transition = normalizeTransition(raw.transition);
+      page.tiles = Array.isArray(raw.tiles) ? raw.tiles : [];
+      next.push(page);
+    }
+    for (const gone of existing.values()) destroyPageElement(gone);
+    pages = next;
+    if (activePageIndex >= pageCount()) activePageIndex = 0;
+  }
+
+  /* Bascule entre le mode classique et le mode tableau de bord. Tout
+     passe par une classe sur <body> plutot que par des styles poses a la
+     main : le mode change l'apparence de plusieurs elements
+     (tiroirs, barre d'outils, bandeau), et une classe unique garantit
+     qu'ils basculent tous ensemble, sans etat intermediaire incoherent.
+     Switches between classic and dashboard mode. Everything goes through
+     a class on <body> rather than hand-applied styles: the mode changes
+     the appearance of several elements (drawers, toolbar, bar), and a
+     single class guarantees they all switch together, with no
+     inconsistent in-between state. */
+  function applyDisplayMode() {
+    const dash = dashboardMode();
+    document.body.classList.toggle("dashboard-mode", dash);
+    if (!dash) {
+      // Retour au mode classique : on revient a la page 1, sinon le
+      // plateau resterait masque derriere une page devenue invisible.
+      // Back to classic mode: return to page 1, otherwise the board
+      // would stay hidden behind a now-invisible page.
+      for (const p of pages) if (p.el) p.el.hidden = true;
+      $("board").hidden = false;
+      activePageIndex = 0;
+      return;
+    }
+    // En mode tableau de bord, les tiroirs n'existent pas : on les ferme
+    // pour qu'aucun ne reste ouvert par-dessus les pages.
+    // In dashboard mode drawers do not exist: we close them so none
+    // stays open over the pages.
+    for (const d of drawers.values()) d.el.classList.remove("open");
+    for (let i = 0; i < pageCount(); i++) {
+      const p = pageAt(i);
+      if (p && p.el) p.el.hidden = i !== activePageIndex;
+    }
+    renderPageIndicator();
+  }
+
   async function renderLayout(layout) {
     unmountAll();
+    syncPages(layout);
     grid.batchUpdate();
     for (const d of drawers.values()) d.grid.batchUpdate();
+    for (const p of pages) p.grid.batchUpdate();
 
     for (const conf of layout.tiles) await mountTile(conf, "board");
+    for (const p of pages) {
+      for (const conf of p.tiles || []) await mountTile(conf, "page:" + p.id);
+    }
     let anyDrawerTiles = false;
     for (const d of drawers.values()) {
       const saved = layout[d.def.layoutKey] || { [d.def.sizeKey]: d.def.defaultSizePct, tiles: [] };
@@ -1255,7 +1670,10 @@
 
     grid.batchUpdate(false);
     for (const d of drawers.values()) d.grid.batchUpdate(false);
+    for (const p of pages) p.grid.batchUpdate(false);
 
+    renderPageIndicator();
+    applyDisplayMode();
     $("boardEmpty").hidden = layout.tiles.length > 0;
     updateOverflow();
     for (const d of drawers.values()) {
@@ -1283,7 +1701,22 @@
   }
 
   function serializeLayout() {
-    const out = { tiles: serializeZone(grid, "board") };
+    const out = {
+      tiles: serializeZone(grid, "board"),
+      mainPage: { name: mainPage.name, transition: mainPage.transition },
+      /* Les pages sont enregistrees meme en mode classique : basculer
+         d'un mode a l'autre ne doit rien detruire, et une bascule faite
+         par erreur doit pouvoir etre annulee sans perte.
+         Pages are saved even in classic mode: switching from one mode to
+         the other must destroy nothing, and a switch made by mistake
+         must be undoable without loss. */
+      pages: pages.map((p) => ({
+        id: p.id,
+        name: p.name || "",
+        transition: p.transition,
+        tiles: p.grid ? serializeZone(p.grid, "page:" + p.id) : (p.tiles || [])
+      }))
+    };
     for (const d of drawers.values()) {
       out[d.def.layoutKey] = {
         [d.def.sizeKey]: d.sizePct,
@@ -1360,7 +1793,13 @@
     // always the one being actively looked at.
     const openSides = openDrawerSides();
     const activeSide = openSides.length ? openSides[openSides.length - 1] : null;
-    const zone = activeSide ? ("drawer-" + activeSide) : "board";
+    /* En mode tableau de bord, une nouvelle tuile atterrit sur la page
+       AFFICHEE, pas sur le plateau principal : ajouter une tuile depuis
+       la page 3 et la voir apparaitre sur la page 1 serait deroutant.
+       In dashboard mode a new tile lands on the DISPLAYED page, not on
+       the main board: adding a tile from page 3 and seeing it appear on
+       page 1 would be baffling. */
+    const zone = dashboardMode() ? currentZone() : (activeSide ? ("drawer-" + activeSide) : "board");
     const targetGrid = gridForZone(zone);
     const cols = COLS;
     const manifest = catalog.find((m) => m.id === widgetId);
@@ -1984,6 +2423,11 @@
         </label>
         ${textScaleField}
         <label class="field checkbox">
+          <input type="checkbox" data-key="_transparent" ${s._transparent ? "checked" : ""}>
+          <span>${i18n.t("tile.transparent")}</span>
+        </label>
+        <small class="field-hint">${i18n.t("tile.transparent.hint")}</small>
+        <label class="field checkbox">
           <input type="checkbox" data-key="_customColor" ${s._customColor ? "checked" : ""}>
           <span>${i18n.t("tile.customColor")}</span>
         </label>
@@ -2499,6 +2943,16 @@
        watches a consumption against a limit, even though the resource
        watched is not the machine's own. */
     { key: "system", ids: ["system", "speedtest", "networkscan", "aiusage"] },
+    /* Mise en page : les deux tuiles de STYLE, qui n'affichent aucune
+       donnee et servent a composer une page (titre, logo). Les ranger
+       dans "Divers" les aurait noyees parmi des tuiles d'information,
+       alors qu'on les cherche au moment precis ou l'on met en forme.
+       Page design: the two STYLE tiles, which display no data and serve
+       to compose a page (title, logo). Filing them under
+       "Miscellaneous" would have drowned them among information tiles,
+       whereas one looks for them at the very moment of laying a page
+       out. */
+    { key: "style", ids: ["text", "image"] },
     { key: "misc", ids: ["clock", "countdown", "quote"] }
   ];
 
@@ -2886,8 +3340,29 @@
 
   function renderUpdateState() {
     const st = updateStatus;
+    /* Le choix du niveau de mise a jour reste TOUJOURS visible : c'est
+       un reglage de l'utilisateur, applique aussi bien par le serveur
+       (Raspberry Pi / Linux) que par l'application de bureau Windows via
+       electron-updater. Seuls les boutons de verification et
+       d'installation, qui n'ont de sens que si le serveur gere ses
+       propres mises a jour, suivent l'etat "supported".
+       C'etait le defaut de la 1.85.0 : toute la section etait masquee
+       des que le serveur ne se mettait pas a jour lui-meme, et le
+       selecteur de canal devenait donc invisible dans l'application de
+       bureau -- alors meme qu'il la concerne.
+       The update level choice stays ALWAYS visible: it is a user
+       setting, applied both by the server (Raspberry Pi / Linux) and by
+       the Windows desktop application through electron-updater. Only the
+       check and install buttons, which only make sense if the server
+       handles its own updates, follow the "supported" state.
+       That was 1.85.0's flaw: the whole section was hidden as soon as
+       the server did not update itself, so the channel selector became
+       invisible in the desktop application -- the very place it applies
+       to. */
     const sup = !!st.supported;
-    $("secUpdates").hidden = !sup;
+    $("updServerControls").hidden = !sup;
+    $("updServerHint").hidden = !sup;
+    $("updDesktopHint").hidden = sup;
 
     /* Bandeau : uniquement hors installation, et pas apres un "Plus tard"
        sur cette meme version. Banner: only outside an install, and not
@@ -3125,6 +3600,104 @@
     }, 1500);
   }
 
+  /* ---------- Editeur de pages (reglages generaux) / pages editor ----------
+     Il agit directement sur les pages en memoire, puis enregistre : les
+     pages portent des tuiles montees, il n'est donc pas possible de les
+     reconstruire depuis un formulaire au moment de valider sans tout
+     demonter. Chaque modification est appliquee immediatement, comme le
+     redimensionnement d'un tiroir.
+     It acts directly on the in-memory pages, then saves: pages carry
+     mounted tiles, so they cannot be rebuilt from a form at validation
+     time without tearing everything down. Every change is applied
+     immediately, like resizing a drawer. */
+  function renderPagesEditor() {
+    const box = $("pagesEditor");
+    const list = $("pagesList");
+    if (!box || !list) return;
+    box.hidden = $("setDisplayMode").value !== "dashboard";
+    if (box.hidden) return;
+
+    const dirLabels = PAGE_DIRECTIONS.map((d) => [d, i18n.t("page.dir." + d)]);
+    const fxLabels = PAGE_EFFECTS.map((f) => [f, i18n.t("page.fx." + f)]);
+    list.innerHTML = "";
+    for (let i = 0; i < pageCount(); i++) {
+      const p = pageAt(i);
+      const row = document.createElement("div");
+      row.className = "page-row" + (i === 0 ? " page-main" : "");
+      row.innerHTML = `
+        <span class="page-row-num">${i + 1}</span>
+        <input type="text" data-role="name" value="${escapeHtmlAttr(p.name || "")}"
+               placeholder="${escapeHtmlAttr(i18n.t("dash.page") + " " + (i + 1))}">
+        <select data-role="dir">
+          ${dirLabels.map(([v, l]) => `<option value="${v}" ${p.transition.direction === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select>
+        <select data-role="fx">
+          ${fxLabels.map(([v, l]) => `<option value="${v}" ${p.transition.effect === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select>
+        <button type="button" class="btn small page-del" data-role="del"
+                title="${escapeHtmlAttr(i18n.t("settings.pages.delete"))}">&times;</button>`;
+      const target = i === 0 ? mainPage : pages[i - 1];
+      row.querySelector("[data-role=name]").addEventListener("input", (e) => {
+        target.name = e.target.value;
+        renderPageIndicator();
+        scheduleSave();
+      });
+      row.querySelector("[data-role=dir]").addEventListener("change", (e) => {
+        target.transition = normalizeTransition({ direction: e.target.value, effect: target.transition.effect });
+        scheduleSave();
+      });
+      row.querySelector("[data-role=fx]").addEventListener("change", (e) => {
+        target.transition = normalizeTransition({ direction: target.transition.direction, effect: e.target.value });
+        scheduleSave();
+      });
+      if (i > 0) {
+        onActivate(row.querySelector("[data-role=del]"), () => deletePage(i));
+      }
+      list.appendChild(row);
+    }
+  }
+
+  function addPage() {
+    const page = createPageElement({ id: newPageId() });
+    page.name = "";
+    page.transition = normalizeTransition(null);
+    page.tiles = [];
+    pages.push(page);
+    applyDisplayMode();
+    renderPagesEditor();
+    renderPageIndicator();
+    scheduleSave();
+  }
+
+  /* Supprimer une page detruit AUSSI ses tuiles : elles n'existent que
+     la. On demonte proprement chacune d'elles plutot que de retirer le
+     conteneur, sans quoi leurs minuteries et leurs connexions
+     continueraient de tourner dans le vide.
+     Deleting a page ALSO destroys its tiles: they exist nowhere else. We
+     unmount each of them cleanly rather than removing the container,
+     otherwise their timers and connections would keep running into the
+     void. */
+  function deletePage(index) {
+    const p = pages[index - 1];
+    if (!p) return;
+    const zone = "page:" + p.id;
+    const count = Array.from(tiles.values()).filter((r) => r.zone === zone).length;
+    const label = p.name || (i18n.t("dash.page") + " " + (index + 1));
+    if (count > 0 && !window.confirm(i18n.t("settings.pages.confirmDelete").replace("{n}", count).replace("{name}", label))) return;
+    for (const [id, rec] of Array.from(tiles.entries())) {
+      if (rec.zone !== zone) continue;
+      destroyInstance(rec);
+      tiles.delete(id);
+    }
+    destroyPageElement(p);
+    pages.splice(index - 1, 1);
+    if (activePageIndex >= pageCount()) activePageIndex = 0;
+    applyDisplayMode();
+    renderPagesEditor();
+    renderPageIndicator();
+    scheduleSave();
+  }
+
   function fillUpdatesForm() {
     renderUpdateState();
   }
@@ -3154,6 +3727,8 @@
     $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
     $("setCartoKey").value = settings.cartoKey || "";
     $("setUpdateChannel").value = settings.updateChannel === "preview" ? "preview" : "stable";
+    $("setDisplayMode").value = settings.displayMode === "dashboard" ? "dashboard" : "classic";
+    renderPagesEditor();
     // Couverture des tiroirs : lue depuis leur etat reel (persiste via
     // le layout, pas les reglages generaux -- voir le commentaire sur
     // les ecouteurs "change" plus bas) plutot que dupliquee ici.
@@ -3192,6 +3767,7 @@
       quickStartOnLaunch: $("setQuickStart").checked,
       cartoKey: $("setCartoKey").value.trim(),
       updateChannel: $("setUpdateChannel").value === "preview" ? "preview" : "stable",
+      displayMode: $("setDisplayMode").value === "dashboard" ? "dashboard" : "classic",
       colors: {
         dark: { bg: $("setDarkBg").value, tile: $("setDarkTile").value },
         light: { bg: $("setLightBg").value, tile: $("setLightTile").value }
@@ -4021,12 +4597,54 @@
       credits: i18n.t("help.group.credits")
     };
 
+    /* ---------- Sommaire : les tuiles reprennent les familles du catalogue
+       La section "Tuiles" comptait une trentaine d'entrees a la file, dans
+       un ordre qui n'etait celui d'aucune autre partie de l'application :
+       on cherchait la fiche d'une tuile en parcourant toute la liste.
+       Elle est desormais decoupee selon les MEMES familles que le
+       catalogue d'ajout de tuiles (CATALOG_FAMILIES) -- une seule
+       classification a apprendre, et la fiche se trouve la ou l'on avait
+       trouve la tuile.
+       ---------- Sidebar: tiles follow the catalog's families
+       The "Tiles" section listed some thirty entries in a row, in an
+       order matching no other part of the application: finding a tile's
+       page meant scanning the whole list. It is now split along the SAME
+       families as the tile-adding catalog (CATALOG_FAMILIES) -- one
+       single classification to learn, and the page is found where the
+       tile was found. */
+    const familyOfTile = new Map();
+    for (const fam of CATALOG_FAMILIES) for (const id of fam.ids) familyOfTile.set(id, fam.key);
+    // Les fiches de tuile portent l'identifiant du widget comme id de
+    // section : c'est ce qui permet ce rapprochement sans table
+    // supplementaire a tenir a jour.
+    // Tile pages carry the widget id as their section id: that is what
+    // makes this matching possible with no extra table to maintain.
+    const tileFamilyOrder = CATALOG_FAMILIES.map((f) => f.key).concat(["misc"]);
+    const sortedSections = sections.slice().sort((a, b) => {
+      if (a.group !== "tiles" || b.group !== "tiles") return 0;
+      const fa = tileFamilyOrder.indexOf(familyOfTile.get(a.id) || "misc");
+      const fb = tileFamilyOrder.indexOf(familyOfTile.get(b.id) || "misc");
+      return fa - fb;
+    });
+
     const nav = $("helpNav");
-    let lastGroup = null;
-    const itemsHtml = sections.map((sec) => {
-      const groupHtml = sec.group !== lastGroup
-        ? `<div class="help-nav-group" data-help-group="${sec.group}">${groupLabels[sec.group] || sec.group}</div>` : "";
-      lastGroup = sec.group;
+    let lastHeading = null;
+    const itemsHtml = sortedSections.map((sec) => {
+      /* Dans la section des tuiles, l'intitule affiche est celui de la
+         FAMILLE ; ailleurs, celui du groupe d'aide. Une tuile absente de
+         toute famille retombe sur "Divers", comme dans le catalogue --
+         jamais omise. In the tiles section the displayed heading is the
+         FAMILY's; elsewhere, the help group's. A tile missing from every
+         family falls back to "Miscellaneous", as in the catalog -- never
+         dropped. */
+      const isTile = sec.group === "tiles";
+      const key = isTile ? ("family:" + (familyOfTile.get(sec.id) || "misc")) : sec.group;
+      const label = isTile
+        ? i18n.t("catalog.family." + (familyOfTile.get(sec.id) || "misc"))
+        : (groupLabels[sec.group] || sec.group);
+      const groupHtml = key !== lastHeading
+        ? `<div class="help-nav-group${isTile ? " help-nav-family" : ""}" data-help-group="${key}">${label}</div>` : "";
+      lastHeading = key;
       return groupHtml +
         `<button type="button" class="help-nav-item" data-help-id="${sec.id}" data-help-search="${normalizeSearch(i18n.fromManifest(sec.title))}">${i18n.fromManifest(sec.title)}</button>`;
     }).join("");
@@ -4428,6 +5046,14 @@
     // Mode tactile : cibles agrandies via CSS (voir body.touch dans style.css)
     // Touch mode: enlarged targets via CSS (see body.touch in style.css)
     document.body.classList.toggle("touch", !!settings.touchMode);
+    // Le bandeau du mode tableau de bord a besoin de savoir s'il est en
+    // tactile pour afficher sa languette : la classe "touch" existante
+    // sert de source unique, dupliquee sous le nom attendu par le CSS du
+    // bandeau. The dashboard bar needs to know whether it is in touch
+    // mode to show its tab: the existing "touch" class is the single
+    // source, mirrored under the name the bar's CSS expects.
+    document.body.classList.toggle("touch-mode", !!settings.touchMode);
+    applyDisplayMode();
     vkb.setLang(settings.lang);
     vkb.setEnabled(!!settings.keyboardEnabled);
     applyTheme();
@@ -4703,6 +5329,14 @@
     // never on load: after a restart, the "Touch mode" checkbox stayed
     // checked but its effect wasn't applied until settings were re-saved.
     document.body.classList.toggle("touch", !!settings.touchMode);
+    // Le bandeau du mode tableau de bord a besoin de savoir s'il est en
+    // tactile pour afficher sa languette : la classe "touch" existante
+    // sert de source unique, dupliquee sous le nom attendu par le CSS du
+    // bandeau. The dashboard bar needs to know whether it is in touch
+    // mode to show its tab: the existing "touch" class is the single
+    // source, mirrored under the name the bar's CSS expects.
+    document.body.classList.toggle("touch-mode", !!settings.touchMode);
+    applyDisplayMode();
 
     catalog = await apiGet("/api/widgets");
     await Promise.all(catalog.map(loadWidgetAssets));
@@ -4710,6 +5344,83 @@
     await renderLayout(await apiGet("/api/layout"));
 
     initSse();
+
+    /* ---------- Bandeau du mode tableau de bord / dashboard bar ----------
+       Le bandeau sort au survol de la bande de quelques pixels au bas de
+       l'ecran, et rentre des que la souris quitte l'ensemble. En mode
+       tactile, la languette permanente prend le relais du survol, qui
+       n'existe pas au doigt.
+       The bar comes out when the few-pixel strip at the bottom of the
+       screen is hovered, and goes back in as soon as the mouse leaves the
+       whole thing. In touch mode, the permanent tab takes over from
+       hovering, which does not exist with a finger. */
+    let dashHideTimer = null;
+    function showDashBar(show) {
+      clearTimeout(dashHideTimer);
+      document.body.classList.toggle("dash-open", !!show);
+    }
+    function scheduleDashHide() {
+      clearTimeout(dashHideTimer);
+      // Petit delai : sans lui, le bandeau disparaitrait pendant le
+      // trajet de la souris entre la bande de declenchement et un
+      // bouton, ce qui le rendrait inutilisable.
+      // Short delay: without it the bar would vanish while the mouse
+      // travels from the trigger strip to a button, making it unusable.
+      dashHideTimer = setTimeout(() => document.body.classList.remove("dash-open"), 320);
+    }
+    $("dashHotzone").addEventListener("mouseenter", () => showDashBar(true));
+    $("dashBar").addEventListener("mouseenter", () => showDashBar(true));
+    $("dashBar").addEventListener("mouseleave", scheduleDashHide);
+    $("dashHotzone").addEventListener("mouseleave", scheduleDashHide);
+    onActivate($("dashTab"), () => showDashBar(true));
+    onActivate($("dashPrev"), () => goToPage(activePageIndex - 1, { backwards: true }));
+    onActivate($("dashNext"), () => goToPage(activePageIndex + 1));
+    onActivate($("dashAdd"), openCatalog);
+    onActivate($("dashEdit"), () => toggleEdit());
+    onActivate($("dashSettings"), openSettings);
+    onActivate($("dashHelp"), openHelp);
+
+    /* Glissement du doigt pour changer de page. Le seuil evite qu'un
+       simple appui un peu traine sur une tuile ne fasse defiler la page,
+       et l'axe dominant evite qu'un defilement vertical dans une tuile ne
+       soit pris pour un changement de page.
+       Finger swipe to change page. The threshold prevents a slightly
+       dragged tap on a tile from scrolling the page, and the dominant
+       axis prevents vertical scrolling inside a tile from being taken
+       for a page change. */
+    let touchStart = null;
+    document.addEventListener("touchstart", (e) => {
+      if (!dashboardMode() || editing || e.touches.length !== 1) { touchStart = null; return; }
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (!touchStart || !dashboardMode() || editing) return;
+      const end = e.changedTouches && e.changedTouches[0];
+      const start = touchStart;
+      touchStart = null;
+      if (!end) return;
+      const dx = end.clientX - start.x;
+      const dy = end.clientY - start.y;
+      if (Date.now() - start.t > 900) return;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      goToPage(activePageIndex + (dx < 0 ? 1 : -1), { backwards: dx > 0 });
+    }, { passive: true });
+
+    /* Fleches du clavier : indispensable pour une telecommande de
+       presentation ou un clavier sans fil pose a cote d'un ecran mural.
+       Ignorees des qu'un champ a le focus, sinon taper dans un reglage
+       ferait defiler les pages.
+       Keyboard arrows: indispensable for a presentation remote or a
+       wireless keyboard next to a wall screen. Ignored as soon as a field
+       has focus, otherwise typing in a setting would scroll the pages. */
+    document.addEventListener("keydown", (e) => {
+      if (!dashboardMode() || editing) return;
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (document.querySelector(".modal:not([hidden])")) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goToPage(activePageIndex + 1); }
+      else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); goToPage(activePageIndex - 1, { backwards: true }); }
+    });
 
     /* Dock */
     onActivate($("dockTab"), () => showDockBar(true));
@@ -4731,6 +5442,8 @@
     onActivate($("btnExit"), () => openExitMenu());
     onActivate($("exitOptionReset"), () => resetDashboard());
     onActivate($("exitOptionDesktop"), () => exitToDesktop());
+    $("setDisplayMode").addEventListener("change", renderPagesEditor);
+    onActivate($("pageAddBtn"), () => addPage());
     onActivate($("updCheckBtn"), () => checkForUpdatesNow());
     onActivate($("updApplyBtn"), () => openUpdateModal());
     onActivate($("updateBannerInstall"), () => openUpdateModal());

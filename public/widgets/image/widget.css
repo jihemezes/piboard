@@ -1,0 +1,83 @@
+/* PiBoard - tuile Logo / Image. Classes cloisonnees sous .pw-image.
+   PiBoard - Logo / Image tile. Classes namespaced under .pw-image. */
+.pw-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.pw-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  /* La largeur et la hauteur sont pilotees par le cadrage choisi (voir
+     applyFit dans widget.js) ; rien n'est fixe ici pour ne pas entrer en
+     conflit avec lui.
+     Width and height are driven by the chosen framing (see applyFit in
+     widget.js); nothing is fixed here so as not to conflict with it. */
+}
+.pw-image-h-left { justify-content: flex-start; }
+.pw-image-h-center { justify-content: center; }
+.pw-image-h-right { justify-content: flex-end; }
+.pw-image-v-top { align-items: flex-start; }
+.pw-image-v-middle { align-items: center; }
+.pw-image-v-bottom { align-items: flex-end; }
+.pw-image-link { cursor: pointer; }
+
+.pw-image-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--faint);
+  font-size: 12.5px;
+  text-align: center;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.pw-image-empty svg { width: 26px; height: 26px; opacity: 0.7; }
+.pw-image-empty .btn { pointer-events: auto; }
+
+/* Gestionnaire d'image (fenetre ouverte depuis les reglages de la tuile)
+   Image manager (window opened from the tile's settings) */
+.pw-image-manager .modal-card { width: min(560px, 96vw); }
+.pw-image-mgr-body { padding: 6px 18px 14px; }
+.pw-image-mgr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  max-height: 46vh;
+  overflow: auto;
+}
+.pw-image-thumb {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  aspect-ratio: 4 / 3;
+  cursor: pointer;
+}
+.pw-image-thumb.selected { border-color: var(--accent); }
+.pw-image-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pw-image-thumb-del {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pw-image-mgr-empty { color: var(--muted); font-size: 13px; margin: 14px 0; }
+.pw-image-mgr-status { color: var(--muted); font-size: 12.5px; margin-top: 8px; }

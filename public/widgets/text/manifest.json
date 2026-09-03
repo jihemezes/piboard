@@ -1,0 +1,299 @@
+{
+  "id": "text",
+  "dir": "text",
+  "version": "0.1.0",
+  "name": {
+    "en": "Text",
+    "fr": "Texte"
+  },
+  "tagline": {
+    "en": "A title or a line of text, placed where you want it.",
+    "fr": "Un titre ou une ligne de texte, placé où vous voulez."
+  },
+  "description": {
+    "en": "A style tile: displays free text (a page title, a section heading, a caption) with the font, size, weight, color and alignment of your choice. Combined with the transparent background it lets you title a page without any visible frame. Works in both classic and dashboard modes.",
+    "fr": "Une tuile de style : affiche un texte libre (titre de page, intitulé de section, légende) avec la police, la taille, la graisse, la couleur et l'alignement de votre choix. Associée au fond transparent, elle permet de titrer une page sans aucun cadre visible. Fonctionne aussi bien en mode classique qu'en mode tableau de bord."
+  },
+  "size": {
+    "w": 4,
+    "h": 1,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 12,
+    "maxH": 8
+  },
+  "settings": [
+    {
+      "key": "text",
+      "type": "textarea",
+      "default": "",
+      "label": {
+        "en": "Text",
+        "fr": "Texte"
+      },
+      "hint": {
+        "en": "One or more lines. Line breaks are kept.",
+        "fr": "Une ou plusieurs lignes. Les retours à la ligne sont conservés."
+      }
+    },
+    {
+      "key": "font",
+      "type": "select",
+      "default": "sans",
+      "label": {
+        "en": "Font",
+        "fr": "Police"
+      },
+      "options": [
+        {
+          "value": "sans",
+          "label": {
+            "en": "Interface (sans-serif)",
+            "fr": "Interface (sans empattement)"
+          }
+        },
+        {
+          "value": "serif",
+          "label": {
+            "en": "Serif",
+            "fr": "Avec empattements"
+          }
+        },
+        {
+          "value": "mono",
+          "label": {
+            "en": "Monospaced",
+            "fr": "Chasse fixe"
+          }
+        },
+        {
+          "value": "condensed",
+          "label": {
+            "en": "Condensed",
+            "fr": "Condensée"
+          }
+        },
+        {
+          "value": "cursive",
+          "label": {
+            "en": "Handwritten",
+            "fr": "Manuscrite"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Only fonts present on the machine are used. On a Raspberry Pi the choice is narrower than on a PC: each option falls back to the closest family available.",
+        "fr": "Seules les polices présentes sur la machine sont utilisées. Sur un Raspberry Pi le choix est plus étroit que sur un PC : chaque option retombe sur la famille la plus proche disponible."
+      }
+    },
+    {
+      "key": "sizeMode",
+      "type": "select",
+      "default": "fit",
+      "label": {
+        "en": "Size",
+        "fr": "Taille"
+      },
+      "options": [
+        {
+          "value": "fit",
+          "label": {
+            "en": "Fit the tile",
+            "fr": "S'adapter à la tuile"
+          }
+        },
+        {
+          "value": "fixed",
+          "label": {
+            "en": "Fixed size",
+            "fr": "Taille fixe"
+          }
+        }
+      ],
+      "hint": {
+        "en": "\"Fit\" recomputes the size whenever the tile is resized: the text always fills it without overflowing. \"Fixed\" keeps the size below, whatever the tile's size.",
+        "fr": "« S'adapter » recalcule la taille à chaque redimensionnement de la tuile : le texte la remplit toujours sans déborder. « Fixe » conserve la taille ci-dessous, quelle que soit la taille de la tuile."
+      }
+    },
+    {
+      "key": "fontSize",
+      "type": "number",
+      "default": 32,
+      "min": 8,
+      "max": 300,
+      "step": 1,
+      "label": {
+        "en": "Fixed size (px)",
+        "fr": "Taille fixe (px)"
+      }
+    },
+    {
+      "key": "weight",
+      "type": "select",
+      "default": "600",
+      "label": {
+        "en": "Weight",
+        "fr": "Graisse"
+      },
+      "options": [
+        {
+          "value": "300",
+          "label": {
+            "en": "Light",
+            "fr": "Fine"
+          }
+        },
+        {
+          "value": "400",
+          "label": {
+            "en": "Regular",
+            "fr": "Normale"
+          }
+        },
+        {
+          "value": "600",
+          "label": {
+            "en": "Semi-bold",
+            "fr": "Demi-grasse"
+          }
+        },
+        {
+          "value": "800",
+          "label": {
+            "en": "Bold",
+            "fr": "Grasse"
+          }
+        }
+      ]
+    },
+    {
+      "key": "italic",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Italic",
+        "fr": "Italique"
+      }
+    },
+    {
+      "key": "uppercase",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Uppercase",
+        "fr": "Majuscules"
+      }
+    },
+    {
+      "key": "letterSpacing",
+      "type": "number",
+      "default": 0,
+      "min": -5,
+      "max": 30,
+      "step": 0.5,
+      "label": {
+        "en": "Letter spacing (px)",
+        "fr": "Espacement des lettres (px)"
+      }
+    },
+    {
+      "key": "useCustomColor",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Custom text color",
+        "fr": "Couleur de texte personnalisée"
+      },
+      "hint": {
+        "en": "Unticked, the text follows the board's theme and switches with day/night mode.",
+        "fr": "Décochée, le texte suit le thème du tableau et bascule avec le mode jour/nuit."
+      }
+    },
+    {
+      "key": "color",
+      "type": "color",
+      "default": "#F2F5FA",
+      "label": {
+        "en": "Text color",
+        "fr": "Couleur du texte"
+      }
+    },
+    {
+      "key": "align",
+      "type": "select",
+      "default": "center",
+      "label": {
+        "en": "Horizontal position",
+        "fr": "Position horizontale"
+      },
+      "options": [
+        {
+          "value": "left",
+          "label": {
+            "en": "Left",
+            "fr": "Gauche"
+          }
+        },
+        {
+          "value": "center",
+          "label": {
+            "en": "Centered",
+            "fr": "Centrée"
+          }
+        },
+        {
+          "value": "right",
+          "label": {
+            "en": "Right",
+            "fr": "Droite"
+          }
+        }
+      ]
+    },
+    {
+      "key": "valign",
+      "type": "select",
+      "default": "middle",
+      "label": {
+        "en": "Vertical position",
+        "fr": "Position verticale"
+      },
+      "options": [
+        {
+          "value": "top",
+          "label": {
+            "en": "Top",
+            "fr": "Haut"
+          }
+        },
+        {
+          "value": "middle",
+          "label": {
+            "en": "Middle",
+            "fr": "Milieu"
+          }
+        },
+        {
+          "value": "bottom",
+          "label": {
+            "en": "Bottom",
+            "fr": "Bas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "shadow",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Text shadow",
+        "fr": "Ombre portée"
+      },
+      "hint": {
+        "en": "Useful when the tile is transparent over a light background photo.",
+        "fr": "Utile quand la tuile est transparente au-dessus d'une photo de fond claire."
+      }
+    }
+  ]
+}

@@ -1,6 +1,6 @@
 {
   "id": "clock",
-  "version": "0.7.3",
+  "version": "0.8.0",
   "name": {
     "en": "Clock",
     "fr": "Horloge"
@@ -339,6 +339,40 @@
       "emptyLabel": {
         "en": "— Not used —",
         "fr": "— Non utilisé —"
+      }
+    },
+    {
+      "key": "showSun",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show sunrise and sunset",
+        "fr": "Afficher le lever et le coucher du soleil"
+      },
+      "hint": {
+        "en": "Computed locally from the board's city (general settings), with no network call. If the clock shows another time zone, the times are shown in that zone.",
+        "fr": "Calculés localement d'après la ville du tableau (réglages généraux), sans aucun appel réseau. Si l'horloge affiche un autre fuseau, les heures sont affichées dans ce fuseau."
+      },
+      "group": {
+        "en": "Sunrise & sunset",
+        "fr": "Lever & coucher du soleil"
+      }
+    },
+    {
+      "key": "sunDayLength",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Also show the length of the day",
+        "fr": "Afficher aussi la durée du jour"
+      },
+      "hint": {
+        "en": "Adds the time between sunrise and sunset.",
+        "fr": "Ajoute le temps écoulé entre le lever et le coucher."
+      },
+      "group": {
+        "en": "Sunrise & sunset",
+        "fr": "Lever & coucher du soleil"
       }
     },
     {

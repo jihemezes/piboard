@@ -51,6 +51,15 @@
     return UV_BANDS.find((b) => uv <= b.max) || UV_BANDS[UV_BANDS.length - 1];
   }
 
+  /* Fleches lever / coucher : le meme disque, la fleche vers le haut ou
+     vers le bas. Deux pictogrammes distincts (soleil levant / couchant)
+     seraient indiscernables a la taille de la tuile.
+     Sunrise / sunset arrows: the same disc, the arrow up or down. Two
+     distinct pictograms (rising / setting sun) would be
+     indistinguishable at the tile's size. */
+  const SUN_UP_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v5"/><path d="m9 6 3-3 3 3"/><path d="M4 18h16"/><path d="M7 18a5 5 0 0 1 10 0"/></svg>';
+  const SUN_DOWN_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 8V3"/><path d="m9 5 3 3 3-3"/><path d="M4 18h16"/><path d="M7 18a5 5 0 0 1 10 0"/></svg>';
+
   function fmtTime(iso, locale) {
     return new Date(iso).toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   }
@@ -347,6 +356,24 @@
       // "Rain in ~X min" line: only shown on the compact tile when rain
       // is actually imminent (within the coming hour), not permanently
       // -- as requested.
+      /* Lever et coucher du soleil sur la tuile (option). Les heures
+         viennent de la requete "etendue", qui est faite de toute facon
+         pour la fenetre de detail : activer l'option n'ajoute donc
+         AUCUN appel reseau. Elles sont absentes tant que cette requete
+         n'a pas abouti (fournisseur personnalise ne les fournissant pas,
+         panne passagere) -- la ligne est alors simplement omise plutot
+         que d'afficher des tirets.
+         Sunrise and sunset on the tile (option). The times come from the
+         "extended" request, which is made anyway for the detail window:
+         turning the option on therefore adds NO network call. They are
+         absent as long as that request has not succeeded (a custom
+         provider not supplying them, a passing outage) -- the line is
+         then simply omitted rather than showing dashes. */
+      const sunLine = (s.showSun && d.dayExt && d.dayExt.sunrise && d.dayExt.sunrise[0] && d.dayExt.sunset && d.dayExt.sunset[0])
+        ? `<div class="pww-sun"><span class="pww-sun-item">${SUN_UP_SVG}${fmtTime(d.dayExt.sunrise[0], d.lang === "fr" ? "fr-FR" : "en-GB")}</span>`
+          + `<span class="pww-sun-item">${SUN_DOWN_SVG}${fmtTime(d.dayExt.sunset[0], d.lang === "fr" ? "fr-FR" : "en-GB")}</span></div>`
+        : "";
+
       const rainSoonLine = rainSoonMinutes
         ? `<div class="pww-rainsoon">🌧 ${this.ctx.i18n.t("weather.rainSoon").replace("{n}", rainSoonMinutes)}</div>`
         : "";
@@ -358,6 +385,7 @@
           <div class="pww-temp">${Math.round(cur.temperature_2m)}°</div>
           <div class="pww-city">${name} — ${today.label}</div>
           <div class="pww-extra">${Math.round(day.temperature_2m_min[0])}° / ${Math.round(day.temperature_2m_max[0])}°${wind}</div>
+          ${sunLine}
           ${rainSoonLine}
           ${saintLine}
         </div>`;

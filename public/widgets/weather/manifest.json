@@ -1,6 +1,6 @@
 {
   "id": "weather",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "name": {
     "en": "Weather",
     "fr": "Météo"
@@ -128,6 +128,19 @@
       "label": {
         "en": "Show wind",
         "fr": "Afficher le vent"
+      }
+    },
+    {
+      "key": "showSun",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show sunrise and sunset",
+        "fr": "Afficher le lever et le coucher du soleil"
+      },
+      "hint": {
+        "en": "Adds a line with today's sunrise and sunset times to the tile. These times are always shown in the detail window, whatever this option.",
+        "fr": "Ajoute à la tuile une ligne avec les heures de lever et de coucher du soleil du jour. Ces heures figurent de toute façon dans la fenêtre de détail, quelle que soit cette option."
       }
     },
     {

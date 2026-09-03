@@ -43,6 +43,8 @@ The catalog groups them by family — the same grouping you see when adding a ti
 
 **System & network** — system status (CPU/RAM/disk/temperature, network adapter IP addresses with a full configuration window — gateway, DHCP, lease, DNS, domain suffix — and live usage charts on tap), **Internet health** (latency, jitter and packet loss measured continuously by the server, 24 h curve with outages flagged, periodic capped speed tests, and on-demand CSV archiving), network scan (pings the local subnet, cross-checked against the ARP table, lists active hosts), **AI usage** (progress bars for your Claude account limits — the 5-hour and 7-day windows — with reset times; percentages come from the provider, nothing is estimated).
 
+**Page design** — **text** (a page title or a caption: font, size that either fits the tile or stays fixed, weight, colour, position), **logo/image** (an image stored on the PiBoard machine itself, uploaded from the tile: framing, position, rounding, opacity, optional link). Both are *style* tiles: they display no data, they are there to compose a page — and combined with the new transparent background they let you title a page without any visible frame.
+
 **Miscellaneous** — countdown/timer (screen flash, beep, notification webhook), quote of the day (offline, auto-fit text).
 
 All of them can be added, configured, resized and removed from the tile catalog — see [docs/WIDGETS.md](docs/WIDGETS.md) to write your own, or the in-app help (the "?" button) for a full guide to each one.

@@ -21,6 +21,10 @@
    update in the background. The repository must be PUBLIC: a private
    one would require embedding an access token in the distributed
    application.
+   The "Updates to install" setting of the general settings applies here
+   too, through `allowPrerelease` (see applyChannel below): the same
+   choice governs the Raspberry Pi and the desktop application.
+
    On Windows this mechanism entirely replaces the ZIP-archive system
    dropped into ~/updates/. That system remains the Raspberry Pi's
    update channel, where Electron plays no part.
@@ -39,6 +43,41 @@ const { autoUpdater } = require("electron-updater");
    and a wall dashboard has no urgency to update itself. */
 autoUpdater.autoDownload = false;
 autoUpdater.autoInstallOnAppQuit = true;
+
+/* Niveau des mises a jour, choisi dans les reglages generaux
+   ("Mises a jour a installer") et partage avec le serveur : le meme
+   reglage vaut pour le Raspberry Pi et pour l'application de bureau.
+   `allowPrerelease` dit a electron-updater d'accepter aussi les
+   releases marquees "Pre-release" sur GitHub.
+
+   Le reglage est relu AVANT CHAQUE verification plutot que fixe au
+   demarrage : le changer dans les reglages doit prendre effet sans
+   redemarrer l'application. Une lecture qui echoue (fichier absent au
+   tout premier lancement) retombe sur "stable" -- jamais sur les
+   pre-versions par defaut.
+
+   Update level, chosen in the general settings ("Updates to install")
+   and shared with the server: the same setting applies to the Raspberry
+   Pi and to the desktop application. `allowPrerelease` tells
+   electron-updater to also accept releases marked "Pre-release" on
+   GitHub.
+
+   The setting is re-read BEFORE EVERY check rather than fixed at
+   startup: changing it in the settings must take effect without
+   restarting the application. A failed read (file absent on the very
+   first launch) falls back to "stable" -- never to pre-releases by
+   default. */
+function applyChannel() {
+  let channel = "stable";
+  try {
+    channel = (require("../server/store").read("settings", {}) || {}).updateChannel || "stable";
+  } catch (e) {
+    // Reglages illisibles : on s'en tient au canal stable.
+    // Unreadable settings: we stick to the stable channel.
+  }
+  autoUpdater.allowPrerelease = channel === "preview";
+  return autoUpdater.allowPrerelease;
+}
 
 let wired = false;
 let manualCheck = false;
@@ -158,6 +197,7 @@ function initAutoUpdate(windowGetter) {
   wireEvents();
   setTimeout(() => {
     manualCheck = false;
+    applyChannel();
     autoUpdater.checkForUpdates().catch(() => { /* signale par l'evenement error / reported by the error event */ });
   }, STARTUP_DELAY_MS);
 }
@@ -180,7 +220,8 @@ function checkForUpdatesManually(win) {
 
   wireEvents();
   manualCheck = true;
+  applyChannel();
   autoUpdater.checkForUpdates().catch(() => { /* signale par l'evenement error / reported by the error event */ });
 }
 
-module.exports = { initAutoUpdate, checkForUpdatesManually };
+module.exports = { initAutoUpdate, checkForUpdatesManually, applyChannel };

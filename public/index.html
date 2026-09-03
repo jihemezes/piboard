@@ -11,7 +11,7 @@
 </head>
 <body data-theme="dark">
 
-<main class="board">
+<main class="board" id="board">
   <div class="grid-stack" id="grid"></div>
   <p class="board-empty" id="boardEmpty" hidden>
     <span data-i18n="board.empty">Your board is empty. Open the toolbar below and add your first tile.</span>
@@ -61,6 +61,52 @@
 </aside>
 
 <!-- Languette + barre d'outils / pull tab + toolbar -->
+<!-- ============================================================
+     Bandeau du mode tableau de bord / dashboard mode bar
+     Fin bandeau au bas de l'ecran, revele au survol de la souris. En
+     mode tactile, une languette reste visible en permanence : il n'y a
+     pas de survol au doigt, et sans elle les reglages deviendraient
+     inaccessibles sur un ecran tactile.
+     La zone "dashTicker" est deja en place mais vide : elle recevra les
+     informations defilantes venues des tuiles (titres des flux RSS, a la
+     maniere des chaines d'info en continu).
+     Thin bar at the bottom of the screen, revealed on mouse hover. In
+     touch mode a tab stays permanently visible: there is no hover with a
+     finger, and without it the settings would become unreachable on a
+     touchscreen.
+     The "dashTicker" zone is already in place but empty: it will carry
+     the scrolling information coming from tiles (RSS feed headlines, in
+     the manner of rolling news channels).
+     ============================================================ -->
+<div class="dash-hotzone" id="dashHotzone" aria-hidden="true"></div>
+<button class="dash-tab" id="dashTab" data-i18n-title="dash.open" title="Show the bar" aria-label="Show the bar">
+  <span class="dash-tab-grip"></span>
+</button>
+<div class="dash-bar" id="dashBar">
+  <div class="dash-pages" id="dashPages"></div>
+  <div class="dash-ticker" id="dashTicker"></div>
+  <div class="dash-actions">
+    <button class="dash-btn" id="dashPrev" data-i18n-title="dash.prev" title="Previous page" aria-label="Previous page">
+      <svg viewBox="0 0 24 24"><path d="m15 5-7 7 7 7"/></svg>
+    </button>
+    <button class="dash-btn" id="dashNext" data-i18n-title="dash.next" title="Next page" aria-label="Next page">
+      <svg viewBox="0 0 24 24"><path d="m9 5 7 7-7 7"/></svg>
+    </button>
+    <button class="dash-btn" id="dashAdd" data-i18n-title="toolbar.add" title="Add a tile" aria-label="Add a tile">
+      <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+    </button>
+    <button class="dash-btn" id="dashEdit" data-i18n-title="toolbar.edit" title="Edit mode" aria-label="Edit mode">
+      <svg viewBox="0 0 24 24"><path d="M4 20h4l10-10-4-4L4 16z"/><path d="m14 6 4 4"/></svg>
+    </button>
+    <button class="dash-btn" id="dashSettings" data-i18n-title="toolbar.settings" title="Settings" aria-label="Settings">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1"/></svg>
+    </button>
+    <button class="dash-btn" id="dashHelp" data-i18n-title="toolbar.help" title="Help" aria-label="Help">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.2-1.2.9-1.2 1.6v.5"/><path d="M12 17h.01"/></svg>
+    </button>
+  </div>
+</div>
+
 <div class="dock" id="dock">
   <button class="dock-tab" id="dockTab" aria-label="Toolbar" title="PiBoard">
     <span class="dock-tab-dot"></span>
@@ -311,7 +357,39 @@
            electron/updater.js). Server self-update (Raspberry Pi /
            Linux): hidden until the server declares it supported (Windows
            goes through electron-updater, see electron/updater.js). -->
-      <fieldset class="form-section" id="secUpdates" hidden>
+      <!-- Section TOUJOURS visible : le niveau des mises a jour est un
+           choix de l'utilisateur, valable aussi bien pour le serveur
+           (Raspberry Pi / Linux) que pour l'application de bureau
+           Windows, qui utilise electron-updater. Seuls les boutons de
+           verification et d'installation, propres au serveur, sont
+           masques quand celui-ci ne gere pas ses mises a jour lui-meme
+           (bloc #updServerControls ci-dessous).
+           ALWAYS visible section: the update level is a user choice,
+           valid both for the server (Raspberry Pi / Linux) and for the
+           Windows desktop application, which uses electron-updater. Only
+           the check and install buttons, specific to the server, are
+           hidden when it does not handle its own updates
+           (#updServerControls block below). -->
+      <!-- Mode d'affichage + pages du mode tableau de bord.
+           Display mode + dashboard-mode pages. -->
+      <fieldset class="form-section">
+        <legend data-i18n="settings.section.display">Display mode</legend>
+        <label class="field">
+          <span data-i18n="settings.displayMode">How pages are shown</span>
+          <select id="setDisplayMode">
+            <option value="classic" data-i18n="settings.displayMode.classic">Classic (one board with drawers)</option>
+            <option value="dashboard" data-i18n="settings.displayMode.dashboard">Dashboard (pages that slide, no drawers)</option>
+          </select>
+          <small class="field-hint" data-i18n="settings.displayMode.hint">Dashboard mode replaces the drawers and the toolbar with a thin bar at the bottom of the screen, revealed by moving the mouse there (a permanent tab in touch mode). Your board becomes page 1: nothing is lost, and switching back to classic mode finds it intact.</small>
+        </label>
+        <div id="pagesEditor" hidden>
+          <div class="pages-list" id="pagesList"></div>
+          <button type="button" class="btn small" id="pageAddBtn" data-i18n="settings.pages.add">Add a page</button>
+          <small class="field-hint" data-i18n="settings.pages.hint">Each page describes how it comes in: the direction the eye travels, and the effect. Deleting a page also deletes its tiles.</small>
+        </div>
+      </fieldset>
+
+      <fieldset class="form-section" id="secUpdates">
         <legend data-i18n="settings.section.updates">Updates</legend>
         <label class="field">
           <span data-i18n="settings.updateChannel">Updates to install</span>
@@ -321,13 +399,16 @@
           </select>
           <small class="field-hint" data-i18n="settings.updateChannel.hint">"Stable" installs only the version marked "Latest" on GitHub. "Pre-releases" also takes the ones marked "Pre-release": newer, but less tested.</small>
         </label>
-        <p class="update-status" id="updStatusText"></p>
-        <p class="update-meta" id="updMetaText"></p>
-        <div class="update-actions">
-          <button type="button" class="btn small" id="updCheckBtn" data-i18n="update.check">Check now</button>
-          <button type="button" class="btn small primary" id="updApplyBtn" hidden></button>
+        <div id="updServerControls" hidden>
+          <p class="update-status" id="updStatusText"></p>
+          <p class="update-meta" id="updMetaText"></p>
+          <div class="update-actions">
+            <button type="button" class="btn small" id="updCheckBtn" data-i18n="update.check">Check now</button>
+            <button type="button" class="btn small primary" id="updApplyBtn" hidden></button>
+          </div>
         </div>
-        <small class="field-hint" data-i18n="update.hint">New versions are fetched from the releases published on GitHub. Your settings, tiles and photos (the data/ folder) are kept. The server restarts at the end and the dashboard reloads by itself.</small>
+        <small class="field-hint" id="updDesktopHint" hidden data-i18n="update.desktopHint">In the Windows desktop application, updates are handled by the application itself: it checks on startup and offers to install. The setting above chooses which versions it offers.</small>
+        <small class="field-hint" id="updServerHint" data-i18n="update.hint">New versions are fetched from the releases published on GitHub. Your settings, tiles and photos (the data/ folder) are kept. The server restarts at the end and the dashboard reloads by itself.</small>
       </fieldset>
 
       <fieldset class="form-section">

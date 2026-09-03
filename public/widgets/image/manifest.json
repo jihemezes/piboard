@@ -1,0 +1,196 @@
+{
+  "id": "image",
+  "dir": "image",
+  "version": "0.1.0",
+  "name": {
+    "en": "Logo / Image",
+    "fr": "Logo / Image"
+  },
+  "tagline": {
+    "en": "A locally stored image or logo.",
+    "fr": "Une image ou un logo stocké en local."
+  },
+  "description": {
+    "en": "A style tile: displays an image stored on the PiBoard machine itself (no external address, nothing to fetch from the Internet). Upload it from the tile's settings; it is kept in the data/ folder and therefore survives updates. Fit, position, rounding and opacity are adjustable, and an optional link opens a page when the image is clicked.",
+    "fr": "Une tuile de style : affiche une image stockée sur la machine PiBoard elle-même (aucune adresse externe, rien à récupérer sur Internet). Vous la téléversez depuis les réglages de la tuile ; elle est conservée dans le dossier data/ et survit donc aux mises à jour. Le cadrage, la position, l'arrondi et l'opacité sont réglables, et un lien optionnel ouvre une page au clic sur l'image."
+  },
+  "size": {
+    "w": 3,
+    "h": 2,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 12,
+    "maxH": 8
+  },
+  "settings": [
+    {
+      "key": "image",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Image file",
+        "fr": "Fichier image"
+      },
+      "hint": {
+        "en": "Filled in by the \"Choose an image\" button below. Leave empty to show none.",
+        "fr": "Renseigné par le bouton « Choisir une image » ci-dessous. Laissez vide pour n'en afficher aucune."
+      }
+    },
+    {
+      "key": "fit",
+      "type": "select",
+      "default": "contain",
+      "label": {
+        "en": "Framing",
+        "fr": "Cadrage"
+      },
+      "options": [
+        {
+          "value": "contain",
+          "label": {
+            "en": "Whole image (may leave margins)",
+            "fr": "Image entière (peut laisser des marges)"
+          }
+        },
+        {
+          "value": "cover",
+          "label": {
+            "en": "Fill the tile (may crop)",
+            "fr": "Remplir la tuile (peut rogner)"
+          }
+        },
+        {
+          "value": "fill",
+          "label": {
+            "en": "Stretch (distorts)",
+            "fr": "Étirer (déforme)"
+          }
+        },
+        {
+          "value": "none",
+          "label": {
+            "en": "Original size",
+            "fr": "Taille d'origine"
+          }
+        }
+      ],
+      "hint": {
+        "en": "For a logo, keep \"Whole image\": it is the only framing that never crops nor distorts it.",
+        "fr": "Pour un logo, gardez « Image entière » : c'est le seul cadrage qui ne le rogne ni ne le déforme jamais."
+      }
+    },
+    {
+      "key": "align",
+      "type": "select",
+      "default": "center",
+      "label": {
+        "en": "Horizontal position",
+        "fr": "Position horizontale"
+      },
+      "options": [
+        {
+          "value": "left",
+          "label": {
+            "en": "Left",
+            "fr": "Gauche"
+          }
+        },
+        {
+          "value": "center",
+          "label": {
+            "en": "Centered",
+            "fr": "Centrée"
+          }
+        },
+        {
+          "value": "right",
+          "label": {
+            "en": "Right",
+            "fr": "Droite"
+          }
+        }
+      ]
+    },
+    {
+      "key": "valign",
+      "type": "select",
+      "default": "middle",
+      "label": {
+        "en": "Vertical position",
+        "fr": "Position verticale"
+      },
+      "options": [
+        {
+          "value": "top",
+          "label": {
+            "en": "Top",
+            "fr": "Haut"
+          }
+        },
+        {
+          "value": "middle",
+          "label": {
+            "en": "Middle",
+            "fr": "Milieu"
+          }
+        },
+        {
+          "value": "bottom",
+          "label": {
+            "en": "Bottom",
+            "fr": "Bas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "padding",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 80,
+      "step": 1,
+      "label": {
+        "en": "Inner margin (px)",
+        "fr": "Marge intérieure (px)"
+      }
+    },
+    {
+      "key": "radius",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "label": {
+        "en": "Corner rounding (px)",
+        "fr": "Arrondi des coins (px)"
+      }
+    },
+    {
+      "key": "opacity",
+      "type": "number",
+      "default": 100,
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "label": {
+        "en": "Opacity (%)",
+        "fr": "Opacité (%)"
+      }
+    },
+    {
+      "key": "link",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Link opened on click",
+        "fr": "Lien ouvert au clic"
+      },
+      "hint": {
+        "en": "Optional. A full address (https://…). Left empty, the image is not clickable.",
+        "fr": "Facultatif. Une adresse complète (https://…). Laissé vide, l'image n'est pas cliquable."
+      }
+    }
+  ]
+}

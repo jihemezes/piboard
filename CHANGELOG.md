@@ -1,5 +1,238 @@
 # Changelog
 
+## 1.87.0
+
+- **NOUVEAU : mode tableau de bord.** Une seconde facon d'afficher
+  PiBoard, choisie dans les reglages generaux (« Mode d'affichage ») --
+  le mode classique reste le defaut et ne change en rien. En mode
+  tableau de bord, plus de tiroirs ni de barre d'outils : une suite de
+  pages qui se remplacent en glissant, et un fin bandeau au bas de
+  l'ecran.
+
+- **Le plateau existant devient la page 1**, sans migration ni recopie.
+  Les pages suivantes vivent dans `layout.pages`. La page 1 n'est
+  deliberement PAS recopiee dans ce tableau : elle y serait dupliquee,
+  avec la certitude qu'un jour les deux copies divergent. Consequence
+  voulue : basculer d'un mode a l'autre ne perd rien, et repasser en
+  classique retrouve le plateau et ses tiroirs intacts -- les pages
+  creees ne sont pas detruites pour autant.
+
+- **Nombre de pages non limite.** Chaque page se regle dans les reglages
+  generaux : nom, **sens** d'arrivee (gauche, droite, haut, bas) et
+  **effet** (pousser, recouvrir, decouvrir, fondu, aucun). La transition
+  appliquee est celle de la page QUI ARRIVE -- chaque page decrit la
+  facon dont elle entre -- et revenir en arriere inverse
+  automatiquement le sens. Depuis la derniere page, « suivant » revient
+  a la premiere. Une tuile ajoutee pendant qu'une page est affichee
+  atterrit sur CETTE page.
+
+- **Bandeau du bas** : sort quand la souris atteint le bas de l'ecran,
+  rentre apres un court delai quand elle s'en va (sans ce delai, il
+  disparaitrait pendant le trajet du pointeur vers un bouton). **En mode
+  tactile, une languette reste visible en permanence** : au doigt il n'y
+  a pas de survol, et sans elle les reglages deviendraient inaccessibles.
+  Il porte le reperage des pages, les fleches precedent/suivant et
+  l'acces aux reglages, au catalogue, au mode edition et a l'aide. Une
+  zone y est **deja reservee** pour les informations defilantes a venir
+  (titres des flux RSS, a la maniere des chaines d'info en continu).
+  Navigation aussi au **glissement du doigt** et aux **fleches du
+  clavier**.
+
+- **TOUTES les pages tournent en meme temps**, pas seulement celle
+  affichee : une tuile Meteo en page 3 doit avoir ses donnees a jour
+  quand la page arrive, pas commencer a les charger a ce moment-la.
+  C'est le comportement attendu d'un tableau qui defile ; en
+  contrepartie, ajouter des pages coute des ressources, et la
+  planification horaire des tuiles reste disponible pour endormir ce qui
+  doit l'etre. C'est dit dans l'aide.
+
+- **Deux tuiles de STYLE**, nouvelle famille « Mise en page » du
+  catalogue, utilisables dans les deux modes :
+  - **Texte** : titre ou legende, avec police, graisse, italique,
+    majuscules, espacement, couleur, position, ombre. La taille
+    s'**adapte a la tuile** par defaut (recherche dichotomique sur le
+    rendu reel, pas une formule : la hauteur depend de la police
+    disponible, du retour a la ligne et de l'espacement) ou reste fixe.
+    Chaque police liste plusieurs familles de repli -- un Raspberry Pi
+    n'a pas celles d'un PC.
+  - **Logo / Image** : image **stockee sur la machine PiBoard**, pas
+    d'adresse externe. Le stockage reutilise l'API media du Diaporama :
+    les fichiers vivent sous `data/`, jamais touche par les mises a jour
+    et inclus dans les sauvegardes, et la tuile herite de ses controles
+    (extensions, taille, noms assainis). Cadrage, position, marge,
+    arrondi, opacite, lien optionnel -- un lien `javascript:` saisi dans
+    le champ est refuse.
+
+- **Fond de tuile transparent** (reglages universels d'apparence) : la
+  tuile prend le fond de la page, sans cadre ni ombre. Pensee pour les
+  deux tuiles de style, disponible sur toutes. En mode edition elle
+  reste cernee d'un pointille, sans quoi elle serait impossible a saisir.
+
+- **Correctif de fond** : `allTiles()` (server/internetHealth.js)
+  balayait les objets porteurs d'un tableau `tiles`, or `layout.pages`
+  est un TABLEAU d'objets -- une tuile posee sur une page 2 ou 3 serait
+  restee invisible a toute lecture de configuration passant par la.
+
+- **Aide reorganisee** : la section « Tuiles » du sommaire, une
+  trentaine d'entrees a la file dans un ordre qui n'etait celui d'aucune
+  autre partie de l'application, est desormais decoupee selon les MEMES
+  familles que le catalogue d'ajout de tuiles. Une seule classification
+  a apprendre, et la fiche se trouve la ou l'on avait trouve la tuile.
+  Nouvelles fiches « Mode tableau de bord », « Texte » et
+  « Logo / Image » ; guide de demarrage rapide mis a jour (FR/EN).
+
+- **Correctif du harnais de test** : le faux serveur renvoyait au PUT des
+  reglages les valeurs INITIALES au lieu de fusionner le corps recu,
+  comme le fait le vrai serveur. Tout ce qui depend d'un reglage
+  fraichement enregistre etait donc invisible aux tests.
+
+---
+
+- **NEW: dashboard mode.** A second way of displaying PiBoard, chosen in
+  the general settings ("Display mode") -- classic mode stays the default
+  and changes in no way. In dashboard mode there are no drawers and no
+  toolbar: a series of pages replacing each other by sliding, and a thin
+  bar at the bottom of the screen.
+
+- **The existing board becomes page 1**, with no migration and no copy.
+  Following pages live in `layout.pages`. Page 1 is deliberately NOT
+  copied into that array: it would be duplicated there, with the
+  certainty that one day the two copies diverge. Intended consequence:
+  switching between modes loses nothing, and going back to classic finds
+  the board and its drawers intact -- the created pages are not destroyed
+  either.
+
+- **Unlimited number of pages.** Each page is set up in the general
+  settings: name, arrival **direction** (left, right, up, down) and
+  **effect** (push, cover, uncover, fade, none). The applied transition
+  is that of the INCOMING page -- each page describes how it enters --
+  and going back automatically reverses the direction. From the last
+  page, "next" returns to the first. A tile added while a page is
+  displayed lands on THAT page.
+
+- **Bottom bar**: comes out when the mouse reaches the bottom of the
+  screen, goes back in after a short delay when it leaves (without that
+  delay it would vanish while the pointer travels to a button). **In
+  touch mode a tab stays permanently visible**: with a finger there is no
+  hover, and without it the settings would become unreachable. It carries
+  the page markers, the previous/next arrows and access to the settings,
+  the catalog, edit mode and the help. A zone in it is **already
+  reserved** for the scrolling information to come (RSS headlines, in the
+  manner of rolling news channels). Navigation also by **finger swipe**
+  and **keyboard arrows**.
+
+- **ALL pages run at the same time**, not only the displayed one: a
+  Weather tile on page 3 must have fresh data when the page arrives, not
+  start loading then. That is the expected behaviour of a cycling board;
+  in exchange, adding pages costs resources, and per-tile scheduling
+  remains available to put to sleep whatever should be. This is stated in
+  the help.
+
+- **Two STYLE tiles**, a new "Page design" catalog family, usable in both
+  modes:
+  - **Text**: title or caption, with font, weight, italic, uppercase,
+    spacing, colour, position, shadow. The size **fits the tile** by
+    default (binary search on the real rendering, not a formula: the
+    height depends on the available font, on wrapping and on spacing) or
+    stays fixed. Each font lists several fallback families -- a Raspberry
+    Pi does not have a PC's.
+  - **Logo / Image**: image **stored on the PiBoard machine**, no
+    external address. Storage reuses the Slideshow's media API: files
+    live under `data/`, never touched by updates and included in backups,
+    and the tile inherits its controls (extensions, size, sanitised
+    names). Framing, position, margin, rounding, opacity, optional link
+    -- a `javascript:` link typed into the field is refused.
+
+- **Transparent tile background** (universal appearance settings): the
+  tile takes the page's background, with no frame and no shadow. Designed
+  for the two style tiles, available on all of them. In edit mode it
+  stays outlined with a dashed border, without which it would be
+  impossible to grab.
+
+- **Underlying fix**: `allTiles()` (server/internetHealth.js) swept
+  objects carrying a `tiles` array, but `layout.pages` is an ARRAY of
+  objects -- a tile placed on page 2 or 3 would have stayed invisible to
+  every config read going through there.
+
+- **Reorganised help**: the sidebar's "Tiles" section, some thirty
+  entries in a row in an order matching no other part of the application,
+  is now split along the SAME families as the tile-adding catalog. One
+  single classification to learn, and the page is found where the tile
+  was found. New "Dashboard mode", "Text" and "Logo / Image" pages; quick
+  start guide updated (FR/EN).
+
+- **Test harness fix**: the fake server returned the INITIAL values to a
+  settings PUT instead of merging the received body, as the real server
+  does. Everything depending on a freshly saved setting was therefore
+  invisible to the tests.
+
+## 1.86.0
+
+- **Correctif : le selecteur « Mises a jour a installer » etait
+  invisible.** Cause : le champ avait ete place dans la section
+  « Mises a jour », elle-meme masquee des que le serveur ne gere pas ses
+  propres mises a jour -- ce qui est precisement le cas de
+  l'application de bureau Windows (electron-updater s'en charge) et de
+  macOS. Le reglage devenait donc introuvable la ou il s'applique
+  pourtant. Desormais la section est **toujours affichee** : seuls les
+  boutons « Verifier maintenant » et « Installer », propres au serveur,
+  suivent l'etat de la plateforme, et une explication remplace l'aide
+  serveur dans l'application de bureau.
+
+- **Le canal choisi vaut aussi pour l'application de bureau Windows.**
+  `electron/updater.js` lit le meme reglage et positionne
+  `allowPrerelease` en consequence, **avant chaque verification** plutot
+  qu'au demarrage : le changer prend effet sans relancer l'application.
+  Une lecture impossible (fichier de reglages absent au tout premier
+  lancement) retombe sur le canal stable, jamais sur les pre-versions.
+
+- **Meteo : affichage optionnel du lever et du coucher du soleil** sur
+  la tuile (nouveau reglage, desactive par defaut), avec une fleche
+  montante et une fleche descendante. Les heures viennent de la requete
+  etendue **deja effectuee** pour la fenetre de detail : activer
+  l'option n'ajoute aucun appel reseau. Si cette requete n'a pas abouti
+  (fournisseur « Personnalise » ne fournissant pas ces champs, panne
+  passagere), la ligne est simplement omise plutot que d'afficher des
+  tirets. Ces heures restent presentes dans la fenetre de detail quelle
+  que soit l'option.
+
+- **Tests** : `dom-smoke.js` verifie que le selecteur de canal reste
+  visible quand le serveur ne gere pas ses mises a jour et que seuls les
+  boutons serveur disparaissent -- exactement la regression corrigee ici ;
+  aide FR/EN couverte par `helpContent.test.js`.
+
+---
+
+- **Fix: the "Updates to install" selector was invisible.** Cause: the
+  field had been placed inside the "Updates" section, itself hidden as
+  soon as the server does not handle its own updates -- which is exactly
+  the case of the Windows desktop application (electron-updater does the
+  job) and of macOS. The setting therefore became unreachable in the
+  very place it applies. The section is now **always shown**: only the
+  "Check now" and "Install" buttons, specific to the server, follow the
+  platform state, and an explanation replaces the server help in the
+  desktop application.
+
+- **The chosen channel also governs the Windows desktop application.**
+  `electron/updater.js` reads the same setting and sets `allowPrerelease`
+  accordingly, **before every check** rather than at startup: changing it
+  takes effect without restarting the application. An impossible read
+  (settings file absent on the very first launch) falls back to the
+  stable channel, never to pre-releases.
+
+- **Weather: optional sunrise and sunset display** on the tile (new
+  setting, off by default), with an up arrow and a down arrow. The times
+  come from the extended request **already made** for the detail window:
+  turning the option on adds no network call. If that request did not
+  succeed (a "Custom" provider not supplying those fields, a passing
+  outage), the line is simply omitted rather than showing dashes. Those
+  times remain present in the detail window whatever the option.
+
+- **Tests**: `dom-smoke.js` checks the channel selector stays visible
+  when the server does not handle its updates and that only the server
+  buttons disappear -- exactly the regression fixed here; FR/EN help
+  covered by `helpContent.test.js`.
+
 ## 1.85.0
 
 - **Choix du niveau des mises a jour** (reglages generaux -> Mises a

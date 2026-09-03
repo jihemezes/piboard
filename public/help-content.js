@@ -970,6 +970,86 @@
     },
 
     {
+      id: "text",
+      group: "tiles",
+      title: { fr: "Texte", en: "Text" },
+      sub: {
+        fr: "Un titre ou une ligne de texte, placé où vous voulez.",
+        en: "A title or a line of text, placed where you want it."
+      },
+      html: {
+        fr: `
+          <p>Une tuile de <b>style</b> : elle n'affiche aucune donnée, elle sert à composer une page. Un titre en haut d'une page de tableau de bord, l'intitulé d'un groupe de tuiles, une légende. Associée au <b>fond transparent</b> (réglages de la tuile → Apparence), elle permet de titrer une page sans qu'aucun cadre n'apparaisse.</p>
+
+          <h4>Deux façons de fixer la taille</h4>
+          <div class="help-opt"><span class="help-opt-name">S'adapter à la tuile</span><span class="help-opt-desc">Par défaut. La taille est recalculée à chaque redimensionnement pour que le texte remplisse la tuile sans jamais déborder. C'est le bon choix dans presque tous les cas : une tuile de titre est presque toujours redimensionnée après coup, et un titre coupé est le défaut le plus visible qui soit sur un écran mural.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Taille fixe</span><span class="help-opt-desc">La taille en pixels que vous indiquez, quelle que soit la taille de la tuile. Prévisible — utile quand plusieurs titres doivent avoir exactement la même taille sur des tuiles de largeurs différentes — mais le texte déborde si vous rétrécissez la tuile.</span></div>
+
+          <h4>Polices</h4>
+          <p>Cinq familles sont proposées. <b>Seules les polices présentes sur la machine sont utilisées</b> : sur un Raspberry Pi le choix est nettement plus étroit que sur un PC. Chaque option liste donc plusieurs polices et retombe sur la plus proche disponible — jamais sur rien. Le rendu peut donc différer entre votre PC et le Pi ; si l'aspect compte, vérifiez sur l'écran de destination.</p>
+
+          <h4>Le reste</h4>
+          <p>Graisse, italique, majuscules, espacement des lettres, couleur (par défaut celle du thème, qui bascule avec le mode jour/nuit — cochez « Couleur personnalisée » pour la figer), position horizontale et verticale dans la tuile, et une ombre portée utile quand la tuile est transparente au-dessus d'une photo claire.</p>
+          <p>Les retours à la ligne saisis dans le champ sont conservés. Une tuile sans texte affiche une mention discrète plutôt que rien : sans elle, une tuile transparente et vide serait introuvable sur la page, même en mode édition.</p>`,
+        en: `
+          <p>A <b>style</b> tile: it displays no data, it is there to compose a page. A title at the top of a dashboard page, the heading of a group of tiles, a caption. Combined with the <b>transparent background</b> (tile settings → Appearance), it lets you title a page with no frame appearing at all.</p>
+
+          <h4>Two ways of setting the size</h4>
+          <div class="help-opt"><span class="help-opt-name">Fit the tile</span><span class="help-opt-desc">The default. The size is recomputed on every resize so the text fills the tile without ever overflowing. This is the right choice in almost every case: a title tile is almost always resized afterwards, and clipped text is the most visible defect there is on a wall screen.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fixed size</span><span class="help-opt-desc">The pixel size you give, whatever the tile's size. Predictable — useful when several titles must be exactly the same size on tiles of different widths — but the text overflows if you shrink the tile.</span></div>
+
+          <h4>Fonts</h4>
+          <p>Five families are offered. <b>Only fonts present on the machine are used</b>: on a Raspberry Pi the choice is markedly narrower than on a PC. Each option therefore lists several fonts and falls back on the closest available one — never on nothing. The rendering may thus differ between your PC and the Pi; if looks matter, check on the target screen.</p>
+
+          <h4>The rest</h4>
+          <p>Weight, italic, uppercase, letter spacing, colour (by default the theme's, which switches with day/night mode — tick "Custom text colour" to pin it), horizontal and vertical position within the tile, and a text shadow useful when the tile is transparent over a light photo.</p>
+          <p>Line breaks typed in the field are kept. A tile with no text shows a discreet note rather than nothing: without it, a transparent empty tile would be impossible to find on the page, edit mode included.</p>`
+      }
+    },
+    {
+      id: "image",
+      group: "tiles",
+      title: { fr: "Logo / Image", en: "Logo / Image" },
+      sub: {
+        fr: "Une image stockée sur la machine PiBoard elle-même.",
+        en: "An image stored on the PiBoard machine itself."
+      },
+      html: {
+        fr: `
+          <p>Une tuile de <b>style</b>, comme la tuile Texte : un logo dans un coin d'écran, un bandeau, une illustration de fond. Associée au <b>fond transparent</b>, l'image apparaît sans cadre.</p>
+
+          <h4>Stockage local, et c'est délibéré</h4>
+          <p>L'image est <b>téléversée sur la machine PiBoard</b> et servie par elle. Aucune adresse externe à saisir : rien ne casse le jour où un site distant disparaît, rien ne part sur Internet depuis un tableau mural, et l'image reste affichée même sans connexion.</p>
+          <p>Les fichiers sont rangés dans le dossier <code>data/</code>, celui qui n'est <b>jamais touché par les mises à jour</b> et qui est inclus dans les sauvegardes. Le mécanisme est celui déjà utilisé par le Diaporama, ce qui fait hériter cette tuile de ses contrôles : extensions autorisées, taille maximale, noms de fichiers assainis.</p>
+          <p>Chaque tuile a son propre dossier : deux tuiles Logo n'ont pas la même bibliothèque d'images. Cliquez sur <b>« Choisir une image »</b> depuis la tuile (ou depuis ses réglages) pour téléverser, choisir ou supprimer.</p>
+
+          <h4>Cadrage</h4>
+          <div class="help-opt"><span class="help-opt-name">Image entière</span><span class="help-opt-desc">Par défaut, et le seul choix qui ne rogne ni ne déforme jamais. Pour un logo, gardez celui-ci : des marges valent mieux qu'un logo tronqué.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Remplir la tuile</span><span class="help-opt-desc">L'image couvre toute la tuile, quitte à en rogner les bords. Pour une illustration de fond.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Étirer</span><span class="help-opt-desc">L'image est déformée pour remplir exactement la tuile. Rarement souhaitable.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Taille d'origine</span><span class="help-opt-desc">Aucun redimensionnement.</span></div>
+
+          <h4>Le reste</h4>
+          <p>Position dans la tuile, marge intérieure, arrondi des coins, opacité, et un lien facultatif ouvert au clic sur l'image. Si le fichier choisi vient à disparaître (supprimé, ou dossier <code>data/</code> restauré sans ses médias), la tuile revient à l'invite de choix plutôt que d'afficher une icône de lien cassé.</p>`,
+        en: `
+          <p>A <b>style</b> tile, like the Text tile: a logo in a screen corner, a banner, a background illustration. Combined with the <b>transparent background</b>, the image appears with no frame.</p>
+
+          <h4>Local storage, deliberately</h4>
+          <p>The image is <b>uploaded to the PiBoard machine</b> and served by it. No external address to type: nothing breaks the day a remote site disappears, nothing leaves for the Internet from a wall board, and the image stays displayed even with no connection.</p>
+          <p>Files are stored in the <code>data/</code> folder, the one <b>never touched by updates</b> and included in backups. The mechanism is the one already used by the Slideshow, which makes this tile inherit its controls: allowed extensions, maximum size, sanitised file names.</p>
+          <p>Each tile has its own folder: two Logo tiles do not share an image library. Click <b>"Choose an image"</b> from the tile (or from its settings) to upload, pick or delete.</p>
+
+          <h4>Framing</h4>
+          <div class="help-opt"><span class="help-opt-name">Whole image</span><span class="help-opt-desc">The default, and the only choice that never crops nor distorts. For a logo, keep this one: margins beat a truncated logo.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fill the tile</span><span class="help-opt-desc">The image covers the whole tile, cropping its edges if need be. For a background illustration.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Stretch</span><span class="help-opt-desc">The image is distorted to fill the tile exactly. Rarely desirable.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Original size</span><span class="help-opt-desc">No resizing at all.</span></div>
+
+          <h4>The rest</h4>
+          <p>Position within the tile, inner margin, corner rounding, opacity, and an optional link opened when the image is clicked. If the chosen file goes missing (deleted, or a <code>data/</code> folder restored without its media), the tile returns to the choice prompt rather than showing a broken-link icon.</p>`
+      }
+    },
+    {
       id: "quote",
       group: "tiles",
       title: { fr: "Citation du jour", en: "Quote of the day" },
@@ -1673,6 +1753,7 @@
           <div class="help-opt"><span class="help-opt-name">Modèle météo / source</span><span class="help-opt-desc">Meilleure correspondance (automatique), ou un modèle national précis (Météo-France, ECMWF, DWD, MET Norway, NOAA), ou personnalisé.</span></div>
           <div class="help-opt"><span class="help-opt-name">URL de prévision personnalisée</span><span class="help-opt-desc">Utilisée seulement par « Personnalisé ». Utilisez <code>{lat}</code> et <code>{lon}</code> comme espaces réservés ; la réponse doit respecter le format JSON exact d'Open-Meteo.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher la prévision du lendemain</span><span class="help-opt-desc">La disposition s'adapte automatiquement à la forme de la tuile.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher le lever et le coucher du soleil</span><span class="help-opt-desc">Ajoute une ligne avec les deux heures du jour. Elles proviennent de la requête étendue déjà effectuée pour la fenêtre de détail : activer l'option n'ajoute aucun appel réseau. Ces heures figurent de toute façon dans la fenêtre de détail.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher le vent</span><span class="help-opt-desc">Ajoute la vitesse du vent.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher le saint du jour</span><span class="help-opt-desc">Tradition française, visible seulement en français. Inclut le saint du lendemain si sa prévision est affichée.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour.</span></div>
@@ -1688,6 +1769,7 @@
           <div class="help-opt"><span class="help-opt-name">Weather model / source</span><span class="help-opt-desc">Best match (automatic), or a precise national model (Météo-France, ECMWF, DWD, MET Norway, NOAA), or custom.</span></div>
           <div class="help-opt"><span class="help-opt-name">Custom forecast URL</span><span class="help-opt-desc">Used only by "Custom". Use <code>{lat}</code> and <code>{lon}</code> as placeholders; the response must match Open-Meteo's exact JSON format.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show tomorrow's forecast</span><span class="help-opt-desc">The layout automatically adapts to the tile's shape.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show sunrise and sunset</span><span class="help-opt-desc">Adds a line with the day's two times. They come from the extended request already made for the detail window: turning the option on adds no network call. These times appear in the detail window anyway.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show wind</span><span class="help-opt-desc">Adds wind speed.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show name day</span><span class="help-opt-desc">French tradition, only shown in French. Includes tomorrow's name day if its forecast is shown.</span></div>
           <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two updates.</span></div>
@@ -1897,6 +1979,66 @@
     },
 
     {
+      id: "dashboard",
+      group: "presentation",
+      title: { fr: "Mode tableau de bord (pages)", en: "Dashboard mode (pages)" },
+      sub: {
+        fr: "Une suite de pages qui se remplacent, sans tiroirs.",
+        en: "A series of pages replacing each other, no drawers."
+      },
+      html: {
+        fr: `
+          <h4>Deux façons d'afficher PiBoard</h4>
+          <p>Le réglage <b>« Façon d'afficher les pages »</b> (réglages généraux → Mode d'affichage) choisit entre :</p>
+          <div class="help-opt"><span class="help-opt-name">Classique</span><span class="help-opt-desc">Le mode d'origine, inchangé : un plateau, trois tiroirs escamotables, la barre d'outils en bas de l'écran.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Tableau de bord</span><span class="help-opt-desc">Une suite de pages qui se remplacent en glissant. Plus de tiroirs ni de barre d'outils : un fin bandeau au bas de l'écran les remplace.</span></div>
+          <p><b>Votre plateau actuel devient la page 1.</b> Il n'est ni déplacé ni recopié : basculer d'un mode à l'autre ne perd rien, et repasser en classique le retrouve exactement tel qu'il était, tiroirs compris. Les pages que vous avez créées ne sont pas détruites pour autant : elles réapparaissent si vous revenez au mode tableau de bord.</p>
+
+          <h4>Le bandeau du bas</h4>
+          <p>À la souris, il sort dès que le pointeur atteint le bas de l'écran, et rentre quand il s'en éloigne. <b>En mode tactile, une languette reste visible en permanence</b> au milieu du bord inférieur : au doigt il n'y a pas de survol, et sans elle les réglages deviendraient inaccessibles.</p>
+          <p>Il contient le repérage des pages (cliquez un numéro pour y aller), les flèches page précédente / suivante, et l'accès à l'ajout de tuile, au mode édition, aux réglages généraux et à cette aide. Une zone y est <b>réservée pour l'avenir</b> : elle accueillera des informations défilantes venues de vos tuiles — les titres de vos flux RSS, à la manière des chaînes d'info en continu.</p>
+
+          <h4>Naviguer entre les pages</h4>
+          <p>Trois moyens, selon le matériel : les numéros et les flèches du bandeau, un <b>glissement du doigt</b> horizontal sur l'écran tactile, et les <b>flèches gauche/droite du clavier</b> (utile avec une télécommande de présentation ou un clavier sans fil posé près d'un écran mural). Depuis la dernière page, « suivant » revient à la première.</p>
+
+          <h4>Créer et régler les pages</h4>
+          <p>Le nombre de pages n'est pas limité. Chaque page se règle dans les réglages généraux :</p>
+          <div class="help-opt"><span class="help-opt-name">Nom</span><span class="help-opt-desc">Affiché en infobulle sur son numéro dans le bandeau. Facultatif.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Sens</span><span class="help-opt-desc">Le sens du déplacement du regard : « vers la gauche » signifie que la page arrive par la droite, comme quand on tourne une page. Revenir en arrière inverse automatiquement le sens.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Effet</span><span class="help-opt-desc"><b>Pousser</b> : les deux pages glissent ensemble, comme une pellicule. <b>Recouvrir</b> : la nouvelle passe par-dessus, l'ancienne ne bouge pas. <b>Découvrir</b> : l'ancienne s'en va et dévoile la nouvelle. <b>Fondu</b> : sans déplacement. <b>Aucun</b> : remplacement immédiat.</span></div>
+          <p>Le réglage appartient à la page <b>qui arrive</b> : chaque page décrit la façon dont elle entre. Une tuile ajoutée pendant qu'une page est affichée atterrit <b>sur cette page</b>, pas sur le plateau principal.</p>
+          <p><b>Supprimer une page supprime aussi ses tuiles</b> — elles n'existent nulle part ailleurs. Une confirmation est demandée si la page n'est pas vide. La page 1 ne peut pas être supprimée : c'est le plateau principal.</p>
+
+          <h4>Ce qu'il faut savoir sur les performances</h4>
+          <p><b>Toutes les pages tournent en même temps</b>, pas seulement celle que vous regardez : une tuile Météo en page 3 doit avoir ses données à jour quand la page arrive, pas commencer à les charger à ce moment-là. C'est ce qu'on attend d'un tableau de bord qui défile, mais cela veut dire qu'ajouter des pages consomme des ressources. Sur un Raspberry Pi, si l'affichage devient poussif, la <b>planification horaire</b> de chaque tuile (réglages de la tuile) permet d'endormir ce qui n'a pas besoin de tourner en permanence.</p>`,
+        en: `
+          <h4>Two ways of displaying PiBoard</h4>
+          <p>The <b>"How pages are shown"</b> setting (general settings → Display mode) chooses between:</p>
+          <div class="help-opt"><span class="help-opt-name">Classic</span><span class="help-opt-desc">The original mode, unchanged: one board, three retractable drawers, the toolbar at the bottom of the screen.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Dashboard</span><span class="help-opt-desc">A series of pages replacing each other by sliding. No more drawers nor toolbar: a thin bar at the bottom of the screen replaces them.</span></div>
+          <p><b>Your current board becomes page 1.</b> It is neither moved nor copied: switching between modes loses nothing, and going back to classic finds it exactly as it was, drawers included. The pages you created are not destroyed either: they reappear if you return to dashboard mode.</p>
+
+          <h4>The bottom bar</h4>
+          <p>With a mouse it comes out as soon as the pointer reaches the bottom of the screen, and goes back in when it moves away. <b>In touch mode a tab stays permanently visible</b> in the middle of the bottom edge: with a finger there is no hover, and without it the settings would become unreachable.</p>
+          <p>It holds the page markers (click a number to go there), the previous/next page arrows, and access to adding a tile, edit mode, the general settings and this help. A zone in it is <b>reserved for the future</b>: it will carry scrolling information coming from your tiles — your RSS feed headlines, in the manner of rolling news channels.</p>
+
+          <h4>Moving between pages</h4>
+          <p>Three ways, depending on the hardware: the bar's numbers and arrows, a horizontal <b>finger swipe</b> on a touchscreen, and the <b>left/right keyboard arrows</b> (useful with a presentation remote or a wireless keyboard next to a wall screen). From the last page, "next" returns to the first.</p>
+
+          <h4>Creating and setting up pages</h4>
+          <p>The number of pages is not limited. Each page is set up in the general settings:</p>
+          <div class="help-opt"><span class="help-opt-name">Name</span><span class="help-opt-desc">Shown as a tooltip on its number in the bar. Optional.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Direction</span><span class="help-opt-desc">The direction the eye travels: "to the left" means the page arrives from the right, like turning a page. Going back automatically reverses the direction.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Effect</span><span class="help-opt-desc"><b>Push</b>: both pages slide together, like a film strip. <b>Cover</b>: the new one passes over, the old one does not move. <b>Uncover</b>: the old one leaves and reveals the new one. <b>Fade</b>: no movement. <b>None</b>: immediate replacement.</span></div>
+          <p>The setting belongs to the <b>incoming</b> page: each page describes how it enters. A tile added while a page is displayed lands <b>on that page</b>, not on the main board.</p>
+          <p><b>Deleting a page also deletes its tiles</b> — they exist nowhere else. A confirmation is asked if the page is not empty. Page 1 cannot be deleted: it is the main board.</p>
+
+          <h4>What to know about performance</h4>
+          <p><b>All pages run at the same time</b>, not only the one you are looking at: a Weather tile on page 3 must have fresh data when the page arrives, not start loading then. That is what one expects from a cycling dashboard, but it does mean adding pages costs resources. On a Raspberry Pi, if the display becomes sluggish, each tile's <b>schedule</b> (tile settings) lets you put to sleep whatever does not need to run permanently.</p>`
+      }
+    },
+
+    {
       id: "linux-update",
       group: "platform",
       title: { fr: "Mises à jour sur Raspberry Pi / Linux", en: "Updates on Raspberry Pi / Linux" },
@@ -1914,7 +2056,7 @@
           <div class="help-opt"><span class="help-opt-name">Depuis un autre appareil</span><span class="help-opt-desc">La section fonctionne aussi depuis un téléphone ou un PC du réseau local ouvert sur l'adresse du PiBoard : pratique pour un kiosque mural sans clavier. L'écran du kiosque se recharge tout seul une fois la mise à jour terminée.</span></div>
 
           <h4>Choisir son niveau de mise à jour</h4>
-          <p>Le réglage <b>« Mises à jour à installer »</b> (réglages généraux → Mises à jour) décide de ce qui vous est proposé :</p>
+          <p>Le réglage <b>« Mises à jour à installer »</b> (réglages généraux → Mises à jour) décide de ce qui vous est proposé. Il vaut aussi bien pour le serveur (Raspberry Pi, Linux) que pour l'application de bureau Windows, qui lit le même réglage — il reste donc visible partout, même là où les boutons « Vérifier » et « Installer » n'apparaissent pas.</p>
           <div class="help-opt"><span class="help-opt-name">Versions stables uniquement</span><span class="help-opt-desc">Par défaut. Seule la version marquée <b>« Latest »</b> sur GitHub est proposée. C'est le choix à laisser sur un tableau mural qui doit simplement fonctionner.</span></div>
           <div class="help-opt"><span class="help-opt-name">Installer aussi les pré-versions</span><span class="help-opt-desc">Les versions marquées <b>« Pre-release »</b> sur GitHub sont également proposées : plus récentes, mais moins éprouvées. Une pré-version est annoncée comme telle dans le bandeau, dans les réglages et dans la fenêtre de confirmation — vous savez toujours ce que vous installez.</span></div>
           <p>Dans les deux cas, les <b>brouillons</b> sont ignorés : une release en brouillon n'a pas d'archive téléchargeable et n'est visible que de vous. Le choix se fait toujours sur le <b>numéro de version le plus élevé</b>, jamais sur la date de publication : republier un correctif ancien après une pré-version plus récente ne fait pas reculer le tableau.</p>
@@ -1938,7 +2080,7 @@
           <div class="help-opt"><span class="help-opt-name">From another device</span><span class="help-opt-desc">The section also works from a phone or PC on the local network opened on the PiBoard's address: handy for a keyboard-less wall kiosk. The kiosk screen reloads by itself once the update is done.</span></div>
 
           <h4>Choosing your update level</h4>
-          <p>The <b>"Updates to install"</b> setting (general settings → Updates) decides what gets offered to you:</p>
+          <p>The <b>"Updates to install"</b> setting (general settings → Updates) decides what gets offered to you. It applies both to the server (Raspberry Pi, Linux) and to the Windows desktop application, which reads the same setting — so it stays visible everywhere, even where the "Check" and "Install" buttons do not appear.</p>
           <div class="help-opt"><span class="help-opt-name">Stable versions only</span><span class="help-opt-desc">The default. Only the version marked <b>"Latest"</b> on GitHub is offered. This is the choice to leave on a wall board that simply has to work.</span></div>
           <div class="help-opt"><span class="help-opt-name">Also install pre-releases</span><span class="help-opt-desc">Versions marked <b>"Pre-release"</b> on GitHub are offered too: newer, but less tested. A pre-release is announced as such in the banner, in the settings and in the confirmation window — you always know what you are installing.</span></div>
           <p>Either way, <b>drafts</b> are ignored: a draft release has no downloadable archive and is visible only to you. The pick is always made on the <b>highest version number</b>, never on the publication date: republishing an old fix after a more recent pre-release does not make the board go backwards.</p>

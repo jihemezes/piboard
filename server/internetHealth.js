@@ -408,7 +408,8 @@ function flush() {
 
    Ce detail a coute une mise a jour entiere : `layout.tiles` ne contient
    que les tuiles du tableau principal. Celles posees dans un tiroir
-   (gauche, haut, droite) vivent ailleurs, sous `layout.drawer.tiles`,
+   (gauche, haut, droite) et les pages du mode tableau de bord
+   (`layout.pages[].tiles`) vivent ailleurs, sous `layout.drawer.tiles`,
    `layout.drawerTop.tiles` et `layout.drawerRight.tiles`. Ne lire que
    `layout.tiles` rendait donc une tuile de tiroir INVISIBLE au serveur :
    aucune mesure n'etait jamais lancee, et la tuile restait indefiniment
@@ -437,8 +438,23 @@ function allTiles(layout) {
   if (!layout || typeof layout !== "object") return out;
   if (Array.isArray(layout.tiles)) out.push(...layout.tiles);
   for (const value of Object.values(layout)) {
-    if (value && typeof value === "object" && Array.isArray(value.tiles)) {
-      out.push(...value.tiles);
+    if (!value || typeof value !== "object") continue;
+    // Tiroirs : un objet qui porte directement un tableau "tiles".
+    // Drawers: an object directly carrying a "tiles" array.
+    if (Array.isArray(value.tiles)) out.push(...value.tiles);
+    /* Pages du mode tableau de bord : `layout.pages` est un TABLEAU
+       d'objets, chacun avec ses tuiles. La boucle ci-dessus ne le voyait
+       pas -- un tableau n'a pas de propriete "tiles" -- et une tuile
+       posee sur une page 2 ou 3 serait donc restee invisible a toute
+       lecture de configuration passant par ici.
+       Dashboard mode pages: `layout.pages` is an ARRAY of objects, each
+       with its own tiles. The loop above did not see it -- an array has
+       no "tiles" property -- so a tile placed on page 2 or 3 would have
+       stayed invisible to every config read going through here. */
+    if (Array.isArray(value)) {
+      for (const entry of value) {
+        if (entry && typeof entry === "object" && Array.isArray(entry.tiles)) out.push(...entry.tiles);
+      }
     }
   }
   return out.filter(Boolean);

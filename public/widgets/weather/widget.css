@@ -265,3 +265,19 @@
 }
 .pww-day-range.pww-day-min { font-size: 11.5px; font-weight: 400; color: var(--faint); }
 .pww-modal-credit { margin-top: 14px; text-align: left; color: var(--faint); }
+
+/* Lever / coucher du soleil sur la tuile (option "showSun").
+   Sunrise / sunset on the tile ("showSun" option). */
+.pww-sun {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  align-items: center;
+  margin-top: 2px;
+  font-size: 0.82em;
+  opacity: 0.9;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.pww-sun-item { display: inline-flex; align-items: center; gap: 3px; }
+.pww-sun-item svg { width: 1.05em; height: 1.05em; flex: none; }

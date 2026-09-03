@@ -648,7 +648,22 @@ const dom = new JSDOM(html, {
 
       if (method === "PUT") {
         putCalls.push({ url: u, body: opts.body });
-        if (u.includes("/api/settings")) return json(settings);
+        if (u.includes("/api/settings")) {
+          /* Le vrai serveur fusionne le corps recu dans les reglages
+             enregistres et renvoie le resultat (voir PUT /api/settings) ;
+             renvoyer les reglages INITIAUX faisait croire au client que
+             rien n'avait change, et masquait tout ce qui depend d'un
+             reglage fraichement enregistre.
+             The real server merges the received body into the saved
+             settings and returns the result (see PUT /api/settings);
+             returning the INITIAL settings made the client believe
+             nothing had changed, and hid everything depending on a
+             freshly saved setting. */
+          let patch = {};
+          try { patch = JSON.parse(opts.body || "{}"); } catch (e) { patch = {}; }
+          Object.assign(settings, patch);
+          return json(settings);
+        }
         return json({ ok: true, version: 2 });
       }
       if (u.includes("/api/settings")) return json(settings);
@@ -4508,6 +4523,177 @@ function catalogItemFor(catalog, document, widgetId) {
       /\.pb-taxis\s*\{/.test(styles));
   }
 
+  console.log("== Mode tableau de bord : pages, transitions, bandeau ==");
+  {
+    const setMode = async (mode) => {
+      document.getElementById("settingsModal").hidden = true;
+      document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(80);
+      const sel = document.getElementById("setDisplayMode");
+      sel.value = mode;
+      sel.dispatchEvent(new window.Event("change", { bubbles: true }));
+      document.getElementById("settingsSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(250);
+    };
+
+    assert("mode classique par defaut : aucun changement d'aspect apres mise a jour",
+      document.body.classList.contains("dashboard-mode") === false);
+    assert("le bandeau existe des le mode classique, mais masque par CSS",
+      !!document.getElementById("dashBar") && !!document.getElementById("dashTab"));
+    assert("la zone du futur bandeau defilant est en place", !!document.getElementById("dashTicker"));
+
+    await setMode("dashboard");
+    assert("mode tableau de bord actif", document.body.classList.contains("dashboard-mode"));
+    assert("editeur de pages visible dans les reglages",
+      document.getElementById("pagesEditor").hidden === false);
+    assert("une seule page au depart : le plateau existant devient la page 1",
+      document.getElementById("pagesList").querySelectorAll(".page-row").length === 1);
+    assert("la page 1 ne peut pas etre supprimee",
+      document.getElementById("pagesList").querySelector(".page-row").classList.contains("page-main"));
+    assert("navigation masquee tant qu'il n'y a qu'une page",
+      document.getElementById("dashPages").hidden === true);
+
+    // Ajout de deux pages
+    document.getElementById("pageAddBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    document.getElementById("pageAddBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    assert("deux pages ajoutees, sans limite imposee",
+      document.getElementById("pagesList").querySelectorAll(".page-row").length === 3);
+    const dots = document.getElementById("dashPages");
+    assert("navigation affichee des la deuxieme page", dots.hidden === false);
+    assert("un reperage par page", dots.querySelectorAll(".dash-page-dot").length === 3);
+    assert("la page 1 est active au depart", dots.querySelector(".dash-page-dot").classList.contains("active"));
+    const pageEls = document.querySelectorAll(".board-page");
+    assert("un conteneur par page secondaire", pageEls.length === 2);
+    assert("les pages secondaires sont masquees tant qu'on ne les affiche pas",
+      Array.from(pageEls).every((el) => el.hidden === true));
+    assert("chaque page a sa propre grille",
+      Array.from(pageEls).every((el) => !!el.querySelector(".grid-stack")));
+
+    // Changement de page : effet "aucun" pour un basculement immediat,
+    // les transitions animees etant intestables de facon fiable en jsdom.
+    const rows = document.getElementById("pagesList").querySelectorAll(".page-row");
+    const fx = rows[1].querySelector("[data-role=fx]");
+    fx.value = "none";
+    fx.dispatchEvent(new window.Event("change", { bubbles: true }));
+    document.getElementById("settingsModal").hidden = true;
+    document.getElementById("dashNext").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    assert("le bouton suivant amene sur la page 2",
+      dots.querySelectorAll(".dash-page-dot")[1].classList.contains("active"));
+    assert("la page 2 est affichee", pageEls[0].hidden === false);
+    assert("la page 1 est masquee", document.getElementById("board").hidden === true);
+
+    // Bouclage : depuis la derniere page, "suivant" revient a la premiere.
+    const fx3 = document.getElementById("pagesList");
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    const rows2 = fx3.querySelectorAll(".page-row");
+    for (const r of rows2) {
+      const sel = r.querySelector("[data-role=fx]");
+      sel.value = "none";
+      sel.dispatchEvent(new window.Event("change", { bubbles: true }));
+    }
+    document.getElementById("settingsModal").hidden = true;
+    document.getElementById("dashNext").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(100);
+    document.getElementById("dashNext").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(100);
+    assert("depuis la derniere page, 'suivant' revient a la premiere",
+      dots.querySelector(".dash-page-dot").classList.contains("active"));
+    assert("la page 1 est de nouveau affichee", document.getElementById("board").hidden === false);
+
+    // Le bandeau s'ouvre au survol et se referme au depart de la souris.
+    document.getElementById("dashHotzone").dispatchEvent(new window.MouseEvent("mouseenter", { bubbles: true }));
+    assert("le bandeau sort au survol de la bande du bas", document.body.classList.contains("dash-open"));
+    document.getElementById("dashBar").dispatchEvent(new window.MouseEvent("mouseleave", { bubbles: true }));
+    await sleep(420);
+    assert("le bandeau rentre quand la souris s'en va", !document.body.classList.contains("dash-open"));
+    document.getElementById("dashTab").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("la languette (tactile) ouvre le bandeau sans survol", document.body.classList.contains("dash-open"));
+    document.body.classList.remove("dash-open");
+
+    // Le bandeau donne acces aux reglages generaux : c'est le seul chemin
+    // en mode tableau de bord, la barre d'outils etant masquee.
+    document.getElementById("dashSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    assert("le bandeau ouvre les reglages generaux",
+      document.getElementById("settingsModal").hidden === false);
+
+    // Suppression d'une page vide : pas de confirmation attendue.
+    const delRow = document.getElementById("pagesList").querySelectorAll(".page-row")[2];
+    delRow.querySelector("[data-role=del]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    assert("une page supprimee disparait de la liste",
+      document.getElementById("pagesList").querySelectorAll(".page-row").length === 2);
+    assert("son conteneur est retire du document",
+      document.querySelectorAll(".board-page").length === 1);
+
+    /* Retour au mode classique : le plateau doit etre retrouve intact et
+       les tiroirs redevenir disponibles. C'est la garantie qui rend la
+       bascule sans risque. Back to classic mode: the board must be found
+       intact and the drawers become available again. That is the
+       guarantee that makes switching risk-free. */
+    await setMode("classic");
+    assert("retour au mode classique", !document.body.classList.contains("dashboard-mode"));
+    assert("le plateau principal est de nouveau affiche", document.getElementById("board").hidden === false);
+    assert("les pages creees ne sont pas detruites par la bascule",
+      document.querySelectorAll(".board-page").length === 1);
+    document.getElementById("settingsModal").hidden = true;
+  }
+
+  console.log("== Tuiles de style : Texte, Logo/Image, fond transparent ==");
+  {
+    const vm = require("vm");
+    let Text = null, Image = null;
+    for (const [id, target] of [["text", "Text"], ["image", "Image"]]) {
+      const sb = { window: { PiBoard: { registerWidget: (wid, k) => { if (wid === id) { if (id === "text") Text = k; else Image = k; } } } }, console, document: undefined, ResizeObserver: undefined };
+      vm.createContext(sb);
+      vm.runInContext(fs.readFileSync(path.join(PUB, "widgets", id, "widget.js"), "utf8"), sb);
+    }
+    assert("les deux tuiles de style s'enregistrent", !!Text && !!Image);
+
+    // Texte : les polices proposees listent plusieurs familles de repli,
+    // sans quoi un Raspberry Pi n'en afficherait aucune.
+    for (const [key, stack] of Object.entries(Text.FONTS)) {
+      assert("la police '" + key + "' prevoit un repli generique",
+        /(sans-serif|serif|monospace|cursive)\s*$/.test(stack));
+    }
+    assert("taille bornee vers le bas", Text._clamp(-50) >= 6);
+    assert("taille bornee vers le haut", Text._clamp(9000) <= 400);
+
+    // Ajustement automatique : recherche dichotomique sur un faux element
+    // dont la hauteur rendue croit avec la taille de police.
+    const fake = { style: {}, get scrollHeight() { return (parseInt(this.style.fontSize, 10) || 0) * 2; },
+                   get scrollWidth() { return (parseInt(this.style.fontSize, 10) || 0) * 3; } };
+    const fitted = Text._fitSize(fake, 300, 100);
+    assert("la taille trouvee tient dans la boite", fitted * 2 <= 100 && fitted * 3 <= 300);
+    assert("la taille trouvee est la plus grande possible", (fitted + 1) * 2 > 100 || (fitted + 1) * 3 > 300);
+
+    // Image : un lien "javascript:" saisi dans le champ ne doit jamais
+    // etre pose sur la balise. C'est le seul cas qui compte ici.
+    assert("lien http accepte", Image._safeLink("https://exemple.test/a") === "https://exemple.test/a");
+    assert("lien interne accepte", Image._safeLink("/aide") === "/aide");
+    assert("javascript: refuse", Image._safeLink("javascript:alert(1)") === null);
+    assert("data: refuse", Image._safeLink("data:text/html,<b>") === null);
+    assert("champ vide : pas de lien", Image._safeLink("") === null && Image._safeLink(null) === null);
+    const img = { style: {} };
+    Image._applyFit(img, "none");
+    assert("cadrage 'taille d'origine' : pas d'etirement force", img.style.width === "auto" && img.style.height === "auto");
+    Image._applyFit(img, "n'importe quoi");
+    assert("cadrage inconnu : repli sur 'image entiere'", img.style.objectFit === "contain");
+
+    // Les deux tuiles sont bien au catalogue, dans la famille Mise en page.
+    const appSrc = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    assert("les tuiles de style ont leur famille dans le catalogue",
+      /\{ key: "style", ids: \["text", "image"\] \}/.test(appSrc));
+    assert("le fond transparent est propose dans les reglages universels",
+      /data-key="_transparent"/.test(appSrc));
+    const css = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+    assert("une tuile transparente reste reperable en mode edition",
+      /body\.editing \.grid-stack-item-content\.tile-transparent/.test(css));
+  }
+
   console.log("== Sante Internet : mesure serveur, coupures et export ==");
   {
     const src = fs.readFileSync(path.join(PUB, "widgets/speedtest/widget.js"), "utf8");
@@ -4887,6 +5073,8 @@ function catalogItemFor(catalog, document, widgetId) {
       !/Pré-version/.test(document.getElementById("updStatusText").textContent));
     assert("selecteur de canal present et par defaut sur stable",
       !!document.getElementById("setUpdateChannel") && document.getElementById("setUpdateChannel").value === "stable");
+    assert("boutons serveur visibles quand le serveur gere ses mises a jour",
+      document.getElementById("updServerControls").hidden === false);
     document.getElementById("settingsModal").hidden = true;
     document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     // Les deux verifications ci-dessus servaient a ce bloc : on remet le
@@ -4992,7 +5180,24 @@ function catalogItemFor(catalog, document, widgetId) {
     document.getElementById("updCheckBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     tries = 0;
     while (document.getElementById("secUpdates").hidden === false && tries++ < 40) await sleep(50);
-    assert("plateforme non supportee : section masquee", document.getElementById("secUpdates").hidden === true);
+    /* Regression corrigee en 1.86.0 : toute la section etait masquee des
+       que le serveur ne gerait pas ses propres mises a jour, ce qui
+       rendait le SELECTEUR DE CANAL invisible dans l'application de
+       bureau Windows -- alors qu'il la concerne (electron-updater lit le
+       meme reglage). Seuls les boutons serveur doivent disparaitre.
+       Regression fixed in 1.86.0: the whole section was hidden as soon as
+       the server did not handle its own updates, making the CHANNEL
+       SELECTOR invisible in the Windows desktop application -- which it
+       applies to (electron-updater reads the same setting). Only the
+       server buttons must disappear. */
+    assert("plateforme non supportee : le selecteur de canal RESTE visible",
+      document.getElementById("secUpdates").hidden === false
+      && document.getElementById("setUpdateChannel").closest("[hidden]") === null);
+    assert("plateforme non supportee : boutons de verification masques",
+      document.getElementById("updServerControls").hidden === true);
+    assert("plateforme non supportee : explication propre a l'application de bureau affichee",
+      document.getElementById("updDesktopHint").hidden === false
+      && document.getElementById("updServerHint").hidden === true);
     assert("plateforme non supportee : bandeau masque", document.getElementById("updateBanner").hidden === true);
     document.getElementById("settingsModal").hidden = true;
   }

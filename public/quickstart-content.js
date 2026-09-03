@@ -33,6 +33,17 @@ window.PIBOARD_QUICKSTART = {
     <h4>Ajouter une tuile</h4>
     <p>Touchez le <b>+</b> : un catalogue s'ouvre, classé par familles. Choisissez un widget, et la tuile apparaît immédiatement sur le tableau, prête à être configurée. Si un tiroir latéral est ouvert à ce moment-là, la tuile y est placée plutôt que sur le tableau principal.</p>
 
+    <h4>Deux façons d'afficher : classique ou tableau de bord</h4>
+    <p>PiBoard sait s'afficher de deux manières, au choix dans les <b>réglages généraux → Mode d'affichage</b> :</p>
+    <div class="qs-two">
+      <div><b>Classique</b> — le mode d'origine, décrit ci-dessus : un plateau, des tiroirs latéraux escamotables, la barre d'outils en bas.</div>
+      <div><b>Tableau de bord</b> — une suite de pages qui se remplacent en glissant. Plus de tiroirs ni de barre d'outils : un <b>fin bandeau</b> apparaît quand vous amenez la souris au bas de l'écran (une languette permanente en mode tactile). On change de page par les numéros du bandeau, par un glissement du doigt, ou avec les flèches du clavier.</div>
+    </div>
+    <p>Votre tableau actuel devient la <b>page 1</b> : rien n'est perdu, et revenir au mode classique le retrouve intact. Le nombre de pages n'est pas limité, et chaque page choisit son sens d'arrivée et son effet (pousser, recouvrir, fondu…).</p>
+
+    <h4>Habiller une page</h4>
+    <p>Deux tuiles servent uniquement à la mise en page, dans la famille <b>Mise en page</b> du catalogue : <b>Texte</b> (un titre, dont la taille s'adapte toute seule à la tuile) et <b>Logo / Image</b> (une image téléversée sur la machine PiBoard). Associez-leur le <b>fond transparent</b> — réglages de la tuile → Apparence — et elles se fondent dans la page, sans aucun cadre visible.</p>
+
     <h4>Deux niveaux de réglages</h4>
     <p>Ne les confondez pas, c'est la source de confusion la plus fréquente :</p>
     <div class="qs-two">
@@ -76,6 +87,17 @@ window.PIBOARD_QUICKSTART = {
 
     <h4>Adding a tile</h4>
     <p>Tap the <b>+</b>: a catalog opens, grouped into families. Pick a widget and the tile appears on the board straight away, ready to configure. If a side drawer happens to be open at that moment, the tile goes there rather than onto the main board.</p>
+
+    <h4>Two ways of displaying: classic or dashboard</h4>
+    <p>PiBoard can display itself in two ways, chosen in the <b>general settings → Display mode</b>:</p>
+    <div class="qs-two">
+      <div><b>Classic</b> — the original mode, described above: one board, retractable side drawers, the toolbar at the bottom.</div>
+      <div><b>Dashboard</b> — a series of pages replacing each other by sliding. No more drawers nor toolbar: a <b>thin bar</b> appears when you move the mouse to the bottom of the screen (a permanent tab in touch mode). You change page with the bar's numbers, a finger swipe, or the keyboard arrows.</div>
+    </div>
+    <p>Your current board becomes <b>page 1</b>: nothing is lost, and returning to classic mode finds it intact. The number of pages is not limited, and each page picks the direction it arrives from and its effect (push, cover, fade…).</p>
+
+    <h4>Dressing a page</h4>
+    <p>Two tiles exist purely for layout, in the catalog's <b>Page design</b> family: <b>Text</b> (a title whose size fits the tile by itself) and <b>Logo / Image</b> (an image uploaded to the PiBoard machine). Give them the <b>transparent background</b> — tile settings → Appearance — and they blend into the page, with no visible frame at all.</p>
 
     <h4>Two levels of settings</h4>
     <p>Don't mix them up — this is the most common source of confusion:</p>

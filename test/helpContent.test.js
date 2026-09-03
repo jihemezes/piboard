@@ -193,4 +193,19 @@ console.log("== Canal des mises a jour documente (1.85.0) ==");
 }
 console.log("  OK");
 
+console.log("== Meteo : lever/coucher du soleil documente (1.86.0) ==");
+{
+  const e = entryById("weather");
+  assert.ok(/help-opt-name">Afficher le lever et le coucher du soleil</.test(e.html.fr),
+    "fr : l'option doit figurer parmi les reglages de la tuile");
+  assert.ok(/help-opt-name">Show sunrise and sunset</.test(e.html.en),
+    "en : l'option doit figurer parmi les reglages de la tuile");
+  const u = entryById("linux-update");
+  assert.ok(/application de bureau Windows, qui lit le même réglage/.test(u.html.fr),
+    "fr : la portee du reglage de canal (serveur ET application Windows) doit etre dite");
+  assert.ok(/Windows desktop application, which reads the same setting/.test(u.html.en),
+    "en : la portee du reglage de canal doit etre dite");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");
