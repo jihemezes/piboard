@@ -1,7 +1,7 @@
 {
   "id": "text",
   "dir": "text",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Text",
     "fr": "Texte"
@@ -15,7 +15,7 @@
     "fr": "Une tuile de style : affiche un texte libre (titre de page, intitulé de section, légende) avec la police, la taille, la graisse, la couleur et l'alignement de votre choix. Associée au fond transparent, elle permet de titrer une page sans aucun cadre visible. Fonctionne aussi bien en mode classique qu'en mode tableau de bord."
   },
   "size": {
-    "w": 4,
+    "w": 2,
     "h": 1,
     "minW": 1,
     "minH": 1,

@@ -1,5 +1,62 @@
 # Changelog
 
+## 1.88.2
+
+- **Tuile Logo/Image : l'aide situait mal le bouton.** Elle annoncait un
+  bouton « Choisir une image » *ci-dessous*, dans le formulaire de
+  reglages, alors qu'il s'affiche **dans la tuile elle-meme** tant
+  qu'elle est vide. Le texte du champ et la fiche d'aide disent
+  desormais ou il se trouve reellement.
+
+- **Et surtout, il n'y avait plus de chemin du tout une fois l'image
+  posee** : le bouton ne s'affiche que sur une tuile vide, et le
+  formulaire de reglages ne contient qu'un champ texte portant le nom du
+  fichier -- changer d'image obligeait donc a vider ce champ a la main.
+  Un petit bouton apparait maintenant dans le coin de la tuile **en mode
+  edition** et rouvre le gestionnaire. Il ne s'affiche qu'en edition :
+  sur un tableau en fonctionnement, il n'aurait rien a faire par-dessus
+  l'image.
+
+- **Tailles de depart reduites de moitie** pour les deux tuiles de
+  style : **Texte** demarre en 2x1 (au lieu de 4x1) et **Logo/Image** en
+  2x2, base carree (au lieu de 3x2). Un titre court ou un logo n'ont
+  aucune raison d'occuper le tiers de la largeur du tableau des leur
+  creation, alors qu'on les place justement dans un coin. Le minimum
+  reste d'une seule cellule dans les deux cas, et le maximum est
+  inchange.
+
+- **Tests** : `dom-smoke.js` verifie les tailles de depart (base carree
+  pour l'image, surface reduite, jamais sous le minimum du manifeste),
+  l'existence du bouton de changement et son affichage limite au mode
+  edition, et que l'aide du champ ne situe plus le bouton « ci-dessous ».
+
+---
+
+- **Logo/Image tile: the help placed the button wrongly.** It announced a
+  "Choose an image" button *below*, in the settings form, whereas it is
+  shown **inside the tile itself** as long as it is empty. The field's
+  text and the help page now say where it actually is.
+
+- **And above all, there was no path at all once an image was set**: the
+  button only appears on an empty tile, and the settings form only holds
+  a text field carrying the file name -- changing the image therefore
+  meant clearing that field by hand. A small button now appears in the
+  tile's corner **in edit mode** and reopens the manager. It is only
+  shown while editing: on a running board it would have no business
+  sitting over the image.
+
+- **Default sizes halved** for both style tiles: **Text** starts at 2x1
+  (instead of 4x1) and **Logo/Image** at 2x2, a square base (instead of
+  3x2). A short title or a logo have no reason to take a third of the
+  board's width the moment they are created, when a corner is precisely
+  where they get placed. The minimum stays a single cell in both cases,
+  and the maximum is unchanged.
+
+- **Tests**: `dom-smoke.js` checks the default sizes (square base for the
+  image, reduced area, never below the manifest's own minimum), the
+  existence of the change button and its display limited to edit mode,
+  and that the field's help no longer places the button "below".
+
 ## 1.88.1
 
 - **Correctif : lever et coucher invisibles dans la colonne « Demain ».**

@@ -1,7 +1,7 @@
 {
   "id": "image",
   "dir": "image",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Logo / Image",
     "fr": "Logo / Image"
@@ -15,7 +15,7 @@
     "fr": "Une tuile de style : affiche une image stockée sur la machine PiBoard elle-même (aucune adresse externe, rien à récupérer sur Internet). Vous la téléversez depuis les réglages de la tuile ; elle est conservée dans le dossier data/ et survit donc aux mises à jour. Le cadrage, la position, l'arrondi et l'opacité sont réglables, et un lien optionnel ouvre une page au clic sur l'image."
   },
   "size": {
-    "w": 3,
+    "w": 2,
     "h": 2,
     "minW": 1,
     "minH": 1,
@@ -32,8 +32,8 @@
         "fr": "Fichier image"
       },
       "hint": {
-        "en": "Filled in by the \"Choose an image\" button below. Leave empty to show none.",
-        "fr": "Renseigné par le bouton « Choisir une image » ci-dessous. Laissez vide pour n'en afficher aucune."
+        "en": "Filled in by the \"Choose an image\" button, which appears IN the tile as long as it is empty. Once an image is set, use the small button in the tile's top corner (visible in edit mode) to change it — or clear this field to get the chooser back.",
+        "fr": "Renseigné par le bouton « Choisir une image », qui apparaît DANS la tuile tant qu'elle est vide. Une fois l'image posée, utilisez le petit bouton dans le coin de la tuile (visible en mode édition) pour en changer — ou videz ce champ pour retrouver le sélecteur."
       }
     },
     {

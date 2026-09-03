@@ -1021,7 +1021,7 @@
           <h4>Stockage local, et c'est délibéré</h4>
           <p>L'image est <b>téléversée sur la machine PiBoard</b> et servie par elle. Aucune adresse externe à saisir : rien ne casse le jour où un site distant disparaît, rien ne part sur Internet depuis un tableau mural, et l'image reste affichée même sans connexion.</p>
           <p>Les fichiers sont rangés dans le dossier <code>data/</code>, celui qui n'est <b>jamais touché par les mises à jour</b> et qui est inclus dans les sauvegardes. Le mécanisme est celui déjà utilisé par le Diaporama, ce qui fait hériter cette tuile de ses contrôles : extensions autorisées, taille maximale, noms de fichiers assainis.</p>
-          <p>Chaque tuile a son propre dossier : deux tuiles Logo n'ont pas la même bibliothèque d'images. Cliquez sur <b>« Choisir une image »</b> depuis la tuile (ou depuis ses réglages) pour téléverser, choisir ou supprimer.</p>
+          <p>Chaque tuile a son propre dossier : deux tuiles Logo n'ont pas la même bibliothèque d'images. Tant que la tuile est vide, le bouton <b>« Choisir une image »</b> s'affiche <b>dans la tuile elle-même</b> : il ouvre le gestionnaire, où l'on téléverse, choisit ou supprime. Une fois l'image posée, ce bouton laisse la place à l'image ; pour en changer, passez en <b>mode édition</b> et utilisez le petit bouton apparu dans le coin de la tuile.</p>
 
           <h4>Cadrage</h4>
           <div class="help-opt"><span class="help-opt-name">Image entière</span><span class="help-opt-desc">Par défaut, et le seul choix qui ne rogne ni ne déforme jamais. Pour un logo, gardez celui-ci : des marges valent mieux qu'un logo tronqué.</span></div>
@@ -1037,7 +1037,7 @@
           <h4>Local storage, deliberately</h4>
           <p>The image is <b>uploaded to the PiBoard machine</b> and served by it. No external address to type: nothing breaks the day a remote site disappears, nothing leaves for the Internet from a wall board, and the image stays displayed even with no connection.</p>
           <p>Files are stored in the <code>data/</code> folder, the one <b>never touched by updates</b> and included in backups. The mechanism is the one already used by the Slideshow, which makes this tile inherit its controls: allowed extensions, maximum size, sanitised file names.</p>
-          <p>Each tile has its own folder: two Logo tiles do not share an image library. Click <b>"Choose an image"</b> from the tile (or from its settings) to upload, pick or delete.</p>
+          <p>Each tile has its own folder: two Logo tiles do not share an image library. As long as the tile is empty, the <b>"Choose an image"</b> button is shown <b>inside the tile itself</b>: it opens the manager, where images are uploaded, picked or deleted. Once an image is set, that button gives way to the image; to change it, switch to <b>edit mode</b> and use the small button that appears in the tile's corner.</p>
 
           <h4>Framing</h4>
           <div class="help-opt"><span class="help-opt-name">Whole image</span><span class="help-opt-desc">The default, and the only choice that never crops nor distorts. For a logo, keep this one: margins beat a truncated logo.</span></div>

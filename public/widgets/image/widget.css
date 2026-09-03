@@ -81,3 +81,33 @@
 }
 .pw-image-mgr-empty { color: var(--muted); font-size: 13px; margin: 14px 0; }
 .pw-image-mgr-status { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+
+/* Bouton de changement d'image, dans le coin de la tuile. Visible
+   uniquement en mode edition : sur un tableau en fonctionnement, il
+   n'aurait rien a faire par-dessus l'image, et le mode edition est deja
+   l'endroit ou l'on remanie les tuiles.
+   Image change button, in the tile's corner. Shown only in edit mode: on
+   a running board it would have no business sitting over the image, and
+   edit mode is already where tiles get reworked. */
+.pw-image-change {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  z-index: 2;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  cursor: pointer;
+}
+body.editing .pw-image-change { display: inline-flex; }
+.pw-image-change svg { width: 15px; height: 15px; }
+/* Le bouton est positionne par rapport a la tuile, pas a la page.
+   The button is positioned relative to the tile, not to the page. */
+.pw-image { position: relative; }

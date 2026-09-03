@@ -135,7 +135,33 @@
         this.render();
       };
 
+      /* Une fois l'image posee, il n'existait plus AUCUN chemin vers le
+         gestionnaire : le bouton n'apparait que sur la tuile vide, et le
+         formulaire de reglages ne contient qu'un champ texte portant le
+         nom du fichier. Changer d'image obligeait donc a vider ce champ
+         a la main. Ce petit bouton de coin, affiche en mode edition,
+         retablit le chemin.
+         Once an image was set there was NO path left to the manager: the
+         button only appears on an empty tile, and the settings form only
+         holds a text field carrying the file name. Changing the image
+         therefore meant clearing that field by hand. This small corner
+         button, shown in edit mode, restores the path. */
+      const change = document.createElement("button");
+      change.type = "button";
+      change.className = "pw-image-change";
+      change.title = i18n.t("image.choose");
+      change.setAttribute("aria-label", i18n.t("image.choose"));
+      change.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
+        + ' stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/>'
+        + '<path d="m4 17 5-5 4 4 3-2 4 4"/></svg>';
+      change.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.openManager();
+      });
+
       this.root.innerHTML = "";
+      this.root.appendChild(change);
       if (link) {
         const a = document.createElement("a");
         a.href = link;

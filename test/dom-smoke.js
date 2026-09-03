@@ -4648,6 +4648,49 @@ function catalogItemFor(catalog, document, widgetId) {
       /\.pb-taxis\s*\{/.test(styles));
   }
 
+  console.log("== Tuiles de style : tailles de depart et acces au gestionnaire d'images ==");
+  {
+    const sizeOf = (id) => JSON.parse(fs.readFileSync(path.join(PUB, "widgets", id, "manifest.json"), "utf8")).size;
+    /* Tailles de depart reduites : une tuile de titre ou un logo n'ont
+       aucune raison d'occuper le tiers de la largeur du tableau des leur
+       creation, alors qu'on les place justement dans un coin.
+       Reduced default sizes: a title tile or a logo have no reason to
+       take a third of the board's width the moment they are created,
+       when a corner is precisely where they get placed. */
+    const text = sizeOf("text");
+    assert("Texte demarre en 2x1, moitie de l'ancienne largeur", text.w === 2 && text.h === 1);
+    const image = sizeOf("image");
+    assert("Logo/Image demarre sur une base carree", image.w === image.h);
+    assert("et sur une surface reduite de moitie (2x2 au lieu de 3x2)", image.w === 2 && image.h === 2);
+    for (const [id, sz] of [["text", text], ["image", image]]) {
+      assert(id + " peut descendre jusqu'a une seule cellule", sz.minW === 1 && sz.minH === 1);
+      assert(id + " ne demarre jamais sous son propre minimum", sz.w >= sz.minW && sz.h >= sz.minH);
+    }
+
+    /* Une fois l'image posee, il n'existait plus aucun chemin vers le
+       gestionnaire : le bouton n'apparait que sur la tuile vide, et les
+       reglages ne contiennent qu'un champ texte. Changer d'image
+       obligeait a vider ce champ a la main.
+       Once an image was set there was no path left to the manager: the
+       button only appears on an empty tile, and the settings only hold a
+       text field. Changing the image meant clearing that field by hand. */
+    const src = fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8");
+    assert("un bouton de changement existe quand une image est posee", /pw-image-change/.test(src));
+    assert("il ouvre le gestionnaire", /pw-image-change[\s\S]{0,900}?this\.openManager\(\)/.test(src));
+    const css = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
+    assert("il ne s'affiche qu'en mode edition", /body\.editing \.pw-image-change/.test(css));
+    assert("il est positionne par rapport a la tuile", /\.pw-image \{[^}]*position:\s*relative/.test(css));
+
+    // L'aide ne doit plus situer le bouton "ci-dessous" : il est DANS la
+    // tuile. The help must no longer place the button "below": it is IN
+    // the tile.
+    const manifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/image/manifest.json"), "utf8"));
+    const hint = manifest.settings.find((f) => f.key === "image").hint;
+    assert("l'aide du champ situe le bouton dans la tuile, pas en dessous",
+      /DANS la tuile/.test(hint.fr) && /IN the tile/.test(hint.en));
+    assert("elle ne dit plus 'ci-dessous'", !/ci-dessous/.test(hint.fr) && !/below/.test(hint.en));
+  }
+
   console.log("== Mode tableau de bord : pages, transitions, bandeau ==");
   {
     const setMode = async (mode) => {
