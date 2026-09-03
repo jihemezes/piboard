@@ -4691,6 +4691,80 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("elle ne dit plus 'ci-dessous'", !/ci-dessous/.test(hint.fr) && !/below/.test(hint.en));
   }
 
+  console.log("== Regressions du mode tableau de bord et des tuiles de style ==");
+  {
+    const appSrc = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+
+    /* 1. Redimensionner une tuile ouvrait ses reglages. Le garde-fou
+       (un glissement qui se termine ne compte pas comme un clic) etait
+       pose au demarrage sur une liste FIGEE : plateau + tiroirs. Les
+       grilles de pages, creees ensuite, en etaient exclues.
+       1. Resizing a tile opened its settings. The guard (a drag that
+       just ended does not count as a click) was set at boot on a FROZEN
+       list: board + drawers. The page grids, created afterwards, were
+       excluded. */
+    assert("le garde-fou du clic est une fonction appliquee a chaque grille",
+      /function wireEditClick\(g, el\)/.test(appSrc));
+    assert("il est applique aux grilles de pages a leur creation",
+      /pgGrid[\s\S]{0,400}?wireEditClick\(pgGrid, gs\)/.test(appSrc));
+    assert("et a toutes les grilles au demarrage",
+      /for \(const g of allGrids\(\)\) wireEditClick\(g, g\.el\)/.test(appSrc));
+    assert("plus aucune liste figee de grilles au demarrage",
+      !/const allGrids = \[grid, \.\.\.Array/.test(appSrc));
+
+    /* 2. Les tuiles debordaient par le bas des pages : les grilles de
+       pages n'etaient pas dans updateCellHeight et gardaient la hauteur
+       de cellule par defaut de Gridstack, sans rapport avec l'ecran.
+       2. Tiles overflowed off the bottom of pages: the page grids were
+       not in updateCellHeight and kept Gridstack's default cell height,
+       unrelated to the screen. */
+    assert("la hauteur de cellule est posee sur toutes les grilles",
+      /for \(const g of allGrids\(\)\) g\.cellHeight\(cell\)/.test(appSrc));
+    /* ... et le plateau mesure/defile devait etre le plateau VISIBLE :
+       en mode tableau de bord, mesurer le plateau principal masque
+       laissait la page courante deborder sans pouvoir atteindre son bas.
+       ... and the measured/scrolled board had to be the VISIBLE one: in
+       dashboard mode, measuring the hidden main board left the current
+       page overflowing with no way to reach its bottom. */
+    assert("le plateau mesure est celui qui est affiche",
+      /function boardEl\(\) \{[\s\S]{0,400}?dashboardMode\(\)[\s\S]{0,200}?pageAt\(activePageIndex\)/.test(appSrc));
+    assert("le debordement est evalue par element, pas par drapeau partage",
+      /over === board\.classList\.contains\("has-overflow"\)/.test(appSrc));
+
+    /* 3. Tuile Texte : la premiere mesure d'un redimensionnement tombe
+       souvent alors que la tuile est a mi-course, voire de taille nulle.
+       Calculer dessus figeait une police minuscule que rien ne
+       corrigeait -- le texte rapetissait en elargissant la tuile.
+       3. Text tile: a resize's first measurement often lands while the
+       tile is mid-course, or even of zero size. Computing on it froze a
+       tiny font that nothing corrected -- text shrank as the tile was
+       widened. */
+    const textSrc = fs.readFileSync(path.join(PUB, "widgets/text/widget.js"), "utf8");
+    assert("les mesures d'un redimensionnement sont regroupees",
+      /scheduleFit\(\)/.test(textSrc) && /this\.fitPending/.test(textSrc));
+    assert("le redimensionnement passe par ce regroupement",
+      /ResizeObserver\(\(\) => this\.scheduleFit\(\)\)/.test(textSrc));
+    assert("un second passage rattrape une mise en page non stabilisee",
+      /requestAnimationFrame\(\(\) => this\.fit\(\)\)/.test(textSrc));
+    assert("une mesure nulle ou minuscule ne fige aucune taille",
+      /box\.width < 2 \|\| box\.height < 2/.test(textSrc));
+
+    /* 4. Tuile Image : les poignees n'apparaissaient que si le cadrage
+       « Recadrer » etait DEJA choisi, donc aucun point d'entree visible.
+       4. Image tile: the handles only appeared if the "Crop" framing was
+       ALREADY chosen, so no visible entry point. */
+    const imgSrc2 = fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8");
+    assert("un bouton d'entree bascule vers le cadrage 'Recadrer'",
+      /pw-image-cropstart/.test(imgSrc2) && /commitCrop\(\{ fit: "crop" \}, true\)/.test(imgSrc2));
+    assert("il reste cliquable hors du cadrage 'Recadrer'",
+      /!e\.target\.closest\("\.pw-image-cropstart"\)/.test(imgSrc2));
+    const imgCss2 = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
+    assert("la surcouche n'est plus masquee en bloc hors recadrage",
+      !/\.pw-image-crop\.pw-image-crop-off \{[^}]*display:\s*none/.test(imgCss2));
+    assert("le bouton d'entree s'affiche alors a la place des poignees",
+      /\.pw-image-crop-off \.pw-image-cropstart \{ display: block/.test(imgCss2));
+  }
+
   console.log("== Mode tableau de bord : pages, transitions, bandeau ==");
   {
     const setMode = async (mode) => {
@@ -5134,8 +5208,17 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("un mouvement n'enregistre pas", /commit\(\{[\s\S]{0,220}?\}, false\)/.test(imgSrc));
     const imgCss = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
     assert("la surcouche n'apparait qu'en mode edition", /body\.editing \.pw-image-crop \{/.test(imgCss));
-    assert("elle disparait si le cadrage n'est pas 'Recadrer'",
-      /\.pw-image-crop\.pw-image-crop-off \{[^}]*display:\s*none/.test(imgCss));
+    /* Hors du cadrage « Recadrer », les POIGNEES disparaissent (elles
+       n'auraient aucun effet) mais la surcouche reste, pour porter le
+       bouton d'entree. Les masquer toutes les deux, comme au depart,
+       revenait a n'offrir aucun point d'entree visible.
+       Outside the "Crop" framing the HANDLES go (they would have no
+       effect) but the overlay stays, to carry the entry button. Hiding
+       both, as originally, meant offering no visible entry point. */
+    assert("les poignees disparaissent si le cadrage n'est pas 'Recadrer'",
+      /\.pw-image-crop-off \.pw-image-handle/.test(imgCss));
+    assert("mais la surcouche reste pour porter le bouton d'entree",
+      /\.pw-image-crop-off \.pw-image-cropstart \{ display: block/.test(imgCss));
 
     const imgManifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/image/manifest.json"), "utf8"));
     const fitField = imgManifest.settings.find((f) => f.key === "fit");

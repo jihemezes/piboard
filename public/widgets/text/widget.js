@@ -84,7 +84,7 @@
          (no settings event is emitted then). ResizeObserver is the only
          reliable source. */
       if (typeof ResizeObserver === "function") {
-        this.ro = new ResizeObserver(() => this.fit());
+        this.ro = new ResizeObserver(() => this.scheduleFit());
         this.ro.observe(this.ctx.el);
       }
     }
@@ -133,6 +133,42 @@
       this.fit();
     }
 
+    /* Un redimensionnement produit une rafale de mesures, et Gridstack
+       redimensionne la tuile PENDANT le glissement de la poignee : la
+       toute premiere mesure tombe souvent alors que l'element est encore
+       a mi-course, voire de taille nulle. En calculant sur cette
+       mesure-la, on figeait une taille de police minuscule que plus rien
+       ne venait corriger -- d'ou un texte qui rapetissait au lieu de
+       grossir quand on elargissait franchement la tuile.
+       On ne garde donc que la DERNIERE mesure de la rafale, et on refait
+       un passage a la trame suivante pour rattraper une mise en page qui
+       n'etait pas encore stabilisee.
+
+       A resize produces a burst of measurements, and Gridstack resizes
+       the tile WHILE the handle is being dragged: the very first
+       measurement often lands while the element is still mid-course, or
+       even of zero size. Computing on that measurement froze a tiny font
+       size that nothing came to correct afterwards -- hence text
+       shrinking instead of growing when the tile was widened
+       substantially.
+       So we keep only the LAST measurement of the burst, and run one
+       more pass on the next frame to catch a layout that had not settled
+       yet. */
+    scheduleFit() {
+      if (this.fitPending) return;
+      this.fitPending = true;
+      const run = () => {
+        this.fitPending = false;
+        this.fit();
+        // Second passage : la taille finale de la tuile n'est parfois
+        // connue qu'a la trame suivante. Second pass: the tile's final
+        // size is sometimes only known on the next frame.
+        requestAnimationFrame(() => this.fit());
+      };
+      if (typeof requestAnimationFrame === "function") requestAnimationFrame(run);
+      else setTimeout(run, 16);
+    }
+
     fit() {
       const s = this.ctx.settings || {};
       if (!this.inner || !this.inner.textContent) return;
@@ -141,8 +177,25 @@
         return;
       }
       const box = this.ctx.el.getBoundingClientRect();
-      if (!box.width || !box.height) return;
-      this.inner.style.fontSize = fitSize(this.inner, box.width, box.height) + "px";
+      // Element pas encore en page (page masquee du mode tableau de
+      // bord, tuile en cours de montage) : on ne calcule rien plutot que
+      // de figer une taille sur une mesure nulle.
+      // Element not laid out yet (hidden dashboard page, tile being
+      // mounted): compute nothing rather than freeze a size on a zero
+      // measurement.
+      if (box.width < 2 || box.height < 2) return;
+      /* On mesure la place reellement disponible POUR LE TEXTE, pas la
+         boite de la tuile : `inner` peut etre en retrait (marges de la
+         tuile, titre affiche). Mesurer la tuile entiere surestimait la
+         largeur, et le texte pouvait alors deborder.
+         We measure the room actually available FOR THE TEXT, not the
+         tile's box: `inner` may be inset (tile margins, displayed
+         title). Measuring the whole tile overestimated the width, and
+         the text could then overflow. */
+      const avail = this.el.getBoundingClientRect();
+      const width = Math.max(2, (avail.width || box.width));
+      const height = Math.max(2, (avail.height || box.height));
+      this.inner.style.fontSize = fitSize(this.inner, width, height) + "px";
     }
 
     destroy() {

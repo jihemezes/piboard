@@ -331,13 +331,38 @@
         + "</div>"
         + `<div class="pw-image-crophint">${esc(i18n.t("image.cropHint"))}</div>`;
 
+      /* Bouton d'entree dans le recadrage. Les poignees n'agissent que
+         sur le cadrage « Recadrer » ; les masquer completement hors de ce
+         cadrage revenait a n'offrir AUCUN point d'entree visible -- il
+         fallait deja savoir qu'il existait un cadrage « Recadrer » et
+         aller le choisir dans les reglages pour voir apparaitre quoi que
+         ce soit. Le mode edition affiche donc toujours quelque chose :
+         soit les poignees, soit ce bouton unique qui bascule le cadrage.
+         Entry button into cropping. The handles only act on the "Crop"
+         framing; hiding them entirely outside it meant offering NO
+         visible entry point -- one had to already know a "Crop" framing
+         existed and go pick it in the settings before anything appeared.
+         Edit mode therefore always shows something: either the handles,
+         or this single button switching the framing. */
+      const enter = document.createElement("button");
+      enter.type = "button";
+      enter.className = "pw-image-cropstart";
+      enter.textContent = i18n.t("image.cropStart");
+      enter.addEventListener("pointerdown", (e) => e.stopPropagation());
+      enter.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        this.commitCrop({ fit: "crop" }, true);
+      });
+      wrap.appendChild(enter);
+
       const zoomLabel = wrap.querySelector("[data-role=zoom]");
       const refresh = () => {
         const s = this.ctx.settings || {};
-        // La surcouche ne sert a rien hors du cadrage « Recadrer » : on
-        // la neutralise plutot que de laisser des poignees sans effet.
-        // The overlay is useless outside the "Crop" framing: we
-        // neutralise it rather than leave handles with no effect.
+        // Hors du cadrage « Recadrer », les poignees n'auraient aucun
+        // effet : on montre le bouton d'entree a leur place.
+        // Outside the "Crop" framing the handles would have no effect:
+        // the entry button is shown in their stead.
         wrap.classList.toggle("pw-image-crop-off", s.fit !== "crop");
         zoomLabel.textContent = clampZoom(s.zoom) + " %";
       };
@@ -377,7 +402,11 @@
          phase, so as to come before it. */
       for (const type of ["mousedown", "touchstart", "pointerdown"]) {
         wrap.addEventListener(type, (e) => {
-          if ((this.ctx.settings || {}).fit !== "crop") return;
+          // Le bouton d'entree doit rester utilisable hors du cadrage
+          // « Recadrer » : c'est justement la qu'il sert.
+          // The entry button must stay usable outside the "Crop"
+          // framing: that is precisely where it is useful.
+          if ((this.ctx.settings || {}).fit !== "crop" && !e.target.closest(".pw-image-cropstart")) return;
           e.stopPropagation();
         }, true);
       }

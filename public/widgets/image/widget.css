@@ -129,10 +129,33 @@ body.editing .pw-image-crop {
   touch-action: none;
 }
 /* Cadrage autre que « Recadrer » : les poignees n'auraient aucun effet,
-   on les retire plutot que de les laisser mentir.
-   Framing other than "Crop": the handles would have no effect, so we
-   remove them rather than let them lie. */
-body.editing .pw-image-crop.pw-image-crop-off { display: none; }
+   on les retire -- mais la surcouche reste, pour porter le bouton qui
+   fait basculer vers ce cadrage. Sans lui, aucun point d'entree visible
+   n'existait.
+   Framing other than "Crop": the handles would have no effect, so they
+   go -- but the overlay stays, to carry the button switching to that
+   framing. Without it, no visible entry point existed. */
+body.editing .pw-image-crop.pw-image-crop-off .pw-image-handle,
+body.editing .pw-image-crop.pw-image-crop-off .pw-image-croptools,
+body.editing .pw-image-crop.pw-image-crop-off .pw-image-crophint { display: none; }
+body.editing .pw-image-crop.pw-image-crop-off { cursor: default; }
+
+.pw-image-cropstart {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border: none;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 11px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+body.editing .pw-image-crop.pw-image-crop-off .pw-image-cropstart { display: block; }
 
 .pw-image-handle {
   position: absolute;

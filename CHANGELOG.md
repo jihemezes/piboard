@@ -1,5 +1,85 @@
 # Changelog
 
+## 1.91.1
+
+Quatre corrections, dont trois ont la meme origine : le mode tableau de
+bord a introduit des grilles (une par page) que du code ecrit avant lui
+ne connaissait pas, parce qu'il travaillait sur des listes constituees
+une fois pour toutes au demarrage.
+
+- **Redimensionner une tuile ouvrait sa fenetre de reglages.** Un
+  glissement se termine par un evenement de clic ; un garde-fou existait
+  pour l'ignorer, mais il etait pose au demarrage sur une liste FIGEE
+  (plateau + tiroirs). Les grilles de pages en etaient donc exclues.
+  C'est desormais une fonction appliquee a chaque grille au moment ou
+  elle existe, page creee en cours de session comprise.
+
+- **Les grandes tuiles debordaient par le bas des pages, sans moyen
+  d'atteindre leur bas.** Deux causes cumulees : les grilles de pages
+  n'etaient pas dans `updateCellHeight()` et gardaient la hauteur de
+  cellule par defaut de Gridstack, sans rapport avec l'ecran ; et le
+  plateau mesure puis rendu defilant etait le PREMIER du document, donc
+  le plateau principal masque, jamais la page affichee. Le debordement
+  est de plus evalue par element au lieu d'un drapeau partage entre tous
+  les plateaux -- avec plusieurs pages, ce drapeau faisait croire que le
+  travail etait deja fait.
+
+- **Tuile Texte : le texte rapetissait quand on elargissait la tuile.**
+  Gridstack redimensionne la tuile PENDANT le glissement de la poignee :
+  la premiere mesure tombait souvent alors que l'element etait a
+  mi-course, voire de taille nulle. La taille de police calculee sur
+  cette mesure restait figee, plus rien ne venant la corriger. Les
+  mesures d'une rafale sont maintenant regroupees (seule la derniere
+  compte), un second passage rattrape une mise en page non stabilisee, et
+  une mesure minuscule ne fige plus rien. La place disponible est
+  mesuree sur la zone de texte et non sur la tuile entiere, qui la
+  surestimait.
+
+- **Tuile Logo/Image : aucune poignee visible.** Elles n'apparaissaient
+  que si le cadrage « Recadrer » etait DEJA choisi -- il fallait donc
+  savoir qu'il existait et aller le selectionner dans les reglages pour
+  voir apparaitre quoi que ce soit. En mode edition, la tuile affiche
+  desormais toujours quelque chose : les poignees, ou un bouton
+  « Recadrer cette image » qui bascule le cadrage et les fait
+  apparaitre.
+
+---
+
+Four fixes, three of which share one origin: dashboard mode introduced
+grids (one per page) that code written before it did not know about,
+because it worked on lists built once and for all at boot.
+
+- **Resizing a tile opened its settings window.** A drag ends with a
+  click event; a guard existed to ignore it, but it was set at boot on a
+  FROZEN list (board + drawers). The page grids were therefore excluded.
+  It is now a function applied to each grid as it comes into existence,
+  a page created mid-session included.
+
+- **Large tiles overflowed off the bottom of pages, with no way to reach
+  their bottom.** Two combined causes: the page grids were not in
+  `updateCellHeight()` and kept Gridstack's default cell height,
+  unrelated to the screen; and the board being measured and made
+  scrollable was the document's FIRST, hence the hidden main board,
+  never the displayed page. Overflow is moreover evaluated per element
+  instead of through a flag shared by every board -- with several pages,
+  that flag made it look like the work was already done.
+
+- **Text tile: text shrank when the tile was widened.** Gridstack
+  resizes the tile WHILE the handle is being dragged: the first
+  measurement often landed while the element was mid-course, or even of
+  zero size. The font size computed on that measurement stayed frozen,
+  nothing coming to correct it. A burst's measurements are now grouped
+  (only the last counts), a second pass catches a layout that had not
+  settled, and a tiny measurement no longer freezes anything. Available
+  room is measured on the text area rather than on the whole tile, which
+  overestimated it.
+
+- **Logo/Image tile: no visible handle.** They only appeared if the
+  "Crop" framing was ALREADY chosen -- one had to know it existed and go
+  select it in the settings before anything appeared. In edit mode the
+  tile now always shows something: the handles, or a "Crop this image"
+  button switching the framing and bringing them up.
+
 ## 1.91.0
 
 - **Tuile Logo/Image : le recadrage se fait desormais SUR l'image.**

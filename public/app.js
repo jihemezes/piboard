@@ -1101,12 +1101,10 @@
     // would be the only frozen page of the session.
     pgGrid.setStatic(!editing);
     pgGrid.on("change", () => { if (editing) scheduleSave(); });
-    gs.addEventListener("click", (e) => {
-      if (!editing) return;
-      if (e.target.closest(".tile-btn")) return;
-      const item = e.target.closest(".grid-stack-item");
-      if (item && item.dataset.tileId) openTileSettings(item.dataset.tileId);
-    });
+    // Meme cablage que le plateau et les tiroirs, garde-fou du clic
+    // compris. Same wiring as the board and the drawers, edit-click
+    // guard included.
+    wireEditClick(pgGrid, gs);
     page.el = el;
     page.grid = pgGrid;
     return page;
@@ -1378,6 +1376,48 @@
     for (const d of drawers.values()) if (d.grid) out.push(d.grid);
     for (const p of pages) if (p.grid) out.push(p.grid);
     return out;
+  }
+
+  /* Garde-fou du clic d'edition, partage par TOUTES les grilles.
+
+     Un glissement ou un redimensionnement se termine par un evenement de
+     clic sur la tuile : sans ce garde-fou, redimensionner une tuile
+     ouvrait sa fenetre de reglages alors que personne ne l'avait
+     demandee. Le drapeau reste leve un court instant apres la
+     manipulation, le temps que ce clic parasite passe.
+
+     Il etait pose au demarrage sur une liste figee (plateau + tiroirs).
+     Les grilles de PAGES, creees ensuite, en etaient donc exclues : sur
+     une page, tout redimensionnement ouvrait les reglages. C'est
+     desormais une fonction appliquee a chaque grille au moment ou elle
+     existe -- y compris a une page creee en cours de session.
+
+     Edit-click guard, shared by EVERY grid.
+
+     A drag or a resize ends with a click event on the tile: without this
+     guard, resizing a tile opened its settings window when nobody asked
+     for it. The flag stays raised for a short while after the
+     manipulation, long enough for that spurious click to go by.
+
+     It used to be set at boot on a frozen list (board + drawers). The
+     PAGE grids, created afterwards, were therefore excluded: on a page,
+     every resize opened the settings. It is now a function applied to
+     each grid as it comes into existence -- a page created mid-session
+     included. */
+  let justManipulated = false;
+
+  function wireEditClick(g, el) {
+    ["dragstart", "resizestart"].forEach((evt) => g.on(evt, () => { justManipulated = true; }));
+    ["dragstop", "resizestop"].forEach((evt) => g.on(evt, () => {
+      setTimeout(() => { justManipulated = false; }, 250);
+    }));
+    if (!el) return;
+    el.addEventListener("click", (e) => {
+      if (!editing || justManipulated) return;
+      if (e.target.closest(".tile-btn")) return;
+      const item = e.target.closest(".grid-stack-item");
+      if (item && item.dataset.tileId) openTileSettings(item.dataset.tileId);
+    });
   }
 
   function gridForZone(zone) {
@@ -5094,7 +5134,22 @@
 
   let boardOverflowing = false;
 
-  function boardEl() { return document.querySelector(".board"); }
+  /* Le plateau VISIBLE, pas forcement le premier du document. En mode
+     tableau de bord, la page affichee est un autre element .board :
+     mesurer et faire defiler le plateau principal, masque, revenait a
+     laisser la page courante deborder sans jamais pouvoir atteindre son
+     bas.
+     The VISIBLE board, not necessarily the document's first. In
+     dashboard mode the displayed page is another .board element:
+     measuring and scrolling the hidden main board meant letting the
+     current page overflow with no way to ever reach its bottom. */
+  function boardEl() {
+    if (dashboardMode()) {
+      const p = pageAt(activePageIndex);
+      if (p && p.el) return p.el;
+    }
+    return document.getElementById("board") || document.querySelector(".board");
+  }
 
   /* Mesure REELLE du DOM plutot qu'un calcul en lignes
      (grid.getRow() > gridRows). Le calcul ignorerait le padding de
@@ -5113,7 +5168,17 @@
     // The 1px tolerance absorbs sub-pixel rounding: without it, some zoom
     // factors made the scrollbar flicker in and out.
     const over = board.scrollHeight > board.clientHeight + 1;
-    if (over === boardOverflowing) return;
+    /* L'etat est compare a CELUI DE L'ELEMENT, plus a un drapeau unique.
+       Avec plusieurs plateaux (une page par ecran du mode tableau de
+       bord), un drapeau partage faisait croire que le travail etait deja
+       fait des qu'une autre page avait le meme etat : la page affichee
+       restait alors sans defilement, son bas inatteignable.
+       The state is compared to THE ELEMENT'S, no longer to a single
+       flag. With several boards (one page per dashboard screen), a
+       shared flag made it look like the work was already done as soon as
+       another page had the same state: the displayed page then stayed
+       without scrolling, its bottom unreachable. */
+    if (over === board.classList.contains("has-overflow")) return;
     boardOverflowing = over;
     board.classList.toggle("has-overflow", over);
     // Si le debordement disparait (tuile supprimee, gridRows augmente),
@@ -5261,8 +5326,14 @@
     const gap = 10;
     const rows = settings.gridRows || 8;
     const cell = Math.floor((window.innerHeight - gap) / rows);
-    grid.cellHeight(cell);
-    drawers.forEach((d) => d.grid.cellHeight(cell));
+    /* Toutes les grilles, pages comprises. Les grilles de pages
+       n'etaient pas dans cette liste : elles gardaient la hauteur de
+       cellule par defaut de Gridstack, sans rapport avec l'ecran, et
+       leurs tuiles debordaient donc par le bas.
+       Every grid, pages included. The page grids were not in this list:
+       they kept Gridstack's default cell height, unrelated to the
+       screen, so their tiles overflowed off the bottom. */
+    for (const g of allGrids()) g.cellHeight(cell);
     // APRES le recalcul, jamais avant : on mesurerait sinon la hauteur
     // d'avant redimensionnement. La dependance ne va que dans ce sens --
     // la hauteur de cellule derive de window.innerHeight, jamais de la
@@ -5414,22 +5485,7 @@
        Un drag/resize qui vient de se terminer ne compte pas comme un clic.
        While editing: a plain click on a tile opens its settings.
        A drag/resize that just ended does not count as a click. */
-    let justManipulated = false;
-    const allGrids = [grid, ...Array.from(drawers.values()).map((d) => d.grid)];
-    allGrids.forEach((g) => {
-      ["dragstart", "resizestart"].forEach((evt) => g.on(evt, () => { justManipulated = true; }));
-      ["dragstop", "resizestop"].forEach((evt) => g.on(evt, () => {
-        setTimeout(() => { justManipulated = false; }, 250);
-      }));
-    });
-    const editClickHandler = (e) => {
-      if (!editing || justManipulated) return;
-      if (e.target.closest(".tile-btn")) return;
-      const item = e.target.closest(".grid-stack-item");
-      if (item && item.dataset.tileId) openTileSettings(item.dataset.tileId);
-    };
-    document.getElementById("grid").addEventListener("click", editClickHandler);
-    drawers.forEach((d) => document.getElementById(d.def.gridId).addEventListener("click", editClickHandler));
+    for (const g of allGrids()) wireEditClick(g, g.el);
 
     /* Tiroirs (gauche, haut, droite) : languette d'ouverture + poignee de
        redimensionnement pour chacun, construites generiquement depuis
