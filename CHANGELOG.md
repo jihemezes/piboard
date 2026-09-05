@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.92.1
+
+- **Tuile Image : les boutons de la barre d'outils ne faisaient plus
+  RIEN.** Regression introduite en 1.91.4 par la correction meme du
+  symptome precedent : pour empecher le clic d'atteindre la grille et
+  d'ouvrir la fenetre de configuration, `click` avait ete arrete en
+  phase de CAPTURE sur la surcouche. Or, en capture, l'evenement est
+  stoppe AVANT d'atteindre sa cible : les boutons ne recevaient plus
+  rien du tout. Le curseur changeait bien au survol -- le pointeur
+  passait, depuis la 1.92.0 -- mais aucun clic n'aboutissait.
+
+  La distinction de phase est desormais explicite :
+  - `mousedown`, `touchstart` et `pointerdown` restent arretes en
+    **capture**, parce que Gridstack demarre son glissement dessus et
+    qu'il faut passer avant lui ;
+  - `click` et `dblclick` sont arretes en **remontee** : les
+    gestionnaires des boutons s'executent d'abord, puis l'evenement est
+    stoppe avant d'atteindre la grille.
+
+- **Le test devient FONCTIONNEL.** Les versions precedentes verifiaient
+  que les ecouteurs etaient bien poses, ce qui passait au vert alors
+  qu'un clic ne declenchait rigoureusement rien -- c'est exactement
+  pourquoi la regression est passee. `dom-smoke.js` monte desormais la
+  tuile pour de vrai, clique sur chaque bouton de la barre d'outils, et
+  verifie que le zoom change, que la remise a zero agit, que l'appareil
+  photo ouvre le gestionnaire, et qu'aucun de ces clics n'ouvre la
+  fenetre de configuration.
+
+---
+
+- **Image tile: the toolbar's buttons did NOTHING any more.** A
+  regression introduced in 1.91.4 by the very fix for the previous
+  symptom: to stop the click from reaching the grid and opening the
+  settings window, `click` had been stopped in the CAPTURE phase on the
+  overlay. But in capture, the event is stopped BEFORE reaching its
+  target: the buttons received nothing at all. The cursor did change on
+  hover -- the pointer got through, as of 1.92.0 -- but no click ever
+  landed.
+
+  The phase distinction is now explicit:
+  - `mousedown`, `touchstart` and `pointerdown` stay stopped in
+    **capture**, because Gridstack starts its drag on them and we must
+    come before it;
+  - `click` and `dblclick` are stopped on the way **up**: the buttons'
+    handlers run first, then the event is stopped before reaching the
+    grid.
+
+- **The test becomes FUNCTIONAL.** The previous versions checked the
+  listeners were in place, which went green while a click did absolutely
+  nothing -- which is exactly why the regression got through.
+  `dom-smoke.js` now mounts the tile for real, clicks every toolbar
+  button, and checks that the zoom changes, that the reset acts, that the
+  camera opens the manager, and that none of these clicks opens the
+  settings window.
+
 ## 1.92.0
 
 - **Tuile Image : poignees et barre d'outils enfin cliquables.** La vraie

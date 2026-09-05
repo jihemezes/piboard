@@ -4751,8 +4751,18 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("la surcouche redevient explicitement sensible au pointeur",
       /pointer-events:\s*auto/.test(cropBlock));
 
-    assert("la surcouche arrete aussi le clic, qui ouvrait la configuration",
-      /\["mousedown", "touchstart", "pointerdown", "click", "dblclick"\]/.test(src));
+    /* Les evenements du glissement sont arretes en CAPTURE (il faut
+       passer avant Gridstack) ; le clic l'est en REMONTEE, sans quoi il
+       n'atteindrait jamais les boutons de la barre d'outils. Le
+       comportement lui-meme est verifie plus bas, par de vrais clics.
+       The drag events are stopped in CAPTURE (we must come before
+       Gridstack); the click is stopped on the way UP, without which it
+       would never reach the toolbar's buttons. The behaviour itself is
+       checked further down, with real clicks. */
+    assert("les evenements du glissement sont arretes avant Gridstack",
+      /\["mousedown", "touchstart", "pointerdown"\][\s\S]{0,160}?\}, true\);/.test(src));
+    assert("le clic est arrete en remontee, apres les boutons",
+      /\["click", "dblclick"\][\s\S]{0,140}?e\.stopPropagation\(\); \}\);/.test(src));
 
     // L'aide ne doit plus situer le bouton "ci-dessous" : il est DANS la
     // tuile. The help must no longer place the button "below": it is IN
@@ -4854,6 +4864,99 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("ni dans la feuille de style", !/pw-image-crop-off/.test(imgCss2));
     assert("la surcouche s'affiche des le mode edition",
       /body\.editing \.pw-image-crop \{[^}]*display:\s*block/.test(imgCss2));
+  }
+
+  console.log("== Tuile Image : la barre d'outils repond reellement au clic ==");
+  {
+    /* Test FONCTIONNEL, pas une lecture du code. Les versions
+       precedentes verifiaient la presence des ecouteurs, ce qui passait
+       au vert alors qu'un clic ne declenchait rigoureusement rien : le
+       `click` etait arrete en phase de CAPTURE sur la surcouche, donc il
+       n'atteignait jamais le bouton qu'il devait servir. On monte donc
+       la tuile pour de vrai, on clique, et on regarde ce qui s'est
+       passe.
+       FUNCTIONAL test, not a code read. The previous versions checked
+       the listeners were present, which went green while a click did
+       absolutely nothing: `click` was stopped in the CAPTURE phase on
+       the overlay, so it never reached the button it was meant to
+       serve. So we mount the tile for real, click, and look at what
+       happened. */
+    const vm = require("vm");
+    const host = document.createElement("div");
+    const item = document.createElement("div");
+    item.className = "grid-stack-item";
+    item.dataset.tileId = "img-probe";
+    const content = document.createElement("div");
+    content.className = "grid-stack-item-content";
+    content.appendChild(host);
+    item.appendChild(content);
+    const holder = document.createElement("div");
+    holder.appendChild(item);
+    document.body.appendChild(holder);
+
+    // Le clic d'edition tel que l'application le pose : sur le
+    // CONTENEUR, pas sur la tuile. C'est lui qui ouvrait la fenetre.
+    let openedSettings = 0;
+    holder.addEventListener("click", (e) => {
+      if (e.target.closest(".tile-btn")) return;
+      if (e.target.closest(".grid-stack-item")) openedSettings++;
+    });
+
+    let Klass = null;
+    const sb = { window: { PiBoard: { registerWidget: (id, k) => { if (id === "image") Klass = k; } } },
+      console, document, fetch: () => Promise.reject(new Error("hors ligne")) };
+    sb.window.document = document;
+    vm.createContext(sb);
+    vm.runInContext(fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8"), sb);
+
+    const saved = [];
+    const widget = new Klass({
+      el: host,
+      settings: { image: "logo.png", fit: "contain", zoom: 100, focusX: 50, focusY: 50 },
+      instanceId: "img-probe",
+      i18n: { t: (k) => k, lang: "fr" },
+      updateSettings: (patch) => saved.push(patch)
+    });
+    widget.init();
+    let managerOpened = 0;
+    widget.openManager = () => { managerOpened++; };
+
+    // L'etat d'edition du scenario est preserve : les sections
+    // suivantes en dependent. The scenario's editing state is preserved:
+    // the following sections depend on it.
+    const wasEditingProbe = document.body.classList.contains("editing");
+    document.body.classList.add("editing");
+    const toolBtn = (act) => host.querySelector('[data-act="' + act + '"]');
+    assert("la barre d'outils est montee avec l'image", !!toolBtn("in") && !!toolBtn("pick"));
+
+    const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+
+    click(toolBtn("in"));
+    assert("le bouton d'agrandissement AGIT reellement",
+      saved.length === 1 && saved[0].zoom === 110);
+    assert("et n'ouvre pas la fenetre de configuration", openedSettings === 0);
+
+    click(toolBtn("out"));
+    assert("le bouton de reduction agit", saved.length === 2 && saved[1].zoom === 100);
+
+    click(toolBtn("reset"));
+    assert("la remise a zero agit sur le zoom ET le cadrage",
+      saved.length === 3 && saved[2].zoom === 100 && saved[2].focusX === 50 && saved[2].focusY === 50);
+
+    click(toolBtn("pick"));
+    assert("l'appareil photo ouvre le gestionnaire d'images", managerOpened === 1);
+    assert("aucun clic de la barre d'outils n'a ouvert la configuration", openedSettings === 0);
+
+    /* Un clic ailleurs sur la tuile ne doit pas davantage ouvrir la
+       fenetre : la surcouche couvre l'image entiere. A click elsewhere
+       on the tile must not open the window either: the overlay covers
+       the whole image. */
+    click(host.querySelector(".pw-image-crop"));
+    assert("un clic sur l'image n'ouvre pas la configuration", openedSettings === 0);
+
+    if (!wasEditingProbe) document.body.classList.remove("editing");
+    widget.destroy();
+    holder.remove();
   }
 
   console.log("== Reglages d'une tuile : reinitialisation ==");

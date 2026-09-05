@@ -391,8 +391,39 @@
          window. By stopping the click at the overlay, nothing happening
          on the image can reach the grid any more: the toolbar's buttons
          act, and nothing else fires. */
-      for (const type of ["mousedown", "touchstart", "pointerdown", "click", "dblclick"]) {
+      /* Deux phases, et la distinction est le fond du probleme.
+
+         `mousedown`, `touchstart` et `pointerdown` sont arretes en phase
+         de CAPTURE : Gridstack demarre son glissement dessus, il faut
+         donc passer avant lui.
+
+         `click` et `dblclick` sont arretes en phase de REMONTEE. Les
+         arreter en capture, comme c'etait le cas, empechait l'evenement
+         d'atteindre sa cible : les boutons de la barre d'outils ne
+         recevaient plus rien et un clic dessus ne faisait
+         RIGOUREUSEMENT rien. En remontee, les gestionnaires des boutons
+         s'executent d'abord, puis l'evenement est stoppe avant
+         d'atteindre la grille -- qui ouvrirait sinon la fenetre de
+         configuration.
+
+         Two phases, and the distinction is the heart of the problem.
+
+         `mousedown`, `touchstart` and `pointerdown` are stopped in the
+         CAPTURE phase: Gridstack starts its drag on them, so we must
+         come before it.
+
+         `click` and `dblclick` are stopped in the BUBBLE phase. Stopping
+         them in capture, as was the case, prevented the event from ever
+         reaching its target: the toolbar's buttons received nothing any
+         more and clicking one did ABSOLUTELY nothing. On the way up, the
+         buttons' handlers run first, then the event is stopped before
+         reaching the grid -- which would otherwise open the settings
+         window. */
+      for (const type of ["mousedown", "touchstart", "pointerdown"]) {
         wrap.addEventListener(type, (e) => { e.stopPropagation(); }, true);
+      }
+      for (const type of ["click", "dblclick"]) {
+        wrap.addEventListener(type, (e) => { e.stopPropagation(); });
       }
 
       let drag = null;
