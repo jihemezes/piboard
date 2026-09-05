@@ -5023,6 +5023,87 @@ function catalogItemFor(catalog, document, widgetId) {
     holder.remove();
   }
 
+  console.log("== Tuile Avions : le repli de recherche de trajet ==");
+  {
+    const vm = require("vm");
+    let Planes = null;
+    const sbP = { window: { PiBoard: { registerWidget: (id, k) => { if (id === "planes") Planes = k; } } },
+      console: { warn() {}, log() {} }, document: undefined, L: undefined, setTimeout, clearTimeout };
+    vm.createContext(sbP);
+    vm.runInContext(fs.readFileSync(path.join(PUB, "widgets/planes/widget.js"), "utf8"), sbP);
+    assert("le widget Avions expose sa recherche de trajet", typeof Planes._lookupRoute === "function");
+
+    const ctxWith = (routes) => ({
+      api: { proxyUrl: (u) => u },
+      fetchCalls: [],
+      i18n: { t: (k) => k }
+    });
+    const runLookup = (handler, plane) => {
+      const ctx = ctxWith();
+      sbP.fetch = (url) => { ctx.fetchCalls.push(url); return handler(url); };
+      // La fonction appelle `fetch` global du bac a sable.
+      global.fetch = sbP.fetch;
+      return Planes._lookupRoute(ctx, plane).then((r) => ({ result: r, calls: ctx.fetchCalls }));
+    };
+    const ok = (body, text) => Promise.resolve({
+      ok: true, status: 200,
+      json: () => Promise.resolve(body),
+      text: () => Promise.resolve(text || "")
+    });
+    const fail = (status) => Promise.resolve({
+      ok: false, status,
+      json: () => Promise.resolve({ error: "upstream fetch failed" }),
+      text: () => Promise.resolve("")
+    });
+
+    const plane = { flight: "AFR123", hex: "abc123" };
+
+    /* LE defaut signale : quand la source principale est injoignable, le
+       proxy renvoie 502. L'ancien code s'arretait la, sur
+       « recherche indisponible », SANS jamais essayer le repli -- d'ou
+       tous les avions en echec alors qu'hexdb.io repondait normalement.
+       THE reported defect: when the primary source is unreachable, the
+       proxy returns 502. The old code stopped there, on "lookup
+       unavailable", WITHOUT ever trying the fallback -- hence every
+       aircraft failing while hexdb.io was answering normally. */
+    let r = await runLookup((url) => (url.includes("adsbdb") ? fail(502) : ok(null, "LFBO-LEBL")), plane);
+    assert("source principale en panne : le repli est bien tente",
+      r.calls.length === 2 && r.calls[1].includes("hexdb"));
+    assert("et le trajet est trouve malgre la panne",
+      r.result && r.result.originName === "LFBO" && r.result.destName === "LEBL");
+
+    // Reseau totalement coupe cote source principale : meme conclusion.
+    r = await runLookup((url) => (url.includes("adsbdb")
+      ? Promise.reject(new Error("reseau"))
+      : ok(null, "EGLL-KJFK")), plane);
+    assert("exception sur la source principale : le repli prend le relais",
+      r.result && r.result.originName === "EGLL");
+
+    // Source principale disponible : elle prime, pas d'appel inutile.
+    r = await runLookup(() => ok({ response: { flightroute: {
+      origin: { municipality: "Toulouse" }, destination: { municipality: "Barcelone" },
+      airline: { name: "Air France" } } } }), plane);
+    assert("source principale disponible : elle prime",
+      r.result.originName === "Toulouse" && r.result.destName === "Barcelone");
+    assert("et le repli n'est pas sollicite inutilement", r.calls.length === 1);
+
+    /* Deux causes, deux messages. Un indicatif inconnu des DEUX bases
+       n'est pas une panne : il ne se resoudra jamais, et le dire
+       « indisponible » laisserait croire qu'il suffit d'attendre.
+       Two causes, two messages. A callsign unknown to BOTH databases is
+       not an outage: it will never resolve, and calling it
+       "unavailable" would suggest waiting is enough. */
+    r = await runLookup((url) => (url.includes("adsbdb") ? ok({ response: {} }) : ok(null, "pas un trajet")), plane);
+    assert("indicatif inconnu des deux bases : 'trajet inconnu', pas une panne", r.result === null);
+    r = await runLookup(() => fail(502), plane);
+    assert("les deux sources en panne : la, c'est bien 'indisponible'",
+      r.result && r.result.error === true);
+    r = await runLookup(() => ok(null, ""), { hex: "abc" });
+    assert("sans indicatif de vol, aucune recherche n'est lancee",
+      r.result === null && r.calls.length === 0);
+    delete global.fetch;
+  }
+
   console.log("== Fond de page : image locale, cadrage, voile ==");
   {
     const vm = require("vm");

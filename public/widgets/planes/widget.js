@@ -594,20 +594,41 @@
               airline: r.airline && r.airline.name ? r.airline.name : null
             };
           }
-        } else if (res.status !== 404) {
-          // Un 404 signifie "indicatif inconnu de cette base", pas une
-          // panne : on enchaine sur le repli. Tout autre code est une
-          // vraie anomalie. A 404 means "callsign unknown to this
-          // database", not a failure: fall through to the fallback. Any
-          // other code is a genuine anomaly.
-          throw new Error("adsbdb " + res.status);
         }
+        // Tout autre reponse -- 404 (indicatif inconnu de cette base),
+        // 502 du proxy quand la source est injoignable, panne cote
+        // serveur -- n'est PAS une raison de s'arreter : le repli est
+        // justement la pour ca.
+        // Any other response -- 404 (callsign unknown to this database),
+        // 502 from the proxy when the source is unreachable, a
+        // server-side outage -- is NOT a reason to stop: the fallback is
+        // there precisely for that.
       } catch (e) {
         console.warn("[piboard/planes] adsbdb", e);
-        return { error: true };
       }
 
-      // Repli hexdb.io : format bien plus simple ("LFBO-LEBL"), sans
+      /* ---------- Repli / fallback ----------
+         Il n'etait ATTEINT que si la source principale avait repondu
+         proprement sans connaitre l'indicatif. Le moindre echec reel --
+         source injoignable, 502 renvoye par le proxy, coupure reseau --
+         faisait sortir la fonction sur `{ error: true }` avant d'arriver
+         ici. Autrement dit : le jour ou la source principale tombe, le
+         repli ne servait a rien et TOUS les avions affichaient
+         « Recherche du trajet indisponible » -- exactement le symptome
+         signale, alors qu'hexdb.io repondait normalement.
+         Le repli est desormais tente dans tous les cas.
+
+         It was only REACHED if the primary source had answered cleanly
+         without knowing the callsign. Any genuine failure -- unreachable
+         source, 502 returned by the proxy, network outage -- made the
+         function return `{ error: true }` before getting here. In other
+         words: the day the primary source goes down, the fallback was
+         useless and EVERY aircraft showed "Route lookup unavailable" --
+         exactly the reported symptom, while hexdb.io was answering
+         normally.
+         The fallback is now tried in every case. */
+
+      // hexdb.io : format bien plus simple ("LFBO-LEBL"), sans
       // coordonnees -- le controle de vraisemblance ne pourra donc pas
       // s'appliquer a ces resultats, ce qui est signale honnetement
       // plutot que de laisser croire a une verification qui n'a pas eu
@@ -618,7 +639,11 @@
       try {
         const url = `https://hexdb.io/callsign-route?callsign=${encodeURIComponent(plane.flight)}`;
         const res = await fetch(this.ctx.api.proxyUrl(url));
-        if (!res.ok) return null;
+        // Une reponse en erreur ici n'est pas « indicatif inconnu » mais
+        // « source injoignable » : les deux sources ont alors echoue.
+        // An error response here is not "callsign unknown" but "source
+        // unreachable": both sources have then failed.
+        if (!res.ok) throw new Error("hexdb " + res.status);
         const text = (await res.text()).trim();
         const m = text.match(/^([A-Z0-9]{3,4})-([A-Z0-9]{3,4})$/i);
         if (!m) return null;
@@ -630,7 +655,17 @@
         };
       } catch (e) {
         console.warn("[piboard/planes] hexdb route", e);
-        return null;
+        /* Les DEUX sources ont echoue : c'est la seule situation qui
+           merite « recherche indisponible ». Un indicatif simplement
+           inconnu des deux bases renvoie `null`, ce qui affiche
+           « trajet inconnu » -- deux messages distincts pour deux causes
+           distinctes, l'un se resout en attendant, l'autre jamais.
+           BOTH sources failed: the only situation deserving "lookup
+           unavailable". A callsign merely unknown to both databases
+           returns `null`, which shows "route unknown" -- two distinct
+           messages for two distinct causes, one resolves by waiting, the
+           other never will. */
+        return { error: true };
       }
     }
 
@@ -708,6 +743,11 @@
       if (this.map) this.map.remove();
     }
   }
+
+  // Expose pour les tests / exposed for tests
+  PlanesWidget._lookupRoute = function (ctx, plane) {
+    return PlanesWidget.prototype.lookupRoute.call({ ctx }, plane);
+  };
 
   window.PiBoard.registerWidget("planes", PlanesWidget);
 })();

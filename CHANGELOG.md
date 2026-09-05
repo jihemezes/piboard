@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.93.1
+
+- **Tuile Avions : plus aucun trajet ne s'affichait, tous les avions
+  indiquant « Recherche du trajet indisponible ».** Cause : la recherche
+  interroge d'abord `api.adsbdb.com`, avec `hexdb.io` en repli. Mais le
+  repli n'etait ATTEINT que si la premiere source avait repondu
+  proprement sans connaitre l'indicatif. Le moindre echec reel -- source
+  injoignable, 502 renvoye par le proxy, coupure reseau -- faisait sortir
+  la fonction sur une erreur AVANT d'arriver au repli. Autrement dit : le
+  jour ou la source principale tombe, le repli ne servait a rien, ce qui
+  est precisement le contraire de sa raison d'etre. Il est desormais
+  tente dans tous les cas.
+
+- **Deux causes, deux messages.** Un indicatif inconnu des DEUX bases
+  n'est pas une panne : il ne se resoudra jamais, et l'annoncer
+  « indisponible » laissait croire qu'il suffisait d'attendre. Ce cas
+  affiche « trajet inconnu » ; « recherche indisponible » est reserve au
+  cas ou les deux sources ont reellement echoue.
+
+- **Test fonctionnel** : `dom-smoke.js` rejoue la recherche avec un faux
+  reseau -- source principale en 502, source principale en exception, les
+  deux en panne, indicatif inconnu des deux, avion sans indicatif -- et
+  verifie a chaque fois le resultat ET le nombre d'appels, pour que le
+  repli ne soit ni oublie ni sollicite inutilement.
+
+---
+
+- **Planes tile: no route was shown any more, every aircraft reporting
+  "Route lookup unavailable".** Cause: the lookup queries
+  `api.adsbdb.com` first, with `hexdb.io` as a fallback. But the fallback
+  was only REACHED if the first source had answered cleanly without
+  knowing the callsign. Any genuine failure -- unreachable source, 502
+  returned by the proxy, network outage -- made the function return an
+  error BEFORE getting to the fallback. In other words: the day the
+  primary source goes down, the fallback was useless, which is precisely
+  the opposite of its purpose. It is now tried in every case.
+
+- **Two causes, two messages.** A callsign unknown to BOTH databases is
+  not an outage: it will never resolve, and calling it "unavailable"
+  suggested that waiting was enough. That case now shows "route
+  unknown"; "lookup unavailable" is reserved for when both sources have
+  genuinely failed.
+
+- **Functional test**: `dom-smoke.js` replays the lookup against a fake
+  network -- primary source on 502, primary source throwing, both down,
+  callsign unknown to both, aircraft with no callsign -- and checks both
+  the result AND the number of calls each time, so the fallback is
+  neither forgotten nor called needlessly.
+
 ## 1.93.0
 
 - **NOUVEAU : image de fond par page.** En plus de la couleur unie du
