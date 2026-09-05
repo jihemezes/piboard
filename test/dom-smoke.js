@@ -4760,7 +4760,16 @@ function catalogItemFor(catalog, document, widgetId) {
        would never reach the toolbar's buttons. The behaviour itself is
        checked further down, with real clicks. */
     assert("les evenements du glissement sont arretes avant Gridstack",
-      /\["mousedown", "touchstart", "pointerdown"\][\s\S]{0,160}?\}, true\);/.test(src));
+      /\["mousedown", "touchstart"\][\s\S]{0,160}?\}, true\);/.test(src));
+    /* `pointerdown` n'est plus dans cette liste : il est arrete par
+       l'ecouteur qui ARME le glissement, lui-meme en capture. Le separer
+       revenait a interrompre la distribution avant que cet armement
+       soit atteint.
+       `pointerdown` is no longer in that list: it is stopped by the
+       listener that ARMS the drag, itself in capture. Separating them
+       meant halting the dispatch before that arming was reached. */
+    assert("l'armement du glissement est lui-meme en capture",
+      /wrap\.addEventListener\("pointerdown"[\s\S]{0,2600}?\}, true\);/.test(src));
     assert("le clic est arrete en remontee, apres les boutons",
       /\["click", "dblclick"\][\s\S]{0,140}?e\.stopPropagation\(\); \}\);/.test(src));
 
@@ -4953,6 +4962,61 @@ function catalogItemFor(catalog, document, widgetId) {
        the whole image. */
     click(host.querySelector(".pw-image-crop"));
     assert("un clic sur l'image n'ouvre pas la configuration", openedSettings === 0);
+
+    /* ---------- Glissement : poignees et deplacement ----------
+       Le curseur changeait au survol (affaire de CSS) mais rien ne se
+       produisait a la saisie : `stopPropagation()` en capture sur la
+       surcouche interrompt toute la distribution, si bien que
+       l'armement du glissement, pose en remontee, n'etait jamais
+       appele. On simule donc un vrai geste et on regarde ce qui change.
+       The cursor changed on hover (a CSS matter) but nothing happened on
+       grab: `stopPropagation()` in capture on the overlay halts the
+       whole dispatch, so the drag arming, attached in the bubble phase,
+       was never called. So we simulate a real gesture and look at what
+       changes. */
+    const wrap = host.querySelector(".pw-image-crop");
+    wrap.getBoundingClientRect = () => ({ width: 200, height: 200, left: 0, top: 0 });
+    host.getBoundingClientRect = () => ({ width: 200, height: 200, left: 0, top: 0 });
+    const pointer = (el, type, x, y) => {
+      const ev = new window.MouseEvent(type, { bubbles: true, cancelable: true, clientX: x, clientY: y });
+      Object.defineProperty(ev, "pointerId", { value: 1 });
+      el.dispatchEvent(ev);
+    };
+
+    // Poignee d'angle : tirer vers l'exterieur doit AGRANDIR.
+    saved.length = 0;
+    const se = host.querySelector(".pw-image-handle-se");
+    assert("les quatre poignees sont presentes", host.querySelectorAll(".pw-image-handle").length === 4);
+    pointer(se, "pointerdown", 100, 100);
+    pointer(wrap, "pointermove", 160, 160);
+    pointer(wrap, "pointerup", 160, 160);
+    assert("tirer la poignee d'angle CHANGE reellement le zoom",
+      saved.length > 0 && saved[saved.length - 1].zoom > 100);
+    assert("le geste sur une poignee n'ouvre pas la configuration", openedSettings === 0);
+
+    /* Deplacement : il n'a d'effet que s'il y a de la matiere hors cadre,
+       donc a partir d'un zoom superieur a 100 %. A 100 % l'image affleure
+       le cadre et le geste ne doit rien faire -- c'est voulu, et c'est
+       desormais dit dans l'aide.
+       Panning only has an effect if there is material outside the frame,
+       so above 100% zoom. At 100% the image meets the frame and the
+       gesture must do nothing -- deliberately so, and now stated in the
+       help. */
+    widget.ctx.settings = Object.assign({}, widget.ctx.settings, { zoom: 100, focusX: 50, focusY: 50 });
+    saved.length = 0;
+    pointer(wrap, "pointerdown", 100, 100);
+    pointer(wrap, "pointermove", 40, 100);
+    pointer(wrap, "pointerup", 40, 100);
+    assert("a 100 %, deplacer l'image ne change pas le cadrage",
+      saved.every((p) => p.focusX === undefined || p.focusX === 50));
+
+    widget.ctx.settings = Object.assign({}, widget.ctx.settings, { zoom: 200, focusX: 50, focusY: 50 });
+    saved.length = 0;
+    pointer(wrap, "pointerdown", 100, 100);
+    pointer(wrap, "pointermove", 40, 100);
+    pointer(wrap, "pointerup", 40, 100);
+    assert("zoomee, l'image se deplace bien dans son cadre",
+      saved.length > 0 && saved[saved.length - 1].focusX > 50);
 
     if (!wasEditingProbe) document.body.classList.remove("editing");
     widget.destroy();

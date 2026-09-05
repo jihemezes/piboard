@@ -419,17 +419,55 @@
          buttons' handlers run first, then the event is stopped before
          reaching the grid -- which would otherwise open the settings
          window. */
-      for (const type of ["mousedown", "touchstart", "pointerdown"]) {
+      for (const type of ["mousedown", "touchstart"]) {
         wrap.addEventListener(type, (e) => { e.stopPropagation(); }, true);
       }
       for (const type of ["click", "dblclick"]) {
         wrap.addEventListener(type, (e) => { e.stopPropagation(); });
       }
 
+      /* Le glissement est arme dans un ecouteur en phase de CAPTURE, et
+         c'est indispensable.
+
+         `stopPropagation()` appele en capture sur cette surcouche
+         interrompt TOUTE la suite de la distribution : l'evenement
+         n'atteint pas sa cible, et ne remonte donc jamais jusqu'aux
+         ecouteurs poses en remontee sur ce meme element. Tant que
+         l'armement du glissement etait en remontee, il n'etait donc
+         jamais appele : les poignees changeaient bien le curseur au
+         survol -- affaire de CSS -- mais rien ne se produisait a la
+         saisie. Meme cause que les boutons inertes de la 1.92.1, une
+         phase plus tot.
+
+         En capture, l'ecouteur arme le glissement PUIS arrete
+         l'evenement, ce qui remplit les deux besoins d'un coup :
+         Gridstack ne demarre pas son propre glissement, et le notre
+         demarre.
+
+         The drag is armed in a CAPTURE-phase listener, and that is
+         essential.
+
+         `stopPropagation()` called in capture on this overlay halts the
+         WHOLE remainder of the dispatch: the event does not reach its
+         target, and therefore never bubbles back up to the listeners
+         attached in the bubble phase on that same element. As long as
+         the drag arming lived in the bubble phase, it was never called:
+         the handles did change the cursor on hover -- a CSS matter --
+         but nothing happened on grab. Same cause as 1.92.1's inert
+         buttons, one phase earlier.
+
+         In capture, the listener arms the drag THEN stops the event,
+         which meets both needs at once: Gridstack does not start its own
+         drag, and ours starts. */
       let drag = null;
       wrap.addEventListener("pointerdown", (e) => {
         const s = this.ctx.settings || {};
+        // La barre d'outils garde ses clics : on n'arme aucun glissement
+        // dessus, et on laisse l'evenement suivre son cours.
+        // The toolbar keeps its clicks: no drag is armed on it, and the
+        // event is left to run its course.
         if (e.target.closest(".pw-image-croptools")) return;
+        e.stopPropagation();
         const box = this.ctx.el.getBoundingClientRect();
         const corner = e.target.closest(".pw-image-handle");
         drag = {
@@ -439,7 +477,7 @@
         };
         e.preventDefault();
         try { wrap.setPointerCapture(e.pointerId); } catch (err) { /* pointeur deja relache / already released */ }
-      });
+      }, true);
 
       wrap.addEventListener("pointermove", (e) => {
         if (!drag) return;
@@ -455,7 +493,7 @@
             focusY: panFocus(drag.focusY, dy, drag.h, drag.zoom)
           }, false);
         }
-      });
+      }, true);
 
       const end = () => {
         if (!drag) return;
@@ -465,8 +503,8 @@
         // A single save for the whole gesture.
         commit({ zoom: clampZoom(s.zoom), focusX: pct(s.focusX, 50), focusY: pct(s.focusY, 50) }, true);
       };
-      wrap.addEventListener("pointerup", end);
-      wrap.addEventListener("pointercancel", end);
+      wrap.addEventListener("pointerup", end, true);
+      wrap.addEventListener("pointercancel", end, true);
       return wrap;
     }
 

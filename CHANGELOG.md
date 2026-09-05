@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.92.2
+
+- **Tuile Image : les poignees d'angle et le deplacement ne repondaient
+  pas.** Meme cause que les boutons inertes de la 1.92.1, une phase plus
+  tot : `stopPropagation()` appele en phase de CAPTURE sur la surcouche
+  interrompt TOUTE la suite de la distribution de l'evenement. Il
+  n'atteint donc pas sa cible, et ne remonte jamais jusqu'aux ecouteurs
+  poses en remontee sur ce meme element -- or c'est la que l'armement du
+  glissement etait pose. Le curseur changeait bien au survol (affaire de
+  CSS), mais aucune saisie ne demarrait quoi que ce soit.
+  L'armement du glissement est desormais lui-meme en capture : il arme
+  PUIS arrete l'evenement, ce qui remplit les deux besoins d'un coup --
+  Gridstack ne demarre pas son propre glissement, et le notre demarre.
+
+- **Le test simule desormais de VRAIS gestes** : appui sur une poignee,
+  deplacement, relachement, et verification que le zoom a change ; puis
+  un glissement sur l'image a 100 % (qui ne doit rien faire) et a 200 %
+  (qui doit deplacer le cadrage). Constater la presence des ecouteurs ne
+  suffit manifestement pas -- c'est ce qui a laisse passer trois
+  regressions d'affilee sur cette meme surcouche.
+
+- **Aide completee, comme demande** : chaque geste est decrit avec sa
+  condition. En particulier, **le deplacement de l'image n'a d'effet
+  qu'au-dessus de 100 % de zoom** -- en dessous, l'image tient
+  entierement dans la tuile, il n'y a rien hors du cadre, donc rien a
+  faire venir. Le curseur laisse pourtant croire a un geste possible :
+  c'est desormais ecrit noir sur blanc, avec la marche a suivre (zoomer
+  d'abord, deplacer ensuite).
+
+---
+
+- **Image tile: the corner handles and panning did not respond.** Same
+  cause as 1.92.1's inert buttons, one phase earlier:
+  `stopPropagation()` called in the CAPTURE phase on the overlay halts
+  the WHOLE remainder of the event's dispatch. It therefore does not
+  reach its target, and never bubbles back up to the listeners attached
+  in the bubble phase on that same element -- which is where the drag
+  arming lived. The cursor did change on hover (a CSS matter), but no
+  grab started anything.
+  The drag arming is now in capture itself: it arms THEN stops the
+  event, which meets both needs at once -- Gridstack does not start its
+  own drag, and ours starts.
+
+- **The test now simulates REAL gestures**: pressing a handle, moving,
+  releasing, and checking the zoom changed; then a drag on the image at
+  100% (which must do nothing) and at 200% (which must move the crop).
+  Observing that listeners are present is clearly not enough -- that is
+  what let three consecutive regressions through on this same overlay.
+
+- **Help completed, as requested**: every gesture is described with its
+  condition. In particular, **panning the image only has an effect above
+  100% zoom** -- below that, the image fits entirely inside the tile,
+  nothing sits outside the frame, so there is nothing to bring in. The
+  cursor nonetheless suggests a possible gesture: this is now written
+  down plainly, with what to do about it (zoom first, then move).
+
 ## 1.92.1
 
 - **Tuile Image : les boutons de la barre d'outils ne faisaient plus

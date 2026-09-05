@@ -272,6 +272,16 @@ console.log("== Tuile Image : recadrage direct documente (1.91.0) ==")
     "le fait qu'elle n'existe qu'en mode edition doit etre dit");
   assert.ok(/pendant<\/b> le geste/.test(e.html.fr) && /while<\/b> you drag/.test(e.html.en),
     "l'affichage en direct est justement ce qui manquait : il doit etre dit");
+  /* Le deplacement n'a d'effet qu'au-dessus de 100 % de zoom. Sans cette
+     condition ecrite, le curseur laisse croire a un geste possible qui ne
+     produit rien -- c'est ce qui a ete signale.
+     Panning only has an effect above 100% zoom. Without that condition
+     written down, the cursor suggests a possible gesture that produces
+     nothing -- which is what was reported. */
+  assert.ok(/au-dessus de 100 % de zoom/.test(e.html.fr) && /above 100% zoom/.test(e.html.en),
+    "la condition du deplacement doit etre dite explicitement");
+  assert.ok(/Tirer une poignée d'angle/.test(e.html.fr) && /Pulling a corner handle/.test(e.html.en),
+    "chaque geste doit etre decrit avec sa condition");
 }
 console.log("  OK");
 
