@@ -82,6 +82,23 @@
      weather, a holding pattern or a reroute legitimately stays a few
      hundred km off its direct path. Only BLATANT inconsistency should
      be flagged, without casting doubt on valid routes. */
+  /* Cache de session des noms d'aeroport, partage par toutes les tuiles
+     Avions : les memes codes reviennent en permanence.
+     Session cache of airport names, shared by every Planes tile: the
+     same codes come back constantly. */
+  const AIRPORT_CACHE = new Map();
+
+  /* Le code n'est affiche QUE s'il apporte quelque chose : quand le nom
+     n'a pas pu etre resolu, le code EST deja le nom affiche, et le
+     repeter donnerait "LFBO (LFBO)".
+     The code is shown ONLY if it adds something: when the name could not
+     be resolved, the code IS the displayed name, and repeating it would
+     give "LFBO (LFBO)". */
+  function routeCode(code, name) {
+    if (!code || String(code).toUpperCase() === String(name || "").toUpperCase()) return "";
+    return ` <span class="pwp-popup-code">${escapeHtml(String(code).toUpperCase())}</span>`;
+  }
+
   const ROUTE_DETOUR_TOLERANCE_KM = 500;
 
   const SOURCES = {
@@ -558,9 +575,9 @@
         ${acHtml}
         ${airline}
         <div class="pwp-popup-route ${doubtful ? "pwp-popup-route-doubt" : ""}">
-          <span>${escapeHtml(routeInfo.originName)}</span>
+          <span>${escapeHtml(routeInfo.originName)}${routeCode(routeInfo.originCode, routeInfo.originName)}</span>
           <span class="pwp-popup-arrow">→</span>
-          <span>${escapeHtml(routeInfo.destName)}</span>
+          <span>${escapeHtml(routeInfo.destName)}${routeCode(routeInfo.destCode, routeInfo.destName)}</span>
         </div>
         ${warning}
         ${this.headingLine(plane)}`));
@@ -577,6 +594,57 @@
        overlap: querying the second when the first doesn't know the
        callsign noticeably increases the number of documented flights
        (reported: too many aircraft with no information at all). */
+    /* Nom convivial d'un aeroport a partir de son code OACI.
+
+       Le repli hexdb.io ne renvoie que des codes bruts ("LEMG-LOWW") :
+       lisible pour qui connait par coeur les codes OACI, opaque pour tous
+       les autres. On les resout donc en ville (ou, a defaut, en nom
+       d'aeroport), le code restant affiche a cote -- il est court,
+       precis, et c'est lui qu'on retrouve sur un billet.
+
+       Les resultats sont mis en cache POUR LA SESSION : au-dessus d'une
+       ville, les memes aeroports reviennent en permanence d'un avion a
+       l'autre, et sans cache chaque clic relancerait deux requetes deja
+       faites. Les echecs sont caches aussi (sous forme de `null`), sans
+       quoi un code introuvable serait redemande a chaque clic.
+
+       Friendly airport name from its ICAO code.
+
+       The hexdb.io fallback only returns raw codes ("LEMG-LOWW"):
+       readable for whoever knows ICAO codes by heart, opaque to everyone
+       else. So we resolve them into a city (or, failing that, an airport
+       name), the code staying displayed alongside -- it is short,
+       precise, and it is what appears on a ticket.
+
+       Results are cached FOR THE SESSION: above a city, the same
+       airports come back constantly from one aircraft to the next, and
+       without a cache every click would fire two already-made requests.
+       Failures are cached too (as `null`), without which an unresolvable
+       code would be re-requested on every click. */
+    async lookupAirport(code) {
+      const icao = String(code || "").trim().toUpperCase();
+      if (!/^[A-Z0-9]{3,4}$/.test(icao)) return null;
+      if (AIRPORT_CACHE.has(icao)) return AIRPORT_CACHE.get(icao);
+      let name = null;
+      try {
+        const url = `https://hexdb.io/airport?icao=${encodeURIComponent(icao)}`;
+        const res = await fetch(this.ctx.api.proxyUrl(url));
+        if (res.ok) {
+          const data = await res.json();
+          // "region_name" est la ville ; "airport" le nom complet de
+          // l'aeroport, souvent plus long et moins parlant.
+          // "region_name" is the city; "airport" the airport's full
+          // name, often longer and less telling.
+          name = (data && (data.region_name || data.airport)) || null;
+          if (typeof name === "string") name = name.trim() || null;
+        }
+      } catch (e) {
+        console.warn("[piboard/planes] airport", e);
+      }
+      AIRPORT_CACHE.set(icao, name);
+      return name;
+    }
+
     async lookupRoute(plane) {
       if (!plane.flight) return null;
       try {
@@ -591,6 +659,12 @@
               destination: r.destination,
               originName: r.origin.municipality || r.origin.name || "?",
               destName: r.destination.municipality || r.destination.name || "?",
+              // Codes affiches a cote du nom : courts, precis, et c'est
+              // ce qu'on lit sur un billet.
+              // Codes displayed next to the name: short, precise, and
+              // what one reads on a ticket.
+              originCode: r.origin.icao_code || r.origin.iata_code || null,
+              destCode: r.destination.icao_code || r.destination.iata_code || null,
               airline: r.airline && r.airline.name ? r.airline.name : null
             };
           }
@@ -647,10 +721,26 @@
         const text = (await res.text()).trim();
         const m = text.match(/^([A-Z0-9]{3,4})-([A-Z0-9]{3,4})$/i);
         if (!m) return null;
+        const fromCode = m[1].toUpperCase();
+        const toCode = m[2].toUpperCase();
+        // Les deux resolutions en parallele : elles sont independantes,
+        // et les enchainer doublerait l'attente avant l'affichage.
+        // Both resolutions in parallel: they are independent, and
+        // chaining them would double the wait before display.
+        const [fromName, toName] = await Promise.all([
+          this.lookupAirport(fromCode),
+          this.lookupAirport(toCode)
+        ]);
         return {
           origin: {}, destination: {}, // pas de coordonnees / no coordinates
-          originName: m[1].toUpperCase(),
-          destName: m[2].toUpperCase(),
+          // Faute de nom resolu, le code reste affiche : mieux vaut un
+          // code qu'un point d'interrogation.
+          // Failing a resolved name, the code stays displayed: a code
+          // beats a question mark.
+          originName: fromName || fromCode,
+          destName: toName || toCode,
+          originCode: fromCode,
+          destCode: toCode,
           airline: null
         };
       } catch (e) {
@@ -745,8 +835,18 @@
   }
 
   // Expose pour les tests / exposed for tests
+  PlanesWidget._routeCode = routeCode;
+  PlanesWidget._airportCache = AIRPORT_CACHE;
+  /* La recherche de trajet s'appuie sur d'autres methodes de la classe
+     (resolution des noms d'aeroport) : le contexte de test doit donc
+     heriter du prototype, et pas etre un objet nu.
+     The route lookup relies on other methods of the class (airport name
+     resolution): the test context must therefore inherit from the
+     prototype, not be a bare object. */
   PlanesWidget._lookupRoute = function (ctx, plane) {
-    return PlanesWidget.prototype.lookupRoute.call({ ctx }, plane);
+    const probe = Object.create(PlanesWidget.prototype);
+    probe.ctx = ctx;
+    return probe.lookupRoute(plane);
   };
 
   window.PiBoard.registerWidget("planes", PlanesWidget);

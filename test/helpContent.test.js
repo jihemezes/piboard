@@ -323,4 +323,20 @@ console.log("== Fond de page documente (1.93.0) ==")
 }
 console.log("  OK");
 
+console.log("== Avions : noms d'aeroport documentes (1.94.0) ==")
+{
+  const e = entryById("planes");
+  assert.ok(/noms de ville/.test(e.html.fr) && /city names/.test(e.html.en),
+    "la traduction des codes en noms de ville doit etre dite");
+  /* Le repli sert aussi quand la source principale est injoignable, pas
+     seulement quand elle ignore l'indicatif -- c'est la correction de la
+     1.93.1, elle doit figurer dans l'aide.
+     The fallback also serves when the primary source is unreachable, not
+     only when it does not know the callsign -- that is 1.93.1's fix, it
+     must appear in the help. */
+  assert.ok(/injoignable/.test(e.html.fr) && /unreachable/.test(e.html.en),
+    "le repli sur source injoignable doit etre dit");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");

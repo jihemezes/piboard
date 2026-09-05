@@ -5067,8 +5067,12 @@ function catalogItemFor(catalog, document, widgetId) {
        unavailable", WITHOUT ever trying the fallback -- hence every
        aircraft failing while hexdb.io was answering normally. */
     let r = await runLookup((url) => (url.includes("adsbdb") ? fail(502) : ok(null, "LFBO-LEBL")), plane);
+    /* Trois appels desormais, et non deux : la source principale, le
+       repli, puis la resolution des deux codes d'aeroport en noms de
+       ville. Three calls now, not two: the primary source, the fallback,
+       then the resolution of both airport codes into city names. */
     assert("source principale en panne : le repli est bien tente",
-      r.calls.length === 2 && r.calls[1].includes("hexdb"));
+      r.calls.length >= 2 && r.calls[1].includes("callsign-route"));
     assert("et le trajet est trouve malgre la panne",
       r.result && r.result.originName === "LFBO" && r.result.destName === "LEBL");
 
@@ -5098,6 +5102,58 @@ function catalogItemFor(catalog, document, widgetId) {
     r = await runLookup(() => fail(502), plane);
     assert("les deux sources en panne : la, c'est bien 'indisponible'",
       r.result && r.result.error === true);
+    /* ---------- Noms d'aeroport ----------
+       Le repli ne renvoie que des codes bruts ("LEMG-LOWW") : lisible
+       pour qui connait les codes OACI par coeur, opaque pour les autres.
+       Ils sont resolus en nom de ville, le code restant affiche a cote.
+       The fallback only returns raw codes ("LEMG-LOWW"): readable for
+       whoever knows ICAO codes by heart, opaque to everyone else. They
+       are resolved into a city name, the code staying alongside. */
+    Planes._airportCache.clear();
+    r = await runLookup((url) => {
+      if (url.includes("adsbdb")) return fail(502);
+      if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
+      if (url.includes("icao=LEMG")) return ok({ region_name: "Malaga", airport: "Malaga-Costa del Sol" });
+      if (url.includes("icao=LOWW")) return ok({ region_name: "Vienne", airport: "Vienna International" });
+      return fail(404);
+    }, plane);
+    assert("les codes bruts sont traduits en noms de ville",
+      r.result.originName === "Malaga" && r.result.destName === "Vienne");
+    assert("le code reste disponible a cote du nom",
+      r.result.originCode === "LEMG" && r.result.destCode === "LOWW");
+    assert("le code est affiche quand il complete le nom",
+      /pwp-popup-code/.test(Planes._routeCode("LEMG", "Malaga")));
+    /* Quand le nom n'a pas pu etre resolu, le code EST le nom affiche :
+       le repeter donnerait "LFBO (LFBO)".
+       When the name could not be resolved, the code IS the displayed
+       name: repeating it would give "LFBO (LFBO)". */
+    assert("il n'est pas repete quand il tient deja lieu de nom",
+      Planes._routeCode("LFBO", "LFBO") === "" && Planes._routeCode("lfbo", "LFBO") === "");
+    assert("aucun code, aucun ajout", Planes._routeCode(null, "Malaga") === "");
+
+    // Les memes aeroports reviennent en permanence : sans cache, chaque
+    // clic relancerait deux requetes deja faites.
+    const before = r.calls.length;
+    r = await runLookup((url) => {
+      if (url.includes("adsbdb")) return fail(502);
+      if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
+      return fail(500);   // toute requete d'aeroport echouerait
+    }, plane);
+    assert("les noms deja resolus ne sont pas redemandes",
+      r.result.originName === "Malaga" && r.calls.every((u) => !u.includes("icao=")));
+    assert("le cache a bien evite des appels", before > r.calls.length);
+    // Un nom introuvable est cache aussi, sinon il serait redemande a
+    // chaque clic.
+    Planes._airportCache.clear();
+    r = await runLookup((url) => {
+      if (url.includes("adsbdb")) return fail(502);
+      if (url.includes("callsign-route")) return ok(null, "ZZZZ-YYYY");
+      return fail(404);
+    }, plane);
+    assert("un aeroport introuvable retombe sur son code",
+      r.result.originName === "ZZZZ" && r.result.destName === "YYYY");
+    assert("et l'echec est memorise", Planes._airportCache.get("ZZZZ") === null);
+
     r = await runLookup(() => ok(null, ""), { hex: "abc" });
     assert("sans indicatif de vol, aucune recherche n'est lancee",
       r.result === null && r.calls.length === 0);

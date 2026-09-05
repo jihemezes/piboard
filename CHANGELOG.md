@@ -1,5 +1,64 @@
 # Changelog
 
+## 1.94.0
+
+- **Tuile Avions : les trajets affichent desormais le nom de la ville**,
+  et plus seulement le code OACI. La base de repli hexdb.io ne renvoie
+  que des codes bruts (« LEMG-LOWW ») : lisible pour qui les connait par
+  coeur, opaque pour tout le monde d'autre. Ils sont maintenant resolus
+  en nom de ville (ou, a defaut, en nom d'aeroport).
+
+- **Le code reste affiche a cote du nom**, en petit et en chasse fixe :
+  il est court, precis, et c'est lui qu'on lit sur un billet. Il n'est
+  PAS repete quand le nom n'a pas pu etre resolu -- le code tient alors
+  lieu de nom, et l'afficher deux fois donnerait « LFBO (LFBO) ».
+
+- **Cache de session des noms d'aeroport.** Au-dessus d'une ville, les
+  memes aeroports reviennent en permanence d'un avion a l'autre : sans
+  cache, chaque clic relancerait deux requetes deja faites. Les echecs
+  sont caches aussi, sans quoi un code introuvable serait redemande a
+  chaque clic. Les deux resolutions d'un meme trajet partent en
+  parallele : les enchainer doublerait l'attente avant l'affichage.
+
+- **Tests** : `dom-smoke.js` verifie la traduction des codes, le repli
+  sur le code quand la resolution echoue, l'absence de repetition
+  « LFBO (LFBO) », et le cache -- y compris qu'un second trajet vers les
+  memes aeroports ne relance aucune requete.
+
+  Au passage, la sonde de test de la recherche de trajet appelait la
+  methode sur un objet nu : elle a echoue des que cette recherche s'est
+  mise a dependre d'une autre methode de la classe. Elle herite
+  desormais du prototype.
+
+---
+
+- **Planes tile: routes now show the city name**, no longer just the
+  ICAO code. The hexdb.io fallback database only returns raw codes
+  ("LEMG-LOWW"): readable for whoever knows them by heart, opaque to
+  everyone else. They are now resolved into a city name (or, failing
+  that, an airport name).
+
+- **The code stays displayed next to the name**, in small monospaced
+  type: it is short, precise, and it is what one reads on a ticket. It is
+  NOT repeated when the name could not be resolved -- the code then
+  stands in for the name, and showing it twice would give "LFBO (LFBO)".
+
+- **Session cache of airport names.** Above a city, the same airports
+  come back constantly from one aircraft to the next: without a cache,
+  every click would fire two already-made requests. Failures are cached
+  too, without which an unresolvable code would be re-requested on every
+  click. Both resolutions of a route run in parallel: chaining them would
+  double the wait before display.
+
+- **Tests**: `dom-smoke.js` checks the code translation, the fallback to
+  the code when resolution fails, the absence of a "LFBO (LFBO)"
+  repetition, and the cache -- including that a second route to the same
+  airports fires no request at all.
+
+  Along the way, the route lookup's test probe called the method on a
+  bare object: it broke as soon as that lookup started depending on
+  another method of the class. It now inherits from the prototype.
+
 ## 1.93.1
 
 - **Tuile Avions : plus aucun trajet ne s'affichait, tous les avions
