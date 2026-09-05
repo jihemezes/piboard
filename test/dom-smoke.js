@@ -5143,8 +5143,11 @@ function catalogItemFor(catalog, document, widgetId) {
     r = await runLookup((url) => {
       if (url.includes("adsbdb")) return fail(502);
       if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
-      if (url.includes("LEMG")) return ok({ region_name: "Malaga", airport: "Malaga-Costa del Sol" });
-      if (url.includes("LOWW")) return ok({ region_name: "Vienne", airport: "Vienna International" });
+      // Reponse realiste : `region_name` porte la REGION, `airport` le
+      // nom de l'aeroport. Realistic response: `region_name` carries the
+      // REGION, `airport` the airport's name.
+      if (url.includes("LEMG")) return ok({ region_name: "Andalousie", airport: "Malaga" });
+      if (url.includes("LOWW")) return ok({ region_name: "Basse-Autriche", airport: "Vienne" });
       return fail(404);
     }, plane);
     assert("les codes bruts sont traduits en noms de ville",
@@ -5181,7 +5184,7 @@ function catalogItemFor(catalog, document, widgetId) {
       tried.push(url);
       // La PREMIERE adresse echoue : la seconde doit prendre le relais.
       if (url.includes("/api/v1/")) return fail(404);
-      return ok({ region_name: url.includes("LEMG") ? "Malaga" : "Vienne" });
+      return ok({ airport: url.includes("LEMG") ? "Malaga" : "Vienne" });
     }, plane);
     assert("si la premiere adresse echoue, la seconde est tentee",
       tried.some((u) => u.includes("/api/v1/")) && tried.some((u) => u.includes("?icao=")));
@@ -5193,13 +5196,25 @@ function catalogItemFor(catalog, document, widgetId) {
        une bulle de carte. The field carrying the name varies from one
        response to another: the CITY is preferred, more telling than a
        full airport name on a map popup. */
+    /* L'ORDRE des champs va du plus precis au plus vague. Il avait ete
+       mal choisi : `region_name` etait essaye en premier en le prenant
+       pour la ville, alors qu'il porte la REGION administrative -- LFBO
+       s'affichait « Occitanie » au lieu de « Toulouse-Blagnac ».
+       The field ORDER runs from most precise to vaguest. It had been
+       badly chosen: `region_name` was tried first, taken for the city,
+       whereas it carries the administrative REGION -- LFBO showed
+       "Occitanie" instead of "Toulouse-Blagnac". */
+    assert("le nom d'aeroport prime sur la region administrative",
+      Planes._airportName({ region_name: "Occitanie", airport: "Toulouse-Blagnac" }) === "Toulouse-Blagnac");
     assert("la ville prime sur le nom d'aeroport",
-      Planes._airportName({ region_name: "Malaga", airport: "Malaga-Costa del Sol" }) === "Malaga");
+      Planes._airportName({ municipality: "Toulouse", airport: "Toulouse-Blagnac" }) === "Toulouse");
     assert("a defaut de ville, le nom d'aeroport est pris",
       Planes._airportName({ airport: "Vienna International" }) === "Vienna International");
+    assert("la region ne sert que de dernier repli",
+      Planes._airportName({ region_name: "Occitanie" }) === "Occitanie");
     assert("d'autres formes de reponse sont acceptees",
-      Planes._airportName({ municipality: "Toulouse" }) === "Toulouse"
-      && Planes._airportName({ city: "Vienne" }) === "Vienne");
+      Planes._airportName({ city: "Vienne" }) === "Vienne"
+      && Planes._airportName({ name: "Wien-Schwechat" }) === "Wien-Schwechat");
     assert("une reponse sans nom exploitable ne produit rien",
       Planes._airportName({}) === null && Planes._airportName(null) === null
       && Planes._airportName({ region_name: "   " }) === null);
@@ -5209,8 +5224,8 @@ function catalogItemFor(catalog, document, widgetId) {
       if (url.includes("airlines.json")) return ok(airlines);
       if (url.includes("adsbdb")) return fail(502);
       if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
-      if (url.includes("LEMG")) return ok({ region_name: "Malaga" });
-      if (url.includes("LOWW")) return ok({ region_name: "Vienne" });
+      if (url.includes("LEMG")) return ok({ airport: "Malaga" });
+      if (url.includes("LOWW")) return ok({ airport: "Vienne" });
       return fail(404);
     }, plane);
 

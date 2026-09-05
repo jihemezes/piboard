@@ -326,8 +326,8 @@ console.log("  OK");
 console.log("== Avions : noms d'aeroport documentes (1.94.0) ==")
 {
   const e = entryById("planes");
-  assert.ok(/noms de ville/.test(e.html.fr) && /city names/.test(e.html.en),
-    "la traduction des codes en noms de ville doit etre dite");
+  assert.ok(/Toulouse-Blagnac/.test(e.html.fr) && /Toulouse-Blagnac/.test(e.html.en),
+    "la traduction des codes doit etre illustree par un exemple concret");
   /* Le repli sert aussi quand la source principale est injoignable, pas
      seulement quand elle ignore l'indicatif -- c'est la correction de la
      1.93.1, elle doit figurer dans l'aide.

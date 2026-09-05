@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.94.3
+
+- **Tuile Avions : LFBO s'affichait « Occitanie » au lieu de
+  « Toulouse-Blagnac ».** Cause : parmi les champs cherches dans la
+  reponse du service d'aeroports, `region_name` etait essaye en PREMIER,
+  en le prenant pour la ville -- alors qu'il porte la REGION
+  administrative. Une region ne designe aucun aeroport en particulier :
+  c'est le champ le moins precis de tous.
+
+- **L'ordre va desormais du plus precis au plus vague** : la ville
+  (`municipality`, `city`) quand elle est donnee, sinon le nom de
+  l'aeroport (`airport`, `name`) -- qui contient presque toujours la
+  ville : « Toulouse-Blagnac », « Malaga-Costa del Sol » -- et la region
+  seulement s'il ne reste rien d'autre, comme repli ultime plutot que
+  comme premier choix.
+
+- **Tests** : `dom-smoke.js` verifie explicitement que le nom d'aeroport
+  l'emporte sur la region, que la ville l'emporte sur le nom d'aeroport,
+  et que la region ne sert que de dernier repli. Les reponses simulees
+  ont ete corrigees au passage : elles mettaient une ville dans
+  `region_name`, ce qui rendait le test complice de l'erreur.
+
+---
+
+- **Planes tile: LFBO showed "Occitanie" instead of
+  "Toulouse-Blagnac".** Cause: among the fields looked for in the airport
+  service's response, `region_name` was tried FIRST, taken for the city
+  -- whereas it carries the administrative REGION. A region designates no
+  airport in particular: it is the least precise field of all.
+
+- **The order now runs from most precise to vaguest**: the city
+  (`municipality`, `city`) when given, otherwise the airport's name
+  (`airport`, `name`) -- which almost always contains the city:
+  "Toulouse-Blagnac", "Malaga-Costa del Sol" -- and the region only if
+  nothing else is left, as an ultimate fallback rather than a first
+  choice.
+
+- **Tests**: `dom-smoke.js` explicitly checks that the airport name beats
+  the region, that the city beats the airport name, and that the region
+  only serves as a last resort. The simulated responses were fixed along
+  the way: they put a city in `region_name`, which made the test
+  complicit in the mistake.
+
 ## 1.94.2
 
 - **Tuile Avions : les trajets restaient affiches en codes bruts.** La

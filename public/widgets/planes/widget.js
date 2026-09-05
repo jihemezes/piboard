@@ -107,47 +107,40 @@
   ];
 
   /* Nom exploitable dans une reponse d'aeroport, quel que soit le champ
-     employe. On privilegie la VILLE : "Malaga" parle plus que
-     "Malaga-Costa del Sol Airport" sur une bulle de carte. Les champs
-     sont essayes dans cet ordre plutot que de coder en dur celui d'une
-     seule forme de reponse.
+     employe. L'ORDRE compte, et il avait ete mal choisi : `region_name`
+     etait essaye en premier en le prenant pour la ville, alors qu'il
+     porte la REGION administrative -- LFBO s'affichait donc
+     « Occitanie » au lieu de « Toulouse-Blagnac ». Une region ne designe
+     aucun aeroport en particulier : c'est le champ le moins precis de
+     tous, il passe donc en dernier, comme repli ultime plutot que comme
+     premier choix.
+
+     L'ordre va du plus precis au plus vague : la ville quand elle est
+     donnee, sinon le nom de l'aeroport -- qui contient presque toujours
+     la ville (« Toulouse-Blagnac », « Malaga-Costa del Sol ») -- et la
+     region seulement s'il ne reste rien d'autre.
+
      A usable name in an airport response, whatever field carries it. The
-     CITY is preferred: "Malaga" says more than "Malaga-Costa del Sol
-     Airport" on a map popup. Fields are tried in this order rather than
-     hard-coding the one of a single response shape. */
+     ORDER matters, and it had been badly chosen: `region_name` was tried
+     first, taken for the city, whereas it carries the administrative
+     REGION -- LFBO therefore showed "Occitanie" instead of
+     "Toulouse-Blagnac". A region designates no airport in particular: it
+     is the least precise field of all, so it goes last, as an ultimate
+     fallback rather than a first choice.
+
+     The order runs from most precise to vaguest: the city when given,
+     otherwise the airport's name -- which almost always contains the
+     city ("Toulouse-Blagnac", "Malaga-Costa del Sol") -- and the region
+     only if nothing else is left. */
   function airportName(data) {
     if (!data || typeof data !== "object") return null;
-    for (const key of ["region_name", "municipality", "city", "airport", "name"]) {
+    for (const key of ["municipality", "city", "airport", "name", "region_name"]) {
       const v = data[key];
       if (typeof v === "string" && v.trim()) return v.trim();
     }
     return null;
   }
 
-  /* ---------- Compagnie aerienne / airline ----------
-     La base de repli hexdb.io ne renvoie pas le nom de la compagnie : un
-     trajet trouve par elle n'en affichait donc aucun. Or l'indicatif de
-     vol commence par le code OACI a trois lettres de la compagnie
-     (AUA454 -> AUA -> Austrian Airlines), ce qui suffit a le retrouver.
-
-     La table est LOCALE et embarquee : le nom d'une compagnie ne change
-     pratiquement jamais, la resoudre par une requete reseau serait
-     disproportionne, et sur un Pi sans connexion la reponse reste juste.
-     Elle est forcement partielle -- une compagnie absente laisse
-     simplement la ligne vide, comme avant, plutot que d'afficher un code
-     brut qui n'apprendrait rien.
-
-     The hexdb.io fallback database does not return the airline name: a
-     route found through it therefore showed none. Yet the flight
-     callsign begins with the airline's three-letter ICAO code (AUA454 ->
-     AUA -> Austrian Airlines), which is enough to find it.
-
-     The table is LOCAL and bundled: an airline's name hardly ever
-     changes, resolving it over the network would be disproportionate,
-     and on a Pi with no connection the answer stays right. It is
-     necessarily partial -- a missing airline simply leaves the line
-     empty, as before, rather than showing a raw code that would teach
-     nothing. */
   let airlinesTable = null;
   let airlinesPromise = null;
 
