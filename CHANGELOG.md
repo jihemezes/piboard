@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.92.3
+
+- **Tuile transparente : le texte devenait illisible.** Une tuile en fond
+  transparent ne peint plus son fond -- ce que l'on voit derriere elle est
+  le fond de la PAGE. Or sa couleur de texte continuait d'etre celle
+  calculee pour son ancien fond de tuile : un texte sombre, pense pour
+  une tuile claire, se retrouvait sur un fond de page sombre. Tres
+  visible sur une tuile Texte servant de titre de page, ou le texte
+  disparaissait presque entierement.
+
+- **La couleur est desormais calculee d'apres le fond de page**, avec
+  exactement le meme raisonnement que pour une couleur de tuile
+  personnalisee -- applique a la bonne surface. La luminosite est mesuree
+  sur la couleur REELLEMENT calculee du plateau, et non sur la variable
+  `--bg` : un theme personnalise ou une couleur de page peuvent l'avoir
+  remplacee, et c'est la couleur affichee qui compte. Un fond totalement
+  transparent est ecarte plutot que lu comme du noir ; faute de mesure
+  exploitable, on retombe sur le theme declare.
+
+- **Recalcul au changement de theme** : le fond de page change, donc la
+  reponse aussi. Sans cela, un passage en mode jour laissait un texte
+  clair sur un fond desormais clair -- le meme defaut, inverse.
+
+- **Aide et intitule completes** : le comportement est decrit sous
+  l'option « Fond transparent » et dans la fiche de la tuile Texte.
+
+---
+
+- **Transparent tile: the text became unreadable.** A tile with a
+  transparent background no longer paints its background -- what is seen
+  behind it is the PAGE's. Yet its text colour was still the one computed
+  for its former tile background: dark text, meant for a light tile,
+  ended up on a dark page background. Very visible on a Text tile used as
+  a page title, where the text all but disappeared.
+
+- **The colour is now computed from the page background**, with exactly
+  the same reasoning as for a custom tile colour -- applied to the right
+  surface. Luminance is measured on the board's ACTUALLY computed colour,
+  not on the `--bg` variable: a custom theme or page colour may have
+  replaced it, and it is the displayed colour that counts. A fully
+  transparent background is discarded rather than read as black; failing
+  a usable measurement, we fall back on the declared theme.
+
+- **Recomputed on theme change**: the page background changes, so does
+  the answer. Without this, switching to day mode left light text on a
+  now-light background -- the same defect, reversed.
+
+- **Help and label completed**: the behaviour is described under the
+  "Transparent background" option and in the Text tile's page.
+
 ## 1.92.2
 
 - **Tuile Image : les poignees d'angle et le deplacement ne repondaient

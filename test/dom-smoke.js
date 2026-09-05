@@ -5023,6 +5023,49 @@ function catalogItemFor(catalog, document, widgetId) {
     holder.remove();
   }
 
+  console.log("== Tuile transparente : la couleur du texte suit le fond de PAGE ==");
+  {
+    /* Une tuile transparente ne peint plus son fond : ce qu'on voit
+       derriere elle est le fond de la PAGE. Sa couleur de texte doit donc
+       trancher sur celui-la. Elle continuait d'heriter de la couleur
+       calculee pour son ancien fond de tuile -- un texte sombre, pense
+       pour une tuile claire, se retrouvait sur un fond de page sombre et
+       devenait illisible.
+       A transparent tile no longer paints its background: what is seen
+       behind it is the PAGE's. Its text colour must therefore contrast
+       with that one. It kept inheriting the colour computed for its
+       former tile background -- dark text, meant for a light tile, ended
+       up on a dark page background and became unreadable. */
+    const appSrc3 = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    const branch = appSrc3.slice(appSrc3.indexOf("if (s._transparent) {"),
+      appSrc3.indexOf("if (s._customColor && s._bgColor) {"));
+    assert("la branche transparente pose bien une couleur de texte",
+      /content\.style\.color = palette\["--text"\]/.test(branch));
+    assert("elle la choisit d'apres le fond de page", /pageIsDark\(\)/.test(branch));
+    assert("elle n'efface plus la couleur sans en remettre",
+      !/content\.style\.color = "";/.test(branch));
+
+    /* La mesure porte sur la couleur REELLEMENT calculee, pas sur la
+       variable `--bg` : un theme personnalise ou une couleur de page
+       peuvent l'avoir remplacee. The measurement is on the ACTUALLY
+       computed colour, not the `--bg` variable: a custom theme or page
+       colour may have replaced it. */
+    assert("le fond de page est mesure, pas suppose",
+      /getComputedStyle\(surface\)\.backgroundColor/.test(appSrc3));
+    assert("un fond totalement transparent n'est pas lu comme du noir",
+      /Number\(alpha\[1\]\) > 0\.1/.test(appSrc3));
+    // Le theme est pose sur <body> : viser la racine aurait fait echouer
+    // le repli en silence.
+    assert("le repli lit le theme la ou il est reellement pose",
+      /document\.body\.dataset\.theme !== "light"/.test(appSrc3));
+    /* Changer de theme change la reponse : sans reapplication, un passage
+       en mode jour laissait un texte clair sur fond clair.
+       Switching theme changes the answer: without reapplication,
+       switching to day mode left light text on a light background. */
+    assert("les tuiles transparentes sont recalculees au changement de theme",
+      /_transparent\) applyTileColor\(rec\)/.test(appSrc3));
+  }
+
   console.log("== Reglages d'une tuile : reinitialisation ==");
   {
     const appSrc2 = fs.readFileSync(path.join(PUB, "app.js"), "utf8");

@@ -709,6 +709,17 @@
     const colors = currentColors()[theme];
     document.body.style.setProperty("--bg", colors.bg);
     document.body.style.setProperty("--tile", colors.tile);
+    /* Les tuiles transparentes calculent leur couleur de texte d'apres le
+       fond de PAGE : changer de theme, ou de couleur de fond, change donc
+       la reponse. Sans cette reapplication, un passage en mode jour
+       laissait un texte clair sur un fond desormais clair.
+       Transparent tiles compute their text colour from the PAGE
+       background: switching theme, or background colour, therefore
+       changes the answer. Without this reapplication, switching to day
+       mode left light text on a now-light background. */
+    for (const rec of tiles.values()) {
+      if (rec.conf && rec.conf.settings && rec.conf.settings._transparent) applyTileColor(rec);
+    }
     clearTimeout(themeTimer);
     if (settings.theme === "auto") themeTimer = setTimeout(applyTheme, 60000);
   }
@@ -848,6 +859,43 @@
     "--tile-edge": "rgba(0,0,0,0.14)", "--field-bg": "rgba(0,0,0,0.05)" };
   const OVERRIDE_PROPS = Object.keys(LIGHT_TEXT_PALETTE);
 
+  /* Le fond de page est-il sombre ? On lit la couleur REELLEMENT
+     calculee sur le plateau plutot que la variable `--bg` : un theme
+     personnalise, une couleur de page ou un mode jour/nuit peuvent
+     l'avoir remplacee, et c'est la couleur affichee qui compte.
+     `getComputedStyle` renvoie du "rgb(r, g, b)" : on le convertit avant
+     d'en calculer la luminosite, `relLuminance` attendant du
+     hexadecimal. Faute de mesure exploitable, on retombe sur le theme
+     declare -- jamais sur une supposition muette.
+
+     Is the page background dark? We read the colour ACTUALLY computed on
+     the board rather than the `--bg` variable: a custom theme, a page
+     colour or day/night mode may have replaced it, and it is the
+     displayed colour that counts. `getComputedStyle` returns
+     "rgb(r, g, b)": we convert it before computing its luminance, as
+     `relLuminance` expects hexadecimal. Failing a usable measurement, we
+     fall back on the declared theme -- never on a silent guess. */
+  function pageIsDark() {
+    let measured = null;
+    try {
+      const surface = (typeof boardEl === "function" && boardEl()) || document.body;
+      measured = getComputedStyle(surface).backgroundColor;
+    } catch (e) { /* pas encore en page / not laid out yet */ }
+    const rgb = String(measured || "").match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    if (rgb) {
+      const hex = "#" + [1, 2, 3].map((i) => Number(rgb[i]).toString(16).padStart(2, "0")).join("");
+      // Un fond totalement transparent ne dit rien de ce qu'on voit :
+      // on l'ecarte plutot que de le lire comme du noir.
+      // A fully transparent background says nothing about what is seen:
+      // we discard it rather than read it as black.
+      const alpha = String(measured).match(/^rgba\([^)]*,\s*([\d.]+)\)$/);
+      if (!alpha || Number(alpha[1]) > 0.1) return relLuminance(hex) < 0.5;
+    }
+    // Le theme est pose sur <body> (voir applyTheme), pas sur la racine.
+    // The theme is set on <body> (see applyTheme), not on the root.
+    return document.body.dataset.theme !== "light";
+  }
+
   function applyTileColor(rec) {
     const content = rec.el.querySelector(".grid-stack-item-content");
     if (!content) return;
@@ -862,8 +910,29 @@
     content.classList.toggle("tile-transparent", !!s._transparent);
     if (s._transparent) {
       content.style.backgroundColor = "";
-      content.style.color = "";
-      for (const prop of OVERRIDE_PROPS) content.style.removeProperty(prop);
+      /* Le texte doit trancher sur ce que l'on VOIT reellement derriere
+         la tuile, c'est-a-dire le fond de la PAGE -- et non sur la
+         couleur de tuile, qui n'est plus peinte du tout.
+
+         Sans cela, la tuile continuait d'heriter de la couleur de texte
+         calculee pour son ancien fond : un texte sombre, pense pour une
+         tuile claire, se retrouvait sur un fond de page sombre et
+         devenait illisible. C'est exactement le meme raisonnement que
+         pour une couleur de tuile personnalisee, applique a la bonne
+         surface.
+
+         The text must contrast with what is actually SEEN behind the
+         tile, that is the PAGE's background -- not with the tile colour,
+         which is no longer painted at all.
+
+         Without this, the tile kept inheriting the text colour computed
+         for its former background: dark text, meant for a light tile,
+         ended up on a dark page background and became unreadable. This
+         is exactly the same reasoning as for a custom tile colour,
+         applied to the right surface. */
+      const palette = pageIsDark() ? LIGHT_TEXT_PALETTE : DARK_TEXT_PALETTE;
+      for (const prop of OVERRIDE_PROPS) content.style.setProperty(prop, palette[prop]);
+      content.style.color = palette["--text"];
       return;
     }
     if (s._customColor && s._bgColor) {

@@ -989,7 +989,7 @@
           <p>Cinq familles sont proposées. <b>Seules les polices présentes sur la machine sont utilisées</b> : sur un Raspberry Pi le choix est nettement plus étroit que sur un PC. Chaque option liste donc plusieurs polices et retombe sur la plus proche disponible — jamais sur rien. Le rendu peut donc différer entre votre PC et le Pi ; si l'aspect compte, vérifiez sur l'écran de destination.</p>
 
           <h4>Le reste</h4>
-          <p>Graisse, italique, majuscules, espacement des lettres, couleur (par défaut celle du thème, qui bascule avec le mode jour/nuit — cochez « Couleur personnalisée » pour la figer), position horizontale et verticale dans la tuile, et une ombre portée utile quand la tuile est transparente au-dessus d'une photo claire.</p>
+          <p>Graisse, italique, majuscules, espacement des lettres, couleur (par défaut celle du thème, qui bascule avec le mode jour/nuit — et qui, si la tuile est en <b>fond transparent</b>, se calcule d'après le fond de la <b>page</b> pour continuer à trancher sur ce qui se trouve réellement derrière ; cochez « Couleur personnalisée » pour la figer), position horizontale et verticale dans la tuile, et une ombre portée utile quand la tuile est transparente au-dessus d'une photo claire.</p>
           <p>Les retours à la ligne saisis dans le champ sont conservés. Une tuile sans texte affiche une mention discrète plutôt que rien : sans elle, une tuile transparente et vide serait introuvable sur la page, même en mode édition.</p>`,
         en: `
           <p>A <b>style</b> tile: it displays no data, it is there to compose a page. A title at the top of a dashboard page, the heading of a group of tiles, a caption. Combined with the <b>transparent background</b> (tile settings → Appearance), it lets you title a page with no frame appearing at all.</p>
@@ -1002,7 +1002,7 @@
           <p>Five families are offered. <b>Only fonts present on the machine are used</b>: on a Raspberry Pi the choice is markedly narrower than on a PC. Each option therefore lists several fonts and falls back on the closest available one — never on nothing. The rendering may thus differ between your PC and the Pi; if looks matter, check on the target screen.</p>
 
           <h4>The rest</h4>
-          <p>Weight, italic, uppercase, letter spacing, colour (by default the theme's, which switches with day/night mode — tick "Custom text colour" to pin it), horizontal and vertical position within the tile, and a text shadow useful when the tile is transparent over a light photo.</p>
+          <p>Weight, italic, uppercase, letter spacing, colour (by default the theme's, which switches with day/night mode — and which, if the tile has a <b>transparent background</b>, is computed from the <b>page</b> background so it keeps contrasting with what is actually behind it; tick "Custom text colour" to pin it), horizontal and vertical position within the tile, and a text shadow useful when the tile is transparent over a light photo.</p>
           <p>Line breaks typed in the field are kept. A tile with no text shows a discreet note rather than nothing: without it, a transparent empty tile would be impossible to find on the page, edit mode included.</p>`
       }
     },
