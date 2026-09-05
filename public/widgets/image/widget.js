@@ -162,6 +162,19 @@
       change.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
         + ' stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/>'
         + '<path d="m4 17 5-5 4 4 3-2 4 4"/></svg>';
+      /* Les trois evenements sont arretes, pas seulement le clic :
+         Gridstack demarre son glissement sur `mousedown`/`touchstart`,
+         et le clic d'edition remonte jusqu'a la grille. Sans cela,
+         appuyer sur ce bouton pouvait deplacer la tuile ou ouvrir ses
+         reglages au lieu d'ouvrir le gestionnaire d'images.
+         All three events are stopped, not just the click: Gridstack
+         starts its drag on `mousedown`/`touchstart`, and the edit click
+         bubbles up to the grid. Without this, pressing this button could
+         move the tile or open its settings instead of opening the image
+         manager. */
+      for (const type of ["mousedown", "touchstart", "pointerdown"]) {
+        change.addEventListener(type, (e) => e.stopPropagation());
+      }
       change.addEventListener("click", (e) => {
         e.stopPropagation();
         e.preventDefault();
@@ -328,6 +341,7 @@
         + '<span data-role="zoom"></span>'
         + `<button type="button" data-act="in" title="${escAttr(i18n.t("image.zoomIn"))}">+</button>`
         + `<button type="button" data-act="reset" title="${escAttr(i18n.t("image.cropReset"))}">&#8634;</button>`
+        + `<button type="button" data-act="pick" title="${escAttr(i18n.t("image.choose"))}">&#128247;</button>`
         + "</div>"
         + `<div class="pw-image-crophint">${esc(i18n.t("image.cropHint"))}</div>`;
 
@@ -358,14 +372,21 @@
       };
       this.commitCrop = commit;
 
-      for (const act of ["in", "out", "reset"]) {
+      for (const act of ["in", "out", "reset", "pick"]) {
         const b = wrap.querySelector('[data-act="' + act + '"]');
         b.addEventListener("pointerdown", (e) => e.stopPropagation());
         b.addEventListener("click", (e) => {
           e.stopPropagation();
           e.preventDefault();
           const s = this.ctx.settings || {};
-          if (act === "reset") commit({ zoom: 100, focusX: 50, focusY: 50 }, true);
+          // Second chemin vers le gestionnaire d'images, dans la barre
+          // d'outils elle-meme : le bouton de coin est petit et se
+          // confond avec les commandes de la tuile.
+          // A second path to the image manager, in the toolbar itself:
+          // the corner button is small and blends in with the tile's own
+          // controls.
+          if (act === "pick") this.openManager();
+          else if (act === "reset") commit({ zoom: 100, focusX: 50, focusY: 50 }, true);
           else commit({ zoom: clampZoom(clampZoom(s.zoom) + (act === "in" ? 10 : -10)) }, true);
         });
       }

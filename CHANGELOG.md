@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.91.3
+
+- **Tuile Image : le petit bouton de changement d'image etait
+  inatteignable.** La surcouche de recadrage, ajoutee apres lui et
+  occupant toute la tuile, passait AU-DESSUS : le clic n'atteignait
+  jamais le bouton, remontait jusqu'a la grille et ouvrait la fenetre de
+  reglages -- ou rien ne permet de choisir un fichier. Le bouton
+  paraissait donc mentir, et l'aide qui le decrivait avec lui. Il passe
+  desormais au-dessus de la surcouche et arrete lui-meme les evenements
+  que Gridstack et la grille ecoutent (`mousedown`, `touchstart`,
+  `pointerdown`), sans quoi appuyer dessus aurait pu deplacer la tuile.
+
+- **Un second chemin** vers le gestionnaire d'images a ete ajoute dans
+  la barre d'outils de recadrage : le bouton de coin est petit et se
+  confond avec les commandes de la tuile.
+
+- **Aide et intitules corriges** : la fiche nomme les deux chemins et dit
+  explicitement que la fenetre de reglages ne permet PAS de choisir un
+  fichier -- elle n'affiche que son nom. Le meme avertissement figure
+  desormais sous le champ « Fichier image », qui promettait l'inverse.
+
+- **Test** : `dom-smoke.js` compare les plans d'empilement du bouton et
+  de la surcouche -- un bouton repasse dessous echouerait -- et verifie
+  la presence du second chemin.
+
+---
+
+- **Image tile: the small change-image button was unreachable.** The crop
+  overlay, added after it and spanning the whole tile, sat ABOVE it: the
+  click never reached the button, bubbled up to the grid and opened the
+  settings window -- where nothing lets you pick a file. The button
+  therefore appeared to lie, and the help describing it with it. It now
+  sits above the overlay and itself stops the events Gridstack and the
+  grid listen for (`mousedown`, `touchstart`, `pointerdown`), without
+  which pressing it could have moved the tile.
+
+- **A second path** to the image manager was added in the crop toolbar:
+  the corner button is small and blends in with the tile's own controls.
+
+- **Help and labels corrected**: the topic names both paths and states
+  explicitly that the settings window does NOT let you pick a file -- it
+  only shows its name. The same warning now appears under the "Image
+  file" field, which promised the opposite.
+
+- **Test**: `dom-smoke.js` compares the stacking levels of the button and
+  the overlay -- a button moved back underneath would fail -- and checks
+  the second path is present.
+
 ## 1.91.2
 
 - **Tuile Image : les champs Zoom et Positions du recadrage ne faisaient

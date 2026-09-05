@@ -93,7 +93,17 @@
   position: absolute;
   top: 4px;
   right: 4px;
-  z-index: 2;
+  /* AU-DESSUS de la surcouche de recadrage (z-index 3), qui occupe
+     toute la tuile. En dessous, elle recouvrait ce bouton : le clic ne
+     l'atteignait jamais, remontait jusqu'a la grille et ouvrait la
+     fenetre de reglages -- ou rien ne permet de changer d'image. Le
+     bouton paraissait donc mentir.
+     ABOVE the crop overlay (z-index 3), which spans the whole tile.
+     Below it, the overlay covered this button: the click never reached
+     it, bubbled up to the grid and opened the settings window -- where
+     nothing lets you change the image. The button therefore appeared to
+     lie. */
+  z-index: 4;
   display: none;
   align-items: center;
   justify-content: center;

@@ -1,7 +1,7 @@
 {
   "id": "image",
   "dir": "image",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "name": {
     "en": "Logo / Image",
     "fr": "Logo / Image"
@@ -32,8 +32,8 @@
         "fr": "Fichier image"
       },
       "hint": {
-        "en": "Filled in by the \"Choose an image\" button, which appears IN the tile as long as it is empty. Once an image is set, use the small button in the tile's top corner (visible in edit mode) to change it — or clear this field to get the chooser back.",
-        "fr": "Renseigné par le bouton « Choisir une image », qui apparaît DANS la tuile tant qu'elle est vide. Une fois l'image posée, utilisez le petit bouton dans le coin de la tuile (visible en mode édition) pour en changer — ou videz ce champ pour retrouver le sélecteur."
+        "en": "Read-only here: it shows the chosen file's name. To pick or change an image, switch to edit mode and use the button in the tile's corner, or the camera in the crop toolbar. On an empty tile, the button is in the middle of the tile.",
+        "fr": "En lecture seule ici : ce champ affiche le nom du fichier choisi. Pour choisir ou changer une image, passez en mode édition et utilisez le bouton dans le coin de la tuile, ou l'appareil photo de la barre d'outils de recadrage. Sur une tuile vide, le bouton est au milieu de la tuile."
       }
     },
     {

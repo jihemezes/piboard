@@ -275,4 +275,23 @@ console.log("== Tuile Image : recadrage direct documente (1.91.0) ==")
 }
 console.log("  OK");
 
+console.log("== Tuile Image : chemins reels vers le gestionnaire (1.91.3) ==")
+{
+  const e = entryById("image");
+  /* L'aide annoncait que le petit bouton ouvrait le gestionnaire, alors
+     que la surcouche de recadrage le recouvrait et que le clic ouvrait
+     les reglages -- ou rien ne permet de changer d'image. Elle doit
+     nommer les chemins qui marchent, et dire ce que la fenetre de
+     reglages ne fait PAS.
+     The help announced that the small button opened the manager, while
+     the crop overlay covered it and the click opened the settings --
+     where nothing lets you change the image. It must name the paths that
+     work, and say what the settings window does NOT do. */
+  assert.ok(/barre d'outils de recadrage/.test(e.html.fr) && /crop toolbar/.test(e.html.en),
+    "le second chemin (barre d'outils) doit etre documente");
+  assert.ok(/ne permet pas de choisir un fichier/.test(e.html.fr) && /does not let you pick a file/.test(e.html.en),
+    "l'aide doit dire que la fenetre de reglages ne choisit pas de fichier");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");

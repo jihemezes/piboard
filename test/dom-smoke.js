@@ -4698,9 +4698,32 @@ function catalogItemFor(catalog, document, widgetId) {
        text field. Changing the image meant clearing that field by hand. */
     const src = fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8");
     assert("un bouton de changement existe quand une image est posee", /pw-image-change/.test(src));
-    assert("il ouvre le gestionnaire", /pw-image-change[\s\S]{0,900}?this\.openManager\(\)/.test(src));
+    assert("il ouvre le gestionnaire", /pw-image-change[\s\S]{0,1400}?this\.openManager\(\)/.test(src));
     const css = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
     assert("il ne s'affiche qu'en mode edition", /body\.editing \.pw-image-change/.test(css));
+    /* La surcouche de recadrage occupe TOUTE la tuile. Sous elle, ce
+       bouton etait recouvert : le clic ne l'atteignait jamais, remontait
+       jusqu'a la grille et ouvrait la fenetre de reglages -- ou rien ne
+       permet de changer d'image. Le bouton paraissait donc mentir, et
+       l'aide avec lui.
+       The crop overlay spans the WHOLE tile. Underneath it, this button
+       was covered: the click never reached it, bubbled up to the grid
+       and opened the settings window -- where nothing lets you change the
+       image. The button therefore appeared to lie, and the help with
+       it. */
+    const zIndexOf = (selector) => {
+      const at = css.indexOf(selector);
+      const m = css.slice(at, css.indexOf("}", at)).match(/z-index:\s*(\d+)/);
+      return m ? Number(m[1]) : null;
+    };
+    assert("le bouton passe AU-DESSUS de la surcouche de recadrage",
+      zIndexOf(".pw-image-change {") > zIndexOf("body.editing .pw-image-crop {"));
+    assert("il arrete aussi les evenements que Gridstack et la grille ecoutent",
+      /change\.addEventListener\(type, \(e\) => e\.stopPropagation\(\)\)/.test(src));
+    // Second chemin, dans la barre d'outils : le bouton de coin est petit
+    // et se confond avec les commandes de la tuile.
+    assert("la barre d'outils propose aussi le changement d'image",
+      /data-act="pick"/.test(src) && /if \(act === "pick"\) this\.openManager\(\)/.test(src));
     assert("il est positionne par rapport a la tuile", /\.pw-image \{[^}]*position:\s*relative/.test(css));
 
     // L'aide ne doit plus situer le bouton "ci-dessous" : il est DANS la
@@ -4708,9 +4731,23 @@ function catalogItemFor(catalog, document, widgetId) {
     // the tile.
     const manifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/image/manifest.json"), "utf8"));
     const hint = manifest.settings.find((f) => f.key === "image").hint;
-    assert("l'aide du champ situe le bouton dans la tuile, pas en dessous",
-      /DANS la tuile/.test(hint.fr) && /IN the tile/.test(hint.en));
-    assert("elle ne dit plus 'ci-dessous'", !/ci-dessous/.test(hint.fr) && !/below/.test(hint.en));
+    /* L'intitule promettait un bouton « ci-dessous », dans le formulaire.
+       Il doit desormais dire l'inverse : ce champ ne choisit rien, et le
+       bouton est sur la TUILE. La formulation ayant change en 1.91.3, on
+       verifie l'idee et non des mots precis : que le champ soit annonce
+       en lecture seule, et que la tuile soit designee comme l'endroit ou
+       agir.
+       The label promised a button "below", in the form. It must now say
+       the opposite: this field picks nothing, and the button is on the
+       TILE. As the wording changed in 1.91.3, we check the idea rather
+       than exact words: that the field is announced as read-only, and
+       that the tile is named as the place to act. */
+    assert("l'aide du champ annonce qu'il ne choisit pas de fichier",
+      /lecture seule/.test(hint.fr) && /Read-only/.test(hint.en));
+    assert("elle renvoie a la tuile pour choisir une image",
+      /tuile/.test(hint.fr) && /tile/.test(hint.en));
+    assert("elle ne promet plus un bouton dans le formulaire",
+      !/ci-dessous/.test(hint.fr) && !/ button below/.test(hint.en));
   }
 
   console.log("== Regressions du mode tableau de bord et des tuiles de style ==");
