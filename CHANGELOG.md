@@ -1,5 +1,75 @@
 # Changelog
 
+## 1.92.0
+
+- **Tuile Image : poignees et barre d'outils enfin cliquables.** La vraie
+  cause, que les corrections precedentes n'avaient pas atteinte : en mode
+  edition, la regle globale
+  `body.editing .tile-body { pointer-events: none }` rend TOUT le contenu
+  des tuiles inerte -- c'est ce qui empeche une iframe, un lien ou une
+  carte d'avaler le pointeur, et permet de saisir la tuile entiere d'un
+  geste. La surcouche de recadrage en heritait : ses poignees et sa barre
+  d'outils s'affichaient parfaitement, mais ne recevaient AUCUN
+  evenement, si bien que le clic traversait jusqu'a la tuile et ouvrait
+  la fenetre de configuration. Aucune interception en JavaScript ne
+  pouvait y changer quoi que ce soit -- l'evenement n'atteignait jamais
+  nos ecouteurs, ce qui explique que les deux versions precedentes
+  n'aient rien change au symptome. La surcouche est desormais rendue
+  explicitement sensible au pointeur : c'est la seule partie du contenu
+  qui le soit en edition, et c'est voulu, ses poignees SONT l'outil
+  d'edition de cette tuile.
+
+- **NOUVEAU : bouton « Reinitialiser les reglages »** au bas de la
+  fenetre de configuration de n'importe quelle tuile. Il remet la tuile
+  aux valeurs par defaut de son manifeste et neutralise les reglages
+  universels (titre, couleur, echelle du texte, transparence,
+  planification). **L'image televersee d'une tuile Logo/Image est
+  conservee** : c'est un fichier, pas un reglage, et le perdre obligerait
+  a le rechercher -- alors que l'usage vise est justement de repartir
+  d'un etat sain apres s'etre perdu dans un recadrage. Une confirmation
+  est exigee : rien ne permet de retrouver des reglages effaces. Le
+  formulaire est reconstruit dans la foulee, sans quoi il afficherait
+  encore les anciennes valeurs et l'on croirait que rien ne s'est passe.
+
+- **Tests** : `dom-smoke.js` verifie que la regle globale rend bien le
+  contenu inerte en edition ET que la surcouche s'en exempte -- les deux
+  ensemble, puisque c'est leur combinaison qui produisait le bug ; ainsi
+  que la reinitialisation (valeurs du manifeste, confirmation, image
+  conservee, formulaire reconstruit, planification reappliquee).
+
+---
+
+- **Image tile: handles and toolbar clickable at last.** The real cause,
+  which the previous fixes had not reached: in edit mode, the global rule
+  `body.editing .tile-body { pointer-events: none }` makes ALL tile
+  content inert -- that is what stops an iframe, a link or a map from
+  swallowing the pointer, and lets the whole tile be grabbed anywhere.
+  The crop overlay inherited that: its handles and toolbar displayed
+  perfectly, but received NO event, so the click went through to the tile
+  and opened the settings window. No amount of JavaScript interception
+  could change anything -- the event never reached our listeners, which
+  is why the two previous versions did nothing about the symptom. The
+  overlay is now explicitly made pointer-sensitive: it is the only part
+  of the content that is, while editing, and deliberately so, since its
+  handles ARE this tile's editing tool.
+
+- **NEW: "Reset settings" button** at the bottom of any tile's settings
+  window. It puts the tile back to its manifest's default values and
+  neutralises the universal settings (title, colour, text scale,
+  transparency, scheduling). **A Logo/Image tile's uploaded image is
+  kept**: it is a file, not a setting, and losing it would mean hunting
+  for it again -- whereas the intended use is precisely to start again
+  from a sane state after getting lost in a crop. A confirmation is
+  required: nothing brings wiped settings back. The form is rebuilt right
+  after, without which it would still show the old values and one would
+  think nothing had happened.
+
+- **Tests**: `dom-smoke.js` checks that the global rule does make content
+  inert while editing AND that the overlay exempts itself -- both
+  together, since it is their combination that produced the bug; plus the
+  reset (manifest values, confirmation, image kept, form rebuilt,
+  scheduling reapplied).
+
 ## 1.91.4
 
 - **Tuile Image : aucun bouton ne repondait en mode edition, tout

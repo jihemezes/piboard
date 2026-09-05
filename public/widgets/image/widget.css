@@ -102,6 +102,32 @@
 .pw-image-crop { display: none; }
 body.editing .pw-image-crop {
   display: block;
+  /* LA cause du symptome signale. En mode edition, la regle globale
+     `body.editing .tile-body { pointer-events: none }` rend TOUT le
+     contenu des tuiles inerte, pour qu'une iframe, un lien ou une carte
+     n'avalent pas le pointeur et que la tuile entiere se saisisse d'un
+     geste. Cette surcouche en heritait : les poignees et la barre
+     d'outils s'affichaient mais ne recevaient aucun evenement, si bien
+     que le clic traversait jusqu'a la tuile et ouvrait la fenetre de
+     configuration. Aucune interception en JavaScript ne pouvait y
+     changer quoi que ce soit -- l'evenement n'atteignait jamais nos
+     ecouteurs.
+     Elle est donc explicitement rendue sensible au pointeur. C'est la
+     seule partie du contenu qui l'est en edition, et c'est voulu : ses
+     poignees SONT l'outil d'edition de cette tuile.
+
+     THE cause of the reported symptom. In edit mode, the global rule
+     `body.editing .tile-body { pointer-events: none }` makes ALL tile
+     content inert, so that an iframe, a link or a map does not swallow
+     the pointer and the whole tile can be grabbed anywhere. This overlay
+     inherited that: the handles and the toolbar were displayed but
+     received no event at all, so the click went through to the tile and
+     opened the settings window. No amount of JavaScript interception
+     could change anything -- the event never reached our listeners.
+     It is therefore explicitly made pointer-sensitive. It is the only
+     part of the content that is, while editing, and deliberately so: its
+     handles ARE this tile's editing tool. */
+  pointer-events: auto;
   position: absolute;
   inset: 0;
   z-index: 3;

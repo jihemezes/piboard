@@ -4720,6 +4720,37 @@ function catalogItemFor(catalog, document, widgetId) {
        window, the toolbar's buttons included. The overlay must therefore
        stop `click` and `dblclick`, not only the events that start
        Gridstack's drag. */
+    /* LA cause du symptome : en mode edition, la regle globale
+       `body.editing .tile-body { pointer-events: none }` rend TOUT le
+       contenu des tuiles inerte, pour qu'une iframe ou une carte n'avale
+       pas le pointeur. La surcouche en heritait : poignees et barre
+       d'outils s'affichaient mais ne recevaient AUCUN evenement, le clic
+       traversait jusqu'a la tuile et ouvrait la configuration. Aucune
+       interception JavaScript ne pouvait y changer quoi que ce soit --
+       l'evenement n'atteignait jamais les ecouteurs.
+       THE cause of the symptom: in edit mode, the global rule
+       `body.editing .tile-body { pointer-events: none }` makes ALL tile
+       content inert, so an iframe or a map does not swallow the pointer.
+       The overlay inherited that: handles and toolbar were displayed but
+       received NO event, the click went through to the tile and opened
+       the settings. No JavaScript interception could change anything --
+       the event never reached the listeners. */
+    assert("la regle globale rend bien le contenu inerte en edition",
+      /body\.editing \.tile-body \{[^}]*pointer-events:\s*none/.test(
+        fs.readFileSync(path.join(PUB, "style.css"), "utf8")));
+    /* On lit la declaration en sautant les commentaires : le motif
+       precedent butait sur une accolade contenue dans un commentaire, et
+       echouait alors que la regle etait bien la.
+       We read the declaration with comments stripped: the previous
+       pattern tripped on a brace inside a comment, and failed although
+       the rule was there. */
+    const cssNoComments = imgCssA.replace(/\/\*[\s\S]*?\*\//g, "");
+    const cropBlock = cssNoComments.slice(
+      cssNoComments.indexOf("body.editing .pw-image-crop {"),
+      cssNoComments.indexOf("}", cssNoComments.indexOf("body.editing .pw-image-crop {")));
+    assert("la surcouche redevient explicitement sensible au pointeur",
+      /pointer-events:\s*auto/.test(cropBlock));
+
     assert("la surcouche arrete aussi le clic, qui ouvrait la configuration",
       /\["mousedown", "touchstart", "pointerdown", "click", "dblclick"\]/.test(src));
 
@@ -4823,6 +4854,31 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("ni dans la feuille de style", !/pw-image-crop-off/.test(imgCss2));
     assert("la surcouche s'affiche des le mode edition",
       /body\.editing \.pw-image-crop \{[^}]*display:\s*block/.test(imgCss2));
+  }
+
+  console.log("== Reglages d'une tuile : reinitialisation ==");
+  {
+    const appSrc2 = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    assert("un bouton de reinitialisation existe dans la fenetre de reglages",
+      /id="tileReset"/.test(fs.readFileSync(path.join(PUB, "index.html"), "utf8")));
+    assert("il est relie a la reinitialisation", /onActivate\(\$\("tileReset"\), \(\) => resetTileSettings\(\)\)/.test(appSrc2));
+    assert("les valeurs revenues sont celles du manifeste",
+      /defaults\[field\.key\] = field\.default/.test(appSrc2));
+    /* Une confirmation est exigee : l'action efface un travail de reglage
+       qui peut etre long, et rien ne permettrait de le retrouver.
+       A confirmation is required: the action wipes settings work that can
+       be long, and nothing would bring it back. */
+    assert("une confirmation est demandee",
+      /window\.confirm\(i18n\.t\("tile\.reset\.confirm"\)\)/.test(appSrc2));
+    /* Le fichier d'une tuile Image est CONSERVE : c'est un fichier
+       televerse, pas un reglage, et le perdre obligerait a le rechercher.
+       An Image tile's file is KEPT: it is an uploaded file, not a
+       setting, and losing it would mean hunting for it again. */
+    assert("une image televersee n'est pas perdue",
+      /if \(kept\.image !== undefined\) defaults\.image = kept\.image/.test(appSrc2));
+    assert("le formulaire est reconstruit pour montrer les valeurs revenues",
+      /openTileSettings\(tileModalTarget\)/.test(appSrc2));
+    assert("la planification est reappliquee", /resetTileSettings[\s\S]{0,2600}?syncTileSchedule\(rec\)/.test(appSrc2));
   }
 
   console.log("== Mode tableau de bord : pages, transitions, bandeau ==");

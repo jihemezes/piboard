@@ -2551,6 +2551,67 @@
     }
   }
 
+  /* Remet la tuile a ses reglages d'origine : ceux du manifeste, plus
+     les reglages universels (titre, couleur, echelle du texte,
+     transparence, planification) revenus a leur etat neutre.
+
+     Ce qui est deliberement CONSERVE : rien d'autre. Une tuile Image
+     garde son fichier -- le fichier televerse n'est pas un reglage, et le
+     perdre obligerait a le rechercher ; une tuile dont les reglages
+     partent en vrille doit pouvoir revenir a un etat sain sans qu'on
+     ait a tout reconstruire, ce qui est justement l'usage vise apres
+     s'etre perdu dans un recadrage.
+
+     La confirmation n'est pas facultative : l'action efface un travail
+     de reglage qui peut etre long, et rien ne permettrait de le
+     retrouver.
+
+     Puts the tile back to its original settings: the manifest's, plus
+     the universal settings (title, colour, text scale, transparency,
+     scheduling) returned to their neutral state.
+
+     What is deliberately KEPT: nothing else. An Image tile keeps its
+     file -- an uploaded file is not a setting, and losing it would mean
+     hunting for it again; a tile whose settings have gone haywire must
+     be able to return to a sane state without everything being rebuilt,
+     which is precisely the use after getting lost in a crop.
+
+     The confirmation is not optional: the action wipes settings work
+     that can be long, and nothing would bring it back. */
+  function resetTileSettings() {
+    const rec = tiles.get(tileModalTarget);
+    if (!rec) return;
+    if (!window.confirm(i18n.t("tile.reset.confirm"))) return;
+
+    const defaults = {};
+    for (const field of (rec.manifest && rec.manifest.settings) || []) {
+      if (field && field.key !== undefined) defaults[field.key] = field.default;
+    }
+    // Le fichier d'une tuile Image n'est pas un reglage comme un autre :
+    // c'est un fichier televerse, qu'on ne veut pas avoir a rechoisir.
+    // An Image tile's file is not a setting like the others: it is an
+    // uploaded file, which one does not want to have to pick again.
+    const kept = rec.conf.settings || {};
+    if (kept.image !== undefined) defaults.image = kept.image;
+
+    rec.conf.settings = defaults;
+    if (rec.instance && rec.instance.ctx) rec.instance.ctx.settings = Object.assign({}, defaults);
+    applyTitleBar(rec);
+    applyTileColor(rec);
+    applyTextScale(rec);
+    if (rec.instance && typeof rec.instance.onSettingsChanged === "function") {
+      try { rec.instance.onSettingsChanged(defaults); } catch (e) { console.warn("[piboard] reset", e); }
+    }
+    syncTileSchedule(rec);
+    scheduleSave();
+    // Le formulaire est reconstruit pour montrer les valeurs revenues :
+    // le laisser tel quel afficherait les anciennes, et l'on croirait
+    // que rien ne s'est passe.
+    // The form is rebuilt to show the restored values: leaving it as is
+    // would display the old ones, and one would think nothing happened.
+    openTileSettings(tileModalTarget);
+  }
+
   function openTileSettings(tileId) {
     const rec = tiles.get(tileId);
     if (!rec || !rec.manifest) return;
@@ -5692,6 +5753,7 @@
     onActivate($("exitOptionDesktop"), () => exitToDesktop());
     $("setDisplayMode").addEventListener("change", renderPagesEditor);
     onActivate($("pageAddBtn"), () => addPage());
+    onActivate($("tileReset"), () => resetTileSettings());
     onActivate($("updCheckBtn"), () => checkForUpdatesNow());
     onActivate($("updApplyBtn"), () => openUpdateModal());
     onActivate($("updateBannerInstall"), () => openUpdateModal());
