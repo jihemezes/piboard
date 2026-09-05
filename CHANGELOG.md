@@ -1,5 +1,76 @@
 # Changelog
 
+## 1.94.1
+
+- **Tuile Avions : le nom de la compagnie aerienne s'affiche a nouveau.**
+  La base de repli hexdb.io ne le renvoie pas : un trajet trouve par elle
+  n'affichait donc aucune compagnie. Or l'indicatif de vol commence par
+  le code OACI a trois lettres de la compagnie (AUA454 -> AUA ->
+  Austrian Airlines), ce qui suffit a la retrouver.
+
+- **Table LOCALE et embarquee** (`public/widgets/planes/airlines.json`,
+  156 compagnies) : le nom d'une compagnie ne change pratiquement jamais,
+  une requete reseau pour le resoudre serait disproportionnee, et sur un
+  Pi sans connexion la reponse reste juste. Elle est forcement partielle,
+  et c'est assume : une compagnie absente laisse la ligne vide, comme
+  avant, plutot que d'afficher un code brut qui n'apprendrait rien. Elle
+  sert aussi de repli quand adsbdb repond sans nommer la compagnie.
+
+- **Une immatriculation n'est PAS lue comme un indicatif de compagnie.**
+  Seules trois LETTRES suivies de chiffres sont reconnues : sans cette
+  distinction, un avion prive (F-GKXA, N123AB) se serait vu attribuer
+  une compagnie au hasard sur ses trois premieres lettres.
+
+- **Deux defauts trouves en ecrivant les tests** :
+  - un ECHEC de chargement de la table etait memorise, ce qui condamnait
+    la resolution des compagnies pour toute la session : une coupure
+    passagere au premier clic, et plus aucun nom jusqu'au rechargement de
+    la page. Seul un chargement reussi est desormais conserve ;
+  - n'importe quelle reponse JSON etait acceptee comme table -- une page
+    d'erreur, la reponse d'une autre requete -- et memorisee comme
+    definitive. La FORME est maintenant verifiee : une vraie table
+    associe des codes de trois lettres majuscules a des noms.
+
+- **Verification de PRESENCE de la table** ajoutee au jeu de tests. Une
+  exclusion de packaging la ferait disparaitre sans la moindre erreur --
+  la ligne compagnie resterait simplement vide. C'est exactement ce qui
+  etait arrive au calendrier des saints.
+
+---
+
+- **Planes tile: the airline name is shown again.** The hexdb.io fallback
+  database does not return it: a route found through it therefore showed
+  no airline. Yet the flight callsign begins with the airline's
+  three-letter ICAO code (AUA454 -> AUA -> Austrian Airlines), which is
+  enough to find it.
+
+- **A LOCAL, bundled table** (`public/widgets/planes/airlines.json`, 156
+  airlines): an airline's name hardly ever changes, a network request to
+  resolve it would be disproportionate, and on a Pi with no connection
+  the answer stays right. It is necessarily partial, and deliberately so:
+  a missing airline leaves the line empty, as before, rather than showing
+  a raw code that would teach nothing. It also serves as a fallback when
+  adsbdb answers without naming the airline.
+
+- **A registration is NOT read as an airline callsign.** Only three
+  LETTERS followed by digits are recognised: without that distinction, a
+  private aircraft (F-GKXA, N123AB) would have been assigned a random
+  airline from its first three letters.
+
+- **Two defects found while writing the tests**:
+  - a table LOADING FAILURE was remembered, which condemned airline
+    resolution for the whole session: a passing outage on the first
+    click, and no name at all until the page was reloaded. Only a
+    successful load is now kept;
+  - any JSON response was accepted as the table -- an error page,
+    another request's answer -- and remembered as definitive. The SHAPE
+    is now checked: a real table maps three uppercase-letter codes to
+    names.
+
+- **A PRESENCE check for the table** added to the test suite. A packaging
+  exclusion would make it vanish with no error at all -- the airline line
+  would simply stay empty. Exactly what happened to the saints calendar.
+
 ## 1.94.0
 
 - **Tuile Avions : les trajets affichent desormais le nom de la ville**,

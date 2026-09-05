@@ -4157,6 +4157,28 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("le calendrier couvre l'annee entiere", saints && Object.keys(saints).length >= 366);
     assert("une date connue renvoie bien un nom", saints && saints["08-27"] === "Monique");
 
+    /* La table des compagnies est chargee par une URL : elle doit donc
+       etre PRESENTE dans la livraison. Une exclusion de packaging la
+       ferait disparaitre sans la moindre erreur -- la ligne compagnie
+       resterait simplement vide, comme si aucune compagnie n'etait
+       connue. C'est exactement ce qui etait arrive au calendrier des
+       saints.
+       The airlines table is loaded through a URL: it must therefore be
+       PRESENT in the delivery. A packaging exclusion would make it
+       vanish with no error at all -- the airline line would simply stay
+       empty, as if no airline were known. Exactly what happened to the
+       saints calendar. */
+    const airlinesPath = path.join(PUB, "widgets", "planes", "airlines.json");
+    assert("la table des compagnies aeriennes est presente", fs.existsSync(airlinesPath));
+    let airlineTable = null;
+    try { airlineTable = JSON.parse(fs.readFileSync(airlinesPath, "utf8")); } catch (e) { airlineTable = null; }
+    assert("elle est un JSON valide", !!airlineTable);
+    assert("elle couvre les principales compagnies",
+      airlineTable && Object.keys(airlineTable).length >= 100);
+    assert("les codes sont bien des codes OACI a trois lettres",
+      airlineTable && Object.keys(airlineTable).every((k) => /^[A-Z]{3}$/.test(k)));
+    assert("aucun nom vide", airlineTable && Object.values(airlineTable).every((v) => typeof v === "string" && v.trim()));
+
     // Toute ressource chargee par un widget via une URL /data/ doit
     // exister : c'est exactement le chemin qui avait ete perdu.
     // Every resource a widget loads through a /data/ URL must exist: that
@@ -5071,8 +5093,12 @@ function catalogItemFor(catalog, document, widgetId) {
        repli, puis la resolution des deux codes d'aeroport en noms de
        ville. Three calls now, not two: the primary source, the fallback,
        then the resolution of both airport codes into city names. */
+    /* La table des compagnies est chargee elle aussi : on cherche donc
+       l'appel de repli parmi les appels, plutot qu'a une position fixe.
+       The airlines table is fetched too: so we look for the fallback
+       call among the calls, rather than at a fixed position. */
     assert("source principale en panne : le repli est bien tente",
-      r.calls.length >= 2 && r.calls[1].includes("callsign-route"));
+      r.calls.some((u) => u.includes("callsign-route")));
     assert("et le trajet est trouve malgre la panne",
       r.result && r.result.originName === "LFBO" && r.result.destName === "LEBL");
 
@@ -5089,7 +5115,8 @@ function catalogItemFor(catalog, document, widgetId) {
       airline: { name: "Air France" } } } }), plane);
     assert("source principale disponible : elle prime",
       r.result.originName === "Toulouse" && r.result.destName === "Barcelone");
-    assert("et le repli n'est pas sollicite inutilement", r.calls.length === 1);
+    assert("et le repli n'est pas sollicite inutilement",
+      !r.calls.some((u) => u.includes("hexdb")));
 
     /* Deux causes, deux messages. Un indicatif inconnu des DEUX bases
        n'est pas une panne : il ne se resoudra jamais, et le dire
@@ -5153,6 +5180,59 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("un aeroport introuvable retombe sur son code",
       r.result.originName === "ZZZZ" && r.result.destName === "YYYY");
     assert("et l'echec est memorise", Planes._airportCache.get("ZZZZ") === null);
+
+    /* ---------- Nom de la compagnie ----------
+       Le repli hexdb.io ne renvoie pas la compagnie : un trajet trouve
+       par lui n'en affichait aucune. L'indicatif commence pourtant par
+       le code OACI a trois lettres de la compagnie, ce qui suffit a la
+       retrouver dans une table locale.
+       The hexdb.io fallback does not return the airline: a route found
+       through it showed none. Yet the callsign begins with the airline's
+       three-letter ICAO code, enough to find it in a local table. */
+    const airlines = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/planes/airlines.json"), "utf8"));
+    assert("AUA454 est reconnu comme Austrian Airlines",
+      Planes._airlineFromCallsign("AUA454", airlines) === "Austrian Airlines");
+    assert("OCN317 est reconnu comme Volotea",
+      Planes._airlineFromCallsign("OCN317", airlines) === "Volotea");
+    /* Une immatriculation n'est PAS un indicatif de compagnie : sans
+       cette distinction, un avion prive se verrait attribuer une
+       compagnie au hasard sur ses trois premieres lettres.
+       A registration is NOT an airline callsign: without this
+       distinction, a private aircraft would be assigned a random airline
+       from its first three letters. */
+    assert("une immatriculation n'est pas lue comme une compagnie",
+      Planes._airlineFromCallsign("F-GKXA", airlines) === null
+      && Planes._airlineFromCallsign("N123AB", airlines) === null);
+    assert("un code inconnu ne produit pas de nom invente",
+      Planes._airlineFromCallsign("ZZZ123", airlines) === null);
+    /* N'importe quelle reponse JSON etait acceptee comme table et
+       memorisee definitivement : une page d'erreur, ou la reponse d'une
+       autre requete, condamnait la resolution des compagnies sans aucun
+       message. La FORME est desormais verifiee.
+       Any JSON response was accepted as the table and remembered for
+       good: an error page, or another request's answer, condemned
+       airline resolution with no message at all. The SHAPE is now
+       checked. */
+    const bogus = await Planes._loadAirlines(() => ok({ response: { flightroute: {} } }));
+    assert("une reponse JSON qui n'est pas une table est refusee",
+      !bogus.AUA && Object.keys(bogus).length === 0);
+    assert("et elle n'est pas memorisee : un chargement correct reste possible",
+      (await Planes._loadAirlines(() => ok(airlines))).AUA === "Austrian Airlines");
+
+    assert("entree vide sans effet",
+      Planes._airlineFromCallsign("", airlines) === null
+      && Planes._airlineFromCallsign(null, airlines) === null);
+
+    // Le nom accompagne bien un trajet trouve par le repli.
+    Planes._airportCache.clear();
+    r = await runLookup((url) => {
+      if (url.includes("airlines.json")) return ok(airlines);
+      if (url.includes("adsbdb")) return fail(502);
+      if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
+      return fail(404);
+    }, { flight: "AUA454", hex: "abc" });
+    assert("un trajet issu du repli porte desormais le nom de la compagnie",
+      r.result && r.result.airline === "Austrian Airlines");
 
     r = await runLookup(() => ok(null, ""), { hex: "abc" });
     assert("sans indicatif de vol, aucune recherche n'est lancee",

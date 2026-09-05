@@ -88,6 +88,98 @@
      same codes come back constantly. */
   const AIRPORT_CACHE = new Map();
 
+  /* ---------- Compagnie aerienne / airline ----------
+     La base de repli hexdb.io ne renvoie pas le nom de la compagnie : un
+     trajet trouve par elle n'en affichait donc aucun. Or l'indicatif de
+     vol commence par le code OACI a trois lettres de la compagnie
+     (AUA454 -> AUA -> Austrian Airlines), ce qui suffit a le retrouver.
+
+     La table est LOCALE et embarquee : le nom d'une compagnie ne change
+     pratiquement jamais, la resoudre par une requete reseau serait
+     disproportionne, et sur un Pi sans connexion la reponse reste juste.
+     Elle est forcement partielle -- une compagnie absente laisse
+     simplement la ligne vide, comme avant, plutot que d'afficher un code
+     brut qui n'apprendrait rien.
+
+     The hexdb.io fallback database does not return the airline name: a
+     route found through it therefore showed none. Yet the flight
+     callsign begins with the airline's three-letter ICAO code (AUA454 ->
+     AUA -> Austrian Airlines), which is enough to find it.
+
+     The table is LOCAL and bundled: an airline's name hardly ever
+     changes, resolving it over the network would be disproportionate,
+     and on a Pi with no connection the answer stays right. It is
+     necessarily partial -- a missing airline simply leaves the line
+     empty, as before, rather than showing a raw code that would teach
+     nothing. */
+  let airlinesTable = null;
+  let airlinesPromise = null;
+
+  /* Un ECHEC de chargement n'est jamais memorise. Le mettre en cache --
+     comme le faisait la premiere version -- condamnait la resolution des
+     compagnies pour toute la session : une coupure passagere au premier
+     clic, et plus aucun nom jusqu'au rechargement de la page. Seul un
+     chargement REUSSI est conserve ; un echec laisse la prochaine
+     tentative reessayer.
+
+     A LOADING FAILURE is never remembered. Caching it -- as the first
+     version did -- condemned airline resolution for the whole session: a
+     passing outage on the first click, and no name at all until the page
+     was reloaded. Only a SUCCESSFUL load is kept; a failure lets the
+     next attempt try again. */
+  function loadAirlines(fetchImpl) {
+    if (airlinesTable) return Promise.resolve(airlinesTable);
+    if (!airlinesPromise) {
+      airlinesPromise = (fetchImpl || fetch)("/widgets/planes/airlines.json")
+        .then((r) => {
+          if (!r.ok) throw new Error("airlines " + r.status);
+          return r.json();
+        })
+        .then((t) => {
+          /* La forme est verifiee, pas seulement le type. N'accepter
+             qu'"un objet" laissait passer n'importe quelle reponse JSON
+             -- une page d'erreur, la reponse d'une autre requete -- qui
+             etait alors memorisee comme table definitive, condamnant la
+             resolution des compagnies sans aucun message. Une vraie
+             table associe des codes OACI de trois lettres a des noms.
+             The shape is checked, not just the type. Accepting merely
+             "an object" let any JSON response through -- an error page,
+             another request's answer -- which was then remembered as the
+             definitive table, condemning airline resolution with no
+             message at all. A real table maps three-letter ICAO codes to
+             names. */
+          const keys = t && typeof t === "object" ? Object.keys(t) : [];
+          const looksLikeTable = keys.length > 0
+            && keys.every((k) => /^[A-Z]{3}$/.test(k) && typeof t[k] === "string");
+          if (!looksLikeTable) throw new Error("airlines: unexpected shape");
+          airlinesTable = t;
+          return airlinesTable;
+        })
+        .catch((e) => {
+          console.warn("[piboard/planes] airlines", e);
+          // La prochaine tentative repartira de zero.
+          // The next attempt will start afresh.
+          airlinesPromise = null;
+          return {};
+        });
+    }
+    return airlinesPromise;
+  }
+
+  /* Prefixe OACI d'un indicatif de vol : exactement trois LETTRES suivies
+     de chiffres. Une immatriculation (F-GKXA, N123AB) n'a pas cette
+     forme et ne doit pas etre lue comme une compagnie -- sans quoi un
+     avion prive se verrait attribuer une compagnie au hasard.
+     A flight callsign's ICAO prefix: exactly three LETTERS followed by
+     digits. A registration (F-GKXA, N123AB) does not have that shape and
+     must not be read as an airline -- otherwise a private aircraft would
+     be assigned a random one. */
+  function airlineFromCallsign(callsign, table) {
+    const m = String(callsign || "").trim().toUpperCase().match(/^([A-Z]{3})\d/);
+    if (!m || !table) return null;
+    return table[m[1]] || null;
+  }
+
   /* Le code n'est affiche QUE s'il apporte quelque chose : quand le nom
      n'a pas pu etre resolu, le code EST deja le nom affiche, et le
      repeter donnerait "LFBO (LFBO)".
@@ -647,6 +739,10 @@
 
     async lookupRoute(plane) {
       if (!plane.flight) return null;
+      // Chargee une fois pour toutes, en parallele du reste : elle sert
+      // aux deux sources. Loaded once and for all, alongside the rest:
+      // it serves both sources.
+      loadAirlines();
       try {
         const url = `https://api.adsbdb.com/v0/callsign/${encodeURIComponent(plane.flight)}`;
         const res = await fetch(this.ctx.api.proxyUrl(url));
@@ -665,7 +761,13 @@
               // what one reads on a ticket.
               originCode: r.origin.icao_code || r.origin.iata_code || null,
               destCode: r.destination.icao_code || r.destination.iata_code || null,
-              airline: r.airline && r.airline.name ? r.airline.name : null
+              // Si la base ne nomme pas la compagnie, la table locale
+              // prend le relais plutot que de laisser la ligne vide.
+              // If the database does not name the airline, the local
+              // table takes over rather than leaving the line empty.
+              airline: (r.airline && r.airline.name)
+                || airlineFromCallsign(plane.flight, airlinesTable)
+                || null
             };
           }
         }
@@ -727,9 +829,10 @@
         // et les enchainer doublerait l'attente avant l'affichage.
         // Both resolutions in parallel: they are independent, and
         // chaining them would double the wait before display.
-        const [fromName, toName] = await Promise.all([
+        const [fromName, toName, table] = await Promise.all([
           this.lookupAirport(fromCode),
-          this.lookupAirport(toCode)
+          this.lookupAirport(toCode),
+          loadAirlines()
         ]);
         return {
           origin: {}, destination: {}, // pas de coordonnees / no coordinates
@@ -741,7 +844,7 @@
           destName: toName || toCode,
           originCode: fromCode,
           destCode: toCode,
-          airline: null
+          airline: airlineFromCallsign(plane.flight, table)
         };
       } catch (e) {
         console.warn("[piboard/planes] hexdb route", e);
@@ -836,6 +939,8 @@
 
   // Expose pour les tests / exposed for tests
   PlanesWidget._routeCode = routeCode;
+  PlanesWidget._airlineFromCallsign = airlineFromCallsign;
+  PlanesWidget._loadAirlines = loadAirlines;
   PlanesWidget._airportCache = AIRPORT_CACHE;
   /* La recherche de trajet s'appuie sur d'autres methodes de la classe
      (resolution des noms d'aeroport) : le contexte de test doit donc

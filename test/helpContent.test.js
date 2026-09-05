@@ -336,6 +336,13 @@ console.log("== Avions : noms d'aeroport documentes (1.94.0) ==")
      must appear in the help. */
   assert.ok(/injoignable/.test(e.html.fr) && /unreachable/.test(e.html.en),
     "le repli sur source injoignable doit etre dit");
+  assert.ok(/AUA454/.test(e.html.fr) && /AUA454/.test(e.html.en),
+    "la resolution de la compagnie depuis l'indicatif doit etre expliquee par l'exemple");
+  /* La table est partielle par nature : le dire evite de faire passer une
+     absence pour une panne. The table is partial by nature: saying so
+     avoids an absence being taken for a failure. */
+  assert.ok(/partielle/.test(e.html.fr) && /partial/.test(e.html.en),
+    "le caractere partiel de la table doit etre assume");
 }
 console.log("  OK");
 
