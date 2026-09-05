@@ -1,5 +1,63 @@
 # Changelog
 
+## 1.94.2
+
+- **Tuile Avions : les trajets restaient affiches en codes bruts.** La
+  resolution des codes en noms de ville, livree en 1.94.0, n'a en
+  pratique jamais fonctionne : l'adresse du service d'aeroports de
+  hexdb.io avait ete SUPPOSEE a partir de celle de la route de vol, sans
+  pouvoir etre verifiee. Elle etait fausse, la requete echouait, et la
+  fonction retombait proprement sur le code -- donc sans la moindre
+  erreur visible, ce qui rendait la panne indetectable autrement qu'a
+  l'oeil.
+
+- **Deux adresses connues sont desormais essayees dans l'ordre**, la
+  seconde prenant le relais si la premiere echoue. Le service en a expose
+  plusieurs formes au fil du temps ; n'en tenter qu'une, c'etait faire
+  dependre toute la fonctionnalite d'une hypothese.
+
+- **L'analyse de la reponse est souple** : le nom est cherche dans
+  plusieurs champs possibles (`region_name`, `municipality`, `city`,
+  `airport`, `name`) plutot que dans celui d'une seule forme de reponse.
+  La VILLE est privilegiee : « Malaga » parle plus que « Malaga-Costa del
+  Sol Airport » sur une bulle de carte.
+
+- **Le chargement de la table des compagnies ne leve plus** quand `fetch`
+  n'existe pas a cet instant : la resolution des compagnies est un
+  agrement, elle ne doit pas faire echouer la recherche de trajet.
+
+- **Tests** : `dom-smoke.js` verifie qu'au moins deux adresses sont
+  tentees, que la seconde prend bien le relais quand la premiere echoue,
+  et couvre les differentes formes de reponse ainsi que la priorite
+  donnee a la ville.
+
+---
+
+- **Planes tile: routes stayed displayed as raw codes.** The resolution
+  of codes into city names, delivered in 1.94.0, never actually worked:
+  hexdb.io's airport service address had been GUESSED from the flight
+  route one, with no way to verify it. It was wrong, the request failed,
+  and the function fell back cleanly on the code -- hence with no visible
+  error at all, which made the breakage undetectable other than by eye.
+
+- **Two known addresses are now tried in order**, the second taking over
+  if the first fails. The service has exposed several shapes over time;
+  trying a single one meant making the whole feature depend on a guess.
+
+- **Response parsing is flexible**: the name is looked for in several
+  possible fields (`region_name`, `municipality`, `city`, `airport`,
+  `name`) rather than in the one of a single response shape. The CITY is
+  preferred: "Malaga" says more than "Malaga-Costa del Sol Airport" on a
+  map popup.
+
+- **Loading the airlines table no longer throws** when `fetch` does not
+  exist at that instant: airline resolution is a nicety, it must not make
+  the route lookup fail.
+
+- **Tests**: `dom-smoke.js` checks that at least two addresses are tried,
+  that the second does take over when the first fails, and covers the
+  different response shapes as well as the priority given to the city.
+
 ## 1.94.1
 
 - **Tuile Avions : le nom de la compagnie aerienne s'affiche a nouveau.**

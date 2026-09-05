@@ -88,6 +88,42 @@
      same codes come back constantly. */
   const AIRPORT_CACHE = new Map();
 
+  /* Adresses connues du service d'aeroports de hexdb.io, essayees dans
+     l'ordre. Deux, et non une, parce que le service a expose plusieurs
+     formes au fil du temps : n'en tenter qu'une signifiait que le jour
+     ou ce n'etait pas la bonne, AUCUN nom n'etait resolu et tous les
+     trajets restaient affiches en codes bruts -- sans aucune erreur
+     visible, la fonction retombant proprement sur le code.
+
+     Known addresses of hexdb.io's airport service, tried in order. Two,
+     not one, because the service has exposed several shapes over time:
+     trying a single one meant that the day it was not the right one, NO
+     name was resolved and every route stayed displayed as raw codes --
+     with no visible error, the function falling back cleanly on the
+     code. */
+  const AIRPORT_ENDPOINTS = [
+    (icao) => `https://hexdb.io/api/v1/airport/icao/${encodeURIComponent(icao)}`,
+    (icao) => `https://hexdb.io/airport?icao=${encodeURIComponent(icao)}`
+  ];
+
+  /* Nom exploitable dans une reponse d'aeroport, quel que soit le champ
+     employe. On privilegie la VILLE : "Malaga" parle plus que
+     "Malaga-Costa del Sol Airport" sur une bulle de carte. Les champs
+     sont essayes dans cet ordre plutot que de coder en dur celui d'une
+     seule forme de reponse.
+     A usable name in an airport response, whatever field carries it. The
+     CITY is preferred: "Malaga" says more than "Malaga-Costa del Sol
+     Airport" on a map popup. Fields are tried in this order rather than
+     hard-coding the one of a single response shape. */
+  function airportName(data) {
+    if (!data || typeof data !== "object") return null;
+    for (const key of ["region_name", "municipality", "city", "airport", "name"]) {
+      const v = data[key];
+      if (typeof v === "string" && v.trim()) return v.trim();
+    }
+    return null;
+  }
+
   /* ---------- Compagnie aerienne / airline ----------
      La base de repli hexdb.io ne renvoie pas le nom de la compagnie : un
      trajet trouve par elle n'en affichait donc aucun. Or l'indicatif de
@@ -129,8 +165,16 @@
      next attempt try again. */
   function loadAirlines(fetchImpl) {
     if (airlinesTable) return Promise.resolve(airlinesTable);
+    // `fetch` peut ne pas exister a cet instant (contexte de test, page
+     // en cours de destruction) : on ne veut pas d'exception ici, la
+     // resolution des compagnies etant un agrement, pas une necessite.
+    // `fetch` may not exist at this instant (test context, page being
+    // torn down): no exception wanted here, airline resolution being a
+    // nicety, not a necessity.
+    const fetcher = fetchImpl || (typeof fetch === "function" ? fetch : null);
+    if (!fetcher) return Promise.resolve({});
     if (!airlinesPromise) {
-      airlinesPromise = (fetchImpl || fetch)("/widgets/planes/airlines.json")
+      airlinesPromise = fetcher("/widgets/planes/airlines.json")
         .then((r) => {
           if (!r.ok) throw new Error("airlines " + r.status);
           return r.json();
@@ -718,20 +762,15 @@
       if (!/^[A-Z0-9]{3,4}$/.test(icao)) return null;
       if (AIRPORT_CACHE.has(icao)) return AIRPORT_CACHE.get(icao);
       let name = null;
-      try {
-        const url = `https://hexdb.io/airport?icao=${encodeURIComponent(icao)}`;
-        const res = await fetch(this.ctx.api.proxyUrl(url));
-        if (res.ok) {
-          const data = await res.json();
-          // "region_name" est la ville ; "airport" le nom complet de
-          // l'aeroport, souvent plus long et moins parlant.
-          // "region_name" is the city; "airport" the airport's full
-          // name, often longer and less telling.
-          name = (data && (data.region_name || data.airport)) || null;
-          if (typeof name === "string") name = name.trim() || null;
+      for (const build of AIRPORT_ENDPOINTS) {
+        try {
+          const res = await fetch(this.ctx.api.proxyUrl(build(icao)));
+          if (!res.ok) continue;
+          name = airportName(await res.json());
+          if (name) break;
+        } catch (e) {
+          console.warn("[piboard/planes] airport", e);
         }
-      } catch (e) {
-        console.warn("[piboard/planes] airport", e);
       }
       AIRPORT_CACHE.set(icao, name);
       return name;
@@ -940,6 +979,11 @@
   // Expose pour les tests / exposed for tests
   PlanesWidget._routeCode = routeCode;
   PlanesWidget._airlineFromCallsign = airlineFromCallsign;
+  PlanesWidget._airportName = airportName;
+  // Reservé aux tests : permet de repartir d'un etat neutre.
+  // Test-only: allows starting from a neutral state.
+  PlanesWidget._resetAirlines = function () { airlinesTable = null; airlinesPromise = null; };
+  PlanesWidget._airportEndpoints = AIRPORT_ENDPOINTS;
   PlanesWidget._loadAirlines = loadAirlines;
   PlanesWidget._airportCache = AIRPORT_CACHE;
   /* La recherche de trajet s'appuie sur d'autres methodes de la classe

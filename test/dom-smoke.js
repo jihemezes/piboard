@@ -5054,6 +5054,9 @@ function catalogItemFor(catalog, document, widgetId) {
     vm.createContext(sbP);
     vm.runInContext(fs.readFileSync(path.join(PUB, "widgets/planes/widget.js"), "utf8"), sbP);
     assert("le widget Avions expose sa recherche de trajet", typeof Planes._lookupRoute === "function");
+    // Declaree tot : plusieurs scenarios ci-dessous en ont besoin.
+    // Declared early: several scenarios below need it.
+    const airlines = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/planes/airlines.json"), "utf8"));
 
     const ctxWith = (routes) => ({
       api: { proxyUrl: (u) => u },
@@ -5140,8 +5143,8 @@ function catalogItemFor(catalog, document, widgetId) {
     r = await runLookup((url) => {
       if (url.includes("adsbdb")) return fail(502);
       if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
-      if (url.includes("icao=LEMG")) return ok({ region_name: "Malaga", airport: "Malaga-Costa del Sol" });
-      if (url.includes("icao=LOWW")) return ok({ region_name: "Vienne", airport: "Vienna International" });
+      if (url.includes("LEMG")) return ok({ region_name: "Malaga", airport: "Malaga-Costa del Sol" });
+      if (url.includes("LOWW")) return ok({ region_name: "Vienne", airport: "Vienna International" });
       return fail(404);
     }, plane);
     assert("les codes bruts sont traduits en noms de ville",
@@ -5157,6 +5160,59 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("il n'est pas repete quand il tient deja lieu de nom",
       Planes._routeCode("LFBO", "LFBO") === "" && Planes._routeCode("lfbo", "LFBO") === "");
     assert("aucun code, aucun ajout", Planes._routeCode(null, "Malaga") === "");
+
+    /* Le service d'aeroports a expose plusieurs adresses au fil du temps.
+       N'en tenter qu'une signifiait que le jour ou ce n'etait pas la
+       bonne, AUCUN nom n'etait resolu et tous les trajets restaient en
+       codes bruts -- sans erreur visible, la fonction retombant
+       proprement sur le code. C'est exactement le symptome signale.
+       The airport service has exposed several addresses over time.
+       Trying a single one meant that the day it was not the right one,
+       NO name was resolved and every route stayed as raw codes -- with
+       no visible error, the function falling back cleanly on the code.
+       Exactly the reported symptom. */
+    assert("plusieurs adresses d'aeroport sont tentees", Planes._airportEndpoints.length >= 2);
+    Planes._airportCache.clear();
+    let tried = [];
+    r = await runLookup((url) => {
+      if (url.includes("airlines.json")) return ok(airlines);
+      if (url.includes("adsbdb")) return fail(502);
+      if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
+      tried.push(url);
+      // La PREMIERE adresse echoue : la seconde doit prendre le relais.
+      if (url.includes("/api/v1/")) return fail(404);
+      return ok({ region_name: url.includes("LEMG") ? "Malaga" : "Vienne" });
+    }, plane);
+    assert("si la premiere adresse echoue, la seconde est tentee",
+      tried.some((u) => u.includes("/api/v1/")) && tried.some((u) => u.includes("?icao=")));
+    assert("et le nom est bien resolu par la seconde",
+      r.result.originName === "Malaga" && r.result.destName === "Vienne");
+
+    /* Le champ portant le nom varie d'une reponse a l'autre : on
+       privilegie la VILLE, plus parlante qu'un nom d'aeroport complet sur
+       une bulle de carte. The field carrying the name varies from one
+       response to another: the CITY is preferred, more telling than a
+       full airport name on a map popup. */
+    assert("la ville prime sur le nom d'aeroport",
+      Planes._airportName({ region_name: "Malaga", airport: "Malaga-Costa del Sol" }) === "Malaga");
+    assert("a defaut de ville, le nom d'aeroport est pris",
+      Planes._airportName({ airport: "Vienna International" }) === "Vienna International");
+    assert("d'autres formes de reponse sont acceptees",
+      Planes._airportName({ municipality: "Toulouse" }) === "Toulouse"
+      && Planes._airportName({ city: "Vienne" }) === "Vienne");
+    assert("une reponse sans nom exploitable ne produit rien",
+      Planes._airportName({}) === null && Planes._airportName(null) === null
+      && Planes._airportName({ region_name: "   " }) === null);
+
+    Planes._airportCache.clear();
+    r = await runLookup((url) => {
+      if (url.includes("airlines.json")) return ok(airlines);
+      if (url.includes("adsbdb")) return fail(502);
+      if (url.includes("callsign-route")) return ok(null, "LEMG-LOWW");
+      if (url.includes("LEMG")) return ok({ region_name: "Malaga" });
+      if (url.includes("LOWW")) return ok({ region_name: "Vienne" });
+      return fail(404);
+    }, plane);
 
     // Les memes aeroports reviennent en permanence : sans cache, chaque
     // clic relancerait deux requetes deja faites.
@@ -5189,7 +5245,6 @@ function catalogItemFor(catalog, document, widgetId) {
        The hexdb.io fallback does not return the airline: a route found
        through it showed none. Yet the callsign begins with the airline's
        three-letter ICAO code, enough to find it in a local table. */
-    const airlines = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/planes/airlines.json"), "utf8"));
     assert("AUA454 est reconnu comme Austrian Airlines",
       Planes._airlineFromCallsign("AUA454", airlines) === "Austrian Airlines");
     assert("OCN317 est reconnu comme Volotea",
@@ -5213,6 +5268,12 @@ function catalogItemFor(catalog, document, widgetId) {
        good: an error page, or another request's answer, condemned
        airline resolution with no message at all. The SHAPE is now
        checked. */
+    // La table valide a pu etre chargee par un scenario precedent : on
+    // repart d'un etat neutre pour tester le refus d'une reponse
+    // inattendue. A valid table may have been loaded by an earlier
+    // scenario: we start from a neutral state to test the refusal of an
+    // unexpected response.
+    Planes._resetAirlines();
     const bogus = await Planes._loadAirlines(() => ok({ response: { flightroute: {} } }));
     assert("une reponse JSON qui n'est pas une table est refusee",
       !bogus.AUA && Object.keys(bogus).length === 0);
