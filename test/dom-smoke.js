@@ -5023,6 +5023,75 @@ function catalogItemFor(catalog, document, widgetId) {
     holder.remove();
   }
 
+  console.log("== Fond de page : image locale, cadrage, voile ==");
+  {
+    const vm = require("vm");
+    const appSrc4 = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    // Les fonctions de traduction du reglage en CSS sont pures : on les
+    // evalue a part, sans monter l'application.
+    const sb = { window: {}, document: undefined, console };
+    vm.createContext(sb);
+    vm.runInContext(appSrc4.slice(appSrc4.indexOf("const BG_MODES ="), appSrc4.indexOf("function normalizeTransition"))
+      + "\nwindow.__bg = { normalizeBackground, backgroundCss, BG_MODES, BG_POSITIONS };", sb);
+    const BG = sb.window.__bg;
+
+    const def = BG.normalizeBackground(null);
+    assert("sans reglage, aucune image et un cadrage sain",
+      def.image === "" && def.mode === "cover" && def.position === "center center" && def.dim === 0);
+    assert("un cadrage inconnu retombe sur 'remplir'", BG.normalizeBackground({ mode: "n'importe quoi" }).mode === "cover");
+    assert("une position inconnue retombe au centre",
+      BG.normalizeBackground({ position: "ailleurs" }).position === "center center");
+    assert("le voile est borne", BG.normalizeBackground({ dim: 900 }).dim === 100
+      && BG.normalizeBackground({ dim: -30 }).dim === 0);
+
+    /* Les cinq cadrages se ramenent a `background-size` et
+       `background-repeat` : c'est ce qui evite cinq chemins de code.
+       The five framings boil down to `background-size` and
+       `background-repeat`: that is what avoids five code paths. */
+    const css = (mode) => BG.backgroundCss(BG.normalizeBackground({ mode }), "/media/bg-main/x.png");
+    assert("remplir : couvre", css("cover").backgroundSize === "cover");
+    assert("image entiere : contient", css("contain").backgroundSize === "contain");
+    assert("taille d'origine : aucune mise a l'echelle", css("original").backgroundSize === "auto");
+    assert("etirer : deforme aux deux dimensions", css("stretch").backgroundSize === "100% 100%");
+    assert("mosaique : seul mode qui repete",
+      css("repeat").backgroundRepeat === "repeat" && css("cover").backgroundRepeat === "no-repeat");
+    assert("l'adresse de l'image est posee", /url\("\/media\/bg-main\/x\.png"\)/.test(css("cover").backgroundImage));
+    /* Le fond ne doit pas defiler avec les tuiles quand la page deborde :
+       il resterait a moitie hors champ.
+       The background must not scroll with the tiles when the page
+       overflows: it would end up half out of view. */
+    assert("le fond ne defile pas avec les tuiles", css("cover").backgroundAttachment === "local");
+    const none = BG.backgroundCss(BG.normalizeBackground({}), "");
+    assert("sans image, aucune propriete de fond n'est posee",
+      none.backgroundImage === "" && none.backgroundSize === "" && none.backgroundPosition === "");
+
+    /* Le fond est attache A CHAQUE PAGE, page 1 comprise -- laquelle est
+       aussi le plateau du mode classique, qui en beneficie donc.
+       The background is attached TO EACH PAGE, page 1 included -- which
+       is also the classic mode's board, and so benefits from it. */
+    assert("chaque page a son propre dossier d'images",
+      /function backgroundMediaId\(index\)[\s\S]{0,400}?"bg-" \+ \(p && p\.index > 0 \? p\.id : "main"\)/.test(appSrc4));
+    assert("le fond est enregistre avec la page", /background: p\.background,/.test(appSrc4));
+    assert("et avec le plateau principal", /background: mainPage\.background \}/.test(appSrc4));
+    /* Le voile est un element a part, pas un filtre : un filtre sur le
+       conteneur aurait AUSSI atteint les tuiles posees dessus.
+       The veil is a separate element, not a filter: a filter on the
+       container would have hit the tiles on top as well. */
+    assert("le voile est un element distinct des tuiles",
+      /veil\.className = "board-bg-veil"/.test(appSrc4));
+    const styles = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+    assert("les tuiles restent au-dessus du voile",
+      /\.board\.has-bg-image \.grid-stack \{[^}]*z-index:\s*1/.test(styles));
+    assert("le voile n'intercepte pas les clics",
+      /\.board-bg-veil \{[^}]*pointer-events:\s*none/.test(styles));
+    // Chaque reglage est applique et enregistre immediatement : on voit
+    // ce qu'on fait en le faisant.
+    assert("un changement de reglage s'applique et s'enregistre aussitot",
+      /function commitPageBackground\(patch\)[\s\S]{0,400}?applyPageBackground\(pageBgIndex\)[\s\S]{0,120}?scheduleSave\(\)/.test(appSrc4));
+    assert("supprimer l'image en cours la deselectionne",
+      /if \(target\.background\.image === el\.dataset\.name\) commitPageBackground\(\{ image: "" \}\)/.test(appSrc4));
+  }
+
   console.log("== Tuile transparente : la couleur du texte suit le fond de PAGE ==");
   {
     /* Une tuile transparente ne peint plus son fond : ce qu'on voit

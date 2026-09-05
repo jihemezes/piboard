@@ -178,6 +178,51 @@
 <!-- Fenetre de mise a jour : confirmation, puis progression, puis
      attente du redemarrage du serveur. Update window: confirmation,
      then progress, then waiting for the server to come back. -->
+<!-- Fond d'une page : image locale, cadrage, position et voile.
+     A page's background: local image, framing, position and veil. -->
+<div class="modal modal-stacked" id="pageBgModal" hidden>
+  <div class="modal-card page-bg-card">
+    <header class="modal-head">
+      <h2 data-i18n="pagebg.title">Page background</h2>
+      <button class="modal-close" id="pageBgClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="page-bg-body">
+      <p class="field-hint" id="pageBgFor"></p>
+      <div class="update-actions">
+        <button type="button" class="btn small primary" id="pageBgUpload" data-i18n="pagebg.upload">Upload an image</button>
+        <button type="button" class="btn small" id="pageBgNone" data-i18n="pagebg.none">No image</button>
+        <input type="file" accept="image/*" multiple hidden id="pageBgFile">
+      </div>
+      <div class="page-bg-grid" id="pageBgGrid"></div>
+      <p class="field-hint" id="pageBgStatus" hidden></p>
+      <label class="field">
+        <span data-i18n="pagebg.mode">Framing</span>
+        <select id="pageBgMode">
+          <option value="cover" data-i18n="pagebg.mode.cover">Fill the page (may crop)</option>
+          <option value="contain" data-i18n="pagebg.mode.contain">Whole image (may leave margins)</option>
+          <option value="original" data-i18n="pagebg.mode.original">Original size</option>
+          <option value="stretch" data-i18n="pagebg.mode.stretch">Stretch (distorts)</option>
+          <option value="repeat" data-i18n="pagebg.mode.repeat">Tile it (repeat)</option>
+        </select>
+      </label>
+      <label class="field">
+        <span data-i18n="pagebg.position">Position</span>
+        <select id="pageBgPosition"></select>
+      </label>
+      <label class="field">
+        <span data-i18n="pagebg.dim">Veil over the image (%)</span>
+        <input type="range" id="pageBgDim" min="0" max="100" step="5">
+        <small class="field-hint" data-i18n="pagebg.dim.hint">Blends the theme's background colour over the image. At 0 the photo is untouched; raise it until the tiles are comfortably readable, especially the transparent ones.</small>
+      </label>
+    </div>
+    <div class="modal-foot">
+      <div class="form-actions">
+        <button type="button" class="btn primary" id="pageBgDone" data-i18n="common.close">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal modal-stacked" id="updateModal" hidden>
   <div class="modal-card update-card">
     <header class="modal-head">

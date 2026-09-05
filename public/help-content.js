@@ -2033,6 +2033,17 @@
           <p>Le réglage appartient à la page <b>qui arrive</b> : chaque page décrit la façon dont elle entre. Une tuile ajoutée pendant qu'une page est affichée atterrit <b>sur cette page</b>, pas sur le plateau principal.</p>
           <p><b>Supprimer une page supprime aussi ses tuiles</b> — elles n'existent nulle part ailleurs. Une confirmation est demandée si la page n'est pas vide. La page 1 ne peut pas être supprimée : c'est le plateau principal.</p>
 
+          <h4>Fond de page</h4>
+          <p>Chaque page peut porter sa propre <b>image de fond</b>, en plus de la couleur unie du thème. Le bouton <b>▣</b> de la ligne de la page, dans les réglages généraux, ouvre la fenêtre de configuration. C'est ce qui distingue vraiment un tableau de bord d'une grille de tuiles.</p>
+          <p>L'image est <b>téléversée sur la machine PiBoard</b> et rangée dans le dossier <code>data/</code> — jamais touché par les mises à jour, et inclus dans les sauvegardes. <b>Chaque page a son propre dossier</b> : supprimer une page n'efface pas le fond d'une autre.</p>
+          <div class="help-opt"><span class="help-opt-name">Remplir la page</span><span class="help-opt-desc">L'image couvre tout l'écran, quitte à en rogner les bords. Le choix habituel pour une photo.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Image entière</span><span class="help-opt-desc">L'image est visible en totalité, avec des marges si les proportions diffèrent.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Taille d'origine</span><span class="help-opt-desc">Aucun redimensionnement. Associé à une position, c'est ce qu'il faut pour un filigrane dans un coin.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Étirer</span><span class="help-opt-desc">L'image remplit exactement l'écran, quitte à être déformée.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Répéter en mosaïque</span><span class="help-opt-desc">L'image est répétée à sa taille d'origine. Pour une texture ou un motif.</span></div>
+          <p>Le réglage <b>« Voile sur l'image »</b> mélange la couleur de fond du thème par-dessus la photo. À 0, la photo est intacte ; à 100, on revient à un fond uni. <b>Montez-le jusqu'à ce que les tuiles redeviennent confortablement lisibles</b> : une photo contrastée rend illisibles les tuiles en fond transparent, et sans ce réglage il faudrait choisir entre un beau fond et un tableau lisible. Le voile passe sous les tuiles, jamais dessus.</p>
+          <p>La page 1 étant aussi le plateau du <b>mode classique</b>, celui-ci profite du fond de page sans rien avoir à configurer de plus. Les tiroirs, eux, gardent la couleur du thème.</p>
+
           <h4>Défilement automatique</h4>
           <p>Un tableau mural n'a personne pour tourner ses pages : sans défilement, les pages 2 et suivantes ne seraient jamais vues. L'option <b>« Passer à la page suivante automatiquement »</b> (réglages généraux → Mode d'affichage) fait défiler les pages en boucle. Elle est <b>désactivée par défaut</b> : un tableau qui se met à tourner tout seul sans qu'on l'ait demandé serait déroutant.</p>
           <p>La durée générale s'applique à toutes les pages, mais <b>chaque page peut fixer la sienne</b> dans la colonne de droite de la liste des pages (laissez le champ vide pour suivre la durée générale — celle-ci apparaît alors en filigrane). C'est utile dès que les pages ne se ressemblent pas : un tableau de valeurs demande plus de temps de lecture qu'une page portant une grande horloge. Minimum 3 secondes.</p>
@@ -2061,6 +2072,17 @@
           <div class="help-opt"><span class="help-opt-name">Effect</span><span class="help-opt-desc"><b>Push</b>: both pages slide together, like a film strip. <b>Cover</b>: the new one passes over, the old one does not move. <b>Uncover</b>: the old one leaves and reveals the new one. <b>Fade</b>: no movement. <b>None</b>: immediate replacement.</span></div>
           <p>The setting belongs to the <b>incoming</b> page: each page describes how it enters. A tile added while a page is displayed lands <b>on that page</b>, not on the main board.</p>
           <p><b>Deleting a page also deletes its tiles</b> — they exist nowhere else. A confirmation is asked if the page is not empty. Page 1 cannot be deleted: it is the main board.</p>
+
+          <h4>Page background</h4>
+          <p>Each page can carry its own <b>background image</b>, on top of the theme's plain colour. The <b>▣</b> button on the page's row, in the general settings, opens the configuration window. This is what really distinguishes a dashboard from a grid of tiles.</p>
+          <p>The image is <b>uploaded to the PiBoard machine</b> and stored in the <code>data/</code> folder — never touched by updates, and included in backups. <b>Each page has its own folder</b>: deleting a page does not wipe another's background.</p>
+          <div class="help-opt"><span class="help-opt-name">Fill the page</span><span class="help-opt-desc">The image covers the whole screen, cropping its edges if need be. The usual choice for a photo.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Whole image</span><span class="help-opt-desc">The image is fully visible, with margins if the proportions differ.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Original size</span><span class="help-opt-desc">No resizing. Combined with a position, this is what a corner watermark needs.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Stretch</span><span class="help-opt-desc">The image fills the screen exactly, distorted if need be.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Tile it</span><span class="help-opt-desc">The image is repeated at its original size. For a texture or a pattern.</span></div>
+          <p>The <b>"Veil over the image"</b> setting blends the theme's background colour over the photo. At 0 the photo is untouched; at 100 you are back to a plain background. <b>Raise it until the tiles become comfortably readable again</b>: a contrasted photo makes transparent-background tiles unreadable, and without this setting one would have to choose between a nice background and a legible board. The veil goes under the tiles, never over them.</p>
+          <p>As page 1 is also the <b>classic mode</b>'s board, that mode benefits from page backgrounds with nothing more to configure. The drawers keep the theme's colour.</p>
 
           <h4>Automatic cycling</h4>
           <p>A wall board has nobody to turn its pages: without cycling, pages 2 and beyond would never be seen. The <b>"Move to the next page automatically"</b> option (general settings → Display mode) cycles the pages in a loop. It is <b>off by default</b>: a board starting to cycle on its own without being asked would be baffling.</p>

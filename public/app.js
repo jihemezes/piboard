@@ -1100,6 +1100,119 @@
     return Number.isFinite(n) && n >= 3 ? Math.round(n) : null;
   }
 
+  /* ---------- Fond de page / page background ----------
+     Une couleur unie ne suffit pas des lors qu'on compose de vraies
+     pages : un fond illustre, c'est ce qui distingue un tableau de bord
+     d'une grille de tuiles. Le fond est donc attache A CHAQUE PAGE, y
+     compris la page 1 -- qui est aussi le plateau du mode classique, qui
+     en beneficie donc sans rien demander.
+
+     Le fichier est stocke en local, par la meme API media que la tuile
+     Logo/Image : sous `data/`, jamais touche par les mises a jour et
+     inclus dans les sauvegardes. Chaque page a son propre dossier, ce
+     qui evite qu'en supprimer une efface le fond d'une autre.
+
+     `dim` assombrit (ou eclaircit) le fond derriere les tuiles. Sans lui,
+     une photo contrastee rend les tuiles transparentes illisibles, et
+     l'on serait oblige de choisir entre un beau fond et un tableau
+     lisible.
+
+     A plain colour is not enough once one composes real pages: an
+     illustrated background is what distinguishes a dashboard from a grid
+     of tiles. The background is therefore attached TO EACH PAGE,
+     including page 1 -- which is also the classic mode's board, and so
+     benefits from it without asking.
+
+     The file is stored locally, through the same media API as the
+     Logo/Image tile: under `data/`, never touched by updates and
+     included in backups. Each page has its own folder, which prevents
+     deleting one from wiping another's background.
+
+     `dim` darkens (or lightens) the background behind the tiles. Without
+     it, a contrasted photo makes transparent tiles unreadable, and one
+     would have to choose between a nice background and a legible
+     board. */
+  const BG_MODES = ["cover", "contain", "original", "stretch", "repeat"];
+  const BG_POSITIONS = ["top left", "top center", "top right",
+    "center left", "center center", "center right",
+    "bottom left", "bottom center", "bottom right"];
+
+  function normalizeBackground(b) {
+    const src = b && typeof b === "object" ? b : {};
+    const dim = Number(src.dim);
+    return {
+      image: typeof src.image === "string" ? src.image : "",
+      mode: BG_MODES.includes(src.mode) ? src.mode : "cover",
+      position: BG_POSITIONS.includes(src.position) ? src.position : "center center",
+      // 0 = photo telle quelle ; 100 = fond uni. Entre les deux, la
+      // couleur de fond du theme est melangee par-dessus.
+      // 0 = photo as is; 100 = plain background. In between, the theme's
+      // background colour is blended over it.
+      dim: Number.isFinite(dim) ? Math.max(0, Math.min(100, Math.round(dim))) : 0
+    };
+  }
+
+  /* Identifiant du dossier media d'une page. Fixe pour la page 1 : elle
+     n'a pas d'identifiant propre, etant le plateau lui-meme.
+     A page's media folder id. Fixed for page 1: it has no id of its own,
+     being the board itself. */
+  function backgroundMediaId(index) {
+    const p = pageAt(index);
+    return "bg-" + (p && p.index > 0 ? p.id : "main");
+  }
+
+  /* Traduit le reglage en proprietes CSS. Les cinq modes se ramenent a
+     `background-size` et `background-repeat`, ce qui evite cinq chemins
+     de code separes.
+     Turns the setting into CSS properties. The five modes boil down to
+     `background-size` and `background-repeat`, which avoids five
+     separate code paths. */
+  function backgroundCss(bg, url) {
+    const size = { cover: "cover", contain: "contain", original: "auto",
+      stretch: "100% 100%", repeat: "auto" }[bg.mode] || "cover";
+    return {
+      backgroundImage: url ? `url("${url}")` : "",
+      backgroundSize: url ? size : "",
+      backgroundRepeat: url ? (bg.mode === "repeat" ? "repeat" : "no-repeat") : "",
+      backgroundPosition: url ? bg.position : "",
+      // Le fond ne doit pas defiler avec les tuiles quand la page
+      // deborde : il resterait a moitie hors champ.
+      // The background must not scroll with the tiles when the page
+      // overflows: it would end up half out of view.
+      backgroundAttachment: url ? "local" : ""
+    };
+  }
+
+  function applyPageBackground(index) {
+    const p = pageAt(index);
+    if (!p || !p.el) return;
+    const bg = normalizeBackground(p.background);
+    const url = bg.image
+      ? "/media/" + encodeURIComponent(backgroundMediaId(index)) + "/" + encodeURIComponent(bg.image)
+      : "";
+    Object.assign(p.el.style, backgroundCss(bg, url));
+    p.el.classList.toggle("has-bg-image", !!url);
+    // Le voile est un element a part plutot qu'un filtre : un filtre sur
+    // le conteneur affecterait AUSSI les tuiles posees dessus.
+    // The veil is a separate element rather than a filter: a filter on
+    // the container would affect the tiles on top as well.
+    let veil = p.el.querySelector(":scope > .board-bg-veil");
+    if (!url || !bg.dim) {
+      if (veil) veil.remove();
+      return;
+    }
+    if (!veil) {
+      veil = document.createElement("div");
+      veil.className = "board-bg-veil";
+      p.el.insertBefore(veil, p.el.firstChild);
+    }
+    veil.style.opacity = String(bg.dim / 100);
+  }
+
+  function applyAllBackgrounds() {
+    for (let i = 0; i < pageCount(); i++) applyPageBackground(i);
+  }
+
   function normalizeTransition(t) {
     const src = t && typeof t === "object" ? t : {};
     return {
@@ -1121,7 +1234,8 @@
   function pageAt(index) {
     if (index <= 0) {
       return { index: 0, id: "main", zone: "board", el: $("board"), grid,
-        name: mainPage.name, transition: mainPage.transition };
+        name: mainPage.name, transition: mainPage.transition,
+        background: mainPage.background };
     }
     const p = pages[index - 1];
     return p ? { index, id: p.id, zone: "page:" + p.id, el: p.el, grid: p.grid,
@@ -1837,7 +1951,8 @@
     mainPage = {
       name: (layout.mainPage && typeof layout.mainPage.name === "string") ? layout.mainPage.name : "",
       transition: normalizeTransition(layout.mainPage && layout.mainPage.transition),
-      dwellSeconds: normalizeDwell(layout.mainPage && layout.mainPage.dwellSeconds)
+      dwellSeconds: normalizeDwell(layout.mainPage && layout.mainPage.dwellSeconds),
+      background: normalizeBackground(layout.mainPage && layout.mainPage.background)
     };
     const existing = new Map(pages.map((p) => [p.id, p]));
     const next = [];
@@ -1848,6 +1963,7 @@
       page.name = typeof raw.name === "string" ? raw.name : "";
       page.transition = normalizeTransition(raw.transition);
       page.dwellSeconds = normalizeDwell(raw.dwellSeconds);
+      page.background = normalizeBackground(raw.background);
       page.tiles = Array.isArray(raw.tiles) ? raw.tiles : [];
       next.push(page);
     }
@@ -1913,6 +2029,7 @@
 
     renderPageIndicator();
     applyDisplayMode();
+    applyAllBackgrounds();
     $("boardEmpty").hidden = layout.tiles.length > 0;
     updateOverflow();
     for (const d of drawers.values()) {
@@ -1943,7 +2060,8 @@
     const out = {
       tiles: serializeZone(grid, "board"),
       mainPage: { name: mainPage.name, transition: mainPage.transition,
-        dwellSeconds: mainPage.dwellSeconds != null ? mainPage.dwellSeconds : null },
+        dwellSeconds: mainPage.dwellSeconds != null ? mainPage.dwellSeconds : null,
+        background: mainPage.background },
       /* Les pages sont enregistrees meme en mode classique : basculer
          d'un mode a l'autre ne doit rien detruire, et une bascule faite
          par erreur doit pouvoir etre annulee sans perte.
@@ -1955,6 +2073,7 @@
         name: p.name || "",
         transition: p.transition,
         dwellSeconds: p.dwellSeconds != null ? p.dwellSeconds : null,
+        background: p.background,
         tiles: p.grid ? serializeZone(p.grid, "page:" + p.id) : (p.tiles || [])
       }))
     };
@@ -3982,6 +4101,8 @@
                value="${p.dwellSeconds != null ? p.dwellSeconds : ""}"
                placeholder="${escapeHtmlAttr(String(autoAdvanceSeconds(i)))}"
                title="${escapeHtmlAttr(i18n.t("settings.pages.dwell"))}">
+        <button type="button" class="btn small page-bg" data-role="bg"
+                title="${escapeHtmlAttr(i18n.t("pagebg.title"))}">&#9635;</button>
         <button type="button" class="btn small page-del" data-role="del"
                 title="${escapeHtmlAttr(i18n.t("settings.pages.delete"))}">&times;</button>`;
       const target = i === 0 ? mainPage : pages[i - 1];
@@ -4006,6 +4127,7 @@
         scheduleAutoAdvance();
         scheduleSave();
       });
+      onActivate(row.querySelector("[data-role=bg]"), () => openPageBackground(i));
       if (i > 0) {
         onActivate(row.querySelector("[data-role=del]"), () => deletePage(i));
       }
@@ -4013,11 +4135,120 @@
     }
   }
 
+  /* ---------- Fenetre du fond de page / page background window ----------
+     Chaque modification est appliquee immediatement a la page visee et
+     enregistree : on voit le resultat en reglant, plutot que d'avoir a
+     valider pour decouvrir ce qu'on a fait -- le defaut exact qui avait
+     ete signale sur le recadrage de la tuile Image.
+     Every change is applied to the target page and saved immediately: one
+     sees the result while adjusting, rather than having to validate to
+     discover what was done -- the exact defect that had been reported on
+     the Image tile's cropping. */
+  let pageBgIndex = 0;
+
+  function pageBgTarget() {
+    return pageBgIndex === 0 ? mainPage : pages[pageBgIndex - 1];
+  }
+
+  function openPageBackground(index) {
+    pageBgIndex = index;
+    const target = pageBgTarget();
+    if (!target) return;
+    target.background = normalizeBackground(target.background);
+    const p = pageAt(index);
+    $("pageBgFor").textContent = (p && p.name) || (i18n.t("dash.page") + " " + (index + 1));
+
+    const posSel = $("pageBgPosition");
+    posSel.innerHTML = BG_POSITIONS.map((v) =>
+      `<option value="${v}">${escapeHtmlAttr(i18n.t("pagebg.pos." + v.replace(" ", "-")))}</option>`).join("");
+    posSel.value = target.background.position;
+    $("pageBgMode").value = target.background.mode;
+    $("pageBgDim").value = String(target.background.dim);
+
+    $("pageBgModal").hidden = false;
+    refreshPageBgList();
+  }
+
+  function commitPageBackground(patch) {
+    const target = pageBgTarget();
+    if (!target) return;
+    target.background = normalizeBackground(Object.assign({}, target.background, patch));
+    applyPageBackground(pageBgIndex);
+    refreshPageBgList();
+    scheduleSave();
+  }
+
+  async function refreshPageBgList() {
+    const grid = $("pageBgGrid");
+    const status = $("pageBgStatus");
+    const target = pageBgTarget();
+    if (!grid || !target) return;
+    status.hidden = true;
+    const mediaId = backgroundMediaId(pageBgIndex);
+    try {
+      const data = await fetch("/api/media/" + encodeURIComponent(mediaId)).then((r) => r.json());
+      const items = data.items || [];
+      const current = target.background.image || "";
+      grid.innerHTML = items.length
+        ? items.map((it) => `
+            <div class="page-bg-thumb${it.name === current ? " selected" : ""}" data-name="${escapeHtmlAttr(it.name)}">
+              <img src="${escapeHtmlAttr(it.url)}" alt="">
+              <button type="button" class="page-bg-thumb-del" title="${escapeHtmlAttr(i18n.t("pagebg.delete"))}">&times;</button>
+            </div>`).join("")
+        : `<p class="field-hint">${i18n.t("pagebg.empty")}</p>`;
+      grid.querySelectorAll(".page-bg-thumb").forEach((el) => {
+        onActivate(el, (e) => {
+          if (e && e.target && e.target.closest(".page-bg-thumb-del")) return;
+          commitPageBackground({ image: el.dataset.name });
+        });
+        onActivate(el.querySelector(".page-bg-thumb-del"), async (e) => {
+          if (e) e.stopPropagation();
+          await fetch("/api/media/" + encodeURIComponent(mediaId) + "/" + encodeURIComponent(el.dataset.name),
+            { method: "DELETE" }).catch(() => null);
+          // Le fond qui vient d'etre supprime ne doit pas rester
+          // reference : la page afficherait une image introuvable.
+          // The just-deleted background must not stay referenced: the
+          // page would show a missing image.
+          if (target.background.image === el.dataset.name) commitPageBackground({ image: "" });
+          else refreshPageBgList();
+        });
+      });
+    } catch (e) {
+      status.hidden = false;
+      status.textContent = i18n.t("pagebg.error");
+    }
+  }
+
+  async function uploadPageBackground(fileList) {
+    if (!fileList || !fileList.length) return;
+    const status = $("pageBgStatus");
+    status.hidden = false;
+    status.textContent = i18n.t("common.loading");
+    const form = new FormData();
+    // Champ "photos" : c'est le nom attendu par l'API media, partagee
+    // avec le Diaporama et la tuile Logo/Image.
+    // Field "photos": the name the media API, shared with the Slideshow
+    // and the Logo/Image tile, expects.
+    for (const f of fileList) form.append("photos", f);
+    try {
+      const res = await fetch("/api/media/" + encodeURIComponent(backgroundMediaId(pageBgIndex)),
+        { method: "POST", body: form });
+      if (!res.ok) throw new Error("status " + res.status);
+      status.hidden = true;
+      await refreshPageBgList();
+    } catch (e) {
+      status.hidden = false;
+      status.textContent = i18n.t("pagebg.uploadError");
+    }
+    $("pageBgFile").value = "";
+  }
+
   function addPage() {
     const page = createPageElement({ id: newPageId() });
     page.name = "";
     page.transition = normalizeTransition(null);
     page.dwellSeconds = null;
+    page.background = normalizeBackground(null);
     page.tiles = [];
     pages.push(page);
     applyDisplayMode();
@@ -5822,6 +6053,14 @@
     onActivate($("exitOptionDesktop"), () => exitToDesktop());
     $("setDisplayMode").addEventListener("change", renderPagesEditor);
     onActivate($("pageAddBtn"), () => addPage());
+    onActivate($("pageBgClose"), () => { $("pageBgModal").hidden = true; });
+    onActivate($("pageBgDone"), () => { $("pageBgModal").hidden = true; });
+    onActivate($("pageBgUpload"), () => $("pageBgFile").click());
+    onActivate($("pageBgNone"), () => commitPageBackground({ image: "" }));
+    $("pageBgFile").addEventListener("change", (e) => uploadPageBackground(e.target.files));
+    $("pageBgMode").addEventListener("change", (e) => commitPageBackground({ mode: e.target.value }));
+    $("pageBgPosition").addEventListener("change", (e) => commitPageBackground({ position: e.target.value }));
+    $("pageBgDim").addEventListener("input", (e) => commitPageBackground({ dim: e.target.value }));
     onActivate($("tileReset"), () => resetTileSettings());
     onActivate($("updCheckBtn"), () => checkForUpdatesNow());
     onActivate($("updApplyBtn"), () => openUpdateModal());

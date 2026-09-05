@@ -304,4 +304,23 @@ console.log("== Tuile Image : chemins reels vers le gestionnaire (1.91.3) ==")
 }
 console.log("  OK");
 
+console.log("== Fond de page documente (1.93.0) ==")
+{
+  const e = entryById("dashboard");
+  for (const [lang, html] of [["fr", e.html.fr], ["en", e.html.en]]) {
+    assert.ok(/data\//.test(html), `${lang} : le stockage local doit etre dit`);
+    assert.ok(/(propre dossier|own folder)/.test(html),
+      `${lang} : le cloisonnement par page doit etre dit -- supprimer une page ne doit pas effacer un autre fond`);
+  }
+  /* Le voile est ce qui rend le fond utilisable : sans lui, une photo
+     contrastee rend les tuiles transparentes illisibles.
+     The veil is what makes the background usable: without it, a
+     contrasted photo makes transparent tiles unreadable. */
+  assert.ok(/Voile sur l'image/.test(e.html.fr) && /Veil over the image/.test(e.html.en),
+    "le voile doit etre documente avec son role de lisibilite");
+  assert.ok(/mode classique/.test(e.html.fr) && /classic mode/.test(e.html.en),
+    "la portee (page 1 = plateau du mode classique) doit etre dite");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");

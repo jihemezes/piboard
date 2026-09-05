@@ -1,5 +1,80 @@
 # Changelog
 
+## 1.93.0
+
+- **NOUVEAU : image de fond par page.** En plus de la couleur unie du
+  theme, chaque page du mode tableau de bord peut porter sa propre image
+  de fond, avec cinq cadrages : remplir la page, image entiere, taille
+  d'origine, etirer, repeter en mosaique -- et neuf positions. Le bouton
+  du fond se trouve sur la ligne de la page, dans les reglages generaux.
+
+- **La page 1 etant aussi le plateau du mode classique**, celui-ci
+  beneficie du fond sans rien avoir a configurer de plus. Les tiroirs
+  gardent la couleur du theme : ils sont etroits, escamotables et se
+  superposent au plateau, une image y aurait surtout gene la lecture.
+
+- **Stockage local**, par la meme API media que la tuile Logo/Image :
+  les fichiers vivent sous `data/`, jamais touche par les mises a jour
+  et inclus dans les sauvegardes. **Chaque page a son propre dossier**,
+  de sorte qu'en supprimer une n'efface pas le fond d'une autre.
+
+- **Reglage « Voile sur l'image »**, et c'est lui qui rend la
+  fonctionnalite utilisable : il melange la couleur de fond du theme
+  par-dessus la photo. Sans lui, une photo contrastee rend illisibles les
+  tuiles en fond transparent, et il faudrait choisir entre un beau fond
+  et un tableau lisible. Le voile est un ELEMENT distinct place sous les
+  tuiles, pas un filtre applique au conteneur : un filtre aurait aussi
+  atteint les tuiles posees dessus.
+
+- **Chaque reglage s'applique et s'enregistre immediatement** : on voit
+  le resultat en reglant, plutot que d'avoir a valider pour decouvrir ce
+  qu'on a fait -- le defaut exact qui avait ete signale sur le recadrage
+  de la tuile Image. Supprimer l'image en cours d'usage la deselectionne,
+  sans quoi la page aurait affiche une image introuvable.
+
+- **Tests** : `dom-smoke.js` couvre la traduction des cinq cadrages en
+  proprietes CSS, le bornage du voile et des valeurs inconnues, le
+  cloisonnement des dossiers par page, l'ordre d'empilement voile/tuiles,
+  le fait que le voile n'intercepte pas les clics, et
+  l'application-enregistrement immediate.
+
+---
+
+- **NEW: per-page background image.** On top of the theme's plain colour,
+  every dashboard mode page can carry its own background image, with five
+  framings: fill the page, whole image, original size, stretch, tile it
+  -- and nine positions. The background button sits on the page's row, in
+  the general settings.
+
+- **As page 1 is also the classic mode's board**, that mode benefits from
+  the background with nothing more to configure. The drawers keep the
+  theme's colour: they are narrow, retractable and overlay the board, so
+  an image there would mostly have hindered reading.
+
+- **Local storage**, through the same media API as the Logo/Image tile:
+  files live under `data/`, never touched by updates and included in
+  backups. **Each page has its own folder**, so deleting one does not
+  wipe another's background.
+
+- **A "Veil over the image" setting**, and it is what makes the feature
+  usable: it blends the theme's background colour over the photo. Without
+  it, a contrasted photo makes transparent-background tiles unreadable,
+  and one would have to choose between a nice background and a legible
+  board. The veil is a separate ELEMENT placed under the tiles, not a
+  filter on the container: a filter would have hit the tiles on top too.
+
+- **Every setting applies and saves immediately**: one sees the result
+  while adjusting, rather than having to validate to discover what was
+  done -- the exact defect reported on the Image tile's cropping.
+  Deleting the image in use deselects it, without which the page would
+  have shown a missing image.
+
+- **Tests**: `dom-smoke.js` covers the five framings' translation into
+  CSS properties, the bounding of the veil and of unknown values, the
+  per-page folder separation, the veil/tiles stacking order, the fact
+  that the veil does not intercept clicks, and the immediate
+  apply-and-save.
+
 ## 1.92.3
 
 - **Tuile transparente : le texte devenait illisible.** Une tuile en fond
