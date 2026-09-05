@@ -195,7 +195,8 @@
       const avail = this.el.getBoundingClientRect();
       const width = Math.max(2, (avail.width || box.width));
       const height = Math.max(2, (avail.height || box.height));
-      this.inner.style.fontSize = fitSize(this.inner, width, height) + "px";
+      const natural = measureNatural(this.inner.textContent, this.inner.style);
+      this.inner.style.fontSize = sizeFor(natural, width, height) + "px";
     }
 
     destroy() {
@@ -207,32 +208,83 @@
     return Math.max(MIN_PX, Math.min(MAX_PX, Math.round(px)));
   }
 
-  /* Recherche dichotomique de la plus grande taille qui tient dans la
-     boite. `el` doit deja porter la police, la graisse et le texte
-     definitifs -- c'est ce rendu-la que l'on mesure, pas une
-     approximation.
-     Binary search for the largest size that fits in the box. `el` must
-     already carry the final font, weight and text -- that rendering is
-     what gets measured, not an approximation. */
-  function fitSize(el, width, height) {
-    let low = MIN_PX;
-    let high = MAX_PX;
-    let best = MIN_PX;
-    for (let i = 0; i < 12 && low <= high; i++) {
-      const mid = Math.floor((low + high) / 2);
-      el.style.fontSize = mid + "px";
-      // scrollWidth/scrollHeight refletent le texte reellement mis en
-      // page, retours automatiques compris.
-      // scrollWidth/scrollHeight reflect the actually laid out text,
-      // automatic wrapping included.
-      if (el.scrollHeight <= height && el.scrollWidth <= width) { best = mid; low = mid + 1; }
-      else high = mid - 1;
-    }
-    return best;
+  /* Taille du texte : MESURE puis REGLE DE TROIS, plutot qu'une
+     recherche dichotomique sur l'element affiche.
+
+     L'ancienne methode reglait la police, mesurait `scrollHeight` de
+     l'element, et recommençait une douzaine de fois. Le probleme est que
+     l'element mesure occupe TOUTE la largeur de la tuile : son
+     `scrollWidth` vaut donc toujours cette largeur, quelle que soit la
+     police, et la mesure de largeur ne contraignait rien. Pire, sa
+     hauteur depend du retour a la ligne, lui-meme fonction de la police
+     -- une boucle de retour dont la dichotomie sortait souvent sur une
+     valeur minuscule, d'ou un texte ridiculement petit qui ne grossissait
+     pas quand on elargissait la tuile.
+
+     On mesure desormais le texte UNE fois, a une police de reference,
+     dans un element hors flux qui n'est contraint par rien : on obtient
+     ses dimensions naturelles. La taille finale est le simple rapport
+     entre la place disponible et ces dimensions. C'est exact du premier
+     coup, sans boucle, et la taille croit strictement avec la tuile.
+
+     Text size: MEASURE then RULE OF THREE, rather than a binary search
+     on the displayed element.
+
+     The old method set the font, measured the element's `scrollHeight`,
+     and started over a dozen times. The trouble is that the measured
+     element spans the tile's FULL width: its `scrollWidth` therefore
+     always equals that width whatever the font, and the width
+     measurement constrained nothing. Worse, its height depends on
+     wrapping, itself a function of the font -- a feedback loop the
+     bisection often exited on a tiny value, hence ridiculously small
+     text that did not grow when the tile was widened.
+
+     We now measure the text ONCE, at a reference font size, in an
+     out-of-flow element constrained by nothing: that gives its natural
+     dimensions. The final size is the plain ratio between the available
+     room and those dimensions. Exact on the first try, no loop, and the
+     size grows strictly with the tile. */
+  const REFERENCE_PX = 100;
+
+  /* Dimensions naturelles du texte a REFERENCE_PX. L'element de mesure
+     copie les proprietes qui changent la largeur du rendu (police,
+     graisse, style, espacement) : en oublier une donnerait un rapport
+     fausse. `white-space: pre` conserve les retours a la ligne saisis
+     sans en ajouter d'autres -- c'est ce qui rend la mesure independante
+     de la largeur de la tuile.
+     Natural dimensions of the text at REFERENCE_PX. The measuring
+     element copies the properties that change the rendered width (font,
+     weight, style, spacing): forgetting one would skew the ratio.
+     `white-space: pre` keeps the typed line breaks without adding any --
+     that is what makes the measurement independent of the tile width. */
+  function measureNatural(text, style) {
+    const probe = document.createElement("span");
+    probe.textContent = text;
+    probe.style.cssText = "position:absolute;left:-99999px;top:0;visibility:hidden;"
+      + "white-space:pre;display:inline-block;line-height:1.15;";
+    probe.style.fontFamily = style.fontFamily;
+    probe.style.fontWeight = style.fontWeight;
+    probe.style.fontStyle = style.fontStyle;
+    probe.style.letterSpacing = style.letterSpacing;
+    probe.style.fontSize = REFERENCE_PX + "px";
+    document.body.appendChild(probe);
+    const rect = probe.getBoundingClientRect();
+    probe.remove();
+    return { w: rect.width, h: rect.height };
+  }
+
+  function sizeFor(natural, width, height) {
+    if (!natural || natural.w <= 0 || natural.h <= 0) return MIN_PX;
+    // Le plus contraignant des deux rapports : le texte doit tenir en
+    // largeur ET en hauteur. The more constraining of the two ratios:
+    // the text must fit in width AND in height.
+    const ratio = Math.min(width / natural.w, height / natural.h);
+    return clamp(REFERENCE_PX * ratio);
   }
 
   TextWidget.FONTS = FONTS;
-  TextWidget._fitSize = fitSize;
+  TextWidget._sizeFor = sizeFor;
+  TextWidget._REFERENCE_PX = REFERENCE_PX;
   TextWidget._clamp = clamp;
 
   window.PiBoard.registerWidget("text", TextWidget);

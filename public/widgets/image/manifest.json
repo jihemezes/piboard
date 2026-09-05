@@ -1,7 +1,7 @@
 {
   "id": "image",
   "dir": "image",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "Logo / Image",
     "fr": "Logo / Image"
@@ -82,15 +82,15 @@
         }
       ],
       "hint": {
-        "en": "For a logo, keep \"Whole image\": it is the only framing that never crops nor distorts it. Choose \"Crop\" to zoom into the image and pick which part stays visible — the edges falling outside the tile are cut off.",
-        "fr": "Pour un logo, gardez « Image entière » : c'est le seul cadrage qui ne le rogne ni ne le déforme jamais. Choisissez « Recadrer » pour zoomer dans l'image et choisir la partie qui reste visible — les bords qui sortent de la tuile sont coupés."
+        "en": "For a logo, keep the whole image: it is the only framing that never crops nor distorts it. Cropping fills the tile instead, cutting off whatever sticks out. The zoom and the two positions below work with every framing.",
+        "fr": "Pour un logo, gardez « Image entière » : c'est le seul cadrage qui ne le rogne ni ne le déforme jamais. « Recadrer » remplit au contraire la tuile en coupant ce qui dépasse. Le zoom et les deux positions ci-dessous fonctionnent avec tous les cadrages."
       }
     },
     {
       "key": "zoom",
       "type": "number",
       "default": 100,
-      "min": 100,
+      "min": 20,
       "max": 500,
       "step": 5,
       "label": {
@@ -98,8 +98,8 @@
         "fr": "Zoom (%)"
       },
       "hint": {
-        "en": "100% fills the tile exactly. Above, the image is enlarged and its edges are cut off. Only used by the \"Crop\" framing.",
-        "fr": "100 % remplit exactement la tuile. Au-delà, l'image est agrandie et ses bords sont coupés. Utilisé uniquement par le cadrage « Recadrer »."
+        "en": "100% leaves the image at the size the framing above gives it. Above, it is enlarged and its edges leave the tile; below, it shrinks within the tile. Works with every framing.",
+        "fr": "100 % laisse l'image à la taille que lui donne le cadrage ci-dessus. Au-delà, elle est agrandie et ses bords sortent de la tuile ; en deçà, elle rétrécit dans la tuile. Fonctionne avec tous les cadrages."
       }
     },
     {
@@ -114,8 +114,8 @@
         "fr": "Position horizontale du recadrage (%)"
       },
       "hint": {
-        "en": "0 keeps the left edge, 100 the right edge, 50 the centre. Only used by the \"Crop\" framing.",
-        "fr": "0 conserve le bord gauche, 100 le bord droit, 50 le centre. Utilisé uniquement par le cadrage « Recadrer »."
+        "en": "0 keeps the left edge, 100 the right edge, 50 the centre. Also the point the zoom starts from. Works with every framing.",
+        "fr": "0 conserve le bord gauche, 100 le bord droit, 50 le centre. C'est aussi le point d'où part le zoom. Fonctionne avec tous les cadrages."
       }
     },
     {
@@ -130,8 +130,8 @@
         "fr": "Position verticale du recadrage (%)"
       },
       "hint": {
-        "en": "0 keeps the top edge, 100 the bottom edge, 50 the centre. Useful to keep a face or a logo in frame rather than the middle of the picture. Only used by the \"Crop\" framing.",
-        "fr": "0 conserve le haut, 100 le bas, 50 le centre. Utile pour garder un visage ou un logo dans le cadre plutôt que le milieu de l'image. Utilisé uniquement par le cadrage « Recadrer »."
+        "en": "0 keeps the top edge, 100 the bottom edge, 50 the centre. Useful to keep a face or a logo in frame rather than the middle of the picture. Works with every framing.",
+        "fr": "0 conserve le haut, 100 le bas, 50 le centre. Utile pour garder un visage ou un logo dans le cadre plutôt que le milieu de l'image. Fonctionne avec tous les cadrages."
       }
     },
     {

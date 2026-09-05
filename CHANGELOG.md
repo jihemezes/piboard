@@ -1,5 +1,91 @@
 # Changelog
 
+## 1.91.2
+
+- **Tuile Image : les champs Zoom et Positions du recadrage ne faisaient
+  RIEN.** Ils n'agissaient qu'avec le cadrage « Recadrer » -- or le
+  cadrage par defaut est « Image entiere ». On saisissait 50 % ou 150 %,
+  on deplacait les positions, rien ne bougeait, sans le moindre indice
+  sur la raison. Un reglage sans effet dans la configuration par defaut
+  est un reglage casse. Le zoom et le point de mire s'appliquent
+  desormais a TOUS les cadrages ; « Recadrer » se distingue par ce qu'il
+  est vraiment, le seul qui remplit la tuile en rognant plutot qu'en
+  laissant des marges.
+
+- **Le zoom descend sous 100 %** (jusqu'a 20 %). Il y etait borne parce
+  qu'en cadrage « couvrir » reduire aurait decouvert des bandes vides ;
+  avec « Image entiere », reduire est au contraire exactement ce qui
+  eloigne un logo des bords de sa tuile.
+
+- **Poignees et barre d'outils presentes des le passage en mode
+  edition**, quel que soit le cadrage. Elles n'apparaissaient qu'avec le
+  cadrage « Recadrer », derriere un bouton d'entree : puisque le zoom
+  agit maintenant partout, cette condition n'a plus lieu d'etre et le
+  bouton disparait.
+
+- **Tuile Texte : le texte restait ridiculement petit.** Cause reelle,
+  differente de celle traitee en 1.91.1 : la recherche dichotomique
+  mesurait l'element AFFICHE, dont la largeur vaut toujours celle de la
+  tuile -- la contrainte de largeur ne servait donc a rien -- tandis que
+  sa hauteur dependait du retour a la ligne, lui-meme fonction de la
+  police. Cette boucle de retour faisait sortir la dichotomie sur une
+  valeur minuscule. Le texte est desormais mesure UNE fois a une police
+  de reference, hors flux, donc a ses dimensions naturelles ; la taille
+  finale est le simple rapport entre la place disponible et ces
+  dimensions. Exact du premier coup, sans boucle, et strictement
+  croissant avec la tuile. Le retour a la ligne automatique est retire :
+  la mesure ne pouvait pas en tenir compte, et le texte affiche
+  depassait alors celui qui avait servi au calcul.
+
+- **Correctif du harnais de test** : la fixture de l'agenda placait la
+  reunion dans le PASSE le samedi et le dimanche, un decalage negatif
+  ayant ete introduit pour la garder dans la semaine affichee. Or la vue
+  liste ne montre que ce qui vient : le test echouait donc toujours deux
+  jours sur sept, pour une raison simplement differente de la
+  precedente. On prend maintenant le plus grand decalage positif qui
+  reste dans la semaine, avec une heure encore a venir quand
+  l'evenement tombe aujourd'hui.
+
+---
+
+- **Image tile: the Zoom and crop Position fields did NOTHING.** They
+  only acted with the "Crop" framing -- yet the default framing is "Whole
+  image". You typed 50% or 150%, you moved the positions, nothing moved,
+  with no hint as to why. A setting with no effect in the default
+  configuration is a broken setting. Zoom and focal point now apply to
+  EVERY framing; "Crop" is distinguished by what it actually is, the only
+  one filling the tile by cropping rather than leaving margins.
+
+- **Zoom goes below 100%** (down to 20%). It was bounded there because in
+  "cover" framing shrinking would have uncovered empty bands; with "Whole
+  image", shrinking is on the contrary exactly what moves a logo away
+  from its tile's edges.
+
+- **Handles and toolbar present as soon as edit mode is entered**,
+  whatever the framing. They only appeared with the "Crop" framing,
+  behind an entry button: since zoom now acts everywhere, that condition
+  has no reason to exist and the button goes.
+
+- **Text tile: text stayed ridiculously small.** The real cause,
+  different from the one addressed in 1.91.1: the bisection measured the
+  DISPLAYED element, whose width always equals the tile's -- so the width
+  constraint was useless -- while its height depended on wrapping, itself
+  a function of the font. That feedback loop made the bisection exit on a
+  tiny value. The text is now measured ONCE at a reference font size, out
+  of flow, hence at its natural dimensions; the final size is the plain
+  ratio between the available room and those dimensions. Exact on the
+  first try, no loop, and strictly increasing with the tile. Automatic
+  wrapping is removed: the measurement could not account for it, and the
+  displayed text then exceeded the one used for the computation.
+
+- **Test harness fix**: the calendar fixture placed the meeting in the
+  PAST on Saturday and Sunday, a negative offset having been introduced
+  to keep it within the displayed week. But the list view only shows what
+  is coming: the test therefore still failed two days out of seven, for a
+  simply different reason. We now take the largest positive offset that
+  stays within the week, with a time still ahead when the event falls
+  today.
+
 ## 1.91.1
 
 Quatre corrections, dont trois ont la meme origine : le mode tableau de

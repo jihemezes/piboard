@@ -331,39 +331,15 @@
         + "</div>"
         + `<div class="pw-image-crophint">${esc(i18n.t("image.cropHint"))}</div>`;
 
-      /* Bouton d'entree dans le recadrage. Les poignees n'agissent que
-         sur le cadrage « Recadrer » ; les masquer completement hors de ce
-         cadrage revenait a n'offrir AUCUN point d'entree visible -- il
-         fallait deja savoir qu'il existait un cadrage « Recadrer » et
-         aller le choisir dans les reglages pour voir apparaitre quoi que
-         ce soit. Le mode edition affiche donc toujours quelque chose :
-         soit les poignees, soit ce bouton unique qui bascule le cadrage.
-         Entry button into cropping. The handles only act on the "Crop"
-         framing; hiding them entirely outside it meant offering NO
-         visible entry point -- one had to already know a "Crop" framing
-         existed and go pick it in the settings before anything appeared.
-         Edit mode therefore always shows something: either the handles,
-         or this single button switching the framing. */
-      const enter = document.createElement("button");
-      enter.type = "button";
-      enter.className = "pw-image-cropstart";
-      enter.textContent = i18n.t("image.cropStart");
-      enter.addEventListener("pointerdown", (e) => e.stopPropagation());
-      enter.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        this.commitCrop({ fit: "crop" }, true);
-      });
-      wrap.appendChild(enter);
-
       const zoomLabel = wrap.querySelector("[data-role=zoom]");
       const refresh = () => {
         const s = this.ctx.settings || {};
-        // Hors du cadrage « Recadrer », les poignees n'auraient aucun
-        // effet : on montre le bouton d'entree a leur place.
-        // Outside the "Crop" framing the handles would have no effect:
-        // the entry button is shown in their stead.
-        wrap.classList.toggle("pw-image-crop-off", s.fit !== "crop");
+        // Plus aucune condition sur le cadrage : le zoom et le point de
+        // mire agissent maintenant sur tous, la barre d'outils et les
+        // poignees ont donc toujours un effet.
+        // No condition on the framing any more: zoom and focal point now
+        // act on all of them, so the toolbar and the handles always have
+        // an effect.
         zoomLabel.textContent = clampZoom(s.zoom) + " %";
       };
       this.refreshCropTools = refresh;
@@ -401,20 +377,12 @@
          the events to stop, not just `pointerdown`. In the capture
          phase, so as to come before it. */
       for (const type of ["mousedown", "touchstart", "pointerdown"]) {
-        wrap.addEventListener(type, (e) => {
-          // Le bouton d'entree doit rester utilisable hors du cadrage
-          // « Recadrer » : c'est justement la qu'il sert.
-          // The entry button must stay usable outside the "Crop"
-          // framing: that is precisely where it is useful.
-          if ((this.ctx.settings || {}).fit !== "crop" && !e.target.closest(".pw-image-cropstart")) return;
-          e.stopPropagation();
-        }, true);
+        wrap.addEventListener(type, (e) => { e.stopPropagation(); }, true);
       }
 
       let drag = null;
       wrap.addEventListener("pointerdown", (e) => {
         const s = this.ctx.settings || {};
-        if (s.fit !== "crop") return;
         if (e.target.closest(".pw-image-croptools")) return;
         const box = this.ctx.el.getBoundingClientRect();
         const corner = e.target.closest(".pw-image-handle");
@@ -501,7 +469,15 @@
      RELEASE: saving at every pixel travelled would have triggered
      hundreds of layout writes for a single drag. */
 
-  const ZOOM_MIN = 100;
+  /* Le zoom descend desormais sous 100 %. Il y etait borne parce qu'en
+     cadrage « couvrir », reduire aurait decouvert des bandes vides. Avec
+     « Image entiere », reduire est au contraire parfaitement legitime :
+     c'est ainsi qu'on eloigne un logo des bords de sa tuile.
+     Zoom now goes below 100%. It was bounded there because in "cover"
+     framing, shrinking would have uncovered empty bands. With "Whole
+     image", shrinking is on the contrary perfectly legitimate: that is
+     how a logo is moved away from its tile's edges. */
+  const ZOOM_MIN = 20;
   const ZOOM_MAX = 500;
 
   function clampZoom(v) {
@@ -608,33 +584,40 @@
       img.style.height = "100%";
     }
 
-    if (mode === "crop") {
-      const x = pct(s.focusX, 50);
-      const y = pct(s.focusY, 50);
-      const zoomRaw = Number(s.zoom);
-      // Sous 100 %, l'image ne couvrirait plus la tuile et laisserait
-      // des bandes vides : ce n'est pas un recadrage, c'est le cadrage
-      // "image entiere". Below 100% the image would no longer cover the
-      // tile and would leave empty bands: that is not cropping, that is
-      // the "whole image" framing.
-      const zoom = Number.isFinite(zoomRaw) ? Math.max(100, Math.min(500, zoomRaw)) : 100;
-      img.style.objectFit = "cover";
-      img.style.objectPosition = x + "% " + y + "%";
-      img.style.transformOrigin = x + "% " + y + "%";
-      img.style.transform = zoom === 100 ? "" : "scale(" + (zoom / 100) + ")";
-      return;
-    }
+    /* Le zoom et le point de mire s'appliquent a TOUS les cadrages, pas
+       au seul cadrage « Recadrer ».
 
-    img.style.objectFit = mode;
-    // Les reglages de recadrage ne doivent pas survivre a un changement
-    // de cadrage : sans cette remise a zero, une image passee de
-    // "Recadrer" a "Image entiere" resterait zoomee.
-    // The crop settings must not survive a framing change: without this
-    // reset, an image switched from "Crop" to "Whole image" would stay
-    // zoomed.
-    img.style.objectPosition = "";
-    img.style.transformOrigin = "";
-    img.style.transform = "";
+       Ils y etaient reserves, si bien qu'avec le cadrage par defaut
+       (« Image entiere ») les trois champs Zoom, Position horizontale et
+       Position verticale ne faisaient strictement rien : on saisissait
+       50 % ou 150 %, rien ne bougeait, sans le moindre indice sur la
+       raison. Un reglage sans aucun effet dans la configuration par
+       defaut est un reglage casse.
+
+       « Recadrer » se distingue desormais du reste par ce qu'il est
+       vraiment : le seul cadrage qui remplit la tuile en rognant plutot
+       qu'en laissant des marges. Le zoom, lui, marche partout.
+
+       Zoom and focal point apply to EVERY framing, not to the "Crop"
+       framing alone.
+
+       They used to be reserved to it, so that with the default framing
+       ("Whole image") the three Zoom, Horizontal position and Vertical
+       position fields did strictly nothing: you typed 50% or 150%,
+       nothing moved, with no hint as to why. A setting with no effect at
+       all in the default configuration is a broken setting.
+
+       "Crop" is now distinguished from the rest by what it actually is:
+       the only framing that fills the tile by cropping rather than
+       leaving margins. Zoom, meanwhile, works everywhere. */
+    img.style.objectFit = mode === "crop" ? "cover" : mode;
+
+    const x = pct(s.focusX, 50);
+    const y = pct(s.focusY, 50);
+    const zoom = clampZoom(s.zoom);
+    img.style.objectPosition = x + "% " + y + "%";
+    img.style.transformOrigin = x + "% " + y + "%";
+    img.style.transform = zoom === 100 ? "" : "scale(" + (zoom / 100) + ")";
   }
 
   ImageWidget._safeLink = safeLink;

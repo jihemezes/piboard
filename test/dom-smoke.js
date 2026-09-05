@@ -27,19 +27,41 @@ function icsDateTime(d) {
   return `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
 }
 const AQ_TODAY = new Date();
-/* Decalage choisi pour rester DANS la semaine courante affichee par la
-   vue semaine (lundi -> dimanche). Un "+2 jours" en dur echouait tous
-   les samedis et dimanches : le samedi, +2 tombe lundi, donc dans la
-   semaine SUIVANTE, et la pastille n'etait pas dans la grille. Le test
-   echouait alors deux jours sur sept, sans rapport avec le code.
-   Offset chosen to stay WITHIN the current week shown by the week view
-   (Monday -> Sunday). A hard-coded "+2 days" failed every Saturday and
-   Sunday: on Saturday, +2 lands on Monday, hence the NEXT week, and the
-   chip was not in the grid. The test then failed two days out of seven,
-   with nothing to do with the code. */
+/* Decalage choisi pour que l'evenement soit DANS la semaine courante
+   affichee par la vue semaine (lundi -> dimanche) ET dans le futur.
+
+   Deux corrections successives, dont la seconde etait la vraie :
+   un "+2 jours" en dur echouait le samedi et le dimanche, l'evenement
+   tombant dans la semaine SUIVANTE. Le decalage a alors ete rendu
+   NEGATIF ces jours-la pour rester dans la semaine -- mais un evenement
+   passe n'apparait pas dans la vue liste, qui ne montre que ce qui
+   vient. Le test echouait donc toujours le samedi et le dimanche, pour
+   une raison differente.
+
+   On prend desormais le plus grand decalage POSITIF qui reste dans la
+   semaine. Le dimanche, ce decalage vaut zero : l'evenement est
+   aujourd'hui, et son heure est placee apres l'heure courante, sans quoi
+   il serait passe des 14 heures.
+
+   Offset chosen so the event is WITHIN the current week shown by the
+   week view (Monday -> Sunday) AND in the future.
+
+   Two successive fixes, the second being the real one: a hard-coded
+   "+2 days" failed on Saturday and Sunday, the event landing in the NEXT
+   week. The offset was then made NEGATIVE on those days to stay within
+   the week -- but a past event does not appear in the list view, which
+   only shows what is coming. So the test still failed on Saturday and
+   Sunday, for a different reason.
+
+   We now take the largest POSITIVE offset that stays within the week. On
+   Sunday that offset is zero: the event is today, and its time is set
+   after the current time, without which it would be past from 2 pm on. */
 const AQ_DOW = (AQ_TODAY.getDay() + 6) % 7;          // 0 = lundi / Monday
-const AQ_OFFSET = AQ_DOW <= 4 ? 2 : -(AQ_DOW - 2);   // reste lundi -> dimanche
-const AQ_IN2DAYS = new Date(AQ_TODAY.getFullYear(), AQ_TODAY.getMonth(), AQ_TODAY.getDate() + AQ_OFFSET, 14, 0, 0);
+const AQ_OFFSET = Math.min(2, 6 - AQ_DOW);           // 0..2, jamais negatif
+// Une heure encore a venir quand l'evenement est aujourd'hui.
+// A time still ahead when the event is today.
+const AQ_HOUR = AQ_OFFSET > 0 ? 14 : Math.min(23, AQ_TODAY.getHours() + 2);
+const AQ_IN2DAYS = new Date(AQ_TODAY.getFullYear(), AQ_TODAY.getMonth(), AQ_TODAY.getDate() + AQ_OFFSET, AQ_HOUR, 0, 0);
 const AQ_IN2DAYS_END = new Date(AQ_IN2DAYS.getTime() + 3600000);
 const FAMILY_ICS = `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:fam1@test\r\nDTSTART;VALUE=DATE:${icsDateOnly(AQ_TODAY)}\r\nSUMMARY:Anniversaire Lea\r\nEND:VEVENT\r\nEND:VCALENDAR`;
 const WORK_ICS = "\uFEFF" + `BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nUID:work1@test\r\nDTSTART:${icsDateTime(AQ_IN2DAYS)}\r\nDURATION:PT1H\r\nSUMMARY:Reunion equipe\r\nLOCATION:Salle B\r\nDESCRIPTION:Ordre du jour\\nPoint budget\\; puis planning\r\nEND:VEVENT\r\nEND:VCALENDAR`;
@@ -4754,15 +4776,19 @@ function catalogItemFor(catalog, document, widgetId) {
        4. Image tile: the handles only appeared if the "Crop" framing was
        ALREADY chosen, so no visible entry point. */
     const imgSrc2 = fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8");
-    assert("un bouton d'entree bascule vers le cadrage 'Recadrer'",
-      /pw-image-cropstart/.test(imgSrc2) && /commitCrop\(\{ fit: "crop" \}, true\)/.test(imgSrc2));
-    assert("il reste cliquable hors du cadrage 'Recadrer'",
-      /!e\.target\.closest\("\.pw-image-cropstart"\)/.test(imgSrc2));
+    /* Il n'y a plus de point d'entree a chercher : la barre d'outils et
+       les poignees sont actives en mode edition quel que soit le
+       cadrage, puisque le zoom et le point de mire agissent desormais
+       sur tous.
+       There is no entry point to look for any more: the toolbar and the
+       handles are active in edit mode whatever the framing, since zoom
+       and focal point now act on all of them. */
+    assert("plus aucune condition de cadrage sur la surcouche",
+      !/pw-image-crop-off/.test(imgSrc2));
     const imgCss2 = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
-    assert("la surcouche n'est plus masquee en bloc hors recadrage",
-      !/\.pw-image-crop\.pw-image-crop-off \{[^}]*display:\s*none/.test(imgCss2));
-    assert("le bouton d'entree s'affiche alors a la place des poignees",
-      /\.pw-image-crop-off \.pw-image-cropstart \{ display: block/.test(imgCss2));
+    assert("ni dans la feuille de style", !/pw-image-crop-off/.test(imgCss2));
+    assert("la surcouche s'affiche des le mode edition",
+      /body\.editing \.pw-image-crop \{[^}]*display:\s*block/.test(imgCss2));
   }
 
   console.log("== Mode tableau de bord : pages, transitions, bandeau ==");
@@ -5073,13 +5099,43 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("taille bornee vers le bas", Text._clamp(-50) >= 6);
     assert("taille bornee vers le haut", Text._clamp(9000) <= 400);
 
-    // Ajustement automatique : recherche dichotomique sur un faux element
-    // dont la hauteur rendue croit avec la taille de police.
-    const fake = { style: {}, get scrollHeight() { return (parseInt(this.style.fontSize, 10) || 0) * 2; },
-                   get scrollWidth() { return (parseInt(this.style.fontSize, 10) || 0) * 3; } };
-    const fitted = Text._fitSize(fake, 300, 100);
-    assert("la taille trouvee tient dans la boite", fitted * 2 <= 100 && fitted * 3 <= 300);
-    assert("la taille trouvee est la plus grande possible", (fitted + 1) * 2 > 100 || (fitted + 1) * 3 > 300);
+    /* Taille du texte : mesure a une police de reference, puis regle de
+       trois. L'ancienne recherche dichotomique mesurait l'element
+       AFFICHE, dont la largeur vaut toujours celle de la tuile : la
+       contrainte de largeur ne servait a rien, et la hauteur dependait
+       d'un retour a la ligne lui-meme fonction de la police. Cette
+       boucle de retour faisait sortir la dichotomie sur une valeur
+       minuscule -- d'ou un texte ridiculement petit qui ne grossissait
+       pas quand on elargissait la tuile.
+       Text size: measured at a reference font size, then a rule of
+       three. The old bisection measured the DISPLAYED element, whose
+       width always equals the tile's: the width constraint was useless,
+       and the height depended on wrapping, itself a function of the
+       font. That feedback loop made the bisection exit on a tiny value
+       -- hence ridiculously small text that did not grow when the tile
+       was widened. */
+    const nat = { w: 500, h: 115 };   // texte mesure a 100 px
+    const narrow = Text._sizeFor(nat, 300, 100);
+    const wide = Text._sizeFor(nat, 900, 100);
+    const tall = Text._sizeFor(nat, 900, 300);
+    assert("elargir la tuile AGRANDIT le texte", wide > narrow);
+    assert("l'agrandir en hauteur aussi", tall > wide);
+    assert("le texte tient en largeur", wide * nat.w / Text._REFERENCE_PX <= 900 + 0.5);
+    assert("et en hauteur", wide * nat.h / Text._REFERENCE_PX <= 100 + 0.5);
+    assert("la contrainte la plus forte l'emporte",
+      Math.abs(narrow - Math.round(100 * Math.min(300 / nat.w, 100 / nat.h))) <= 1);
+    assert("la taille reste bornee vers le haut", Text._sizeFor({ w: 1, h: 1 }, 99999, 99999) <= 400);
+    assert("un texte non mesurable ne produit pas de valeur absurde",
+      Text._sizeFor({ w: 0, h: 0 }, 300, 100) >= 6);
+    assert("aucune mesure nulle ne passe", Text._sizeFor(null, 300, 100) >= 6);
+    const textCss = fs.readFileSync(path.join(PUB, "widgets/text/widget.css"), "utf8");
+    /* Le retour a la ligne AUTOMATIQUE est retire : la mesure ne peut pas
+       en tenir compte, le texte affiche serait alors plus haut que celui
+       qui a servi au calcul. Automatic wrapping is removed: the
+       measurement cannot account for it, and the displayed text would
+       then be taller than the one used for the computation. */
+    assert("seuls les retours a la ligne saisis comptent",
+      /white-space:\s*pre;/.test(textCss) && !/white-space:\s*pre-wrap/.test(textCss));
 
     // Image : un lien "javascript:" saisi dans le champ ne doit jamais
     // etre pose sur la balise. C'est le seul cas qui compte ici.
@@ -5113,10 +5169,16 @@ function catalogItemFor(catalog, document, widgetId) {
 
     Image._applyFit(crop, "crop", { zoom: 100, focusX: 50, focusY: 50 });
     assert("a 100 %, aucune transformation inutile n'est posee", crop.style.transform === "");
-    // Sous 100 %, l'image ne couvrirait plus la tuile et laisserait des
-    // bandes vides : ce n'est plus un recadrage.
-    Image._applyFit(crop, "crop", { zoom: 40 });
-    assert("un zoom sous 100 % est ramene a 100 %", crop.style.transform === "");
+    /* Le zoom descend sous 100 %. Il y etait borne parce qu'en cadrage
+       « couvrir » reduire aurait decouvert des bandes vides ; avec
+       « Image entiere », reduire est au contraire ce qui eloigne un logo
+       des bords de sa tuile.
+       Zoom goes below 100%. It was bounded there because in "cover"
+       framing shrinking would have uncovered empty bands; with "Whole
+       image", shrinking is on the contrary what moves a logo away from
+       its tile's edges. */
+    Image._applyFit(crop, "contain", { zoom: 40 });
+    assert("un zoom sous 100 % reduit reellement l'image", crop.style.transform === "scale(0.4)");
     Image._applyFit(crop, "crop", { zoom: 9000 });
     assert("un zoom demesure est borne", crop.style.transform === "scale(5)");
     Image._applyFit(crop, "crop", {});
@@ -5124,101 +5186,31 @@ function catalogItemFor(catalog, document, widgetId) {
     Image._applyFit(crop, "crop", { focusX: -80, focusY: 300 });
     assert("un point de mire hors bornes est ramene dans le cadre", crop.style.objectPosition === "0% 100%");
 
-    /* Changer de cadrage doit effacer le recadrage : sans cette remise a
-       zero, une image passee de "Recadrer" a "Image entiere" resterait
-       zoomee. Switching framing must clear the crop: without this reset,
-       an image switched from "Crop" to "Whole image" would stay zoomed. */
-    Image._applyFit(crop, "crop", { zoom: 300, focusX: 10, focusY: 10 });
-    Image._applyFit(crop, "contain", { zoom: 300, focusX: 10, focusY: 10 });
-    assert("passer a 'image entiere' efface le zoom", crop.style.transform === "");
-    assert("et efface le point de mire", crop.style.objectPosition === "");
-    assert("l'ancien cadrage 'remplir' reste disponible et distinct",
-      (Image._applyFit(crop, "cover", {}), crop.style.objectFit === "cover" && crop.style.transform === ""));
-
-    /* ---------- Recadrage direct : calculs ----------
-       Regler le recadrage par des champs numeriques revenait a
-       travailler a l'aveugle, les valeurs n'atteignant l'image qu'apres
-       enregistrement. Le recadrage se fait desormais sur l'image ; ce
-       sont ces calculs qui traduisent le geste.
-       Setting the crop through numeric fields meant working blind, the
-       values only reaching the image once saved. Cropping now happens on
-       the image; these computations translate the gesture. */
-    // Glisser vers la DROITE doit faire venir la partie GAUCHE, comme
-    // lorsqu'on pousse une photo sous un cache.
-    assert("glisser a droite deplace le cadrage vers la gauche",
-      Image._panFocus(50, 40, 200, 200) < 50);
-    assert("glisser a gauche fait l'inverse",
-      Image._panFocus(50, -40, 200, 200) > 50);
-    assert("le geste est symetrique",
-      Math.abs((50 - Image._panFocus(50, 40, 200, 200)) - (Image._panFocus(50, -40, 200, 200) - 50)) < 0.001);
-    /* A 100 %, l'image affleure exactement le cadre : il n'y a rien hors
-       champ, donc rien a deplacer. Un geste doit rester sans effet plutot
-       que de decaler une image qui ne peut pas l'etre.
-       At 100% the image exactly meets the frame: nothing is off-screen,
-       so there is nothing to move. A gesture must have no effect rather
-       than shifting an image that cannot be shifted. */
-    assert("a 100 %, le deplacement ne fait rien", Image._panFocus(50, 80, 200, 100) === 50);
-    // Plus le zoom est fort, plus il y a de matiere hors cadre : un meme
-    // geste doit parcourir MOINS de pourcentage, pas plus.
-    const at150 = 50 - Image._panFocus(50, 30, 200, 150);
-    const at400 = 50 - Image._panFocus(50, 30, 200, 400);
-    assert("a fort zoom, le meme geste deplace moins le cadrage", at400 < at150);
-    assert("le cadrage ne sort jamais du cadre",
-      Image._panFocus(50, 99999, 200, 200) === 0 && Image._panFocus(50, -99999, 200, 200) === 100);
-    assert("une tuile de taille nulle ne produit pas de valeur absurde",
-      Image._panFocus(50, 40, 0, 200) === 50);
-
-    // Tirer VERS L'EXTERIEUR agrandit, quel que soit l'angle saisi.
-    assert("angle bas-droit tire vers l'exterieur : zoom", Image._zoomFromDrag(150, 60, 60, 1, 1, 200, 200) > 150);
-    assert("angle haut-gauche tire vers l'exterieur : zoom aussi", Image._zoomFromDrag(150, -60, -60, -1, -1, 200, 200) > 150);
-    assert("tirer vers l'interieur reduit", Image._zoomFromDrag(300, -60, -60, 1, 1, 200, 200) < 300);
-    assert("le zoom reste borne",
-      Image._zoomFromDrag(100, -9999, -9999, 1, 1, 200, 200) === 100
-      && Image._zoomFromDrag(400, 9999, 9999, 1, 1, 200, 200) === 500);
-    /* Un meme geste doit produire le meme effet sur une petite comme sur
-       une grande tuile : sans mise a l'echelle par la diagonale, le zoom
-       serait incontrolable sur une petite tuile.
-       A same gesture must have the same effect on a small tile as on a
-       large one: without scaling by the diagonal, zooming would be
-       uncontrollable on a small tile. */
-    const smallTile = Image._zoomFromDrag(200, 20, 20, 1, 1, 100, 100);
-    const largeTile = Image._zoomFromDrag(200, 40, 40, 1, 1, 200, 200);
-    assert("un geste proportionnel produit le meme zoom quelle que soit la taille",
-      Math.abs(smallTile - largeTile) < 0.001);
-
-    // ---------- Recadrage direct : surcouche ----------
-    const imgSrc = fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8");
-    assert("quatre poignees d'angle sont posees", /\['nw', 'ne', 'sw', 'se'\]/.test(imgSrc));
-    assert("une barre d'outils donne zoom, increments et remise a zero",
-      /data-act="in"/.test(imgSrc) && /data-act="out"/.test(imgSrc) && /data-act="reset"/.test(imgSrc));
-    /* Gridstack demarre son glissement sur mousedown/touchstart : ne
-       stopper que pointerdown aurait laisse la tuile se deplacer sur la
-       grille au lieu de recadrer.
-       Gridstack starts its drag on mousedown/touchstart: stopping only
-       pointerdown would have let the tile move on the grid instead of
-       cropping. */
-    assert("les evenements que Gridstack ecoute sont interceptes",
-      /\["mousedown", "touchstart", "pointerdown"\]/.test(imgSrc));
-    assert("ils le sont en phase de capture, donc avant Gridstack",
-      /\}, true\);/.test(imgSrc));
-    // L'affichage suit le geste, l'enregistrement attend le relachement.
-    assert("le rendu est rafraichi a chaque mouvement", /pointermove[\s\S]{0,600}?commit\(/.test(imgSrc));
-    assert("l'enregistrement n'a lieu qu'au relachement",
-      /if \(persist && typeof this\.ctx\.updateSettings === "function"\)/.test(imgSrc));
-    assert("un mouvement n'enregistre pas", /commit\(\{[\s\S]{0,220}?\}, false\)/.test(imgSrc));
-    const imgCss = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
-    assert("la surcouche n'apparait qu'en mode edition", /body\.editing \.pw-image-crop \{/.test(imgCss));
-    /* Hors du cadrage « Recadrer », les POIGNEES disparaissent (elles
-       n'auraient aucun effet) mais la surcouche reste, pour porter le
-       bouton d'entree. Les masquer toutes les deux, comme au depart,
-       revenait a n'offrir aucun point d'entree visible.
-       Outside the "Crop" framing the HANDLES go (they would have no
-       effect) but the overlay stays, to carry the entry button. Hiding
-       both, as originally, meant offering no visible entry point. */
-    assert("les poignees disparaissent si le cadrage n'est pas 'Recadrer'",
-      /\.pw-image-crop-off \.pw-image-handle/.test(imgCss));
-    assert("mais la surcouche reste pour porter le bouton d'entree",
-      /\.pw-image-crop-off \.pw-image-cropstart \{ display: block/.test(imgCss));
+    /* LE defaut signale : avec le cadrage par defaut (« Image entiere »),
+       les trois champs Zoom et Positions ne faisaient strictement rien.
+       On saisissait 50 % ou 150 %, rien ne bougeait, sans le moindre
+       indice sur la raison. Ils agissent desormais sur TOUS les cadrages.
+       THE reported defect: with the default framing ("Whole image"), the
+       three Zoom and Position fields did strictly nothing. You typed 50%
+       or 150%, nothing moved, with no hint as to why. They now act on
+       EVERY framing. */
+    for (const mode of ["contain", "cover", "crop", "fill"]) {
+      const el = { style: {} };
+      Image._applyFit(el, mode, { zoom: 150, focusX: 80, focusY: 57 });
+      assert("cadrage '" + mode + "' : le zoom agit", el.style.transform === "scale(1.5)");
+      assert("cadrage '" + mode + "' : le point de mire agit", el.style.objectPosition === "80% 57%");
+      assert("cadrage '" + mode + "' : le zoom part du point de mire",
+        el.style.transformOrigin === "80% 57%");
+    }
+    const kept = { style: {} };
+    Image._applyFit(kept, "crop", { zoom: 300, focusX: 10, focusY: 10 });
+    Image._applyFit(kept, "contain", { zoom: 300, focusX: 10, focusY: 10 });
+    assert("changer de cadrage ne perd plus le zoom, qui vaut pour tous",
+      kept.style.transform === "scale(3)");
+    assert("'Recadrer' reste distinct : c'est le seul qui remplit en rognant",
+      (Image._applyFit(kept, "crop", {}), kept.style.objectFit === "cover"));
+    assert("'Image entiere' ne rogne pas",
+      (Image._applyFit(kept, "contain", {}), kept.style.objectFit === "contain"));
 
     const imgManifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/image/manifest.json"), "utf8"));
     const fitField = imgManifest.settings.find((f) => f.key === "fit");
@@ -5227,11 +5219,11 @@ function catalogItemFor(catalog, document, widgetId) {
     for (const k of ["zoom", "focusX", "focusY"]) {
       const f = imgManifest.settings.find((x) => x.key === k);
       assert("le reglage '" + k + "' est declare", !!f);
-      assert("il dit dans les deux langues qu'il ne sert qu'au recadrage",
-        /Recadrer/.test(f.hint.fr) && /Crop/.test(f.hint.en));
+      assert("il dit dans les deux langues qu'il vaut pour tous les cadrages",
+        /tous les cadrages/.test(f.hint.fr) && /every framing/.test(f.hint.en));
     }
-    assert("le zoom ne peut pas descendre sous 100 % dans le formulaire",
-      imgManifest.settings.find((x) => x.key === "zoom").min === 100);
+    assert("le formulaire autorise un zoom inferieur a 100 %",
+      imgManifest.settings.find((x) => x.key === "zoom").min < 100);
 
     // Les deux tuiles sont bien au catalogue, dans la famille Mise en page.
     const appSrc = fs.readFileSync(path.join(PUB, "app.js"), "utf8");

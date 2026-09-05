@@ -12,12 +12,17 @@
 .pw-text-inner {
   width: 100%;
   line-height: 1.15;
-  /* Les retours a la ligne saisis dans les reglages sont conserves, et
-     un mot trop long est coupe plutot que de deborder de la tuile.
-     Line breaks typed in the settings are kept, and an over-long word is
-     broken rather than overflowing the tile. */
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
+  /* Seuls les retours a la ligne SAISIS comptent : `pre-wrap` ajoutait
+     des retours automatiques, dont la mesure de taille ne pouvait pas
+     tenir compte -- le texte affiche etait alors plus haut que celui qui
+     avait servi au calcul, et debordait. La taille etant calculee pour
+     que tout tienne, le retour automatique n'a plus lieu d'etre.
+     Only the TYPED line breaks count: `pre-wrap` added automatic
+     wrapping, which the size computation could not account for -- the
+     displayed text was then taller than the one used for the
+     computation, and overflowed. Since the size is computed so that
+     everything fits, automatic wrapping has no reason to exist. */
+  white-space: pre;
 }
 .pw-text-placeholder {
   color: var(--faint);
