@@ -143,46 +143,18 @@
         this.render();
       };
 
-      /* Une fois l'image posee, il n'existait plus AUCUN chemin vers le
-         gestionnaire : le bouton n'apparait que sur la tuile vide, et le
-         formulaire de reglages ne contient qu'un champ texte portant le
-         nom du fichier. Changer d'image obligeait donc a vider ce champ
-         a la main. Ce petit bouton de coin, affiche en mode edition,
-         retablit le chemin.
-         Once an image was set there was NO path left to the manager: the
-         button only appears on an empty tile, and the settings form only
-         holds a text field carrying the file name. Changing the image
-         therefore meant clearing that field by hand. This small corner
-         button, shown in edit mode, restores the path. */
-      const change = document.createElement("button");
-      change.type = "button";
-      change.className = "pw-image-change";
-      change.title = i18n.t("image.choose");
-      change.setAttribute("aria-label", i18n.t("image.choose"));
-      change.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"'
-        + ' stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/>'
-        + '<path d="m4 17 5-5 4 4 3-2 4 4"/></svg>';
-      /* Les trois evenements sont arretes, pas seulement le clic :
-         Gridstack demarre son glissement sur `mousedown`/`touchstart`,
-         et le clic d'edition remonte jusqu'a la grille. Sans cela,
-         appuyer sur ce bouton pouvait deplacer la tuile ou ouvrir ses
-         reglages au lieu d'ouvrir le gestionnaire d'images.
-         All three events are stopped, not just the click: Gridstack
-         starts its drag on `mousedown`/`touchstart`, and the edit click
-         bubbles up to the grid. Without this, pressing this button could
-         move the tile or open its settings instead of opening the image
-         manager. */
-      for (const type of ["mousedown", "touchstart", "pointerdown"]) {
-        change.addEventListener(type, (e) => e.stopPropagation());
-      }
-      change.addEventListener("click", (e) => {
-        e.stopPropagation();
-        e.preventDefault();
-        this.openManager();
-      });
+      /* Le bouton de coin a ete retire : il se superposait a la poignee
+         de zoom de l'angle superieur droit, et l'on ne savait plus lequel
+         des deux on visait. Le changement d'image se fait desormais par
+         l'appareil photo de la barre d'outils, qui est en bas, au milieu,
+         loin des quatre angles.
+         The corner button was removed: it overlapped the top-right zoom
+         handle, and one could no longer tell which of the two was being
+         aimed at. Changing the image now goes through the toolbar's
+         camera, which sits at the bottom centre, away from all four
+         corners. */
 
       this.root.innerHTML = "";
-      this.root.appendChild(change);
       this.root.appendChild(this.buildCropOverlay());
       if (link) {
         const a = document.createElement("a");
@@ -397,7 +369,29 @@
          Gridstack starts its drag on `mousedown`/`touchstart`: those are
          the events to stop, not just `pointerdown`. In the capture
          phase, so as to come before it. */
-      for (const type of ["mousedown", "touchstart", "pointerdown"]) {
+      /* `click` et `dblclick` sont arretes eux aussi, et pas seulement
+         les evenements qui declenchent le glissement de Gridstack.
+
+         C'est le point qui manquait : le clic d'edition est ecoute sur
+         la GRILLE, pas sur la tuile. Tout clic qui traversait la
+         surcouche -- y compris sur ses propres boutons, des lors qu'un
+         ecouteur du navigateur ou de Gridstack le retargetait -- finissait
+         donc par ouvrir la fenetre de configuration. En arretant le clic
+         a la surcouche, plus rien de ce qui se passe sur l'image ne peut
+         atteindre la grille : les boutons de la barre d'outils agissent,
+         et rien d'autre ne se declenche.
+
+         `click` and `dblclick` are stopped too, not only the events that
+         start Gridstack's drag.
+
+         This was the missing piece: the edit click is listened for on the
+         GRID, not on the tile. Any click going through the overlay --
+         including on its own buttons, as soon as a browser or Gridstack
+         listener retargeted it -- therefore ended up opening the settings
+         window. By stopping the click at the overlay, nothing happening
+         on the image can reach the grid any more: the toolbar's buttons
+         act, and nothing else fires. */
+      for (const type of ["mousedown", "touchstart", "pointerdown", "click", "dblclick"]) {
         wrap.addEventListener(type, (e) => { e.stopPropagation(); }, true);
       }
 

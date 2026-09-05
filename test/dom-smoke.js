@@ -4697,34 +4697,31 @@ function catalogItemFor(catalog, document, widgetId) {
        button only appears on an empty tile, and the settings only hold a
        text field. Changing the image meant clearing that field by hand. */
     const src = fs.readFileSync(path.join(PUB, "widgets/image/widget.js"), "utf8");
-    assert("un bouton de changement existe quand une image est posee", /pw-image-change/.test(src));
-    assert("il ouvre le gestionnaire", /pw-image-change[\s\S]{0,1400}?this\.openManager\(\)/.test(src));
-    const css = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
-    assert("il ne s'affiche qu'en mode edition", /body\.editing \.pw-image-change/.test(css));
-    /* La surcouche de recadrage occupe TOUTE la tuile. Sous elle, ce
-       bouton etait recouvert : le clic ne l'atteignait jamais, remontait
-       jusqu'a la grille et ouvrait la fenetre de reglages -- ou rien ne
-       permet de changer d'image. Le bouton paraissait donc mentir, et
-       l'aide avec lui.
-       The crop overlay spans the WHOLE tile. Underneath it, this button
-       was covered: the click never reached it, bubbled up to the grid
-       and opened the settings window -- where nothing lets you change the
-       image. The button therefore appeared to lie, and the help with
-       it. */
-    const zIndexOf = (selector) => {
-      const at = css.indexOf(selector);
-      const m = css.slice(at, css.indexOf("}", at)).match(/z-index:\s*(\d+)/);
-      return m ? Number(m[1]) : null;
-    };
-    assert("le bouton passe AU-DESSUS de la surcouche de recadrage",
-      zIndexOf(".pw-image-change {") > zIndexOf("body.editing .pw-image-crop {"));
-    assert("il arrete aussi les evenements que Gridstack et la grille ecoutent",
-      /change\.addEventListener\(type, \(e\) => e\.stopPropagation\(\)\)/.test(src));
-    // Second chemin, dans la barre d'outils : le bouton de coin est petit
-    // et se confond avec les commandes de la tuile.
-    assert("la barre d'outils propose aussi le changement d'image",
+    /* Le changement d'image se fait par l'appareil photo de la barre
+       d'outils. Le bouton de coin a ete retire : il se superposait a la
+       poignee de zoom de l'angle superieur droit, et l'on ne savait plus
+       lequel des deux on visait.
+       Changing the image goes through the toolbar's camera. The corner
+       button was removed: it overlapped the top-right zoom handle, and
+       one could no longer tell which of the two was being aimed at. */
+    const imgCssA = fs.readFileSync(path.join(PUB, "widgets/image/widget.css"), "utf8");
+    assert("plus de bouton de coin superpose a une poignee",
+      !/pw-image-change/.test(src) && !/pw-image-change/.test(imgCssA));
+    assert("la barre d'outils porte le changement d'image",
       /data-act="pick"/.test(src) && /if \(act === "pick"\) this\.openManager\(\)/.test(src));
-    assert("il est positionne par rapport a la tuile", /\.pw-image \{[^}]*position:\s*relative/.test(css));
+
+    /* Le clic d'edition est ecoute sur la GRILLE, pas sur la tuile : tout
+       clic traversant la surcouche finissait par ouvrir la fenetre de
+       configuration, boutons de la barre d'outils compris. La surcouche
+       doit donc arreter `click` et `dblclick`, et pas seulement les
+       evenements qui declenchent le glissement de Gridstack.
+       The edit click is listened for on the GRID, not on the tile: any
+       click going through the overlay ended up opening the settings
+       window, the toolbar's buttons included. The overlay must therefore
+       stop `click` and `dblclick`, not only the events that start
+       Gridstack's drag. */
+    assert("la surcouche arrete aussi le clic, qui ouvrait la configuration",
+      /\["mousedown", "touchstart", "pointerdown", "click", "dblclick"\]/.test(src));
 
     // L'aide ne doit plus situer le bouton "ci-dessous" : il est DANS la
     // tuile. The help must no longer place the button "below": it is IN

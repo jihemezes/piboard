@@ -287,8 +287,8 @@ console.log("== Tuile Image : chemins reels vers le gestionnaire (1.91.3) ==")
      the crop overlay covered it and the click opened the settings --
      where nothing lets you change the image. It must name the paths that
      work, and say what the settings window does NOT do. */
-  assert.ok(/barre d'outils de recadrage/.test(e.html.fr) && /crop toolbar/.test(e.html.en),
-    "le second chemin (barre d'outils) doit etre documente");
+  assert.ok(/appareil photo/.test(e.html.fr) && /camera/.test(e.html.en),
+    "le chemin reel (appareil photo de la barre d'outils) doit etre documente");
   assert.ok(/ne permet pas de choisir un fichier/.test(e.html.fr) && /does not let you pick a file/.test(e.html.en),
     "l'aide doit dire que la fenetre de reglages ne choisit pas de fichier");
 }

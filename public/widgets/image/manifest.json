@@ -1,7 +1,7 @@
 {
   "id": "image",
   "dir": "image",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "name": {
     "en": "Logo / Image",
     "fr": "Logo / Image"
@@ -32,8 +32,8 @@
         "fr": "Fichier image"
       },
       "hint": {
-        "en": "Read-only here: it shows the chosen file's name. To pick or change an image, switch to edit mode and use the button in the tile's corner, or the camera in the crop toolbar. On an empty tile, the button is in the middle of the tile.",
-        "fr": "En lecture seule ici : ce champ affiche le nom du fichier choisi. Pour choisir ou changer une image, passez en mode édition et utilisez le bouton dans le coin de la tuile, ou l'appareil photo de la barre d'outils de recadrage. Sur une tuile vide, le bouton est au milieu de la tuile."
+        "en": "Read-only here: it shows the chosen file's name. To pick or change an image, switch to edit mode and use the camera in the toolbar at the bottom of the tile. On an empty tile, a button in the middle of the tile does the same.",
+        "fr": "En lecture seule ici : ce champ affiche le nom du fichier choisi. Pour choisir ou changer une image, passez en mode édition et utilisez l'appareil photo de la barre d'outils, en bas de la tuile. Sur une tuile vide, un bouton au milieu de la tuile fait la même chose."
       }
     },
     {

@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.91.4
+
+- **Tuile Image : aucun bouton ne repondait en mode edition, tout
+  basculait vers la fenetre de configuration.** Cause : le clic
+  d'edition est ecoute sur la GRILLE, pas sur la tuile. La surcouche de
+  recadrage n'arretait que les evenements declenchant le glissement de
+  Gridstack (`mousedown`, `touchstart`, `pointerdown`) -- jamais le
+  `click` lui-meme. Tout clic sur l'image, boutons de la barre d'outils
+  compris, finissait donc par remonter jusqu'a la grille et ouvrir les
+  reglages. La surcouche arrete desormais aussi `click` et `dblclick` :
+  plus rien de ce qui se passe sur l'image ne peut atteindre la grille.
+
+- **Le bouton de changement d'image du coin est retire.** Il se
+  superposait a la poignee de zoom de l'angle superieur droit -- on ne
+  savait plus lequel des deux on visait. Le changement d'image passe
+  desormais par l'appareil photo de la barre d'outils, en bas au milieu,
+  loin des quatre angles. Les boutons de cette barre sont un peu
+  agrandis et passent au-dessus des poignees.
+
+- **Aide et intitule du champ mis a jour** : ils decrivaient le bouton de
+  coin, qui n'existe plus.
+
+- **Tests** : `dom-smoke.js` verifie que la surcouche arrete bien le clic
+  -- une regression sur ce point ramenerait exactement le symptome
+  signale -- et qu'aucune trace du bouton de coin ne subsiste.
+
+---
+
+- **Image tile: no button responded in edit mode, everything switched to
+  the settings window.** Cause: the edit click is listened for on the
+  GRID, not on the tile. The crop overlay only stopped the events that
+  start Gridstack's drag (`mousedown`, `touchstart`, `pointerdown`) --
+  never the `click` itself. Every click on the image, the toolbar's
+  buttons included, therefore bubbled up to the grid and opened the
+  settings. The overlay now stops `click` and `dblclick` too: nothing
+  happening on the image can reach the grid any more.
+
+- **The corner change-image button is removed.** It overlapped the
+  top-right zoom handle -- one could no longer tell which of the two was
+  being aimed at. Changing the image now goes through the toolbar's
+  camera, at the bottom centre, away from all four corners. That
+  toolbar's buttons are slightly enlarged and sit above the handles.
+
+- **Help and field label updated**: they described the corner button,
+  which no longer exists.
+
+- **Tests**: `dom-smoke.js` checks the overlay does stop the click -- a
+  regression there would bring back exactly the reported symptom -- and
+  that no trace of the corner button remains.
+
 ## 1.91.3
 
 - **Tuile Image : le petit bouton de changement d'image etait
