@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.95.2
+
+- **Fond d'ecran d'une page du mode tableau de bord : l'image choisie ne
+  s'affichait jamais**, sauf sur la page 1. Elle etait pourtant
+  correctement televersee, selectionnee, enregistree et rechargee : seul
+  l'affichage manquait.
+
+- **Cause** : le descripteur de page renvoye par `pageAt()` -- par lequel
+  passe tout l'affichage -- ne comportait pas le champ `background` pour
+  les pages secondaires. La page 1, decrite quelques lignes plus haut,
+  l'avait. `applyPageBackground()` lisait donc un fond toujours vide au
+  dela de la page 1 et n'appliquait aucune image.
+
+- **Televerser une image la choisit maintenant comme fond** si la page
+  n'en avait pas encore. Auparavant l'image rejoignait la pellicule sans
+  rien changer a la page, et il fallait deviner qu'un clic
+  supplementaire sur la vignette etait attendu.
+
+- **La liste des pages, dans les reglages generaux, distingue enfin une
+  page illustree d'une page nue** : le bouton de fond prend la couleur
+  d'accent et une infobulle explicite. Il fallait sinon ouvrir la
+  fenetre de chaque page pour le savoir.
+
+- **Tests** : `dom-smoke.js` verifie desormais le parcours reel sur une
+  page SECONDAIRE -- ouvrir la fenetre de fond depuis la liste des pages,
+  choisir une image, et constater le style effectivement pose sur
+  l'element de page, ainsi que l'apparition du marqueur sur la bonne
+  ligne. Les verifications purement structurelles qui existaient sur ce
+  sujet n'avaient rien vu passer : elles decrivaient la forme du code,
+  pas son effet.
+
 ## 1.95.1
 
 - **Fond d'ecran des pages du mode tableau de bord : le televersement

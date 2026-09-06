@@ -1238,8 +1238,21 @@
         background: mainPage.background };
     }
     const p = pages[index - 1];
+    /* "background" fait partie du descripteur au meme titre que le nom
+       et la transition. Il manquait ici -- et LUI SEUL : la page 1,
+       decrite juste au-dessus, l'avait bien. applyPageBackground() lit
+       le fond a travers ce descripteur, il ne voyait donc jamais celui
+       d'une page secondaire, et aucune image de fond ne s'affichait
+       au-dela de la page 1, alors qu'elle etait correctement choisie,
+       enregistree et rechargee.
+       "background" is part of the descriptor just like the name and the
+       transition. It was missing here -- and only here: page 1,
+       described just above, did have it. applyPageBackground() reads the
+       background through this descriptor, so it never saw a secondary
+       page's one, and no background image showed beyond page 1, even
+       though it was correctly picked, saved and reloaded. */
     return p ? { index, id: p.id, zone: "page:" + p.id, el: p.el, grid: p.grid,
-      name: p.name, transition: p.transition } : null;
+      name: p.name, transition: p.transition, background: p.background } : null;
   }
 
   function currentZone() {
@@ -4180,8 +4193,8 @@
                value="${p.dwellSeconds != null ? p.dwellSeconds : ""}"
                placeholder="${escapeHtmlAttr(String(autoAdvanceSeconds(i)))}"
                title="${escapeHtmlAttr(i18n.t("settings.pages.dwell"))}">
-        <button type="button" class="btn small page-bg" data-role="bg"
-                title="${escapeHtmlAttr(i18n.t("pagebg.title"))}">&#9635;</button>
+        <button type="button" class="btn small page-bg${normalizeBackground(p.background).image ? " has-bg" : ""}" data-role="bg"
+                title="${escapeHtmlAttr(i18n.t(normalizeBackground(p.background).image ? "pagebg.btnHas" : "pagebg.btnNone"))}">&#9635;</button>
         <button type="button" class="btn small page-del" data-role="del"
                 title="${escapeHtmlAttr(i18n.t("settings.pages.delete"))}">&times;</button>`;
       const target = i === 0 ? mainPage : pages[i - 1];
@@ -4254,6 +4267,11 @@
     target.background = normalizeBackground(Object.assign({}, target.background, patch));
     applyPageBackground(pageBgIndex);
     refreshPageBgList();
+    // La liste des pages, derriere cette fenetre, porte le marqueur
+    // "cette page a un fond" : il doit suivre le changement tout de
+    // suite. The pages list, behind this window, carries the "this page
+    // has a background" marker: it must follow the change at once.
+    renderPagesEditor();
     scheduleSave();
   }
 
@@ -4314,7 +4332,29 @@
         { method: "POST", body: form });
       if (!res.ok) throw new Error("status " + res.status);
       status.hidden = true;
+      /* Televerser une image POUR un fond de page, c'est vouloir la voir
+         en fond : si la page n'en a pas encore, la derniere arrivee est
+         choisie d'office. Sans cela, l'image apparaissait dans la
+         pellicule sans rien changer a la page, et il fallait deviner
+         qu'un clic supplementaire sur la vignette etait attendu.
+         Uploading an image FOR a page background means wanting to see it
+         as the background: if the page has none yet, the last one in is
+         picked outright. Without this, the image appeared in the strip
+         without changing anything on the page, and one had to guess that
+         an extra click on the thumbnail was expected. */
+      const target = pageBgTarget();
+      const had = target && normalizeBackground(target.background).image;
       await refreshPageBgList();
+      if (!had) {
+        const data = await fetch("/api/media/" + encodeURIComponent(backgroundMediaId(pageBgIndex)))
+          .then((r) => r.json()).catch(() => null);
+        const items = (data && data.items) || [];
+        // La liste est triee du plus ancien au plus recent : la derniere
+        // entree est celle qui vient d'etre televersee.
+        // The list is sorted oldest first: the last entry is the one just
+        // uploaded.
+        if (items.length) commitPageBackground({ image: items[items.length - 1].name });
+      }
     } catch (e) {
       status.hidden = false;
       status.textContent = i18n.t("pagebg.uploadError");

@@ -626,6 +626,19 @@ const dom = new JSDOM(html, {
           return json({ ok: true });
         }
       }
+      /* Images de fond de page : l'API media, partagee avec le
+         diaporama. Une seule image disponible, ce qui suffit a verifier
+         qu'un choix se traduit bien par un fond sur la page visee.
+         Page background images: the media API, shared with the
+         slideshow. A single available image, which is enough to check
+         that a choice does translate into a background on the target
+         page. */
+      if (/\/api\/media\//.test(u)) {
+        if (method === "POST") return json({ ok: true, uploaded: 1 });
+        if (method === "DELETE") return json({ ok: true });
+        const folder = (u.match(/\/api\/media\/([^/?]+)/) || [])[1] || "";
+        return json({ items: [{ name: "fond.png", size: 1234, url: "/media/" + folder + "/fond.png" }] });
+      }
       /* Mise a jour serveur (Linux) : etat pilote par le test, qui fait
          evoluer la phase pour verifier la fenetre de progression sans
          jamais couper de serveur. Server self-update (Linux): state
@@ -5380,7 +5393,7 @@ function catalogItemFor(catalog, document, widgetId) {
     // Chaque reglage est applique et enregistre immediatement : on voit
     // ce qu'on fait en le faisant.
     assert("un changement de reglage s'applique et s'enregistre aussitot",
-      /function commitPageBackground\(patch\)[\s\S]{0,400}?applyPageBackground\(pageBgIndex\)[\s\S]{0,120}?scheduleSave\(\)/.test(appSrc4));
+      /function commitPageBackground\(patch\)[\s\S]{0,400}?applyPageBackground\(pageBgIndex\)[\s\S]{0,600}?scheduleSave\(\)/.test(appSrc4));
     assert("supprimer l'image en cours la deselectionne",
       /if \(target\.background\.image === el\.dataset\.name\) commitPageBackground\(\{ image: "" \}\)/.test(appSrc4));
   }
@@ -5637,6 +5650,38 @@ function catalogItemFor(catalog, document, widgetId) {
     document.body.classList.remove("immersive");
     document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "F9", bubbles: true }));
     assert("hors affichage immersif, F9 reste sans effet", !document.body.classList.contains("win-open"));
+
+    /* ---------- Fond d'ecran d'une page SECONDAIRE ----------
+       Le defaut corrige en 1.95.2 ne touchait que les pages autres que
+       la page 1 : l'image etait bien choisie et enregistree, mais jamais
+       posee sur la page. Le test va donc jusqu'a l'element de page et
+       regarde le style REELLEMENT applique, plutot que la forme du code.
+       Secondary PAGE background. The defect fixed in 1.95.2 only
+       affected pages other than page 1: the image was properly picked
+       and saved, but never set on the page. The test therefore goes all
+       the way to the page element and looks at the style ACTUALLY
+       applied, rather than at the shape of the code. */
+    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    const bgRows = document.getElementById("pagesList").querySelectorAll(".page-row");
+    assert("la liste des pages ne marque aucun fond au depart",
+      !bgRows[1].querySelector("[data-role=bg]").classList.contains("has-bg"));
+    bgRows[1].querySelector("[data-role=bg]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    const thumb = document.querySelector("#pageBgGrid .page-bg-thumb");
+    assert("les images televersees de la page sont listees", !!thumb);
+    thumb.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(150);
+    const page2El = document.querySelectorAll(".board-page")[0];
+    assert("l'image choisie est bien posee en fond de la page 2",
+      /url\("\/media\/bg-pg-[^"]*\/fond\.png"\)/.test(page2El.style.backgroundImage));
+    const bgRows2 = document.getElementById("pagesList").querySelectorAll(".page-row");
+    assert("la liste des pages marque desormais la page 2 comme illustree",
+      bgRows2[1].querySelector("[data-role=bg]").classList.contains("has-bg"));
+    assert("et laisse la page 1, sans fond, non marquee",
+      !bgRows2[0].querySelector("[data-role=bg]").classList.contains("has-bg"));
+    document.getElementById("pageBgModal").hidden = true;
+    document.getElementById("settingsModal").hidden = true;
 
     /* ---------- Defilement automatique ----------
        Duree ramenee a 3 s (le minimum) pour que le test s'execute en un

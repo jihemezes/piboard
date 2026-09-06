@@ -2396,6 +2396,18 @@ body.dashboard-mode.touch-mode.dash-open .dash-tab { display: none; }
   background: var(--faint);
 }
 
+/* Marqueur "cette page a un fond" dans la liste des pages des reglages
+   generaux. Rien ne distinguait auparavant une page illustree d'une page
+   nue : il fallait ouvrir la fenetre de chaque page pour le savoir.
+   "This page has a background" marker in the pages list of the general
+   settings. Nothing used to tell an illustrated page from a bare one:
+   one had to open each page's window to find out. */
+.page-bg.has-bg {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
 .dash-pages { display: flex; gap: 6px; align-items: center; flex: none; }
 .dash-page-dot {
   min-width: 24px;
