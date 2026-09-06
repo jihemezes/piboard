@@ -148,6 +148,26 @@ const DEFAULT_SETTINGS = {
      layout.pages[].dwellSeconds). */
   pageAutoAdvance: false,
   pageAutoSeconds: 30,
+  /* Affichage immersif du mode tableau de bord (application de bureau
+     Windows uniquement). Quand il est actif, la fenetre passe en plein
+     ecran veritable : plus de barre de titre, plus de barre des taches,
+     rien d'autre que le tableau de bord. Une barre de fenetre interne,
+     revelee en amenant la souris tout en haut de l'ecran ou par la
+     touche F9, redonne acces a Reduire / Fenetre / Quitter -- sans quoi
+     un ecran sans clavier deviendrait une impasse.
+
+     Desactive par defaut, comme tout ce qui change l'aspect d'une
+     installation existante lors d'une mise a jour.
+
+     Immersive display for dashboard mode (Windows desktop application
+     only). When active, the window goes true full screen: no title bar,
+     no taskbar, nothing but the dashboard. An in-app window bar,
+     revealed by moving the mouse to the very top of the screen or with
+     the F9 key, gives Minimise / Windowed / Quit back -- without which a
+     keyboard-less screen would become a dead end.
+     Off by default, like anything that changes the look of an existing
+     installation on update. */
+  immersive: false,
   /* Cle CARTO des fonds de carte (tuiles Trafic, Radar, Avions).
      Vide par defaut, et il ne peut pas en etre autrement : CARTO
      delivre des cles PAR CLIENT, a ne pas partager entre projets sans
@@ -1146,6 +1166,35 @@ app.post("/api/system/autostart", (req, res) => {
   }
   const enabled = !!(req.body || {}).enabled;
   res.json(platform.setAutoStart(enabled));
+});
+
+/* ---------- Affichage immersif / immersive display ----------
+   Meme principe que /api/system/autostart : le serveur ne sait pas
+   passer une fenetre en plein ecran, il delegue au processus principal
+   Electron via le controleur de kiosque. Hors application de bureau
+   (navigateur ordinaire, ou Chromium en kiosque sur le Pi, deja sans
+   decoration), la route repond simplement que ce n'est pas supporte.
+   Same principle as /api/system/autostart: the server cannot put a
+   window in full screen, it delegates to the Electron main process
+   through the kiosk controller. Outside the desktop application (plain
+   browser, or kiosk Chromium on the Pi, already undecorated), the route
+   simply answers that it is not supported. */
+app.post("/api/system/immersive", (req, res) => {
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ supported: false, reason: "not-local" });
+  }
+  res.json(platform.setImmersive(!!(req.body || {}).enabled));
+});
+
+/* Reduire la fenetre dans la barre des taches : seule action de la barre
+   de fenetre interne qui n'a pas deja son equivalent ailleurs.
+   Minimise the window to the taskbar: the only action of the in-app
+   window bar that does not already have its equivalent elsewhere. */
+app.post("/api/system/minimize", (req, res) => {
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ ok: false, reason: "not-local" });
+  }
+  res.json(platform.minimizeWindow());
 });
 
 app.post("/api/system/exit-kiosk", (req, res) => {

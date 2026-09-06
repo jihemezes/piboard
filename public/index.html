@@ -78,6 +78,33 @@
      the scrolling information coming from tiles (RSS feed headlines, in
      the manner of rolling news channels).
      ============================================================ -->
+<!-- ============================================================
+     Barre de fenetre de l'affichage immersif (application de bureau).
+     En plein ecran veritable il n'y a plus ni barre de titre ni barre
+     des taches : cette barre les remplace, revelee en amenant la souris
+     tout en haut de l'ecran ou par la touche F9. Meme mecanique que le
+     bandeau du bas ci-dessous, en miroir.
+     Immersive display's window bar (desktop application). In true full
+     screen there is no title bar and no taskbar left: this bar replaces
+     them, revealed by moving the mouse to the very top of the screen or
+     with the F9 key. Same mechanics as the bottom bar below, mirrored.
+     ============================================================ -->
+<div class="win-hotzone" id="winHotzone" aria-hidden="true"></div>
+<div class="win-bar" id="winBar">
+  <span class="win-title">PiBoard</span>
+  <div class="win-actions">
+    <button class="win-btn" id="winMinimize" data-i18n-title="win.minimize" title="Minimise">
+      <svg viewBox="0 0 24 24"><path d="M5 12h14"/></svg>
+    </button>
+    <button class="win-btn" id="winWindowed" data-i18n-title="win.windowed" title="Leave full screen">
+      <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="13" rx="2"/><path d="M4 10h16"/></svg>
+    </button>
+    <button class="win-btn win-btn-danger" id="winQuit" data-i18n-title="win.quit" title="Quit PiBoard">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+</div>
+
 <div class="dash-hotzone" id="dashHotzone" aria-hidden="true"></div>
 <button class="dash-tab" id="dashTab" data-i18n-title="dash.open" title="Show the bar" aria-label="Show the bar">
   <span class="dash-tab-grip"></span>
@@ -395,6 +422,11 @@
           <span data-i18n="settings.autostart">Launch PiBoard when the session starts</span>
         </label>
         <small class="field-hint" data-i18n="settings.autostart.hint">Opens the dashboard automatically when you log in to Windows. This section only appears in the desktop application.</small>
+        <label class="field checkbox">
+          <input type="checkbox" id="setImmersive">
+          <span data-i18n="settings.immersive">Immersive display in dashboard mode</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.immersive.hint">In dashboard mode, the window goes full screen: no title bar, no Windows taskbar, nothing but the board. Bring the mouse to the very top of the screen, or press F9, to reveal a thin bar offering Minimise, Windowed and Quit. F11 also leaves full screen at any time.</small>
       </fieldset>
 
       <!-- Mise a jour automatique du serveur (Raspberry Pi / Linux) :

@@ -1994,6 +1994,7 @@
       $("board").hidden = false;
       activePageIndex = 0;
       stopAutoAdvance();
+      applyImmersive();
       return;
     }
     // En mode tableau de bord, les tiroirs n'existent pas : on les ferme
@@ -2007,6 +2008,7 @@
     }
     renderPageIndicator();
     scheduleAutoAdvance();
+    applyImmersive();
   }
 
   async function renderLayout(layout) {
@@ -3710,6 +3712,83 @@
     const supported = !!(appIntegration.desktopApp && appIntegration.autoStart && appIntegration.autoStart.supported);
     $("secDesktopApp").hidden = !supported;
     $("setAutoStart").checked = supported && !!appIntegration.autoStart.enabled;
+    $("setImmersive").checked = !!settings.immersive;
+  }
+
+  /* ---------- Affichage immersif / immersive display ----------
+     Plein ecran veritable de l'application de bureau : ni barre de
+     titre, ni barre des taches Windows. La fenetre elle-meme ne peut
+     etre commandee que par le processus principal Electron, d'ou l'aller
+     -retour par le serveur (meme chemin que le lancement au demarrage).
+
+     Le mode n'est demande qu'en mode tableau de bord : en mode
+     classique, la barre d'outils et les tiroirs supposent une fenetre
+     ordinaire, et masquer sa barre de titre n'apporterait rien.
+
+     L'etat REEL de la fenetre est la reponse du serveur, pas le
+     souhait : si Electron n'est pas la (navigateur, Raspberry Pi), la
+     classe n'est pas posee et la barre de fenetre interne n'apparait
+     jamais -- il n'y a alors rien a remplacer.
+
+     True full screen for the desktop application: no title bar, no
+     Windows taskbar. The window itself can only be commanded by the
+     Electron main process, hence the round trip through the server (the
+     same path as launch at startup).
+     The mode is only requested in dashboard mode: in classic mode the
+     toolbar and drawers assume an ordinary window, and hiding its title
+     bar would bring nothing.
+     The window's REAL state is the server's answer, not the wish: if
+     Electron is not there (browser, Raspberry Pi) the class is not set
+     and the in-app window bar never appears -- there is then nothing to
+     replace. */
+  let immersiveApplied = null;
+
+  async function requestImmersive(enabled) {
+    if (!appIntegration.desktopApp) return false;
+    try {
+      const r = await fetch("/api/system/immersive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !!enabled })
+      });
+      if (!r.ok) return false;
+      const res = await r.json();
+      const on = !!(res.supported && res.enabled);
+      document.body.classList.toggle("immersive", on);
+      if (!on) document.body.classList.remove("win-open");
+      return on;
+    } catch (e) {
+      // Serveur plus ancien ou route absente : on reste en fenetre
+      // ordinaire, ce qui est toujours utilisable.
+      // Older server or missing route: we stay in an ordinary window,
+      // which is always usable.
+      return false;
+    }
+  }
+
+  function applyImmersive() {
+    const wanted = !!(appIntegration.desktopApp && settings && settings.immersive && dashboardMode());
+    // Sans ce garde-fou, chaque rendu de disposition renverrait la meme
+    // demande a Electron, qui refait alors une transition de plein ecran
+    // visible a l'ecran. Without this guard every layout render would
+    // send the same request to Electron, which then replays a full
+    // screen transition, visible on screen.
+    if (immersiveApplied === wanted) return;
+    immersiveApplied = wanted;
+    requestImmersive(wanted);
+  }
+
+  /* Sortie manuelle par la barre de fenetre : on repasse en fenetre sans
+     toucher au reglage enregistre. Le choix est delibere -- on quitte le
+     plein ecran pour faire autre chose sur le PC, pas pour renoncer au
+     mode immersif, qui revient au prochain demarrage.
+     Manual exit through the window bar: we go back to a window without
+     touching the saved setting. The choice is deliberate -- one leaves
+     full screen to do something else on the PC, not to give up immersive
+     mode, which comes back on the next startup. */
+  async function leaveImmersive() {
+    immersiveApplied = false;
+    await requestImmersive(false);
   }
 
   /* ---------- Mise a jour automatique du serveur / server self-update ----------
@@ -4358,6 +4437,7 @@
       cartoKey: $("setCartoKey").value.trim(),
       updateChannel: $("setUpdateChannel").value === "preview" ? "preview" : "stable",
       displayMode: $("setDisplayMode").value === "dashboard" ? "dashboard" : "classic",
+      immersive: $("setImmersive").checked,
       pageAutoAdvance: $("setPageAuto").checked,
       pageAutoSeconds: Math.max(3, Math.min(3600, Number($("setPageAutoSeconds").value) || 30)),
       colors: {
@@ -5977,6 +6057,51 @@
       // travels from the trigger strip to a button, making it unusable.
       dashHideTimer = setTimeout(() => document.body.classList.remove("dash-open"), 320);
     }
+    /* ---------- Barre de fenetre de l'affichage immersif ----------
+       Meme mecanique que le bandeau du bas, en miroir : bande de
+       declenchement de quelques pixels tout en haut, et un delai avant
+       la fermeture pour que la souris puisse atteindre les boutons.
+       La touche F9 fait la meme chose sans souris -- indispensable sur
+       un ecran mural pilote au clavier sans fil, ou l'angle superieur
+       est parfois hors de portee.
+       Immersive display's window bar. Same mechanics as the bottom bar,
+       mirrored: a few-pixel trigger strip at the very top, and a delay
+       before closing so the mouse can reach the buttons. The F9 key does
+       the same without a mouse -- indispensable on a wall screen driven
+       by a wireless keyboard, where the top corner is sometimes out of
+       reach. */
+    let winHideTimer = null;
+    function showWinBar(show) {
+      clearTimeout(winHideTimer);
+      document.body.classList.toggle("win-open", !!show);
+    }
+    function scheduleWinHide() {
+      clearTimeout(winHideTimer);
+      winHideTimer = setTimeout(() => document.body.classList.remove("win-open"), 320);
+    }
+    $("winHotzone").addEventListener("mouseenter", () => showWinBar(true));
+    $("winBar").addEventListener("mouseenter", () => showWinBar(true));
+    $("winBar").addEventListener("mouseleave", scheduleWinHide);
+    $("winHotzone").addEventListener("mouseleave", scheduleWinHide);
+    onActivate($("winMinimize"), async () => {
+      showWinBar(false);
+      try { await fetch("/api/system/minimize", { method: "POST" }); } catch (e) { /* sans effet visible / no visible effect */ }
+    });
+    onActivate($("winWindowed"), () => {
+      showWinBar(false);
+      leaveImmersive();
+    });
+    onActivate($("winQuit"), async () => {
+      showWinBar(false);
+      try { await fetch("/api/system/exit-to-desktop", { method: "POST" }); } catch (e) { /* la fenetre se ferme / the window closes */ }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "F9") return;
+      if (!document.body.classList.contains("immersive")) return;
+      e.preventDefault();
+      showWinBar(!document.body.classList.contains("win-open"));
+    });
+
     $("dashHotzone").addEventListener("mouseenter", () => showDashBar(true));
     $("dashBar").addEventListener("mouseenter", () => showDashBar(true));
     $("dashBar").addEventListener("mouseleave", scheduleDashHide);

@@ -5613,6 +5613,31 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("la languette (tactile) ouvre le bandeau sans survol", document.body.classList.contains("dash-open"));
     document.body.classList.remove("dash-open");
 
+    /* ---------- Barre de fenetre de l'affichage immersif ----------
+       Elle n'existe que lorsque la fenetre est reellement passee en
+       plein ecran (classe "immersive", posee apres accord du processus
+       Electron, absent en test) : on la pose donc a la main, puis on
+       verifie le survol, la touche F9 et l'absence de reaction hors
+       mode immersif -- sans quoi une barre fantome s'ouvrirait dans un
+       simple navigateur.
+       The window bar only exists once the window has actually gone full
+       screen (class "immersive", set after the Electron process agrees,
+       absent in tests): we set it by hand, then check hovering, the F9
+       key and the absence of any reaction outside immersive mode. */
+    document.body.classList.add("immersive");
+    document.getElementById("winHotzone").dispatchEvent(new window.MouseEvent("mouseenter", { bubbles: true }));
+    assert("la barre de fenetre sort au survol du haut de l'ecran", document.body.classList.contains("win-open"));
+    document.getElementById("winBar").dispatchEvent(new window.MouseEvent("mouseleave", { bubbles: true }));
+    await sleep(420);
+    assert("la barre de fenetre rentre quand la souris s'en va", !document.body.classList.contains("win-open"));
+    document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "F9", bubbles: true }));
+    assert("F9 fait apparaitre la barre de fenetre", document.body.classList.contains("win-open"));
+    document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "F9", bubbles: true }));
+    assert("F9 la referme", !document.body.classList.contains("win-open"));
+    document.body.classList.remove("immersive");
+    document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "F9", bubbles: true }));
+    assert("hors affichage immersif, F9 reste sans effet", !document.body.classList.contains("win-open"));
+
     /* ---------- Defilement automatique ----------
        Duree ramenee a 3 s (le minimum) pour que le test s'execute en un
        temps raisonnable ; effets deja regles sur "aucun" plus haut, les

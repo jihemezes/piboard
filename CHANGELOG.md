@@ -1,5 +1,77 @@
 # Changelog
 
+## 1.95.1
+
+- **Fond d'ecran des pages du mode tableau de bord : le televersement
+  echouait systematiquement.** Le message « le televersement a echoue »
+  laissait croire a un probleme de fichier ou de format (PNG en
+  particulier) : il n'en etait rien, aucun fichier n'a jamais ete
+  refuse pour son contenu.
+
+- **Cause reelle** : les images de fond sont rangees par l'API media,
+  partagee avec le Diaporama, sous un identifiant de dossier propre --
+  `bg-main` pour la page 1, `bg-pg-<id>` pour les pages suivantes. Or le
+  controle d'identifiant de cette API n'acceptait qu'une seule famille,
+  celle des tuiles : `t-` suivi de caracteres alphanumeriques SANS
+  tiret. Les deux formes de fond etaient donc rejetees des la premiere
+  ligne de la route, qui repondait 400 avant meme de regarder le
+  fichier. Le listing des fonds deja televerses tombait de la meme
+  facon.
+
+- **Correction** : le controle connait desormais les deux familles,
+  tuile et fond de page. Aucun assouplissement de securite -- ni point,
+  ni slash, ni antislash ne passent, la traversee de chemin reste
+  impossible, et les identifiants de fond inconnus sont toujours
+  refuses.
+
+- **Tests** : `media.test.js` verifie que `bg-main` et
+  `bg-pg-<id>` sont acceptes, et que `bg-pg-../etc`, `bg-other` et
+  `bg-pg-` restent rejetes.
+
+## 1.95.0
+
+- **Affichage immersif du mode tableau de bord (application de bureau
+  Windows).** Nouveau reglage, dans la section « Application de bureau »
+  des reglages generaux : quand il est actif ET que le mode d'affichage
+  est « Tableau de bord », la fenetre passe en plein ecran veritable --
+  ni barre de titre, ni barre des taches Windows, rien d'autre que le
+  tableau. Desactive par defaut : une installation existante ne change
+  pas d'aspect a la faveur d'une mise a jour.
+
+- **Une fine barre de fenetre remplace la barre de titre**, revelee en
+  amenant la souris tout en haut de l'ecran ou par la touche F9,
+  exactement comme le bandeau du bas l'est par le bas. Elle offre
+  Reduire, Quitter le plein ecran et Quitter PiBoard. Sans elle, un
+  ecran mural sans clavier serait une impasse une fois le plein ecran
+  engage.
+
+- **Pourquoi une barre interne plutot que la vraie barre de titre** :
+  faire reapparaitre la decoration native suppose de sortir du plein
+  ecran, donc de redimensionner la fenetre -- et chaque aller-retour
+  reflowerait toute la grille des tuiles sous les yeux de
+  l'utilisateur. La barre interne glisse par-dessus, sans toucher a la
+  mise en page. Le bouton « Quitter le plein ecran » reste la pour qui
+  veut vraiment la fenetre Windows.
+
+- **Sortir du plein ecran ne desactive pas le reglage** : on quitte pour
+  faire autre chose sur le PC, pas pour renoncer au mode immersif, qui
+  revient au demarrage suivant. F11 et Alt+F4 continuent de fonctionner
+  en toutes circonstances.
+
+- **Architecture** : la fenetre n'est commandable que par le processus
+  principal Electron. Le chemin suivi est celui, deja en place, du
+  lancement au demarrage de session -- nouvelles routes
+  `/api/system/immersive` et `/api/system/minimize`, limitees aux
+  requetes locales, deleguant a `platform.setImmersive()` /
+  `platform.minimizeWindow()`, elles-memes adossees au controleur de
+  kiosque enregistre par `electron/main.js`. Hors application de bureau
+  (navigateur, Raspberry Pi en kiosque, deja sans decoration) les routes
+  repondent « non supporte » et la barre de fenetre n'apparait jamais.
+
+- **Tests** : `dom-smoke.js` verifie que la barre sort au survol du haut
+  de l'ecran, qu'elle rentre au depart de la souris, que F9 l'ouvre et
+  la referme, et qu'elle reste sans effet hors affichage immersif.
+
 ## 1.94.3
 
 - **Tuile Avions : LFBO s'affichait « Occitanie » au lieu de

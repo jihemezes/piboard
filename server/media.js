@@ -18,12 +18,49 @@ const MEDIA_ROOT = path.join(store.DATA_DIR, "media");
 const ALLOWED_EXT = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp"]);
 const MAX_FILES_PER_TILE = 200;
 
-/* Identifiant de tuile strictement valide (meme format que celui genere
-   par le client : "t-" + caracteres alphanumeriques)
-   Strictly validated tile id (same format the client generates:
-   "t-" + alphanumeric characters) */
+/* Identifiant de dossier media strictement valide. DEUX familles, et
+   c'est important : le nom "tileId" vient du diaporama, mais l'API media
+   sert aussi de reserve d'images aux fonds de page du mode tableau de
+   bord, qui n'appartiennent a AUCUNE tuile.
+
+     - "t-<alphanum>"        : une tuile (diaporama, Logo/Image)
+     - "bg-main"             : le fond de la page 1 (le plateau)
+     - "bg-pg-<alphanum et tirets>" : le fond d'une page secondaire,
+                               construit sur l'identifiant de page genere
+                               par le client ("pg-" + base36 + "-" + alea)
+
+   La deuxieme famille manquait : le motif n'acceptait que "t-" suivi de
+   caracteres alphanumeriques SANS tiret, donc "bg-main" et
+   "bg-pg-mh2k9x-a4f1" etaient refuses des le premier controle. Le
+   televersement d'un fond de page repondait alors 400 pour tout fichier,
+   quel qu'en soit le format -- et le message de l'interface ("le
+   televersement a echoue") laissait croire a un probleme d'image.
+
+   Aucun assouplissement cote securite : ni point, ni slash, ni
+   antislash ne passent, donc toujours aucune traversee de chemin
+   possible.
+
+   Strictly validated media folder id. TWO families, and this matters:
+   the name "tileId" comes from the slideshow, but the media API also
+   serves as the image store for dashboard-mode page backgrounds, which
+   belong to NO tile.
+     - "t-<alnum>"                  : a tile (slideshow, Logo/Image)
+     - "bg-main"                    : page 1's background (the board)
+     - "bg-pg-<alnum and dashes>"   : a secondary page's background,
+                                      built on the client-generated page
+                                      id ("pg-" + base36 + "-" + random)
+   The second family was missing: the pattern only accepted "t-" followed
+   by alphanumeric characters WITHOUT a dash, so "bg-main" and
+   "bg-pg-mh2k9x-a4f1" were rejected at the very first check. Uploading a
+   page background then answered 400 for every file, whatever its format
+   -- and the interface's message ("upload failed") suggested an image
+   problem. No security loosening: no dot, no slash, no backslash gets
+   through, so path traversal remains impossible. */
 function isValidTileId(id) {
-  return typeof id === "string" && /^t-[a-z0-9]{1,40}$/i.test(id);
+  if (typeof id !== "string") return false;
+  return /^t-[a-z0-9]{1,40}$/i.test(id)
+    || id === "bg-main"
+    || /^bg-pg-[a-z0-9-]{1,60}$/i.test(id);
 }
 
 function dirFor(tileId) {

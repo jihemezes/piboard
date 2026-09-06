@@ -18,6 +18,18 @@ try {
   assert(!media.isValidTileId("t-with/slash"), "slash rejete");
   assert(!media.isValidTileId(""), "chaine vide rejetee");
   assert(!media.isValidTileId(null), "null rejete");
+  /* Fonds de page du mode tableau de bord : ils n'appartiennent a aucune
+     tuile et portent donc leur propre prefixe. Refuses avant la
+     correction, ce qui faisait echouer TOUT televersement de fond de
+     page (message trompeur : "le televersement a echoue").
+     Dashboard-mode page backgrounds: they belong to no tile and
+     therefore carry their own prefix. Rejected before the fix, which
+     made EVERY page background upload fail. */
+  assert(media.isValidTileId("bg-main"), "fond de la page 1 accepte");
+  assert(media.isValidTileId("bg-pg-mh2k9x-a4f1"), "fond d'une page secondaire accepte");
+  assert(!media.isValidTileId("bg-pg-../etc"), "traversee rejetee malgre le prefixe de fond");
+  assert(!media.isValidTileId("bg-other"), "prefixe de fond inconnu rejete");
+  assert(!media.isValidTileId("bg-pg-"), "identifiant de page vide rejete");
   console.log("  OK validations d'identifiant");
 
   console.log("== Dossier vide au depart ==");

@@ -376,6 +376,27 @@ function registerController() {
       checkForUpdatesManually(mainWindow);
       return { ok: true };
     },
+    /* Affichage immersif : plein ecran veritable. Sous Windows,
+       setFullScreen(true) masque d'un coup la barre de titre ET la barre
+       des taches -- c'est la seule facon d'obtenir les deux, une fenetre
+       simplement sans cadre (frame: false) laissant la barre des taches
+       par-dessus. Le retour est toujours possible sans souris : F11 dans
+       le menu, Alt+F4 pour quitter, et la barre de fenetre interne du
+       tableau de bord (survol du haut de l'ecran ou touche F9).
+       Immersive display: true full screen. On Windows, setFullScreen
+       (true) hides the title bar AND the taskbar in one go -- the only
+       way to get both, a merely frameless window (frame: false) leaving
+       the taskbar on top. Going back is always possible without a mouse:
+       F11 in the menu, Alt+F4 to quit, and the dashboard's in-app window
+       bar (hovering the top of the screen or the F9 key). */
+    setImmersive: (enabled) => {
+      if (!mainWindow || mainWindow.isDestroyed()) return false;
+      mainWindow.setFullScreen(!!enabled);
+      return mainWindow.isFullScreen();
+    },
+    minimize: () => {
+      if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
+    },
     getAutoStart: () => app.getLoginItemSettings().openAtLogin,
     setAutoStart: (enabled) => {
       app.setLoginItemSettings({

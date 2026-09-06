@@ -187,6 +187,40 @@ function getAutoStart() {
   return { supported: false, enabled: false };
 }
 
+/* ---------- Affichage immersif / immersive display ----------
+   Meme delegation que le lancement au demarrage : seul le processus
+   principal Electron peut passer sa fenetre en plein ecran veritable
+   (barre de titre ET barre des taches masquees). Hors application de
+   bureau, la fonctionnalite est declaree non supportee -- sur le Pi,
+   Chromium tourne deja en kiosque, sans aucune decoration a masquer.
+   Same delegation as launch at startup: only the Electron main process
+   can put its window in true full screen (title bar AND taskbar
+   hidden). Outside the desktop application the feature is declared
+   unsupported -- on the Pi, Chromium already runs in kiosk mode, with no
+   decoration to hide. */
+function setImmersive(enabled) {
+  if (kioskController && typeof kioskController.setImmersive === "function") {
+    try {
+      return { supported: true, enabled: !!kioskController.setImmersive(!!enabled) };
+    } catch (e) {
+      return { supported: false, enabled: false, reason: String(e.message || e) };
+    }
+  }
+  return { supported: false, enabled: false, reason: "no-kiosk-controller" };
+}
+
+function minimizeWindow() {
+  if (kioskController && typeof kioskController.minimize === "function") {
+    try {
+      kioskController.minimize();
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, reason: String(e.message || e) };
+    }
+  }
+  return { ok: false, reason: "no-kiosk-controller" };
+}
+
 function setAutoStart(enabled) {
   if (kioskController && typeof kioskController.setAutoStart === "function") {
     try {
@@ -273,6 +307,8 @@ module.exports = {
   diskUsage,
   scanMountRootsPosix,
   registerKioskController,
+  setImmersive,
+  minimizeWindow,
   isDesktopApp,
   getAutoStart,
   setAutoStart,
