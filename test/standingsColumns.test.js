@@ -115,3 +115,72 @@ console.log("== statValue ==");
 console.log("  OK");
 
 console.log("Tous les tests standings sont passes.");
+
+/* ---------- Saison demandee a ESPN ----------
+   Sans parametre, ESPN sert la derniere saison close : le Top 14
+   affichait donc tout l'automne le classement de la saison precedente
+   alors que la competition avait repris. La saison en cours est
+   desormais demandee explicitement, avec repli sur l'appel nu. */
+const { seasonYearFor, hasEntries, loadEspn } = require("../public/widgets/standings/widget.js");
+
+console.log("== seasonYearFor : ESPN nomme une saison par son annee de debut ==");
+assert.strictEqual(seasonYearFor("rugby:270559", new Date("2026-09-07T12:00:00Z")), 2026,
+  "en septembre, la saison en cours est celle qui vient de commencer");
+assert.strictEqual(seasonYearFor("rugby:270559", new Date("2027-03-07T12:00:00Z")), 2026,
+  "au printemps, c'est toujours la saison commencee l'automne d'avant");
+assert.strictEqual(seasonYearFor("soccer:fra.1", new Date("2026-07-01T12:00:00Z")), 2026,
+  "juillet bascule deja sur la saison a venir");
+assert.strictEqual(seasonYearFor("baseball:mlb", new Date("2026-03-07T12:00:00Z")), 2026,
+  "une competition en annee civile ne recule jamais d'un an");
+assert.strictEqual(seasonYearFor("soccer:usa.1", new Date("2026-03-07T12:00:00Z")), 2026,
+  "la MLS non plus");
+console.log("  OK");
+
+console.log("== hasEntries : une saison demandee trop tot est vide, pas valide ==");
+assert.strictEqual(hasEntries(null), false, "reponse absente");
+assert.strictEqual(hasEntries({ standings: { entries: [] } }), false, "structure valide mais vide");
+assert.strictEqual(hasEntries({ standings: { entries: [{}] } }), true, "un classement simple");
+assert.strictEqual(hasEntries({ children: [{ standings: { entries: [] } }, { standings: { entries: [{}] } }] }), true,
+  "une seule poule remplie suffit");
+assert.strictEqual(hasEntries({ children: [{ standings: { entries: [] } }] }), false, "toutes les poules vides");
+console.log("  OK");
+
+(async () => {
+  const ROW = {
+    team: { shortDisplayName: "Toulouse" },
+    stats: [{ name: "points", abbreviation: "P", displayValue: "9" }]
+  };
+  function makeCtx(responses, seen) {
+    global.fetch = async (url) => {
+      seen.push(url);
+      const body = responses[url];
+      if (!body) return { ok: false, status: 404, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => body };
+    };
+    return { api: { proxyUrl: (u) => u } };
+  }
+  const BASE = "https://site.api.espn.com/apis/v2/sports/rugby/270559/standings";
+  const YEAR = seasonYearFor("rugby:270559", new Date());
+
+  console.log("== loadEspn demande d'abord la saison en cours ==");
+  let seen = [];
+  let ctx = makeCtx({
+    [BASE + "?season=" + YEAR]: { standings: { entries: [ROW] } },
+    [BASE]: { standings: { entries: [] } }
+  }, seen);
+  let groups = await loadEspn(ctx, "rugby:270559");
+  assert.ok(seen[0].endsWith("?season=" + YEAR), "la saison est demandee explicitement, en premier");
+  assert.strictEqual(seen.length, 1, "et l'appel nu n'est meme pas necessaire");
+  assert.strictEqual(groups[0].rows[0].team, "Toulouse", "le classement de la saison en cours est rendu");
+  console.log("  OK");
+
+  console.log("== ... et retombe sur l'appel nu si cette saison n'existe pas encore ==");
+  seen = [];
+  ctx = makeCtx({ [BASE]: { standings: { entries: [ROW] } } }, seen);
+  groups = await loadEspn(ctx, "rugby:270559");
+  assert.strictEqual(seen.length, 2, "la saison a bien ete tentee avant le repli");
+  assert.strictEqual(groups[0].rows[0].team, "Toulouse", "le repli affiche quand meme un classement");
+  console.log("  OK");
+
+  console.log("\n>>> TOUS LES TESTS CLASSEMENTS PASSENT");
+})().catch((e) => { console.error("\n>>> ECHEC :", e.message); process.exit(1); });

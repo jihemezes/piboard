@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.95.4
+
+- **Tuile Classement : le Top 14 affichait encore la saison precedente**
+  alors que la competition avait repris. Interroge sans parametre de
+  saison, ESPN sert le classement de la DERNIERE saison qu'il considere
+  close : la saison en cours doit etre demandee explicitement. Le defaut
+  touchait de la meme facon toutes les competitions a cheval sur deux
+  annees civiles, en debut de saison.
+
+- **La saison en cours est desormais demandee nommement.** ESPN designe
+  une saison par son annee de DEBUT : la saison 2026-2027 du Top 14 est
+  « 2026 ». L'annee demandee est donc l'annee courante a partir de
+  juillet, et l'annee precedente avant -- sauf pour les competitions
+  jouees dans une seule annee civile (MLB, MLS, WNBA, championnats
+  scandinaves et bresilien), toujours a l'annee courante, faute de quoi
+  elles auraient affiche au printemps la saison d'avant.
+
+- **Repli conserve** : si la saison deduite est refusee par ESPN ou
+  renvoie un classement vide -- calendrier inhabituel, code de
+  competition saisi a la main, saison pas encore ouverte -- l'appel sans
+  parametre reprend la main. L'affichage retombe alors sur le
+  comportement precedent, jamais sur une erreur.
+
+- **Tests** : `standingsColumns.test.js` couvre le calcul de l'annee de
+  saison (rentree, printemps, bascule de juillet, competitions en annee
+  civile), la detection d'un classement vide, et le parcours reel de
+  `loadEspn` -- saison demandee en premier, puis repli sur l'appel nu
+  quand elle ne rend rien.
+
 ## 1.95.3
 
 - **Tuile Trafic : le menu « Rafraichir maintenant » ne proposait pas de

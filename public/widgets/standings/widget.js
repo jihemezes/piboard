@@ -175,11 +175,77 @@
     return res.json();
   }
 
+  /* ---------- Saison a demander a ESPN ----------
+     Interroge sans parametre, ESPN sert le classement de la DERNIERE
+     saison qu'il considere close -- c'est ce qui laissait le Top 14
+     afficher tout l'automne le classement de la saison precedente, alors
+     que la competition avait repris. Le classement de la saison en cours
+     doit etre demande explicitement.
+
+     ESPN designe une saison par son annee de DEBUT : la saison
+     2026-2027 du Top 14 est "2026". Pour les competitions qui
+     chevauchent deux annees civiles, l'annee a demander est donc
+     l'annee courante a partir de l'ete, et l'annee precedente avant.
+     Quelques competitions se jouent au contraire dans une seule annee
+     civile (MLB, MLS, WNBA, championnats scandinaves et bresilien...) :
+     pour elles c'est toujours l'annee courante, et les traiter comme les
+     autres ferait afficher au printemps la saison d'avant -- exactement
+     le defaut qu'on corrige.
+
+     Le mois de bascule est juillet : aucune des competitions listees ne
+     commence avant aout, et aucune ne se prolonge jusqu'en juillet.
+
+     Which season to ask ESPN for. Queried without a parameter, ESPN
+     serves the standings of the LAST season it considers closed -- which
+     is what left the Top 14 showing the previous season's table all
+     autumn, while the competition had resumed. The current season's
+     table must be asked for explicitly.
+     ESPN names a season by its STARTING year: the Top 14's 2026-2027
+     season is "2026". For competitions straddling two calendar years the
+     year to ask for is therefore the current one from summer onwards,
+     and the previous one before that. A few competitions are played
+     within a single calendar year instead (MLB, MLS, WNBA, Scandinavian
+     and Brazilian leagues...): for those it is always the current year,
+     and treating them like the others would show the previous season in
+     spring -- exactly the defect being fixed. The switch month is July:
+     none of the listed competitions starts before August, and none runs
+     into July. */
+  const CALENDAR_YEAR_LEAGUES = new Set([
+    "baseball:mlb", "soccer:usa.1", "basketball:wnba",
+    "soccer:bra.1", "soccer:nor.1", "soccer:swe.1"
+  ]);
+
+  function seasonYearFor(raw, date) {
+    const d = date || new Date();
+    const year = d.getFullYear();
+    if (CALENDAR_YEAR_LEAGUES.has(String(raw))) return year;
+    return d.getMonth() >= 6 ? year : year - 1;
+  }
+
   /* --- Sports collectifs (ESPN) / team sports (ESPN) --- */
   async function loadEspn(ctx, raw) {
     const [sport, league] = raw.includes(":") ? raw.split(":") : ["soccer", raw];
-    const url = `https://site.api.espn.com/apis/v2/sports/${sport}/${league}/standings`;
-    const data = await fetchJson(ctx, url);
+    const base = `https://site.api.espn.com/apis/v2/sports/${sport}/${league}/standings`;
+    /* Deux tentatives, dans cet ordre : la saison en cours explicitement,
+       puis l'appel nu. Le repli couvre les cas ou notre deduction est
+       fausse (competition au calendrier inhabituel, code saisi a la main
+       par l'utilisateur) ou la saison pas encore ouverte chez ESPN :
+       l'affichage retombe alors sur le comportement d'avant, jamais sur
+       une erreur.
+       Two attempts, in this order: the current season explicitly, then
+       the bare call. The fallback covers cases where our deduction is
+       wrong (competition with an unusual calendar, code typed by hand by
+       the user) or the season is not open at ESPN yet: the display then
+       falls back to the previous behaviour, never to an error. */
+    let data = null;
+    try {
+      const withSeason = await fetchJson(ctx, base + "?season=" + seasonYearFor(raw, new Date()));
+      if (hasEntries(withSeason)) data = withSeason;
+    } catch (e) {
+      // saison refusee par ESPN : on tente l'appel nu ci-dessous
+      // season refused by ESPN: the bare call is tried below
+    }
+    if (!data) data = await fetchJson(ctx, base);
 
     // Une ou plusieurs poules/conferences selon la competition
     // One or several groups/conferences depending on the competition
@@ -208,6 +274,22 @@
         })
       };
     });
+  }
+
+  /* Vrai si la reponse d'ESPN contient au moins une equipe classee : une
+     saison demandee trop tot renvoie une structure valide mais vide, ce
+     qui doit compter comme un echec et non comme un classement vide.
+     True if ESPN's answer holds at least one ranked team: a season asked
+     for too early returns a valid but empty structure, which must count
+     as a failure rather than as an empty table. */
+  function hasEntries(data) {
+    if (!data) return false;
+    if (Array.isArray(data.children)) {
+      for (const c of data.children) {
+        if (c && c.standings && (c.standings.entries || []).length) return true;
+      }
+    }
+    return !!(data.standings && (data.standings.entries || []).length);
   }
 
   /* --- Formule 1 (Jolpica / Ergast) ---
@@ -441,7 +523,7 @@
      no module system in the browser here, and these functions are
      exactly where the bug was hiding. */
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { canonicalKey, pickColumns, formatPercentStat, statValue, COLUMN_ORDER, MAX_STAT_COLUMNS };
+    module.exports = { canonicalKey, pickColumns, formatPercentStat, statValue, COLUMN_ORDER, MAX_STAT_COLUMNS, seasonYearFor, hasEntries, loadEspn };
   } else {
     window.PiBoard.registerWidget("standings", StandingsWidget);
   }
