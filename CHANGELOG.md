@@ -1,5 +1,73 @@
 # Changelog
 
+## 1.96.1
+
+- **Tuile Classement : le Top 14 affichait TOUJOURS la saison
+  precedente.** La correction de la 1.95.4 ne pouvait pas fonctionner :
+  verification faite contre l'API reelle, le parametre `season` n'est
+  honore que par `site.web.api.espn.com`. Sur `site.api.espn.com`,
+  l'hote utilise jusqu'ici, il est purement et simplement ignore -- la
+  reponse restait celle de la derniere saison close, parametre ou pas.
+  La tuile interroge desormais le bon hote.
+
+- **La saison en cours n'est plus devinee, elle est lue.** Deduire
+  l'annee de saison du mois courant etait fragile et demandait une liste
+  de championnats en annee civile a maintenir. La reponse d'ESPN porte
+  un catalogue `seasons[]` avec, pour chaque saison, ses dates et si
+  elle a un classement : on prend celle dont l'intervalle contient
+  aujourd'hui. Un second appel n'est fait que si la reponse nue sert
+  effectivement une autre saison -- le reste de l'annee, une seule
+  requete comme avant.
+
+- **Nouveau reglage « Colonnes », par defaut « Essentiel ».** Le tableau
+  n'affiche plus que gagnes, nuls, perdus et points : ce qui fait un
+  classement. Matchs joues, difference de points et pourcentage de
+  victoires relevaient du contexte, illisible sur une tuile murale. Le
+  mode « Complet » retablit le choix automatique d'avant. Les colonnes
+  absentes chez la source ne sont jamais inventees : un sport sans match
+  nul ne recoit pas une colonne N remplie de tirets. Exception pour les
+  sports americains, qui n'ont pas de points de championnat : le
+  pourcentage de victoires y est conserve, faute de quoi une tuile NBA
+  se reduirait a « G / P » en perdant la colonne sur laquelle le
+  classement est justement etabli.
+
+- **Tests** : `standingsColumns.test.js` couvre la lecture du catalogue
+  de saisons (saison en cours, saison sans classement, catalogue
+  absent), la saison servie par une reponse, le jeu de colonnes
+  essentiel, et le parcours reel de `loadEspn` -- bon hote, second appel
+  seulement quand la saison servie est perimee, aucun appel superflu
+  sinon.
+
+## 1.96.0
+
+- **Tuile Classement : la Ligue des champions rejoint la liste des
+  competitions** (`soccer:uefa.champions`). La phase de ligue etant un
+  tableau unique de 36 equipes, elle profite directement du defilement
+  ci-dessous.
+
+- **Le tableau defile quand il compte plus de lignes que la tuile n'en
+  peut montrer** : molette, glissement du doigt, ou barre de defilement
+  fine sur le bord droit. La tuile elle-meme ne deborde pas, seul le
+  conteneur des tableaux defile, et le geste s'arrete a la tuile plutot
+  que d'entrainer la page derriere une fois le bas atteint. Le reglage
+  « Equipes affichees par groupe » reste une limite volontaire sur le
+  nombre de lignes demandees, a distinguer de la place disponible.
+
+- **Basket francais, handball et volley : non livres.** Ces trois
+  championnats ne sont pas couverts par ESPN, la source de la tuile pour
+  les sports collectifs : ESPN ne publie en basket que la NBA, la WNBA et
+  les championnats universitaires americains, ne couvre pas le handball,
+  et n'a en volley que les competitions internationales FIVB -- aucun
+  championnat national. Ajouter des codes inventes aurait donne des
+  tuiles en erreur. Les faire fonctionner suppose de brancher une source
+  supplementaire (LNB, LNH, LNV), travail a part entiere.
+
+- **Tests** : `standingsColumns.test.js` verifie la presence du code de
+  la C1 et son calendrier a cheval sur deux annees, ainsi que le
+  conteneur defilant -- y compris le `min-height: 0` sans lequel un
+  enfant flex ne retrecit jamais sous son contenu et la barre
+  n'apparaitrait pas.
+
 ## 1.95.4
 
 - **Tuile Classement : le Top 14 affichait encore la saison precedente**

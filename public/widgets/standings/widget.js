@@ -112,7 +112,42 @@
      Available columns vary between competitions: we inspect every row
      and not just the first, since a newly promoted team may be missing
      a statistic. */
-  function pickColumns(entries) {
+  /* Jeu de colonnes reduit : gagnes / nuls / perdus / points. C'est ce
+     qui fait un classement, le reste (matchs joues, difference,
+     pourcentage de victoires) est du contexte dont on se passe sur une
+     tuile murale. Le mode "complet" garde le choix automatique d'avant.
+     Reduced column set: won / drawn / lost / points. That is what makes
+     a table; the rest (games played, difference, win percentage) is
+     context one does without on a wall tile. The "full" mode keeps the
+     previous automatic choice. */
+  const ESSENTIAL_COLUMNS = ["W", "D", "L", "PTS"];
+
+  function pickColumns(entries, mode) {
+    if (mode === "essential") {
+      /* On ne garde que celles que la source publie reellement : un
+         sport sans match nul ne doit pas se voir imposer une colonne N
+         remplie de tirets. We only keep those the source actually
+         publishes: a sport without draws must not be given a D column
+         full of dashes. */
+      const seen = new Set();
+      for (const e of entries) {
+        for (const st of e.stats || []) {
+          const k = canonicalKey(st);
+          if (k) seen.add(k);
+        }
+      }
+      const allowed = new Set(ESSENTIAL_COLUMNS);
+      /* Les sports americains ne comptent pas de points de championnat :
+         leur classement se lit au pourcentage de victoires. Sans cette
+         exception, une tuile NBA se reduirait a "G / P", en perdant la
+         colonne sur laquelle le classement est justement etabli.
+         US sports have no championship points: their table is read by
+         win percentage. Without this exception an NBA tile would shrink
+         to "W / L", losing the very column the ranking is built on. */
+      if (!seen.has("PTS") && seen.has("PCT")) allowed.add("PCT");
+      const kept = COLUMN_ORDER.filter((k) => allowed.has(k) && seen.has(k));
+      return kept.length ? kept : ESSENTIAL_COLUMNS;
+    }
     const present = new Set();
     for (const e of entries) {
       for (const s of e.stats || []) {
@@ -176,76 +211,90 @@
   }
 
   /* ---------- Saison a demander a ESPN ----------
-     Interroge sans parametre, ESPN sert le classement de la DERNIERE
-     saison qu'il considere close -- c'est ce qui laissait le Top 14
-     afficher tout l'automne le classement de la saison precedente, alors
-     que la competition avait repris. Le classement de la saison en cours
-     doit etre demande explicitement.
+     Deux corrections d'un coup, apres verification sur l'API reelle :
 
-     ESPN designe une saison par son annee de DEBUT : la saison
-     2026-2027 du Top 14 est "2026". Pour les competitions qui
-     chevauchent deux annees civiles, l'annee a demander est donc
-     l'annee courante a partir de l'ete, et l'annee precedente avant.
-     Quelques competitions se jouent au contraire dans une seule annee
-     civile (MLB, MLS, WNBA, championnats scandinaves et bresilien...) :
-     pour elles c'est toujours l'annee courante, et les traiter comme les
-     autres ferait afficher au printemps la saison d'avant -- exactement
-     le defaut qu'on corrige.
+     1. L'HOTE. Le parametre `season` n'est honore que par
+        site.web.api.espn.com. Sur site.api.espn.com -- l'hote utilise
+        jusqu'ici -- il est purement ignore : la reponse reste celle de la
+        derniere saison close. C'est pour cela que le Top 14 affichait
+        encore la saison precedente MALGRE la correction precedente.
 
-     Le mois de bascule est juillet : aucune des competitions listees ne
-     commence avant aout, et aucune ne se prolonge jusqu'en juillet.
+     2. LA DEDUCTION. Deviner l'annee de saison a partir du mois etait de
+        toute facon fragile. La reponse d'ESPN porte un tableau
+        `seasons[]`, chaque entree donnant `year`, `startDate`, `endDate`
+        et `hasStandings`. La saison en cours est donc LUE, pas devinee :
+        c'est celle dont l'intervalle contient aujourd'hui. Plus de mois
+        de bascule, plus de liste de championnats en annee civile, plus
+        rien a maintenir quand une competition change de calendrier.
 
-     Which season to ask ESPN for. Queried without a parameter, ESPN
-     serves the standings of the LAST season it considers closed -- which
-     is what left the Top 14 showing the previous season's table all
-     autumn, while the competition had resumed. The current season's
-     table must be asked for explicitly.
-     ESPN names a season by its STARTING year: the Top 14's 2026-2027
-     season is "2026". For competitions straddling two calendar years the
-     year to ask for is therefore the current one from summer onwards,
-     and the previous one before that. A few competitions are played
-     within a single calendar year instead (MLB, MLS, WNBA, Scandinavian
-     and Brazilian leagues...): for those it is always the current year,
-     and treating them like the others would show the previous season in
-     spring -- exactly the defect being fixed. The switch month is July:
-     none of the listed competitions starts before August, and none runs
-     into July. */
-  const CALENDAR_YEAR_LEAGUES = new Set([
-    "baseball:mlb", "soccer:usa.1", "basketball:wnba",
-    "soccer:bra.1", "soccer:nor.1", "soccer:swe.1"
-  ]);
+     Two fixes at once, after checking against the real API:
+     1. THE HOST. The `season` parameter is only honoured by
+        site.web.api.espn.com. On site.api.espn.com -- the host used until
+        now -- it is simply ignored: the answer stays the last closed
+        season. That is why the Top 14 still showed the previous season
+        DESPITE the earlier fix.
+     2. THE DEDUCTION. Guessing the season year from the month was
+        fragile anyway. ESPN's answer carries a `seasons[]` array, each
+        entry giving `year`, `startDate`, `endDate` and `hasStandings`.
+        The current season is therefore READ, not guessed: the one whose
+        interval contains today. No switch month, no list of
+        calendar-year leagues, nothing to maintain when a competition
+        changes its calendar. */
 
-  function seasonYearFor(raw, date) {
-    const d = date || new Date();
-    const year = d.getFullYear();
-    if (CALENDAR_YEAR_LEAGUES.has(String(raw))) return year;
-    return d.getMonth() >= 6 ? year : year - 1;
+  /* Saison en cours d'apres le catalogue renvoye par ESPN, ou null si le
+     catalogue est absent ou ne couvre pas aujourd'hui.
+     Current season from the catalogue ESPN returns, or null if the
+     catalogue is missing or does not cover today. */
+  function currentSeasonYear(data, now) {
+    const list = (data && Array.isArray(data.seasons)) ? data.seasons : [];
+    const t = (now || new Date()).getTime();
+    for (const s of list) {
+      const start = Date.parse(s.startDate);
+      const end = Date.parse(s.endDate);
+      if (!isFinite(start) || !isFinite(end)) continue;
+      if (t >= start && t < end && s.hasStandings !== false) return s.year;
+    }
+    return null;
+  }
+
+  /* Saison effectivement servie dans une reponse, pour savoir s'il faut
+     en redemander une autre. Season actually served in a response, to
+     know whether another one must be asked for. */
+  function servedSeasonYear(data) {
+    if (!data) return null;
+    if (data.season && typeof data.season.year === "number") return data.season.year;
+    const kids = Array.isArray(data.children) ? data.children : [];
+    for (const c of kids) {
+      if (c && c.standings && typeof c.standings.season === "number") return c.standings.season;
+    }
+    return null;
   }
 
   /* --- Sports collectifs (ESPN) / team sports (ESPN) --- */
-  async function loadEspn(ctx, raw) {
+  async function loadEspn(ctx, raw, mode) {
     const [sport, league] = raw.includes(":") ? raw.split(":") : ["soccer", raw];
-    const base = `https://site.api.espn.com/apis/v2/sports/${sport}/${league}/standings`;
-    /* Deux tentatives, dans cet ordre : la saison en cours explicitement,
-       puis l'appel nu. Le repli couvre les cas ou notre deduction est
-       fausse (competition au calendrier inhabituel, code saisi a la main
-       par l'utilisateur) ou la saison pas encore ouverte chez ESPN :
-       l'affichage retombe alors sur le comportement d'avant, jamais sur
-       une erreur.
-       Two attempts, in this order: the current season explicitly, then
-       the bare call. The fallback covers cases where our deduction is
-       wrong (competition with an unusual calendar, code typed by hand by
-       the user) or the season is not open at ESPN yet: the display then
-       falls back to the previous behaviour, never to an error. */
-    let data = null;
-    try {
-      const withSeason = await fetchJson(ctx, base + "?season=" + seasonYearFor(raw, new Date()));
-      if (hasEntries(withSeason)) data = withSeason;
-    } catch (e) {
-      // saison refusee par ESPN : on tente l'appel nu ci-dessous
-      // season refused by ESPN: the bare call is tried below
+    const base = `https://site.web.api.espn.com/apis/v2/sports/${sport}/${league}/standings`;
+
+    /* Premier appel sans parametre : il sert un classement (celui de la
+       derniere saison close, le plus souvent) ET le catalogue des
+       saisons. Second appel seulement si le catalogue dit qu'une autre
+       saison est en cours -- inutile de payer deux requetes le reste de
+       l'annee.
+       First call without a parameter: it serves a table (the last closed
+       season's, most of the time) AND the season catalogue. A second call
+       only if the catalogue says another season is under way -- no point
+       paying for two requests the rest of the year. */
+    let data = await fetchJson(ctx, base);
+    const wanted = currentSeasonYear(data, new Date());
+    if (wanted != null && wanted !== servedSeasonYear(data)) {
+      try {
+        const fresh = await fetchJson(ctx, base + "?season=" + wanted);
+        if (hasEntries(fresh)) data = fresh;
+      } catch (e) {
+        // Saison refusee : on garde ce qu'on a plutot que rien.
+        // Season refused: we keep what we have rather than nothing.
+      }
     }
-    if (!data) data = await fetchJson(ctx, base);
 
     // Une ou plusieurs poules/conferences selon la competition
     // One or several groups/conferences depending on the competition
@@ -257,7 +306,7 @@
       : [{ name: "", entries: (data.standings && data.standings.entries) || [] }];
 
     return groups.filter((g) => g.entries.length).map((g) => {
-      const cols = pickColumns(g.entries);
+      const cols = pickColumns(g.entries, mode);
       return {
         name: g.name,
         cols,
@@ -465,7 +514,7 @@
         let groups;
         if (!custom && raw.startsWith("f1:")) groups = await loadF1(this.ctx, raw.slice(3), i18n);
         else if (!custom && raw.startsWith("motogp:")) groups = await loadMotoGp(this.ctx, raw.slice(7), i18n);
-        else groups = await loadEspn(this.ctx, raw);
+        else groups = await loadEspn(this.ctx, raw, s.columns === "full" ? "full" : "essential");
 
         const filter = (s.highlightTeam || "").trim().toLowerCase();
         const maxRows = Math.max(3, Number(s.maxRows) || 10);
@@ -502,8 +551,17 @@
             ${g.note ? `<div class="pws-note">${escapeHtml(g.note)}</div>` : ""}`;
         }).join("");
 
+        /* Les tableaux vivent dans un conteneur defilant : une tuile
+           courte ne peut pas montrer 36 equipes de Ligue des champions,
+           et rogner silencieusement le bas du classement serait pire que
+           de le faire defiler. La tuile elle-meme reste sans
+           debordement, c'est ce conteneur seul qui defile.
+           The tables live in a scrolling container: a short tile cannot
+           show 36 Champions League teams, and silently clipping the
+           bottom of the table would be worse than letting it scroll. The
+           tile itself stays overflow-free, only this container scrolls. */
         el.innerHTML = blocks
-          ? `<div class="pw-standings">${blocks}</div>`
+          ? `<div class="pw-standings"><div class="pws-scroll">${blocks}</div></div>`
           : `<div class="pw-standings"><div class="pws-err">${i18n.t("standings.error")}</div></div>`;
       } catch (e) {
         console.warn("[piboard/standings]", e);
@@ -523,7 +581,7 @@
      no module system in the browser here, and these functions are
      exactly where the bug was hiding. */
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { canonicalKey, pickColumns, formatPercentStat, statValue, COLUMN_ORDER, MAX_STAT_COLUMNS, seasonYearFor, hasEntries, loadEspn };
+    module.exports = { canonicalKey, pickColumns, formatPercentStat, statValue, COLUMN_ORDER, MAX_STAT_COLUMNS, ESSENTIAL_COLUMNS, currentSeasonYear, servedSeasonYear, hasEntries, loadEspn };
   } else {
     window.PiBoard.registerWidget("standings", StandingsWidget);
   }

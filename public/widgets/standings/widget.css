@@ -5,6 +5,34 @@
   padding: 8px 10px;
   overflow: hidden;
 }
+/* Conteneur defilant : la tuile peut etre plus courte que le classement
+   (36 equipes en Ligue des champions, 20 en Ligue 1). min-height: 0 est
+   indispensable -- sans lui, un enfant flex refuse de retrecir sous la
+   taille de son contenu et la barre de defilement n'apparait jamais.
+   Scrolling container: the tile can be shorter than the table (36 teams
+   in the Champions League, 20 in Ligue 1). min-height: 0 is essential --
+   without it a flex child refuses to shrink below its content's size and
+   the scrollbar never appears. */
+.pw-standings .pws-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  /* Le geste de defilement s'arrete a la tuile plutot que d'entrainer la
+     page derriere une fois le bas atteint. The scroll gesture stops at
+     the tile rather than dragging the page behind it once the bottom is
+     reached. */
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: var(--tile-edge) transparent;
+}
+.pw-standings .pws-scroll::-webkit-scrollbar { width: 8px; }
+.pw-standings .pws-scroll::-webkit-scrollbar-track { background: transparent; }
+.pw-standings .pws-scroll::-webkit-scrollbar-thumb {
+  background: var(--tile-edge);
+  border-radius: 4px;
+}
+
 .pw-standings .pws-group {
   font-family: var(--mono);
   font-size: 11px;
@@ -13,7 +41,7 @@
   color: var(--muted);
   margin: 6px 0 3px;
 }
-.pw-standings .pws-group:first-child { margin-top: 0; }
+.pw-standings .pws-scroll > .pws-group:first-child { margin-top: 0; }
 .pw-standings table { width: 100%; border-collapse: collapse; table-layout: fixed; }
 .pw-standings th {
   font-size: 10.5px;

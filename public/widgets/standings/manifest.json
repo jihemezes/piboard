@@ -72,6 +72,13 @@
           }
         },
         {
+          "value": "soccer:uefa.champions",
+          "label": {
+            "en": "\u26bd Champions League",
+            "fr": "\u26bd Ligue des champions"
+          }
+        },
+        {
           "value": "rugby:270559",
           "label": {
             "en": "🏉 Top 14 (Rugby, France)",
@@ -127,6 +134,31 @@
         "en": "Example for the NFL: <code>football:nfl</code>. How to find any code: on espn.com, open the scoreboard page for that competition (e.g. espn.com/nfl/scoreboard), open your browser's DevTools → Network tab, reload, and look for a request to <code>site.api.espn.com/apis/site/v2/sports/&lt;sport&gt;/&lt;league&gt;/scoreboard</code> — the two segments after <code>/sports/</code> are the code to enter here, separated by a colon. Common ones: NFL → <code>football:nfl</code>, NHL → <code>hockey:nhl</code>, MLB → <code>baseball:mlb</code>, EuroLeague basketball → <code>basketball:euroleague-women</code> style codes vary, always verify via DevTools. Full write-up in the PiBoard README.",
         "fr": "Exemple pour la NFL : <code>football:nfl</code>. Pour trouver un code : sur espn.com, ouvrez la page de classement de cette compétition (ex. espn.com/nfl/scoreboard), ouvrez les outils de développement du navigateur → onglet Réseau, rechargez la page, et repérez une requête vers <code>site.api.espn.com/apis/site/v2/sports/&lt;sport&gt;/&lt;league&gt;/scoreboard</code> — les deux segments après <code>/sports/</code> forment le code à saisir ici, séparés par deux-points. Quelques exemples : NFL → <code>football:nfl</code>, NHL → <code>hockey:nhl</code>, MLB → <code>baseball:mlb</code>. Le détail complet est dans le README de PiBoard."
       }
+    },
+    {
+      "key": "columns",
+      "type": "select",
+      "default": "essential",
+      "label": {
+        "en": "Columns",
+        "fr": "Colonnes"
+      },
+      "options": [
+        {
+          "value": "essential",
+          "label": {
+            "en": "Essential \u2014 W, D, L, Pts",
+            "fr": "Essentiel \u2014 G, N, P, Pts"
+          }
+        },
+        {
+          "value": "full",
+          "label": {
+            "en": "Full \u2014 whatever the source publishes",
+            "fr": "Complet \u2014 tout ce que publie la source"
+          }
+        }
+      ]
     },
     {
       "key": "maxRows",

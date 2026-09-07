@@ -117,23 +117,34 @@ console.log("  OK");
 console.log("Tous les tests standings sont passes.");
 
 /* ---------- Saison demandee a ESPN ----------
-   Sans parametre, ESPN sert la derniere saison close : le Top 14
-   affichait donc tout l'automne le classement de la saison precedente
-   alors que la competition avait repris. La saison en cours est
-   desormais demandee explicitement, avec repli sur l'appel nu. */
-const { seasonYearFor, hasEntries, loadEspn } = require("../public/widgets/standings/widget.js");
+   Deux defauts corriges en 1.96.1, verifies contre l'API reelle :
+   l'hote (le parametre season n'est honore que par site.web.api) et la
+   deduction (la saison en cours est desormais LUE dans le catalogue
+   seasons[] que renvoie ESPN, au lieu d'etre devinee d'apres le mois). */
+const { currentSeasonYear, servedSeasonYear, hasEntries, loadEspn, ESSENTIAL_COLUMNS } =
+  require("../public/widgets/standings/widget.js");
 
-console.log("== seasonYearFor : ESPN nomme une saison par son annee de debut ==");
-assert.strictEqual(seasonYearFor("rugby:270559", new Date("2026-09-07T12:00:00Z")), 2026,
-  "en septembre, la saison en cours est celle qui vient de commencer");
-assert.strictEqual(seasonYearFor("rugby:270559", new Date("2027-03-07T12:00:00Z")), 2026,
-  "au printemps, c'est toujours la saison commencee l'automne d'avant");
-assert.strictEqual(seasonYearFor("soccer:fra.1", new Date("2026-07-01T12:00:00Z")), 2026,
-  "juillet bascule deja sur la saison a venir");
-assert.strictEqual(seasonYearFor("baseball:mlb", new Date("2026-03-07T12:00:00Z")), 2026,
-  "une competition en annee civile ne recule jamais d'un an");
-assert.strictEqual(seasonYearFor("soccer:usa.1", new Date("2026-03-07T12:00:00Z")), 2026,
-  "la MLS non plus");
+/* Calque de ce que renvoie reellement ESPN. */
+const SEASONS = [
+  { year: 2026, startDate: "2026-06-01T04:00Z", endDate: "2027-06-01T03:59Z", hasStandings: true },
+  { year: 2025, startDate: "2025-06-01T04:00Z", endDate: "2026-06-01T03:59Z", hasStandings: true }
+];
+
+console.log("== currentSeasonYear : la saison en cours est lue, pas devinee ==");
+assert.strictEqual(currentSeasonYear({ seasons: SEASONS }, new Date("2026-09-07T12:00:00Z")), 2026,
+  "septembre 2026 tombe dans la saison 2026-27");
+assert.strictEqual(currentSeasonYear({ seasons: SEASONS }, new Date("2026-03-07T12:00:00Z")), 2025,
+  "mars 2026 appartient encore a la saison 2025-26");
+assert.strictEqual(currentSeasonYear({ seasons: [] }, new Date()), null,
+  "sans catalogue, aucune saison n'est affirmee");
+assert.strictEqual(currentSeasonYear({ seasons: [{ year: 2026, startDate: "2026-06-01T04:00Z", endDate: "2027-06-01T03:59Z", hasStandings: false }] },
+  new Date("2026-09-07T12:00:00Z")), null, "une saison sans classement n'est pas proposee");
+console.log("  OK");
+
+console.log("== servedSeasonYear : quelle saison la reponse contient-elle ==");
+assert.strictEqual(servedSeasonYear({ season: { year: 2025 } }), 2025, "champ season de la reponse");
+assert.strictEqual(servedSeasonYear({ children: [{ standings: { season: 2025 } }] }), 2025, "ou celui de la poule");
+assert.strictEqual(servedSeasonYear({}), null, "rien a dire si l'information manque");
 console.log("  OK");
 
 console.log("== hasEntries : une saison demandee trop tot est vide, pas valide ==");
@@ -142,45 +153,103 @@ assert.strictEqual(hasEntries({ standings: { entries: [] } }), false, "structure
 assert.strictEqual(hasEntries({ standings: { entries: [{}] } }), true, "un classement simple");
 assert.strictEqual(hasEntries({ children: [{ standings: { entries: [] } }, { standings: { entries: [{}] } }] }), true,
   "une seule poule remplie suffit");
-assert.strictEqual(hasEntries({ children: [{ standings: { entries: [] } }] }), false, "toutes les poules vides");
+console.log("  OK");
+
+console.log("== Colonnes essentielles : G, N, P, Pts, et rien d'autre ==");
+const RUGBY = [{ stats: [
+  { name: "gamesPlayed", abbreviation: "GP", displayValue: "5" },
+  { name: "wins", abbreviation: "W", displayValue: "4" },
+  { name: "ties", abbreviation: "D", displayValue: "0" },
+  { name: "losses", abbreviation: "L", displayValue: "1" },
+  { name: "pointDifferential", abbreviation: "GD", displayValue: "+42" },
+  { name: "points", abbreviation: "P", displayValue: "19" }
+] }];
+assert.deepStrictEqual(pickColumns(RUGBY, "essential"), ["W", "D", "L", "PTS"],
+  "ni matchs joues, ni difference");
+assert.ok(pickColumns(RUGBY, "full").includes("DIFF"), "le mode complet garde le choix automatique d'avant");
+const NO_DRAW = [{ stats: [
+  { name: "wins", abbreviation: "W", displayValue: "40" },
+  { name: "losses", abbreviation: "L", displayValue: "20" },
+  { name: "points", abbreviation: "PTS", displayValue: "80" }
+] }];
+assert.deepStrictEqual(pickColumns(NO_DRAW, "essential"), ["W", "L", "PTS"],
+  "un sport sans match nul ne recoit pas une colonne N vide");
+/* Sports americains : pas de points de championnat, le classement se lit
+   au pourcentage de victoires -- une tuile NBA reduite a "G / P" perdrait
+   la colonne sur laquelle le classement est etabli. */
+const NBA = [{ stats: [
+  { name: "wins", abbreviation: "W", displayValue: "40" },
+  { name: "losses", abbreviation: "L", displayValue: "20" },
+  { name: "winPercent", abbreviation: "PCT", value: 0.667 }
+] }];
+assert.deepStrictEqual(pickColumns(NBA, "essential"), ["W", "L", "PCT"],
+  "sans points de championnat, le pourcentage de victoires est conserve");
+assert.deepStrictEqual(ESSENTIAL_COLUMNS, ["W", "D", "L", "PTS"], "l'ordre reste celui d'un tableau de championnat");
 console.log("  OK");
 
 (async () => {
   const ROW = {
     team: { shortDisplayName: "Toulouse" },
-    stats: [{ name: "points", abbreviation: "P", displayValue: "9" }]
+    stats: [
+      { name: "wins", abbreviation: "W", displayValue: "4" },
+      { name: "ties", abbreviation: "D", displayValue: "0" },
+      { name: "losses", abbreviation: "L", displayValue: "1" },
+      { name: "points", abbreviation: "P", displayValue: "19" },
+      { name: "gamesPlayed", abbreviation: "GP", displayValue: "5" }
+    ]
   };
-  function makeCtx(responses, seen) {
-    global.fetch = async (url) => {
-      seen.push(url);
-      const body = responses[url];
-      if (!body) return { ok: false, status: 404, json: async () => ({}) };
-      return { ok: true, status: 200, json: async () => body };
-    };
-    return { api: { proxyUrl: (u) => u } };
-  }
-  const BASE = "https://site.api.espn.com/apis/v2/sports/rugby/270559/standings";
-  const YEAR = seasonYearFor("rugby:270559", new Date());
+  const seen = [];
+  /* La reponse nue sert la saison close 2025 mais annonce 2026 en cours :
+     exactement le cas du Top 14 en septembre. */
+  const BASE = "https://site.web.api.espn.com/apis/v2/sports/rugby/270559/standings";
+  const NOW_YEAR = currentSeasonYear({ seasons: SEASONS }, new Date());
+  const responses = {
+    [BASE]: { season: { year: 2025 }, seasons: SEASONS, standings: { entries: [ROW] } },
+    [BASE + "?season=" + NOW_YEAR]: { season: { year: NOW_YEAR }, seasons: SEASONS, standings: { entries: [ROW] } }
+  };
+  global.fetch = async (url) => {
+    seen.push(url);
+    const body = responses[url];
+    if (!body) return { ok: false, status: 404, json: async () => ({}) };
+    return { ok: true, status: 200, json: async () => body };
+  };
+  const ctx = { api: { proxyUrl: (u) => u } };
 
-  console.log("== loadEspn demande d'abord la saison en cours ==");
-  let seen = [];
-  let ctx = makeCtx({
-    [BASE + "?season=" + YEAR]: { standings: { entries: [ROW] } },
-    [BASE]: { standings: { entries: [] } }
-  }, seen);
-  let groups = await loadEspn(ctx, "rugby:270559");
-  assert.ok(seen[0].endsWith("?season=" + YEAR), "la saison est demandee explicitement, en premier");
-  assert.strictEqual(seen.length, 1, "et l'appel nu n'est meme pas necessaire");
-  assert.strictEqual(groups[0].rows[0].team, "Toulouse", "le classement de la saison en cours est rendu");
+  console.log("== loadEspn redemande la saison en cours quand la reponse est perimee ==");
+  const groups = await loadEspn(ctx, "rugby:270559", "essential");
+  assert.ok(seen[0].startsWith("https://site.web.api.espn.com/"),
+    "l'hote est celui qui honore le parametre season");
+  assert.strictEqual(seen.length, 2, "un second appel, cible sur la saison en cours");
+  assert.ok(seen[1].endsWith("?season=" + NOW_YEAR), "et c'est bien celle lue dans le catalogue");
+  assert.deepStrictEqual(groups[0].cols, ["W", "D", "L", "PTS"], "avec les seules colonnes utiles");
+  assert.strictEqual(groups[0].rows[0].team, "Toulouse");
   console.log("  OK");
 
-  console.log("== ... et retombe sur l'appel nu si cette saison n'existe pas encore ==");
-  seen = [];
-  ctx = makeCtx({ [BASE]: { standings: { entries: [ROW] } } }, seen);
-  groups = await loadEspn(ctx, "rugby:270559");
-  assert.strictEqual(seen.length, 2, "la saison a bien ete tentee avant le repli");
-  assert.strictEqual(groups[0].rows[0].team, "Toulouse", "le repli affiche quand meme un classement");
+  console.log("== ... et se contente d'un appel quand la saison servie est deja la bonne ==");
+  seen.length = 0;
+  responses[BASE] = { season: { year: NOW_YEAR }, seasons: SEASONS, standings: { entries: [ROW] } };
+  await loadEspn(ctx, "rugby:270559", "essential");
+  assert.strictEqual(seen.length, 1, "pas de requete inutile le reste de l'annee");
   console.log("  OK");
 
   console.log("\n>>> TOUS LES TESTS CLASSEMENTS PASSENT");
 })().catch((e) => { console.error("\n>>> ECHEC :", e.message); process.exit(1); });
+
+/* ---------- Ligue des champions et defilement ---------- */
+const fsSt = require("fs");
+const pathSt = require("path");
+const DIR = pathSt.join(__dirname, "..", "public", "widgets", "standings");
+
+console.log("== La Ligue des champions figure dans la liste des competitions ==");
+assert.ok(fsSt.readFileSync(pathSt.join(DIR, "manifest.json"), "utf8").includes("soccer:uefa.champions"),
+  "le code ESPN de la C1 est propose");
+console.log("  OK");
+
+console.log("== Le tableau defile quand il depasse la hauteur de la tuile ==");
+const wjs = fsSt.readFileSync(pathSt.join(DIR, "widget.js"), "utf8");
+const wcss = fsSt.readFileSync(pathSt.join(DIR, "widget.css"), "utf8");
+assert.ok(/<div class="pws-scroll">/.test(wjs), "les tableaux sont places dans le conteneur defilant");
+const scrollRule = (wcss.match(/\.pw-standings \.pws-scroll \{[^}]*\}/) || [""])[0];
+assert.ok(/overflow-y:\s*auto/.test(scrollRule), "le conteneur defile verticalement");
+assert.ok(/min-height:\s*0/.test(scrollRule), "et peut retrecir sous la taille de son contenu");
+console.log("  OK");

@@ -3283,7 +3283,7 @@ function catalogItemFor(catalog, document, widgetId) {
     await sleep(30);
   }
 
-  console.log("== Tuile Classement : pourcentage de victoires lisible (pas '.692' brut) ==");
+  console.log("== Tuile Classement : colonnes essentielles par defaut ==");
   {
     const standingsIndex = catalog.findIndex((m) => m.id === "standings");
     assert("widget standings present dans le catalogue", standingsIndex >= 0);
@@ -3295,8 +3295,20 @@ function catalogItemFor(catalog, document, widgetId) {
     await sleep(120);
     const tile = items()[items().length - 1];
 
-    assert("colonne %V affiche un pourcentage lisible", tile.textContent.includes("69.2%"));
-    assert("l'ancien format ESPN brut n'apparait plus", !tile.textContent.includes(".692"));
+    /* Depuis la 1.96.1, la tuile s'en tient par defaut a ce qui fait un
+       classement : gagnes, perdus, points. Le pourcentage de victoires
+       et les matchs joues relevaient du contexte -- ils reviennent en
+       reglant « Colonnes » sur « Complet ». Le formatage du pourcentage
+       lui-meme reste couvert par standingsColumns.test.js.
+       Since 1.96.1 the tile sticks by default to what makes a table:
+       wins, losses, points. Win percentage and games played were
+       context -- they come back by setting "Columns" to "Full". The
+       percentage formatting itself stays covered by
+       standingsColumns.test.js. */
+    assert("les points sont affiches", tile.textContent.includes("92"));
+    assert("les victoires aussi", tile.textContent.includes("18"));
+    assert("le pourcentage de victoires n'encombre plus le tableau",
+      !tile.textContent.includes("69.2%") && !tile.textContent.includes(".692"));
 
     tile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
