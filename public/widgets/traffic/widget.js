@@ -140,6 +140,19 @@
           <div class="pwt-boost">
             <button type="button" class="pwt-boost-trigger">${this.ctx.i18n.t("traffic.boostPick")}</button>
             <ul class="pwt-boost-menu" hidden>
+              <!-- Le bouton s'appelle "Rafraichir maintenant" : le menu
+                   doit donc d'abord proposer... maintenant. Les entrees
+                   suivantes ne rafraichissent pas tout de suite, elles
+                   accelerent la cadence pendant une duree -- ce n'est pas
+                   la meme chose, et la plus courte (5 min) etait jusqu'ici
+                   la reponse la plus proche a une demande immediate.
+                   The button is called "Refresh now": the menu must
+                   therefore offer... now, first. The following entries do
+                   not refresh immediately, they speed up the cadence for a
+                   while -- not the same thing, and the shortest one
+                   (5 min) was until now the closest answer to an immediate
+                   request. -->
+              <li data-min="0"><button type="button">${this.ctx.i18n.t("traffic.boostNow")}</button></li>
               <li data-min="5"><button type="button">5 min</button></li>
               <li data-min="10"><button type="button">10 min</button></li>
               <li data-min="15"><button type="button">15 min</button></li>
@@ -222,6 +235,7 @@
           this.boostMenu.hidden = true;
           const minutes = Number(li.dataset.min);
           if (minutes > 0) this.startBoost(minutes);
+          else this.refreshNow();
         });
       });
 
@@ -604,6 +618,32 @@
 
     setStale(isStale) {
       this.staleBadge.hidden = !isStale;
+    }
+
+    /* Rafraichissement immediat, sans toucher a la cadence. Il passe
+       outre la pause et la plage silencieuse : c'est une demande
+       explicite de l'utilisateur, pas un declenchement automatique, et
+       refuser silencieusement d'y repondre serait le pire des comportements.
+       La pause n'est PAS levee pour autant -- on veut voir l'etat du
+       trafic une fois, pas relancer le cycle.
+       Immediate refresh, without touching the cadence. It overrides the
+       pause and the quiet period: this is an explicit user request, not
+       an automatic trigger, and silently refusing to answer it would be
+       the worst possible behaviour. The pause is NOT lifted for all that
+       -- one wants to see traffic once, not restart the cycle. */
+    refreshNow() {
+      /* On n'ecrase PAS lastRefreshAt ici, contrairement au boost :
+         refreshData() l'horodate lui-meme en fin de course, et le mettre
+         a zero avant ferait croire au prochain tick() qu'aucun
+         rafraichissement n'a jamais eu lieu -- il en relancerait un
+         aussitot, pour rien, aux depens du quota TomTom.
+         We do NOT overwrite lastRefreshAt here, unlike the boost:
+         refreshData() timestamps it itself at the end, and zeroing it
+         beforehand would make the next tick() believe no refresh ever
+         happened -- it would fire another one at once, for nothing, at
+         the expense of the TomTom quota. */
+      this.refreshData();
+      this.updateCartouche();
     }
 
     startBoost(minutes) {

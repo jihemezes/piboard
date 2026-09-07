@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.95.3
+
+- **Tuile Trafic : le menu « Rafraichir maintenant » ne proposait pas de
+  rafraichir maintenant.** Ses entrees (5, 10, 15, 30, 60 min) ne
+  declenchent rien tout de suite : elles accelerent la cadence pendant
+  une duree. La plus courte, 5 min, etait donc la reponse la plus proche
+  d'une demande immediate -- ce qui n'est pas la meme chose du tout.
+
+- **Nouvelle entree « Maintenant (une fois) », en tete du menu.** Elle
+  rafraichit sur-le-champ sans toucher a la cadence. Elle passe outre la
+  pause et la plage silencieuse -- c'est une demande explicite de
+  l'utilisateur, pas un declenchement automatique -- mais ne leve pas la
+  pause : on veut voir l'etat du trafic une fois, pas relancer le cycle.
+
+- **Elle ne remet pas a zero l'horodatage du dernier rafraichissement**,
+  contrairement au boost : le prochain battement croirait sinon qu'aucun
+  rafraichissement n'a eu lieu et en relancerait un aussitot, pour rien,
+  aux depens du quota TomTom.
+
+- **Tests** : nouveau `trafficRefreshNow.test.js` -- le widget est
+  instancie seul (Leaflet et le reseau neutralises) et le menu est
+  actionne par de vrais evenements pointerup : entree immediate en tete,
+  rafraichissement demande sans boost, demande honoree meme en pause
+  sans lever la pause, et les durees engageant toujours une cadence
+  acceleree.
+
 ## 1.95.2
 
 - **Fond d'ecran d'une page du mode tableau de bord : l'image choisie ne
