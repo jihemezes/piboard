@@ -121,7 +121,7 @@ console.log("Tous les tests standings sont passes.");
    l'hote (le parametre season n'est honore que par site.web.api) et la
    deduction (la saison en cours est desormais LUE dans le catalogue
    seasons[] que renvoie ESPN, au lieu d'etre devinee d'apres le mois). */
-const { currentSeasonYear, servedSeasonYear, hasEntries, loadEspn, ESSENTIAL_COLUMNS } =
+const { currentSeasonYear, servedSeasonYear, servedSeasonEnd, hasEntries, loadEspn, ESSENTIAL_COLUMNS } =
   require("../public/widgets/standings/widget.js");
 
 /* Calque de ce que renvoie reellement ESPN. */
@@ -223,6 +223,24 @@ console.log("  OK");
   assert.ok(seen[1].endsWith("?season=" + NOW_YEAR), "et c'est bien celle lue dans le catalogue");
   assert.deepStrictEqual(groups[0].cols, ["W", "D", "L", "PTS"], "avec les seules colonnes utiles");
   assert.strictEqual(groups[0].rows[0].team, "Toulouse");
+  console.log("  OK");
+
+  console.log("== Une saison close est annoncee sous le tableau ==");
+  /* Cas reel du Top 14 : ESPN ne publie plus rien pour l'identifiant
+     270559 depuis 2022-23. La donnee n'existe pas, il n'y a rien a
+     reparer -- mais la tuile doit le dire au lieu de presenter un vieux
+     tableau comme celui du jour. */
+  seen.length = 0;
+  const OLD = {
+    season: { year: 2022 },
+    seasons: [{ year: 2022, startDate: "2022-06-01T04:00Z", endDate: "2023-06-01T03:59Z", hasStandings: true }],
+    standings: { entries: [ROW] }
+  };
+  responses[BASE] = OLD;
+  const ctxI18n = { api: { proxyUrl: (u) => u }, i18n: { t: () => "Saison {season} perimee" } };
+  const stale = await loadEspn(ctxI18n, "rugby:270559", "essential");
+  assert.ok(/2022-23/.test(stale[0].note), "la saison close est nommee sous le tableau");
+  assert.strictEqual(servedSeasonEnd(OLD, 2022), Date.parse("2023-06-01T03:59Z"), "fin de saison lue dans le catalogue");
   console.log("  OK");
 
   console.log("== ... et se contente d'un appel quand la saison servie est deja la bonne ==");

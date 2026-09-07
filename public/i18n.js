@@ -682,6 +682,8 @@
       "commute.quota": "TomTom:",
       "commute.onTime": "on time",
 
+      "standings.lnrNote": "LNR \u2014 {season}",
+      "standings.staleSeason": "{season} season \u2014 the source has published nothing more recent",
       "standings.error": "Standings unavailable",
       "standings.f1Drivers": "F1 — Drivers",
       "standings.f1Constructors": "F1 — Constructors",
@@ -1408,6 +1410,8 @@
       "commute.quota": "TomTom :",
       "commute.onTime": "à l'heure",
 
+      "standings.lnrNote": "LNR \u2014 {season}",
+      "standings.staleSeason": "Saison {season} \u2014 la source ne publie rien de plus recent",
       "standings.error": "Classement indisponible",
       "standings.f1Drivers": "F1 — Pilotes",
       "standings.f1Constructors": "F1 — Constructeurs",

@@ -78,11 +78,18 @@
             "fr": "\u26bd Ligue des champions"
           }
         },
-        {
-          "value": "rugby:270559",
+                {
+          "value": "lnr:top14",
           "label": {
-            "en": "🏉 Top 14 (Rugby, France)",
-            "fr": "🏉 Top 14 (Rugby, France)"
+            "en": "\ud83c\udfc9 Top 14 (Rugby, France)",
+            "fr": "\ud83c\udfc9 Top 14 (Rugby, France)"
+          }
+        },
+        {
+          "value": "lnr:prod2",
+          "label": {
+            "en": "\ud83c\udfc9 PRO D2 (Rugby, France)",
+            "fr": "\ud83c\udfc9 PRO D2 (Rugby, France)"
           }
         },
         {

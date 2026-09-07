@@ -210,6 +210,148 @@
     return res.json();
   }
 
+  async function fetchText(ctx, url) {
+    const res = await fetch(ctx.api.proxyUrl(url), { cache: "no-store" });
+    if (!res.ok) throw new Error("status " + res.status);
+    return res.text();
+  }
+
+  /* ---------- Ligue Nationale de Rugby (LNR) ----------
+     Source officielle du TOP 14 et de la PRO D2, adoptee parce qu'ESPN
+     a cesse de publier ces competitions (voir 1.96.2).
+
+     Le site ne propose pas d'API : le classement est ecrit directement
+     dans le HTML servi par le serveur -- aucun appel reseau
+     supplementaire, aucun JavaScript a executer. On lit donc la page
+     telle qu'un navigateur la recoit.
+
+     Sa structure, verifiee sur la page reelle : deux colonnes en
+     vis-a-vis. A gauche, des lignes "table-line--ranking-fixed" qui
+     portent le rang et le logo ; a droite, des lignes
+     "table-line--ranking-scrollable" qui portent le nom du club puis
+     les chiffres, dans l'ordre annonce par la ligne d'en-tete
+     "table-line--full-ranking-heading" (Pts, M, G, N, P, Bonus, Pts M.,
+     Pts E., Diff...).
+
+     C'est cet EN-TETE qui est lu pour savoir quelle cellule contient
+     quoi, et non une position codee en dur : le jour ou la LNR
+     intercalera une colonne, les chiffres suivront au lieu de se
+     decaler silencieusement d'une case -- le pire des defauts pour un
+     classement, puisque rien n'y parait.
+
+     Official source for the TOP 14 and PRO D2, adopted because ESPN
+     stopped publishing these competitions (see 1.96.2). The site offers
+     no API: the table is written straight into the server-rendered HTML
+     -- no extra network call, no JavaScript to run. Its structure,
+     checked against the real page: ranks and logos on the left
+     ("ranking-fixed" lines), club name then figures on the right
+     ("ranking-scrollable" lines), in the order announced by the
+     "full-ranking-heading" row. That HEADER is what is read to know
+     which cell holds what, rather than hard-coded positions: the day
+     the LNR inserts a column, the figures follow instead of silently
+     shifting by one -- the worst kind of defect for a table, since
+     nothing looks wrong. */
+  const LNR_SITES = {
+    "top14": { url: "https://top14.lnr.fr/classement", name: "TOP 14" },
+    "prod2": { url: "https://prod2.lnr.fr/classement", name: "PRO D2" }
+  };
+
+  // Libelles de la LNR -> colonnes de la tuile. Les colonnes non citees
+  // (Bonus, Pts M., Pts E., etat de forme, prochain match) sont ignorees.
+  // LNR labels -> tile columns. Columns not listed here are ignored.
+  const LNR_COLUMNS = { "Pts": "PTS", "M": "GP", "G": "W", "N": "D", "P": "L", "Diff": "DIFF" };
+
+  function textOf(node) {
+    return (node && node.textContent ? node.textContent : "").replace(/\s+/g, " ").trim();
+  }
+
+  function parseLnrRanking(html, mode) {
+    const Parser = typeof DOMParser !== "undefined" ? DOMParser : null;
+    if (!Parser) return null;
+    const doc = new Parser().parseFromString(html, "text/html");
+
+    /* Le tableau est place dans un <template> (le site alimente ainsi un
+       composant a onglets). Le contenu d'un template est INERTE : il
+       n'appartient pas au document et querySelector sur le document ne
+       le voit pas. Il faut donc chercher aussi dans le fragment
+       .content de chaque template -- sans quoi la page semble ne
+       contenir aucun classement alors qu'il y est bel et bien.
+       The table sits inside a <template> (that is how the site feeds its
+       tab component). A template's content is INERT: it does not belong
+       to the document, and querySelector on the document cannot see it.
+       So the .content fragment of every template must be searched too --
+       without which the page looks as if it held no table at all, while
+       it does. */
+    const roots = [doc];
+    Array.from(doc.querySelectorAll("template")).forEach((t) => {
+      if (t.content) roots.push(t.content);
+    });
+    const findAll = (sel) => {
+      for (const root of roots) {
+        const found = Array.from(root.querySelectorAll(sel));
+        if (found.length) return found;
+      }
+      return [];
+    };
+
+    // Ordre des colonnes, lu dans la ligne d'en-tete.
+    const head = findAll(".table-line--full-ranking-heading")[0];
+    if (!head) return null;
+    const labels = Array.from(head.querySelectorAll(".ranking__head")).map(textOf);
+
+    const lines = findAll(".table-line--ranking-scrollable");
+    if (!lines.length) return null;
+
+    const wanted = mode === "full" ? ["GP", "W", "D", "L", "DIFF", "PTS"] : ["W", "D", "L", "PTS"];
+    // Position de chaque colonne voulue parmi les cellules chiffrees.
+    const index = {};
+    labels.forEach((lab, i) => {
+      const key = LNR_COLUMNS[lab];
+      if (key && index[key] === undefined) index[key] = i;
+    });
+    const cols = COLUMN_ORDER.filter((k) => wanted.indexOf(k) >= 0 && index[k] !== undefined);
+
+    const rows = lines.map((line, i) => {
+      const cells = Array.from(line.querySelectorAll(".table-line__cell-wrapper--small")).map(textOf);
+      const link = line.querySelector(".table-line__cell-wrapper--club-name a");
+      return {
+        rank: i + 1,
+        team: textOf(link) || textOf(line.querySelector(".table-line__cell-wrapper--club-name")),
+        sub: "",
+        values: cols.map((k) => (cells[index[k]] !== undefined ? cells[index[k]] : "\u2014"))
+      };
+    }).filter((r) => r.team);
+
+    if (!rows.length) return null;
+    return { cols, rows, note: lnrSeasonNote(doc) };
+  }
+
+  /* Saison et journee, tirees du titre de la page ("Classement TOP 14
+     2026-2027 | J1 | ..."). Affichees sous le tableau : sur un
+     classement, savoir de quelle journee il date vaut mieux que de le
+     supposer a jour.
+     Season and matchday, taken from the page title. Shown under the
+     table: on a standings table, knowing which matchday it reflects
+     beats assuming it is current. */
+  function lnrSeasonNote(doc) {
+    const title = doc.querySelector("title");
+    const t = textOf(title);
+    const season = (t.match(/(\d{4}-\d{4})/) || [])[1];
+    const day = (t.match(/\|\s*(J\d+)\s*\|/) || [])[1];
+    if (!season) return "";
+    return season + (day ? " \u2014 " + day : "");
+  }
+
+  async function loadLnr(ctx, comp, mode) {
+    const site = LNR_SITES[comp] || LNR_SITES.top14;
+    const parsed = parseLnrRanking(await fetchText(ctx, site.url), mode);
+    if (!parsed) throw new Error("lnr: classement introuvable dans la page");
+    const note = parsed.note
+      ? (ctx.i18n ? ctx.i18n.t("standings.lnrNote").replace("{season}", parsed.note) : parsed.note)
+      : "";
+    return [{ name: "", cols: parsed.cols, rows: parsed.rows, note }];
+  }
+
   /* ---------- Saison a demander a ESPN ----------
      Deux corrections d'un coup, apres verification sur l'API reelle :
 
@@ -253,6 +395,21 @@
       const end = Date.parse(s.endDate);
       if (!isFinite(start) || !isFinite(end)) continue;
       if (t >= start && t < end && s.hasStandings !== false) return s.year;
+    }
+    return null;
+  }
+
+  /* Fin de la saison servie, d'apres le catalogue. Sert a savoir si le
+     classement affiche appartient a une saison DEJA TERMINEE.
+     End of the served season, per the catalogue. Used to know whether
+     the displayed table belongs to an ALREADY FINISHED season. */
+  function servedSeasonEnd(data, year) {
+    const list = (data && Array.isArray(data.seasons)) ? data.seasons : [];
+    for (const s of list) {
+      if (s.year === year) {
+        const end = Date.parse(s.endDate);
+        return isFinite(end) ? end : null;
+      }
     }
     return null;
   }
@@ -305,10 +462,37 @@
         }))
       : [{ name: "", entries: (data.standings && data.standings.entries) || [] }];
 
-    return groups.filter((g) => g.entries.length).map((g) => {
+    /* Garde-fou de fraicheur. Certaines competitions ont ete abandonnees
+       par ESPN sans que rien ne le signale : la reponse reste valide et
+       complete, mais elle date d'une saison close depuis des annees. Le
+       Top 14 (identifiant 270559) en est l'exemple : ESPN n'y publie
+       plus rien depuis 2022-23, et la tuile affichait ce vieux tableau
+       comme s'il etait celui du jour.
+
+       Il n'y a rien a reparer cote code -- la donnee n'existe pas -- mais
+       une tuile qui se tait est pire qu'une tuile qui previent. On
+       annonce donc la saison sous le tableau des qu'elle est close.
+
+       Freshness guard. Some competitions have been abandoned by ESPN
+       with nothing to signal it: the answer stays valid and complete,
+       but comes from a season closed years ago. The Top 14 (id 270559)
+       is the example: ESPN has published nothing there since 2022-23,
+       and the tile showed that old table as if it were today's. There
+       is nothing to fix in the code -- the data does not exist -- but a
+       silent tile is worse than one that warns. So we announce the
+       season under the table as soon as it is closed. */
+    const served = servedSeasonYear(data);
+    const end = served != null ? servedSeasonEnd(data, served) : null;
+    const stale = end != null && end < Date.now();
+    const staleNote = stale && ctx.i18n
+      ? ctx.i18n.t("standings.staleSeason").replace("{season}", served + "-" + String(served + 1).slice(2))
+      : "";
+
+    return groups.filter((g) => g.entries.length).map((g, gi) => {
       const cols = pickColumns(g.entries, mode);
       return {
         name: g.name,
+        note: gi === 0 ? staleNote : "",
         cols,
         rows: g.entries.map((e, idx) => {
           const rankStat = (e.stats || []).find(
@@ -509,10 +693,21 @@
         // NFL, NHL...). It applies to ESPN only, the motorsport sources
         // having no equivalent code.
         const custom = (s.customLeague || "").trim();
-        const raw = custom || s.league || "soccer:fra.1";
+        let raw = custom || s.league || "soccer:fra.1";
+        /* Les tuiles deja en place pointent sur l'ancien identifiant ESPN
+           du Top 14, que la source n'alimente plus depuis 2022-23 : on
+           les bascule sur la LNR sans rien demander a l'utilisateur.
+           Une tuile qu'il faut reconfigurer soi-meme apres une mise a
+           jour n'est pas une tuile reparee.
+           Existing tiles point at the old ESPN id for the Top 14, which
+           the source has not fed since 2022-23: they are switched to the
+           LNR without asking. A tile the user must reconfigure himself
+           after an update is not a fixed tile. */
+        if (raw === "rugby:270559") raw = "lnr:top14";
 
         let groups;
-        if (!custom && raw.startsWith("f1:")) groups = await loadF1(this.ctx, raw.slice(3), i18n);
+        if (!custom && raw.startsWith("lnr:")) groups = await loadLnr(this.ctx, raw.slice(4), s.columns === "full" ? "full" : "essential");
+        else if (!custom && raw.startsWith("f1:")) groups = await loadF1(this.ctx, raw.slice(3), i18n);
         else if (!custom && raw.startsWith("motogp:")) groups = await loadMotoGp(this.ctx, raw.slice(7), i18n);
         else groups = await loadEspn(this.ctx, raw, s.columns === "full" ? "full" : "essential");
 
@@ -581,7 +776,7 @@
      no module system in the browser here, and these functions are
      exactly where the bug was hiding. */
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { canonicalKey, pickColumns, formatPercentStat, statValue, COLUMN_ORDER, MAX_STAT_COLUMNS, ESSENTIAL_COLUMNS, currentSeasonYear, servedSeasonYear, hasEntries, loadEspn };
+    module.exports = { parseLnrRanking, lnrSeasonNote, LNR_SITES, servedSeasonEnd, canonicalKey, pickColumns, formatPercentStat, statValue, COLUMN_ORDER, MAX_STAT_COLUMNS, ESSENTIAL_COLUMNS, currentSeasonYear, servedSeasonYear, hasEntries, loadEspn };
   } else {
     window.PiBoard.registerWidget("standings", StandingsWidget);
   }

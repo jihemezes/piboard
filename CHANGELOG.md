@@ -1,5 +1,64 @@
 # Changelog
 
+## 1.97.0
+
+- **Tuile Classement : le Top 14 revient, avec la LNR pour source.**
+  ESPN ne publiant plus cette competition depuis 2022-23, le classement
+  est desormais lu sur le site officiel de la Ligue Nationale de Rugby.
+  La **PRO D2** est ajoutee au passage, meme source. Les tuiles Top 14
+  deja en place basculent automatiquement : pas de reconfiguration a
+  faire, une tuile qu'il faut reparer soi-meme n'est pas une tuile
+  reparee.
+
+- **Comment.** La LNR ne propose pas d'API -- verification faite, la
+  page n'emet aucun appel reseau : le classement est ecrit directement
+  dans le HTML servi. La tuile lit donc la page comme le ferait un
+  navigateur, sans executer de JavaScript.
+
+- **Deux pieges rencontres, et traites.** Le tableau est enferme dans un
+  `<template>`, dont le contenu est INERTE : il n'appartient pas au
+  document et une recherche ordinaire ne le voit pas -- la page semblait
+  vide alors que tout y etait. Et les colonnes sont reperees par
+  l'EN-TETE du tableau, jamais par une position codee en dur : le jour
+  ou la LNR intercalera une colonne, les chiffres suivront au lieu de se
+  decaler d'une case, ce qui donnerait un classement faux sans que rien
+  ne le laisse paraitre.
+
+- **Saison et journee rappelees sous le tableau** (« LNR -- 2026-2027 --
+  J1 »), dans le meme esprit que le garde-fou de fraicheur de la 1.96.2.
+
+- **Tests** : nouveau `lnrRanking.test.js`, adosse a un extrait
+  VERBATIM de la page reelle -- pas une imitation ecrite a la main.
+  Il couvre la lecture des clubs et des chiffres, le contenu inerte du
+  `<template>`, l'insertion d'une colonne, le mode complet, la saison
+  tiree du titre, et le refus de fabriquer un classement a partir d'une
+  page qui n'en contient pas.
+
+## 1.96.2
+
+- **Top 14 : la donnee n'existe plus chez ESPN.** Apres interrogation
+  directe de l'API et de la page ESPN correspondante : pour
+  l'identifiant `rugby:270559`, ESPN ne publie plus rien depuis la
+  saison **2022-23** -- son propre selecteur de saison s'arrete la. Le
+  tableau que la tuile affichait n'etait donc meme pas celui de la
+  saison derniere : c'etait celui de 2022-23. Aucun parametre de saison,
+  aucun changement d'hote ne peut y changer quoi que ce soit ; ESPN a
+  simplement abandonne cette competition.
+
+- **Garde-fou de fraicheur.** Une tuile qui se tait est pire qu'une
+  tuile qui previent : des que le classement affiche appartient a une
+  saison DEJA TERMINEE d'apres le catalogue de saisons d'ESPN, la saison
+  concernee est nommee sous le tableau. Le probleme reste visible au
+  lieu de se faire passer pour un classement du jour -- et le meme
+  garde-fou couvre toute autre competition qu'ESPN laisserait tomber.
+
+- **Aide** : la section « Quand la source decroche » explique le cas,
+  pour que la tuile ne soit pas soupconnee a tort la prochaine fois.
+
+- **Tests** : `standingsColumns.test.js` verifie la lecture de la fin de
+  saison dans le catalogue et l'apparition de la mention sous le tableau
+  quand la saison servie est close.
+
 ## 1.96.1
 
 - **Tuile Classement : le Top 14 affichait TOUJOURS la saison
