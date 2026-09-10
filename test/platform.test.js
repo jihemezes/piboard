@@ -303,3 +303,45 @@ console.log("== platform.diskUsage : fs.statfs remplace `df` ==");
     process.exit(1);
   });
 }
+
+/* ---------- Extinction reelle de l'ecran ----------
+   L'ordre des methodes n'est pas indifferent : Pi OS a change deux fois
+   de pile graphique, et vcgencmd -- longtemps la reponse evidente sur
+   Raspberry Pi -- ne fonctionne plus avec le pilote KMS des versions
+   recentes. Il doit donc rester en DERNIER recours, jamais en tete.
+   Et une inversion "on"/"off" passerait inapercue jusqu'a l'ecran reste
+   noir : c'est verifie explicitement. */
+{
+  const linux = require("../server/platform/linux.js");
+  const off = linux.displayPowerCommands(false, "HDMI-A-1");
+  const on = linux.displayPowerCommands(true, "HDMI-A-1");
+  const methods = off.map((c) => c.method);
+
+  assert.strictEqual(methods[0], "wlopm",
+    "Wayland d'abord : c'est la pile de Pi OS Bookworm et Trixie");
+  assert.strictEqual(methods[methods.length - 1], "vcgencmd",
+    "vcgencmd en dernier recours : inoperant avec le pilote KMS recent");
+  assert.ok(methods.indexOf("xset") > methods.indexOf("wlr-randr"),
+    "X11 apres Wayland");
+
+  assert.deepStrictEqual(off[0].args, ["--off", "*"], "wlopm eteint bien");
+  assert.deepStrictEqual(on[0].args, ["--on", "*"], "et rallume bien");
+  assert.deepStrictEqual(off.find((c) => c.method === "xset").args, ["dpms", "force", "off"]);
+  assert.deepStrictEqual(on.find((c) => c.method === "xset").args, ["dpms", "force", "on"]);
+  assert.deepStrictEqual(off.find((c) => c.method === "vcgencmd").args, ["display_power", "0"]);
+  assert.deepStrictEqual(on.find((c) => c.method === "vcgencmd").args, ["display_power", "1"]);
+
+  /* Sans nom de sortie (wlr-randr absent), la methode correspondante est
+     sautee plutot que lancee avec un argument vide. */
+  assert.ok(!linux.displayPowerCommands(false, null).some((c) => c.method === "wlr-randr"),
+    "wlr-randr saute quand la sortie n'a pas pu etre lue");
+
+  /* Les trois plateformes exposent la meme surface ; Windows et macOS
+     repondent franchement que ce n'est pas supporte plutot que d'echouer
+     a l'usage. */
+  for (const name of ["win32", "darwin"]) {
+    const mod = require("../server/platform/" + name + ".js");
+    assert.strictEqual(typeof mod.setDisplayPower, "function", name + " expose setDisplayPower");
+  }
+  console.log("  OK extinction reelle de l'ecran : ordre des methodes et on/off");
+}

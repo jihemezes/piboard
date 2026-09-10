@@ -735,7 +735,25 @@ function networkDetails() {
   });
 }
 
+/* Extinction reelle de l'ecran : implementee sur Linux uniquement (voir
+   linux.js). Sur Windows, PiBoard s'affiche dans une fenetre parmi
+   d'autres -- eteindre l'ecran de toute la machine depuis une fenetre
+   serait deplace, et le systeme a deja ses propres reglages
+   d'alimentation, mieux places pour cela. La fonction existe pour que
+   les trois plateformes exposent la meme surface, et repond
+   franchement qu'elle n'est pas supportee.
+   True display power off: implemented on Linux only (see linux.js). On
+   Windows, PiBoard is one window among others -- powering off the whole
+   machine's screen from a window would be out of place, and the system
+   already has its own power settings, better suited for it. The
+   function exists so all three platforms expose the same surface, and
+   plainly answers that it is unsupported. */
+function setDisplayPower(on) {
+  return Promise.resolve({ ok: false, method: null, on: !!on, reason: "unsupported-platform" });
+}
+
 module.exports = {
+  setDisplayPower,
   id,
   networkDetails,
   parseIpconfig,

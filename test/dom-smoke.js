@@ -5663,6 +5663,71 @@ function catalogItemFor(catalog, document, widgetId) {
     document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "F9", bubbles: true }));
     assert("hors affichage immersif, F9 reste sans effet", !document.body.classList.contains("win-open"));
 
+    /* ---------- Defilement tactile ----------
+       Deux gestes independants, chacun activable seul : elargir les
+       barres, et glisser le contenu pour le faire defiler. Le second est
+       verifie par un vrai glissement de pointeur sur un conteneur qui
+       deborde -- c'est le scrollTop obtenu qui compte, pas la presence
+       d'un ecouteur. Two independent behaviours, each switchable on its
+       own. The second is checked with a real pointer drag over an
+       overflowing container -- what counts is the resulting scrollTop. */
+    const scroller = document.createElement("div");
+    scroller.setAttribute("style", "overflow-y:auto;height:50px");
+    scroller.innerHTML = "<p style=\"height:500px\">long</p>";
+    document.body.appendChild(scroller);
+    Object.defineProperty(scroller, "scrollHeight", { value: 500, configurable: true });
+    Object.defineProperty(scroller, "clientHeight", { value: 50, configurable: true });
+
+    // jsdom ne fournit pas PointerEvent : un MouseEvent renomme porte les
+    // memes coordonnees, ce dont le code a besoin. jsdom has no
+    // PointerEvent: a renamed MouseEvent carries the same coordinates,
+    // which is all the code needs.
+    const pointer = (type, x, y) => {
+      const ev = new window.Event(type, { bubbles: true, cancelable: true });
+      ev.clientX = x;
+      ev.clientY = y;
+      return ev;
+    };
+    const drag = (fromY, toY) => {
+      scroller.dispatchEvent(pointer("pointerdown", 10, fromY));
+      document.dispatchEvent(pointer("pointermove", 10, toY));
+      document.dispatchEvent(pointer("pointerup", 10, toY));
+    };
+
+    document.body.classList.remove("touch-drag-scroll");
+    scroller.scrollTop = 100;
+    drag(200, 140);
+    assert("sans l'option, glisser le contenu ne le fait pas defiler", scroller.scrollTop === 100);
+
+    document.body.classList.add("touch-drag-scroll");
+    scroller.scrollTop = 100;
+    drag(200, 140);
+    assert("avec l'option, glisser vers le haut fait defiler vers le bas", scroller.scrollTop === 160);
+    scroller.scrollTop = 100;
+    drag(200, 260);
+    assert("et glisser vers le bas remonte le contenu", scroller.scrollTop === 40);
+    document.body.classList.remove("touch-drag-scroll");
+    scroller.remove();
+
+    /* ---------- Largeur de la fenetre de configuration generale ----------
+       Les largeurs etaient des plafonds en pixels : sur un grand ecran la
+       fenetre restait plantee a 620 ou 1080 px. Un plancher relatif est
+       exige, et ces regles doivent venir APRES `body.touch .modal-card`,
+       qui fixait sinon 1000 px quelle que soit la disposition -- donc
+       precisement sur le tableau mural. jsdom ne calcule pas les unites
+       vw : c'est la feuille de style elle-meme qui est verifiee. */
+    {
+      const css = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+      const settingsRules = css.match(/#settingsModal \.modal-card[^\n]*width:[^\n]*/g) || [];
+      assert("la fenetre de configuration a ses propres largeurs", settingsRules.length >= 4);
+      assert("chacune impose un plancher relatif d'au moins 75% de l'ecran",
+        settingsRules.every((r) => /max\(\s*\d+px,\s*(7[5-9]|8[0-9]|9[0-6])vw\s*\)/.test(r)));
+      assert("et garde un plafond qui ne touche pas les bords",
+        settingsRules.every((r) => /min\(\s*96vw/.test(r)));
+      assert("le tactile ne repasse pas devant avec sa largeur fixe",
+        css.indexOf("body.touch #settingsModal .modal-card") > css.indexOf("body.touch .modal-card { width:"));
+    }
+
     /* ---------- Fond d'ecran d'une page SECONDAIRE ----------
        Le defaut corrige en 1.95.2 ne touchait que les pages autres que
        la page 1 : l'image etait bien choisie et enregistree, mais jamais

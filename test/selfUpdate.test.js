@@ -438,3 +438,31 @@ async function waitRestart(updater, spy, timeoutMs) {
   process.exitCode = 1;
   server.close();
 });
+
+/* ---------- Publication GitHub : jamais en brouillon ----------
+   Le Raspberry Pi interroge l'API GitHub sans authentification, et cette
+   API ne montre JAMAIS les brouillons -- ni GET /releases/latest, ni la
+   liste GET /releases. Une release laissee en brouillon est donc
+   invisible depuis le Pi, sur les deux canaux : la mise a jour
+   integree repondait « vous avez la derniere version » en toute bonne
+   foi. Or electron-builder cree la release en brouillon PAR DEFAUT :
+   c'est la configuration, et non le code de mise a jour, qu'il fallait
+   corriger. Ce test verrouille ce reglage.
+
+   The Pi queries GitHub's API unauthenticated, and that API NEVER shows
+   drafts. A release left as a draft is therefore invisible from the Pi,
+   on both channels. electron-builder creates the release as a draft BY
+   DEFAULT: the configuration, not the update code, is what had to be
+   fixed. This test locks that setting down. */
+{
+  const fsCfg = require("fs");
+  const pathCfg = require("path");
+  const yml = fsCfg.readFileSync(pathCfg.join(__dirname, "..", "electron-builder.yml"), "utf8");
+  const publishBlock = yml.slice(yml.lastIndexOf("\npublish:"));
+  const active = publishBlock.split("\n").filter((l) => l.trim() && !l.trim().startsWith("#"));
+  assert.ok(active.some((l) => /^\s+releaseType:\s*release\s*$/.test(l)),
+    "la publication GitHub doit etre immediate, jamais en brouillon");
+  assert.ok(!active.some((l) => /releaseType:\s*draft/.test(l)),
+    "aucun reglage ne doit remettre la publication en brouillon");
+  console.log("  OK publication GitHub immediate (pas de brouillon)");
+}

@@ -530,6 +530,16 @@
           <span data-i18n="settings.touch">Touch mode: larger buttons, tabs and handles</span>
         </label>
         <small class="field-hint" data-i18n="settings.touch.hint">Enlarges the toolbar buttons, the drawer and toolbar pull tabs, the tile icons and the resize handles, for fingers on a touchscreen.</small>
+        <label class="field">
+          <span data-i18n="settings.touchScroll">Scrolling tile content on a touchscreen</span>
+          <select id="setTouchScroll">
+            <option value="both" data-i18n="settings.touchScroll.both">Both — wide scrollbars and drag to scroll</option>
+            <option value="drag" data-i18n="settings.touchScroll.drag">Drag the content to scroll</option>
+            <option value="bars" data-i18n="settings.touchScroll.bars">Wide scrollbars only</option>
+            <option value="off" data-i18n="settings.touchScroll.off">Neither — leave as on a desktop</option>
+          </select>
+        </label>
+        <small class="field-hint" data-i18n="settings.touchScroll.hint">Only applies in touch mode. Default scrollbars are a few pixels wide, awkward for a finger; dragging the content, meanwhile, selects text instead of scrolling. Widening the bars, dragging to scroll, or both, fixes that.</small>
         <label class="field checkbox">
           <input type="checkbox" id="setMultiColumnForms">
           <span data-i18n="settings.multiColumnForms">Multi-column settings windows</span>
@@ -548,6 +558,11 @@
           <input type="checkbox" id="setSSEnabled">
           <span data-i18n="ss.enabled">Enable the screen saver</span>
         </label>
+        <div class="field">
+          <button type="button" class="btn small" id="btnTestDisplayOff" data-i18n="ss.displayTest">Test: turn the display off for 5 s</button>
+          <small class="field-hint" id="ssDisplayTestResult" hidden></small>
+        </div>
+        <small class="field-hint" data-i18n="ss.displayOff.hint">The "Turn the display off" slot mode really cuts the video output's power, unlike the black overlay which leaves the panel lit. Raspberry Pi only. A touch, a key or a mouse move turns it back on. If the command fails, the black overlay takes over as before — the test button above says which method worked.</small>
         <small class="field-hint" data-i18n="ss.enabled.hint">During the time slots below, the screen goes fully black (or shows a photo slideshow), to save energy at night or when no one is around. A click, a tap, or any key press wakes it up instantly. This never turns the physical display off — a software overlay only, which is instant and always reliable to wake up.</small>
 
         <div id="ssSlots" style="margin-top:10px"></div>

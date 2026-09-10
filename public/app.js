@@ -1995,6 +1995,104 @@
      the appearance of several elements (drawers, toolbar, bar), and a
      single class guarantees they all switch together, with no
      inconsistent in-between state. */
+  /* ---------- Defilement tactile ----------
+     Sur un ecran tactile, faire defiler le contenu d'une tuile etait
+     penible pour deux raisons independantes :
+
+     - les barres de defilement font quelques pixels de large, dessinees
+       pour un pointeur de souris, pas pour un doigt ;
+     - poser le doigt sur le contenu et le faire glisser ne fait pas
+       defiler mais SELECTIONNE DU TEXTE, ce qui n'a aucun interet ici.
+       C'est le signe que la dalle remonte des evenements de souris
+       plutot que de vrais evenements tactiles -- auquel cas le
+       navigateur ne declenche jamais son defilement natif.
+
+     Les deux se corrigent separement, et l'utilisateur choisit : barres
+     larges, glisser pour defiler, les deux (defaut), ou rien.
+
+     Touch scrolling. On a touchscreen, scrolling a tile's content was
+     awkward for two independent reasons: scrollbars are a few pixels
+     wide, drawn for a mouse pointer, not a finger; and pressing the
+     content and dragging SELECTS TEXT rather than scrolling -- the sign
+     that the panel reports mouse events rather than real touch events,
+     in which case the browser never triggers its native scrolling. Both
+     are fixed separately, and the user chooses: wide bars, drag to
+     scroll, both (default), or neither. */
+  function touchScrollMode() {
+    if (!settings.touchMode) return "off";
+    const m = settings.touchScroll || "both";
+    return ["both", "drag", "bars", "off"].indexOf(m) >= 0 ? m : "both";
+  }
+
+  function applyTouchScroll() {
+    const mode = touchScrollMode();
+    document.body.classList.toggle("touch-scrollbars", mode === "both" || mode === "bars");
+    document.body.classList.toggle("touch-drag-scroll", mode === "both" || mode === "drag");
+  }
+
+  /* Element defilant sous le doigt : le premier ancetre qui deborde
+     REELLEMENT. Un conteneur qui declare overflow:auto sans depasser sa
+     hauteur ne defile pas -- s'en saisir avalerait le geste sans rien
+     faire bouger. Nearest scrollable element under the finger: the first
+     ancestor that actually overflows. A container declaring
+     overflow:auto without exceeding its height does not scroll --
+     grabbing it would swallow the gesture without moving anything. */
+  function scrollableUnder(node) {
+    for (let el = node; el && el !== document.body; el = el.parentElement) {
+      const st = getComputedStyle(el);
+      const canY = /(auto|scroll)/.test(st.overflowY) && el.scrollHeight - el.clientHeight > 2;
+      const canX = /(auto|scroll)/.test(st.overflowX) && el.scrollWidth - el.clientWidth > 2;
+      if (canY || canX) return el;
+    }
+    return null;
+  }
+
+  function initTouchDragScroll() {
+    let target = null;
+    let startX = 0, startY = 0, startTop = 0, startLeft = 0, moved = false;
+
+    document.addEventListener("pointerdown", (e) => {
+      if (!document.body.classList.contains("touch-drag-scroll")) return;
+      // Le geste ne doit pas voler les interactions ordinaires : un
+      // champ, un bouton, un lien restent prioritaires.
+      // The gesture must not steal ordinary interactions: a field, a
+      // button, a link keep priority.
+      if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+      // Ni le deplacement des tuiles : en mode edition, la grille a la
+      // main. Nor tile dragging: in edit mode the grid comes first.
+      if (e.target.closest(".grid-stack-item-content .tile-head")) return;
+      const el = scrollableUnder(e.target);
+      if (!el) return;
+      target = el;
+      startX = e.clientX; startY = e.clientY;
+      startTop = el.scrollTop; startLeft = el.scrollLeft;
+      moved = false;
+    }, true);
+
+    document.addEventListener("pointermove", (e) => {
+      if (!target) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      moved = true;
+      target.scrollTop = startTop - dy;
+      target.scrollLeft = startLeft - dx;
+      /* Le geste est consomme : sans cela le navigateur poursuit sa
+         selection de texte par-dessus le defilement, et l'on se
+         retrouve avec du contenu surligne en bleu a chaque glissement.
+         The gesture is consumed: otherwise the browser carries on
+         selecting text on top of the scrolling, leaving content
+         highlighted in blue after every drag. */
+      e.preventDefault();
+      const sel = window.getSelection && window.getSelection();
+      if (sel && !sel.isCollapsed) sel.removeAllRanges();
+    }, { capture: true, passive: false });
+
+    const end = () => { target = null; moved = false; };
+    document.addEventListener("pointerup", end, true);
+    document.addEventListener("pointercancel", end, true);
+  }
+
   function applyDisplayMode() {
     const dash = dashboardMode();
     document.body.classList.toggle("dashboard-mode", dash);
@@ -3920,7 +4018,24 @@
     else if (st.checkError) {
       const why = st.checkError === "no-release" ? i18n.t("update.checkFailed.noRelease") : st.checkError;
       text = tf("update.checkFailed", { e: why });
-    } else if (st.checkedAt) text = i18n.t("update.upToDate");
+    } else if (st.checkedAt) {
+      /* La version vue chez GitHub est nommee, pas seulement « a jour ».
+         Deux etats etaient jusqu'ici indiscernables : PiBoard est
+         reellement a jour, et GitHub ne montre pas les versions plus
+         recentes (c'etait le cas des releases restees en brouillon,
+         invisibles a l'API). Voir « la derniere version publiee est
+         v1.94.3 » alors qu'on en attendait une plus haute designe le
+         probleme du premier coup d'oeil.
+         The version seen at GitHub is named, not merely "up to date".
+         Two states were indistinguishable until now: PiBoard really is
+         up to date, and GitHub does not show the newer versions (the
+         case with releases left as drafts, invisible to the API).
+         Seeing "the latest published version is v1.94.3" when a higher
+         one was expected points at the problem at first glance. */
+      text = st.latestVersion
+        ? tf("update.upToDateAt", { v: "v" + st.latestVersion })
+        : i18n.t("update.upToDate");
+    }
     else text = i18n.t("update.neverChecked");
     $("updStatusText").textContent = text;
 
@@ -4430,6 +4545,7 @@
     $("setRows").value = settings.gridRows;
     $("setKeyboard").checked = !!settings.keyboardEnabled;
     $("setTouch").checked = !!settings.touchMode;
+    $("setTouchScroll").value = settings.touchScroll || "both";
     $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
     $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
     $("setCartoKey").value = settings.cartoKey || "";
@@ -4472,6 +4588,7 @@
       gridRows: Math.max(4, Math.min(16, Number($("setRows").value) || 8)),
       keyboardEnabled: $("setKeyboard").checked,
       touchMode: $("setTouch").checked,
+      touchScroll: $("setTouchScroll").value,
       multiColumnForms: $("setMultiColumnForms").checked,
       quickStartOnLaunch: $("setQuickStart").checked,
       cartoKey: $("setCartoKey").value.trim(),
@@ -4742,6 +4859,7 @@
           <select id="setSSSlot${i}Mode">
             <option value="black">${i18n.t("ss.mode.black")}</option>
             <option value="slideshow">${i18n.t("ss.mode.slideshow")}</option>
+            <option value="displayOff">${i18n.t("ss.mode.displayOff")}</option>
           </select>
         </div>`;
     }
@@ -5006,6 +5124,7 @@
     const overlay = $("screensaverOverlay");
     const ssiEl = $("screensaverSlideshow");
     ssiEl.hidden = slot.mode !== "slideshow";
+    if (slot.mode === "displayOff") setDisplayPower(false);
 
     if (slot.mode === "slideshow") {
       const manifest = catalog.find((m) => m.id === "slideshow");
@@ -5081,6 +5200,48 @@
     activateScreensaver({ mode: "slideshow" }, "manual");
   }
 
+  /* ---------- Extinction reelle de l'ecran ----------
+     Le calque noir de l'economiseur ne coupe pas la dalle : elle reste
+     allumee et consomme. La plage reglee sur "Eteindre l'ecran" demande
+     en plus au systeme de couper l'alimentation de la sortie video.
+
+     Le calque noir est POSE MALGRE TOUT, et c'est delibere : si la
+     commande echoue -- outil absent, pile graphique inattendue --, on
+     retombe exactement sur l'ancien comportement au lieu de laisser le
+     tableau de bord allume toute la nuit. Un repli silencieux vaut mieux
+     qu'une panne silencieuse.
+
+     Le reveil est assure par le meme ecouteur qu'avant : ecran eteint,
+     la dalle tactile et le clavier continuent d'emettre leurs
+     evenements, que le compositeur transmet toujours a la page.
+
+     True display power off. The screen saver's black overlay does not
+     cut the panel: it stays lit and draws power. A slot set to "Turn
+     the display off" additionally asks the system to cut the video
+     output's power. The black overlay is laid down ANYWAY, deliberately:
+     if the command fails -- tool missing, unexpected graphics stack --
+     we fall back exactly on the old behaviour instead of leaving the
+     dashboard lit all night. Waking uses the same listener as before:
+     with the display off, the touch panel and keyboard keep emitting
+     their events, which the compositor still delivers to the page. */
+  let ssDisplayOff = false;
+
+  async function setDisplayPower(on) {
+    try {
+      const r = await fetch("/api/system/display-power", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ on: !!on })
+      });
+      if (!r.ok) return { ok: false };
+      const res = await r.json();
+      if (res.ok) ssDisplayOff = !on;
+      return res;
+    } catch (e) {
+      return { ok: false };
+    }
+  }
+
   function deactivateScreensaver() {
     ssActiveSlotKey = null;
     const overlay = $("screensaverOverlay");
@@ -5090,6 +5251,10 @@
       ssActiveInstance = null;
     }
     $("screensaverSlideshow").innerHTML = "";
+    // Rallumer avant tout le reste : tant que la dalle est coupee, rien
+    // de ce qui suit n'est visible. Turn the panel back on before
+    // anything else: while it is off, none of the rest is visible.
+    if (ssDisplayOff) setDisplayPower(true);
   }
 
   /* Reveil : clic/tap/touche n'importe ou pendant que la veille est
@@ -5791,6 +5956,7 @@
     // mode to show its tab: the existing "touch" class is the single
     // source, mirrored under the name the bar's CSS expects.
     document.body.classList.toggle("touch-mode", !!settings.touchMode);
+    applyTouchScroll();
     applyDisplayMode();
     vkb.setLang(settings.lang);
     vkb.setEnabled(!!settings.keyboardEnabled);
@@ -5897,6 +6063,17 @@
 
   async function boot() {
     settings = await apiGet("/api/settings");
+    /* Au demarrage, on rallume sans condition : si PiBoard a ete relance
+       (ou le Pi redemarre) alors que l'ecran etait coupe par une plage,
+       personne ne verrait plus rien -- et le reveil au toucher suppose
+       precisement de voir quelque chose pour savoir qu'il y a lieu de
+       toucher. La commande est sans effet si l'ecran est deja allume.
+       At startup we turn the display on unconditionally: if PiBoard was
+       restarted while the display was off, nothing would be visible --
+       and waking by touch assumes seeing something in the first place.
+       The command is a no-op if the display is already on. */
+    setDisplayPower(true);
+
     await refreshAppIntegration();
     refreshUpdateStatus();
     i18n.setLang(settings.lang);
@@ -6065,6 +6242,7 @@
     // mode to show its tab: the existing "touch" class is the single
     // source, mirrored under the name the bar's CSS expects.
     document.body.classList.toggle("touch-mode", !!settings.touchMode);
+    applyTouchScroll();
     applyDisplayMode();
 
     catalog = await apiGet("/api/widgets");
@@ -6119,6 +6297,31 @@
       clearTimeout(winHideTimer);
       winHideTimer = setTimeout(() => document.body.classList.remove("win-open"), 320);
     }
+    initTouchDragScroll();
+
+    /* Bouton de test de l'extinction : la commande qui fonctionne depend
+       de la pile graphique installee, et l'utilisateur ne peut pas
+       l'essayer autrement qu'en attendant une plage horaire nocturne.
+       L'ecran s'eteint cinq secondes, se rallume seul, et la METHODE qui
+       a marche est affichee -- ou la liste de celles qui ont echoue.
+       Test button for display power off: which command works depends on
+       the installed graphics stack, and the user cannot otherwise try it
+       without waiting for a night-time slot. The screen goes off for
+       five seconds, comes back on its own, and the METHOD that worked is
+       shown -- or the list of those that failed. */
+    onActivate($("btnTestDisplayOff"), async () => {
+      const out = $("ssDisplayTestResult");
+      out.hidden = false;
+      out.textContent = i18n.t("ss.displayTest.running");
+      const off = await setDisplayPower(false);
+      setTimeout(async () => {
+        await setDisplayPower(true);
+        out.textContent = off.ok
+          ? tf("ss.displayTest.ok", { m: off.method })
+          : tf("ss.displayTest.failed", { m: (off.tried || []).join(", ") || "\u2014" });
+      }, 5000);
+    });
+
     $("winHotzone").addEventListener("mouseenter", () => showWinBar(true));
     $("winBar").addEventListener("mouseenter", () => showWinBar(true));
     $("winBar").addEventListener("mouseleave", scheduleWinHide);

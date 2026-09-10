@@ -168,6 +168,10 @@ const DEFAULT_SETTINGS = {
      Off by default, like anything that changes the look of an existing
      installation on update. */
   immersive: false,
+  /* Defilement du contenu des tuiles au doigt, en mode tactile :
+     "both" (defaut), "bars", "drag" ou "off". Voir applyTouchScroll()
+     cote client. Touch scrolling of tile content, in touch mode. */
+  touchScroll: "both",
   /* Cle CARTO des fonds de carte (tuiles Trafic, Radar, Avions).
      Vide par defaut, et il ne peut pas en etre autrement : CARTO
      delivre des cles PAR CLIENT, a ne pas partager entre projets sans
@@ -1190,6 +1194,19 @@ app.post("/api/system/immersive", (req, res) => {
    de fenetre interne qui n'a pas deja son equivalent ailleurs.
    Minimise the window to the taskbar: the only action of the in-app
    window bar that does not already have its equivalent elsewhere. */
+/* Extinction reelle de l'ecran (Raspberry Pi). Utilisee par
+   l'economiseur d'ecran quand la plage horaire est reglee sur
+   "Eteindre l'ecran", et par le bouton de test des reglages.
+   True display power off (Raspberry Pi). Used by the screen saver when
+   the time slot is set to "Turn the display off", and by the test
+   button in the settings. */
+app.post("/api/system/display-power", async (req, res) => {
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ ok: false, reason: "not-local" });
+  }
+  res.json(await platform.setDisplayPower(!!(req.body || {}).on));
+});
+
 app.post("/api/system/minimize", (req, res) => {
   if (!isLocalRequest(req)) {
     return res.status(403).json({ ok: false, reason: "not-local" });

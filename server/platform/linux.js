@@ -385,6 +385,129 @@ function gpuUsage() {
    ffmpeg installs via the package manager and lands in PATH: the bare
    name almost always suffices. The absolute paths cover a restricted
    PATH (a systemd service started with a minimal environment, notably). */
+/* ---------- Extinction reelle de l'ecran / true display power off -----
+   L'economiseur d'ecran de PiBoard pose un calque noir : instantane et
+   toujours reveillable, mais la dalle reste allumee et consomme. Pour
+   economiser vraiment, il faut couper l'alimentation de la sortie
+   video, ce qui depend de la pile graphique -- et Pi OS a change deux
+   fois de pile en peu d'annees.
+
+   Quatre methodes sont donc essayees dans l'ordre, de la plus moderne a
+   la plus ancienne, jusqu'a ce que l'une reussisse :
+
+     1. wlopm      -- Wayland (labwc, wayfire) : c'est le cas de Pi OS
+                      Bookworm et Trixie, la cible principale.
+     2. wlr-randr  -- meme famille, present quand wlopm ne l'est pas ;
+                      demande le nom de la sortie, d'ou l'appel prealable
+                      sans argument pour le lire.
+     3. xset dpms  -- X11, pour Pi OS Bullseye et les PC Linux restes
+                      sous serveur X.
+     4. vcgencmd   -- micrologiciel Raspberry Pi, dernier recours ; il ne
+                      fonctionne plus avec le pilote KMS des versions
+                      recentes, d'ou sa place en fin de liste plutot
+                      qu'en tete.
+
+   La methode qui a fonctionne est renvoyee a l'appelant : l'interface
+   l'affiche, pour qu'un echec se diagnostique sans ouvrir un terminal.
+
+   True display power off. PiBoard's screen saver lays a black overlay:
+   instant and always wakeable, but the panel stays lit and draws power.
+   Real saving means cutting the video output's power, which depends on
+   the graphics stack -- and Pi OS has changed stack twice in a few
+   years. Four methods are tried in order, newest to oldest, until one
+   succeeds. The method that worked is returned to the caller: the
+   interface displays it, so a failure can be diagnosed without opening
+   a terminal. */
+
+/* Environnement des clients Wayland. Le serveur PiBoard tourne en
+   service systemd, avec un environnement minimal : ni XDG_RUNTIME_DIR
+   ni WAYLAND_DISPLAY. Sans eux, wlopm et wlr-randr ne trouvent pas le
+   compositeur et echouent avec un message peu parlant. Le repertoire
+   d'execution se deduit de l'uid, et le nom du socket est LU dans ce
+   repertoire plutot que suppose : "wayland-0" est le cas courant, pas
+   une garantie.
+   Wayland clients' environment. The PiBoard server runs as a systemd
+   service with a minimal environment: neither XDG_RUNTIME_DIR nor
+   WAYLAND_DISPLAY. The runtime directory is derived from the uid, and
+   the socket name is READ from that directory rather than assumed:
+   "wayland-0" is the common case, not a guarantee. */
+function waylandEnv() {
+  const env = Object.assign({}, process.env);
+  if (!env.XDG_RUNTIME_DIR) {
+    try {
+      env.XDG_RUNTIME_DIR = "/run/user/" + process.getuid();
+    } catch (e) { /* getuid absent (Windows) : sans objet ici */ }
+  }
+  if (!env.WAYLAND_DISPLAY && env.XDG_RUNTIME_DIR) {
+    try {
+      const sock = fs.readdirSync(env.XDG_RUNTIME_DIR)
+        .filter((f) => /^wayland-\d+$/.test(f))
+        .sort()[0];
+      if (sock) env.WAYLAND_DISPLAY = sock;
+    } catch (e) { /* repertoire illisible : les methodes X11 restent */ }
+  }
+  if (!env.DISPLAY) env.DISPLAY = ":0";
+  return env;
+}
+
+/* Commandes a essayer, dans l'ordre. Fonction PURE (aucun effet, aucun
+   acces disque) pour rester testable : c'est l'ordre et les arguments
+   qui comptent, et une inversion "on"/"off" passerait autrement
+   inapercue jusqu'a l'ecran reste noir.
+   Commands to try, in order. PURE function (no effects, no disk access)
+   to stay testable: order and arguments are what matter, and an
+   on/off inversion would otherwise go unnoticed until the screen stayed
+   black. */
+function displayPowerCommands(on, outputName) {
+  const state = on ? "on" : "off";
+  const list = [
+    { method: "wlopm", cmd: "wlopm", args: ["--" + state, "*"] }
+  ];
+  if (outputName) {
+    list.push({ method: "wlr-randr", cmd: "wlr-randr", args: ["--output", outputName, "--" + state] });
+  }
+  list.push({ method: "xset", cmd: "xset", args: on ? ["dpms", "force", "on"] : ["dpms", "force", "off"] });
+  list.push({ method: "vcgencmd", cmd: "vcgencmd", args: ["display_power", on ? "1" : "0"] });
+  return list;
+}
+
+/* Nom de la premiere sortie video, lu chez wlr-randr. Null si l'outil
+   est absent : la methode correspondante est alors simplement sautee.
+   Name of the first video output, read from wlr-randr. */
+function firstWaylandOutput(env) {
+  return new Promise((resolve) => {
+    execFile("wlr-randr", [], { timeout: 3000, env }, (err, stdout) => {
+      if (err) return resolve(null);
+      const m = String(stdout || "").match(/^(\S+)/m);
+      resolve(m ? m[1] : null);
+    });
+  });
+}
+
+function runOnce(cmd, args, env) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: 5000, env }, (err) => resolve(!err));
+  });
+}
+
+async function setDisplayPower(on) {
+  const env = waylandEnv();
+  const output = await firstWaylandOutput(env);
+  const tried = [];
+  for (const c of displayPowerCommands(!!on, output)) {
+    tried.push(c.method);
+    /* xset refuse d'agir si DPMS est desactive : on l'active avant, sans
+       se soucier de l'echec (l'appel suivant tranchera).
+       xset refuses to act when DPMS is disabled: enable it first,
+       ignoring failure -- the next call decides. */
+    if (c.method === "xset") await runOnce("xset", ["+dpms"], env);
+    if (await runOnce(c.cmd, c.args, env)) {
+      return { ok: true, method: c.method, on: !!on };
+    }
+  }
+  return { ok: false, method: null, on: !!on, tried };
+}
+
 function ffmpegCandidates() {
   return ["ffmpeg", "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg"];
 }
@@ -611,6 +734,8 @@ async function networkDetails() {
 }
 
 module.exports = {
+  setDisplayPower,
+  displayPowerCommands,
   id,
   networkDetails,
   parseIpRoute,

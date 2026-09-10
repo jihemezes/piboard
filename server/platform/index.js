@@ -198,6 +198,28 @@ function getAutoStart() {
    hidden). Outside the desktop application the feature is declared
    unsupported -- on the Pi, Chromium already runs in kiosk mode, with no
    decoration to hide. */
+/* Extinction reelle de l'ecran, deleguee a l'implementation de la
+   plateforme (seul Linux la fournit reellement). Contrairement a
+   l'affichage immersif, rien ne passe par Electron : c'est une
+   commande systeme, valable aussi -- et surtout -- quand PiBoard
+   s'affiche dans Chromium en kiosque sur un Raspberry Pi, ou aucun
+   processus Electron n'existe.
+   True display power off, delegated to the platform implementation
+   (only Linux really provides it). Unlike immersive display, nothing
+   goes through Electron: this is a system command, valid also -- and
+   above all -- when PiBoard runs in kiosk Chromium on a Raspberry Pi,
+   where no Electron process exists. */
+async function setDisplayPower(on) {
+  if (impl && typeof impl.setDisplayPower === "function") {
+    try {
+      return await impl.setDisplayPower(!!on);
+    } catch (e) {
+      return { ok: false, method: null, on: !!on, reason: String(e.message || e) };
+    }
+  }
+  return { ok: false, method: null, on: !!on, reason: "unsupported-platform" };
+}
+
 function setImmersive(enabled) {
   if (kioskController && typeof kioskController.setImmersive === "function") {
     try {
@@ -308,6 +330,7 @@ module.exports = {
   scanMountRootsPosix,
   registerKioskController,
   setImmersive,
+  setDisplayPower,
   minimizeWindow,
   isDesktopApp,
   getAutoStart,

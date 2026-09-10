@@ -1638,6 +1638,39 @@ body.touch.editing .ui-resizable-s::after {
 .modal-card[data-cols="2"] { width: min(1080px, 96vw); }
 .modal-card[data-cols="3"] { width: min(1600px, 96vw); }
 body.touch .modal-card { width: min(1000px, 96vw); }
+
+/* ---------- Largeur de la fenetre de configuration generale ----------
+   Les largeurs ci-dessus sont des PLAFONDS en pixels : sur un grand
+   ecran, la fenetre restait plantee a 620 ou 1080 px, perdue au milieu
+   du vide, alors que ses sections en colonnes demandent de la place.
+   Un plancher relatif est ajoute -- au moins 75 % de la largeur de
+   l'ecran -- tout en gardant le plafond a 96vw pour ne jamais toucher
+   les bords.
+
+   Regles placees APRES `body.touch .modal-card`, qui fixait sinon 1000px
+   quelle que soit la disposition et annulait le calcul par colonnes :
+   en mode tactile -- donc sur le tableau mural, ou le probleme se voit
+   le plus -- la fenetre etait toujours de largeur fixe.
+
+   Scope a #settingsModal a dessein : les autres fenetres batie sur
+   .modal-card (lecture de mail, article RSS, reglages d'une tuile)
+   n'ont pas le meme contenu et n'ont rien a gagner a occuper tout
+   l'ecran.
+
+   Width of the general settings window. The widths above are pixel
+   CEILINGS: on a large screen the window stayed stuck at 620 or 1080px,
+   lost in empty space, while its columned sections ask for room. A
+   relative floor is added -- at least 75% of the screen width -- while
+   keeping the 96vw ceiling so it never touches the edges. Placed AFTER
+   `body.touch .modal-card`, which otherwise pinned 1000px whatever the
+   layout. Scoped to #settingsModal on purpose: the other windows built
+   on .modal-card have different content and nothing to gain from
+   filling the screen. */
+#settingsModal .modal-card { width: min(96vw, max(620px, 75vw)); }
+#settingsModal .modal-card[data-cols="1"] { width: min(96vw, max(620px, 75vw)); }
+#settingsModal .modal-card[data-cols="2"] { width: min(96vw, max(1080px, 78vw)); }
+#settingsModal .modal-card[data-cols="3"] { width: min(96vw, max(1600px, 82vw)); }
+body.touch #settingsModal .modal-card { width: min(96vw, max(1000px, 75vw)); }
 body.touch .modal-head { padding: 18px 24px; }
 body.touch .modal-head h2 { font-size: 22px; }
 body.touch .modal-close { width: 52px; height: 52px; font-size: 30px; border-radius: 12px; }
@@ -2250,6 +2283,60 @@ body.touch .quickstart-again input { width: 20px; height: 20px; }
 body.dashboard-mode .drawer,
 body.dashboard-mode .drawer-tab,
 body.dashboard-mode .dock { display: none !important; }
+
+/* ---------- Defilement tactile ----------
+   Les barres de defilement par defaut font quelques pixels : dessinees
+   pour la pointe d'une souris, pas pour un doigt. En mode tactile, et
+   seulement la, elles sont elargies partout ou du contenu defile --
+   tuiles, tiroirs, fenetres de reglages, aide.
+   Touch scrolling. Default scrollbars are a few pixels wide: drawn for a
+   mouse pointer, not a finger. In touch mode, and only there, they are
+   widened everywhere content scrolls -- tiles, drawers, settings
+   windows, help. */
+body.touch-scrollbars * {
+  scrollbar-width: auto;
+}
+body.touch-scrollbars ::-webkit-scrollbar {
+  width: 18px;
+  height: 18px;
+}
+body.touch-scrollbars ::-webkit-scrollbar-track {
+  background: transparent;
+}
+body.touch-scrollbars ::-webkit-scrollbar-thumb {
+  background: var(--tile-edge);
+  border-radius: 9px;
+  /* Bordure transparente : le curseur parait plus fin que la zone
+     tactile, qui reste large. Transparent border: the thumb looks
+     slimmer than the touch area, which stays wide. */
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+body.touch-scrollbars ::-webkit-scrollbar-thumb:active {
+  background: var(--accent);
+  background-clip: padding-box;
+}
+
+/* Glisser le contenu pour le faire defiler. La selection de texte est
+   coupee : c'est elle qui se declenchait a la place du defilement, et
+   surligner du texte dans une tuile murale n'a aucun usage. Les champs
+   de saisie gardent evidemment la selection, sans quoi on ne pourrait
+   plus corriger ce qu'on tape.
+   Drag the content to scroll. Text selection is switched off: it was
+   what triggered instead of scrolling, and highlighting text in a wall
+   tile serves no purpose. Input fields of course keep selection,
+   otherwise one could no longer fix what one types. */
+body.touch-drag-scroll {
+  -webkit-user-select: none;
+  user-select: none;
+}
+body.touch-drag-scroll input,
+body.touch-drag-scroll textarea,
+body.touch-drag-scroll [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
 
 /* ---------- Affichage immersif : barre de fenetre ----------
    Miroir exact du bandeau du bas, en haut de l'ecran. N'existe que

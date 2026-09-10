@@ -1,5 +1,137 @@
 # Changelog
 
+## 1.99.0
+
+- **Economiseur d'ecran : nouveau mode de plage « Eteindre l'ecran »
+  (Raspberry Pi).** Les modes « Noir » et « Diaporama » posent un calque
+  logiciel : la dalle reste allumee et consomme. Ce mode coupe reellement
+  l'alimentation de la sortie video.
+
+- **Quatre methodes essayees dans l'ordre**, de la plus moderne a la
+  plus ancienne : `wlopm` (Wayland/labwc, la pile de Pi OS Bookworm et
+  Trixie), `wlr-randr`, `xset dpms` (X11, Bullseye et PC Linux), puis
+  `vcgencmd` en dernier recours -- longtemps la reponse evidente sur
+  Raspberry Pi, mais inoperante avec le pilote KMS des versions
+  recentes, d'ou sa place en fin de liste et non en tete.
+
+- **L'environnement Wayland est reconstruit** : le serveur tourne en
+  service systemd, sans `XDG_RUNTIME_DIR` ni `WAYLAND_DISPLAY`. Le
+  repertoire est deduit de l'uid et le nom du socket est LU dans ce
+  repertoire plutot que suppose -- « wayland-0 » est le cas courant, pas
+  une garantie.
+
+- **Le calque noir est pose malgre tout**, deliberement : si la commande
+  echoue, on retombe exactement sur l'ancien comportement au lieu de
+  laisser le tableau allume toute la nuit. Un repli silencieux vaut
+  mieux qu'une panne silencieuse.
+
+- **Bouton de test dans les reglages** : l'ecran s'eteint cinq secondes,
+  se rallume seul, et la METHODE qui a fonctionne est affichee -- ou la
+  liste de celles qui ont echoue. Sans lui, la seule facon d'essayer
+  serait d'attendre une plage nocturne.
+
+- **Rallumage inconditionnel au demarrage** : si PiBoard est relance
+  alors que l'ecran etait coupe, plus rien ne serait visible -- et le
+  reveil au toucher suppose precisement de voir quelque chose pour
+  savoir qu'il y a lieu de toucher.
+
+- **Reveil inchange** : un toucher, une touche, un mouvement de souris.
+  Ecran eteint, la dalle tactile et le clavier continuent d'emettre
+  leurs evenements, que le compositeur transmet toujours a la page.
+
+- **Tests** : `platform.test.js` verrouille l'ordre des methodes et les
+  arguments on/off de chacune -- une inversion passerait sinon
+  inaperçue jusqu'a l'ecran reste noir -- ainsi que la presence de la
+  fonction sur les trois plateformes.
+
+## 1.98.1
+
+- **La fenetre de configuration generale etait beaucoup trop etroite.**
+  Ses largeurs etaient des PLAFONDS en pixels -- 620, 1080 ou 1600 px
+  selon le nombre de colonnes -- si bien que sur un grand ecran elle
+  restait plantee au milieu du vide, alors que ses sections en colonnes
+  demandent de la place.
+
+- **Un plancher relatif est ajoute** : au moins 75 % de la largeur de
+  l'ecran (78 % a deux colonnes, 82 % a trois), tout en gardant le
+  plafond a 96vw pour ne jamais toucher les bords.
+
+- **Le mode tactile passait par-dessus.** La regle `body.touch
+  .modal-card` fixait 1000 px quelle que soit la disposition et annulait
+  le calcul par colonnes : sur le tableau mural -- la ou la gene se voit
+  le plus -- la fenetre etait toujours de largeur fixe. Les nouvelles
+  regles sont placees apres, et le tactile suit desormais le meme
+  plancher.
+
+- **Portee volontairement limitee a la fenetre de configuration
+  generale** : les autres fenetres batie sur le meme gabarit (lecture de
+  mail, article RSS, reglages d'une tuile) n'ont pas le meme contenu et
+  n'ont rien a gagner a occuper tout l'ecran.
+
+- **Tests** : `dom-smoke.js` verifie la presence du plancher relatif, du
+  plafond, et l'ordre des regles -- sans quoi le correctif serait annule
+  en mode tactile sans que rien ne le signale.
+
+## 1.98.0
+
+- **Defilement du contenu des tuiles au doigt.** Deux genes distinctes,
+  traitees separement : les barres de defilement font quelques pixels --
+  dessinees pour la pointe d'une souris, pas pour un doigt -- et poser
+  le doigt sur le contenu pour le faire glisser SELECTIONNE DU TEXTE au
+  lieu de faire defiler, ce qui n'a aucun usage sur un ecran mural.
+
+- **Nouveau reglage, quatre choix** : les deux (defaut), barres larges
+  seulement, glisser pour defiler seulement, ou ni l'un ni l'autre. Il
+  ne s'applique qu'en mode tactile ; sur un poste a la souris, rien ne
+  change.
+
+- **Barres larges** : 18 px de zone tactile partout ou du contenu defile
+  -- tuiles, tiroirs, fenetres de reglages, aide. Le curseur parait plus
+  fin que sa zone de prise grace a une bordure transparente.
+
+- **Glisser pour defiler** : le geste s'applique au premier conteneur
+  qui deborde REELLEMENT sous le doigt -- un conteneur qui declare
+  `overflow: auto` sans depasser sa hauteur ne defile pas, et s'en
+  saisir avalerait le geste sans rien faire bouger. Champs, boutons,
+  liens et poignees de tuiles gardent la priorite. La selection de texte
+  est desactivee hors des champs de saisie, ou elle reste evidemment
+  necessaire.
+
+- **Tests** : `dom-smoke.js` exerce un vrai glissement de pointeur sur
+  un conteneur qui deborde et verifie le `scrollTop` obtenu dans les
+  deux sens -- ainsi que l'absence d'effet quand l'option est
+  desactivee.
+
+## 1.97.1
+
+- **Mise a jour integree sur Raspberry Pi : « vous avez la derniere
+  version » alors que plusieurs versions etaient sorties.** Le defaut
+  n'etait pas dans le code de mise a jour, mais dans la configuration de
+  publication : `electron-builder` cree la release GitHub en
+  **brouillon** par defaut, a charge pour le mainteneur d'aller la
+  publier a la main. Or l'API GitHub ne montre JAMAIS les brouillons a
+  un client non authentifie -- ni `GET /releases/latest`, ni la liste
+  `GET /releases`. Le Pi ne voyait donc rien, et repondait sans mentir
+  que la derniere version publiee etait la 1.94.3. Changer de canal n'y
+  pouvait rien : les deux ignorent les brouillons.
+
+- **`releaseType: release` est desormais fixe explicitement** dans
+  `electron-builder.yml` : `npm run publish` publie la release au lieu
+  de la laisser en attente. Un test verrouille le reglage, pour qu'un
+  retour au defaut ne repasse pas inapercu.
+
+- **Le message « a jour » nomme maintenant la version vue chez
+  GitHub** (« la derniere version publiee est v1.94.3 »). Deux etats
+  etaient jusqu'ici indiscernables : PiBoard reellement a jour, et
+  GitHub qui ne montre pas les versions plus recentes. Voir un numero
+  plus bas que celui attendu designe le probleme du premier coup d'oeil,
+  au lieu de laisser croire a une panne du Pi.
+
+- **A faire une fois, cote GitHub** : les releases deja creees en
+  brouillon (1.95.0 a 1.97.0) doivent etre publiees a la main dans
+  l'interface GitHub -- ou simplement ignorees, la 1.97.1 les
+  remplacant toutes.
+
 ## 1.97.0
 
 - **Tuile Classement : le Top 14 revient, avec la LNR pour source.**

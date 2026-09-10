@@ -186,3 +186,26 @@ publish:
   provider: github
   owner: jihemezes
   repo: piboard
+  # PUBLICATION IMMEDIATE, ET NON EN BROUILLON.
+  # Par defaut, electron-builder cree la release GitHub en BROUILLON
+  # (releaseType: draft), a charge pour le mainteneur d'aller la publier
+  # a la main dans l'interface GitHub. Or l'API GitHub ne montre jamais
+  # les brouillons a un client non authentifie : ni GET /releases/latest,
+  # ni la liste GET /releases. Le Raspberry Pi, qui interroge cette API
+  # pour ses mises a jour, ne voyait donc RIEN de ce qui avait ete
+  # publie -- et repondait, sans mentir, que la derniere version
+  # disponible etait la derniere effectivement publiee. Changer de canal
+  # (stable ou toutes versions) n'y changeait rien : les deux canaux
+  # ignorent les brouillons.
+  #
+  # PUBLISH IMMEDIATELY, NOT AS A DRAFT.
+  # By default electron-builder creates the GitHub release as a DRAFT
+  # (releaseType: draft), leaving the maintainer to publish it by hand in
+  # GitHub's interface. But GitHub's API never shows drafts to an
+  # unauthenticated client: neither GET /releases/latest nor the list
+  # GET /releases. The Raspberry Pi, which queries that API for its
+  # updates, therefore saw NOTHING of what had been published -- and
+  # answered, truthfully, that the latest available version was the last
+  # actually published one. Switching channels (stable or all versions)
+  # made no difference: both ignore drafts.
+  releaseType: release
