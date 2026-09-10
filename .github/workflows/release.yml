@@ -1,0 +1,148 @@
+# ============================================================
+# PiBoard - .github/workflows/release.yml
+# Construction et publication des paquets Linux et macOS de
+# l'application de bureau, a chaque tag `v*` pousse sur GitHub.
+#
+# POURQUOI ICI ET PAS SUR LE PC : electron-builder ne sait produire ni
+# .deb / AppImage depuis Windows, ni DMG hors de macOS. GitHub Actions
+# prete des machines Linux et macOS, gratuitement pour un depot public.
+# L'installeur Windows, lui, continue d'etre construit et publie
+# depuis le PC de developpement par `npm run publish` -- ce workflow ne
+# le touche pas.
+#
+# COMMENT CA S'ARTICULE avec la publication Windows : les deux
+# ecrivent dans la MEME release GitHub, celle du tag. Celui qui arrive
+# en premier la cree, le suivant y ajoute ses fichiers. Aucune
+# collision possible : chaque plateforme a ses propres noms de
+# fichiers ET son propre fichier de version pour electron-updater
+# (latest.yml pour Windows, latest-linux.yml / latest-linux-arm64.yml
+# pour Linux, latest-mac.yml pour macOS).
+#
+# ORDRE CONSEILLE (celui du bloc de commandes de livraison) :
+#   git push origin vX.Y.Z   -> demarre ce workflow (Linux + macOS)
+#   npm run publish          -> publie Windows dans la meme release
+#
+# Build and publication of the desktop application's Linux and macOS
+# packages, on every `v*` tag pushed to GitHub.
+#
+# WHY HERE AND NOT ON THE PC: electron-builder can produce neither
+# .deb / AppImage from Windows, nor DMG outside macOS. GitHub Actions
+# lends Linux and macOS machines, free of charge for a public
+# repository. The Windows installer keeps being built and published
+# from the development PC by `npm run publish` -- this workflow leaves
+# it alone.
+#
+# HOW IT FITS with the Windows publication: both write into the SAME
+# GitHub release, the tag's one. Whichever comes first creates it, the
+# next one adds its files. No collision possible: each platform has its
+# own file names AND its own version file for electron-updater
+# (latest.yml for Windows, latest-linux.yml / latest-linux-arm64.yml
+# for Linux, latest-mac.yml for macOS).
+#
+# RECOMMENDED ORDER (the delivery command block's):
+#   git push origin vX.Y.Z   -> starts this workflow (Linux + macOS)
+#   npm run publish          -> publishes Windows into the same release
+# ============================================================
+name: Desktop packages (Linux + macOS)
+
+on:
+  push:
+    tags:
+      - "v*"
+  # Lancement manuel depuis l'onglet Actions, sans publier : pour
+  # verifier qu'une modification de la configuration construit encore,
+  # avant de tagger. Les fichiers produits sont alors deposes en
+  # "artifacts" du workflow, telechargeables 7 jours.
+  # Manual run from the Actions tab, without publishing: to check that a
+  # configuration change still builds, before tagging. The produced
+  # files are then stored as workflow "artifacts", downloadable for
+  # 7 days.
+  workflow_dispatch:
+
+# Le jeton automatique GITHUB_TOKEN doit pouvoir ecrire dans les
+# releases : c'est lui qu'electron-builder utilise (variable GH_TOKEN),
+# aucun jeton personnel a stocker.
+# The automatic GITHUB_TOKEN must be allowed to write releases: it is
+# what electron-builder uses (GH_TOKEN variable), no personal token to
+# store.
+permissions:
+  contents: write
+
+jobs:
+  linux:
+    name: Linux (AppImage + deb, x64 + arm64)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # Les deux architectures sont construites sur cette seule machine
+      # x64 : electron-builder telecharge le binaire Electron arm64
+      # prebuilt et l'empaquete tel quel, sans emulation -- aucun code
+      # natif n'est compile (PiBoard n'a pas de module natif).
+      # Both architectures are built on this single x64 machine:
+      # electron-builder downloads the prebuilt arm64 Electron binary
+      # and packages it as is, no emulation -- no native code is
+      # compiled (PiBoard has no native module).
+      - name: Build (and publish on tag)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            npm run publish:linux
+          else
+            npm run dist:linux
+          fi
+
+      - name: Keep the packages as artifacts (manual run only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: piboard-linux
+          path: |
+            dist/*.AppImage
+            dist/*.deb
+            dist/latest-linux*.yml
+          retention-days: 7
+
+  mac:
+    name: macOS (DMG + zip, Intel + Apple Silicon)
+    runs-on: macos-latest
+    env:
+      # Pas de certificat Apple : on le dit a electron-builder plutot que
+      # de le laisser chercher (et parfois echouer) sur la machine.
+      # No Apple certificate: tell electron-builder rather than letting
+      # it search (and sometimes fail) on the machine.
+      CSC_IDENTITY_AUTO_DISCOVERY: "false"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Build (and publish on tag)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "push" ]; then
+            npm run publish:mac
+          else
+            npm run dist:mac
+          fi
+
+      - name: Keep the packages as artifacts (manual run only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: piboard-mac
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/latest-mac.yml
+          retention-days: 7

@@ -1,5 +1,61 @@
 # Changelog
 
+## 1.100.0
+
+- **Application de bureau pour Linux et macOS**, en plus de Windows. Le
+  meme code, trois empaquetages (`electron-builder.yml`) : `.deb` et
+  AppImage sous Linux, en x64 (PC Debian, Ubuntu, Zorin OS, Fedora...)
+  ET en arm64 (Raspberry Pi 3/4/5 sous Pi OS 64 bits) ; `.dmg` sous
+  macOS 12 Monterey et suivants, Intel et Apple Silicon. Guide complet
+  dans `docs/LINUX-MACOS.md` : quel format choisir, pieges connus
+  (libfuse2, AppArmor d'Ubuntu 24.04), differences avec Windows.
+
+- **Construction par GitHub Actions** (`.github/workflows/release.yml`) :
+  electron-builder ne sait produire ni `.deb` / AppImage depuis Windows,
+  ni `.dmg` hors de macOS. Les paquets Linux et macOS sont donc
+  construits par GitHub a chaque tag `v*` pousse, et deposes dans la
+  MEME release que l'installeur Windows, toujours publie depuis le PC
+  par `npm run publish`. La sequence de livraison ne change pas. Le
+  workflow peut aussi etre lance a la main sans publier (artifacts).
+
+- **Mise a jour automatique sous Linux** par electron-updater, comme
+  sous Windows : l'AppImage est remplacee en place, le `.deb`
+  reinstalle via `pkexec` (mot de passe administrateur). Chaque
+  architecture lit son propre fichier de version (`latest-linux.yml`,
+  `latest-linux-arm64.yml`). Verifie : l'application Linux empaquetee
+  interroge bien la release GitHub au demarrage.
+
+- **macOS : pas de mise a jour automatique sans signature Apple.**
+  electron-updater refuse par conception de mettre a jour une
+  application non signee, et PiBoard ne l'est pas (compte developpeur
+  payant). « Rechercher une mise a jour » y affiche desormais un message
+  qui l'explique et renvoie vers la page des releases. Gatekeeper
+  bloque aussi le premier lancement ; la marche a suivre par version
+  de macOS est dans la documentation. Retirer `identity: null` de
+  `electron-builder.yml` le jour ou un certificat existe suffira.
+
+- **Demarrage automatique sous Linux** : `app.setLoginItemSettings`
+  n'agit que sous Windows et macOS (sous Linux la fonction existe mais
+  ne fait rien -- constate sur le paquet, case restant decochee sans
+  erreur). La case des reglages ecrit/supprime maintenant un fichier
+  `~/.config/autostart/piboard.desktop`, convention Freedesktop comprise
+  par labwc, GNOME, KDE, XFCE. La commande enregistree est le chemin de
+  l'AppImage si c'en est une (`process.execPath` pointerait dans son
+  montage temporaire), sinon `/opt/PiBoard/piboard` du `.deb`.
+
+- **Details de plateforme dans la coquille Electron** : icone PNG pour
+  la fenetre sous Linux (le `.ico` ne convient qu'a Windows), `Cmd+Q`
+  pour quitter sous macOS (`Alt+F4` n'y existe pas), `homepage` et
+  `desktopName` ajoutes a `package.json` (le premier est exige par le
+  constructeur `.deb`, le second associe la fenetre a son lanceur dans
+  la barre des taches).
+
+- **Non verifie** faute de machine : le paquet macOS lui-meme et
+  l'execution reelle sur Raspberry Pi (le paquet arm64 est produit, pas
+  lance). Verifie sur Linux x64 : les quatre paquets, le contenu du
+  `.deb`, le lancement de l'application deballee et de l'AppImage, la
+  case de demarrage automatique.
+
 ## 1.99.0
 
 - **Economiseur d'ecran : nouveau mode de plage « Eteindre l'ecran »

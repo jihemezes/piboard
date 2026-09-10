@@ -1,6 +1,7 @@
 /* ============================================================
    PiBoard - electron/main.js
-   Processus principal de l'application de bureau Windows.
+   Processus principal de l'application de bureau (Windows, Linux,
+   macOS -- un seul code, trois empaquetages, voir electron-builder.yml).
 
    ARCHITECTURE : Electron n'est ici qu'une COQUILLE. Le tableau de bord
    reste exactement la meme application Express + navigateur que sur le
@@ -216,7 +217,15 @@ function createWindow() {
     minHeight: 600,
     title: "PiBoard",
     backgroundColor: "#0B0E14", // evite le flash blanc au demarrage / avoids the white flash on startup
-    icon: path.join(__dirname, "..", "build", "icon.ico"),
+    // Windows lit le .ico ; Linux a besoin du PNG pour l'icone de la
+    // fenetre et de la barre des taches (macOS n'utilise pas ce champ :
+    // l'icone vient du paquet .app). L'identifiant vient de la couche
+    // plateforme, seule autorisee a consulter process.platform.
+    // Windows reads the .ico; Linux needs the PNG for the window and
+    // taskbar icon (macOS ignores this field: the icon comes from the
+    // .app bundle). The id comes from the platform layer, the only one
+    // allowed to consult process.platform.
+    icon: path.join(__dirname, "..", "build", platform.id === "win32" ? "icon.ico" : "icon.png"),
     show: false,
     autoHideMenuBar: true,
     webPreferences: {
@@ -329,7 +338,12 @@ function buildMenu() {
           click: () => checkForUpdatesManually(mainWindow)
         },
         { type: "separator" },
-        { label: "Quitter / Quit", accelerator: "Alt+F4", role: "quit" }
+        // Alt+F4 est le raccourci de fermeture de Windows et de la plupart
+        // des bureaux Linux ; sur macOS c'est Cmd+Q, et Alt+F4 n'y existe
+        // pas.
+        // Alt+F4 is the close shortcut on Windows and most Linux
+        // desktops; on macOS it is Cmd+Q, and Alt+F4 does not exist there.
+        { label: "Quitter / Quit", accelerator: platform.id === "darwin" ? "Cmd+Q" : "Alt+F4", role: "quit" }
       ]
     }
   ];
@@ -397,8 +411,12 @@ function registerController() {
     minimize: () => {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();
     },
-    getAutoStart: () => app.getLoginItemSettings().openAtLogin,
+    getAutoStart: () => {
+      if (linuxAutostart) return linuxAutostart.get();
+      return app.getLoginItemSettings().openAtLogin;
+    },
     setAutoStart: (enabled) => {
+      if (linuxAutostart) return linuxAutostart.set(!!enabled);
       app.setLoginItemSettings({
         openAtLogin: !!enabled,
         // Demarrage discret : la fenetre s'ouvre normalement, mais sans
@@ -411,6 +429,58 @@ function registerController() {
     }
   });
 }
+
+/* ---------- Lancement au demarrage sous Linux / launch at login on Linux ----------
+   app.setLoginItemSettings n'est implementee que sous Windows et
+   macOS : sous Linux, Electron expose bien la fonction mais elle ne
+   fait RIEN (verifie sur le paquet Linux : la case restait decochee
+   sans erreur). La convention Freedesktop, comprise par
+   tous les bureaux vises (Pi OS/labwc, GNOME de Zorin et Ubuntu, KDE,
+   XFCE...), est un fichier .desktop dans ~/.config/autostart/. La
+   commande lancee est celle qui a demarre CETTE instance : le chemin de
+   l'AppImage si c'en est une (variable APPIMAGE posee par le lanceur
+   AppImage -- process.execPath pointerait dans son point de montage
+   temporaire, invalide au prochain demarrage), sinon l'executable
+   installe par le .deb.
+   app.setLoginItemSettings is only implemented on Windows and macOS:
+   on Linux, Electron does expose the function but it does NOTHING
+   (verified on the Linux package: the checkbox stayed unchecked, no
+   error). The Freedesktop convention, understood
+   by every targeted desktop (Pi OS/labwc, Zorin's and Ubuntu's GNOME,
+   KDE, XFCE...), is a .desktop file in ~/.config/autostart/. The
+   launched command is the one that started THIS instance: the AppImage
+   path if it is one (APPIMAGE variable set by the AppImage launcher --
+   process.execPath would point inside its temporary mount point,
+   invalid on the next boot), otherwise the executable installed by the
+   .deb. */
+const linuxAutostart = platform.id !== "linux" ? null : (() => {
+  const dir = path.join(app.getPath("home"), ".config", "autostart");
+  const file = path.join(dir, "piboard.desktop");
+  const exec = process.env.APPIMAGE || process.execPath;
+  return {
+    get: () => fs.existsSync(file),
+    set: (enabled) => {
+      if (!enabled) {
+        try { fs.unlinkSync(file); } catch (e) { /* deja absent / already absent */ }
+        return;
+      }
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(file, [
+        "[Desktop Entry]",
+        "Type=Application",
+        "Name=PiBoard",
+        "Comment=Tile-based kiosk dashboard / Tableau de bord kiosque a tuiles",
+        // Guillemets : un chemin d'AppImage peut contenir des espaces.
+        // Quotes: an AppImage path may contain spaces.
+        `Exec="${exec.replace(/"/g, '\\"')}"`,
+        "Icon=piboard",
+        "Terminal=false",
+        "X-GNOME-Autostart-enabled=true",
+        ""
+      ].join("\n"));
+    }
+  };
+})();
 
 /* ---------- Demarrage / startup ---------- */
 app.on("second-instance", () => {
@@ -455,10 +525,14 @@ app.whenReady().then(async () => {
   }
 });
 
-/* Sous Windows, fermer la derniere fenetre quitte l'application : il n'y
-   a pas de convention d'application sans fenetre comme sur macOS.
-   On Windows, closing the last window quits the application: there is no
-   window-less application convention as on macOS. */
+/* Fermer la derniere fenetre quitte l'application, sur les trois
+   systemes -- y compris macOS, ou la convention d'une application qui
+   survit sans fenetre n'aurait aucun sens ici : sans fenetre, le serveur
+   embarque tournerait pour personne (il n'ecoute que sur 127.0.0.1).
+   Closing the last window quits the application, on all three systems
+   -- macOS included, where the convention of an application surviving
+   without a window would make no sense here: with no window, the
+   embedded server would run for nobody (it only listens on 127.0.0.1). */
 app.on("window-all-closed", () => {
   app.quit();
 });

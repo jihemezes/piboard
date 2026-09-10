@@ -10,9 +10,23 @@
    PUBLIC : un depot prive imposerait d'embarquer un jeton d'acces dans
    l'application distribuee.
 
-   Ce mecanisme remplace entierement, sous Windows, le systeme
-   d'archives ZIP deposees dans ~/updates/. Ce dernier reste le canal de
-   mise a jour du Raspberry Pi, ou Electron n'intervient pas.
+   Ce mecanisme remplace entierement, dans l'application de bureau, le
+   systeme d'archives ZIP deposees dans ~/updates/. Ce dernier reste le
+   canal de mise a jour du Raspberry Pi en mode kiosque (serveur systemd
+   + Chromium), ou Electron n'intervient pas.
+
+   PAR PLATEFORME :
+     - Windows : installeur NSIS, telecharge puis lance a la fermeture.
+     - Linux : AppImage remplacee en place (aucun droit particulier) ;
+       .deb reinstalle via `pkexec dpkg -i` (invite de mot de passe
+       administrateur). Chaque architecture lit son propre fichier de
+       version (latest-linux.yml pour x64, latest-linux-arm64.yml).
+     - macOS : electron-updater EXIGE une application signee par Apple
+       (Developer ID). PiBoard n'etant pas signe (voir
+       electron-builder.yml), la verification echoue la-bas avec une
+       erreur de signature : la mise a jour reste manuelle (retelecharger
+       le DMG) tant qu'aucun certificat n'est en place. L'erreur n'est
+       montree qu'a une verification manuelle, jamais au demarrage.
 
    HOW IT WORKS: for each version, electron-builder publishes the
    installer files AND a "latest.yml" file in the matching GitHub
@@ -25,14 +39,28 @@
    too, through `allowPrerelease` (see applyChannel below): the same
    choice governs the Raspberry Pi and the desktop application.
 
-   On Windows this mechanism entirely replaces the ZIP-archive system
-   dropped into ~/updates/. That system remains the Raspberry Pi's
-   update channel, where Electron plays no part.
+   In the desktop application this mechanism entirely replaces the
+   ZIP-archive system dropped into ~/updates/. That system remains the
+   update channel of the Raspberry Pi in kiosk mode (systemd server +
+   Chromium), where Electron plays no part.
+
+   PER PLATFORM:
+     - Windows: NSIS installer, downloaded then run on close.
+     - Linux: AppImage replaced in place (no special rights); .deb
+       reinstalled via `pkexec dpkg -i` (administrator password prompt).
+       Each architecture reads its own version file (latest-linux.yml
+       for x64, latest-linux-arm64.yml).
+     - macOS: electron-updater REQUIRES an Apple-signed application
+       (Developer ID). PiBoard being unsigned (see electron-builder.yml),
+       the check fails there with a signature error: updating stays
+       manual (re-download the DMG) until a certificate is in place. The
+       error is only shown on a manual check, never at startup.
    ============================================================ */
 "use strict";
 
 const { app, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
+const platform = require("../server/platform");
 
 /* Le telechargement est explicite plutot qu'automatique : consommer la
    bande passante de l'utilisateur sans le prevenir serait discourtois
@@ -161,11 +189,21 @@ function wireEvents() {
     if (!manualCheck) return;
     manualCheck = false;
     const win = parentWindow();
+    // Sous macOS, l'echec attendu (application non signee, voir
+    // l'en-tete) est explique plutot que laisse brut.
+    // On macOS the expected failure (unsigned application, see the
+    // header) is explained rather than left raw.
+    const macHint = platform.id === "darwin"
+      ? "\n\nSous macOS, la mise a jour automatique exige une application signee par Apple ; " +
+        "PiBoard ne l'est pas encore. Telechargez la nouvelle version depuis github.com/jihemezes/piboard/releases.\n" +
+        "On macOS, automatic updating requires an Apple-signed application; PiBoard is not signed yet. " +
+        "Download the new version from github.com/jihemezes/piboard/releases."
+      : "";
     const options = {
       type: "warning",
       title: "PiBoard",
       message: "Verification impossible / Check failed",
-      detail: String((err && err.message) || err)
+      detail: String((err && err.message) || err) + macHint
     };
     if (win) dialog.showMessageBox(win, options);
     else dialog.showMessageBox(options);

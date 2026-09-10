@@ -1,9 +1,35 @@
 # ============================================================
 # PiBoard - electron-builder.yml
-# Configuration de l'empaquetage Windows (installeur NSIS) et de la
-# publication des mises a jour sur GitHub Releases.
-# Windows packaging configuration (NSIS installer) and publication of
-# updates to GitHub Releases.
+# Configuration de l'empaquetage de l'application de bureau -- Windows
+# (installeur NSIS), Linux (AppImage + .deb, x64 et arm64) et macOS
+# (DMG + ZIP, Intel et Apple Silicon) -- et de la publication des mises
+# a jour sur GitHub Releases.
+#
+# QUI CONSTRUIT QUOI : electron-builder ne sait pas produire un .deb ou
+# une AppImage depuis Windows, ni un DMG hors de macOS. L'installeur
+# Windows continue donc d'etre construit et publie depuis le PC de
+# developpement (`npm run publish`), tandis que les paquets Linux et
+# macOS sont construits par GitHub Actions (.github/workflows/
+# release.yml) a chaque tag `v*` pousse. Les trois deposent leurs
+# fichiers dans la MEME release GitHub, celle du tag -- avec chacun
+# leur fichier de version (latest.yml, latest-linux.yml,
+# latest-linux-arm64.yml, latest-mac.yml) que lit electron-updater sur
+# la plateforme correspondante.
+#
+# Desktop application packaging configuration -- Windows (NSIS
+# installer), Linux (AppImage + .deb, x64 and arm64) and macOS (DMG +
+# ZIP, Intel and Apple Silicon) -- and publication of updates to
+# GitHub Releases.
+#
+# WHO BUILDS WHAT: electron-builder cannot produce a .deb or an AppImage
+# from Windows, nor a DMG outside macOS. The Windows installer therefore
+# keeps being built and published from the development PC (`npm run
+# publish`), while the Linux and macOS packages are built by GitHub
+# Actions (.github/workflows/release.yml) on every pushed `v*` tag. All
+# three drop their files into the SAME GitHub release, the tag's one --
+# each with its own version file (latest.yml, latest-linux.yml,
+# latest-linux-arm64.yml, latest-mac.yml) read by electron-updater on
+# the matching platform.
 # ============================================================
 
 # Identifiant applicatif : chaine unique identifiant PiBoard aupres de
@@ -175,6 +201,199 @@ nsis:
   # behavior on failure). Declining or a failed download never prevents
   # PiBoard's own installation from completing.
   include: build/installer.nsh
+
+# ---------------------------------------------------------------
+# Linux : Raspberry Pi OS, Debian, Ubuntu, Zorin OS, Fedora...
+# ---------------------------------------------------------------
+# Deux formats, complementaires :
+#   - .deb : le format natif de TOUTE la famille visee (Pi OS, Debian,
+#     Ubuntu, Zorin sont tous derives de Debian). Installation par
+#     `sudo apt install ./PiBoard-x.y.z-linux-<arch>.deb`, entree dans
+#     le menu des applications, dependances resolues par apt, et
+#     surtout le bac a sable de Chromium (chrome-sandbox) installe
+#     avec les bons droits -- ce que l'AppImage ne peut pas garantir.
+#     electron-updater sait mettre a jour un .deb (il relance dpkg via
+#     pkexec, d'ou une demande de mot de passe administrateur).
+#   - AppImage : un seul fichier executable, sans installation, qui
+#     marche sur n'importe quelle distribution (Fedora, Arch, Mint...).
+#     C'est le "paquet universel". electron-updater le remplace en
+#     place, sans droits particuliers. Contraintes connues : il faut
+#     libfuse2 (`sudo apt install libfuse2`, ou `libfuse2t64` sur
+#     Ubuntu 24.04 / Debian Trixie), et Ubuntu 24.04+ (donc Zorin 18)
+#     restreint par AppArmor les espaces de noms utilisateur dont le
+#     bac a sable de Chromium a besoin -- lancer alors avec
+#     `--no-sandbox`, ou preferer le .deb.
+# Deux architectures : x64 (PC) et arm64 (Raspberry Pi 3/4/5 sous OS
+# 64 bits). Pas de 32 bits (armv7l) : Electron 43 est la derniere serie
+# a en fournir, et une image Pi OS 64 bits est de toute facon la norme
+# depuis Bookworm.
+#
+# Linux: Raspberry Pi OS, Debian, Ubuntu, Zorin OS, Fedora...
+# Two complementary formats:
+#   - .deb: the native format of the WHOLE targeted family (Pi OS,
+#     Debian, Ubuntu, Zorin are all Debian-derived). Installed with
+#     `sudo apt install ./PiBoard-x.y.z-linux-<arch>.deb`, gets an
+#     applications-menu entry, dependencies resolved by apt, and above
+#     all Chromium's sandbox (chrome-sandbox) installed with the right
+#     permissions -- which the AppImage cannot guarantee.
+#     electron-updater knows how to update a .deb (it re-runs dpkg via
+#     pkexec, hence an administrator password prompt).
+#   - AppImage: a single executable file, no installation, working on
+#     any distribution (Fedora, Arch, Mint...). This is the "universal
+#     package". electron-updater replaces it in place, no special
+#     rights needed. Known constraints: libfuse2 is required
+#     (`sudo apt install libfuse2`, or `libfuse2t64` on Ubuntu 24.04 /
+#     Debian Trixie), and Ubuntu 24.04+ (hence Zorin 18) restricts via
+#     AppArmor the user namespaces Chromium's sandbox needs -- then
+#     launch with `--no-sandbox`, or prefer the .deb.
+# Two architectures: x64 (PC) and arm64 (Raspberry Pi 3/4/5 on a
+# 64-bit OS). No 32-bit (armv7l): Electron 43 is the last series to
+# ship it, and a 64-bit Pi OS image has been the norm since Bookworm
+# anyway.
+linux:
+  target:
+    - target: AppImage
+      arch: [x64, arm64]
+    - target: deb
+      arch: [x64, arm64]
+  # electron-builder genere lui-meme les tailles d'icone Linux a partir
+  # de ce PNG 512x512 (le .ico Windows ne convient pas ici).
+  # electron-builder generates the Linux icon sizes itself from this
+  # 512x512 PNG (the Windows .ico is unsuitable here).
+  icon: build/icon.png
+  category: Utility
+  synopsis: Tile-based kiosk dashboard / Tableau de bord kiosque a tuiles
+  description: >-
+    PiBoard - self-hosted tile dashboard (weather, traffic, TV guide,
+    sports, photos, home automation...) for a wall screen or a desktop.
+    Tableau de bord a tuiles auto-heberge pour un ecran mural ou un
+    bureau.
+  maintainer: Jean-Michel Ezes <jihemezes@users.noreply.github.com>
+  vendor: Jean-Michel Ezes
+  executableName: piboard
+  # Fait correspondre le WM_CLASS des fenetres au fichier .desktop
+  # (desktopName dans package.json) : sans cela, GNOME/KDE n'associent
+  # pas la fenetre ouverte a l'icone du lanceur (icone generique dans la
+  # barre des taches, "PiBoard" en double).
+  # Matches the windows' WM_CLASS to the .desktop file (desktopName in
+  # package.json): without it GNOME/KDE do not link the open window to
+  # the launcher icon (generic icon in the taskbar, duplicate "PiBoard").
+  syncDesktopName: true
+  # Nom de fichier explicite : l'OS et l'architecture y figurent, pour
+  # que les quatre fichiers Linux d'une meme release se distinguent au
+  # premier coup d'oeil sur la page GitHub. electron-builder ecrit
+  # l'architecture avec le nom propre a chaque format : x86_64 pour
+  # l'AppImage, amd64 pour le .deb, arm64 pour les deux -- d'ou
+  # PiBoard-1.2.3-linux-x86_64.AppImage mais PiBoard-1.2.3-linux-amd64.deb.
+  # Explicit file name: OS and architecture are part of it, so the four
+  # Linux files of one release tell apart at a glance on the GitHub
+  # page. electron-builder spells the architecture the way each format
+  # does: x86_64 for the AppImage, amd64 for the .deb, arm64 for both --
+  # hence PiBoard-1.2.3-linux-x86_64.AppImage but
+  # PiBoard-1.2.3-linux-amd64.deb.
+  artifactName: "${productName}-${version}-linux-${arch}.${ext}"
+  desktop:
+    entry:
+      Name: PiBoard
+      Comment: Tile-based kiosk dashboard / Tableau de bord kiosque a tuiles
+      Categories: Utility;Network;
+      StartupWMClass: PiBoard
+
+deb:
+  # Depuis Debian Trixie / Ubuntu 24.04, plusieurs bibliotheques ont ete
+  # renommees (transition "t64" : libgtk-3-0t64, libasound2t64...). Les
+  # nouveaux paquets declarent "Provides: <ancien nom>", donc la liste
+  # par defaut d'electron-builder reste satisfaisable ; on la redeclare
+  # ici explicitement, avec les alternatives, pour ne pas dependre de
+  # ce comportement implicite.
+  # Since Debian Trixie / Ubuntu 24.04 several libraries were renamed
+  # ("t64" transition: libgtk-3-0t64, libasound2t64...). The new
+  # packages declare "Provides: <old name>", so electron-builder's
+  # default list stays satisfiable; it is restated here explicitly, with
+  # the alternatives, so as not to rely on that implicit behaviour.
+  depends:
+    - "libgtk-3-0 | libgtk-3-0t64"
+    - libnotify4
+    - libnss3
+    - libxss1
+    - libxtst6
+    - xdg-utils
+    - "libatspi2.0-0 | libatspi2.0-0t64"
+    - libuuid1
+    - libsecret-1-0
+    - "libasound2 | libasound2t64"
+  # Le .deb n'a pas de script de post-desinstallation qui efface
+  # ~/.config/PiBoard : meme politique que Windows, les donnees
+  # survivent a la desinstallation.
+  # The .deb has no post-uninstall script wiping ~/.config/PiBoard: same
+  # policy as Windows, data survives uninstallation.
+
+# ---------------------------------------------------------------
+# macOS : Monterey (12) et suivants, Intel et Apple Silicon
+# ---------------------------------------------------------------
+# La version minimale de macOS est dictee par Electron, donc par
+# Chromium : Electron 43 (celui de package.json) exige macOS 12 ; la
+# serie 44 exigera macOS 13. Remonter Electron dans package.json
+# abandonne donc mecaniquement une version de macOS -- a verifier
+# dans les "breaking changes" d'Electron avant chaque montee.
+# Deux formats :
+#   - DMG : l'installeur classique (glisser PiBoard dans Applications).
+#   - ZIP : OBLIGATOIRE pour electron-updater sur macOS, qui ne sait
+#     mettre a jour qu'a partir d'une archive zip (pas d'un DMG).
+# SIGNATURE : sans certificat "Developer ID" Apple (compte developpeur
+# payant), l'application n'est ni signee ni notarisee. Consequences
+# assumees, documentees dans docs/LINUX-MACOS.md : Gatekeeper refuse
+# l'ouverture au premier lancement (contournable par l'utilisateur), et
+# electron-updater REFUSE de mettre a jour une application non signee
+# sur macOS -- la mise a jour y reste donc manuelle (retelecharger le
+# DMG) tant qu'aucune signature n'est en place. `identity: null` rend
+# cette absence de signature explicite plutot que subie, et evite
+# qu'electron-builder ne cherche un certificat sur la machine de build.
+#
+# macOS: Monterey (12) and later, Intel and Apple Silicon
+# The minimum macOS version is dictated by Electron, hence by Chromium:
+# Electron 43 (package.json's) requires macOS 12; the 44 series will
+# require macOS 13. Bumping Electron in package.json therefore
+# mechanically drops a macOS version -- check Electron's "breaking
+# changes" before each upgrade.
+# Two formats:
+#   - DMG: the classic installer (drag PiBoard into Applications).
+#   - ZIP: REQUIRED by electron-updater on macOS, which can only update
+#     from a zip archive (not from a DMG).
+# SIGNING: without an Apple "Developer ID" certificate (paid developer
+# account), the application is neither signed nor notarized. Accepted
+# consequences, documented in docs/LINUX-MACOS.md: Gatekeeper refuses
+# the first launch (user-bypassable), and electron-updater REFUSES to
+# update an unsigned application on macOS -- updating there stays
+# manual (re-download the DMG) until signing is in place.
+# `identity: null` makes that absence of signature explicit rather than
+# incidental, and stops electron-builder from looking for a certificate
+# on the build machine.
+mac:
+  target:
+    - target: dmg
+      arch: [x64, arm64]
+    - target: zip
+      arch: [x64, arm64]
+  icon: build/icon.png
+  category: public.app-category.utilities
+  identity: null
+  # Pas de "hardened runtime" sans signature : l'option n'a de sens
+  # qu'avec la notarisation.
+  # No hardened runtime without signing: the option only makes sense
+  # together with notarization.
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  artifactName: "${productName}-${version}-mac-${arch}.${ext}"
+  extendInfo:
+    LSMinimumSystemVersion: "12.0"
+    # Le serveur embarque ecoute sur 127.0.0.1 : aucune permission
+    # reseau local n'est demandee par macOS, mais on declare les usages
+    # pour les widgets qui pourraient en avoir besoin un jour.
+    # The embedded server listens on 127.0.0.1: macOS asks for no
+    # local-network permission, but usages are declared for the
+    # widgets that may need them one day.
+    NSLocalNetworkUsageDescription: PiBoard scans the local network for the network-scan tile.
 
 # Publication des mises a jour. electron-builder depose ici l'installeur
 # ET le fichier latest.yml que lit electron-updater. Le depot doit etre

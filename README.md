@@ -108,16 +108,21 @@ than on the Pi (where `getent` consults Avahi), showing only their IP and
 the manufacturer deduced from their MAC. CPU temperature is unavailable
 on Windows and the *System* widget simply hides that row.
 
-### Windows desktop application
+### Desktop application (Windows, Linux, macOS)
 
-PiBoard also installs as a regular Windows application (NSIS installer,
-automatic updates through GitHub Releases). Electron is only a shell
-around the very same Express server and interface — any widget written
-for the Pi works there unmodified.
+PiBoard also installs as a regular desktop application, with automatic
+updates through GitHub Releases: NSIS installer on Windows, `.deb` and
+AppImage on Linux (x64 PCs and 64-bit Raspberry Pi), `.dmg` on macOS 12
+and later (Intel and Apple Silicon). Electron is only a shell around the
+very same Express server and interface — any widget written for the Pi
+works there unmodified.
 
-Build it with `npm install && npm run dist` **on Windows**. Full
-instructions, differences from the Pi and publishing steps:
-[`docs/WINDOWS.md`](docs/WINDOWS.md).
+The Windows installer is built with `npm install && npm run dist` **on
+Windows** (full instructions: [`docs/WINDOWS.md`](docs/WINDOWS.md)); the
+Linux and macOS packages are built by GitHub Actions on every pushed tag
+(which format to pick, differences, known limits — including the lack of
+automatic updates on macOS without an Apple signature:
+[`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)).
 
 ### Side drawer (for map-first or content-first screens)
 
@@ -331,17 +336,23 @@ leur IP et le fabricant déduit de leur adresse MAC. La température du
 processeur n'est pas disponible sous Windows et le widget *Système*
 masque simplement cette ligne.
 
-### Application de bureau Windows
+### Application de bureau (Windows, Linux, macOS)
 
-PiBoard s'installe aussi comme une application Windows ordinaire
-(installeur NSIS, mises à jour automatiques via GitHub Releases).
+PiBoard s'installe aussi comme une application de bureau ordinaire,
+avec mises à jour automatiques via GitHub Releases : installeur NSIS
+sous Windows, `.deb` et AppImage sous Linux (PC x64 et Raspberry Pi
+64 bits), `.dmg` sous macOS 12 et suivants (Intel et Apple Silicon).
 Electron n'est qu'une coquille autour du même serveur Express et de la
 même interface — tout widget écrit pour le Pi y fonctionne sans
 modification.
 
-Construction avec `npm install && npm run dist` **sous Windows**. Marche
-à suivre complète, différences avec le Pi et procédure de publication :
-[`docs/WINDOWS.md`](docs/WINDOWS.md).
+L'installeur Windows se construit avec `npm install && npm run dist`
+**sous Windows** (marche à suivre complète :
+[`docs/WINDOWS.md`](docs/WINDOWS.md)) ; les paquets Linux et macOS sont
+construits par GitHub Actions à chaque tag poussé (quel format choisir,
+différences, limites connues — dont l'absence de mise à jour automatique
+sous macOS sans signature Apple :
+[`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)).
 
 ### Tiroir latéral (pour les écrans dédiés à une carte ou un contenu principal)
 
