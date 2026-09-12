@@ -345,6 +345,35 @@ function buildMenu() {
         // desktops; on macOS it is Cmd+Q, and Alt+F4 does not exist there.
         { label: "Quitter / Quit", accelerator: platform.id === "darwin" ? "Cmd+Q" : "Alt+F4", role: "quit" }
       ]
+    },
+    /* Menu Edition, INDISPENSABLE sous macOS : Cmd+C / Cmd+V / Cmd+X /
+       Cmd+A n'y sont pas des raccourcis natifs des champs de saisie
+       (comme Ctrl+C/V le sont sous Windows et Linux), mais des
+       accelerateurs du menu de l'application. Sans ce menu, coller une
+       cle API dans un champ des reglages ne faisait strictement rien
+       sur Mac (signale sur le premier paquet macOS). Declare sur les
+       trois systemes : sous Windows et Linux le menu est masque
+       (autoHideMenuBar) et les raccourcis natifs marchent deja, il ne
+       change donc rien -- mais un seul gabarit vaut mieux que deux.
+       Edit menu, ESSENTIAL on macOS: Cmd+C / Cmd+V / Cmd+X / Cmd+A are
+       not native shortcuts of input fields there (the way Ctrl+C/V are
+       on Windows and Linux) but accelerators of the application menu.
+       Without this menu, pasting an API key into a settings field did
+       strictly nothing on a Mac (reported on the first macOS package).
+       Declared on all three systems: on Windows and Linux the menu is
+       hidden (autoHideMenuBar) and the native shortcuts already work,
+       so it changes nothing -- but one template beats two. */
+    {
+      label: "Edition / Edit",
+      submenu: [
+        { label: "Annuler / Undo", role: "undo" },
+        { label: "Retablir / Redo", role: "redo" },
+        { type: "separator" },
+        { label: "Couper / Cut", role: "cut" },
+        { label: "Copier / Copy", role: "copy" },
+        { label: "Coller / Paste", role: "paste" },
+        { label: "Tout selectionner / Select all", role: "selectAll" }
+      ]
     }
   ];
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
@@ -405,8 +434,43 @@ function registerController() {
        bar (hovering the top of the screen or the F9 key). */
     setImmersive: (enabled) => {
       if (!mainWindow || mainWindow.isDestroyed()) return false;
-      mainWindow.setFullScreen(!!enabled);
-      return mainWindow.isFullScreen();
+      const on = !!enabled;
+      /* Deux pieges macOS, sans effet sous Windows (signales sur le
+         premier paquet Mac : "l'affichage immersif ne fonctionne pas") :
+           1. setFullScreen() y est ASYNCHRONE -- une animation de
+              transition vers un nouvel espace de travail. Juste apres
+              l'appel, isFullScreen() repond encore false : renvoyer cet
+              etat "reel" disait a l'interface que le mode etait refuse,
+              et elle ne posait jamais la classe "immersive" (donc pas de
+              barre de fenetre interne, pas de retour possible sans F11).
+              On renvoie donc l'etat DEMANDE, qui sera vrai dans la
+              seconde ; sous Windows la transition est immediate et les
+              deux etats coincident.
+           2. La demande arrive souvent AVANT l'affichage de la fenetre
+              (show: false jusqu'a ready-to-show, et le tableau de bord
+              se rend d'abord) : macOS ignore le plein ecran d'une
+              fenetre pas encore visible. On la differe alors au
+              premier "show".
+         Two macOS traps, harmless on Windows (reported on the first Mac
+         package: "immersive display does not work"):
+           1. setFullScreen() is ASYNCHRONOUS there -- a transition
+              animation to a new Space. Right after the call,
+              isFullScreen() still answers false: returning that "real"
+              state told the interface the mode was refused, and it
+              never set the "immersive" class (hence no in-app window
+              bar, no way back without F11). So we return the REQUESTED
+              state, true within the second; on Windows the transition
+              is immediate and both states coincide.
+           2. The request often arrives BEFORE the window is shown
+              (show: false until ready-to-show, and the dashboard
+              renders first): macOS ignores full screen on a window not
+              yet visible. It is then deferred to the first "show". */
+      const apply = () => {
+        if (mainWindow && !mainWindow.isDestroyed()) mainWindow.setFullScreen(on);
+      };
+      if (mainWindow.isVisible()) apply();
+      else mainWindow.once("show", apply);
+      return on;
     },
     minimize: () => {
       if (mainWindow && !mainWindow.isDestroyed()) mainWindow.minimize();

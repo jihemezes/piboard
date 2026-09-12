@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.100.1
+
+- **macOS : le collage dans les champs fonctionne** (cle API TomTom,
+  etc.). Sous macOS, Cmd+C / Cmd+V / Cmd+X / Cmd+A ne sont pas des
+  raccourcis natifs des champs de saisie mais des accelerateurs du menu
+  de l'application ; sans menu Edition, coller ne faisait rien. Un menu
+  Edition (annuler, retablir, couper, copier, coller, tout
+  selectionner) est ajoute au gabarit commun aux trois systemes -- sans
+  effet sous Windows et Linux, ou le menu est masque et les raccourcis
+  natifs marchent deja.
+
+- **macOS : l'affichage immersif du mode tableau de bord fonctionne.**
+  Deux causes, propres a macOS : `setFullScreen()` y est asynchrone
+  (animation vers un nouvel espace), donc l'etat lu juste apres
+  repondait « pas en plein ecran » et l'interface concluait a un refus
+  -- la classe `immersive` n'etait jamais posee ; et une demande
+  arrivant avant l'affichage de la fenetre (cas du demarrage) etait
+  ignoree par macOS. Le controleur renvoie desormais l'etat demande et
+  differe la mise en plein ecran au premier affichage de la fenetre.
+
 ## 1.100.0
 
 - **Application de bureau pour Linux et macOS**, en plus de Windows. Le
