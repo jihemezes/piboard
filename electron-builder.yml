@@ -427,4 +427,15 @@ publish:
   # answered, truthfully, that the latest available version was the last
   # actually published one. Switching channels (stable or all versions)
   # made no difference: both ignore drafts.
+  # Le type de release n'est PAS fige ici : scripts/publish.js le passe
+  # en ligne de commande (-c.publish.releaseType) a chaque publication,
+  # `prerelease` ou `release` selon le numero de version. La valeur
+  # ci-dessous n'est donc qu'un defaut de securite, pour une
+  # construction lancee directement par electron-builder sans passer par
+  # le script.
+  # The release type is NOT frozen here: scripts/publish.js passes it on
+  # the command line (-c.publish.releaseType) on every publication,
+  # `prerelease` or `release` depending on the version number. The value
+  # below is only a safety default, for a build launched straight
+  # through electron-builder without the script.
   releaseType: release

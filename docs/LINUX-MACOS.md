@@ -152,6 +152,42 @@ git push origin vx.y.z        # -> démarre le workflow Linux + macOS
 npm run publish               # -> ajoute Windows à la même release
 ```
 
+### Release « latest » ou « pre-release »
+
+Le statut de la release n'est choisi ni sur le PC ni dans le workflow,
+mais par le **numéro de version** de `package.json`, lu par
+`scripts/publish.js` des deux côtés :
+
+| Version dans `package.json` (et donc le tag) | Release GitHub |
+|---|---|
+| `1.101.0` → `v1.101.0` | **Latest** (version recommandée du dépôt) |
+| `1.101.0-beta.1` → `v1.101.0-beta.1` | **Pre-release** (ne devient pas la « latest ») |
+
+Le choix se fait donc au moment du push, sans aller sur GitHub : il
+suffit du suffixe dans le numéro de version. C'est le même suffixe
+sémantique que celui sur lequel s'appuie déjà le canal « Toutes les
+versions (aperçu) » des réglages, donc une pre-release n'est proposée
+qu'aux installations réglées sur ce canal.
+
+Pourquoi le numéro de version plutôt qu'un simple drapeau : **deux**
+machines publient dans la même release (le PC pour Windows, GitHub
+Actions pour Linux et macOS), et la première arrivée fixe le statut.
+Un drapeau connu du seul PC ferait dépendre le résultat de qui gagne
+la course ; le numéro de version, lui, est dans le dépôt et lu à
+l'identique des deux côtés.
+
+Dérogation ponctuelle, sans toucher au numéro :
+`PIBOARD_RELEASE=prerelease npm run publish` (ou `=latest`). À poser
+des deux côtés si la publication Linux/macOS doit suivre — d'où
+l'intérêt de s'en tenir au suffixe de version dans le cas normal.
+
+Les brouillons (`draft`) ne sont volontairement pas proposés : l'API
+GitHub ne les montre pas à un client non authentifié, et le Raspberry
+Pi ne verrait plus aucune mise à jour.
+
+`npm run publish` refuse par ailleurs de publier si le tag git posé sur
+HEAD ne correspond pas à la version de `package.json`.
+
 Le workflow prend 5 à 10 minutes ; l'onglet *Actions* du dépôt montre
 son avancement. On peut aussi le lancer **à la main** depuis cet onglet
 (*Run workflow*) : il construit alors sans publier et dépose les
@@ -324,6 +360,42 @@ git push
 git push origin vx.y.z        # -> starts the Linux + macOS workflow
 npm run publish               # -> adds Windows to the same release
 ```
+
+### "Latest" or "pre-release"
+
+The release's status is chosen neither on the PC nor in the workflow,
+but by `package.json`'s **version number**, read by
+`scripts/publish.js` on both sides:
+
+| Version in `package.json` (hence the tag) | GitHub release |
+|---|---|
+| `1.101.0` → `v1.101.0` | **Latest** (the repository's recommended version) |
+| `1.101.0-beta.1` → `v1.101.0-beta.1` | **Pre-release** (does not become the "latest") |
+
+The choice is therefore made at push time, without visiting GitHub: the
+suffix in the version number is all it takes. It is the same semver
+suffix the settings' "All versions (preview)" channel already relies
+on, so a pre-release is only offered to installations set to that
+channel.
+
+Why the version number rather than a plain flag: **two** machines
+publish into the same release (the PC for Windows, GitHub Actions for
+Linux and macOS), and whichever arrives first sets the status. A flag
+known only to the PC would make the result depend on who wins the race;
+the version number is in the repository and read identically on both
+sides.
+
+One-off override, without touching the number:
+`PIBOARD_RELEASE=prerelease npm run publish` (or `=latest`). To be set
+on both sides if the Linux/macOS publication must follow — hence the
+interest of sticking to the version suffix in the normal case.
+
+Drafts are deliberately not offered: GitHub's API hides them from
+unauthenticated clients, and the Raspberry Pi would stop seeing any
+update.
+
+`npm run publish` also refuses to publish if the git tag on HEAD does
+not match `package.json`'s version.
 
 The workflow takes 5 to 10 minutes; the repository's *Actions* tab
 shows its progress. It can also be run **by hand** from that tab

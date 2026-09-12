@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.100.2
+
+- **Choix « latest » ou « pre-release » au moment de la publication**,
+  sans passer par l'interface GitHub. Depuis la 1.100.0, toute release
+  poussee devenait aussitot la « latest » du depot : le type etait fige
+  dans `electron-builder.yml`. Il est desormais decide par le NUMERO DE
+  VERSION de `package.json`, via le nouveau `scripts/publish.js` :
+  un suffixe semver (`1.101.0-beta.1`, `-rc.2`, `-preview.3`...) publie
+  une PRE-RELEASE, un numero nu publie en LATEST. Le script annonce sa
+  decision avant de construire.
+
+  Le numero de version plutot qu'un drapeau local parce que DEUX
+  machines publient dans la meme release -- le PC pour Windows, GitHub
+  Actions pour Linux et macOS -- et que la premiere arrivee fixe le
+  statut : un drapeau connu du seul PC ferait dependre le resultat de
+  qui gagne la course, alors que le numero de version est dans le
+  depot et lu pareil des deux cotes. C'est aussi ce sur quoi s'appuie
+  deja le canal « Toutes les versions (apercu) » des reglages.
+
+  Derogation ponctuelle possible sans toucher au numero :
+  `PIBOARD_RELEASE=prerelease npm run publish` (ou `=latest`) -- a
+  poser des deux cotes si la publication Linux/macOS doit suivre.
+
+- **Garde-fou sur le tag** : `npm run publish` refuse desormais de
+  publier si le tag git pose sur HEAD ne correspond pas a la version de
+  `package.json`, une incoherence qui se rattrape mal une fois poussee.
+
+- Les brouillons (`draft`) restent volontairement hors du choix :
+  l'API GitHub ne les montre pas a un client non authentifie, et le
+  Raspberry Pi ne verrait plus aucune mise a jour.
+
 ## 1.100.1
 
 - **macOS : le collage dans les champs fonctionne** (cle API TomTom,

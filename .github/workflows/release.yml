@@ -22,6 +22,12 @@
 #   git push origin vX.Y.Z   -> demarre ce workflow (Linux + macOS)
 #   npm run publish          -> publie Windows dans la meme release
 #
+# LATEST OU PRE-RELEASE : le statut de la release n'est decide ni ici ni
+# sur le PC, mais par le NUMERO DE VERSION de package.json, lu par
+# scripts/publish.js des deux cotes (suffixe semver -beta.1, -rc.2...
+# = pre-release ; numero nu = latest). Les deux publications decident
+# donc forcement pareil, quel que soit l'ordre d'arrivee.
+#
 # Build and publication of the desktop application's Linux and macOS
 # packages, on every `v*` tag pushed to GitHub.
 #
@@ -42,6 +48,12 @@
 # RECOMMENDED ORDER (the delivery command block's):
 #   git push origin vX.Y.Z   -> starts this workflow (Linux + macOS)
 #   npm run publish          -> publishes Windows into the same release
+#
+# LATEST OR PRE-RELEASE: the release's status is decided neither here nor
+# on the PC, but by package.json's VERSION NUMBER, read by
+# scripts/publish.js on both sides (semver suffix -beta.1, -rc.2... =
+# pre-release; bare number = latest). Both publications therefore
+# necessarily decide alike, whatever the order of arrival.
 # ============================================================
 name: Desktop packages (Linux + macOS)
 
