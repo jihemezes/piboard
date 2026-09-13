@@ -187,6 +187,83 @@ function exitToDesktop() {
   return { ok: true };
 }
 
+/* ---------- Extinction de la machine / powering the machine off ----------
+   Troisieme sortie possible, a cote de \"Reinitialiser\" et \"Revenir au
+   bureau\" : eteindre pour de bon le Pi ou l'ordinateur. Utile la ou
+   PiBoard est justement la seule chose affichee -- un ecran mural n'a
+   ni menu de bureau ni bouton d'arret a portee.
+
+   La difficulte n'est pas la commande mais le DROIT de l'executer. Le
+   service systemd tourne sous un utilisateur sans privileges et avec
+   NoNewPrivileges=true (voir install/piboard.service), ce qui interdit
+   par construction tout passage par sudo : sudo est un binaire setuid,
+   et NoNewPrivileges lui retire justement ce pouvoir. Une regle
+   sudoers ne changerait donc RIEN ici -- c'est le piege de ce sujet.
+
+   Ce qui marche, en revanche, c'est systemctl poweroff : ce n'est pas
+   une elevation de privileges mais un simple message D-Bus adresse a
+   systemd-logind, qui decide ensuite selon polkit. Aucun setuid, donc
+   NoNewPrivileges ne gene pas. Reste a ce que polkit dise oui :
+     - Application de bureau Linux : l'utilisateur a une session
+       graphique active locale, et la regle polkit par defaut de toute
+       distribution autorise ce cas sans mot de passe. Ca marche sans
+       rien installer.
+     - Pi en kiosque (service systemd, pas de session) : polkit refuse
+       par defaut. install/install.sh depose donc une regle
+       /etc/polkit-1/rules.d/ qui autorise CETTE SEULE action a
+       l'utilisateur du service. Une installation faite avant la 1.104.0
+       n'a pas cette regle : l'extinction echoue alors proprement et
+       l'interface explique quoi faire.
+   Dernier recours, pkexec : il ouvre une fenetre de mot de passe sur un
+   bureau graphique. Inutile sur le kiosque (personne a qui demander) et
+   redondant avec le premier cas, mais il rattrape les configurations
+   intermediaires (session graphique sans la regle par defaut).
+
+   Third possible exit, next to \"Reset\" and \"Return to the desktop\":
+   actually powering the Pi or the computer off. Useful precisely where
+   PiBoard is the only thing on screen -- a wall display has neither a
+   desktop menu nor a power button within reach.
+
+   The difficulty is not the command but the RIGHT to run it. The
+   systemd service runs as an unprivileged user with
+   NoNewPrivileges=true (see install/piboard.service), which rules out
+   sudo by construction: sudo is a setuid binary, and NoNewPrivileges is
+   exactly what strips it of that power. A sudoers rule would therefore
+   change NOTHING here -- the trap of this subject.
+
+   What does work is systemctl poweroff: not a privilege escalation but
+   a plain D-Bus message to systemd-logind, which then decides through
+   polkit. No setuid, so NoNewPrivileges does not get in the way. Polkit
+   still has to say yes:
+     - Linux desktop application: the user has an active local graphical
+       session, and every distribution's default polkit rule allows that
+       case without a password. It works with nothing to install.
+     - Kiosk Pi (systemd service, no session): polkit refuses by
+       default. install/install.sh therefore drops a
+       /etc/polkit-1/rules.d/ rule allowing THAT SINGLE action to the
+       service user. An installation made before 1.104.0 has no such
+       rule: powering off then fails cleanly and the interface explains
+       what to do.
+   Last resort, pkexec: it opens a password window on a graphical
+   desktop. Useless on the kiosk (nobody to ask) and redundant with the
+   first case, but it catches in-between setups (graphical session
+   without the default rule). */
+function shutdown() {
+  return new Promise((resolve) => {
+    execFile("systemctl", ["poweroff"], { timeout: 10000 }, (err) => {
+      if (!err) return resolve({ ok: true, method: "logind" });
+      execFile("pkexec", ["systemctl", "poweroff"], { timeout: 60000 }, (err2) => {
+        if (!err2) return resolve({ ok: true, method: "pkexec" });
+        resolve({
+          ok: false,
+          reason: "not-permitted",
+          detail: String((err2 && err2.message) || (err && err.message) || "")
+        });
+      });
+    });
+  });
+}
+
 /* ---------- Mise a jour automatique / self-update ----------
    Sur Linux, le serveur peut se mettre a jour lui-meme depuis les
    releases GitHub (voir server/selfUpdate.js) : `tar` est present sur
@@ -849,6 +926,7 @@ module.exports = {
   filesystemRoot,
   exitKiosk,
   exitToDesktop,
+  shutdown,
   updateSupport,
   restartServer,
   gpuUsage,

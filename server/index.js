@@ -1202,7 +1202,14 @@ app.get("/api/system/app-integration", (req, res) => {
   res.json({
     desktopApp: platform.isDesktopApp(),
     platform: platform.id,
-    autoStart: platform.getAutoStart()
+    autoStart: platform.getAutoStart(),
+    // Dit a l'interface s'il faut afficher la troisieme sortie
+    // ("Eteindre"). Le serveur est seul a savoir sur quel systeme il
+    // tourne ; la page, elle, est la meme partout.
+    // Tells the interface whether to show the third exit ("Shut down").
+    // Only the server knows which system it runs on; the page is the
+    // same everywhere.
+    canShutdown: platform.shutdownSupported()
   });
 });
 
@@ -1354,6 +1361,34 @@ app.post("/api/system/exit-to-desktop", (req, res) => {
   }
   const result = platform.exitToDesktop();
   res.json(result);
+});
+
+/* Extinction de la machine. Reservee aux requetes locales, comme les
+   deux sorties ci-dessus et pour la meme raison : eteindre le Pi du
+   salon depuis un telephone au fond du jardin, par erreur ou par
+   plaisanterie, n'a aucun interet legitime -- alors que mettre a jour a
+   distance en a un (voir la note de la route de mise a jour plus bas).
+   Contrairement aux deux autres, la reponse est ATTENDUE avant que
+   l'action ne prenne effet : systemd-logind laisse quelques secondes
+   avant de couper, ce qui suffit largement a repondre, et surtout un
+   refus de polkit doit pouvoir etre explique a l'utilisateur.
+   Powering the machine off. Restricted to local requests, like the two
+   exits above and for the same reason: switching off the living-room Pi
+   from a phone at the bottom of the garden, by mistake or as a joke,
+   has no legitimate use -- whereas updating remotely does (see the note
+   on the update route below). Unlike the other two, the response is
+   AWAITED before the action takes effect: systemd-logind leaves a few
+   seconds before cutting power, which is ample time to answer, and
+   above all a polkit refusal must be explainable to the user. */
+app.post("/api/system/shutdown", async (req, res) => {
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ ok: false, reason: "not-local" });
+  }
+  try {
+    res.json(await platform.shutdown());
+  } catch (e) {
+    res.status(500).json({ ok: false, reason: String(e.message || e) });
+  }
 });
 
 /* ---------- Mise a jour automatique du serveur / server self-update ----------

@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.104.0
+
+- **Menu de sortie : troisieme choix, « Eteindre l'ordinateur »**, a
+  cote de « Reinitialiser le tableau de bord » et « Revenir au
+  bureau ». Reserve a Linux -- Raspberry Pi comme PC sous Debian,
+  Ubuntu ou Zorin. C'est la que PiBoard est souvent tout ce qui est
+  affiche : un ecran mural n'a ni menu de bureau ni bouton d'arret a
+  portee. Sous Windows et macOS, l'option n'apparait pas : le menu
+  d'arret du systeme est a portee de souris, et un bouton de plus ne
+  serait qu'une occasion de clic malheureux.
+
+  Le bouton demande confirmation, contrairement aux deux autres
+  sorties : celles-la se rattrapent en quelques secondes, l'extinction
+  oblige a se lever pour rallumer.
+
+- **Comment le droit d'eteindre est obtenu.** Le service tourne sous un
+  utilisateur sans privileges et son unite declare
+  NoNewPrivileges=true, ce qui neutralise les binaires setuid : `sudo`
+  ne peut PAS fonctionner ici, et une regle sudoers n'aurait servi a
+  rien. L'extinction passe donc par `systemctl poweroff`, qui n'est pas
+  une elevation de privileges mais un message D-Bus a systemd-logind,
+  dont polkit garde l'entree. `install/install.sh` depose desormais une
+  regle polkit qui autorise UNE action et une seule -- power-off -- au
+  seul utilisateur du service. Ni redemarrage, ni veille, ni extinction
+  forcee avec d'autres sessions ouvertes.
+
+  Dans l'application de bureau Linux, rien a installer : une session
+  graphique active est deja autorisee par la regle par defaut de toute
+  distribution. Sur une installation kiosque anterieure a cette
+  version, l'extinction echoue proprement et l'interface indique de
+  relancer `install/install.sh`.
+
+- **L'extinction est refusee aux requetes distantes**, comme les deux
+  autres sorties : eteindre le Pi du salon depuis un telephone au fond
+  du jardin n'a pas d'usage legitime. La mise a jour a distance, elle,
+  en a un et le reste.
+
 ## 1.103.0
 
 - **Licence enoncee en clair, et possibilite d'offrir un cafe.** La

@@ -296,6 +296,18 @@
         <span class="exit-option-title" data-i18n="exit.desktop.title">Return to the desktop</span>
         <span class="exit-option-desc" data-i18n="exit.desktop.desc">Closes PiBoard and shows the Raspberry Pi OS desktop underneath, without relaunching the dashboard. To bring it back: reopen Chromium on the dashboard's address yourself, or restart the Pi.</span>
       </button>
+      <!-- Masquee par defaut : l'interface ne l'affiche que si le
+           serveur dit tourner sous Linux (canShutdown). Cachee dans le
+           HTML plutot qu'ajoutee en JavaScript, pour qu'elle reste
+           traduite et mise en forme comme les deux autres.
+           Hidden by default: the interface only shows it if the server
+           says it runs on Linux (canShutdown). Hidden in the HTML rather
+           than added in JavaScript, so it stays translated and styled
+           like the other two. -->
+      <button type="button" class="exit-option exit-option-warn" id="exitOptionShutdown" hidden>
+        <span class="exit-option-title" data-i18n="exit.shutdown.title">Shut down the computer</span>
+        <span class="exit-option-desc" data-i18n="exit.shutdown.desc">Powers off the Raspberry Pi or the computer entirely, as a proper shutdown. Only available on Linux. You will have to switch it back on by hand.</span>
+      </button>
     </div>
     <div class="modal-foot">
       <div class="form-actions">

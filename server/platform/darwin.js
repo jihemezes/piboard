@@ -310,6 +310,24 @@ function setDisplayPower(on) {
   return Promise.resolve({ ok: false, method: null, on: !!on, reason: "unsupported-platform" });
 }
 
+/* L'extinction de la machine n'est proposee que sous Linux : c'est la
+   que PiBoard est souvent la seule chose affichee (ecran mural sans
+   clavier). Sous Windows et macOS, l'application vit sur un bureau
+   ordinaire, dont le menu d'arret est a portee de souris -- doubler ce
+   bouton dans PiBoard n'apporterait rien et ajouterait un risque de
+   clic malheureux. La fonction existe quand meme, pour que la couche
+   plateforme garde la meme forme partout.
+   Powering the machine off is only offered on Linux: that is where
+   PiBoard is often the only thing on screen (wall display with no
+   keyboard). On Windows and macOS the application lives on an ordinary
+   desktop whose shutdown menu is a mouse click away -- duplicating that
+   button inside PiBoard would add nothing and one more chance of an
+   unfortunate click. The function still exists, so the platform layer
+   keeps the same shape everywhere. */
+function shutdown() {
+  return Promise.resolve({ ok: false, reason: "unsupported" });
+}
+
 module.exports = {
   setDisplayPower,
   id,
@@ -327,6 +345,7 @@ module.exports = {
   filesystemRoot,
   exitKiosk,
   exitToDesktop,
+  shutdown,
   updateSupport,
   restartServer,
   gpuUsage,

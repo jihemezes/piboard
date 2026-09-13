@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.103.0
+   Version 1.104.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -4898,6 +4898,19 @@
        kiosk; from another browser, the server refuses and we just close
        the tab (same logic documented further below in performExit()). */
   function openExitMenu() {
+    /* La troisieme sortie n'apparait que la ou elle fonctionne : le
+       serveur dit s'il tourne sous Linux (canShutdown). Sous Windows et
+       macOS, le menu d'arret du systeme est a portee de souris, doubler
+       ce bouton ici n'apporterait rien. Le reglage est relu a chaque
+       ouverture plutot qu'une fois au demarrage : le meme onglet peut
+       avoir ete ouvert sur un autre PiBoard (favori, ecran partage).
+       The third exit only appears where it works: the server says
+       whether it runs on Linux (canShutdown). On Windows and macOS the
+       system's shutdown menu is a mouse click away, duplicating that
+       button here would add nothing. The flag is re-read on each
+       opening rather than once at startup: the same tab may have been
+       pointed at another PiBoard (bookmark, shared screen). */
+    $("exitOptionShutdown").hidden = !appIntegration.canShutdown;
     $("exitMenuModal").hidden = false;
   }
 
@@ -4945,6 +4958,51 @@
   function exitToDesktop() {
     $("exitMenuModal").hidden = true;
     performExit("/api/system/exit-to-desktop", i18n.t("exit.desktop.fallback"));
+  }
+
+  /* Extinction de la machine. Trois differences avec les deux autres
+     sorties, toutes voulues :
+       1. Une confirmation. Les deux autres sont rattrapables en
+          quelques secondes ; celle-ci oblige a se lever pour rallumer,
+          et le bouton est juste sous le doigt sur un ecran tactile.
+       2. On ATTEND la reponse au lieu de fermer l'onglet aussitot :
+          systemd-logind laisse quelques secondes avant de couper, et
+          surtout un refus (droits insuffisants sur une installation
+          ancienne) doit pouvoir etre explique plutot que de laisser
+          croire a une extinction qui n'aura pas lieu.
+       3. Aucun repli "vous pouvez fermer cet onglet" : si tout va bien
+          la machine s'eteint, l'onglet disparait avec elle.
+     Powering the machine off. Three differences from the other two
+     exits, all deliberate:
+       1. A confirmation. The other two are undoable within seconds;
+          this one means getting up to switch the machine back on, and
+          the button sits right under the finger on a touchscreen.
+       2. The response is AWAITED instead of closing the tab at once:
+          systemd-logind leaves a few seconds before cutting power, and
+          above all a refusal (insufficient rights on an older install)
+          must be explainable rather than suggesting a shutdown that
+          will not happen.
+       3. No "you may close this tab" fallback: if all goes well the
+          machine switches off, and the tab goes with it. */
+  async function shutdownMachine() {
+    if (!window.confirm(i18n.t("exit.shutdown.confirm"))) return;
+    const btn = $("exitOptionShutdown");
+    const title = btn.querySelector(".exit-option-title");
+    const label = title.textContent;
+    title.textContent = i18n.t("exit.shutdown.going");
+    btn.disabled = true;
+    try {
+      const r = await fetch("/api/system/shutdown", { method: "POST" });
+      const out = await r.json().catch(() => ({}));
+      if (out && out.ok) return; // la machine s'eteint / the machine is going down
+      console.warn("[piboard] shutdown", out);
+      window.alert(i18n.t("exit.shutdown.denied"));
+    } catch (e) {
+      console.warn("[piboard] shutdown", e);
+      window.alert(i18n.t("exit.shutdown.denied"));
+    }
+    title.textContent = label;
+    btn.disabled = false;
   }
 
   /* ---------- Economiseur d'ecran / screensaver ---------- */
@@ -6550,6 +6608,7 @@
     onActivate($("btnExit"), () => openExitMenu());
     onActivate($("exitOptionReset"), () => resetDashboard());
     onActivate($("exitOptionDesktop"), () => exitToDesktop());
+    onActivate($("exitOptionShutdown"), () => shutdownMachine());
     $("setDisplayMode").addEventListener("change", renderPagesEditor);
     onActivate($("pageAddBtn"), () => addPage());
     onActivate($("pageBgClose"), () => { $("pageBgModal").hidden = true; });

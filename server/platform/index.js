@@ -267,6 +267,27 @@ function exitKiosk() {
   return impl.exitKiosk();
 }
 
+/* L'extinction n'est proposee que sous Linux -- et pas seulement dans
+   l'application de bureau : le Raspberry Pi en kiosque est justement le
+   cas d'usage principal (aucun clavier, aucun menu d'arret a l'ecran).
+   Le controleur Electron n'est donc PAS consulte ici, contrairement a
+   exitKiosk/exitToDesktop : eteindre la machine n'est pas une affaire
+   de fenetre, c'est toujours le systeme qui s'en charge.
+   Powering off is only offered on Linux -- and not only inside the
+   desktop application: the kiosk Raspberry Pi is precisely the main use
+   case (no keyboard, no shutdown menu on screen). The Electron
+   controller is therefore NOT consulted here, unlike
+   exitKiosk/exitToDesktop: powering the machine off is not a window
+   matter, the system always handles it. */
+function shutdownSupported() {
+  return impl.id === "linux";
+}
+
+function shutdown() {
+  if (!shutdownSupported()) return Promise.resolve({ ok: false, reason: "unsupported" });
+  return impl.shutdown();
+}
+
 function exitToDesktop() {
   if (kioskController && typeof kioskController.quit === "function") {
     try {
@@ -337,6 +358,8 @@ module.exports = {
   setAutoStart,
   exitKiosk,
   exitToDesktop,
+  shutdown,
+  shutdownSupported,
   updateSupport,
   restartServer,
   /* Renvoie null sur toute machine dont le GPU n'expose pas sa charge --

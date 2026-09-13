@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.104.0" date="2026-09-13">
+      <description>
+        <p>The exit menu can now shut the computer down on Linux, next to resetting the dashboard and returning to the desktop.</p>
+        <p xml:lang="fr">Le menu de sortie peut desormais eteindre l'ordinateur sous Linux, a cote de la reinitialisation et du retour au bureau.</p>
+      </description>
+    </release>
     <release version="1.103.0" date="2026-09-13">
       <description>
         <p>The MIT licence is now stated in plain terms, with an optional way to buy the author a coffee.</p>
