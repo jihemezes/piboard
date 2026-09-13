@@ -113,6 +113,19 @@ function installHint() {
   return platform.ffmpegInstallHint();
 }
 
+/* Oublie le resultat de la recherche. A appeler apres une installation
+   faite depuis les reglages : sans cela, le "ffmpeg introuvable" mis en
+   cache au demarrage survivrait jusqu'au prochain lancement, et
+   l'utilisateur croirait que l'installation n'a servi a rien.
+   Forgets the lookup's result. To be called after an installation done
+   from the settings: without this, the "ffmpeg not found" cached at
+   startup would survive until the next launch, and the user would
+   believe the installation achieved nothing. */
+function resetCache() {
+  ffmpegChecked = false;
+  ffmpegPath = null;
+}
+
 /* Diffuse le flux distant vers la reponse HTTP en MP4 fragmente (le
    seul format qu'un navigateur accepte de lire "au fil de l'eau" depuis
    un flux HTTP continu, sans index prealable -- impossible pour du
@@ -431,4 +444,4 @@ function diagnose(url, mode, inputStream) {
   });
 }
 
-module.exports = { checkFfmpeg, findFfmpeg, installHint, streamTranscoded, diagnose };
+module.exports = { checkFfmpeg, findFfmpeg, installHint, resetCache, streamTranscoded, diagnose };

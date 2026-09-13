@@ -122,6 +122,15 @@ function installHint() {
   return platform.vlcInstallHint();
 }
 
+/* Voir iptvAudio.resetCache() : meme raison, apres une installation
+   depuis les reglages.
+   See iptvAudio.resetCache(): same reason, after an installation from
+   the settings. */
+function resetCache() {
+  vlcChecked = false;
+  vlcPath = null;
+}
+
 /* Lance VLC en relais pur (aucun reencodage) de l'URL fournie vers sa
    sortie standard, prete a etre chainee vers ffmpeg. --intf dummy est
    TOUJOURS passe explicitement ici, plutot que de compter sur le
@@ -191,4 +200,4 @@ function spawnTranscode(url) {
   });
 }
 
-module.exports = { checkVlc, findVlc, installHint, spawnTranscode, tryCandidate };
+module.exports = { checkVlc, findVlc, installHint, resetCache, spawnTranscode, tryCandidate };

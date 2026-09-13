@@ -352,6 +352,25 @@ module.exports = {
   chromiumInstallHint: impl.chromiumInstallHint,
   vlcCandidates: impl.vlcCandidates,
   vlcInstallHint: impl.vlcInstallHint,
+
+  /* Installation des outils multimedias facultatifs (ffmpeg, VLC)
+     depuis l'interface. Seul Linux sait le faire sans quitter PiBoard,
+     via le gestionnaire de paquets du systeme ; ailleurs, il n'existe
+     pas de mecanisme comparable qu'on puisse declencher sans supposer
+     un outil tiers installe (Homebrew, winget). Les deux fonctions sont
+     donc absentes de win32.js et darwin.js, et l'appelant doit
+     verifier leur presence -- c'est precisement ainsi qu'il sait s'il
+     peut proposer un bouton ou seulement afficher une commande.
+     Installing the optional media tools (ffmpeg, VLC) from the
+     interface. Only Linux can do it without leaving PiBoard, through
+     the system package manager; elsewhere there is no comparable
+     mechanism one could trigger without assuming a third-party tool is
+     installed (Homebrew, winget). Both functions are therefore absent
+     from win32.js and darwin.js, and the caller must check for them --
+     that is exactly how it knows whether it can offer a button or only
+     display a command. */
+  mediaPackages: impl.mediaPackages,
+  installMediaTool: impl.installMediaTool,
   // Exposees pour les tests unitaires, qui doivent pouvoir verifier les
   // trois parseurs quelle que soit la machine qui execute la suite.
   // Exposed for unit tests, which must be able to check all three

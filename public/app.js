@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.100.4
+   Version 1.101.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3826,6 +3826,126 @@
     $("setImmersive").checked = !!settings.immersive;
   }
 
+  /* ---------- Outils multimedias facultatifs / optional media tools ----------
+     ffmpeg et VLC ne servent qu'a la tuile IPTV : rattraper un son
+     AC3/DTS inaudible, et relayer les chaines en direct qui refusent
+     une connexion directe. Ils ne sont pas installes avec PiBoard
+     (plusieurs centaines de Mo pour une fonction que la plupart des
+     installations n'utilisent pas), d'ou cette section qui dit ou on en
+     est et propose de les ajouter apres coup.
+
+     Le bouton n'apparait que si le serveur declare pouvoir installer
+     (`canInstall` : Linux + application de bureau + requete locale).
+     Partout ailleurs -- Windows, macOS, Raspberry Pi en kiosque,
+     navigateur distant -- on affiche la commande a taper, qui depend du
+     systeme et vient donc du serveur.
+
+     ffmpeg and VLC only serve the IPTV tile: fixing inaudible AC3/DTS
+     sound, and relaying live channels that refuse a direct connection.
+     They are not installed with PiBoard (several hundred MB for a
+     feature most installations do not use), hence this section saying
+     where things stand and offering to add them afterwards.
+
+     The button only appears if the server declares it can install
+     (`canInstall`: Linux + desktop application + local request).
+     Everywhere else -- Windows, macOS, a kiosk Raspberry Pi, a remote
+     browser -- the command to type is shown, which depends on the
+     system and therefore comes from the server. */
+  let mediaTools = null;
+
+  async function refreshMediaTools() {
+    try {
+      const r = await fetch("/api/system/media-tools");
+      if (!r.ok) return;
+      mediaTools = await r.json();
+    } catch (e) {
+      // Serveur plus ancien : la section reste sur son etat precedent.
+      // Older server: the section keeps its previous state.
+    }
+  }
+
+  function fillMediaToolsForm() {
+    const section = $("secMediaTools");
+    if (!section) return;
+    if (!mediaTools) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    const lang = settings.lang === "fr" ? "fr" : "en";
+    let anyMissing = false;
+    [["ffmpeg", "Ffmpeg"], ["vlc", "Vlc"]].forEach(([key, suffix]) => {
+      const tool = (mediaTools.tools || {})[key] || {};
+      const state = $("mediaState" + suffix);
+      const button = $("mediaInstall" + suffix);
+      if (state) {
+        state.textContent = tool.installed
+          ? i18n.t("settings.media.present")
+          : i18n.t("settings.media.absent");
+        state.classList.toggle("ok", !!tool.installed);
+      }
+      if (button) button.hidden = !!tool.installed || !mediaTools.canInstall;
+      if (!tool.installed) anyMissing = true;
+    });
+    const hint = $("mediaToolsHint");
+    if (hint) {
+      if (!anyMissing) {
+        hint.textContent = "";
+        hint.hidden = true;
+      } else if (mediaTools.canInstall) {
+        hint.textContent = i18n.t("settings.media.hint.button");
+        hint.hidden = false;
+      } else {
+        /* Commande a taper : on ne montre que celles des outils
+           reellement absents, pour ne pas suggerer de reinstaller ce qui
+           est deja la.
+           Command to type: only the genuinely missing tools are shown,
+           so as not to suggest reinstalling what is already there. */
+        const commands = ["ffmpeg", "vlc"]
+          .filter((key) => !(((mediaTools.tools || {})[key] || {}).installed))
+          .map((key) => (((mediaTools.tools || {})[key] || {}).hint || {})[lang])
+          .filter(Boolean);
+        hint.textContent = i18n.t("settings.media.hint.manual") + " " + commands.join("  |  ");
+        hint.hidden = false;
+      }
+    }
+  }
+
+  async function installMediaTool(tool, button) {
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = i18n.t("settings.media.installing");
+    let result = null;
+    try {
+      const r = await fetch("/api/system/media-tools/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tool })
+      });
+      result = await r.json();
+    } catch (e) {
+      result = { ok: false, reason: "failed" };
+    }
+    button.disabled = false;
+    button.textContent = label;
+    await refreshMediaTools();
+    fillMediaToolsForm();
+    if (result && result.ok) return;
+    /* Une annulation de la fenetre de mot de passe n'est pas une panne :
+       on ne montre alors aucun message d'erreur, l'etat inchange suffit.
+       Cancelling the password window is not a failure: no error message
+       is shown then, the unchanged state says enough. */
+    const reason = result && result.reason;
+    if (reason === "cancelled") return;
+    const hint = $("mediaToolsHint");
+    if (hint) {
+      hint.hidden = false;
+      hint.textContent = reason === "no-auth-agent"
+        ? i18n.t("settings.media.error.noauth")
+        : i18n.t("settings.media.error");
+    }
+  }
+
   /* ---------- Affichage immersif / immersive display ----------
      Plein ecran veritable de l'application de bureau : ni barre de
      titre, ni barre des taches Windows. La fenetre elle-meme ne peut
@@ -4575,6 +4695,16 @@
     $("setLightTile").value = colors.light.tile;
     fillScreensaverForm();
     fillDesktopAppForm();
+    fillMediaToolsForm();
+    /* Relecture a chaque ouverture des reglages : l'outil a pu etre
+       installe entre-temps en dehors de PiBoard (apt, logitheque). La
+       fenetre s'affiche sans attendre la reponse, qui ne fait que
+       rafraichir deux lignes.
+       Re-read on every opening of the settings: the tool may have been
+       installed meanwhile outside PiBoard (apt, software centre). The
+       window shows without waiting for the answer, which only refreshes
+       two lines. */
+    refreshMediaTools().then(fillMediaToolsForm);
     fillUpdatesForm();
     $("settingsModal").hidden = false;
     requestAnimationFrame(() => layoutFormColumns(document.querySelector("#settingsModal .form"), { preferMax: true }));
@@ -6075,6 +6205,7 @@
     setDisplayPower(true);
 
     await refreshAppIntegration();
+    await refreshMediaTools();
     refreshUpdateStatus();
     i18n.setLang(settings.lang);
     vkb.attach();
@@ -6638,6 +6769,9 @@
 
     $("settingsSave").addEventListener("click", () => saveSettings().catch(console.error));
     initCitySearch();
+    $("mediaInstallFfmpeg").addEventListener("click", (e) => installMediaTool("ffmpeg", e.currentTarget));
+    $("mediaInstallVlc").addEventListener("click", (e) => installMediaTool("vlc", e.currentTarget));
+
     $("colorsReset").addEventListener("click", () => {
       $("setDarkBg").value = DEFAULT_COLORS.dark.bg;
       $("setDarkTile").value = DEFAULT_COLORS.dark.tile;

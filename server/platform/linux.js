@@ -565,6 +565,103 @@ function vlcInstallHint() {
   return { fr: "sudo apt install vlc-bin vlc-plugin-base", en: "sudo apt install vlc-bin vlc-plugin-base" };
 }
 
+/* ---------- Installation des outils multimedias depuis l'interface ----------
+   ffmpeg et VLC ne sont PAS des dependances du paquet PiBoard : ils ne
+   servent qu'aux flux IPTV recalcitrants, pesent lourd (plusieurs
+   centaines de Mo avec leurs dependances) et seraient imposes a la
+   majorite des installations qui n'en ont aucun usage. Ils restent
+   donc facultatifs, installables apres coup depuis les reglages --
+   d'ou ces deux fonctions.
+
+   La commande est fixe et ne contient AUCUNE donnee venue du
+   navigateur : la liste de paquets est choisie ici, l'appelant ne
+   transmet qu'un nom d'outil parmi deux. C'est la condition pour
+   accepter d'installer des paquets sur demande d'une page web, fut-elle
+   locale.
+
+   pkexec (et non sudo) parce qu'il ouvre la fenetre d'authentification
+   graphique du bureau : l'utilisateur voit ce qui va etre installe et
+   saisit son mot de passe dans une boite de dialogue du systeme, pas
+   dans PiBoard -- qui ne voit jamais ce mot de passe. Sans session
+   graphique (serveur systemd d'un Pi en kiosque), pkexec n'a personne a
+   qui demander et echoue proprement : c'est pourquoi l'interface ne
+   propose le bouton que dans l'application de bureau.
+
+   ffmpeg and VLC are NOT dependencies of the PiBoard package: they only
+   serve stubborn IPTV streams, weigh a lot (several hundred MB with
+   their dependencies) and would be forced upon the majority of
+   installations that have no use for them. They stay optional,
+   installable afterwards from the settings -- hence these two
+   functions.
+
+   The command is fixed and contains NO data coming from the browser:
+   the package list is chosen here, the caller only passes one of two
+   tool names. That is the condition for agreeing to install packages at
+   the request of a web page, local though it may be.
+
+   pkexec (rather than sudo) because it opens the desktop's graphical
+   authentication window: the user sees what is about to be installed
+   and types their password into a system dialog, not into PiBoard --
+   which never sees that password. With no graphical session (the
+   systemd server of a kiosk Pi), pkexec has nobody to ask and fails
+   cleanly: that is why the interface only offers the button in the
+   desktop application. */
+const MEDIA_PACKAGES = {
+  ffmpeg: ["ffmpeg"],
+  vlc: ["vlc-bin", "vlc-plugin-base"]
+};
+
+function mediaPackages(tool) {
+  return MEDIA_PACKAGES[tool] || null;
+}
+
+function installMediaTool(tool) {
+  const packages = mediaPackages(tool);
+  if (!packages) return Promise.resolve({ ok: false, reason: "unknown-tool" });
+  return new Promise((resolve) => {
+    /* apt-get plutot qu'apt : c'est l'interface stable, faite pour etre
+       appelee par un programme (apt affiche un avertissement a ce
+       sujet). DEBIAN_FRONTEND=noninteractive evite qu'un paquet ouvre
+       un questionnaire dans un terminal que personne ne regarde.
+       apt-get rather than apt: it is the stable interface, meant to be
+       called by a program (apt prints a warning about this).
+       DEBIAN_FRONTEND=noninteractive prevents a package from opening a
+       questionnaire in a terminal nobody is watching. */
+    const args = ["env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y"].concat(packages);
+    execFile("pkexec", args, { timeout: 15 * 60 * 1000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (!err) return resolve({ ok: true, packages, output: String(stdout || "").slice(-4000) });
+      /* pkexec sort avec 126 si l'utilisateur annule ou echoue
+         l'authentification, 127 s'il n'a pas pu demander du tout (pas de
+         session graphique, agent absent). Les distinguer evite
+         d'afficher "erreur" quand l'utilisateur a simplement clique sur
+         Annuler.
+         pkexec exits with 126 if the user cancels or fails
+         authentication, 127 if it could not ask at all (no graphical
+         session, missing agent). Telling them apart avoids showing an
+         "error" when the user simply clicked Cancel. */
+      /* ENOENT (une chaine, pas un nombre) signifie que pkexec n'est pas
+         installe du tout : sur les bureaux completes c'est rare, mais
+         une image minimale ou un conteneur n'en a pas. Le resultat est
+         le meme pour l'utilisateur que 127 -- aucune fenetre de mot de
+         passe possible -- d'ou le meme motif.
+         ENOENT (a string, not a number) means pkexec is not installed at
+         all: rare on complete desktops, but a minimal image or a
+         container has none. The outcome for the user is the same as 127
+         -- no password window possible -- hence the same reason. */
+      const code = err.code;
+      const reason = code === 126 ? "cancelled"
+        : (code === 127 || code === "ENOENT") ? "no-auth-agent"
+        : "failed";
+      resolve({
+        ok: false,
+        reason,
+        packages,
+        output: (String(stderr || "") + String(stdout || "")).slice(-4000)
+      });
+    });
+  });
+}
+
 
 /* ---------- Configuration reseau / network configuration ----------
 
@@ -763,5 +860,7 @@ module.exports = {
   chromiumCandidates,
   chromiumInstallHint,
   vlcCandidates,
-  vlcInstallHint
+  vlcInstallHint,
+  mediaPackages,
+  installMediaTool
 };

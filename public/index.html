@@ -429,6 +429,32 @@
         <small class="field-hint" data-i18n="settings.immersive.hint">In dashboard mode, the window goes full screen: no title bar, no Windows taskbar, nothing but the board. Bring the mouse to the very top of the screen, or press F9, to reveal a thin bar offering Minimise, Windowed and Quit. F11 also leaves full screen at any time.</small>
       </fieldset>
 
+      <!-- Outils multimedias facultatifs : section TOUJOURS visible, y
+           compris sur le Raspberry Pi et dans un navigateur, car savoir
+           si ffmpeg et VLC sont presents a un interet partout. Seul le
+           BOUTON d'installation depend du systeme ; a defaut, la
+           commande a taper est affichee.
+           Optional media tools: section ALWAYS visible, on the Raspberry
+           Pi and in a browser too, since knowing whether ffmpeg and VLC
+           are present is useful everywhere. Only the install BUTTON
+           depends on the system; failing that, the command to type is
+           shown. -->
+      <fieldset class="form-section" id="secMediaTools">
+        <legend data-i18n="settings.section.media">Media tools (optional)</legend>
+        <small class="field-hint" data-i18n="settings.media.intro">Used only by the IPTV tile, to fix inaudible sound (AC3/DTS) and to relay live channels that refuse a direct connection. Everything else in PiBoard works without them, which is why they are not installed with the application.</small>
+        <div class="field" id="mediaToolFfmpeg">
+          <span class="media-tool-name">ffmpeg</span>
+          <span class="media-tool-state" id="mediaStateFfmpeg"></span>
+          <button type="button" class="btn small" id="mediaInstallFfmpeg" hidden data-i18n="settings.media.install">Install</button>
+        </div>
+        <div class="field" id="mediaToolVlc">
+          <span class="media-tool-name">VLC</span>
+          <span class="media-tool-state" id="mediaStateVlc"></span>
+          <button type="button" class="btn small" id="mediaInstallVlc" hidden data-i18n="settings.media.install">Install</button>
+        </div>
+        <small class="field-hint" id="mediaToolsHint"></small>
+      </fieldset>
+
       <!-- Mise a jour automatique du serveur (Raspberry Pi / Linux) :
            section masquee tant que le serveur ne la declare pas
            supportee (Windows passe par electron-updater, voir

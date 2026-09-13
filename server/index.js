@@ -1164,6 +1164,86 @@ app.get("/api/system/app-integration", (req, res) => {
   });
 });
 
+/* ---------- Outils multimedias facultatifs / optional media tools ----------
+   ffmpeg et VLC ne sont volontairement PAS des dependances du paquet :
+   ils ne servent qu'aux flux IPTV recalcitrants (son AC3/DTS
+   inaudible, chaines en direct qui refusent ffmpeg), pesent plusieurs
+   centaines de Mo avec leurs dependances, et seraient imposes a toutes
+   les installations qui n'ont pas de tuile IPTV. D'ou ces deux routes :
+   savoir ou on en est, et installer apres coup depuis les reglages.
+
+   `canInstall` resume ce que l'interface peut proposer : un bouton
+   (Linux, application de bureau, requete locale) ou seulement la
+   commande a copier. Les trois conditions comptent -- sur un Pi en
+   kiosque le serveur est un service systemd sans session graphique,
+   et pkexec n'aurait personne a qui demander le mot de passe.
+
+   ffmpeg and VLC are deliberately NOT dependencies of the package: they
+   only serve stubborn IPTV streams (inaudible AC3/DTS sound, live
+   channels refusing ffmpeg), weigh several hundred MB with their
+   dependencies, and would be forced upon every installation without an
+   IPTV tile. Hence these two routes: knowing where things stand, and
+   installing afterwards from the settings.
+
+   `canInstall` sums up what the interface may offer: a button (Linux,
+   desktop application, local request) or merely the command to copy.
+   All three conditions matter -- on a kiosk Pi the server is a systemd
+   service with no graphical session, and pkexec would have nobody to
+   ask for the password. */
+app.get("/api/system/media-tools", async (req, res) => {
+  const canInstall = !!(
+    platform.installMediaTool &&
+    platform.isDesktopApp() &&
+    isLocalRequest(req)
+  );
+  res.json({
+    canInstall,
+    tools: {
+      ffmpeg: {
+        installed: await iptvAudio.checkFfmpeg(),
+        hint: iptvAudio.installHint(),
+        packages: platform.mediaPackages ? platform.mediaPackages("ffmpeg") : null
+      },
+      vlc: {
+        installed: await iptvVlc.checkVlc(),
+        hint: iptvVlc.installHint(),
+        packages: platform.mediaPackages ? platform.mediaPackages("vlc") : null
+      }
+    }
+  });
+});
+
+app.post("/api/system/media-tools/install", async (req, res) => {
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ ok: false, reason: "not-local" });
+  }
+  if (!platform.installMediaTool || !platform.isDesktopApp()) {
+    return res.status(400).json({ ok: false, reason: "unsupported" });
+  }
+  /* Le corps de la requete ne choisit qu'un NOM parmi deux ; la liste
+     de paquets correspondante est fixee dans la couche plateforme. Rien
+     de ce que le navigateur envoie n'atteint la ligne de commande.
+     The request body only picks a NAME out of two; the matching package
+     list is fixed in the platform layer. Nothing the browser sends
+     reaches the command line. */
+  const tool = String((req.body || {}).tool || "");
+  if (tool !== "ffmpeg" && tool !== "vlc") {
+    return res.status(400).json({ ok: false, reason: "unknown-tool" });
+  }
+  const result = await platform.installMediaTool(tool);
+  /* La recherche de l'outil est mise en cache au premier appel : sans
+     cet oubli, l'interface continuerait d'afficher "absent" jusqu'au
+     redemarrage.
+     The tool lookup is cached on first call: without this reset, the
+     interface would keep showing "missing" until a restart. */
+  if (result.ok) {
+    if (tool === "ffmpeg") iptvAudio.resetCache();
+    else iptvVlc.resetCache();
+  }
+  const installed = tool === "ffmpeg" ? await iptvAudio.checkFfmpeg() : await iptvVlc.checkVlc();
+  res.json(Object.assign({}, result, { installed }));
+});
+
 app.post("/api/system/autostart", (req, res) => {
   if (!isLocalRequest(req)) {
     return res.status(403).json({ supported: false, reason: "not-local" });

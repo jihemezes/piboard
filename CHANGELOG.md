@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.101.0
+
+- **ffmpeg et VLC s'installent depuis les reglages.** Nouvelle section
+  « Outils multimedias (facultatifs) » dans la configuration generale :
+  elle indique si chacun des deux est present et, dans l'application de
+  bureau sous Linux, offre un bouton Installer. L'installation passe par
+  `pkexec` : c'est la fenetre de mot de passe du systeme qui s'ouvre,
+  PiBoard ne voit jamais ce mot de passe. Le bouton n'apparait que si
+  l'installation est reellement possible (Linux + application de bureau
+  + requete locale) ; partout ailleurs -- Windows, macOS, Raspberry Pi
+  en kiosque, navigateur distant -- la section affiche la commande a
+  taper, adaptee au systeme.
+
+  La liste de paquets est fixee cote serveur : la page n'envoie qu'un
+  nom parmi deux, rien de ce qu'elle transmet n'atteint la ligne de
+  commande. Un clic sur Annuler dans la fenetre de mot de passe n'est
+  pas traite comme une erreur, et l'absence d'agent d'authentification
+  (cas d'un serveur sans session graphique) a son propre message.
+
+  Le resultat de la recherche de l'outil, mis en cache au demarrage,
+  est oublie apres une installation reussie : l'etat se met a jour sans
+  redemarrer. Les reglages relisent aussi cet etat a chaque ouverture,
+  pour tenir compte d'une installation faite ailleurs (apt, logitheque).
+
+- **Non, il ne manquait rien a l'installation Zorin OS** : ffmpeg et VLC
+  n'ont jamais ete des dependances du paquet, ni sous Windows, ni sur le
+  Raspberry Pi. Ils ne servent qu'a la tuile IPTV (son AC3/DTS
+  inaudible, chaines en direct refusant ffmpeg) et pesent plusieurs
+  centaines de megaoctets avec leurs dependances : les imposer a toutes
+  les installations serait disproportionne. C'est ce choix que la
+  nouvelle section rend visible et reversible.
+
 ## 1.100.4
 
 - **Fiche d'installation correcte dans les logitheques graphiques**

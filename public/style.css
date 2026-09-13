@@ -1458,6 +1458,34 @@ body.touch .modal-card { resize: none; }
   padding: 0 8px;
   margin-left: -4px;
 }
+/* Outils multimedias : une ligne par outil -- nom, etat, bouton
+   d'installation -- alignee horizontalement. Le nom en chasse fixe
+   parce que c'est un nom de commande. L'etat "installe" se distingue
+   par le vert deja utilise ailleurs pour les indicateurs sains ; les
+   autres etats gardent la couleur attenuee des textes secondaires,
+   sans rouge : un outil facultatif absent n'est pas une erreur.
+   Media tools: one row per tool -- name, state, install button --
+   aligned horizontally. The name in a monospace face because it is a
+   command name. The "installed" state stands out with the green
+   already used elsewhere for healthy indicators; the other states keep
+   the muted colour of secondary text, with no red: a missing optional
+   tool is not an error. */
+#secMediaTools .field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.media-tool-name {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  min-width: 70px;
+}
+.media-tool-state {
+  font-size: 12px;
+  color: var(--faint);
+}
+.media-tool-state.ok { color: var(--good, #4CAF7D); }
+
 .form-section-plain {
   border: none;
   border-radius: 0;

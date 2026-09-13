@@ -144,6 +144,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.101.0" date="2026-09-13">
+      <description>
+        <p>The IPTV tile's optional tools, ffmpeg and VLC, can now be installed from the settings.</p>
+        <p xml:lang="fr">Les outils facultatifs de la tuile IPTV, ffmpeg et VLC, s'installent desormais depuis les reglages.</p>
+      </description>
+    </release>
     <release version="1.100.4" date="2026-09-13">
       <description>
         <p>Better presentation in graphical software centres: application name, icon, licence and release notes.</p>
