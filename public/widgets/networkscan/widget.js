@@ -46,6 +46,8 @@
       this.scanning = false;
       this.lastData = null; // {hosts, cidr, scannedAt} le plus recent connu / most recent known
       this.editingIndex = null; // index de la ligne en cours de renommage / row being renamed
+      this.note = "";      // compte rendu du dernier export/import / last export-import report
+      this.noteKind = "";  // "ok" | "err" | "" -- couleur du compte rendu / report colour
     }
 
     async init() {
@@ -134,12 +136,16 @@
         <div class="pw-netscan">
           <div class="pwn-head">
             <span class="pwn-count">${hosts.length ? hosts.length + " " + i18n.t(hosts.length > 1 ? "netscan.hostsPlural" : "netscan.hostsSingular") : ""}</span>
+            <button type="button" class="pwn-io-btn" data-io="export" title="${escapeHtmlAttr(i18n.t("netscan.exportTitle"))}">${i18n.t("netscan.export")}</button>
+            <button type="button" class="pwn-io-btn" data-io="import" title="${escapeHtmlAttr(i18n.t("netscan.importTitle"))}">${i18n.t("netscan.import")}</button>
             <button type="button" class="pwn-scan-btn" ${this.scanning ? "disabled" : ""}>${this.scanning ? i18n.t("netscan.scanning") : i18n.t("netscan.scanNow")}</button>
           </div>
           <div class="pwn-status">${escapeHtml(statusParts.join(" · "))}</div>
+          <div class="pwn-note${this.noteKind ? " pwn-note-" + this.noteKind : ""}">${escapeHtml(this.note || "")}</div>
           <div class="pwn-list">${rows}</div>
         </div>`;
       this.wireScanButton();
+      this.wireIoButtons();
       this.wireRows();
     }
 
@@ -275,6 +281,110 @@
       this.wireScanButton();
     }
 
+    /* ---------- Export / import de la table des noms ----------
+       Les noms donnes aux appareils sont une saisie longue et
+       fastidieuse : ces deux boutons la rendent transportable d'un
+       PiBoard a l'autre, et relisible dans un tableur. Le format et ses
+       choix sont decrits dans server/netHosts.js.
+       Export / import of the names table. The names given to devices
+       are long, tedious typing: these two buttons make it portable from
+       one PiBoard to another, and readable in a spreadsheet. The format
+       and its choices are described in server/netHosts.js. */
+    setNote(text, kind) {
+      this.note = text || "";
+      this.noteKind = kind || "";
+      const el = this.ctx.el.querySelector(".pwn-note");
+      if (el) {
+        el.textContent = this.note;
+        el.className = "pwn-note" + (this.noteKind ? " pwn-note-" + this.noteKind : "");
+      }
+      // Le compte rendu s'efface tout seul : il renseigne sur une action
+      // ponctuelle et n'a pas a occuper durablement une tuile dont la
+      // place est comptee.
+      // The report clears itself: it informs about a one-off action and
+      // has no business permanently occupying a tile where space is
+      // tight.
+      clearTimeout(this.noteTimer);
+      if (this.note) this.noteTimer = setTimeout(() => this.setNote(""), 12000);
+    }
+
+    wireIoButtons() {
+      this.ctx.el.querySelectorAll(".pwn-io-btn").forEach((btn) => {
+        // pointerup et stopPropagation() : meme raison que les autres
+        // boutons de la tuile (ecran tactile, mode edition du tableau).
+        // pointerup and stopPropagation(): same reason as the tile's
+        // other buttons (touchscreen, board edit mode).
+        btn.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (btn.dataset.io === "export") this.exportCsv();
+          else this.pickImportFile();
+        });
+      });
+    }
+
+    exportCsv() {
+      const dialect = this.ctx.settings.csvDialect === "international" ? "international" : "french";
+      // Navigation simple : le serveur pose deja Content-Disposition.
+      // Plain navigation: the server already sets Content-Disposition.
+      window.open("/api/network-hosts/export.csv?dialect=" + dialect, "_blank");
+    }
+
+    /* Le fichier est lu par le navigateur puis poste en texte brut :
+       PiBoard n'embarque pas d'analyseur multipart, et cette voie evite
+       d'en ajouter un pour un seul usage. Le champ de fichier est cree
+       a la volee et jamais insere dans la tuile -- un input visible y
+       serait a la fois encombrant et cliquable par megarde en mode
+       edition.
+       The file is read by the browser then posted as plain text:
+       PiBoard embeds no multipart parser, and this route avoids adding
+       one for a single use. The file field is created on the fly and
+       never inserted into the tile -- a visible input would be both
+       bulky and clickable by accident in edit mode. */
+    pickImportFile() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".csv,text/csv,text/plain";
+      input.addEventListener("change", async () => {
+        const file = input.files && input.files[0];
+        if (file) await this.importCsv(file);
+      });
+      input.click();
+    }
+
+    async importCsv(file) {
+      const i18n = this.ctx.i18n;
+      this.setNote(i18n.t("netscan.importing"));
+      try {
+        const text = await file.text();
+        const res = await fetch("/api/network-hosts/import", {
+          method: "POST",
+          headers: { "Content-Type": "text/csv" },
+          body: text
+        });
+        const out = await res.json();
+        if (!res.ok) throw new Error(out.error || ("status " + res.status));
+        const parts = [
+          out.added + " " + i18n.t("netscan.importAdded"),
+          out.updated + " " + i18n.t("netscan.importUpdated")
+        ];
+        if (out.skipped) parts.push(out.skipped + " " + i18n.t("netscan.importSkipped"));
+        this.setNote(parts.join(" · "), "ok");
+        // Une analyse n'est pas necessaire : les noms importes
+        // s'appliquent aux hotes deja affiches, et le serveur les
+        // renvoie a la prochaine lecture. On rafraichit sans relancer
+        // de balayage, donc sans les dix a vingt secondes d'attente.
+        // No scan is needed: imported names apply to the hosts already
+        // displayed, and the server returns them on the next read. We
+        // refresh without starting a sweep, hence without the ten to
+        // twenty seconds' wait.
+        await this.refresh(false);
+      } catch (e) {
+        console.warn("[piboard/networkscan] import", e);
+        this.setNote(i18n.t("netscan.importFailed") + " " + String(e.message || e), "err");
+      }
+    }
+
     wireScanButton() {
       const btn = this.ctx.el.querySelector(".pwn-scan-btn");
       if (!btn) return;
@@ -292,6 +402,7 @@
 
     destroy() {
       clearInterval(this.timer);
+      clearTimeout(this.noteTimer);
     }
   }
 

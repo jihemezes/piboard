@@ -51,6 +51,35 @@
         "en": "0 = manual only (use the \"Scan now\" button on the tile). A scan takes roughly 10–20 seconds depending on the network's size.",
         "fr": "0 = analyse manuelle uniquement (bouton « Analyser maintenant » sur la tuile). Une analyse prend environ 10 à 20 secondes selon la taille du réseau."
       }
+    },
+    {
+      "key": "csvDialect",
+      "type": "select",
+      "default": "french",
+      "options": [
+        {
+          "value": "french",
+          "label": {
+            "en": "Semicolon (French spreadsheets)",
+            "fr": "Point-virgule (tableurs français)"
+          }
+        },
+        {
+          "value": "international",
+          "label": {
+            "en": "Comma (international)",
+            "fr": "Virgule (international)"
+          }
+        }
+      ],
+      "label": {
+        "en": "CSV separator for export",
+        "fr": "Séparateur CSV de l'export"
+      },
+      "hint": {
+        "en": "A spreadsheet set to French expects the semicolon; given a comma-separated file it drops each row into a single cell. Import detects the separator by itself, whichever was used.",
+        "fr": "Un tableur configuré en français attend le point-virgule ; avec un fichier séparé par des virgules, il met chaque ligne dans une seule cellule. L'import, lui, détecte le séparateur tout seul, quel qu'il soit."
+      }
     }
   ]
 }

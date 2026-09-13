@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.102.0
+
+- **Analyse reseau : export et import CSV des noms d'appareils.** Deux
+  boutons en haut de la tuile. Nommer trente appareils represente un
+  vrai travail de saisie, jusqu'ici captif d'une installation :
+  reconstruire un PiBoard, ou en installer un second dans la meme
+  maison, obligeait a tout ressaisir. La table devient transportable.
+
+  Le format est un CSV ouvrable dans un tableur -- une ligne par
+  appareil : type, identifiant, nom, date de modification. Le choix du
+  CSV plutot que du JSON deja stocke est delibere : une sauvegarde
+  transporte deja le fichier, ce qui manquait etait de pouvoir RELIRE
+  et CORRIGER les noms en masse dans Excel ou LibreOffice. Separateur
+  point-virgule par defaut (tableur francais) ou virgule
+  (international), au choix dans les reglages de la tuile ; a l'import
+  le separateur est detecte tout seul, ainsi que les en-tetes dans les
+  deux langues et dans n'importe quel ordre.
+
+  L'import **complete** la table plutot que de la remplacer : les noms
+  du fichier l'emportent pour les appareils concernes, les autres
+  gardent le leur, rien n'est supprime. Une ligne inutilisable
+  (identifiant invalide, nom vide) est ignoree seule plutot que de
+  faire echouer tout le fichier -- un tableau retravaille dans un
+  tableur contient souvent une ligne de total ou un commentaire. Le
+  compte rendu affiche sous les boutons indique les noms ajoutes, mis
+  a jour et ignores.
+
+  Les noms restant associes a l'adresse MAC, un fichier importe sur un
+  autre PiBoard du meme reseau retrouve les bons appareils tout seul.
+
 ## 1.101.1
 
 - **Remise d'aplomb des numeros de version.** Les correctifs livres sous

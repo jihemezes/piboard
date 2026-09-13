@@ -144,6 +144,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.102.0" date="2026-09-13">
+      <description>
+        <p>The Network scan tile can export and import its device names as a CSV file.</p>
+        <p xml:lang="fr">La tuile Analyse reseau exporte et importe ses noms d'appareils dans un fichier CSV.</p>
+      </description>
+    </release>
     <release version="1.101.1" date="2026-09-13">
       <description>
         <p>Version numbering put back in order, and a clearer message when this system's package is not published yet.</p>

@@ -203,6 +203,261 @@ function clearAll() {
   return saveAliases({});
 }
 
+/* ============================================================
+   Export / import CSV
+   ============================================================
+   Pourquoi : les noms donnes aux appareils representent un vrai travail
+   de saisie -- une trentaine d'appareils, dont beaucoup ne se
+   presentent que par une MAC. Ce travail etait jusqu'ici captif d'une
+   installation : reconstruire un PiBoard, ou en installer un second
+   dans la meme maison, obligeait a tout ressaisir. L'export/import
+   rend cette table portable.
+
+   Pourquoi le CSV plutot que le JSON deja stocke : parce que le besoin
+   n'est pas seulement de transporter le fichier (une sauvegarde le fait
+   deja) mais de pouvoir le RELIRE et le MODIFIER dans un tableur. Une
+   table de correspondance MAC -> nom est exactement ce qu'un tableur
+   sait editer confortablement.
+
+   Colonnes : type, identifiant, nom, modifie_le. `type` vaut "mac" ou
+   "ip" et `identifiant` porte la valeur correspondante : c'est la
+   decomposition lisible de la cle interne ("mac:aa:bb:..."), qui
+   evite a l'utilisateur de comprendre ce prefixe, et evite surtout
+   qu'un tableur ne prenne "mac:aa:bb:cc" pour autre chose qu'un texte.
+
+   Why: the names given to devices represent real typing work -- a few
+   dozen devices, many of which only introduce themselves by a MAC.
+   That work used to be captive to one installation: rebuilding a
+   PiBoard, or setting up a second one in the same house, meant typing
+   everything again. Export/import makes this table portable.
+
+   Why CSV rather than the JSON already stored: because the need is not
+   only to carry the file over (a backup does that already) but to be
+   able to READ and EDIT it in a spreadsheet. A MAC -> name mapping is
+   exactly what a spreadsheet edits comfortably.
+
+   Columns: type, identifier, name, updated_at. `type` is "mac" or "ip"
+   and `identifier` carries the matching value: it is the readable
+   decomposition of the internal key ("mac:aa:bb:..."), which spares
+   the user from understanding that prefix, and above all keeps a
+   spreadsheet from reading "mac:aa:bb:cc" as anything but text. */
+
+/* En-tetes acceptes a l'import, par colonne. Les deux langues sont
+   reconnues, ainsi que les variantes qu'un tableur peut produire
+   (majuscules, espaces, accents). Un fichier exporte en francais se
+   reimporte donc dans une installation en anglais, et un fichier
+   retravaille a la main reste accepte tant que les intitules sont
+   reconnaissables.
+   Header names accepted on import, per column. Both languages are
+   recognized, as well as the variants a spreadsheet may produce
+   (case, spaces, accents). A file exported in French therefore
+   re-imports into an English installation, and a hand-reworked file
+   stays acceptable as long as the headings are recognizable. */
+const CSV_HEADERS = {
+  type: ["type"],
+  id: ["identifiant", "identifier", "id", "adresse", "address", "mac", "ip"],
+  name: ["nom", "name", "nom_convivial", "friendly_name", "alias"],
+  updatedAt: ["modifie_le", "modified_at", "updated_at", "date"]
+};
+
+/* Une cellule CSV. Les guillemets sont doubles a l'interieur, et tout
+   champ contenant separateur, guillemet ou saut de ligne est entoure de
+   guillemets : c'est la RFC 4180. Un nom d'appareil peut tres bien
+   contenir un point-virgule ("Imprimante bureau ; etage").
+   One CSV cell. Inner quotes are doubled, and any field containing a
+   separator, a quote or a line break is wrapped in quotes: that is RFC
+   4180. A device name may well contain a semicolon ("Office printer ;
+   upstairs"). */
+function csvCell(value, sep) {
+  const s = String(value == null ? "" : value);
+  return (s.includes(sep) || s.includes('"') || /[\r\n]/.test(s))
+    ? '"' + s.replace(/"/g, '""') + '"'
+    : s;
+}
+
+/* Meme choix de dialecte que l'export de l'etat de la connexion (voir
+   server/internetHealth.js) : point-virgule pour un tableur configure
+   en francais, virgule pour le reste du monde. Ici aucun nombre
+   decimal n'est en jeu, seul le separateur change.
+   Same dialect choice as the connection-health export (see
+   server/internetHealth.js): semicolon for a French-configured
+   spreadsheet, comma for the rest of the world. No decimal number is
+   involved here, only the separator changes. */
+function toCsv(aliases, opts) {
+  const sep = (opts && opts.dialect === "international") ? "," : ";";
+  const table = sanitizeAliases(aliases);
+  const lines = [["type", "identifiant", "nom", "modifie_le"].join(sep)];
+  // Tri par identifiant : un ordre stable d'un export a l'autre rend
+  // deux fichiers comparables, et le tableau plus agreable a relire.
+  // Sorted by identifier: a stable order from one export to the next
+  // makes two files comparable, and the table nicer to read.
+  for (const key of Object.keys(table).sort()) {
+    const sepIdx = key.indexOf(":");
+    const type = key.slice(0, sepIdx);
+    const id = key.slice(sepIdx + 1);
+    const entry = table[key];
+    lines.push([type, id, entry.name, entry.updatedAt || ""].map((v) => csvCell(v, sep)).join(sep));
+  }
+  return lines.join("\r\n") + "\r\n";
+}
+
+/* Decoupe une ligne CSV en respectant les guillemets. Ecrit a la main
+   plutot qu'avec une expression reguliere : un champ entre guillemets
+   peut contenir le separateur, et une expression reguliere lisible ne
+   sait pas gerer ce cas.
+   Splits a CSV line honouring quotes. Hand-written rather than done
+   with a regular expression: a quoted field may contain the separator,
+   and a readable regular expression cannot handle that case. */
+function splitCsvLine(line, sep) {
+  const out = [];
+  let cur = "";
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (line[i + 1] === '"') { cur += '"'; i++; }
+        else inQuotes = false;
+      } else cur += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === sep) { out.push(cur); cur = ""; }
+    else cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+/* Ramene un intitule de colonne a une forme comparable : sans accents,
+   sans espaces ni ponctuation, en minuscules. "Modifié le" et
+   "modifie_le" deviennent ainsi la meme chose.
+   Reduces a column heading to a comparable form: no accents, no spaces
+   or punctuation, lower case. "Modifié le" and "modifie_le" thus
+   become the same thing. */
+function normalizeHeader(h) {
+  return String(h || "")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/* Devine le separateur d'un fichier a importer plutot que de l'imposer :
+   le fichier peut venir d'un PiBoard regle sur l'autre dialecte, ou
+   d'un tableur qui a reenregistre a sa facon. On compte les deux
+   candidats sur la ligne d'en-tete, le plus frequent gagne.
+   Guesses the separator of an imported file rather than imposing one:
+   the file may come from a PiBoard set to the other dialect, or from a
+   spreadsheet that saved it its own way. Both candidates are counted on
+   the header line, the most frequent wins. */
+function guessSeparator(headerLine) {
+  const semis = (headerLine.match(/;/g) || []).length;
+  const commas = (headerLine.match(/,/g) || []).length;
+  return semis >= commas ? ";" : ",";
+}
+
+/* Analyse un CSV et renvoie les entrees exploitables, plus le detail de
+   ce qui a ete ecarte. On ne rejette JAMAIS le fichier entier pour
+   quelques lignes douteuses : un fichier retravaille dans un tableur
+   contient souvent une ligne de total, une ligne vide ou un
+   commentaire. Les lignes valides sont importees, les autres comptees
+   et rapportees a l'utilisateur.
+   Parses a CSV and returns the usable entries, plus the detail of what
+   was discarded. The whole file is NEVER rejected over a few dubious
+   lines: a file reworked in a spreadsheet often holds a total row, an
+   empty row or a comment. Valid rows are imported, the others counted
+   and reported to the user. */
+function parseCsv(text) {
+  const clean = String(text == null ? "" : text).replace(/^\uFEFF/, "");
+  const lines = clean.split(/\r\n|\n|\r/).filter((l) => l.trim() !== "");
+  if (!lines.length) return { aliases: {}, rows: 0, skipped: 0, reasons: {} };
+
+  const sep = guessSeparator(lines[0]);
+  const header = splitCsvLine(lines[0], sep).map(normalizeHeader);
+  const col = {};
+  for (const [field, names] of Object.entries(CSV_HEADERS)) {
+    col[field] = header.findIndex((h) => names.some((n) => normalizeHeader(n) === h));
+  }
+  if (col.id < 0 || col.name < 0) {
+    throw new Error("missing columns: the file needs at least an identifier column and a name column");
+  }
+
+  const aliases = {};
+  const reasons = { badId: 0, noName: 0, duplicate: 0 };
+  let rows = 0;
+  let skipped = 0;
+  for (const line of lines.slice(1)) {
+    const cells = splitCsvLine(line, sep);
+    const rawId = String(cells[col.id] || "").trim();
+    const declaredType = col.type >= 0 ? String(cells[col.type] || "").trim().toLowerCase() : "";
+    const name = normalizeName(cells[col.name]);
+
+    // Le type declare est une indication, pas une autorite : c'est la
+    // FORME de l'identifiant qui tranche. Une colonne type absente, mal
+    // orthographiee ou intervertie par un tri de tableur ne doit pas
+    // faire perdre une ligne parfaitement lisible.
+    // The declared type is a hint, not an authority: the identifier's
+    // SHAPE decides. A type column that is missing, misspelled or
+    // shuffled by a spreadsheet sort must not lose a perfectly readable
+    // row.
+    const mac = normalizeMac(rawId);
+    let key = null;
+    if (mac && declaredType !== "ip") key = "mac:" + mac;
+    else if (isValidIp(rawId)) key = "ip:" + rawId;
+
+    if (!key) { skipped++; reasons.badId++; continue; }
+    if (!name) { skipped++; reasons.noName++; continue; }
+    if (aliases[key]) { skipped++; reasons.duplicate++; }
+    const updatedAt = col.updatedAt >= 0 ? String(cells[col.updatedAt] || "").trim() : "";
+    aliases[key] = { name, updatedAt: updatedAt || new Date().toISOString() };
+    rows++;
+  }
+  return { aliases: sanitizeAliases(aliases), rows, skipped, reasons };
+}
+
+/* Fusionne une table importee dans celle deja en place.
+     - "merge" (defaut) : les noms importes l'emportent sur les noms
+       existants pour les memes appareils, et les appareils absents du
+       fichier gardent leur nom. C'est le comportement attendu quand on
+       reinjecte une table apres une reconstruction.
+     - "replace" : la table en place est remplacee. Utile quand on veut
+       vraiment repartir du fichier, et seulement dans ce cas -- d'ou le
+       choix explicite.
+   Un import ne supprime jamais silencieusement : sans "replace", aucune
+   entree existante ne disparait.
+   Merges an imported table into the one already in place.
+     - "merge" (default): imported names win over existing ones for the
+       same devices, and devices absent from the file keep their name.
+       That is the expected behaviour when re-injecting a table after a
+       rebuild.
+     - "replace": the table in place is replaced. Useful when one really
+       wants to start from the file, and only then -- hence the explicit
+       choice.
+   An import never deletes silently: without "replace", no existing
+   entry disappears. */
+function importCsv(text, opts) {
+  const parsed = parseCsv(text);
+  const replace = !!(opts && opts.mode === "replace");
+  const before = replace ? {} : loadAliases();
+  const merged = trimAliases(Object.assign({}, before, parsed.aliases));
+  const saved = saveAliases(merged);
+  const existing = replace ? {} : before;
+  let added = 0;
+  let updated = 0;
+  for (const [key, entry] of Object.entries(parsed.aliases)) {
+    if (!existing[key]) added++;
+    else if (existing[key].name !== entry.name) updated++;
+  }
+  return {
+    imported: parsed.rows,
+    added,
+    updated,
+    unchanged: parsed.rows - added - updated,
+    skipped: parsed.skipped,
+    reasons: parsed.reasons,
+    total: Object.keys(saved).length,
+    mode: replace ? "replace" : "merge",
+    aliases: saved
+  };
+}
+
 module.exports = {
   STORE_KEY,
   MAX_NAME_LENGTH,
@@ -218,5 +473,8 @@ module.exports = {
   loadAliases,
   saveAliases,
   renameHost,
-  clearAll
+  clearAll,
+  toCsv,
+  parseCsv,
+  importCsv
 };

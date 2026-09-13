@@ -494,6 +494,48 @@ app.post("/api/network-hosts", (req, res) => {
   }
 });
 
+/* Export CSV de la table des noms. Meme forme que l'export de l'etat de
+   la connexion : le serveur pose Content-Disposition, le navigateur
+   telecharge, et le BOM UTF-8 est ajoute ici -- sans lui un tableur
+   sous Windows abime les accents des noms d'appareils.
+   CSV export of the names table. Same shape as the connection-health
+   export: the server sets Content-Disposition, the browser downloads,
+   and the UTF-8 BOM is added here -- without it a spreadsheet on
+   Windows mangles the accents in device names. */
+app.get("/api/network-hosts/export.csv", (req, res) => {
+  try {
+    const csv = netHosts.toCsv(netHosts.loadAliases(), { dialect: req.query.dialect });
+    const stamp = new Date().toISOString().slice(0, 10);
+    res.setHeader("Content-Type", "text/csv; charset=utf-8");
+    res.setHeader("Content-Disposition", `attachment; filename="piboard-reseau-${stamp}.csv"`);
+    res.send("\uFEFF" + csv);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/* Import. Le fichier arrive en texte brut dans le corps de la requete
+   (Content-Type: text/csv), pas en multipart : PiBoard n'embarque pas
+   d'analyseur multipart, et le navigateur sait tres bien lire le
+   fichier choisi puis en poster le contenu. La limite de taille est
+   celle d'express.text ci-dessous ; une table de plusieurs centaines
+   d'appareils pese quelques dizaines de kilo-octets.
+   Import. The file arrives as plain text in the request body
+   (Content-Type: text/csv), not as multipart: PiBoard embeds no
+   multipart parser, and the browser is perfectly able to read the
+   chosen file and post its content. The size limit is that of
+   express.text below; a table of several hundred devices weighs a few
+   dozen kilobytes. */
+app.post("/api/network-hosts/import", express.text({ type: ["text/csv", "text/plain"], limit: "1mb" }), (req, res) => {
+  try {
+    const body = typeof req.body === "string" ? req.body : String((req.body && req.body.csv) || "");
+    if (!body.trim()) return res.status(400).json({ error: "empty file" });
+    res.json(Object.assign({ ok: true }, netHosts.importCsv(body, { mode: req.query.mode })));
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
 /* ---------- Programme TV / TV guide (voir server/teleProgram.js) ---------- */
 
 /* Lecture/validation de la partie "source" de la config, commune aux

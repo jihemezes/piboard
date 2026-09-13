@@ -14,7 +14,9 @@ const {
   trimAliases,
   applyAliases,
   MAX_NAME_LENGTH,
-  MAX_ENTRIES
+  MAX_ENTRIES,
+  toCsv,
+  parseCsv
 } = require("../server/netHosts");
 
 console.log("== normalizeMac : casse, separateurs, zeros de tete ==");
@@ -117,6 +119,68 @@ console.log("== applyAliases : enrichit sans ecraser le nom detecte ==");
   assert.strictEqual(hosts[0].alias, undefined, "la liste d'entree n'est pas mutee");
   assert.deepStrictEqual(applyAliases(null, aliases), []);
   assert.strictEqual(applyAliases(hosts, null)[0].alias, null);
+}
+console.log("  OK");
+
+console.log("== CSV : export, et aller-retour export -> import ==");
+{
+  const aliases = {
+    "mac:aa:bb:cc:dd:ee:ff": { name: "PC salon", updatedAt: "2026-09-01T10:00:00.000Z" },
+    "ip:192.168.1.40": { name: "Chaudiere", updatedAt: "2026-09-02T10:00:00.000Z" },
+    // Un nom contenant le separateur ET un guillemet : c'est le cas qui
+    // casse un export naif. A name containing the separator AND a quote:
+    // the case that breaks a naive export.
+    "mac:11:22:33:44:55:66": { name: 'Imprimante ; "bureau"', updatedAt: "2026-09-03T10:00:00.000Z" }
+  };
+
+  const csv = toCsv(aliases);
+  assert.ok(csv.startsWith("type;identifiant;nom;modifie_le"), "en-tete francais par defaut");
+  assert.ok(csv.includes('"Imprimante ; ""bureau"""'), "separateur et guillemets echappes (RFC 4180)");
+  assert.ok(csv.endsWith("\r\n"), "fins de ligne CRLF");
+  assert.ok(toCsv(aliases, { dialect: "international" }).startsWith("type,identifiant,nom,modifie_le"));
+
+  const back = parseCsv(csv);
+  assert.strictEqual(back.rows, 3);
+  assert.strictEqual(back.skipped, 0);
+  assert.deepStrictEqual(back.aliases, aliases, "aller-retour sans perte");
+
+  // Le fichier a virgules se relit aussi : le separateur est devine.
+  // The comma file reads back too: the separator is guessed.
+  assert.deepStrictEqual(parseCsv(toCsv(aliases, { dialect: "international" })).aliases, aliases);
+}
+console.log("  OK");
+
+console.log("== CSV : tolerance a l'import (tableur, BOM, colonnes, lignes douteuses) ==");
+{
+  // En-tetes anglais, BOM, colonnes dans un autre ordre, MAC en
+  // majuscules avec des tirets : tout ce qu'un tableur ou une autre
+  // installation peut produire. English headings, BOM, columns in
+  // another order, uppercase dashed MAC: everything a spreadsheet or
+  // another installation may produce.
+  const csv = "\uFEFFname,identifier,type\r\n" +
+    "Salon TV,AA-BB-CC-DD-EE-FF,mac\r\n" +
+    "Chaudiere,192.168.1.40,ip\r\n" +
+    ",11:22:33:44:55:66,mac\r\n" +          // nom vide -> ignore / empty name -> skipped
+    "Bidon,pas-une-adresse,mac\r\n" +       // identifiant invalide / invalid identifier
+    "\r\n";                                 // ligne vide / empty line
+  const out = parseCsv(csv);
+  assert.strictEqual(out.rows, 2, "deux lignes exploitables");
+  assert.strictEqual(out.skipped, 2, "les deux lignes douteuses sont ecartees, pas le fichier");
+  assert.strictEqual(out.reasons.noName, 1);
+  assert.strictEqual(out.reasons.badId, 1);
+  assert.strictEqual(out.aliases["mac:aa:bb:cc:dd:ee:ff"].name, "Salon TV");
+  assert.ok(out.aliases["mac:aa:bb:cc:dd:ee:ff"].updatedAt, "date posee a defaut de colonne");
+  assert.strictEqual(out.aliases["ip:192.168.1.40"].name, "Chaudiere");
+
+  // La colonne type est une indication, pas une autorite : c'est la
+  // forme de l'identifiant qui tranche. The type column is a hint, not
+  // an authority: the identifier's shape decides.
+  const wrongType = parseCsv("type;identifiant;nom\r\nip;aa:bb:cc:dd:ee:ff;Test\r\n");
+  assert.strictEqual(wrongType.rows, 0, "type=ip sur une MAC : la ligne n'est pas inventee en cle IP");
+
+  assert.throws(() => parseCsv("colonne1;colonne2\r\na;b\r\n"), /missing columns/,
+    "un fichier sans colonne exploitable est refuse en bloc");
+  assert.deepStrictEqual(parseCsv("").aliases, {}, "fichier vide : table vide, pas d'exception");
 }
 console.log("  OK");
 

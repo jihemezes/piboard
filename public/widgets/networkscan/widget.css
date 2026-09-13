@@ -134,3 +134,37 @@
   touch-action: manipulation;
 }
 .pw-netscan .pwn-edit-ok { color: var(--accent); }
+
+/* Boutons d'export/import de la table des noms. Discrets par rapport au
+   bouton d'analyse : ce sont des actions occasionnelles, alors que
+   l'analyse est l'action principale de la tuile.
+   Export/import buttons for the names table. Discreet compared to the
+   scan button: these are occasional actions, whereas scanning is the
+   tile's main one. */
+.pw-netscan .pwn-io-btn {
+  font: inherit;
+  font-size: 0.82em;
+  padding: 0.15em 0.6em;
+  border-radius: 0.5em;
+  border: 1px solid var(--line, rgba(127, 127, 127, 0.35));
+  background: transparent;
+  color: inherit;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.pw-netscan .pwn-io-btn:hover { opacity: 1; }
+
+/* Compte rendu du dernier import. Absent la plupart du temps : la regle
+   :empty lui retire toute hauteur pour ne pas voler une ligne a la
+   liste des hotes.
+   Report of the last import. Absent most of the time: the :empty rule
+   removes all its height so it does not steal a line from the host
+   list. */
+.pw-netscan .pwn-note {
+  font-size: 0.82em;
+  opacity: 0.85;
+  margin: 0.2em 0;
+}
+.pw-netscan .pwn-note:empty { display: none; }
+.pw-netscan .pwn-note-ok { color: var(--ok, #3fa860); }
+.pw-netscan .pwn-note-err { color: var(--danger, #d05050); }
