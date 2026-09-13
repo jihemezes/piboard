@@ -256,18 +256,41 @@ linux:
       arch: [x64, arm64]
     - target: deb
       arch: [x64, arm64]
-  # electron-builder genere lui-meme les tailles d'icone Linux a partir
-  # de ce PNG 512x512 (le .ico Windows ne convient pas ici).
-  # electron-builder generates the Linux icon sizes itself from this
-  # 512x512 PNG (the Windows .ico is unsuitable here).
-  icon: build/icon.png
-  category: Utility
+  # Un DOSSIER d'icones, et non le seul PNG 512x512. Avec un fichier
+  # unique, electron-builder n'installait qu'une icone 512x512 : les
+  # logitheques et les barres des taches, qui cherchent du 48, 64 ou
+  # 128, ne trouvaient rien et affichaient une icone generique (constate
+  # sur Zorin OS). Le dossier build/icons/ contient les tailles
+  # standard, toutes derivees du meme PNG.
+  # A FOLDER of icons, not the single 512x512 PNG. With one file,
+  # electron-builder only installed a 512x512 icon: software centres and
+  # taskbars, which look for 48, 64 or 128, found nothing and showed a
+  # generic icon (observed on Zorin OS). The build/icons/ folder holds
+  # the standard sizes, all derived from the same PNG.
+  icon: build/icons
+  # `category` alimente la ligne Categories= du .desktop et ecrase ce
+  # que `desktop.entry.Categories` demanderait : les deux valeurs sont
+  # donc declarees ici, separees par des points-virgules comme le veut
+  # la norme Freedesktop.
+  # `category` feeds the .desktop's Categories= line and overrides what
+  # `desktop.entry.Categories` would ask for: both values are therefore
+  # declared here, semicolon-separated as the Freedesktop standard
+  # requires.
+  category: Utility;Network;
   synopsis: Tile-based kiosk dashboard / Tableau de bord kiosque a tuiles
+  # `description` sert de Comment= dans le .desktop -- c'est l'info-bulle
+  # du menu des applications, qui doit tenir sur une ligne. La
+  # presentation longue de l'application n'est donc PAS ici mais dans la
+  # fiche AppStream (build/io.github.jihemezes.piboard.metainfo.xml),
+  # faite pour cela.
+  # `description` doubles as Comment= in the .desktop -- the tooltip of
+  # the applications menu, which must fit on one line. The application's
+  # long presentation is therefore NOT here but in the AppStream
+  # metadata (build/io.github.jihemezes.piboard.metainfo.xml), which is
+  # made for it.
   description: >-
-    PiBoard - self-hosted tile dashboard (weather, traffic, TV guide,
-    sports, photos, home automation...) for a wall screen or a desktop.
-    Tableau de bord a tuiles auto-heberge pour un ecran mural ou un
-    bureau.
+    Self-hosted tile dashboard for a wall screen or a desktop /
+    Tableau de bord a tuiles auto-heberge pour un ecran mural ou un bureau
   maintainer: Jean-Michel Ezes <jihemezes@users.noreply.github.com>
   vendor: Jean-Michel Ezes
   executableName: piboard
@@ -292,11 +315,19 @@ linux:
   # hence PiBoard-1.2.3-linux-x86_64.AppImage but
   # PiBoard-1.2.3-linux-amd64.deb.
   artifactName: "${productName}-${version}-linux-${arch}.${ext}"
+  # Entrees du fichier .desktop (forme imbriquee `entry:`, la seule que
+  # valide le schema d'electron-builder 26). Keywords aide la recherche
+  # dans les menus et les logitheques, dans les deux langues.
+  # Entries of the .desktop file (nested `entry:` form, the only one
+  # electron-builder 26's schema validates). Keywords helps searching in
+  # menus and software centres, in both languages.
   desktop:
     entry:
       Name: PiBoard
+      GenericName: Dashboard
       Comment: Tile-based kiosk dashboard / Tableau de bord kiosque a tuiles
       Categories: Utility;Network;
+      Keywords: dashboard;kiosk;tiles;tableau;bord;kiosque;tuiles;
       StartupWMClass: PiBoard
 
 deb:
@@ -322,6 +353,19 @@ deb:
     - libuuid1
     - libsecret-1-0
     - "libasound2 | libasound2t64"
+  # Fiche AppStream : le fichier est copie dans /usr/share/metainfo/,
+  # ou les logitheques graphiques le cherchent. La syntaxe
+  # `source=destination` est celle de fpm, l'outil qu'electron-builder
+  # utilise pour fabriquer le .deb ; ces arguments lui sont passes tels
+  # quels. Voir l'en-tete du fichier XML pour ce que cela corrige.
+  # AppStream metadata: the file is copied into /usr/share/metainfo/,
+  # where graphical software centres look for it. The
+  # `source=destination` syntax is fpm's, the tool electron-builder uses
+  # to build the .deb; these arguments are passed to it as is. See the
+  # XML file's header for what it fixes.
+  fpm:
+    - "build/io.github.jihemezes.piboard.metainfo.xml=/usr/share/metainfo/io.github.jihemezes.piboard.metainfo.xml"
+
   # Le .deb n'a pas de script de post-desinstallation qui efface
   # ~/.config/PiBoard : meme politique que Windows, les donnees
   # survivent a la desinstallation.

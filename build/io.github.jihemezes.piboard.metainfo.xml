@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  PiBoard - build/io.github.jihemezes.piboard.metainfo.xml
+
+  Fiche AppStream de l'application, installee par le paquet .deb dans
+  /usr/share/metainfo/. C'est CE fichier que lisent les logithequeses
+  graphiques (Logiciels de GNOME, donc celle de Zorin OS et d'Ubuntu,
+  KDE Discover, elementary AppCenter) pour afficher autre chose que le
+  strict minimum du paquet Debian.
+
+  Sans lui, la fiche d'installation n'avait que les champs du control
+  Debian : nom du PAQUET en minuscules ("piboard"), aucune icone,
+  "Licence inconnue", "Aucune information n'est disponible pour cette
+  version", "Aucune information d'evaluation par age". Le control
+  Debian n'a tout simplement pas de champ pour une icone, une licence
+  ou des notes de version — d'ou ce format complementaire.
+
+  Ce qui reste inevitable : le bandeau "Aucun depot de logiciels
+  inclus / Elle ne sera pas mise a jour vers de nouvelles versions".
+  Il ne parle pas de l'application mais de la maniere dont elle a ete
+  installee — un fichier .deb telecharge a la main n'est rattache a
+  aucun depot apt, et la logitheque n'a donc nulle part ou aller
+  chercher une version suivante. C'est exact de son point de vue, et
+  sans consequence ici : PiBoard se met a jour lui-meme (voir
+  electron/updater.js), ce que la logitheque n'a aucun moyen de savoir.
+  Seule la publication d'un depot apt signe la ferait taire.
+
+  AppStream metadata for the application, installed by the .deb package
+  into /usr/share/metainfo/. THIS file is what graphical software
+  centres (GNOME Software, hence Zorin OS's and Ubuntu's, KDE Discover,
+  elementary AppCenter) read to display more than the bare minimum of
+  the Debian package.
+
+  Without it the install page only had the Debian control fields: the
+  lower-case PACKAGE name ("piboard"), no icon, "Unknown licence", "No
+  information is available for this version", "No age rating
+  information". The Debian control simply has no field for an icon, a
+  licence or release notes — hence this complementary format.
+
+  What stays unavoidable: the "No software repository included / It
+  will not be updated to new versions" banner. It does not describe the
+  application but the way it was installed — a .deb file downloaded by
+  hand belongs to no apt repository, so the software centre has nowhere
+  to look for a next version. That is correct from its point of view,
+  and harmless here: PiBoard updates itself (see electron/updater.js),
+  which the software centre has no way of knowing. Only publishing a
+  signed apt repository would silence it.
+-->
+<component type="desktop-application">
+  <!-- Identifiant inverse-DNS, derive de l'adresse du depot GitHub :
+       la convention AppStream, et ce qui garantit l'unicite. Le nom du
+       fichier doit lui etre identique.
+       Reverse-DNS identifier, derived from the GitHub repository
+       address: the AppStream convention, and what guarantees
+       uniqueness. The file name must match it. -->
+  <id>io.github.jihemezes.piboard</id>
+
+  <!-- Fait le lien avec le fichier .desktop installe par le paquet :
+       c'est ainsi que la logitheque sait quoi lancer, et qu'elle
+       rattache l'icone du theme a cette fiche.
+       Links to the .desktop file installed by the package: this is how
+       the software centre knows what to launch, and how it ties the
+       theme icon to this entry. -->
+  <launchable type="desktop-id">piboard.desktop</launchable>
+
+  <name>PiBoard</name>
+  <summary>Tile-based kiosk dashboard for a wall screen or a desktop</summary>
+  <summary xml:lang="fr">Tableau de bord a tuiles pour un ecran mural ou un bureau</summary>
+
+  <!-- Licence du code (SPDX) : remplace le "Licence inconnue" et son
+       avertissement sur un logiciel potentiellement proprietaire.
+       metadata_license couvre ce fichier-ci, comme le veut la
+       specification.
+       Licence of the code (SPDX): replaces the "Unknown licence" and
+       its warning about potentially proprietary software.
+       metadata_license covers this very file, as the specification
+       requires. -->
+  <project_license>MIT</project_license>
+  <metadata_license>MIT</metadata_license>
+
+  <developer id="io.github.jihemezes">
+    <name>Jean-Michel Ezes</name>
+  </developer>
+
+  <description>
+    <p>
+      PiBoard is a self-hosted dashboard made of tiles: weather, road
+      traffic, TV guide, sports results, photos, home automation,
+      calendars and more. It runs on a Raspberry Pi driving a wall
+      screen as well as on an ordinary desktop, and the same interface
+      serves both.
+    </p>
+    <p>
+      Everything stays on your own machine: the tiles talk to the
+      services you configure, the server listens on the local machine
+      only, and no account is needed.
+    </p>
+    <p xml:lang="fr">
+      PiBoard est un tableau de bord auto-heberge compose de tuiles :
+      meteo, trafic routier, programme TV, resultats sportifs, photos,
+      domotique, agendas et bien d'autres. Il tourne aussi bien sur un
+      Raspberry Pi pilotant un ecran mural que sur un ordinateur de
+      bureau ordinaire, avec la meme interface.
+    </p>
+    <p xml:lang="fr">
+      Tout reste sur votre machine : les tuiles interrogent les services
+      que vous configurez, le serveur n'ecoute que sur l'ordinateur
+      local, et aucun compte n'est necessaire.
+    </p>
+  </description>
+
+  <!-- Icone du theme : le paquet installe piboard.png dans
+       /usr/share/icons/hicolor/<taille>/apps/. C'est ce qui remplit la
+       vignette vide de la fiche d'installation.
+       Theme icon: the package installs piboard.png into
+       /usr/share/icons/hicolor/<size>/apps/. This is what fills the
+       empty thumbnail of the install page. -->
+  <icon type="stock">piboard</icon>
+
+  <categories>
+    <category>Utility</category>
+    <category>Network</category>
+  </categories>
+
+  <url type="homepage">https://github.com/jihemezes/piboard</url>
+  <url type="bugtracker">https://github.com/jihemezes/piboard/issues</url>
+
+  <!-- Classification par age. L'absence de cette balise n'est pas lue
+       comme "tout public" mais comme "inconnu", d'ou la quatrieme case
+       grisee de la fiche. Un tableau de bord n'a aucun des contenus
+       listes par la norme OARS : une balise vide suffit et vaut
+       "convient a tous".
+       Age rating. Missing this tag is not read as "suitable for all"
+       but as "unknown", hence the fourth greyed-out box on the page. A
+       dashboard has none of the contents listed by the OARS standard:
+       an empty tag is enough and means "suitable for everyone". -->
+  <content_rating type="oars-1.1" />
+
+  <!-- Notes de version. La logitheque n'affiche que celle qui
+       correspond exactement a la version installee ; une entree par
+       version publiee est donc a ajouter ici en meme temps que dans
+       CHANGELOG.md.
+       Release notes. The software centre only displays the one exactly
+       matching the installed version; an entry per published version is
+       therefore to be added here at the same time as in CHANGELOG.md. -->
+  <releases>
+    <release version="1.100.4" date="2026-09-13">
+      <description>
+        <p>Better presentation in graphical software centres: application name, icon, licence and release notes.</p>
+        <p xml:lang="fr">Meilleure presentation dans les logitheques graphiques : nom de l'application, icone, licence et notes de version.</p>
+      </description>
+    </release>
+    <release version="1.100.3" date="2026-09-11">
+      <description>
+        <p>On macOS, the update now opens the release page instead of a download that could not install itself.</p>
+        <p xml:lang="fr">Sous macOS, la mise a jour ouvre desormais la page de la version au lieu d'un telechargement qui ne pouvait pas s'installer.</p>
+      </description>
+    </release>
+    <release version="1.100.0" date="2026-09-10">
+      <description>
+        <p>First Linux and macOS packages of the desktop application.</p>
+        <p xml:lang="fr">Premiers paquets Linux et macOS de l'application de bureau.</p>
+      </description>
+    </release>
+  </releases>
+</component>

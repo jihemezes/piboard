@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.100.4
+
+- **Fiche d'installation correcte dans les logitheques graphiques**
+  (Logiciels de Zorin OS et d'Ubuntu, KDE Discover). La fiche
+  n'affichait que les champs du paquet Debian : nom du paquet en
+  minuscules, aucune icone, « Licence inconnue » avec son avertissement
+  sur un logiciel potentiellement proprietaire, « Aucune information
+  n'est disponible pour cette version », « Aucune information
+  d'evaluation par age ». Le control Debian n'a tout simplement pas de
+  champ pour tout cela.
+
+  Le paquet installe desormais une fiche AppStream
+  (`/usr/share/metainfo/io.github.jihemezes.piboard.metainfo.xml`) :
+  nom PiBoard, resume et description bilingues, licence MIT, icone,
+  categories, liens, classement par age (vide = tout public, alors que
+  l'absence de balise vaut « inconnu ») et notes de version. Fichier
+  valide par `appstreamcli validate`.
+
+- **Icone enfin affichee.** Le paquet n'installait qu'une icone
+  512x512, faute d'une seule image source : les logitheques et les
+  barres des taches, qui cherchent du 48, 64 ou 128, ne trouvaient rien
+  et repliaient sur une icone generique. Les huit tailles standard (16
+  a 512) sont maintenant generees dans `build/icons/` et installees.
+
+- **Entree de menu plus juste** : categories Utility;Network (le champ
+  `category` ecrasait silencieusement celles demandees plus bas),
+  info-bulle courte au lieu de la description complete, GenericName et
+  mots-cles de recherche dans les deux langues.
+
+- **Ce qui ne change pas** : le bandeau « Aucun depot de logiciels
+  inclus / Elle ne sera pas mise a jour vers de nouvelles versions ».
+  Il ne parle pas de l'application mais de la maniere dont elle a ete
+  installee : un `.deb` telecharge a la main n'appartient a aucun depot
+  apt. C'est exact du point de vue de la logitheque, et sans
+  consequence : PiBoard se met a jour lui-meme. Seule la publication
+  d'un depot apt signe ferait disparaitre ce bandeau.
+
 ## 1.100.3
 
 - **macOS : la mise a jour ne fait plus semblant de marcher.** Le

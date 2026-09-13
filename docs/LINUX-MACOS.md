@@ -53,6 +53,22 @@ installé avec les bons droits — y compris le profil AppArmor dont
 Ubuntu 24.04 et suivants (donc Zorin OS 18) ont besoin. Désinstallation :
 `sudo apt remove piboard` (les données restent, voir plus bas).
 
+On peut aussi double-cliquer le `.deb` pour l'ouvrir dans la logithèque
+graphique (*Logiciels*, sur Zorin OS et Ubuntu). Depuis la 1.100.4, la
+fiche y est complète : nom PiBoard, icône, licence MIT, description et
+notes de version, grâce à un fichier AppStream installé par le paquet
+(`/usr/share/metainfo/`).
+
+Une mention y reste cependant, et elle est normale : **« Aucun dépôt de
+logiciels inclus — elle ne sera pas mise à jour vers de nouvelles
+versions »**. Elle ne décrit pas l'application mais la façon dont elle a
+été installée : un `.deb` téléchargé à la main n'appartient à aucun
+dépôt `apt`, donc la logithèque n'a nulle part où chercher une version
+suivante. Sans conséquence ici, puisque PiBoard se met à jour lui-même
+(il interroge GitHub et réinstalle le `.deb` via `pkexec`) — mais la
+logithèque n'a aucun moyen de le savoir. Seule la publication d'un dépôt
+`apt` signé ferait disparaître ce bandeau ; voir plus bas.
+
 **L'AppImage ensuite**, quand il n'y a pas d'`apt` (Fedora, Arch…) ou
 qu'on ne veut rien installer :
 
@@ -270,6 +286,22 @@ and above all Chromium's sandbox (`chrome-sandbox`) is installed with
 the right permissions — including the AppArmor profile that Ubuntu
 24.04 and later (hence Zorin OS 18) require. Uninstall:
 `sudo apt remove piboard` (data is kept, see below).
+
+You can also double-click the `.deb` to open it in the graphical
+software centre (*Software*, on Zorin OS and Ubuntu). Since 1.100.4 the
+page there is complete: PiBoard name, icon, MIT licence, description
+and release notes, thanks to an AppStream file installed by the package
+(`/usr/share/metainfo/`).
+
+One mention nevertheless stays, and it is normal: **"No software
+repository included — it will not be updated to new versions"**. It
+describes not the application but the way it was installed: a `.deb`
+downloaded by hand belongs to no `apt` repository, so the software
+centre has nowhere to look for a next version. Harmless here, since
+PiBoard updates itself (it queries GitHub and reinstalls the `.deb`
+through `pkexec`) — but the software centre has no way of knowing that.
+Only publishing a signed `apt` repository would make the banner go
+away; see below.
 
 **The AppImage otherwise**, when there is no `apt` (Fedora, Arch…) or
 you don't want to install anything:
