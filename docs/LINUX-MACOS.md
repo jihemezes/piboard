@@ -113,12 +113,18 @@ développeur payant). Deux conséquences, connues et acceptées :
    puis *Réglages Système → Confidentialité et sécurité → Ouvrir quand
    même*. En dernier recours, dans le Terminal :
    `xattr -cr /Applications/PiBoard.app`.
-2. **Pas de mise à jour automatique** : `electron-updater` refuse par
-   conception de mettre à jour une application non signée sur macOS.
-   « Rechercher une mise à jour » affiche une erreur qui l'explique.
-   Mettre à jour = retélécharger le `.dmg` depuis la page des releases.
-   Les données (`~/Library/Application Support/piboard/data`) sont
-   conservées.
+2. **Pas de mise à jour automatique** : l'installation est confiée à
+   Squirrel.Mac, qui refuse par conception une application non signée.
+   Attention, ce refus n'arrive pas où on l'attend : la vérification et
+   le téléchargement réussissent (d'où un « prêt à installer » très
+   rapide), et c'est seulement à l'installation que la signature est
+   vérifiée — l'échec est alors silencieux, l'application ne se ferme
+   même pas. Depuis la 1.100.3, PiBoard ne tente donc plus rien de tout
+   cela sous macOS : il **signale** la nouvelle version et ouvre la page
+   de la release dans le navigateur. Mettre à jour = télécharger le
+   `.dmg` correspondant à son Mac et le réinstaller par-dessus
+   l'ancienne version. Les données
+   (`~/Library/Application Support/piboard/data`) sont conservées.
 
 Le jour où une signature Developer ID est disponible, il suffit de
 retirer `identity: null` de `electron-builder.yml`, de fournir le
@@ -324,10 +330,16 @@ account). Two known and accepted consequences:
    suffices: try opening once, then *System Settings → Privacy &
    Security → Open Anyway*. As a last resort, in Terminal:
    `xattr -cr /Applications/PiBoard.app`.
-2. **No automatic update**: `electron-updater` refuses by design to
-   update an unsigned app on macOS. "Check for updates" shows an error
-   explaining it. Updating = re-download the `.dmg` from the releases
-   page. Data (`~/Library/Application Support/piboard/data`) is kept.
+2. **No automatic update**: installing is handed to Squirrel.Mac, which
+   refuses an unsigned application by design. Beware, that refusal does
+   not happen where one expects: the check and the download succeed
+   (hence a very fast "ready to install"), and only at install time is
+   the signature verified — the failure is then silent, the application
+   does not even quit. Since 1.100.3 PiBoard therefore attempts none of
+   that on macOS: it **announces** the new version and opens the
+   release's page in the browser. Updating = download the `.dmg`
+   matching your Mac and reinstall it over the old version. Data
+   (`~/Library/Application Support/piboard/data`) is kept.
 
 Once a Developer ID signature is available, remove `identity: null`
 from `electron-builder.yml`, hand the certificate to the workflow

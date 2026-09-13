@@ -21,12 +21,8 @@
        .deb reinstalle via `pkexec dpkg -i` (invite de mot de passe
        administrateur). Chaque architecture lit son propre fichier de
        version (latest-linux.yml pour x64, latest-linux-arm64.yml).
-     - macOS : electron-updater EXIGE une application signee par Apple
-       (Developer ID). PiBoard n'etant pas signe (voir
-       electron-builder.yml), la verification echoue la-bas avec une
-       erreur de signature : la mise a jour reste manuelle (retelecharger
-       le DMG) tant qu'aucun certificat n'est en place. L'erreur n'est
-       montree qu'a une verification manuelle, jamais au demarrage.
+     - macOS : mise a jour MANUELLE, par ouverture de la page de la
+       release dans le navigateur. Voir le bloc MACOS ci-dessous.
 
    HOW IT WORKS: for each version, electron-builder publishes the
    installer files AND a "latest.yml" file in the matching GitHub
@@ -50,17 +46,67 @@
        reinstalled via `pkexec dpkg -i` (administrator password prompt).
        Each architecture reads its own version file (latest-linux.yml
        for x64, latest-linux-arm64.yml).
-     - macOS: electron-updater REQUIRES an Apple-signed application
-       (Developer ID). PiBoard being unsigned (see electron-builder.yml),
-       the check fails there with a signature error: updating stays
-       manual (re-download the DMG) until a certificate is in place. The
-       error is only shown on a manual check, never at startup.
+     - macOS: MANUAL update, by opening the release's page in the
+       browser. See the MACOS block below.
    ============================================================ */
 "use strict";
 
-const { app, dialog } = require("electron");
+const { app, dialog, shell } = require("electron");
 const { autoUpdater } = require("electron-updater");
 const platform = require("../server/platform");
+
+/* ---------- MACOS : pourquoi la mise a jour n'est pas automatique ----------
+   Sous macOS, l'installation d'une mise a jour par electron-updater est
+   confiee a Squirrel.Mac, qui REFUSE une application non signee par
+   Apple (certificat Developer ID). PiBoard ne l'est pas.
+
+   Le piege, constate sur la 1.100.x : ce refus n'arrive pas au moment
+   ou on le croirait. La verification reussit (elle ne fait que lire un
+   fichier .yml), le telechargement reussit aussi et parait meme tres
+   rapide -- d'ou le message "pret a etre installe" en quelques
+   secondes. C'est SEULEMENT a l'installation que Squirrel.Mac verifie
+   la signature, echoue, et ne fait rien : l'application ne se ferme
+   pas, ne se relance pas, aucune fenetre d'erreur n'apparait. De
+   l'exterieur, "on clique sur redemarrer et il ne se passe rien".
+
+   Plutot que de laisser l'utilisateur dans cette impasse, la nouvelle
+   version est SIGNALEE sous macOS, mais le bouton ouvre la page de la
+   release dans le navigateur : le DMG se telecharge et s'installe a la
+   main, par-dessus l'ancienne application, en conservant les donnees.
+   Aucun telechargement n'est declenche dans l'application, aucun
+   redemarrage n'est propose.
+
+   Le jour ou un certificat Developer ID sera en place (voir
+   electron-builder.yml et docs/LINUX-MACOS.md), il suffira de
+   supprimer ce detournement : le chemin normal fonctionnera.
+
+   MACOS: why updating is not automatic. There, installing an update is
+   handed to Squirrel.Mac, which REFUSES an application not signed by
+   Apple (Developer ID certificate). PiBoard is not signed.
+
+   The trap, observed on 1.100.x: that refusal does not happen where one
+   would expect. The check succeeds (it only reads a .yml file), the
+   download succeeds too and even looks very fast -- hence the "ready to
+   install" message within seconds. Only at INSTALL time does
+   Squirrel.Mac verify the signature, fail, and do nothing: the
+   application neither quits nor restarts, and no error window appears.
+   From the outside, "you click restart and nothing happens".
+
+   Rather than leaving the user in that dead end, the new version is
+   ANNOUNCED on macOS, but the button opens the release's page in the
+   browser: the DMG is downloaded and installed by hand, over the old
+   application, keeping the data. No download is started inside the
+   application, no restart is offered.
+
+   Once a Developer ID certificate is in place (see electron-builder.yml
+   and docs/LINUX-MACOS.md), removing this detour is enough: the normal
+   path will work. */
+const MANUAL_UPDATE_ON_MAC = platform.id === "darwin";
+const RELEASES_URL = "https://github.com/jihemezes/piboard/releases";
+
+function releaseUrl(version) {
+  return version ? RELEASES_URL + "/tag/v" + version : RELEASES_URL;
+}
 
 /* Le telechargement est explicite plutot qu'automatique : consommer la
    bande passante de l'utilisateur sans le prevenir serait discourtois
@@ -122,22 +168,42 @@ function wireEvents() {
 
   autoUpdater.on("update-available", async (info) => {
     const win = parentWindow();
-    const options = {
-      type: "info",
-      buttons: ["Telecharger / Download", "Plus tard / Later"],
-      defaultId: 0,
-      cancelId: 1,
-      title: "PiBoard",
-      message: `PiBoard ${info.version} est disponible / is available`,
-      detail:
-        `Version installee / installed version : ${app.getVersion()}\n` +
-        "La mise a jour sera installee a la fermeture de l'application.\n" +
-        "The update will be installed when the application closes."
-    };
+    const options = MANUAL_UPDATE_ON_MAC
+      ? {
+          type: "info",
+          buttons: ["Ouvrir la page / Open the page", "Plus tard / Later"],
+          defaultId: 0,
+          cancelId: 1,
+          title: "PiBoard",
+          message: `PiBoard ${info.version} est disponible / is available`,
+          detail:
+            `Version installee / installed version : ${app.getVersion()}\n\n` +
+            "Sous macOS, l'installation se fait a la main : la page de la version va s'ouvrir " +
+            "dans le navigateur. Telecharge le fichier .dmg correspondant a ton Mac " +
+            "(arm64 pour Apple Silicon, x64 pour Intel), ouvre-le et glisse PiBoard dans " +
+            "Applications par-dessus l'ancienne version. Tes tuiles et tes reglages sont conserves.\n\n" +
+            "On macOS the installation is manual: the version's page will open in the browser. " +
+            "Download the .dmg matching your Mac (arm64 for Apple Silicon, x64 for Intel), open it " +
+            "and drag PiBoard into Applications over the old version. Your tiles and settings are kept."
+        }
+      : {
+          type: "info",
+          buttons: ["Telecharger / Download", "Plus tard / Later"],
+          defaultId: 0,
+          cancelId: 1,
+          title: "PiBoard",
+          message: `PiBoard ${info.version} est disponible / is available`,
+          detail:
+            `Version installee / installed version : ${app.getVersion()}\n` +
+            "La mise a jour sera installee a la fermeture de l'application.\n" +
+            "The update will be installed when the application closes."
+        };
     const result = win
       ? await dialog.showMessageBox(win, options)
       : await dialog.showMessageBox(options);
-    if (result.response === 0) autoUpdater.downloadUpdate();
+    if (result.response !== 0) return;
+    if (MANUAL_UPDATE_ON_MAC) shell.openExternal(releaseUrl(info.version));
+    else autoUpdater.downloadUpdate();
   });
 
   autoUpdater.on("update-not-available", () => {
@@ -174,7 +240,38 @@ function wireEvents() {
     const result = win
       ? await dialog.showMessageBox(win, options)
       : await dialog.showMessageBox(options);
-    if (result.response === 0) autoUpdater.quitAndInstall();
+    if (result.response !== 0) return;
+    /* quitAndInstall() ne rend la main que si l'installation echoue
+       AVANT la fermeture ; sous Windows et Linux elle ferme
+       l'application et on ne revient jamais ici. Tout retour est donc
+       un echec silencieux : on le journalise et on le dit, plutot que
+       de laisser une fenetre qui ne fait rien.
+       quitAndInstall() only returns if installing fails BEFORE the
+       shutdown; on Windows and Linux it closes the application and we
+       never come back here. Any return is therefore a silent failure:
+       we log it and say so, rather than leaving a window that does
+       nothing. */
+    try {
+      autoUpdater.quitAndInstall();
+    } catch (e) {
+      console.warn("[piboard] installation de la mise a jour / update install:", (e && e.message) || e);
+    }
+    setTimeout(() => {
+      const w = parentWindow();
+      const failed = {
+        type: "warning",
+        title: "PiBoard",
+        message: "Installation impossible / Install failed",
+        detail:
+          "La mise a jour n'a pas pu s'installer toute seule. Telecharge la nouvelle version " +
+          "depuis " + RELEASES_URL + " et installe-la par-dessus l'ancienne ; " +
+          "tes tuiles et tes reglages sont conserves.\n\n" +
+          "The update could not install itself. Download the new version from " +
+          RELEASES_URL + " and install it over the old one; your tiles and settings are kept."
+      };
+      if (w) dialog.showMessageBox(w, failed);
+      else dialog.showMessageBox(failed);
+    }, 5000);
   });
 
   autoUpdater.on("error", (err) => {
@@ -193,11 +290,11 @@ function wireEvents() {
     // l'en-tete) est explique plutot que laisse brut.
     // On macOS the expected failure (unsigned application, see the
     // header) is explained rather than left raw.
-    const macHint = platform.id === "darwin"
+    const macHint = MANUAL_UPDATE_ON_MAC
       ? "\n\nSous macOS, la mise a jour automatique exige une application signee par Apple ; " +
-        "PiBoard ne l'est pas encore. Telechargez la nouvelle version depuis github.com/jihemezes/piboard/releases.\n" +
+        "PiBoard ne l'est pas encore. Telechargez la nouvelle version depuis " + RELEASES_URL + ".\n" +
         "On macOS, automatic updating requires an Apple-signed application; PiBoard is not signed yet. " +
-        "Download the new version from github.com/jihemezes/piboard/releases."
+        "Download the new version from " + RELEASES_URL + "."
       : "";
     const options = {
       type: "warning",

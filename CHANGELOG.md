@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.100.3
+
+- **macOS : la mise a jour ne fait plus semblant de marcher.** Le
+  symptome signale (« nouvelle version disponible », telechargement
+  tres rapide, « pret a installer », puis rien du tout au redemarrage)
+  vient de Squirrel.Mac, a qui electron-updater confie l'installation :
+  il REFUSE une application non signee par Apple, et PiBoard ne l'est
+  pas. Le piege est que ce refus n'arrive pas ou on l'attend --
+  verification et telechargement reussissent (ils ne font que lire un
+  .yml puis un zip), et c'est seulement a l'installation que la
+  signature est verifiee ; l'echec est alors totalement silencieux,
+  l'application ne se ferme meme pas.
+
+  Sous macOS, la nouvelle version est donc toujours signalee, mais le
+  bouton ouvre desormais **la page de la release dans le navigateur** :
+  on telecharge le .dmg correspondant a son Mac (arm64 pour Apple
+  Silicon, x64 pour Intel) et on l'installe par-dessus l'ancienne
+  version, tuiles et reglages conserves. Plus aucun telechargement ni
+  redemarrage n'est propose dans l'application. Le detour disparaitra
+  d'une ligne le jour ou un certificat Developer ID sera en place.
+
+- **Filet de securite sur les trois systemes** : `quitAndInstall()` ne
+  rend normalement jamais la main (elle ferme l'application). Si elle
+  revient, ou si rien ne s'est produit au bout de cinq secondes, une
+  fenetre l'annonce et renvoie vers la page des releases, au lieu de
+  laisser croire a un redemarrage en cours.
+
 ## 1.100.2
 
 - **Choix « latest » ou « pre-release » au moment de la publication**,
