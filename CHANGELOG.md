@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.103.0
+
+- **Licence enoncee en clair, et possibilite d'offrir un cafe.** La
+  licence MIT etait bien la (fichier LICENSE, champ de package.json)
+  mais n'etait affirmee nulle part de visible. Elle est desormais
+  expliquee en francais et en anglais dans le README et dans la page
+  « A propos » de l'aide : logiciel libre et gratuit, utilisable,
+  modifiable et redistribuable, sans version payante, sans cle de
+  licence, sans fonction reservee et sans compte a creer, fourni sans
+  garantie.
+
+- **Lien de don Ko-fi** (ko-fi.com/jihemezes), presente comme ce qu'il
+  est : facultatif et sans contrepartie -- aucun droit, aucune fonction
+  ni aucun support supplementaires, aucune obligation de part et
+  d'autre. L'adresse figure a cinq endroits, qui ne se lisent pas les
+  uns les autres : le champ `funding` de package.json (npm), l'element
+  <url type="donation"> de la fiche AppStream (bouton « Faire un don »
+  des logitheques Linux), le fichier .github/FUNDING.yml (bouton
+  Sponsor de GitHub -- qui attend l'identifiant seul, pas l'URL), le
+  README et l'aide de l'application. Une adresse qui changerait est
+  donc a changer aux cinq.
+
 ## 1.102.1
 
 - **Mise a jour du Raspberry Pi reparee (erreur « download HTTP 415 »).**

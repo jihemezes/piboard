@@ -1,0 +1,28 @@
+# PiBoard - .github/FUNDING.yml
+#
+# Fait apparaitre le bouton "Sponsor" (un coeur) en haut de la page du
+# depot et sur chaque page de release. C'est GitHub qui lit ce fichier,
+# il n'a aucun effet ailleurs -- d'ou la duplication apparente avec le
+# champ `funding` de package.json (lu par npm) et l'element
+# <url type="donation"> de la fiche AppStream (lu par les logitheques
+# Linux). Trois lecteurs differents, aucun ne connait les deux autres :
+# une adresse qui change doit etre changee aux trois endroits, plus le
+# README et l'aide de l'application.
+#
+# Le champ `ko_fi` attend l'IDENTIFIANT seul, pas l'adresse complete :
+# GitHub reconstruit https://ko-fi.com/<identifiant>. Y mettre une URL
+# produirait un lien casse, sans erreur visible.
+#
+# Adds the "Sponsor" button (a heart) at the top of the repository page
+# and on every release page. GitHub reads this file, it has no effect
+# anywhere else -- hence the apparent duplication with package.json's
+# `funding` field (read by npm) and the AppStream metadata's
+# <url type="donation"> element (read by Linux software centres). Three
+# different readers, none of which knows about the other two: an address
+# that changes must be changed in all three places, plus the README and
+# the application's help.
+#
+# The `ko_fi` field expects the HANDLE alone, not the full address:
+# GitHub rebuilds https://ko-fi.com/<handle>. Putting a URL there would
+# produce a broken link, with no visible error.
+ko_fi: jihemezes

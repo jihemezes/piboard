@@ -471,4 +471,33 @@ Plusieurs tuiles interrogent des API publiques gratuites et sans clé : Open-Met
 
 ## License / Licence
 
-MIT — see [LICENSE](LICENSE).
+**MIT** — see [LICENSE](LICENSE). In plain terms: PiBoard is free software,
+free of charge, and free to use, modify and redistribute, privately or
+commercially, as long as the copyright notice is kept. There is no paid
+version, no licence key, no feature held back, and no account to create.
+It comes with no warranty of any kind.
+
+PiBoard est un **logiciel libre sous licence MIT** — voir
+[LICENSE](LICENSE). En clair : gratuit, et libre d'usage, de
+modification et de redistribution, à titre privé comme commercial, du
+moment que la mention de copyright est conservée. Il n'existe ni version
+payante, ni clé de licence, ni fonction réservée, ni compte à créer. Le
+logiciel est fourni sans aucune garantie.
+
+### Offrir un café / Buy me a coffee
+
+PiBoard est gratuit et le restera. Si l'application vous est utile et
+que vous souhaitez soutenir le temps passé dessus, vous pouvez m'offrir
+un café : **[ko-fi.com/jihemezes](https://ko-fi.com/jihemezes)**.
+
+C'est une simple marque de sympathie, sans contrepartie : un don ne
+donne accès à aucune fonction supplémentaire, n'ouvre droit à aucun
+support et ne crée aucune obligation — ni pour vous, ni pour moi. Ne
+donnez rien si cela vous met la moindre difficulté ; utiliser PiBoard,
+signaler un bug ou proposer une idée fait tout autant plaisir.
+
+PiBoard is free and will stay free. If it is useful to you and you would
+like to support the time that goes into it, you can buy me a coffee:
+**[ko-fi.com/jihemezes](https://ko-fi.com/jihemezes)**. It is a simple token of appreciation, with
+no strings attached: a donation unlocks no extra feature, entitles you to
+no support and creates no obligation either way.

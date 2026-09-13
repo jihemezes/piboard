@@ -124,6 +124,15 @@
 
   <url type="homepage">https://github.com/jihemezes/piboard</url>
   <url type="bugtracker">https://github.com/jihemezes/piboard/issues</url>
+  <!-- Les logitheques graphiques (Logiciels de GNOME, KDE Discover)
+       transforment cette adresse en bouton "Faire un don" sur la fiche
+       de l'application. C'est le seul endroit ou le lien apparait sous
+       Linux sans que l'application soit lancee.
+       Graphical software centres (GNOME Software, KDE Discover) turn
+       this address into a "Donate" button on the application's page. It
+       is the only place where the link shows on Linux without the
+       application being launched. -->
+  <url type="donation">https://ko-fi.com/jihemezes</url>
 
   <!-- Classification par age. L'absence de cette balise n'est pas lue
        comme "tout public" mais comme "inconnu", d'ou la quatrieme case
@@ -144,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.103.0" date="2026-09-13">
+      <description>
+        <p>The MIT licence is now stated in plain terms, with an optional way to buy the author a coffee.</p>
+        <p xml:lang="fr">La licence MIT est desormais enoncee en clair, avec une facon facultative d'offrir un cafe a l'auteur.</p>
+      </description>
+    </release>
     <release version="1.102.1" date="2026-09-13">
       <description>
         <p>Fixes the Raspberry Pi self-update, which GitHub had started refusing with an HTTP 415 error.</p>
