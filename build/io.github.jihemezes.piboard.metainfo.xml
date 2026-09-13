@@ -144,6 +144,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.101.1" date="2026-09-13">
+      <description>
+        <p>Version numbering put back in order, and a clearer message when this system's package is not published yet.</p>
+        <p xml:lang="fr">Numerotation des versions remise d'aplomb, et message plus clair quand le paquet de ce systeme n'est pas encore publie.</p>
+      </description>
+    </release>
     <release version="1.101.0" date="2026-09-13">
       <description>
         <p>The IPTV tile's optional tools, ffmpeg and VLC, can now be installed from the settings.</p>

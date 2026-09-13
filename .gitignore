@@ -1,6 +1,20 @@
 # Dependances et donnees / dependencies and data
 node_modules/
-data/
+# Barre oblique INITIALE indispensable : ecrit "data/", le motif designe
+# n'importe quel dossier nomme data a n'importe quelle profondeur -- il
+# excluait donc aussi public/data/, ou vit le calendrier des saints
+# livre avec l'application. Resultat : le fichier n'a jamais ete pousse,
+# et toute construction faite ailleurs que sur le PC (GitHub Actions,
+# donc les paquets Linux et macOS) sortait sans lui. "/data/" ne vise
+# que le dossier de donnees a la racine, celui de l'instance locale.
+# The LEADING slash is essential: written "data/", the pattern matches
+# any directory named data at any depth -- so it also excluded
+# public/data/, where the saints calendar shipped with the application
+# lives. As a result the file was never pushed, and every build made
+# outside the PC (GitHub Actions, hence the Linux and macOS packages)
+# came out without it. "/data/" only targets the root data folder, the
+# local instance's one.
+/data/
 
 # Sortie d'electron-builder : l'installeur pese plus de 100 Mo et est
 # publie sur GitHub Releases, jamais versionne.

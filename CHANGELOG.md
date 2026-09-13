@@ -1,26 +1,29 @@
 # Changelog
 
-## 1.100.5
+## 1.101.1
 
-- **Message lisible quand le paquet du systeme n'est pas encore
-  publie.** Depuis que trois plateformes se partagent une meme release,
-  un cas nouveau existe : la release est creee tres vite par la
-  publication Windows, alors que les paquets Linux et macOS sont encore
-  en construction chez GitHub -- ou ont echoue. Une verification lancee
-  dans cette fenetre affichait une erreur 404 brute, avec tout
-  l'en-tete HTTP et une pile d'appels. Elle est remplacee par une
-  explication en clair (« reessaie dans un quart d'heure ; si ca
-  persiste, les fichiers manquent peut-etre »), le detail technique
-  restant dans le journal.
+- **Remise d'aplomb des numeros de version.** Les correctifs livres sous
+  le numero 1.100.5 ont ete appliques sur une base qui portait deja le
+  numero 1.101.0 : le depot se retrouvait avec un package.json en
+  1.101.0 et un tag v1.100.5 sur le meme commit. Le garde-fou de
+  coherence ajoute en 1.100.2 a fait son travail -- il a refuse de
+  publier, sur le PC comme dans les deux jobs GitHub Actions, d'ou les
+  echecs en quelques secondes et les courriels d'alerte. Cette version
+  reunit tout sous un seul numero coherent ; aucun code n'a ete perdu,
+  la section « Outils multimedias » de la 1.101.0 et les correctifs de
+  la 1.100.5 sont tous les deux presents.
 
-- **Le workflow ne peut plus publier une release Linux incomplete.**
-  Une etape verifie desormais que les SIX fichiers attendus existent
-  (deux AppImage, deux .deb, deux fichiers de version) avant de
-  considerer la publication reussie, et la sortie complete de la
-  construction est conservee en artifact pendant quinze jours en cas
-  d'echec. Sans cela, un echec ne laissait aucune trace consultable --
-  c'est ce qui s'est passe pour la 1.100.4, publiee sans aucun de ses
-  fichiers Linux.
+- **Le calendrier des saints manquait aux paquets Linux et macOS.**
+  La regle `data/` du .gitignore, sans barre oblique initiale, designe
+  n'importe quel dossier nomme data a n'importe quelle profondeur :
+  elle excluait donc aussi `public/data/`, ou vit le fichier
+  `saints-fr.json` livre avec l'application. Ce fichier n'avait jamais
+  ete pousse sur GitHub. Invisible sur le PC de developpement, ou il
+  existe localement, mais toute construction faite ailleurs -- donc
+  tous les paquets Linux et macOS fabriques par GitHub Actions --
+  sortait sans lui, et la tuile du jour restait muette sur le saint du
+  jour. La regle vise desormais la racine seule (`/data/`) et le
+  fichier est versionne.
 
 ## 1.101.0
 
@@ -53,6 +56,28 @@
   centaines de megaoctets avec leurs dependances : les imposer a toutes
   les installations serait disproportionne. C'est ce choix que la
   nouvelle section rend visible et reversible.
+
+## 1.100.5
+
+- **Message lisible quand le paquet du systeme n'est pas encore
+  publie.** Depuis que trois plateformes se partagent une meme release,
+  un cas nouveau existe : la release est creee tres vite par la
+  publication Windows, alors que les paquets Linux et macOS sont encore
+  en construction chez GitHub -- ou ont echoue. Une verification lancee
+  dans cette fenetre affichait une erreur 404 brute, avec tout
+  l'en-tete HTTP et une pile d'appels. Elle est remplacee par une
+  explication en clair (« reessaie dans un quart d'heure ; si ca
+  persiste, les fichiers manquent peut-etre »), le detail technique
+  restant dans le journal.
+
+- **Le workflow ne peut plus publier une release Linux incomplete.**
+  Une etape verifie desormais que les SIX fichiers attendus existent
+  (deux AppImage, deux .deb, deux fichiers de version) avant de
+  considerer la publication reussie, et la sortie complete de la
+  construction est conservee en artifact pendant quinze jours en cas
+  d'echec. Sans cela, un echec ne laissait aucune trace consultable --
+  c'est ce qui s'est passe pour la 1.100.4, publiee sans aucun de ses
+  fichiers Linux.
 
 ## 1.100.4
 
