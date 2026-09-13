@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.102.1
+
+- **Mise a jour du Raspberry Pi reparee (erreur « download HTTP 415 »).**
+  Le telechargement de l'archive du tag echouait, sans qu'une ligne de
+  PiBoard ait change : c'est GitHub qui a durci ce point d'entree. Son
+  API n'accepte pas la meme valeur d'en-tete `Accept` partout -- une
+  piece jointe de release EXIGE `application/octet-stream` (sans quoi
+  elle repond du JSON), tandis que l'archive d'un tag
+  (`/tarball/v1.2.3`) refuse desormais cette meme valeur par un 415
+  Unsupported Media Type. PiBoard envoyait `application/octet-stream`
+  dans les deux cas. L'en-tete est maintenant choisi selon l'URL.
+
+  La correction est verrouillee par le test : le faux GitHub de
+  `test/selfUpdate.test.js` repond lui aussi 415 a l'ancien en-tete,
+  donc un retour en arriere ferait echouer le cycle complet.
+
+  Sans consequence pour les applications de bureau : Windows, Linux et
+  macOS passent par electron-updater et les fichiers de release, pas
+  par l'archive du tag.
+
 ## 1.102.0
 
 - **Analyse reseau : export et import CSV des noms d'appareils.** Deux

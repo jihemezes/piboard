@@ -144,6 +144,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.102.1" date="2026-09-13">
+      <description>
+        <p>Fixes the Raspberry Pi self-update, which GitHub had started refusing with an HTTP 415 error.</p>
+        <p xml:lang="fr">Corrige la mise a jour automatique du Raspberry Pi, que GitHub avait commence a refuser par une erreur HTTP 415.</p>
+      </description>
+    </release>
     <release version="1.102.0" date="2026-09-13">
       <description>
         <p>The Network scan tile can export and import its device names as a CSV file.</p>

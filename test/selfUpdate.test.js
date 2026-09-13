@@ -75,6 +75,17 @@ const server = http.createServer((req, res) => {
     return res.end(JSON.stringify(release));
   }
   if (req.url === "/tarball") {
+    /* Le vrai GitHub repond 415 sur ce point d'entree si on lui demande
+       "application/octet-stream" -- c'est ce qui a casse la mise a jour
+       du Pi en 1.101.1. Le faux GitHub se comporte donc pareil, sinon
+       le test validerait un en-tete que la production refuse.
+       The real GitHub answers 415 on this endpoint when asked for
+       "application/octet-stream" -- that is what broke the Pi's update
+       in 1.101.1. The fake GitHub behaves the same, otherwise the test
+       would bless a header production rejects. */
+    if (String(req.headers.accept || "").includes("application/octet-stream")) {
+      res.writeHead(415); return res.end("{}");
+    }
     const data = fs.readFileSync(archivePath);
     res.writeHead(200, { "Content-Type": "application/gzip", "Content-Length": data.length });
     return res.end(data);
@@ -465,4 +476,27 @@ async function waitRestart(updater, spy, timeoutMs) {
   assert.ok(!active.some((l) => /releaseType:\s*draft/.test(l)),
     "aucun reglage ne doit remettre la publication en brouillon");
   console.log("  OK publication GitHub immediate (pas de brouillon)");
+}
+
+/* En-tete Accept du telechargement : verrouille la correction de la
+   1.102.1. Le compteur ci-dessus n'aurait rien vu -- l'archive se
+   telecharge aussi bien avec le mauvais en-tete contre un faux serveur
+   complaisant ; c'est le vrai GitHub qui refuse.
+   Download Accept header: locks in the 1.102.1 fix. The counter above
+   would have seen nothing -- the archive downloads just as well with
+   the wrong header against a lenient fake server; it is the real GitHub
+   that refuses. */
+{
+  const { _acceptFor } = require("../server/selfUpdate");
+  assert.strictEqual(_acceptFor("https://api.github.com/repos/o/r/tarball/v1.2.3"), "*/*",
+    "l'archive d'un tag : GitHub repond 415 a application/octet-stream");
+  assert.strictEqual(_acceptFor("https://api.github.com/repos/o/r/releases/assets/42"), "application/octet-stream",
+    "une piece jointe de release : octet-stream reste indispensable pour obtenir le binaire");
+  /* Le cycle complet, lui, est verrouille par le faux serveur lui-meme :
+     il repond 415 comme le vrai GitHub, donc un retour a l'ancien
+     en-tete ferait echouer bruyamment les telechargements plus bas.
+     The full cycle is locked in by the fake server itself: it answers
+     415 like the real GitHub, so going back to the old header would
+     make the downloads further down fail loudly. */
+  console.log("  OK   en-tete Accept du telechargement (tarball vs piece jointe)");
 }

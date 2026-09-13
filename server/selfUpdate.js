@@ -276,6 +276,41 @@ function rollbackTree(appDir, previousDir, installed) {
 
 /* ---------- L'updater / the updater ---------- */
 
+/* En-tete Accept a envoyer pour telecharger une archive, et c'est
+   tout sauf un detail : l'API GitHub n'accepte PAS la meme valeur
+   selon le point d'entree.
+     - Une piece jointe de release (/releases/assets/123) est servie en
+       JSON par defaut ; il FAUT "application/octet-stream" pour
+       obtenir le binaire.
+     - L'archive d'un tag (/tarball/v1.2.3) refuse au contraire cette
+       valeur et repond 415 Unsupported Media Type. Ce n'etait pas le
+       cas auparavant -- GitHub a durci ce point d'entree, et la mise
+       a jour du Raspberry Pi, qui passe par lui, a cesse de
+       fonctionner du jour au lendemain sans qu'une ligne de PiBoard
+       n'ait change (constate sur la 1.101.1 : "download HTTP 415").
+   D'ou un choix guide par l'URL plutot qu'une valeur unique. "* / *"
+   convient au tarball : GitHub y renvoie alors l'archive, redirection
+   vers codeload comprise.
+
+   Accept header to send when downloading an archive, and it is
+   anything but a detail: the GitHub API does NOT accept the same
+   value depending on the endpoint.
+     - A release asset (/releases/assets/123) is served as JSON by
+       default; "application/octet-stream" is REQUIRED to get the
+       binary.
+     - A tag's archive (/tarball/v1.2.3) on the contrary rejects that
+       value and answers 415 Unsupported Media Type. This was not the
+       case before -- GitHub tightened that endpoint, and the
+       Raspberry Pi's update, which goes through it, stopped working
+       overnight without a single line of PiBoard changing (observed
+       on 1.101.1: "download HTTP 415").
+   Hence a URL-driven choice rather than a single value. "* / *" suits
+   the tarball: GitHub then returns the archive, redirect to codeload
+   included. */
+function acceptFor(url) {
+  return /\/releases\/assets\//.test(String(url)) ? "application/octet-stream" : "*/*";
+}
+
 function createUpdater(options) {
   // Les cles a `undefined` ne doivent pas ecraser les valeurs par defaut
   // (Object.assign les copierait telles quelles).
@@ -522,7 +557,7 @@ function createUpdater(options) {
       const res = await opts.fetchImpl(url, {
         signal: ctrl.signal,
         redirect: "follow",
-        headers: { "User-Agent": "PiBoard/" + opts.currentVersion, "Accept": "application/octet-stream" }
+        headers: { "User-Agent": "PiBoard/" + opts.currentVersion, "Accept": acceptFor(url) }
       });
       if (!res.ok || !res.body) throw new Error("download HTTP " + res.status);
       const total = Number(res.headers.get("content-length")) || null;
@@ -707,6 +742,7 @@ module.exports = {
   compareVersions,
   parseVersionTag,
   // Exposes pour les tests / exposed for tests
+  _acceptFor: acceptFor,
   _swapTree: swapTree,
   _rollbackTree: rollbackTree,
   _PRESERVED: PRESERVED
