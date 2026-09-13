@@ -100,15 +100,60 @@ jobs:
       # electron-builder downloads the prebuilt arm64 Electron binary
       # and packages it as is, no emulation -- no native code is
       # compiled (PiBoard has no native module).
+      # La sortie est dupliquee dans un fichier (`tee`) pour pouvoir la
+      # recuperer telle quelle en cas d'echec : sans cela, une
+      # construction ratee ne laisse que le journal en ligne, que
+      # personne ne pense a lire, et la release se retrouve publiee sans
+      # ses fichiers Linux -- exactement ce qui est arrive a la 1.100.4.
+      # `pipefail` est indispensable, sinon c'est le code de retour de
+      # `tee` (toujours 0) qui serait pris pour celui de la construction.
+      # The output is duplicated into a file (`tee`) so it can be
+      # retrieved as is on failure: without it a failed build only
+      # leaves the online log, which nobody thinks of reading, and the
+      # release ends up published without its Linux files -- exactly
+      # what happened to 1.100.4. `pipefail` is essential, otherwise
+      # `tee`'s exit code (always 0) would be taken for the build's.
       - name: Build (and publish on tag)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -o pipefail
           if [ "${{ github.event_name }}" = "push" ]; then
-            npm run publish:linux
+            npm run publish:linux 2>&1 | tee build-linux.log
           else
-            npm run dist:linux
+            npm run dist:linux 2>&1 | tee build-linux.log
           fi
+
+      # Verification explicite : electron-builder peut tres bien rendre
+      # la main sans erreur apres n'avoir produit qu'une partie des
+      # fichiers. On exige les six attendus (deux AppImage, deux .deb,
+      # deux fichiers de version) avant de considerer la publication
+      # reussie.
+      # Explicit check: electron-builder can return without an error
+      # after producing only part of the files. The six expected ones
+      # (two AppImages, two .debs, two version files) are required
+      # before the publication counts as successful.
+      - name: Check that all six Linux files were produced
+        run: |
+          missing=0
+          for pattern in "dist/*-linux-x86_64.AppImage" "dist/*-linux-arm64.AppImage" \
+                         "dist/*-linux-amd64.deb" "dist/*-linux-arm64.deb" \
+                         "dist/latest-linux.yml" "dist/latest-linux-arm64.yml"; do
+            if ! ls $pattern >/dev/null 2>&1; then
+              echo "MANQUANT / MISSING: $pattern"
+              missing=1
+            fi
+          done
+          ls -la dist | grep -v unpacked || true
+          exit $missing
+
+      - name: Keep the build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: piboard-linux-build-log
+          path: build-linux.log
+          retention-days: 14
 
       - name: Keep the packages as artifacts (manual run only)
         if: github.event_name == 'workflow_dispatch'
@@ -142,11 +187,20 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -o pipefail
           if [ "${{ github.event_name }}" = "push" ]; then
-            npm run publish:mac
+            npm run publish:mac 2>&1 | tee build-mac.log
           else
-            npm run dist:mac
+            npm run dist:mac 2>&1 | tee build-mac.log
           fi
+
+      - name: Keep the build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: piboard-mac-build-log
+          path: build-mac.log
+          retention-days: 14
 
       - name: Keep the packages as artifacts (manual run only)
         if: github.event_name == 'workflow_dispatch'

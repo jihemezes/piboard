@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.100.5
+
+- **Message lisible quand le paquet du systeme n'est pas encore
+  publie.** Depuis que trois plateformes se partagent une meme release,
+  un cas nouveau existe : la release est creee tres vite par la
+  publication Windows, alors que les paquets Linux et macOS sont encore
+  en construction chez GitHub -- ou ont echoue. Une verification lancee
+  dans cette fenetre affichait une erreur 404 brute, avec tout
+  l'en-tete HTTP et une pile d'appels. Elle est remplacee par une
+  explication en clair (« reessaie dans un quart d'heure ; si ca
+  persiste, les fichiers manquent peut-etre »), le detail technique
+  restant dans le journal.
+
+- **Le workflow ne peut plus publier une release Linux incomplete.**
+  Une etape verifie desormais que les SIX fichiers attendus existent
+  (deux AppImage, deux .deb, deux fichiers de version) avant de
+  considerer la publication reussie, et la sortie complete de la
+  construction est conservee en artifact pendant quinze jours en cas
+  d'echec. Sans cela, un echec ne laissait aucune trace consultable --
+  c'est ce qui s'est passe pour la 1.100.4, publiee sans aucun de ses
+  fichiers Linux.
+
 ## 1.101.0
 
 - **ffmpeg et VLC s'installent depuis les reglages.** Nouvelle section

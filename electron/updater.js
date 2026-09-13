@@ -290,6 +290,44 @@ function wireEvents() {
     // l'en-tete) est explique plutot que laisse brut.
     // On macOS the expected failure (unsigned application, see the
     // header) is explained rather than left raw.
+    /* Cas tres particulier, mais desormais frequent depuis que trois
+       plateformes se partagent une meme release : la release existe
+       (elle a ete creee par la publication Windows, rapide) mais le
+       fichier de version du systeme courant n'y est pas encore, ou pas
+       du tout -- construction GitHub Actions encore en cours, ou
+       echouee. electron-updater renvoie alors une erreur 404 illisible,
+       accompagnee de tout l'en-tete HTTP et d'une pile d'appels, qui ne
+       dit rien a l'utilisateur et l'inquiete pour rien.
+       Very specific case, but frequent now that three platforms share
+       one release: the release exists (created by the Windows
+       publication, which is quick) but the current system's version
+       file is not there yet, or not at all -- GitHub Actions build
+       still running, or failed. electron-updater then returns an
+       unreadable 404 error, along with the whole HTTP header and a call
+       stack, which tells the user nothing and worries them for
+       nothing. */
+    const raw = String((err && err.message) || err);
+    const missingFile = /cannot find .*\.yml/i.test(raw) || /404/.test(raw);
+    if (missingFile) {
+      const notYet = {
+        type: "info",
+        title: "PiBoard",
+        message: "Mise a jour pas encore disponible / Update not available yet",
+        detail:
+          "Une version plus recente existe, mais le paquet pour ce systeme n'a pas encore ete " +
+          "publie : sa construction prend quelques minutes de plus que celle de la version " +
+          "Windows. Reessaie dans un quart d'heure. Si le message persiste, les fichiers sont " +
+          "peut-etre absents de la release : " + RELEASES_URL + "\n\n" +
+          "A newer version exists, but the package for this system has not been published yet: " +
+          "building it takes a few minutes longer than the Windows one. Try again in fifteen " +
+          "minutes. If the message persists, the files may be missing from the release: " +
+          RELEASES_URL
+      };
+      if (win) dialog.showMessageBox(win, notYet);
+      else dialog.showMessageBox(notYet);
+      return;
+    }
+
     const macHint = MANUAL_UPDATE_ON_MAC
       ? "\n\nSous macOS, la mise a jour automatique exige une application signee par Apple ; " +
         "PiBoard ne l'est pas encore. Telechargez la nouvelle version depuis " + RELEASES_URL + ".\n" +
@@ -300,7 +338,7 @@ function wireEvents() {
       type: "warning",
       title: "PiBoard",
       message: "Verification impossible / Check failed",
-      detail: String((err && err.message) || err) + macHint
+      detail: raw + macHint
     };
     if (win) dialog.showMessageBox(win, options);
     else dialog.showMessageBox(options);
