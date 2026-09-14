@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.105.0
+
+- **Nouvelle tuile « Veille reseau »** (rangee dans Systeme & Reseau).
+  Elle repond a une question que ne couvrait aucune tuile existante :
+  est-ce que CES machines et CES services, ceux qu'on a choisis,
+  repondent en ce moment ? C'est ce qu'on veut savoir quand une lampe
+  connectee ne s'allume plus -- le probleme vient-il de la maison ou du
+  fournisseur ? « Analyse reseau » DECOUVRE ce qui est present sur le
+  sous-reseau et ignore tout des services distants ; « Sante Internet »
+  mesure la qualite de la connexion, pas la disponibilite d'une machine
+  donnee.
+
+- **Trois sondes, aucun type a declarer.** La sonde est deduite de la
+  forme de ce qu'on ecrit : une URL (`https://alexa.amazon.com`)
+  declenche une requete HTTP -- la seule facon de tester un service
+  distant, Amazon et Somfy ne repondant pas au ping ; un couple
+  `hote:port` (`nas.local:5001`) ouvre une connexion TCP, qui verifie
+  que le SERVICE ecoute et pas seulement que la machine est allumee ;
+  une adresse ou un nom seul fait un ping. Une ligne par cible, au
+  format `Nom = cible`, les lignes commencant par `#` etant ignorees
+  pour desactiver une surveillance sans perdre la ligne. 20 cibles au
+  maximum, sondees EN PARALLELE : en serie, deux cibles injoignables
+  auraient fige la tuile dix secondes.
+
+- **Ce que montre une panne** : un motif ecrit (« connexion refusee »,
+  « nom inconnu », « pas de reponse a temps ») et surtout DEPUIS
+  QUAND -- devant une tuile rouge, l'information qu'on cherche n'est pas
+  « c'est en panne » mais « depuis quand ». Une frise d'une barre par
+  verification montre si la panne est toute recente ou si elle va et
+  vient. Un code HTTP quelconque, meme 403, compte comme une reponse :
+  le service est joignable et tourne.
+
+- **Ni alerte ni notification, volontairement**, et aucun historique sur
+  disque (la quarantaine de releves vit en memoire et repart vide apres
+  un redemarrage). Un systeme d'alerte suppose un canal et une gestion
+  des faux positifs qui depassent le cadre d'un tableau de bord mural :
+  cette tuile montre, elle ne previent pas.
+
 ## 1.104.0
 
 - **Menu de sortie : troisieme choix, « Eteindre l'ordinateur »**, a

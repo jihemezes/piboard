@@ -1,0 +1,94 @@
+{
+  "id": "hostwatch",
+  "version": "0.1.0",
+  "name": {
+    "en": "Network watch",
+    "fr": "Veille réseau"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Watches whether the hosts and services you rely on are answering: a NAS, a Raspberry Pi, an Umbrel server, a home-automation hub, and remote services such as Alexa or Somfy. Ping, TCP port or HTTP, chosen automatically from what you type.",
+    "fr": "Surveille si les hôtes et services dont vous dépendez répondent : un NAS, un Raspberry Pi, un serveur Umbrel, une box domotique, et des services distants comme Alexa ou Somfy. Ping, port TCP ou HTTP, choisi automatiquement selon ce que vous saisissez."
+  },
+  "tagline": {
+    "en": "Are my machines and services answering right now?",
+    "fr": "Mes machines et services répondent-ils en ce moment ?"
+  },
+  "size": {
+    "w": 4,
+    "h": 4,
+    "minW": 3,
+    "minH": 2,
+    "maxW": 8,
+    "maxH": 10
+  },
+  "settings": [
+    {
+      "key": "targets",
+      "type": "textarea",
+      "default": "Box / routeur = 192.168.1.1\nAmazon Alexa = https://alexa.amazon.com\nSomfy = https://www.somfy.fr",
+      "label": {
+        "en": "What to watch (one per line)",
+        "fr": "Ce qu'il faut surveiller (un par ligne)"
+      },
+      "hint": {
+        "en": "Format: Name = target, or just the target. The probe is picked from the shape: https://example.com tests a service over HTTP, nas.local:5001 tests that a port is listening, 192.168.1.10 or pi.local simply pings. Lines starting with # are ignored, which is handy for disabling one temporarily. Up to 20 lines.",
+        "fr": "Format : Nom = cible, ou la cible seule. La sonde est choisie d'après la forme : https://exemple.fr teste un service en HTTP, nas.local:5001 teste qu'un port écoute, 192.168.1.10 ou pi.local fait un simple ping. Les lignes commençant par # sont ignorées, pratique pour en désactiver une temporairement. 20 lignes au maximum."
+      }
+    },
+    {
+      "key": "refreshSeconds",
+      "type": "number",
+      "default": 60,
+      "min": 15,
+      "max": 3600,
+      "label": {
+        "en": "Check every (seconds)",
+        "fr": "Vérifier toutes les (secondes)"
+      },
+      "hint": {
+        "en": "60 seconds suits a wall display. Below 30, remote services are queried often enough to be noticed by them; there is nothing to gain unless you are actively chasing an intermittent fault.",
+        "fr": "60 secondes conviennent à un écran mural. En dessous de 30, les services distants sont interrogés assez souvent pour le remarquer ; il n'y a rien à y gagner, sauf à traquer activement une panne intermittente."
+      }
+    },
+    {
+      "key": "showLatency",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show response time",
+        "fr": "Afficher le temps de réponse"
+      },
+      "hint": {
+        "en": "The time of the last successful check. Useful to spot a machine that answers but is struggling, before it stops answering at all.",
+        "fr": "Le temps de la dernière vérification réussie. Utile pour repérer une machine qui répond mais peine, avant qu'elle ne réponde plus du tout."
+      }
+    },
+    {
+      "key": "showHistory",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the recent trend",
+        "fr": "Afficher la tendance récente"
+      },
+      "hint": {
+        "en": "A small bar per check, for the last forty or so. It shows at a glance whether a failure is brand new or has been coming and going. The history lives in memory only and starts empty after a server restart.",
+        "fr": "Une petite barre par vérification, sur la quarantaine les plus récentes. Elle montre d'un coup d'œil si une panne est toute récente ou si elle va et vient. L'historique ne vit qu'en mémoire et repart vide après un redémarrage du serveur."
+      }
+    },
+    {
+      "key": "downFirst",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Move failures to the top",
+        "fr": "Remonter les pannes en haut"
+      },
+      "hint": {
+        "en": "Off by default: a list whose order never changes is read faster, because each line always sits where you expect it. Turn it on if your list is long enough that a failure could scroll out of sight.",
+        "fr": "Désactivé par défaut : une liste dont l'ordre ne change jamais se lit plus vite, chaque ligne restant là où on l'attend. À activer si votre liste est assez longue pour qu'une panne puisse sortir du cadre."
+      }
+    }
+  ]
+}

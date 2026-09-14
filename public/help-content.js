@@ -1604,6 +1604,56 @@
     },
 
     {
+      id: "hostwatch",
+      group: "tiles",
+      title: { fr: "Veille réseau", en: "Network watch" },
+      sub: {
+        fr: "Vérifie en continu que les machines et services choisis répondent.",
+        en: "Continuously checks that the chosen machines and services answer."
+      },
+      html: {
+        fr: `
+          <p>Cette tuile répond à une question précise : <b>est-ce que ces machines et ces services, ceux que j'ai choisis, répondent en ce moment ?</b> C'est la tuile qu'on regarde quand une lampe connectée ne s'allume plus, pour savoir en trente secondes si le problème vient de la maison ou du fournisseur.</p>
+          <p>Elle ne fait pas double emploi avec ses voisines : <b>Analyse réseau</b> découvre ce qui est présent sur le sous-réseau, ponctuellement, et ignore tout des services distants ; <b>Santé Internet</b> mesure la qualité de la connexion elle-même (latence, gigue, pertes), pas la disponibilité de telle ou telle machine.</p>
+          <h4>Ce qu'on peut surveiller</h4>
+          <p>Une ligne par cible, sous la forme <code>Nom = cible</code> (le nom est facultatif). La sonde est choisie automatiquement d'après la forme de ce que vous écrivez — il n'y a aucun type à déclarer :</p>
+          <div class="help-opt"><span class="help-opt-name">https://alexa.amazon.com</span><span class="help-opt-desc">Une adresse web déclenche une requête HTTP. C'est la seule façon de tester un service distant : Amazon et Somfy ne répondent pas au ping, leur site oui. Tout code HTTP obtenu compte comme une réponse, même un 403 — le service est joignable et tourne.</span></div>
+          <div class="help-opt"><span class="help-opt-name">nas.local:5001</span><span class="help-opt-desc">Un couple hôte:port déclenche une connexion TCP. La bonne sonde pour un service précis d'une machine locale : l'interface d'un NAS Synology, Home Assistant sur 8123, un serveur Umbrel. Elle vérifie que <i>le service écoute</i>, pas seulement que la machine est allumée — la distinction compte quand un conteneur est tombé mais que la machine tourne.</span></div>
+          <div class="help-opt"><span class="help-opt-name">192.168.1.10 ou pi.local</span><span class="help-opt-desc">Une adresse ou un nom seul déclenche un ping. La réponse la plus simple à « cette machine est-elle allumée ? ».</span></div>
+          <p>Les lignes commençant par <code>#</code> sont ignorées : pratique pour désactiver temporairement une surveillance sans perdre la ligne. 20 cibles au maximum, toutes vérifiées en parallèle — une cible injoignable ne retarde donc pas les autres.</p>
+          <h4>Lire la tuile</h4>
+          <p>Une pastille verte ou rouge par ligne, le temps de réponse de la dernière vérification réussie, et une petite frise : une barre par vérification, la plus récente à droite. Elle montre d'un coup d'œil si une panne est toute récente ou si elle va et vient depuis un moment. Une ligne en panne affiche toujours <b>un motif écrit</b> (« connexion refusée », « nom inconnu », « pas de réponse à temps ») et <b>depuis combien de temps</b> — l'information qu'on cherche vraiment devant une tuile rouge n'est pas « c'est en panne » mais « depuis quand ».</p>
+          <p>L'historique ne vit qu'en mémoire du serveur, sur une quarantaine de vérifications : il repart vide après un redémarrage, et rien n'est écrit sur disque.</p>
+          <h4>Ce que la tuile ne fait pas</h4>
+          <p>Volontairement : <b>aucune alerte, aucune notification</b>. Un système d'alerte suppose un canal (courriel, message) et une gestion des faux positifs qui dépassent le cadre d'un tableau de bord mural. Cette tuile montre, elle ne prévient pas.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Vérifier toutes les</span><span class="help-opt-desc">60 secondes conviennent à un écran mural. En dessous de 30, les services distants sont interrogés assez souvent pour le remarquer, sans rien à y gagner — sauf à traquer activement une panne intermittente.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher le temps de réponse</span><span class="help-opt-desc">Celui de la dernière vérification réussie. Utile pour repérer une machine qui répond mais peine, avant qu'elle ne réponde plus du tout.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la tendance récente</span><span class="help-opt-desc">La frise de barres décrite plus haut. À désactiver sur une tuile étroite, où chaque pixel compte.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Remonter les pannes en haut</span><span class="help-opt-desc">Désactivé par défaut : une liste dont l'ordre ne change jamais se lit plus vite, chaque ligne restant là où l'œil l'attend. À activer si votre liste est assez longue pour qu'une panne puisse sortir du cadre.</span></div>`,
+        en: `
+          <p>This tile answers one precise question: <b>are these machines and these services, the ones I picked, answering right now?</b> It is the tile you look at when a connected lamp stops turning on, to know within thirty seconds whether the problem is at home or at the provider's.</p>
+          <p>It does not duplicate its neighbours: <b>Network scan</b> discovers what is present on the subnet, at one point in time, and knows nothing of remote services; <b>Internet health</b> measures the quality of the connection itself (latency, jitter, loss), not the availability of this or that machine.</p>
+          <h4>What can be watched</h4>
+          <p>One line per target, as <code>Name = target</code> (the name is optional). The probe is picked automatically from the shape of what you write — there is no type to declare:</p>
+          <div class="help-opt"><span class="help-opt-name">https://alexa.amazon.com</span><span class="help-opt-desc">A web address triggers an HTTP request. This is the only way to test a remote service: Amazon and Somfy do not answer pings, their site does. Any HTTP code obtained counts as an answer, even a 403 — the service is reachable and running.</span></div>
+          <div class="help-opt"><span class="help-opt-name">nas.local:5001</span><span class="help-opt-desc">A host:port pair triggers a TCP connection. The right probe for one precise service of a local machine: a Synology NAS's interface, Home Assistant on 8123, an Umbrel server. It checks that <i>the service is listening</i>, not merely that the machine is powered on — a distinction that matters when a container is down but the machine is up.</span></div>
+          <div class="help-opt"><span class="help-opt-name">192.168.1.10 or pi.local</span><span class="help-opt-desc">An address or a bare name triggers a ping. The simplest answer to "is that machine on?".</span></div>
+          <p>Lines starting with <code>#</code> are ignored: handy to disable a check temporarily without losing the line. Up to 20 targets, all checked in parallel — so one unreachable target does not delay the others.</p>
+          <h4>Reading the tile</h4>
+          <p>A green or red dot per line, the response time of the last successful check, and a small strip: one bar per check, the most recent on the right. It shows at a glance whether a failure is brand new or has been coming and going for a while. A failing line always shows <b>a written reason</b> ("connection refused", "unknown name", "no answer in time") and <b>for how long</b> — what one actually looks for in front of a red tile is not "it is down" but "since when".</p>
+          <p>The history lives in the server's memory only, over some forty checks: it starts empty after a restart, and nothing is written to disk.</p>
+          <h4>What the tile does not do</h4>
+          <p>Deliberately: <b>no alerting, no notification</b>. An alerting system implies a channel (email, message) and false-positive handling that go beyond a wall dashboard. This tile shows, it does not warn.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Check every</span><span class="help-opt-desc">60 seconds suits a wall display. Below 30, remote services are queried often enough to be noticed, with nothing to gain — unless you are actively chasing an intermittent fault.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show response time</span><span class="help-opt-desc">That of the last successful check. Useful to spot a machine that answers but is struggling, before it stops answering at all.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show the recent trend</span><span class="help-opt-desc">The strip of bars described above. Worth turning off on a narrow tile, where every pixel counts.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Move failures to the top</span><span class="help-opt-desc">Off by default: a list whose order never changes is read faster, each line staying where the eye expects it. Turn it on if your list is long enough that a failure could scroll out of sight.</span></div>`
+      }
+    },
+
+    {
       id: "networkscan",
       group: "tiles",
       title: { fr: "Analyse réseau", en: "Network scan" },

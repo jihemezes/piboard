@@ -43,6 +43,7 @@ const localFolder = require("./localFolder");
 const usbMedia = require("./usbMedia");
 const networkScan = require("./networkScan");
 const netHosts = require("./netHosts");
+const hostWatch = require("./hostWatch");
 const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
@@ -502,6 +503,34 @@ app.post("/api/network-hosts", (req, res) => {
    export: the server sets Content-Disposition, the browser downloads,
    and the UTF-8 BOM is added here -- without it a spreadsheet on
    Windows mangles the accents in device names. */
+/* Surveillance d'hotes et de services (tuile "Veille reseau").
+   La liste des cibles est passee en parametre plutot que stockee ici :
+   elle appartient aux reglages de la tuile, comme pour toutes les
+   autres, et deux tuiles peuvent ainsi surveiller deux listes
+   differentes sur le meme tableau. Le corps de la sonde est dans
+   server/hostWatch.js.
+
+   Methode POST malgre une lecture : la liste peut atteindre une
+   vingtaine de lignes avec des URL completes, ce qui passerait mal dans
+   une chaine de requete (longueur, encodage, journalisation des URL).
+
+   Host and service monitoring (the "Network watch" tile). The target
+   list is passed as a parameter rather than stored here: it belongs to
+   the tile's settings, as with every other tile, and two tiles can thus
+   watch two different lists on the same board. The probing itself lives
+   in server/hostWatch.js.
+
+   POST despite being a read: the list may reach a score of lines with
+   full URLs, which would sit badly in a query string (length, encoding,
+   URL logging). */
+app.post("/api/host-watch", express.json({ limit: "32kb" }), async (req, res) => {
+  try {
+    res.json(await hostWatch.check(String((req.body && req.body.targets) || "")));
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 app.get("/api/network-hosts/export.csv", (req, res) => {
   try {
     const csv = netHosts.toCsv(netHosts.loadAliases(), { dialect: req.query.dialect });

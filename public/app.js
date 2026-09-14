@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.104.0
+   Version 1.105.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3476,7 +3476,7 @@
        The AI usage tile joins "System & Network": like System status, it
        watches a consumption against a limit, even though the resource
        watched is not the machine's own. */
-    { key: "system", ids: ["system", "speedtest", "networkscan", "aiusage"] },
+    { key: "system", ids: ["system", "speedtest", "networkscan", "hostwatch", "aiusage"] },
     /* Mise en page : les deux tuiles de STYLE, qui n'affichent aucune
        donnee et servent a composer une page (titre, logo). Les ranger
        dans "Divers" les aurait noyees parmi des tuiles d'information,
