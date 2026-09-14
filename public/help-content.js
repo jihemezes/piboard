@@ -427,6 +427,7 @@
 
           <h4>Rappels avant le d\u00e9but d'une \u00e9mission</h4>
           <p>Touchez une \u00e9mission pour demander \u00e0 en \u00eatre averti avant qu'elle commence. \u00c0 l'heure dite, PiBoard peut faire clignoter tout l'\u00e9cran, jouer un son (des haut-parleurs sur l'\u00e9cran sont alors n\u00e9cessaires), et appeler un webhook pour relayer l'alerte ailleurs \u2014 vers un t\u00e9l\u00e9phone, par exemple. L'alerte s'arr\u00eate d'un appui n'importe o\u00f9 sur l'\u00e9cran.</p>
+          <p>Le rappel se demande aussi bien depuis la liste de la tuile que depuis la <b>grille compl\u00e8te</b> : dans la grille, touchez un bloc pour le d\u00e9plier, un bouton de cloche y appara\u00eet sous le synopsis. Il n'est propos\u00e9 que pour une diffusion \u00e0 venir \u2014 une \u00e9mission d\u00e9j\u00e0 commenc\u00e9e n'a plus rien \u00e0 d\u00e9clencher. C'est la seule fa\u00e7on d'armer un rappel pour une \u00e9mission qui passe apr\u00e8s ce soir, puisque la liste de la tuile ne va pas au-del\u00e0.</p>
 
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Source des donn\u00e9es</span><span class="help-opt-desc">xmltvfr.fr (recommand\u00e9), une URL ou un fichier XMLTV personnel, ou une page \u00e0 analyser (exp\u00e9rimental).</span></div>
@@ -462,6 +463,7 @@
 
           <h4>Reminders before a show starts</h4>
           <p>Tap a show to be alerted before it begins. At the set time, PiBoard can flash the whole screen, play a sound (speakers on the screen are then required), and call a webhook to relay the alert elsewhere \u2014 to a phone, for instance. The alert stops with a tap anywhere on the screen.</p>
+          <p>A reminder can be set from the tile's list as well as from the <b>full grid</b>: in the grid, tap a block to expand it and a bell button appears under the synopsis. It is only offered for an upcoming broadcast \u2014 a programme already under way has nothing left to fire. This is the only way to arm a reminder for a show airing after tonight, since the tile's list does not reach that far.</p>
 
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Data source</span><span class="help-opt-desc">xmltvfr.fr (recommended), your own XMLTV URL or file, or a page to scrape (experimental).</span></div>
@@ -1622,6 +1624,9 @@
           <div class="help-opt"><span class="help-opt-name">Une file</span><span class="help-opt-desc">En mode « file », une adresse de vidéo par ligne, lues dans l'ordre. Les lignes commençant par <code>#</code> sont ignorées.</span></div>
           <h4>Lecture</h4>
           <p>La tuile s'ouvre sur une affiche avec un bouton Lecture : c'est ce clic qui autorise le navigateur à jouer le son. Ensuite, les commandes habituelles du lecteur YouTube (pause, volume, plein écran, sous-titres) restent disponibles, et les boutons ◀ ▶ passent d'une vidéo à l'autre. Une vidéo supprimée, privée ou dont l'auteur interdit l'intégration est simplement sautée.</p>
+          <h4>Changer de vidéo sans ouvrir les réglages</h4>
+          <p>Le bouton <b>Lien…</b>, dans la barre sous le lecteur, ouvre une petite fenêtre où coller une adresse YouTube (vidéo, playlist ou chaîne) et basculer <i>Enchaîner</i>, <i>Boucle</i> et <i>Muet</i>. C'est fait pour l'usage devant l'écran, à la souris ou au doigt, sans passer en mode configuration.</p>
+          <p>Ce choix ne modifie pas les réglages de la tuile : ceux-ci restent la référence, et le bouton <b>Revenir à la source configurée</b> y ramène d'un clic. Il survit en revanche à un rechargement de la page — sinon le tableau reviendrait à sa source d'origine dès le prochain réveil du Pi. Les bascules, elles, ne valent que pour la session.</p>
           <h4>Recherche (facultative)</h4>
           <p>En ajoutant votre propre <b>clé API Google</b> dans les réglages, une zone de recherche apparaît dans la tuile. La clé est gratuite : créez un projet sur console.cloud.google.com, activez « YouTube Data API v3 » et créez une clé API. Le quota gratuit permet une centaine de recherches par jour. La clé est stockée chiffrée sur le serveur et n'est jamais renvoyée au navigateur. Un résultat choisi remplace la file en cours jusqu'au prochain rechargement — rien n'est enregistré.</p>
           <h4>Options</h4>
@@ -1638,6 +1643,9 @@
           <div class="help-opt"><span class="help-opt-name">A queue</span><span class="help-opt-desc">In "queue" mode, one video address per line, played in order. Lines starting with <code>#</code> are ignored.</span></div>
           <h4>Playback</h4>
           <p>The tile opens on a poster with a Play button: that click is what lets the browser play sound. Afterwards the usual YouTube controls (pause, volume, full screen, captions) remain available, and the ◀ ▶ buttons move between videos. A removed or private video, or one whose author forbids embedding, is simply skipped.</p>
+          <h4>Changing video without opening the settings</h4>
+          <p>The <b>Link…</b> button, in the bar under the player, opens a small panel where you can paste a YouTube address (video, playlist or channel) and flip <i>Play next</i>, <i>Loop</i> and <i>Muted</i>. It is made for use in front of the screen, by mouse or finger, without going into configuration mode.</p>
+          <p>That choice does not modify the tile's settings: they remain the reference, and the <b>Back to the configured source</b> button returns to them in one click. It does survive a page reload though — otherwise the board would revert to its original source at the Pi's next wake-up. The toggles, on the other hand, only last for the session.</p>
           <h4>Search (optional)</h4>
           <p>Adding your own <b>Google API key</b> in the settings adds a search box to the tile. The key is free: create a project on console.cloud.google.com, enable "YouTube Data API v3" and create an API key. The free quota allows about a hundred searches a day. The key is stored encrypted on the server and never sent back to the browser. A chosen result replaces the current queue until the next reload — nothing is saved.</p>
           <h4>Options</h4>

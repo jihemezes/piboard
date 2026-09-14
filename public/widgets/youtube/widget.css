@@ -194,3 +194,47 @@
   text-align: center;
   padding: 10px;
 }
+
+/* Fenetre de saisie rapide : coller un lien ou changer les bascules de
+   lecture sans passer en mode configuration. Repliee par defaut -- sur
+   un ecran mural, l'espace appartient a la video, pas aux commandes.
+   Quick entry panel: paste a link or flip the playback toggles without
+   going into configuration mode. Collapsed by default -- on a wall
+   display the room belongs to the video, not to the controls. */
+.pw-youtube .pwy-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 8px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+}
+.pw-youtube .pwy-panel-form {
+  display: flex;
+  gap: 6px;
+}
+.pw-youtube .pwy-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+.pw-youtube .pwy-panel-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pw-youtube .pwy-panel-opts label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
+.pw-youtube .pwy-revert { align-self: flex-start; }

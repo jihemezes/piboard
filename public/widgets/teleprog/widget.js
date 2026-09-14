@@ -414,7 +414,7 @@
        programmer). Toggles the reminder for ONE specific broadcast (see
        reminderKey). No-op if the broadcast has no known start time
        (nothing to schedule). */
-    toggleReminder(row) {
+    toggleReminder(row, opts) {
       const p = row.program;
       if (!p || !p.start) return;
       const rk = reminderKey(row.channelId, p.start);
@@ -432,7 +432,12 @@
       }
       this.saveReminders();
       this.armReminders();
-      this.renderBody();
+      // Depuis la grille, le bouton se met a jour lui-meme (voir
+      // renderGridBody) : redessiner la liste de la tuile serait inutile
+      // et couteux. From the grid, the button updates itself (see
+      // renderGridBody): redrawing the tile's list would be pointless
+      // and costly.
+      if (!(opts && opts.silentRender)) this.renderBody();
     }
 
     onSettingsChanged(settings) {
@@ -961,6 +966,29 @@
           el.classList.toggle("pwtp-block-open");
         });
       });
+
+      /* La cloche ne doit ni replier le bloc, ni faire redessiner la
+         grille : un redessin perdrait le defilement horizontal et le
+         bloc ouvert, alors que l'utilisateur est en train de comparer
+         des horaires. On met donc a jour le seul bouton concerne.
+         The bell must neither collapse the block nor redraw the grid: a
+         redraw would lose the horizontal scroll and the open block,
+         while the user is busy comparing times. So only the button
+         concerned is updated. */
+      inner.querySelectorAll(".pwtp-grid-remind").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const d = btn.dataset;
+          this.toggleReminder({
+            channelId: d.channelId,
+            channelName: d.channelName,
+            program: { title: d.title, start: d.start }
+          }, { silentRender: true });
+          const on = !!this.reminders[reminderKey(d.channelId, d.start)];
+          btn.classList.toggle("pwtp-on", on);
+          btn.textContent = (on ? "🔔 " : "🔕 ") + i18n.t(on ? "teleprog.remindOn" : "teleprog.remindOff");
+        });
+      });
     }
 
     /* Ligne du temps en en-tete : une graduation par heure pleine, avec
@@ -1001,6 +1029,7 @@
     }
 
     gridRowHtml(row, originMs, endMs, pxPerMinute, totalWidth, normalizedQuery) {
+      const i18n = this.ctx.i18n;
       const chName = escapeHtml(row.channelName || row.channelId);
       const chNum = row.channelNumber ? `<span class="pwtp-chan-num">${row.channelNumber}</span>` : "";
       // Logo de la chaine quand la grille en fournit un, via le proxy
@@ -1027,9 +1056,35 @@
           ? `<div class="pwtp-block-text"><span class="pwtp-block-time">${escapeHtml(startLabel)}</span><span class="pwtp-block-title">${escapeHtml(p.title)}</span></div>`
           : "";
         const tip = `${startLabel} · ${p.title}${p.subtitle ? " — " + p.subtitle : ""}`;
+
+        /* Cloche de rappel, dans le bloc deplie. Elle manquait a la
+           grille : on pouvait y reperer une emission mais pas demander
+           a en etre prevenu, ce qui obligeait a retrouver la meme
+           emission dans la liste de la tuile -- impossible des qu'elle
+           passe apres ce soir. Elle n'apparait que pour une diffusion A
+           VENIR et dont l'heure de debut est connue : un rappel pour
+           une emission deja commencee n'aurait rien a declencher.
+           Reminder bell, inside the expanded block. It was missing from
+           the grid: one could spot a programme there but not ask to be
+           warned about it, which meant finding the same programme again
+           in the tile's list -- impossible as soon as it airs after
+           tonight. It only appears for an UPCOMING broadcast with a
+           known start time: a reminder for a programme already under
+           way would have nothing to fire. */
+        const startMs = new Date(p.start).getTime();
+        const remindable = p.start && startMs > Date.now();
+        const rk = remindable ? reminderKey(row.channelId, p.start) : null;
+        const bell = remindable
+          ? `<button type="button" class="pwtp-grid-remind${this.reminders[rk] ? " pwtp-on" : ""}"
+              data-channel-id="${escapeHtml(row.channelId)}"
+              data-channel-name="${escapeHtml(row.channelName || row.channelId)}"
+              data-start="${escapeHtml(p.start)}"
+              data-title="${escapeHtml(p.title || "")}">${this.reminders[rk] ? "🔔" : "🔕"} ${escapeHtml(i18n.t(this.reminders[rk] ? "teleprog.remindOn" : "teleprog.remindOff"))}</button>`
+          : "";
+
         return `<div class="pwtp-block${matches ? " pwtp-block-match" : ""}${geo.estimatedDuration ? " pwtp-block-est" : ""}"
           style="left:${geo.left.toFixed(1)}px;width:${Math.max(2, geo.width - 2).toFixed(1)}px"
-          title="${escapeHtml(tip)}">${thumb}${title}<div class="pwtp-block-desc">${escapeHtml(p.desc || "")}</div></div>`;
+          title="${escapeHtml(tip)}">${thumb}${title}<div class="pwtp-block-desc">${escapeHtml(p.desc || "")}${bell}</div></div>`;
       }).join("");
 
       return `

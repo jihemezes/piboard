@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.107.1" date="2026-09-14">
+      <description>
+        <p>Reminders can now be set from the TV guide's full grid, and the YouTube tile got a quick link and playback panel.</p>
+        <p xml:lang="fr">Les rappels peuvent desormais etre poses depuis la grille complete du programme TV, et la tuile YouTube recoit une fenetre rapide de lien et de lecture.</p>
+      </description>
+    </release>
     <release version="1.107.0" date="2026-09-14">
       <description>
         <p>Every tile can now be enlarged to the full page.</p>

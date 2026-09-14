@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.107.1
+
+- **Programme TV : le rappel se pose enfin depuis la grille complete.**
+  On pouvait y reperer une emission mais pas demander a en etre
+  prevenu : il fallait retrouver la meme emission dans la liste de la
+  tuile, ce qui est impossible des qu'elle passe apres ce soir -- la
+  grille etait donc le SEUL endroit ou l'on voyait ces emissions, et le
+  seul ou l'on ne pouvait pas armer de rappel. Un bouton de cloche
+  apparait desormais dans le bloc deplie, uniquement pour une diffusion
+  a venir (une emission commencee n'a plus rien a declencher). Il met a
+  jour son seul bouton au lieu de redessiner la grille : un redessin
+  perdrait le defilement horizontal et le bloc ouvert, au moment precis
+  ou l'on compare des horaires.
+
+- **YouTube : fenetre rapide de lien et de lecture.** Le bouton
+  « Lien… » sous le lecteur ouvre une petite fenetre ou coller une
+  adresse (video, playlist, chaine) et basculer Enchainer, Boucle et
+  Muet, sans passer en mode configuration. Elle ne duplique pas les
+  reglages : elle porte ce qu'on change devant l'ecran, pas ce qu'on
+  configure une fois (cle API, intervalle de relecture).
+
+  L'adresse collee ne modifie pas les reglages de la tuile -- ils
+  restent la reference, et un bouton « Revenir a la source configuree »
+  y ramene d'un clic -- mais elle SURVIT a un rechargement de la page,
+  sinon le tableau reviendrait a sa source d'origine au prochain reveil
+  du Pi. Les bascules, elles, ne valent que pour la session, et le muet
+  s'applique immediatement au lecteur en cours.
+
 ## 1.107.0
 
 - **Toutes les tuiles peuvent desormais couvrir la page entiere.** Les

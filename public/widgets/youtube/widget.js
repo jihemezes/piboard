@@ -83,10 +83,32 @@
       this.searchResults = null;
       this.timer = null;
       this.playing = false;
+      this.panelOpen = false;
+      /* Source choisie depuis la tuile elle-meme, sans passer par les
+         reglages. Elle est conservee dans le stockage d'etat de la
+         tuile (meme mecanisme que les favoris du Programme TV) : coller
+         un lien devant l'ecran doit survivre a un rechargement de la
+         page, sinon le tableau revient a la source d'origine des que le
+         Pi se reveille. Les REGLAGES, eux, ne sont pas modifies : ils
+         restent la reference, et le bouton « Revenir » de la fenetre y
+         ramene d'un clic.
+         Source chosen from the tile itself, without going through the
+         settings. It is kept in the tile's state storage (same
+         mechanism as the TV guide's favourites): pasting a link in
+         front of the screen must survive a page reload, otherwise the
+         board reverts to the original source as soon as the Pi wakes
+         up. The SETTINGS are not modified: they remain the reference,
+         and the window's \"Revert\" button returns to them in one click. */
+      this.stateKey = "youtube-source-" + ctx.instanceId;
+      this.adhoc = null;
     }
 
     async init() {
       this.render();
+      try {
+        const saved = await this.ctx.api.state.get(this.stateKey);
+        if (saved && typeof saved === "object" && saved.source) this.adhoc = saved;
+      } catch (e) { /* premier demarrage / first run */ }
       await Promise.all([this.loadQueue(), this.checkKey()]);
       this.render();
       this.arm();
@@ -135,7 +157,7 @@
       this.error = "";
       try {
         let data;
-        if (s.mode === "queue") {
+        if (s.mode === "queue" && !(this.adhoc && this.adhoc.source)) {
           const r = await fetch("api/youtube/queue", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -143,7 +165,7 @@
           });
           data = await r.json();
         } else {
-          const source = String(s.source || "").trim();
+          const source = String((this.adhoc && this.adhoc.source) || s.source || "").trim();
           if (!source) { this.videos = []; this.loading = false; return; }
           const r = await fetch(`api/youtube/${encodeURIComponent(this.ctx.instanceId)}/resolve?source=${encodeURIComponent(source)}&limit=${Number(s.listCount) || 8}`);
           data = await r.json();
@@ -205,7 +227,7 @@
         playerVars: { autoplay: 1, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3 },
         events: {
           onReady: (ev) => {
-            if (this.ctx.settings.startMuted) ev.target.mute();
+            if (this.opt("startMuted")) ev.target.mute();
             ev.target.playVideo();
           },
           onStateChange: (ev) => this.onState(ev),
@@ -217,7 +239,7 @@
     onState(ev) {
       const YT = window.YT;
       if (ev.data === YT.PlayerState.ENDED) {
-        if (this.ctx.settings.autoNext) this.next(true);
+        if (this.opt("autoNext")) this.next(true);
         else { this.playing = false; }
       }
     }
@@ -230,7 +252,7 @@
        simply move on -- a removed video must not freeze the tile. */
     onPlayerError(ev) {
       console.warn("[piboard/youtube] player error", ev.data);
-      if (this.videos.length > 1 && this.ctx.settings.autoNext) this.next(true);
+      if (this.videos.length > 1 && this.opt("autoNext")) this.next(true);
       else {
         this.playing = false;
         this.error = this.ctx.i18n.t("youtube.notEmbeddable");
@@ -242,7 +264,7 @@
       if (!this.videos.length) return;
       let i = this.index + 1;
       if (i >= this.videos.length) {
-        if (!this.ctx.settings.loop && auto) { this.playing = false; this.render(); return; }
+        if (!this.opt("loop") && auto) { this.playing = false; this.render(); return; }
         i = 0;
       }
       this.play(i);
@@ -309,6 +331,31 @@
       this.render();
     }
 
+    /* Une option de lecture : la valeur choisie dans la fenetre rapide
+       si elle existe, sinon celle des reglages. Les reglages restent la
+       valeur par defaut, la fenetre ne fait que la couvrir pour la
+       session.
+       A playback option: the value chosen in the quick panel if there is
+       one, otherwise the settings'. The settings stay the default value,
+       the panel merely covers it for the session. */
+    opt(key) {
+      if (this.overrides && Object.prototype.hasOwnProperty.call(this.overrides, key)) return this.overrides[key];
+      return !!this.ctx.settings[key];
+    }
+
+    async setSource(text) {
+      const value = String(text || "").trim();
+      this.adhoc = value ? { source: value } : null;
+      try { await this.ctx.api.state.put(this.stateKey, this.adhoc); } catch (e) { /* best effort */ }
+      this.destroyPlayer();
+      this.searchResults = null;
+      this.index = 0;
+      this.loading = true;
+      this.render();
+      await this.loadQueue();
+      this.render();
+    }
+
     /* ---------- Rendu / rendering ---------- */
 
     render() {
@@ -347,6 +394,30 @@
           <button type="submit" class="pwy-btn">${i18n.t("youtube.search")}</button>
         </form>` : "";
 
+      const openBtn = `<button type="button" class="pwy-btn" data-panel="toggle" title="${escapeHtml(i18n.t("youtube.openPanelTitle"))}">${i18n.t("youtube.openPanel")}</button>`;
+
+      /* Fenetre de saisie rapide. Elle ne duplique PAS les reglages :
+         elle porte ce qu'on change devant l'ecran (quoi regarder, et
+         les trois bascules de lecture), pas ce qu'on configure une fois
+         (cle API, intervalle de relecture, nombre de videos listees).
+         Quick entry panel. It does NOT duplicate the settings: it holds
+         what one changes in front of the screen (what to watch, and the
+         three playback toggles), not what one configures once (API key,
+         re-read interval, number of videos listed). */
+      const panel = this.panelOpen ? `
+        <div class="pwy-panel">
+          <form class="pwy-panel-form">
+            <input type="text" class="pwy-url" placeholder="${escapeHtml(i18n.t("youtube.urlPlaceholder"))}" value="${escapeHtml((this.adhoc && this.adhoc.source) || "")}" autocomplete="off">
+            <button type="submit" class="pwy-btn">${i18n.t("youtube.load")}</button>
+          </form>
+          <div class="pwy-panel-opts">
+            <label><input type="checkbox" data-opt="autoNext" ${this.opt("autoNext") ? "checked" : ""}> ${i18n.t("youtube.optAutoNext")}</label>
+            <label><input type="checkbox" data-opt="loop" ${this.opt("loop") ? "checked" : ""}> ${i18n.t("youtube.optLoop")}</label>
+            <label><input type="checkbox" data-opt="startMuted" ${this.opt("startMuted") ? "checked" : ""}> ${i18n.t("youtube.optMuted")}</label>
+          </div>
+          ${this.adhoc && this.adhoc.source ? `<button type="button" class="pwy-btn pwy-revert" data-panel="revert">${i18n.t("youtube.revert")}</button>` : ""}
+        </div>` : "";
+
       const nav = this.videos.length > 1 ? `
         <div class="pwy-nav">
           <button type="button" class="pwy-btn" data-nav="prev" title="${escapeHtml(i18n.t("youtube.prev"))}">&#9664;</button>
@@ -360,7 +431,9 @@
           <div class="pwy-bar">
             ${this.title ? `<span class="pwy-title" title="${escapeHtml(this.title)}">${escapeHtml(this.title)}</span>` : "<span></span>"}
             ${nav}
+            ${openBtn}
           </div>
+          ${panel}
           ${search}
           <div class="pwy-list"></div>
         </div>`;
@@ -425,6 +498,42 @@
       }
       const player = el.querySelector(".pwy-player");
       if (player) player.addEventListener("click", (e) => e.stopPropagation());
+
+      el.querySelectorAll("[data-panel]").forEach((b) => {
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (b.dataset.panel === "revert") { this.panelOpen = false; this.setSource(""); return; }
+          this.panelOpen = !this.panelOpen;
+          this.render();
+        });
+      });
+      const panelForm = el.querySelector(".pwy-panel-form");
+      if (panelForm) {
+        panelForm.addEventListener("click", (e) => e.stopPropagation());
+        panelForm.addEventListener("submit", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.panelOpen = false;
+          this.setSource(panelForm.querySelector(".pwy-url").value);
+        });
+      }
+      el.querySelectorAll("[data-opt]").forEach((box) => {
+        box.addEventListener("click", (e) => e.stopPropagation());
+        box.addEventListener("change", () => {
+          this.overrides = this.overrides || {};
+          this.overrides[box.dataset.opt] = box.checked;
+          // Le muet s'applique tout de suite s'il y a un lecteur : sinon
+          // l'option ne servirait qu'a la video suivante, ce qui n'est
+          // pas ce qu'on attend d'une case a cocher devant l'ecran.
+          // Muting applies at once if a player exists: otherwise the
+          // option would only affect the next video, which is not what
+          // one expects from a checkbox in front of the screen.
+          if (box.dataset.opt === "startMuted" && this.player) {
+            if (box.checked && this.player.mute) this.player.mute();
+            else if (this.player.unMute) this.player.unMute();
+          }
+        });
+      });
     }
 
     destroy() {
