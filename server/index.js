@@ -566,7 +566,11 @@ app.get("/api/youtube/:tileId/search", async (req, res) => {
   const apiKey = tileSecrets.get(req.params.tileId, "apiKey");
   if (!apiKey) return res.status(400).json({ error: "missing_key" });
   try {
-    res.json({ videos: await youtube.search(String(req.query.q || ""), apiKey, req.query.max) });
+    res.json(await youtube.search(String(req.query.q || ""), apiKey, {
+      max: req.query.max,
+      order: req.query.order,
+      page: req.query.page
+    }));
   } catch (e) {
     res.status(502).json({ error: String(e.message || e) });
   }

@@ -218,22 +218,51 @@ async function apiGet(endpoint, params, apiKey) {
   return JSON.parse(text);
 }
 
-async function search(query, apiKey, max) {
-  const data = await apiGet("search", {
+/* Ordres de tri acceptes par l'API, et rien d'autre : une valeur
+   inconnue ferait repondre 400 a Google avec un message peu parlant.
+   Sort orders the API accepts, and nothing else: an unknown value would
+   make Google answer 400 with an unhelpful message. */
+const SEARCH_ORDERS = new Set(["relevance", "date", "viewCount", "rating"]);
+
+/* opts.page : jeton de page renvoye par une recherche precedente
+   (nextPageToken / prevPageToken). C'est ainsi que l'API pagine -- pas
+   par numero de page. Le jeton est opaque et n'est valide que pour la
+   meme requete et le meme ordre ; la tuile les renvoie tels quels.
+   videoEmbeddable=true ecarte d'emblee les videos que le lecteur
+   integre refuserait de lire : inutile de proposer un resultat qui
+   echouera au clic.
+   opts.page: page token returned by a previous search (nextPageToken /
+   prevPageToken). That is how the API paginates -- not by page number.
+   The token is opaque and only valid for the same query and order; the
+   tile sends them back as is. videoEmbeddable=true excludes upfront the
+   videos the embedded player would refuse: no point offering a result
+   that will fail on click. */
+async function search(query, apiKey, opts) {
+  const o = opts || {};
+  const params = {
     part: "snippet",
     type: "video",
     q: String(query || "").slice(0, 200),
-    maxResults: Math.min(25, Math.max(1, Number(max) || 12)),
+    maxResults: Math.min(50, Math.max(1, Number(o.max) || 24)),
     safeSearch: "moderate",
-    videoEmbeddable: "true"
-  }, apiKey);
-  return (data.items || []).map((it) => ({
-    id: it.id && it.id.videoId,
-    title: it.snippet && it.snippet.title,
-    author: it.snippet && it.snippet.channelTitle,
-    published: it.snippet && it.snippet.publishedAt,
-    thumbnail: it.id && it.id.videoId ? "https://i.ytimg.com/vi/" + it.id.videoId + "/mqdefault.jpg" : null
-  })).filter((v) => v.id && VIDEO_ID.test(v.id));
+    videoEmbeddable: "true",
+    order: SEARCH_ORDERS.has(o.order) ? o.order : "relevance"
+  };
+  if (o.page) params.pageToken = String(o.page);
+  const data = await apiGet("search", params, apiKey);
+  return {
+    videos: (data.items || []).map((it) => ({
+      id: it.id && it.id.videoId,
+      title: decodeXml(it.snippet && it.snippet.title || ""),
+      author: it.snippet && it.snippet.channelTitle,
+      published: it.snippet && it.snippet.publishedAt,
+      description: it.snippet && it.snippet.description,
+      thumbnail: it.id && it.id.videoId ? "https://i.ytimg.com/vi/" + it.id.videoId + "/mqdefault.jpg" : null
+    })).filter((v) => v.id && VIDEO_ID.test(v.id)),
+    nextPage: data.nextPageToken || null,
+    prevPage: data.prevPageToken || null,
+    total: (data.pageInfo && data.pageInfo.totalResults) || null
+  };
 }
 
 /* ---------- Point d'entree unique / single entry point ----------

@@ -246,3 +246,109 @@
   cursor: pointer;
 }
 .pw-youtube .pwy-revert { align-self: flex-start; }
+
+/* ---------- Fenetre de recherche, plein ecran ----------
+   Meme gabarit que la grille complete du Programme TV : une fenetre de
+   l'application, large, avec sa croix de fermeture. Les resultats sont
+   en grille de vignettes, pas en liste : on choisit une video a l'image
+   bien plus qu'au titre.
+   Full-screen search window. Same template as the TV guide's full grid:
+   an application window, wide, with its close cross. Results are a grid
+   of thumbnails, not a list: one picks a video by its picture far more
+   than by its title. */
+.pwy-search-card {
+  width: min(1500px, 96vw);
+  height: 88vh;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+.pwy-search-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwy-search-q {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 15px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+.pwy-search-order {
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+.pwy-search-card .pwy-btn { font-size: 14px; padding: 6px 14px; }
+.pwy-search-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px 14px;
+  display: flex;
+}
+.pwy-search-body .pwy-empty { margin: auto; font-size: 15px; }
+.pwy-results {
+  width: 100%;
+  align-self: flex-start;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 14px;
+}
+.pwy-result {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 0 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pwy-result:hover, .pwy-result:focus-visible {
+  border-color: var(--accent, #4C8DFF);
+  background: rgba(127, 127, 127, 0.1);
+}
+.pwy-result-thumb {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  border-radius: 10px 10px 0 0;
+  background: #222;
+}
+.pwy-result-title {
+  padding: 0 8px;
+  font-size: 14px;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.pwy-result-meta {
+  padding: 0 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pwy-search-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 14px;
+  border-top: 1px solid var(--tile-edge);
+}
+.pwy-search-foot .pwy-btn:disabled { opacity: 0.4; cursor: default; }
+.pwy-search-status { font-size: 13px; color: var(--muted); font-family: var(--mono); }

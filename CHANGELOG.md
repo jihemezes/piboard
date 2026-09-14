@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.108.0
+
+- **YouTube : recherche dans une fenetre plein ecran.** La barre de
+  recherche, sous le lecteur, ouvre une fenetre a la taille de l'ecran
+  -- meme gabarit que la grille complete du Programme TV -- avec les
+  resultats en grille de vignettes : on choisit une video a l'image
+  bien plus qu'au titre, ce qu'une tuile ne permettait pas (deux ou
+  trois vignettes visibles au mieux). Tri par pertinence, date ou
+  nombre de vues, pages Precedente / Suivante (la pagination par
+  jetons de l'API YouTube, rendus tels quels par le serveur), 24
+  resultats par page. Toucher un resultat le lit dans la tuile ; la
+  page de resultats devient la file, et ◀ ▶ passent d'un resultat a
+  l'autre sans rouvrir la fenetre.
+
+  La barre est TOUJOURS visible : sans cle API, la fenetre explique
+  comment en obtenir une au lieu de rester vide -- on ne devine pas une
+  fonction qu'on ne voit pas. Les resultats non integrables sont
+  ecartes par la requete elle-meme (videoEmbeddable), pour ne pas
+  proposer une vignette qui echouerait au clic.
+
+- **Aide et README verifies pour toutes les nouveautes recentes** :
+  veille reseau, export/import CSV de l'analyse reseau, extinction
+  depuis le menu de sortie (README mis a jour : trois choix, pas deux),
+  cloche de rappel dans la grille TV, fenetre rapide, liste repliable
+  et qualite de la tuile YouTube, licence et dons. La fiche YouTube
+  decrit la nouvelle fenetre de recherche en remplacement de l'ancienne
+  liste dans la tuile.
+
 ## 1.107.2
 
 - **YouTube : la liste des videos se replie.** Elle occupait jusqu'a

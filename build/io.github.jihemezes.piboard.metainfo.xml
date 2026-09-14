@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.108.0" date="2026-09-14">
+      <description>
+        <p>YouTube tile: full-screen search window with sorting and paging; help and README brought up to date.</p>
+        <p xml:lang="fr">Tuile YouTube : fenetre de recherche plein ecran avec tri et pagination ; aide et README mis a jour.</p>
+      </description>
+    </release>
     <release version="1.107.2" date="2026-09-14">
       <description>
         <p>YouTube tile: a default quality setting, and the video list can be folded away.</p>
