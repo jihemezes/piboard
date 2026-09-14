@@ -200,8 +200,8 @@
         "fr": "Clé API Google (facultative, pour la recherche)"
       },
       "hint": {
-        "en": "Adds a search box to the tile. Free: create a project on console.cloud.google.com, enable \"YouTube Data API v3\" and create an API key. The free quota allows about a hundred searches a day. Stored encrypted, never sent back to the browser.",
-        "fr": "Ajoute une recherche dans la tuile. Gratuit : créez un projet sur console.cloud.google.com, activez « YouTube Data API v3 » et créez une clé API. Le quota gratuit permet une centaine de recherches par jour. Stockée chiffrée, jamais renvoyée au navigateur."
+        "en": "Adds a search box to the tile. Free, a few minutes: create a project on console.cloud.google.com, enable \"YouTube Data API v3\" IN that project, then create an API key in the credentials. Remember to restrict the key to that one API. The free quota allows about a hundred result pages a day. Stored encrypted, never sent back to the browser. The detailed procedure is in the tile's help.",
+        "fr": "Ajoute une recherche dans la tuile. Gratuit, quelques minutes : créez un projet sur console.cloud.google.com, activez « YouTube Data API v3 » DANS ce projet, puis créez une clé API dans les identifiants. Pensez à restreindre la clé à cette seule API. Le quota gratuit permet une centaine de pages de résultats par jour. Stockée chiffrée, jamais renvoyée au navigateur. La marche à suivre détaillée est dans l'aide de la tuile."
       }
     }
   ]

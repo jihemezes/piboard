@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.108.1
+
+- **Aide : marche a suivre pas a pas pour la cle API YouTube.**
+  L'aide se contentait d'une phrase (« creez un projet, activez l'API,
+  creez une cle ») : exact, mais inutilisable devant la console Google
+  Cloud quand on ne la connait pas. Elle detaille desormais les quatre
+  etapes numerotees -- creer le projet, activer l'API DANS ce projet,
+  creer la cle dans les identifiants, la restreindre -- avec les noms
+  exacts des boutons, dans les deux langues.
+
+  Deux pieges sont nommes explicitement parce qu'ils font perdre du
+  temps : activer l'API APRES avoir cree la cle donne des erreurs et
+  fait croire a une cle invalide alors qu'elle est bonne ; et une
+  restriction par adresse IP est a eviter si le fournisseur change
+  l'adresse publique regulierement, sous peine de voir la recherche
+  cesser de fonctionner sans raison apparente.
+
+- **Precisions sur le quota et la securite** : 10 000 unites par jour
+  remises a zero a minuit heure du Pacifique, 100 unites par page de
+  resultats, et le fait que la lecture des videos, playlists et chaines
+  n'utilise PAS l'API -- un quota epuise n'empeche que la recherche. La
+  consigne de ne jamais publier la cle est explicite, avec le rappel
+  qu'une cle se supprime et se recree instantanement en cas de doute.
+
+- Le texte du reglage et le message affiche dans la fenetre de
+  recherche sans cle renvoient tous deux a cette procedure, au lieu de
+  la resumer chacun a leur facon.
+
 ## 1.108.0
 
 - **YouTube : recherche dans une fenetre plein ecran.** La barre de

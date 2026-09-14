@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.108.1" date="2026-09-14">
+      <description>
+        <p>Help: step-by-step procedure for getting and securing a YouTube API key.</p>
+        <p xml:lang="fr">Aide : marche a suivre pas a pas pour obtenir et securiser une cle API YouTube.</p>
+      </description>
+    </release>
     <release version="1.108.0" date="2026-09-14">
       <description>
         <p>YouTube tile: full-screen search window with sorting and paging; help and README brought up to date.</p>

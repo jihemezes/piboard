@@ -1993,6 +1993,26 @@ body.touch .pwt-boost-menu button { padding: 14px 16px; font-size: 17px; min-hei
 /* Liste des options d'une tuile : nom en avant, description en dessous
    A tile's option list: name upfront, description below */
 .help-opt { margin-bottom: 14px; }
+
+/* Procedure numerotee dans l'aide (obtention d'une cle API, par
+   exemple). Les puces des listes de l'aide sont neutralisees ailleurs ;
+   ici la numerotation EST l'information -- les etapes se suivent dans
+   l'ordre et l'une d'elles (activer l'API avant de creer la cle) ne
+   pardonne pas l'inversion.
+   Numbered procedure in the help (getting an API key, for instance).
+   List markers are neutralized elsewhere in the help; here the
+   numbering IS the information -- the steps follow one another and one
+   of them (enabling the API before creating the key) does not forgive
+   being swapped. */
+.help-steps {
+  margin: 10px 0 14px;
+  padding-left: 22px;
+  list-style: decimal;
+}
+.help-steps li {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
 .help-opt-name {
   display: block;
   font-family: var(--mono);
