@@ -18,8 +18,8 @@
     "h": 4,
     "minW": 2,
     "minH": 2,
-    "maxW": 8,
-    "maxH": 8
+    "maxW": 12,
+    "maxH": 16
   },
   "settings": [
     {
@@ -113,15 +113,24 @@
       "options": [
         {
           "value": "calendar",
-          "label": { "en": "Standard calendar week", "fr": "Semaine calendaire classique" }
+          "label": {
+            "en": "Standard calendar week",
+            "fr": "Semaine calendaire classique"
+          }
         },
         {
           "value": "todayStart",
-          "label": { "en": "Today at the start", "fr": "Aujourd'hui en début de tableau" }
+          "label": {
+            "en": "Today at the start",
+            "fr": "Aujourd'hui en début de tableau"
+          }
         },
         {
           "value": "todayMiddle",
-          "label": { "en": "Today in the middle", "fr": "Aujourd'hui au milieu" }
+          "label": {
+            "en": "Today in the middle",
+            "fr": "Aujourd'hui au milieu"
+          }
         }
       ]
     },

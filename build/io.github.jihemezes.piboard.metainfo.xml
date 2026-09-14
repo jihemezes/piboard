@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.107.0" date="2026-09-14">
+      <description>
+        <p>Every tile can now be enlarged to the full page.</p>
+        <p xml:lang="fr">Chaque tuile peut desormais etre agrandie a la page entiere.</p>
+      </description>
+    </release>
     <release version="1.106.1" date="2026-09-14">
       <description>
         <p>Weather tile: no more cut-off content in narrow portrait tiles, and larger maximum size.</p>

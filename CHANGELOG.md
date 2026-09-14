@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.107.0
+
+- **Toutes les tuiles peuvent desormais couvrir la page entiere.** Les
+  28 tuiles qui plafonnaient en dessous vont maintenant jusqu'a 12x16,
+  c'est-a-dire la largeur du tableau (12 colonnes) et sa hauteur
+  maximale (le reglage gridRows monte a 16). Les plafonds precedents
+  allaient de 6x4 a 12x12 sans justification technique : ils
+  empechaient par exemple de consacrer un ecran entier a une seule
+  tuile -- un radar, un diaporama, un programme TV, une horloge geante
+  a l'autre bout d'une piece.
+
+  Les tailles MINIMALES ne bougent pas : elles, ont une raison d'etre
+  (en dessous, les commandes d'une tuile se chevauchent).
+
+- **Un test verrouille la regle** pour les tuiles a venir
+  (test/widgetSizes.test.js) : il verifie que chaque manifeste declare
+  bien 12x16, et au passage que la taille par defaut tient dans ses
+  propres bornes -- sinon Gridstack la corrige en silence et la tuile
+  n'a pas la taille annoncee.
+
 ## 1.106.1
 
 - **Meteo : le contenu ne deborde plus en portrait etroit.** Avec le

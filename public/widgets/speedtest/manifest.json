@@ -19,8 +19,8 @@
     "h": 3,
     "minW": 2,
     "minH": 2,
-    "maxW": 8,
-    "maxH": 6
+    "maxW": 12,
+    "maxH": 16
   },
   "settings": [
     {
@@ -72,7 +72,6 @@
         "fr": "Afficher la courbe de latence sur la tuile"
       }
     },
-
     {
       "key": "latencySeconds",
       "type": "number",
@@ -129,7 +128,6 @@
         "fr": "Résolveurs DNS publics par défaut. 5 au maximum, utilisées à tour de rôle. Port 443 si omis."
       }
     },
-
     {
       "key": "throughputMinutes",
       "type": "number",
@@ -236,7 +234,6 @@
         "fr": "Adresse du test montant"
       }
     },
-
     {
       "key": "exportHours",
       "type": "number",
@@ -257,8 +254,20 @@
       "type": "select",
       "default": "french",
       "options": [
-        { "value": "french", "label": { "en": "French (semicolon, decimal comma)", "fr": "Français (point-virgule, virgule décimale)" } },
-        { "value": "international", "label": { "en": "International (comma, decimal point)", "fr": "International (virgule, point décimal)" } }
+        {
+          "value": "french",
+          "label": {
+            "en": "French (semicolon, decimal comma)",
+            "fr": "Français (point-virgule, virgule décimale)"
+          }
+        },
+        {
+          "value": "international",
+          "label": {
+            "en": "International (comma, decimal point)",
+            "fr": "International (virgule, point décimal)"
+          }
+        }
       ],
       "group": {
         "en": "CSV archiving",

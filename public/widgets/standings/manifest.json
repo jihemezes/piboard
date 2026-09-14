@@ -20,7 +20,7 @@
     "minW": 2,
     "minH": 2,
     "maxW": 12,
-    "maxH": 12
+    "maxH": 16
   },
   "settings": [
     {
@@ -74,22 +74,22 @@
         {
           "value": "soccer:uefa.champions",
           "label": {
-            "en": "\u26bd Champions League",
-            "fr": "\u26bd Ligue des champions"
+            "en": "⚽ Champions League",
+            "fr": "⚽ Ligue des champions"
           }
         },
-                {
+        {
           "value": "lnr:top14",
           "label": {
-            "en": "\ud83c\udfc9 Top 14 (Rugby, France)",
-            "fr": "\ud83c\udfc9 Top 14 (Rugby, France)"
+            "en": "🏉 Top 14 (Rugby, France)",
+            "fr": "🏉 Top 14 (Rugby, France)"
           }
         },
         {
           "value": "lnr:prod2",
           "label": {
-            "en": "\ud83c\udfc9 PRO D2 (Rugby, France)",
-            "fr": "\ud83c\udfc9 PRO D2 (Rugby, France)"
+            "en": "🏉 PRO D2 (Rugby, France)",
+            "fr": "🏉 PRO D2 (Rugby, France)"
           }
         },
         {
@@ -154,15 +154,15 @@
         {
           "value": "essential",
           "label": {
-            "en": "Essential \u2014 W, D, L, Pts",
-            "fr": "Essentiel \u2014 G, N, P, Pts"
+            "en": "Essential — W, D, L, Pts",
+            "fr": "Essentiel — G, N, P, Pts"
           }
         },
         {
           "value": "full",
           "label": {
-            "en": "Full \u2014 whatever the source publishes",
-            "fr": "Complet \u2014 tout ce que publie la source"
+            "en": "Full — whatever the source publishes",
+            "fr": "Complet — tout ce que publie la source"
           }
         }
       ]
