@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.107.2
+
+- **YouTube : la liste des videos se replie.** Elle occupait jusqu'a
+  40 % de la hauteur sans aucun moyen de la reduire -- soit pres de la
+  moitie basse d'une tuile moyenne, alors qu'elle n'est utile que le
+  temps de choisir. Un bouton de la barre la replie entierement, et le
+  plafond passe de 40 a 30 % quand elle est visible. L'etat est
+  memorise, rechargement compris : un ecran mural reste comme on l'a
+  laisse.
+
+- **YouTube : qualite video par defaut** (automatique, la plus elevee
+  possible, 1080p, 720p, 480p, 360p). A dire honnetement : c'est une
+  DEMANDE, pas un ordre. setPlaybackQuality est une suggestion que le
+  lecteur ignore souvent, choisissant seul selon le debit et la taille
+  reelle du cadre -- une tuile de 300 pixels de large ne recevra pas du
+  1080p quoi qu'on demande, et « la plus elevee possible » ne fera pas
+  de miracle sur une connexion lente. Le reglage est surtout utile dans
+  l'AUTRE sens : plafonner a 480p ou 360p pour menager une connexion
+  partagee ou un Raspberry Pi ancien. Pour gagner en qualite, agrandir
+  la tuile reste bien plus efficace -- ce que dit desormais l'aide.
+  La demande est renouvelee a chaque chargement de video, le lecteur
+  remettant son choix a zero d'une video a l'autre.
+
 ## 1.107.1
 
 - **Programme TV : le rappel se pose enfin depuis la grille complete.**

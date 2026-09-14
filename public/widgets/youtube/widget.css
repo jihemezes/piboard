@@ -139,9 +139,17 @@
    Hauteur bornee pour que le lecteur garde la majorite de la tuile.
    List: a thumbnail and a title per video, the current one highlighted.
    Height capped so the player keeps most of the tile. */
+/* La liste est bornee a 30 % de la hauteur (40 % auparavant, ce qui
+   mangeait pres de la moitie basse d'une tuile moyenne) et se replie
+   entierement par le bouton de la barre : elle n'est utile que le temps
+   de choisir, la video merite le reste.
+   The list is capped at 30% of the height (40% before, which ate close
+   to the bottom half of a medium tile) and folds away entirely through
+   the bar's button: it is only useful long enough to pick, the video
+   deserves the rest. */
 .pw-youtube .pwy-list {
   flex: 0 1 auto;
-  max-height: 40%;
+  max-height: 30%;
   overflow-y: auto;
   display: flex;
   flex-direction: column;

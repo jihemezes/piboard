@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.107.2" date="2026-09-14">
+      <description>
+        <p>YouTube tile: a default quality setting, and the video list can be folded away.</p>
+        <p xml:lang="fr">Tuile YouTube : reglage de qualite par defaut, et la liste des videos peut etre repliee.</p>
+      </description>
+    </release>
     <release version="1.107.1" date="2026-09-14">
       <description>
         <p>Reminders can now be set from the TV guide's full grid, and the YouTube tile got a quick link and playback panel.</p>

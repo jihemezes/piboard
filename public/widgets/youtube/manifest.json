@@ -136,6 +136,63 @@
       }
     },
     {
+      "key": "quality",
+      "type": "select",
+      "default": "auto",
+      "options": [
+        {
+          "value": "auto",
+          "label": {
+            "en": "Automatic (YouTube decides)",
+            "fr": "Automatique (YouTube décide)"
+          }
+        },
+        {
+          "value": "highres",
+          "label": {
+            "en": "Highest available",
+            "fr": "La plus élevée possible"
+          }
+        },
+        {
+          "value": "hd1080",
+          "label": {
+            "en": "1080p",
+            "fr": "1080p"
+          }
+        },
+        {
+          "value": "hd720",
+          "label": {
+            "en": "720p",
+            "fr": "720p"
+          }
+        },
+        {
+          "value": "large",
+          "label": {
+            "en": "480p",
+            "fr": "480p"
+          }
+        },
+        {
+          "value": "medium",
+          "label": {
+            "en": "360p (spares the network)",
+            "fr": "360p (ménage le réseau)"
+          }
+        }
+      ],
+      "label": {
+        "en": "Default video quality",
+        "fr": "Qualité vidéo par défaut"
+      },
+      "hint": {
+        "en": "A REQUEST, not an order: YouTube has the final say and adjusts to bandwidth and to the player's size — a small tile will not get 1080p whatever is asked. Most useful in the other direction, capping quality to spare a shared connection or an older Raspberry Pi.",
+        "fr": "Une DEMANDE, pas un ordre : YouTube garde le dernier mot et s'adapte au débit et à la taille du lecteur — une petite tuile n'obtiendra pas du 1080p quoi qu'on demande. Surtout utile dans l'autre sens, pour plafonner la qualité et ménager une connexion partagée ou un Raspberry Pi ancien."
+      }
+    },
+    {
       "key": "apiKey",
       "type": "secret",
       "label": {

@@ -84,6 +84,18 @@
       this.timer = null;
       this.playing = false;
       this.panelOpen = false;
+      /* Liste repliee ou non. Elle prenait jusqu'a 40 % de la hauteur
+         sans aucun moyen de la reduire : sur une tuile de taille
+         moyenne, la video se retrouvait a l'etroit alors que la liste
+         n'est utile que le temps de choisir. L'etat est conserve avec
+         la source ad hoc, pour qu'un ecran mural reste comme on l'a
+         laisse.
+         List collapsed or not. It took up to 40% of the height with no
+         way to shrink it: on a medium tile the video ended up cramped
+         while the list is only useful long enough to pick. The state is
+         kept alongside the ad-hoc source, so a wall display stays as it
+         was left. */
+      this.listCollapsed = false;
       /* Source choisie depuis la tuile elle-meme, sans passer par les
          reglages. Elle est conservee dans le stockage d'etat de la
          tuile (meme mecanisme que les favoris du Programme TV) : coller
@@ -107,7 +119,10 @@
       this.render();
       try {
         const saved = await this.ctx.api.state.get(this.stateKey);
-        if (saved && typeof saved === "object" && saved.source) this.adhoc = saved;
+        if (saved && typeof saved === "object") {
+          if (saved.source) this.adhoc = { source: saved.source };
+          this.listCollapsed = !!saved.listCollapsed;
+        }
       } catch (e) { /* premier demarrage / first run */ }
       await Promise.all([this.loadQueue(), this.checkKey()]);
       this.render();
@@ -228,6 +243,7 @@
         events: {
           onReady: (ev) => {
             if (this.opt("startMuted")) ev.target.mute();
+            this.applyQuality(ev.target);
             ev.target.playVideo();
           },
           onStateChange: (ev) => this.onState(ev),
@@ -236,8 +252,40 @@
       });
     }
 
+    /* Qualite demandee au lecteur. A dire honnetement : YouTube garde le
+       dernier mot. setPlaybackQuality est une SUGGESTION, souvent
+       ignoree depuis que le lecteur choisit seul selon le debit et la
+       taille reelle du cadre -- une tuile de 300 pixels de large ne
+       recevra pas du 1080p, quoi qu'on demande. La suggestion est
+       renouvelee a chaque chargement de video parce que le lecteur
+       remet son choix a zero d'une video a l'autre.
+       « La plus elevee possible » se traduit par \"highres\", la valeur la
+       plus haute du vocabulaire de l'API ; le lecteur redescend tout
+       seul si le debit ne suit pas.
+       Quality asked of the player. To be said honestly: YouTube has the
+       final say. setPlaybackQuality is a SUGGESTION, often ignored now
+       that the player picks on its own from bandwidth and the frame's
+       real size -- a 300-pixel-wide tile will not get 1080p, whatever is
+       asked. The suggestion is renewed on every video load because the
+       player resets its choice from one video to the next.
+       \"Highest available\" maps to \"highres\", the API vocabulary's top
+       value; the player steps down by itself if bandwidth cannot keep
+       up. */
+    applyQuality(player) {
+      const q = this.ctx.settings.quality;
+      if (!q || q === "auto") return;
+      try {
+        if (player && typeof player.setPlaybackQuality === "function") player.setPlaybackQuality(q);
+      } catch (e) { /* le lecteur reste maitre / the player stays in charge */ }
+    }
+
     onState(ev) {
       const YT = window.YT;
+      // Le lecteur reinitialise sa qualite a chaque video : on la
+      // redemande des que la lecture demarre.
+      // The player resets its quality on every video: we ask again as
+      // soon as playback starts.
+      if (ev.data === YT.PlayerState.PLAYING) this.applyQuality(ev.target);
       if (ev.data === YT.PlayerState.ENDED) {
         if (this.opt("autoNext")) this.next(true);
         else { this.playing = false; }
@@ -282,6 +330,7 @@
       if (this.player && typeof this.player.loadVideoById === "function") {
         this.playing = true;
         this.player.loadVideoById(video.id);
+        this.applyQuality(this.player);
         this.renderList();
       } else {
         this.startPlayer(i);
@@ -343,10 +392,15 @@
       return !!this.ctx.settings[key];
     }
 
+    saveUiState() {
+      const payload = Object.assign({}, this.adhoc || {}, { listCollapsed: this.listCollapsed });
+      this.ctx.api.state.put(this.stateKey, payload).catch(() => {});
+    }
+
     async setSource(text) {
       const value = String(text || "").trim();
       this.adhoc = value ? { source: value } : null;
-      try { await this.ctx.api.state.put(this.stateKey, this.adhoc); } catch (e) { /* best effort */ }
+      this.saveUiState();
       this.destroyPlayer();
       this.searchResults = null;
       this.index = 0;
@@ -394,6 +448,10 @@
           <button type="submit" class="pwy-btn">${i18n.t("youtube.search")}</button>
         </form>` : "";
 
+      const listBtn = this.videos.length > 1 || this.searchResults
+        ? `<button type="button" class="pwy-btn" data-list="toggle" title="${escapeHtml(i18n.t(this.listCollapsed ? "youtube.showList" : "youtube.hideList"))}">${this.listCollapsed ? "\u25B4" : "\u25BE"}</button>`
+        : "";
+
       const openBtn = `<button type="button" class="pwy-btn" data-panel="toggle" title="${escapeHtml(i18n.t("youtube.openPanelTitle"))}">${i18n.t("youtube.openPanel")}</button>`;
 
       /* Fenetre de saisie rapide. Elle ne duplique PAS les reglages :
@@ -431,6 +489,7 @@
           <div class="pwy-bar">
             ${this.title ? `<span class="pwy-title" title="${escapeHtml(this.title)}">${escapeHtml(this.title)}</span>` : "<span></span>"}
             ${nav}
+            ${listBtn}
             ${openBtn}
           </div>
           ${panel}
@@ -448,6 +507,7 @@
       const list = this.searchResults || this.videos;
       const isSearch = !!this.searchResults;
       if (list.length <= 1 && !isSearch) { box.innerHTML = ""; box.hidden = true; return; }
+      if (this.listCollapsed) { box.innerHTML = ""; box.hidden = true; return; }
       box.hidden = false;
       if (isSearch && !list.length) {
         box.innerHTML = `<div class="pwy-empty">${i18n.t("youtube.noResults")}</div>`;
@@ -498,6 +558,15 @@
       }
       const player = el.querySelector(".pwy-player");
       if (player) player.addEventListener("click", (e) => e.stopPropagation());
+
+      el.querySelectorAll("[data-list]").forEach((b) => {
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          this.listCollapsed = !this.listCollapsed;
+          this.saveUiState();
+          this.render();
+        });
+      });
 
       el.querySelectorAll("[data-panel]").forEach((b) => {
         b.addEventListener("click", (e) => {
