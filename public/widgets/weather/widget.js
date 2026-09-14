@@ -632,8 +632,25 @@
       // empile, blockH tient deja compte du partage de l'espace.
       // The compactness factor only applies side by side: stacked mode's
       // blockH already accounts for the shared space.
-      const k = two && !stacked ? 0.8 : 1;
+      const baseK = two && !stacked ? 0.8 : 1;
 
+      /* Deux passes. La premiere dimensionne d'apres la seule hauteur,
+         comme avant. Puis on MESURE : si un bloc deborde de la place
+         qui lui est allouee -- ce qui arrive en portrait etroit quand
+         vent, soleil, saint du jour et « demain » sont tous actives,
+         car chaque ligne ajoutee prend une part fixe de la hauteur et
+         la somme finit par depasser 100 % -- on reduit tout d'un meme
+         facteur et on recommence. Reduire plutot que couper : un texte
+         plus petit reste lisible, un texte hors champ est perdu.
+         Two passes. The first sizes from height alone, as before. Then we
+         MEASURE: if a block overflows the room it is given -- which
+         happens in narrow portrait when wind, sun, saint of the day and
+         \"tomorrow\" are all enabled, since each added line takes a fixed
+         share of the height and the sum ends up past 100% -- everything
+         is scaled down by one factor and sized again. Shrinking rather
+         than clipping: smaller text stays readable, text out of view is
+         lost. */
+      const apply = (k) => {
       el.querySelectorAll(".pww-icon").forEach((icon) => {
         icon.style.width = icon.style.height = Math.floor(blockH * 0.30 * k) + "px";
       });
@@ -665,6 +682,21 @@
       el.querySelectorAll(".pww-sun").forEach((n) => {
         n.style.fontSize = Math.max(9, Math.floor(blockH * 0.075 * k)) + "px";
       });
+      };
+
+      let k = baseK;
+      apply(k);
+      for (let pass = 0; pass < 3; pass++) {
+        let worst = 1;
+        el.querySelectorAll(".pww-col").forEach((col) => {
+          const need = col.scrollHeight;
+          const room = col.clientHeight;
+          if (need > room + 1 && room > 0) worst = Math.min(worst, room / need);
+        });
+        if (worst >= 0.995) break;
+        k *= worst * 0.97;
+        apply(k);
+      }
     }
 
     destroy() {

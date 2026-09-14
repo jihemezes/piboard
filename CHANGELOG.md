@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.106.1
+
+- **Meteo : le contenu ne deborde plus en portrait etroit.** Avec le
+  vent, le soleil, le saint du jour et « demain » tous actives dans une
+  tuile etroite, les lignes du bas sortaient du cadre. Cause : chaque
+  element recoit une part FIXE de la hauteur du bloc (icone 30 %,
+  temperature 24 %, ville 9,5 %...), et la somme depasse 100 % des
+  qu'assez de lignes s'ajoutent -- le dimensionnement ne regardait que
+  la hauteur, jamais le nombre de lignes. Le calcul fait maintenant une
+  seconde passe : il MESURE chaque bloc, et si le contenu depasse la
+  place allouee, tout est reduit d'un meme facteur (trois passes au
+  plus). Reduire plutot que couper : un texte plus petit reste lisible,
+  un texte hors champ est perdu.
+
+- **Meteo : taille maximale relevee** de 8x4 a 12x16, comme les plus
+  grandes tuiles (trafic, radar). La limite a 4 de haut n'avait pas de
+  raison particuliere ; elle empechait justement de donner a la tuile
+  la hauteur que son contenu reclame en portrait.
+
 ## 1.106.0
 
 - **Nouvelle tuile « YouTube »** (rangee dans Divertissement). Elle
