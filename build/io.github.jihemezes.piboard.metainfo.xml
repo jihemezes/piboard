@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.106.0" date="2026-09-14">
+      <description>
+        <p>New YouTube tile: videos, playlists, a channel's latest videos or a pasted queue, in YouTube's official privacy-enhanced player.</p>
+        <p xml:lang="fr">Nouvelle tuile YouTube : videos, playlists, dernieres videos d'une chaine ou file collee, dans le lecteur officiel de YouTube en mode confidentialite avancee.</p>
+      </description>
+    </release>
     <release version="1.105.0" date="2026-09-13">
       <description>
         <p>New Network watch tile: checks that the chosen hosts and services answer, from a NAS to remote services such as Alexa or Somfy.</p>

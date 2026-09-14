@@ -1,0 +1,437 @@
+/* PiBoard widget: YouTube
+   Lecteur officiel de YouTube en \"mode confidentialite avancee\"
+   (youtube-nocookie.com), pilote par son API IFrame. Pas de cookie de
+   suivi, pas de publicite personnalisee -- et, aujourd'hui, le plus
+   souvent aucune publicite. Ce n'est PAS un bloqueur : rien n'est
+   intercepte, la tuile joue ce que YouTube sert a ce lecteur. Voir
+   l'en-tete de server/youtube.js.
+
+   ORGANISATION. Le serveur transforme ce que l'utilisateur a colle
+   (video, playlist, chaine, file) en UNE forme unique : une file de
+   videos. La tuile ne connait donc qu'un seul modele -- une liste, un
+   index courant -- quel que soit le mode.
+
+   DEMARRAGE MANUEL, par choix : la tuile s'ouvre sur une affiche
+   (vignette + bouton Lecture) et ne cree le lecteur qu'au premier
+   clic. C'est ce clic, un vrai geste de l'utilisateur, qui autorise le
+   navigateur a demarrer le son ; une lecture automatique au chargement
+   serait de toute facon forcee en muet par Chromium.
+
+   YouTube's official player in \"privacy-enhanced mode\"
+   (youtube-nocookie.com), driven through its IFrame API. No tracking
+   cookie, no personalized advertising -- and, today, most often no
+   advertising at all. It is NOT a blocker: nothing is intercepted, the
+   tile plays what YouTube serves to that player. See the header of
+   server/youtube.js.
+
+   ORGANIZATION. The server turns what the user pasted (video, playlist,
+   channel, queue) into ONE single shape: a queue of videos. The tile
+   therefore knows a single model -- a list, a current index -- whatever
+   the mode.
+
+   MANUAL START, by choice: the tile opens on a poster (thumbnail + Play
+   button) and only creates the player on the first click. That click, a
+   genuine user gesture, is what lets the browser start the sound; an
+   autoplay on load would be forced muted by Chromium anyway. */
+(function () {
+  "use strict";
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+
+  /* Le script de l'API IFrame est charge une seule fois pour toutes les
+     tuiles YouTube de la page. YouTube appelle la fonction globale
+     onYouTubeIframeAPIReady quand il est pret ; on la transforme en
+     promesse partagee.
+     The IFrame API script is loaded once for every YouTube tile on the
+     page. YouTube calls the global onYouTubeIframeAPIReady when ready;
+     we turn it into a shared promise. */
+  let apiPromise = null;
+  function loadApi() {
+    if (window.YT && window.YT.Player) return Promise.resolve();
+    if (apiPromise) return apiPromise;
+    apiPromise = new Promise((resolve, reject) => {
+      const previous = window.onYouTubeIframeAPIReady;
+      window.onYouTubeIframeAPIReady = () => {
+        if (typeof previous === "function") previous();
+        resolve();
+      };
+      const tag = document.createElement("script");
+      tag.src = "https://www.youtube.com/iframe_api";
+      tag.onerror = () => { apiPromise = null; reject(new Error("iframe_api")); };
+      document.head.appendChild(tag);
+      // Sans reseau, YouTube ne rappellera jamais : on ne laisse pas la
+      // tuile attendre indefiniment. Without network YouTube will never
+      // call back: we do not let the tile wait forever.
+      setTimeout(() => { if (!(window.YT && window.YT.Player)) { apiPromise = null; reject(new Error("iframe_api_timeout")); } }, 15000);
+    });
+    return apiPromise;
+  }
+
+  class YouTubeWidget {
+    constructor(ctx) {
+      this.ctx = ctx;
+      this.videos = [];        // la file / the queue
+      this.index = 0;          // video courante / current video
+      this.title = "";         // titre de la chaine ou playlist / channel or playlist title
+      this.player = null;      // instance YT.Player, creee au premier clic / created on first click
+      this.playerEl = null;    // element conteneur du lecteur / player container element
+      this.error = "";
+      this.loading = true;
+      this.searchable = false; // une cle API est enregistree / an API key is stored
+      this.searchResults = null;
+      this.timer = null;
+      this.playing = false;
+    }
+
+    async init() {
+      this.render();
+      await Promise.all([this.loadQueue(), this.checkKey()]);
+      this.render();
+      this.arm();
+    }
+
+    arm() {
+      clearInterval(this.timer);
+      const minutes = Math.max(5, Number(this.ctx.settings.refreshMinutes) || 30);
+      const s = this.ctx.settings;
+      if (s.mode !== "queue") {
+        this.timer = setInterval(() => {
+          // Jamais pendant une lecture : remplacer la file sous le
+          // lecteur en pleine video serait une aberration.
+          // Never during playback: swapping the queue under the player
+          // mid-video would be absurd.
+          if (!this.playing) this.loadQueue().then(() => this.render());
+        }, minutes * 60000);
+      }
+    }
+
+    async onSettingsChanged(settings) {
+      this.ctx.settings = settings;
+      this.destroyPlayer();
+      this.searchResults = null;
+      this.loading = true;
+      this.render();
+      await Promise.all([this.loadQueue(), this.checkKey()]);
+      this.render();
+      this.arm();
+    }
+
+    onLangChanged() { this.render(); }
+
+    async checkKey() {
+      try {
+        const r = await fetch(`api/tile-secrets/${encodeURIComponent(this.ctx.instanceId)}/apiKey`);
+        const d = await r.json();
+        this.searchable = !!(d && d.configured);
+      } catch (e) {
+        this.searchable = false;
+      }
+    }
+
+    async loadQueue() {
+      const s = this.ctx.settings;
+      this.error = "";
+      try {
+        let data;
+        if (s.mode === "queue") {
+          const r = await fetch("api/youtube/queue", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ text: String(s.queue || "") })
+          });
+          data = await r.json();
+        } else {
+          const source = String(s.source || "").trim();
+          if (!source) { this.videos = []; this.loading = false; return; }
+          const r = await fetch(`api/youtube/${encodeURIComponent(this.ctx.instanceId)}/resolve?source=${encodeURIComponent(source)}&limit=${Number(s.listCount) || 8}`);
+          data = await r.json();
+          if (!r.ok) throw new Error(data.error || ("status " + r.status));
+        }
+        this.videos = data.videos || [];
+        this.title = data.title || "";
+        if (this.index >= this.videos.length) this.index = 0;
+      } catch (e) {
+        console.warn("[piboard/youtube]", e);
+        /* Les motifs techniques du serveur sont traduits ; un motif
+           inconnu (erreur reseau, HTTP) est montre tel quel.
+           The server's technical reasons are translated; an unknown one
+           (network error, HTTP) is shown as is. */
+        const msg = String(e.message || e);
+        const key = "youtube.error." + msg.replace(/[^a-z_]/gi, "");
+        const translated = this.ctx.i18n.t(key);
+        this.error = translated === key ? msg : translated;
+        this.videos = [];
+      }
+      this.loading = false;
+    }
+
+    /* ---------- Lecteur / player ---------- */
+
+    async startPlayer(index) {
+      if (typeof index === "number") this.index = index;
+      const video = this.videos[this.index];
+      if (!video) return;
+      const i18n = this.ctx.i18n;
+      this.playing = true;
+      this.render();
+      try {
+        await loadApi();
+      } catch (e) {
+        this.playing = false;
+        this.error = i18n.t("youtube.apiUnavailable");
+        this.render();
+        return;
+      }
+      const host = this.ctx.el.querySelector(".pwy-player");
+      if (!host) return;
+      this.destroyPlayer();
+      this.playerEl = document.createElement("div");
+      host.appendChild(this.playerEl);
+      this.player = new window.YT.Player(this.playerEl, {
+        /* youtube-nocookie.com : c'est ce parametre qui fait tout le
+           mode confidentialite avancee. Le reste sont des options
+           d'affichage : pas de suggestions d'autres chaines en fin de
+           video (rel=0), lecture dans la page sur mobile (playsinline).
+           youtube-nocookie.com: this parameter is the whole
+           privacy-enhanced mode. The rest are display options: no
+           suggestions from other channels at the end (rel=0), in-page
+           playback on mobile (playsinline). */
+        host: "https://www.youtube-nocookie.com",
+        videoId: video.id,
+        width: "100%",
+        height: "100%",
+        playerVars: { autoplay: 1, rel: 0, playsinline: 1, modestbranding: 1, iv_load_policy: 3 },
+        events: {
+          onReady: (ev) => {
+            if (this.ctx.settings.startMuted) ev.target.mute();
+            ev.target.playVideo();
+          },
+          onStateChange: (ev) => this.onState(ev),
+          onError: (ev) => this.onPlayerError(ev)
+        }
+      });
+    }
+
+    onState(ev) {
+      const YT = window.YT;
+      if (ev.data === YT.PlayerState.ENDED) {
+        if (this.ctx.settings.autoNext) this.next(true);
+        else { this.playing = false; }
+      }
+    }
+
+    /* Codes d'erreur du lecteur : 100 = video supprimee ou privee,
+       101/150 = integration interdite par l'auteur. Dans une file, on
+       passe simplement a la suivante -- une video retiree ne doit pas
+       figer la tuile. Player error codes: 100 = removed or private
+       video, 101/150 = embedding forbidden by the author. In a queue we
+       simply move on -- a removed video must not freeze the tile. */
+    onPlayerError(ev) {
+      console.warn("[piboard/youtube] player error", ev.data);
+      if (this.videos.length > 1 && this.ctx.settings.autoNext) this.next(true);
+      else {
+        this.playing = false;
+        this.error = this.ctx.i18n.t("youtube.notEmbeddable");
+        this.render();
+      }
+    }
+
+    next(auto) {
+      if (!this.videos.length) return;
+      let i = this.index + 1;
+      if (i >= this.videos.length) {
+        if (!this.ctx.settings.loop && auto) { this.playing = false; this.render(); return; }
+        i = 0;
+      }
+      this.play(i);
+    }
+
+    prev() {
+      if (!this.videos.length) return;
+      this.play((this.index - 1 + this.videos.length) % this.videos.length);
+    }
+
+    play(i) {
+      this.index = i;
+      const video = this.videos[i];
+      if (!video) return;
+      if (this.player && typeof this.player.loadVideoById === "function") {
+        this.playing = true;
+        this.player.loadVideoById(video.id);
+        this.renderList();
+      } else {
+        this.startPlayer(i);
+      }
+    }
+
+    destroyPlayer() {
+      if (this.player) {
+        try { this.player.destroy(); } catch (e) { /* deja detruit / already destroyed */ }
+      }
+      this.player = null;
+      this.playerEl = null;
+      this.playing = false;
+    }
+
+    /* ---------- Recherche (cle API) / search (API key) ---------- */
+    async search(query) {
+      const q = String(query || "").trim();
+      if (!q) { this.searchResults = null; this.render(); return; }
+      try {
+        const r = await fetch(`api/youtube/${encodeURIComponent(this.ctx.instanceId)}/search?q=${encodeURIComponent(q)}&max=12`);
+        const d = await r.json();
+        if (!r.ok) throw new Error(d.error || ("status " + r.status));
+        this.searchResults = d.videos || [];
+      } catch (e) {
+        console.warn("[piboard/youtube] search", e);
+        this.searchResults = [];
+      }
+      this.render();
+    }
+
+    /* Un resultat de recherche remplace la file : c'est ce qu'on veut
+       quand on cherche quelque chose devant l'ecran. La file d'origine
+       revient a la prochaine ouverture des reglages ou au prochain
+       rechargement -- rien n'est enregistre.
+       A search result replaces the queue: that is what one wants when
+       looking something up in front of the screen. The original queue
+       returns at the next settings change or reload -- nothing is
+       saved. */
+    playSearchResult(i) {
+      const v = this.searchResults && this.searchResults[i];
+      if (!v) return;
+      this.videos = this.searchResults.slice();
+      this.title = "";
+      this.searchResults = null;
+      this.play(i);
+      this.render();
+    }
+
+    /* ---------- Rendu / rendering ---------- */
+
+    render() {
+      const i18n = this.ctx.i18n;
+      const el = this.ctx.el;
+      const current = this.videos[this.index];
+
+      let main;
+      if (this.loading) {
+        main = `<div class="pwy-empty">${i18n.t("youtube.loading")}</div>`;
+      } else if (this.error && !this.playing) {
+        main = `<div class="pwy-empty">${escapeHtml(this.error)}</div>`;
+      } else if (!this.videos.length) {
+        main = `<div class="pwy-empty">${i18n.t("youtube.noSource")}</div>`;
+      } else if (this.playing) {
+        // Le lecteur est insere dans .pwy-player par startPlayer() ; le
+        // rendu ne doit pas le detruire. On ne touche donc pas a ce
+        // bloc s'il existe deja.
+        // The player is inserted into .pwy-player by startPlayer(); the
+        // rendering must not destroy it. So we leave that block alone if
+        // it already exists.
+        const existing = el.querySelector(".pwy-player");
+        if (existing && this.playerEl) { this.renderList(); return; }
+        main = `<div class="pwy-player"></div>`;
+      } else {
+        main = `
+          <button type="button" class="pwy-poster" style="background-image:url('${escapeHtml(current.thumbnail)}')" title="${escapeHtml(i18n.t("youtube.play"))}">
+            <span class="pwy-play" aria-hidden="true">&#9654;</span>
+            <span class="pwy-poster-title">${escapeHtml(current.title || "")}</span>
+          </button>`;
+      }
+
+      const search = this.searchable ? `
+        <form class="pwy-search">
+          <input type="search" class="pwy-search-input" placeholder="${escapeHtml(i18n.t("youtube.searchPlaceholder"))}" autocomplete="off">
+          <button type="submit" class="pwy-btn">${i18n.t("youtube.search")}</button>
+        </form>` : "";
+
+      const nav = this.videos.length > 1 ? `
+        <div class="pwy-nav">
+          <button type="button" class="pwy-btn" data-nav="prev" title="${escapeHtml(i18n.t("youtube.prev"))}">&#9664;</button>
+          <span class="pwy-counter">${this.index + 1} / ${this.videos.length}</span>
+          <button type="button" class="pwy-btn" data-nav="next" title="${escapeHtml(i18n.t("youtube.next"))}">&#9654;</button>
+        </div>` : "";
+
+      el.innerHTML = `
+        <div class="pw-youtube">
+          <div class="pwy-main">${main}</div>
+          <div class="pwy-bar">
+            ${this.title ? `<span class="pwy-title" title="${escapeHtml(this.title)}">${escapeHtml(this.title)}</span>` : "<span></span>"}
+            ${nav}
+          </div>
+          ${search}
+          <div class="pwy-list"></div>
+        </div>`;
+      this.renderList();
+      this.wire();
+    }
+
+    renderList() {
+      const box = this.ctx.el.querySelector(".pwy-list");
+      if (!box) return;
+      const i18n = this.ctx.i18n;
+      const list = this.searchResults || this.videos;
+      const isSearch = !!this.searchResults;
+      if (list.length <= 1 && !isSearch) { box.innerHTML = ""; box.hidden = true; return; }
+      box.hidden = false;
+      if (isSearch && !list.length) {
+        box.innerHTML = `<div class="pwy-empty">${i18n.t("youtube.noResults")}</div>`;
+        return;
+      }
+      box.innerHTML = list.map((v, i) => `
+        <button type="button" class="pwy-item ${(!isSearch && i === this.index) ? "pwy-current" : ""}" data-idx="${i}" data-kind="${isSearch ? "search" : "queue"}">
+          <img class="pwy-thumb" src="${escapeHtml(v.thumbnail)}" alt="" loading="lazy">
+          <span class="pwy-item-text">
+            <span class="pwy-item-title">${escapeHtml(v.title || v.id)}</span>
+            ${v.author ? `<span class="pwy-item-meta">${escapeHtml(v.author)}</span>` : ""}
+          </span>
+        </button>`).join("");
+      const cur = box.querySelector(".pwy-current");
+      if (cur && cur.scrollIntoView) cur.scrollIntoView({ block: "nearest" });
+      box.querySelectorAll(".pwy-item").forEach((b) => {
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const i = Number(b.dataset.idx);
+          if (b.dataset.kind === "search") this.playSearchResult(i);
+          else this.play(i);
+        });
+      });
+    }
+
+    wire() {
+      const el = this.ctx.el;
+      // stopPropagation() partout : en mode edition, un clic sur la tuile
+      // ouvrirait ses reglages a la place de l'action.
+      // stopPropagation() everywhere: in edit mode, a click on the tile
+      // would open its settings instead of the action.
+      const poster = el.querySelector(".pwy-poster");
+      if (poster) poster.addEventListener("click", (e) => { e.stopPropagation(); this.startPlayer(); });
+      el.querySelectorAll("[data-nav]").forEach((b) => {
+        b.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (b.dataset.nav === "next") this.next(false); else this.prev();
+        });
+      });
+      const form = el.querySelector(".pwy-search");
+      if (form) {
+        form.addEventListener("click", (e) => e.stopPropagation());
+        form.addEventListener("submit", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          this.search(form.querySelector(".pwy-search-input").value);
+        });
+      }
+      const player = el.querySelector(".pwy-player");
+      if (player) player.addEventListener("click", (e) => e.stopPropagation());
+    }
+
+    destroy() {
+      clearInterval(this.timer);
+      this.destroyPlayer();
+    }
+  }
+
+  window.PiBoard.registerWidget("youtube", YouTubeWidget);
+})();

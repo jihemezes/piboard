@@ -1,0 +1,196 @@
+.pw-youtube {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px 10px;
+  min-height: 0;
+}
+
+/* Le lecteur ou l'affiche occupe tout ce que la liste ne prend pas ; le
+   16:9 n'est pas force pour ne pas laisser de bandes dans une tuile
+   haute -- le lecteur de YouTube gere lui-meme les marges.
+   The player or the poster takes whatever the list does not; 16:9 is
+   not enforced so as not to leave bands in a tall tile -- YouTube's
+   player handles its own margins. */
+.pw-youtube .pwy-main {
+  flex: 1 1 auto;
+  min-height: 90px;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #000;
+}
+.pw-youtube .pwy-player,
+.pw-youtube .pwy-player > div,
+.pw-youtube .pwy-player iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+/* Affiche de demarrage : la vignette de la video, assombrie, avec un
+   grand bouton. Un bouton et non une image cliquable : accessible au
+   clavier et a la telecommande, et sa zone couvre toute l'affiche.
+   Start poster: the video's thumbnail, dimmed, with a big button. A
+   button rather than a clickable image: reachable from the keyboard and
+   a remote, and its area covers the whole poster. */
+.pw-youtube .pwy-poster {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  cursor: pointer;
+  background-size: cover;
+  background-position: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  color: #fff;
+  font: inherit;
+}
+.pw-youtube .pwy-poster::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+}
+.pw-youtube .pwy-play {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.92);
+  color: #111;
+  font-size: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 5px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.5);
+}
+.pw-youtube .pwy-poster:hover .pwy-play { background: #fff; }
+.pw-youtube .pwy-poster-title {
+  position: relative;
+  font-size: 13px;
+  max-width: 90%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+}
+
+.pw-youtube .pwy-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  min-height: 1.2em;
+}
+.pw-youtube .pwy-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pw-youtube .pwy-nav {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pw-youtube .pwy-counter { font-family: var(--mono); }
+.pw-youtube .pwy-btn {
+  font: inherit;
+  font-size: 12px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.pw-youtube .pwy-search {
+  display: flex;
+  gap: 6px;
+}
+.pw-youtube .pwy-search-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+
+/* Liste : une vignette et un titre par video, la courante surlignee.
+   Hauteur bornee pour que le lecteur garde la majorite de la tuile.
+   List: a thumbnail and a title per video, the current one highlighted.
+   Height capped so the player keeps most of the tile. */
+.pw-youtube .pwy-list {
+  flex: 0 1 auto;
+  max-height: 40%;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.pw-youtube .pwy-list[hidden] { display: none; }
+.pw-youtube .pwy-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 4px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.pw-youtube .pwy-item:hover { background: rgba(127, 127, 127, 0.12); }
+.pw-youtube .pwy-current { background: rgba(127, 127, 127, 0.2); }
+.pw-youtube .pwy-thumb {
+  flex: 0 0 auto;
+  width: 56px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 4px;
+  background: #222;
+}
+.pw-youtube .pwy-item-text {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pw-youtube .pwy-item-title {
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pw-youtube .pwy-item-meta {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pw-youtube .pwy-empty {
+  margin: auto;
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 10px;
+}

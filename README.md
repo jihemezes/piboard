@@ -37,7 +37,7 @@ The catalog groups them by family — the same grouping you see when adding a ti
 
 **Personal** — calendar (merge several iCal/.ics calendars, each in its own colour, list and week-grid views, recurring events, iPhone/Google/Nextcloud/Outlook), mailbox (latest messages from an IMAP mailbox, read on tap, nothing stored, strictly read-only), notes (Markdown-lite, checklists, sticky-note colours).
 
-**Entertainment** — TV guide (French DTT and Canal+, turnkey), **TV channels** (a plain player for an IPTV `.m3u` playlist — PiBoard provides no channels and no content whatsoever; it only works with a playlist you already have), slideshow (photos uploaded from the tile, a local/NAS folder, a USB key, WebDAV, or a URL list; landscape and portrait handled separately).
+**Entertainment** — TV guide (French DTT and Canal+, turnkey), **TV channels** (a plain player for an IPTV `.m3u` playlist — PiBoard provides no channels and no content whatsoever; it only works with a playlist you already have), **YouTube** (a video, a playlist, a channel's latest videos or a pasted queue, in YouTube's official privacy-enhanced player — no tracking cookies, no personalized ads; optional search with your own free API key), slideshow (photos uploaded from the tile, a local/NAS folder, a USB key, WebDAV, or a URL list; landscape and portrait handled separately).
 
 **Sport** — live scores, motorsport schedule (full F1/MotoGP race-weekend session timetable), league standings (football, rugby, NBA).
 
@@ -270,7 +270,7 @@ Le catalogue les regroupe par famille — le même classement qu'à l'ajout d'un
 
 **Personnel** — agenda (fusion de plusieurs calendriers iCal/.ics, chacun dans sa couleur, vues liste et grille semaine, événements récurrents, iPhone/Google/Nextcloud/Outlook), courriel (derniers messages d'une boîte IMAP, lecture au clic, rien n'est stocké, strictement en lecture seule), bloc-notes (Markdown léger, listes à cocher, couleurs post-it).
 
-**Divertissement** — programme TV (TNT française et Canal+, clé en main), **chaînes TV** (simple lecteur pour une playlist IPTV `.m3u` — PiBoard ne fournit AUCUNE chaîne ni aucun contenu ; la tuile ne fonctionne qu'avec une playlist dont vous disposez déjà), diaporama (photos téléversées depuis la tuile, dossier local/NAS, clé USB, WebDAV, ou liste d'URLs ; paysage et portrait traités séparément).
+**Divertissement** — programme TV (TNT française et Canal+, clé en main), **chaînes TV** (simple lecteur pour une playlist IPTV `.m3u` — PiBoard ne fournit AUCUNE chaîne ni aucun contenu ; la tuile ne fonctionne qu'avec une playlist dont vous disposez déjà), **YouTube** (une vidéo, une playlist, les dernières vidéos d'une chaîne ou une file collée, dans le lecteur officiel de YouTube en mode confidentialité avancée — sans cookies de suivi ni publicité personnalisée ; recherche en option avec votre propre clé API gratuite), diaporama (photos téléversées depuis la tuile, dossier local/NAS, clé USB, WebDAV, ou liste d'URLs ; paysage et portrait traités séparément).
 
 **Sport** — scores en direct, sports mécaniques (programme complet des séances d'un week-end F1/MotoGP), classements (football, rugby, NBA).
 

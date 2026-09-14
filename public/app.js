@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.105.0
+   Version 1.106.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3468,7 +3468,7 @@
        INSIDE the home, which no existing family covered. */
     { key: "home", ids: ["tempo", "homeassistant"] },
     { key: "personal", ids: ["calendar", "mailbox", "notes"] },
-    { key: "entertainment", ids: ["teleprog", "iptv", "slideshow"] },
+    { key: "entertainment", ids: ["teleprog", "iptv", "youtube", "slideshow"] },
     { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
     /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
        systeme, elle surveille une consommation et un seuil, meme si la

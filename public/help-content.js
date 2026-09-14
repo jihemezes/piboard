@@ -1604,6 +1604,50 @@
     },
 
     {
+      id: "youtube",
+      group: "tiles",
+      title: { fr: "YouTube", en: "YouTube" },
+      sub: {
+        fr: "Lit des vidéos YouTube dans le lecteur officiel en mode confidentialité avancée.",
+        en: "Plays YouTube videos in the official privacy-enhanced player."
+      },
+      html: {
+        fr: `
+          <p>Cette tuile intègre le <b>lecteur officiel de YouTube en « mode confidentialité avancée »</b> (<code>youtube-nocookie.com</code>). C'est le lecteur que Google fournit aux développeurs pour intégrer des vidéos dans une page — rien n'est contourné, rien n'est piraté, et aucun service tiers n'est impliqué. Il ne dépose pas de cookie de suivi et n'affiche donc pas de publicité personnalisée ; en pratique, aujourd'hui, le plus souvent aucune publicité du tout.</p>
+          <p><b>À savoir, honnêtement :</b> ce n'est pas un bloqueur. La tuile n'intercepte rien, elle joue ce que YouTube sert à ce lecteur — et Google reste libre d'y diffuser des annonces demain, ou déjà sur certaines vidéos très monétisées. Si vous appréciez un créateur, les publicités sont une part de ses revenus : un abonnement à sa chaîne, un don ou un achat sont d'autres façons de le soutenir.</p>
+          <h4>Ce qu'on peut lire</h4>
+          <div class="help-opt"><span class="help-opt-name">Une vidéo</span><span class="help-opt-desc">Collez son adresse (<code>youtu.be/…</code>, <code>watch?v=…</code>, un Short) ou son identifiant seul.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Une playlist</span><span class="help-opt-desc">Collez une adresse contenant <code>list=…</code>. Les vidéos s'enchaînent dans l'ordre de la playlist.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Une chaîne</span><span class="help-opt-desc">Collez <code>youtube.com/@nom</code> ou <code>/channel/UC…</code>. La tuile affiche ses dernières vidéos, lues depuis le <b>flux public</b> de la chaîne — sans clé, sans compte, sans quota — et le relit à intervalle réglable pour voir apparaître les nouvelles parutions. C'est l'usage le plus intéressant sur un écran mural : votre chaîne météo, d'actualité ou de votre club, toujours à jour.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Une file</span><span class="help-opt-desc">En mode « file », une adresse de vidéo par ligne, lues dans l'ordre. Les lignes commençant par <code>#</code> sont ignorées.</span></div>
+          <h4>Lecture</h4>
+          <p>La tuile s'ouvre sur une affiche avec un bouton Lecture : c'est ce clic qui autorise le navigateur à jouer le son. Ensuite, les commandes habituelles du lecteur YouTube (pause, volume, plein écran, sous-titres) restent disponibles, et les boutons ◀ ▶ passent d'une vidéo à l'autre. Une vidéo supprimée, privée ou dont l'auteur interdit l'intégration est simplement sautée.</p>
+          <h4>Recherche (facultative)</h4>
+          <p>En ajoutant votre propre <b>clé API Google</b> dans les réglages, une zone de recherche apparaît dans la tuile. La clé est gratuite : créez un projet sur console.cloud.google.com, activez « YouTube Data API v3 » et créez une clé API. Le quota gratuit permet une centaine de recherches par jour. La clé est stockée chiffrée sur le serveur et n'est jamais renvoyée au navigateur. Un résultat choisi remplace la file en cours jusqu'au prochain rechargement — rien n'est enregistré.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Enchaîner la suivante / Recommencer après la dernière</span><span class="help-opt-desc">Pour laisser tourner une playlist ou une chaîne en continu.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Démarrer en muet</span><span class="help-opt-desc">Pour un écran mural où le son gênerait ; le lecteur permet de le rétablir à tout moment.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Vidéos listées</span><span class="help-opt-desc">Combien de vidéos d'une chaîne ou d'une playlist sont affichées sous le lecteur (15 au plus, la limite du flux public).</span></div>`,
+        en: `
+          <p>This tile embeds <b>YouTube's official player in "privacy-enhanced mode"</b> (<code>youtube-nocookie.com</code>). It is the player Google provides to developers for embedding videos in a page — nothing is bypassed, nothing is hacked, and no third-party service is involved. It sets no tracking cookie and therefore shows no personalized advertising; in practice, today, most often no advertising at all.</p>
+          <p><b>Worth knowing, honestly:</b> this is not a blocker. The tile intercepts nothing, it plays what YouTube serves to that player — and Google remains free to run ads there tomorrow, or already on some heavily monetized videos. If you value a creator, ads are part of their income: subscribing to their channel, a donation or a purchase are other ways to support them.</p>
+          <h4>What can be played</h4>
+          <div class="help-opt"><span class="help-opt-name">A video</span><span class="help-opt-desc">Paste its address (<code>youtu.be/…</code>, <code>watch?v=…</code>, a Short) or its bare id.</span></div>
+          <div class="help-opt"><span class="help-opt-name">A playlist</span><span class="help-opt-desc">Paste an address containing <code>list=…</code>. Videos play in the playlist's order.</span></div>
+          <div class="help-opt"><span class="help-opt-name">A channel</span><span class="help-opt-desc">Paste <code>youtube.com/@name</code> or <code>/channel/UC…</code>. The tile shows its latest videos, read from the channel's <b>public feed</b> — no key, no account, no quota — and re-reads it at an adjustable interval so new releases show up. This is the most interesting use on a wall display: your weather, news or club channel, always current.</span></div>
+          <div class="help-opt"><span class="help-opt-name">A queue</span><span class="help-opt-desc">In "queue" mode, one video address per line, played in order. Lines starting with <code>#</code> are ignored.</span></div>
+          <h4>Playback</h4>
+          <p>The tile opens on a poster with a Play button: that click is what lets the browser play sound. Afterwards the usual YouTube controls (pause, volume, full screen, captions) remain available, and the ◀ ▶ buttons move between videos. A removed or private video, or one whose author forbids embedding, is simply skipped.</p>
+          <h4>Search (optional)</h4>
+          <p>Adding your own <b>Google API key</b> in the settings adds a search box to the tile. The key is free: create a project on console.cloud.google.com, enable "YouTube Data API v3" and create an API key. The free quota allows about a hundred searches a day. The key is stored encrypted on the server and never sent back to the browser. A chosen result replaces the current queue until the next reload — nothing is saved.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Play the next / Start over after the last</span><span class="help-opt-desc">To let a playlist or a channel run continuously.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Start muted</span><span class="help-opt-desc">For a wall display where sound would be a nuisance; the player can unmute at any time.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Videos listed</span><span class="help-opt-desc">How many videos of a channel or playlist are shown under the player (15 at most, the public feed's limit).</span></div>`
+      }
+    },
+
+    {
       id: "hostwatch",
       group: "tiles",
       title: { fr: "Veille réseau", en: "Network watch" },

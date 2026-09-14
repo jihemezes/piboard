@@ -1,5 +1,50 @@
 # Changelog
 
+## 1.106.0
+
+- **Nouvelle tuile « YouTube »** (rangee dans Divertissement). Elle
+  integre le lecteur officiel de YouTube en « mode confidentialite
+  avancee » (youtube-nocookie.com), pilote par son API IFrame : le
+  lecteur que Google fournit aux developpeurs pour integrer des videos
+  dans une page. Rien n'est contourne ni pirate, aucun service tiers
+  n'intervient (l'astuce « yout-ube.com » qui circule n'est qu'un
+  redirecteur tiers vers ce meme lecteur -- la tuile s'en passe). Il ne
+  depose pas de cookie de suivi et n'affiche donc pas de publicite
+  personnalisee ; en pratique, aujourd'hui, le plus souvent aucune.
+
+  Dit honnetement dans l'aide : ce n'est PAS un bloqueur. La tuile
+  n'intercepte rien et joue ce que YouTube sert a ce lecteur ; Google
+  reste libre d'y diffuser des annonces. L'aide rappelle aussi que les
+  publicites sont une part des revenus des createurs.
+
+- **Quatre sources, une seule forme.** Une video, une playlist, une
+  chaine ou une file collee a la main : le serveur (server/youtube.js)
+  reconnait toutes les formes d'adresse YouTube et les transforme en
+  une file de videos, le seul modele que connait le lecteur. La source
+  la plus utile sur un ecran mural : **les dernieres videos d'une
+  chaine**, lues depuis le flux Atom public de YouTube -- sans cle,
+  sans compte, sans quota -- et relues a intervalle reglable. Un
+  @pseudo est resolu en identifiant de chaine par lecture de sa page
+  publique (fragile par nature, l'API prend le relais si une cle est
+  fournie).
+
+- **Demarrage manuel**, par choix : une affiche (vignette + bouton
+  Lecture), et le lecteur n'est cree qu'au premier clic -- ce geste
+  est ce qui autorise le navigateur a jouer le son. Enchainement,
+  boucle et demarrage en muet en option. Une video supprimee, privee ou
+  non integrable est sautee au lieu de figer la tuile.
+
+- **Recherche facultative** avec la cle API Google de l'utilisateur
+  (gratuite, ~100 recherches par jour), stockee dans le coffre chiffre
+  de la tuile et jamais renvoyee au navigateur. Un resultat choisi
+  remplace la file en cours jusqu'au prochain rechargement.
+
+- **Non verifie ici** faute d'acces reseau a YouTube depuis
+  l'environnement de construction : la lecture reelle du flux d'une
+  chaine et le lecteur lui-meme. Verifies : reconnaissance de quatorze
+  formes d'adresse, analyse du flux Atom sur un document de synthese,
+  file collee, et les trois routes contre un serveur lance.
+
 ## 1.105.0
 
 - **Nouvelle tuile « Veille reseau »** (rangee dans Systeme & Reseau).

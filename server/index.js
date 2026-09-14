@@ -44,6 +44,7 @@ const usbMedia = require("./usbMedia");
 const networkScan = require("./networkScan");
 const netHosts = require("./netHosts");
 const hostWatch = require("./hostWatch");
+const youtube = require("./youtube");
 const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
@@ -528,6 +529,46 @@ app.post("/api/host-watch", express.json({ limit: "32kb" }), async (req, res) =>
     res.json(await hostWatch.check(String((req.body && req.body.targets) || "")));
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/* ---------- Tuile YouTube / YouTube tile ----------
+   Trois routes, aucune ne touche au lecteur (integre cote client, voir
+   server/youtube.js pour ce qu'il est et ce qu'il n'est pas) :
+     - resolve : ce que l'utilisateur a colle -> une file de videos
+       (flux RSS public pour une chaine ou une playlist, sans cle).
+     - queue   : une liste collee a la main -> la meme forme.
+     - search  : recherche via l'API Data, UNIQUEMENT avec la cle de
+       l'utilisateur, lue dans le coffre chiffre de la tuile et jamais
+       renvoyee au navigateur.
+   Three routes, none of which touches the player (embedded client-side,
+   see server/youtube.js for what it is and is not):
+     - resolve : what the user pasted -> a queue of videos (public RSS
+       feed for a channel or a playlist, no key).
+     - queue   : a hand-pasted list -> the same shape.
+     - search  : search through the Data API, ONLY with the user's key,
+       read from the tile's encrypted vault and never sent back to the
+       browser. */
+app.get("/api/youtube/:tileId/resolve", async (req, res) => {
+  try {
+    const apiKey = tileSecrets.get(req.params.tileId, "apiKey") || null;
+    res.json(await youtube.resolve(String(req.query.source || ""), apiKey, req.query.limit));
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/youtube/queue", express.json({ limit: "32kb" }), (req, res) => {
+  res.json({ kind: "queue", title: "", videos: youtube.parseQueue((req.body && req.body.text) || "") });
+});
+
+app.get("/api/youtube/:tileId/search", async (req, res) => {
+  const apiKey = tileSecrets.get(req.params.tileId, "apiKey");
+  if (!apiKey) return res.status(400).json({ error: "missing_key" });
+  try {
+    res.json({ videos: await youtube.search(String(req.query.q || ""), apiKey, req.query.max) });
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
   }
 });
 

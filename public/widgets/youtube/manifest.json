@@ -1,0 +1,112 @@
+{
+  "id": "youtube",
+  "version": "0.1.0",
+  "name": {
+    "en": "YouTube",
+    "fr": "YouTube"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Plays YouTube videos in the official privacy-enhanced player (no tracking cookies, no personalized ads). A single video, a playlist, a channel's latest videos, or a queue you paste — and a search box if you add your own free Google API key.",
+    "fr": "Lit des vidéos YouTube dans le lecteur officiel en mode confidentialité avancée (sans cookies de suivi, sans publicité personnalisée). Une vidéo, une playlist, les dernières vidéos d'une chaîne, ou une file que vous collez — et une recherche si vous ajoutez votre propre clé API Google gratuite."
+  },
+  "tagline": {
+    "en": "YouTube in the privacy-enhanced player: videos, playlists, channels.",
+    "fr": "YouTube dans le lecteur confidentialité avancée : vidéos, playlists, chaînes."
+  },
+  "size": {
+    "w": 6,
+    "h": 5,
+    "minW": 3,
+    "minH": 3,
+    "maxW": 12,
+    "maxH": 12
+  },
+  "settings": [
+    {
+      "key": "mode",
+      "type": "select",
+      "default": "source",
+      "options": [
+        { "value": "source", "label": { "en": "A video, a playlist or a channel", "fr": "Une vidéo, une playlist ou une chaîne" } },
+        { "value": "queue", "label": { "en": "A queue of videos I paste", "fr": "Une file de vidéos que je colle" } }
+      ],
+      "label": { "en": "What to play", "fr": "Quoi lire" }
+    },
+    {
+      "key": "source",
+      "type": "text",
+      "default": "",
+      "label": { "en": "Video, playlist or channel", "fr": "Vidéo, playlist ou chaîne" },
+      "hint": {
+        "en": "Paste any YouTube address: a video (youtu.be/… or watch?v=…), a playlist (…list=PL…), or a channel (youtube.com/@name or /channel/UC…). A channel shows its latest videos, from its public feed — no key needed.",
+        "fr": "Collez n'importe quelle adresse YouTube : une vidéo (youtu.be/… ou watch?v=…), une playlist (…list=PL…) ou une chaîne (youtube.com/@nom ou /channel/UC…). Une chaîne affiche ses dernières vidéos, lues depuis son flux public — aucune clé nécessaire."
+      }
+    },
+    {
+      "key": "queue",
+      "type": "textarea",
+      "default": "",
+      "label": { "en": "Queue (one address per line)", "fr": "File (une adresse par ligne)" },
+      "hint": {
+        "en": "Only used in queue mode. One video address or id per line, played in order. Lines starting with # are ignored. Up to 50.",
+        "fr": "Utilisé uniquement en mode file. Une adresse ou un identifiant de vidéo par ligne, lus dans l'ordre. Les lignes commençant par # sont ignorées. 50 au maximum."
+      }
+    },
+    {
+      "key": "listCount",
+      "type": "number",
+      "default": 8,
+      "min": 1,
+      "max": 15,
+      "label": { "en": "Videos listed for a channel or playlist", "fr": "Vidéos listées pour une chaîne ou une playlist" },
+      "hint": {
+        "en": "The public feed carries the 15 most recent at most. Fewer lines leave more room for the player.",
+        "fr": "Le flux public porte au plus les 15 plus récentes. Moins de lignes laissent plus de place au lecteur."
+      }
+    },
+    {
+      "key": "autoNext",
+      "type": "checkbox",
+      "default": true,
+      "label": { "en": "Play the next video when one ends", "fr": "Enchaîner la vidéo suivante à la fin" }
+    },
+    {
+      "key": "loop",
+      "type": "checkbox",
+      "default": false,
+      "label": { "en": "Start over after the last one", "fr": "Recommencer après la dernière" }
+    },
+    {
+      "key": "startMuted",
+      "type": "checkbox",
+      "default": false,
+      "label": { "en": "Start muted", "fr": "Démarrer en muet" },
+      "hint": {
+        "en": "For a wall display where the sound would be a nuisance. The player's own controls can unmute at any time.",
+        "fr": "Pour un écran mural où le son gênerait. Les commandes du lecteur permettent de rétablir le son à tout moment."
+      }
+    },
+    {
+      "key": "refreshMinutes",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 1440,
+      "label": { "en": "Re-read a channel or playlist every (minutes)", "fr": "Relire une chaîne ou une playlist toutes les (minutes)" },
+      "hint": {
+        "en": "Picks up newly published videos. Nothing is reloaded while a video is playing.",
+        "fr": "Récupère les vidéos nouvellement publiées. Rien n'est rechargé pendant qu'une vidéo est en lecture."
+      }
+    },
+    {
+      "key": "apiKey",
+      "type": "secret",
+      "label": { "en": "Google API key (optional, for search)", "fr": "Clé API Google (facultative, pour la recherche)" },
+      "hint": {
+        "en": "Adds a search box to the tile. Free: create a project on console.cloud.google.com, enable \"YouTube Data API v3\" and create an API key. The free quota allows about a hundred searches a day. Stored encrypted, never sent back to the browser.",
+        "fr": "Ajoute une recherche dans la tuile. Gratuit : créez un projet sur console.cloud.google.com, activez « YouTube Data API v3 » et créez une clé API. Le quota gratuit permet une centaine de recherches par jour. Stockée chiffrée, jamais renvoyée au navigateur."
+      }
+    }
+  ]
+}
