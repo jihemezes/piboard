@@ -392,8 +392,19 @@
         </label>
       </fieldset>
 
-      <fieldset class="form-section">
+      <fieldset class="form-section" id="secDrawers">
         <legend data-i18n="settings.section.drawers">Tile drawers</legend>
+        <!-- Note d'inactivite : la section reste a sa place et reste
+             modifiable, elle signale seulement qu'elle ne s'applique pas
+             au mode d'affichage courant. Faire disparaitre la section
+             changeait la disposition du panneau d'un mode a l'autre, ce
+             qui desoriente sans rien apporter.
+             Inactivity note: the section stays where it is and stays
+             editable, it merely says it does not apply to the current
+             display mode. Removing the section changed the panel's
+             layout from one mode to the other, which is disorienting
+             and gains nothing. -->
+        <p class="section-note" data-i18n="settings.drawers.inactive" hidden>Drawers do not exist in dashboard mode: these sizes are kept and will apply again in classic mode.</p>
         <p class="hint" data-i18n="settings.drawers.hint">How much of the screen each drawer covers when open, as a percentage. Can also be adjusted by dragging its edge with the mouse or a finger, up to 96% — use these fields to go all the way to 100%, or if the edge is hard to grab.</p>
         <label class="field">
           <span data-i18n="settings.drawers.left">Left drawer (width)</span>
@@ -498,7 +509,8 @@
           </select>
           <small class="field-hint" data-i18n="settings.displayMode.hint">Dashboard mode replaces the drawers and the toolbar with a thin bar at the bottom of the screen, revealed by moving the mouse there (a permanent tab in touch mode). Your board becomes page 1: nothing is lost, and switching back to classic mode finds it intact.</small>
         </label>
-        <div id="pagesEditor" hidden>
+        <p class="section-note" data-i18n="settings.pages.inactive" hidden>Pages only come into play in dashboard mode: what you set here is kept and will apply as soon as you switch to it.</p>
+        <div id="pagesEditor">
           <label class="field checkbox">
             <input type="checkbox" id="setPageAuto">
             <span data-i18n="settings.pageAuto">Move to the next page automatically</span>

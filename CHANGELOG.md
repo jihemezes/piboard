@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.109.1
+
+- **Le panneau de reglages generaux garde la meme disposition dans les
+  deux modes d'affichage.** L'editeur de pages apparaissait et
+  disparaissait selon qu'on etait en mode classique ou tableau de bord :
+  toutes les sections suivantes se decalaient, et l'on pouvait croire
+  avoir perdu une option en changeant de mode. Les deux sections
+  concernees -- Tiroirs et Pages -- sont desormais TOUJOURS visibles, a
+  la meme place, quel que soit le mode.
+
+- **Aucune option perdue, et elles restent modifiables.** La section
+  sans effet dans le mode courant est simplement grisee et porte une
+  note qui le dit (« les tiroirs n'existent pas en mode tableau de
+  bord : ces tailles sont conservees... »). Elle n'est PAS desactivee :
+  on peut preparer ses pages avant de basculer, et retrouver ses
+  largeurs de tiroirs au retour. La section reprend son opacite normale
+  des qu'un de ses champs a le focus, pour ne pas gener celui qui la
+  remplit volontairement.
+
 ## 1.109.0
 
 - **Bascule de langue en tete du guide de demarrage rapide.** Au tout

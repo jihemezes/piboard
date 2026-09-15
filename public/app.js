@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.109.0
+   Version 1.109.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -4400,12 +4400,49 @@
      mounted tiles, so they cannot be rebuilt from a form at validation
      time without tearing everything down. Every change is applied
      immediately, like resizing a drawer. */
+  /* Le panneau de reglages garde EXACTEMENT la meme disposition dans les
+     deux modes d'affichage. Auparavant, l'editeur de pages apparaissait
+     et disparaissait selon le mode : les sections suivantes se
+     decalaient, et l'on croyait avoir perdu une option en changeant de
+     mode. Les deux sections concernees -- tiroirs et pages -- restent
+     donc toujours visibles ET modifiables ; seule une note signale
+     celle qui ne s'applique pas au mode courant, et son contenu est
+     grise. Rien n'est perdu : ce qu'on y regle est conserve et
+     reprendra effet au changement de mode.
+     The settings panel keeps EXACTLY the same layout in both display
+     modes. The pages editor used to appear and disappear with the mode:
+     the following sections shifted, and one believed an option had been
+     lost by switching. Both sections concerned -- drawers and pages --
+     therefore stay visible AND editable at all times; only a note points
+     out the one that does not apply to the current mode, and its content
+     is dimmed. Nothing is lost: what is set there is kept and takes
+     effect again when the mode changes. */
+  function applySettingsModeNotes() {
+    const dash = $("setDisplayMode").value === "dashboard";
+    const mark = (el, inactive) => {
+      if (!el) return;
+      el.classList.toggle("section-inactive", inactive);
+      const note = el.querySelector(".section-note");
+      if (note) note.hidden = !inactive;
+    };
+    mark($("secDrawers"), dash);
+    // La section « Mode d'affichage » contient le selecteur lui-meme, qui
+    // reste evidemment actif : seul l'editeur de pages est grise.
+    // The "Display mode" section holds the selector itself, which stays
+    // active of course: only the pages editor is dimmed.
+    const pagesBox = $("pagesEditor");
+    if (pagesBox) {
+      pagesBox.classList.toggle("section-inactive", !dash);
+      const note = pagesBox.parentElement && pagesBox.parentElement.querySelector(".section-note");
+      if (note) note.hidden = dash;
+    }
+  }
+
   function renderPagesEditor() {
     const box = $("pagesEditor");
     const list = $("pagesList");
     if (!box || !list) return;
-    box.hidden = $("setDisplayMode").value !== "dashboard";
-    if (box.hidden) return;
+    applySettingsModeNotes();
 
     const dirLabels = PAGE_DIRECTIONS.map((d) => [d, i18n.t("page.dir." + d)]);
     const fxLabels = PAGE_EFFECTS.map((f) => [f, i18n.t("page.fx." + f)]);

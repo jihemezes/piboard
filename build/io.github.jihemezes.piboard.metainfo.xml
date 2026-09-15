@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.109.1" date="2026-09-14">
+      <description>
+        <p>The general settings panel now keeps the same layout in both display modes.</p>
+        <p xml:lang="fr">Le panneau de reglages generaux garde desormais la meme disposition dans les deux modes d'affichage.</p>
+      </description>
+    </release>
     <release version="1.109.0" date="2026-09-14">
       <description>
         <p>Quick start guide: language toggle and a donation button; the YouTube key is now listed among the API keys.</p>

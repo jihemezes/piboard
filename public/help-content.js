@@ -2168,6 +2168,8 @@
           <div class="help-opt"><span class="help-opt-name">Tableau de bord</span><span class="help-opt-desc">Une suite de pages qui se remplacent en glissant. Plus de tiroirs ni de barre d'outils : un fin bandeau au bas de l'écran les remplace.</span></div>
           <p><b>Votre plateau actuel devient la page 1.</b> Il n'est ni déplacé ni recopié : basculer d'un mode à l'autre ne perd rien, et repasser en classique le retrouve exactement tel qu'il était, tiroirs compris. Les pages que vous avez créées ne sont pas détruites pour autant : elles réapparaissent si vous revenez au mode tableau de bord.</p>
 
+          <p>Le <b>panneau de réglages généraux est identique dans les deux modes</b> : même ordre, mêmes sections, rien n'apparaît ni ne disparaît quand vous basculez. La section qui ne sert pas au mode courant — les tiroirs en mode tableau de bord, les pages en mode classique — est simplement grisée, avec un mot d'explication, mais elle <b>reste modifiable</b> : vous pouvez préparer vos pages avant de basculer, et vos largeurs de tiroirs vous attendent au retour.</p>
+
           <h4>Le bandeau du bas</h4>
           <p>À la souris, il sort dès que le pointeur atteint le bas de l'écran, et rentre quand il s'en éloigne. <b>En mode tactile, une languette reste visible en permanence</b> au milieu du bord inférieur : au doigt il n'y a pas de survol, et sans elle les réglages deviendraient inaccessibles.</p>
           <p>Il contient le repérage des pages (cliquez un numéro pour y aller), les flèches page précédente / suivante, et l'accès à l'ajout de tuile, au mode édition, aux réglages généraux et à cette aide. Une zone y est <b>réservée pour l'avenir</b> : elle accueillera des informations défilantes venues de vos tuiles — les titres de vos flux RSS, à la manière des chaînes d'info en continu.</p>
@@ -2207,6 +2209,8 @@
           <div class="help-opt"><span class="help-opt-name">Classic</span><span class="help-opt-desc">The original mode, unchanged: one board, three retractable drawers, the toolbar at the bottom of the screen.</span></div>
           <div class="help-opt"><span class="help-opt-name">Dashboard</span><span class="help-opt-desc">A series of pages replacing each other by sliding. No more drawers nor toolbar: a thin bar at the bottom of the screen replaces them.</span></div>
           <p><b>Your current board becomes page 1.</b> It is neither moved nor copied: switching between modes loses nothing, and going back to classic finds it exactly as it was, drawers included. The pages you created are not destroyed either: they reappear if you return to dashboard mode.</p>
+
+          <p>The <b>general settings panel is identical in both modes</b>: same order, same sections, nothing appears or disappears when you switch. The section that is idle in the current mode — drawers in dashboard mode, pages in classic mode — is simply dimmed, with a word of explanation, but it <b>stays editable</b>: you can set your pages up before switching, and your drawer widths are waiting for you on the way back.</p>
 
           <h4>The bottom bar</h4>
           <p>With a mouse it comes out as soon as the pointer reaches the bottom of the screen, and goes back in when it moves away. <b>In touch mode a tab stays permanently visible</b> in the middle of the bottom edge: with a finger there is no hover, and without it the settings would become unreachable.</p>

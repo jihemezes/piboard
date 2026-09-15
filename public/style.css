@@ -2789,3 +2789,30 @@ body.editing .grid-stack-item-content.tile-transparent {
    Language toggle, in the guide's header: discreet, left of the close
    cross. */
 .quickstart-card .modal-head #quickStartLang { margin-left: auto; }
+
+/* ---------- Section de reglages sans effet dans le mode courant ----------
+   Grisee mais TOUJOURS utilisable : les tiroirs n'existent pas en mode
+   tableau de bord, les pages n'existent pas en mode classique, mais on
+   doit pouvoir les preparer avant de basculer -- et surtout la
+   disposition du panneau ne doit pas changer d'un mode a l'autre, sinon
+   les sections se decalent et l'on croit avoir perdu une option.
+   D'ou une mise en retrait visuelle, et non un masquage.
+   Settings section with no effect in the current mode. Dimmed but STILL
+   usable: drawers do not exist in dashboard mode, pages do not exist in
+   classic mode, yet one must be able to set them up before switching --
+   and above all the panel's layout must not change from one mode to the
+   other, otherwise sections shift and one believes an option was lost.
+   Hence a visual step back, not a hiding. */
+.section-inactive { opacity: 0.55; }
+.section-inactive:focus-within { opacity: 1; }
+
+.section-note {
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-left: 3px solid var(--accent, #4C8DFF);
+  border-radius: 0 6px 6px 0;
+  background: rgba(127, 127, 127, 0.1);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
