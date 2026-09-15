@@ -127,6 +127,71 @@ if (publishing) {
   }
 }
 
+/* Verification prealable cote GitHub : une release portant deja ce tag
+   fait echouer electron-builder par un 422 "already_exists" -- mais
+   SEULEMENT a la toute fin, apres trois a cinq minutes de construction
+   et l'envoi d'un installeur de 130 Mo. Constate sur la 1.108.1 : une
+   release vide creee par un essai precedent, et tout le travail perdu.
+   On regarde donc AVANT de construire. L'appel est anonyme (depot
+   public) et sans consequence s'il echoue : en cas de doute, on laisse
+   passer plutot que de bloquer une publication legitime.
+
+   Pre-flight check on GitHub's side: a release already carrying this tag
+   makes electron-builder fail with a 422 "already_exists" -- but ONLY at
+   the very end, after three to five minutes of building and uploading a
+   130 MB installer. Observed on 1.108.1: an empty release left by an
+   earlier attempt, and all the work wasted. So we look BEFORE building.
+   The call is anonymous (public repository) and inconsequential if it
+   fails: when in doubt we let it through rather than block a legitimate
+   publication. */
+async function existingRelease(tag) {
+  const repo = "jihemezes/piboard";
+  /* Le jeton de publication, s'il est pose (GH_TOKEN pour
+     electron-builder, GITHUB_TOKEN dans Actions), sert aussi ici : sans
+     lui l'API limite a 60 appels par heure et par adresse, et un refus
+     de quota renverrait 403 -- que l'on traite comme \"je ne sais pas\",
+     donc en laissant passer. Avec le jeton, la reponse est fiable.
+     The publishing token, when set (GH_TOKEN for electron-builder,
+     GITHUB_TOKEN in Actions), is used here too: without it the API caps
+     at 60 calls an hour per address, and a quota refusal would answer
+     403 -- which we treat as \"I do not know\", hence letting it through.
+     With the token, the answer is reliable. */
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
+  const headers = { "User-Agent": "PiBoard publish", Accept: "application/vnd.github+json" };
+  if (token) headers.Authorization = "Bearer " + token;
+  try {
+    const res = await fetch(`https://api.github.com/repos/${repo}/releases/tags/${tag}`, { headers });
+    if (res.status === 404) return null;
+    if (!res.ok) return null;
+    const data = await res.json();
+    return { assets: (data.assets || []).length, url: data.html_url, draft: !!data.draft };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function main() {
+if (publishing) {
+  const tag = "v" + version;
+  const found = await existingRelease(tag);
+  if (found) {
+    console.error(
+      `\nUne release ${tag} existe deja sur GitHub` +
+      (found.assets ? ` avec ${found.assets} fichier(s).` : ` mais elle est VIDE (aucun fichier).`) +
+      `\n  ${found.url}\n\n` +
+      (found.assets
+        ? `Publier a nouveau sous ce numero est refuse par GitHub. Passe au numero suivant\n` +
+          `(package.json + tag), ou supprime cette release si elle est ratee.\n`
+        : `Elle vient sans doute d'un essai precedent, ou du workflow GitHub Actions declenche\n` +
+          `par le tag. Supprime-la sur la page ci-dessus (bouton Delete), puis relance\n` +
+          `npm run publish. Le tag git, lui, peut rester s'il pointe sur le bon commit.\n`) +
+      `\nA release ${tag} already exists on GitHub -- delete it or move to the next version\n` +
+      `number before publishing again.\n`
+    );
+    process.exit(1);
+  }
+}
+
 console.log(
   `\nPiBoard ${version} -> release GitHub marquee ` +
   (prerelease
@@ -157,3 +222,6 @@ const bin = path.join(
 );
 const run = spawnSync(bin, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
 process.exit(run.status === null ? 1 : run.status);
+}
+
+main();

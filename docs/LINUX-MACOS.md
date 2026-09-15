@@ -174,6 +174,12 @@ git push origin vx.y.z        # -> démarre le workflow Linux + macOS
 npm run publish               # -> ajoute Windows à la même release
 ```
 
+Si `npm run publish` s'arrête en annonçant qu'une release existe déjà, c'est
+qu'un essai précédent (ou le workflow) l'a créée : supprimez-la sur sa page
+GitHub, puis relancez. Le script vérifie ce point **avant** de construire,
+pour ne pas perdre cinq minutes et l'envoi d'un installeur de 130 Mo sur une
+erreur qui n'apparaissait qu'à la toute fin.
+
 ### Release « latest » ou « pre-release »
 
 Le statut de la release n'est choisi ni sur le PC ni dans le workflow,
@@ -404,6 +410,11 @@ git push
 git push origin vx.y.z        # -> starts the Linux + macOS workflow
 npm run publish               # -> adds Windows to the same release
 ```
+
+If `npm run publish` stops saying a release already exists, an earlier attempt
+(or the workflow) created it: delete it from its GitHub page, then run again.
+The script checks this **before** building, so as not to waste five minutes and
+a 130 MB installer upload on an error that only showed at the very end.
 
 ### "Latest" or "pre-release"
 

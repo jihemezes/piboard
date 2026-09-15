@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.108.2" date="2026-09-14">
+      <description>
+        <p>Publishing now checks for an existing release before building, and no longer rewrites the lockfile mid-release.</p>
+        <p xml:lang="fr">La publication verifie l'existence de la release avant de construire, et ne reecrit plus le fichier de verrouillage en cours de livraison.</p>
+      </description>
+    </release>
     <release version="1.108.1" date="2026-09-14">
       <description>
         <p>Help: step-by-step procedure for getting and securing a YouTube API key.</p>

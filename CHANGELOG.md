@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.108.2
+
+- **La publication verifie d'abord si la release existe deja.**
+  electron-builder ne s'en apercoit qu'a la toute fin : il construit,
+  signe, televerse 130 Mo, puis echoue sur un 422 « already_exists » --
+  tout le travail perdu. `scripts/publish.js` interroge maintenant
+  l'API GitHub AVANT de construire et s'arrete en expliquant quoi faire
+  (supprimer la release ratee, ou passer au numero suivant). L'appel
+  utilise le jeton GH_TOKEN s'il est pose ; sans reponse fiable, il
+  laisse passer plutot que de bloquer une publication legitime.
+
+- **`npm install` ne reecrit plus package-lock.json pendant la
+  publication** (`--no-save`). Il tournait APRES le commit : quand il
+  touchait le fichier de verrouillage, le depot se retrouvait avec une
+  modification non commitee, un second commit portant le meme message,
+  et surtout un tag pointant sur le commit PRECEDENT -- donc une release
+  construite a partir d'un arbre different de celui que le tag designe.
+
 ## 1.108.1
 
 - **Aide : marche a suivre pas a pas pour la cle API YouTube.**
