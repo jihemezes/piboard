@@ -1,5 +1,75 @@
 # Changelog
 
+## 1.110.1
+
+- **`npm run library:meta`** : remplit le meta.json des sections de la
+  bibliotheque livree a partir des NOMS DE FICHIERS, pour ne pas avoir
+  a decrire trente images a la main. `name` reprend le nom sans
+  extension, `category` en prend la premiere partie -- avant le premier
+  `_`, `-` ou espace (« Classy_Blue.png » -> categorie « Classy ») --,
+  l'auteur et la licence se passent en option et valent pour tout le
+  lot.
+
+- **Le clair/sombre est MESURE, pas devine** : ffmpeg reduit l'image a
+  un seul pixel et on lit sa luminance, ponderee selon la Rec. 709 (le
+  vert compte bien plus que le bleu pour l'oeil -- une moyenne
+  arithmetique classerait « sombre » des fonds bleus parfaitement
+  lisibles). C'est la question que se pose l'utilisateur -- « le texte
+  de mes tuiles restera-t-il lisible par-dessus ? » -- et une reponse
+  mesuree vaut mieux qu'une reponse deduite d'un nom de couleur. Sans
+  ffmpeg, le champ est laisse vide plutot que rempli au hasard.
+
+- Le script **n'ecrase jamais une entree existante** : on peut le
+  relancer apres chaque ajout sans perdre une description affinee a la
+  main (`--force` pour repartir de zero). Le champ `source` n'est
+  volontairement pas rempli : il ne sert qu'a crediter une image
+  trouvee ailleurs, et il n'y a rien a pointer pour ses propres images.
+
+## 1.110.0
+
+- **Bibliotheque d'images**, accessible partout ou l'on choisit une
+  image : fond d'une page, tuile Logo, photos du diaporama. Trois
+  sections (fonds de page, logos et icones, photos), une seule fenetre
+  pour les trois -- c'est le meme geste, il n'y avait aucune raison
+  d'en entretenir trois variantes. Filtres par categorie, par dominante
+  claire ou sombre, et recherche.
+
+- **Deux origines, jamais melangees**, et c'est le mecanisme de mise a
+  jour qui l'impose : `public/library/` contient le lot LIVRE, remplace
+  a chaque mise a jour -- c'est par la qu'il s'enrichit ;
+  `data/library/` contient les ajouts de l'UTILISATEUR, que la mise a
+  jour ne touche jamais. La solution qui consiste a recopier le lot
+  livre dans data/ au premier demarrage a ete ecartee : les images
+  ajoutees plus tard n'atteindraient jamais les installations
+  existantes.
+
+  Consequence assumee : un element livre ne peut pas etre supprime (il
+  reviendrait a la mise a jour suivante) mais il peut etre MASQUE. Les
+  ajouts personnels, eux, se suppriment pour de bon.
+
+- **Le lot livre reste leger, le reste est en ligne.** Chaque
+  mega-octet embarque est paye quatre fois (installeur Windows, .deb,
+  .dmg, archive du Pi). Le bouton « Plus en ligne » lit un catalogue
+  JSON du depot et telecharge A LA DEMANDE, image par image, vers la
+  bibliotheque personnelle. Rien n'est rapatrie automatiquement. Un
+  catalogue mis a jour est visible de toutes les installations sans
+  publier de version.
+
+- **Cote livraison** : deposer les fichiers dans
+  `public/library/<section>/`, les decrire dans le `meta.json` de la
+  section (nom, categorie, clair/sombre, auteur, licence), puis
+  `npm run library:index`. Le script lit les dimensions dans l'en-tete
+  des fichiers (sans dependance) et fabrique les vignettes avec ffmpeg,
+  que PiBoard sait deja detecter pour l'IPTV. Marche a suivre complete
+  et pieges dans `docs/LIBRARY.md`.
+
+- **Choisir une image la COPIE** dans le dossier de la tuile ou de la
+  page, au lieu de la referencer. Une page ne doit pas se retrouver nue
+  parce qu'une image a ete retiree de la bibliotheque ou renommee par
+  une mise a jour ; le cout est quelques mega-octets dupliques. Les
+  tuiles continuent donc de passer par l'API media existante, sans
+  changement.
+
 ## 1.109.1
 
 - **Le panneau de reglages generaux garde la meme disposition dans les

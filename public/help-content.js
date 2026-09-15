@@ -1682,6 +1682,40 @@
     },
 
     {
+      id: "library",
+      group: "presentation",
+      title: { fr: "Bibliothèque d'images", en: "Image library" },
+      sub: {
+        fr: "Fonds de page, logos et photos livrés avec PiBoard, que vous pouvez enrichir.",
+        en: "Page backgrounds, logos and photos shipped with PiBoard, which you can extend."
+      },
+      html: {
+        fr: `
+          <p>PiBoard est livré avec une petite bibliothèque d'images, accessible partout où l'on choisit une image : le <b>fond d'une page</b>, la tuile <b>Logo</b>, et les photos du <b>diaporama</b>. Le bouton <b>« Bibliothèque… »</b> l'ouvre. Trois sections : fonds de page, logos et icônes, photos.</p>
+          <h4>Deux origines, et pourquoi ça compte</h4>
+          <p>La bibliothèque mélange deux choses à l'affichage, mais elles vivent à des endroits très différents :</p>
+          <div class="help-opt"><span class="help-opt-name">Les images livrées</span><span class="help-opt-desc">Elles font partie de l'application et s'enrichissent à chaque mise à jour. Vous ne pouvez pas les supprimer — elles reviendraient à la mise à jour suivante, ce qui serait déroutant — mais vous pouvez les <b>masquer</b> : elles cessent simplement d'être proposées.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Vos images</span><span class="help-opt-desc">« Ajouter mes images… » les range à côté de vos réglages et de vos photos. Elles <b>survivent aux mises à jour</b> et sont reprises par vos sauvegardes. Vous pouvez les supprimer pour de bon.</span></div>
+          <p>Vous pouvez aussi déposer des fichiers directement dans <code>data/library/backgrounds/</code> (ou <code>logos/</code>, <code>photos/</code>) depuis un partage réseau : ils apparaissent sans rien lancer, avec leur nom de fichier pour libellé.</p>
+          <h4>Plus d'images en ligne</h4>
+          <p>Le lot livré reste volontairement léger : il voyage dans l'installeur Windows, le paquet Linux, le .dmg et l'archive du Pi. Le bouton <b>« Plus en ligne… »</b> montre le reste du catalogue, et chaque image se télécharge <b>à la demande</b>, une par une, dans votre bibliothèque personnelle. Rien n'est rapatrié automatiquement : une connexion modeste n'a pas à subir un téléchargement que vous n'avez pas demandé. Une fois récupérée, l'image ne dépend plus du réseau.</p>
+          <h4>Ce qui se passe quand vous choisissez une image</h4>
+          <p>Elle est <b>copiée</b> dans le dossier de la tuile ou de la page, pas simplement référencée. C'est volontaire : une page ne doit pas se retrouver nue parce que l'image a été retirée de la bibliothèque ou renommée par une mise à jour. Le prix est quelques méga-octets dupliqués, sans commune mesure avec un tableau mural qui se viderait tout seul.</p>`,
+        en: `
+          <p>PiBoard ships with a small image library, reachable everywhere an image is picked: a <b>page background</b>, the <b>Logo</b> tile, and the <b>slideshow</b>'s photos. The <b>"Library…"</b> button opens it. Three sections: page backgrounds, logos and icons, photos.</p>
+          <h4>Two origins, and why it matters</h4>
+          <p>The library mixes two things on screen, but they live in very different places:</p>
+          <div class="help-opt"><span class="help-opt-name">Shipped images</span><span class="help-opt-desc">They are part of the application and grow with every update. You cannot delete them — they would come back with the next update, which would be confusing — but you can <b>hide</b> them: they simply stop being offered.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Your images</span><span class="help-opt-desc">"Add my images…" files them next to your settings and your photos. They <b>survive updates</b> and are picked up by your backups. You can delete them for good.</span></div>
+          <p>You can also drop files straight into <code>data/library/backgrounds/</code> (or <code>logos/</code>, <code>photos/</code>) from a network share: they show up with nothing to run, with their file name as their label.</p>
+          <h4>More images online</h4>
+          <p>The shipped lot stays deliberately light: it travels inside the Windows installer, the Linux package, the .dmg and the Pi archive. The <b>"More online…"</b> button shows the rest of the catalogue, and each image downloads <b>on demand</b>, one at a time, into your personal library. Nothing is fetched automatically: a modest connection should not suffer a download you did not ask for. Once fetched, the image no longer depends on the network.</p>
+          <h4>What happens when you pick an image</h4>
+          <p>It is <b>copied</b> into the tile's or the page's folder, not merely referenced. That is deliberate: a page must not end up bare because the image was removed from the library or renamed by an update. The price is a few duplicated megabytes, nothing next to a wall board emptying itself.</p>`
+      }
+    },
+
+    {
       id: "hostwatch",
       group: "tiles",
       title: { fr: "Veille réseau", en: "Network watch" },

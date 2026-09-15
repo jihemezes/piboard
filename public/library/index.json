@@ -1,0 +1,203 @@
+{
+  "generated": "2026-09-15T18:25:36.067Z",
+  "items": {
+    "builtin:backgrounds:Classy_Blue.png": {
+      "name": "Classy_Blue",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_Blue.jpg"
+    },
+    "builtin:backgrounds:Classy_BlueGold.png": {
+      "name": "Classy_BlueGold",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_BlueGold.jpg"
+    },
+    "builtin:backgrounds:Classy_BurgundyGold.png": {
+      "name": "Classy_BurgundyGold",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_BurgundyGold.jpg"
+    },
+    "builtin:backgrounds:Classy_BurnedOrange.png": {
+      "name": "Classy_BurnedOrange",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_BurnedOrange.jpg"
+    },
+    "builtin:backgrounds:Classy_DarkBlue_Copper.png": {
+      "name": "Classy_DarkBlue_Copper",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_DarkBlue_Copper.jpg"
+    },
+    "builtin:backgrounds:Classy_Gold.png": {
+      "name": "Classy_Gold",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_Gold.jpg"
+    },
+    "builtin:backgrounds:Classy_Red.png": {
+      "name": "Classy_Red",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_Red.jpg"
+    },
+    "builtin:backgrounds:Classy_Slate_Copper.png": {
+      "name": "Classy_Slate_Copper",
+      "category": "Classy",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Classy_Slate_Copper.jpg"
+    },
+    "builtin:backgrounds:Designer (5).png": {
+      "name": "Designer (5)",
+      "category": "Designer",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Designer (5).jpg"
+    },
+    "builtin:backgrounds:Soft_BurgundyGold.png": {
+      "name": "Soft_BurgundyGold",
+      "category": "Soft",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Soft_BurgundyGold.jpg"
+    },
+    "builtin:backgrounds:Soft_Red.png": {
+      "name": "Soft_Red",
+      "category": "Soft",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1672,
+      "height": 941,
+      "thumb": "thumbs/Soft_Red.jpg"
+    },
+    "builtin:backgrounds:Soft_Warm.png": {
+      "name": "Soft_Warm",
+      "category": "Soft",
+      "tone": "light",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1672,
+      "height": 941,
+      "thumb": "thumbs/Soft_Warm.jpg"
+    },
+    "builtin:backgrounds:Soft_Warm2.png": {
+      "name": "Soft_Warm2",
+      "category": "Soft",
+      "tone": "light",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Soft_Warm2.jpg"
+    },
+    "builtin:backgrounds:Sport_AcidGreen.png": {
+      "name": "Sport_AcidGreen",
+      "category": "Sport",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Sport_AcidGreen.jpg"
+    },
+    "builtin:backgrounds:Sport_B_BlackOrange.png": {
+      "name": "Sport_B_BlackOrange",
+      "category": "Sport",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1672,
+      "height": 940,
+      "thumb": "thumbs/Sport_B_BlackOrange.jpg"
+    },
+    "builtin:backgrounds:Sport_BlackRed.png": {
+      "name": "Sport_BlackRed",
+      "category": "Sport",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Sport_BlackRed.jpg"
+    },
+    "builtin:backgrounds:Sport_LightBlue.png": {
+      "name": "Sport_LightBlue",
+      "category": "Sport",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1536,
+      "height": 1024,
+      "thumb": "thumbs/Sport_LightBlue.jpg"
+    },
+    "builtin:backgrounds:Sport_ST_RedBlack.png": {
+      "name": "Sport_ST_RedBlack",
+      "category": "Sport",
+      "tone": "dark",
+      "author": "Jean-Michel EZES",
+      "license": "CC BY 4.0",
+      "source": null,
+      "width": 1672,
+      "height": 941,
+      "thumb": "thumbs/Sport_ST_RedBlack.jpg"
+    }
+  }
+}

@@ -153,6 +153,18 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.110.1" date="2026-09-15">
+      <description>
+        <p>A script now describes the shipped library's images from their file names, measuring light or dark with ffmpeg.</p>
+        <p xml:lang="fr">Un script decrit desormais les images de la bibliotheque livree a partir de leurs noms de fichiers, en mesurant clair ou sombre avec ffmpeg.</p>
+      </description>
+    </release>
+    <release version="1.110.0" date="2026-09-15">
+      <description>
+        <p>New image library: page backgrounds, logos and photos shipped with PiBoard, extensible by the user and from an online catalogue.</p>
+        <p xml:lang="fr">Nouvelle bibliotheque d'images : fonds de page, logos et photos livres avec PiBoard, enrichissables par l'utilisateur et depuis un catalogue en ligne.</p>
+      </description>
+    </release>
     <release version="1.109.1" date="2026-09-14">
       <description>
         <p>The general settings panel now keeps the same layout in both display modes.</p>

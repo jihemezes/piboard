@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.109.1
+   Version 1.110.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -101,7 +101,16 @@
   /* ---------- Registre public des widgets / public widget registry ---------- */
 
   window.PiBoard = {
-    registerWidget(id, klass) { widgetClasses.set(id, klass); }
+    registerWidget(id, klass) { widgetClasses.set(id, klass); },
+    /* Ouvre la bibliotheque d'images pour une tuile. Expose ici pour que
+       les widgets n'aient pas a la reimplementer : ils fournissent leur
+       identifiant media, la section qui les concerne, et ce qu'il faut
+       rafraichir une fois l'image copiee chez eux.
+       Opens the image library for a tile. Exposed here so widgets need
+       not reimplement it: they supply their media id, the section that
+       concerns them, and what to refresh once the image has been copied
+       into their folder. */
+    openLibrary(target, section, onPicked) { openLibrary(target, section, onPicked); }
   };
 
   /* ---------- Petites aides / small helpers ---------- */
@@ -4547,6 +4556,225 @@
     scheduleSave();
   }
 
+
+  /* ============================================================
+     Bibliotheque d'images
+     ============================================================
+     Une seule fenetre pour les trois usages (fond de page, tuile Logo,
+     diaporama). Elle ne connait pas ses appelants : on lui passe une
+     destination -- l'identifiant media de la tuile -- et ce qu'il faut
+     faire une fois l'image copiee. Le serveur copie l'image de la
+     bibliotheque vers le dossier de la tuile (voir server/library.js
+     pour le pourquoi de la copie).
+
+     A single window for the three uses (page background, Logo tile,
+     slideshow). It does not know its callers: it is handed a
+     destination -- the tile's media id -- and what to do once the image
+     is copied. The server copies the library image into the tile's
+     folder (see server/library.js for why a copy). */
+  const libraryState = {
+    items: [],
+    sections: [],
+    categories: [],
+    target: null,     // identifiant media de destination / destination media id
+    onPicked: null,   // rappel apres copie / callback after copying
+    section: "backgrounds"
+  };
+
+  function openLibrary(target, section, onPicked) {
+    libraryState.target = target;
+    libraryState.onPicked = onPicked || null;
+    if (section) libraryState.section = section;
+    $("libraryModal").hidden = false;
+    refreshLibrary();
+  }
+
+  function closeLibrary() {
+    $("libraryModal").hidden = true;
+  }
+
+  function librarySetStatus(text, kind) {
+    const el = $("libraryStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("library-status-err", kind === "err");
+  }
+
+  async function refreshLibrary() {
+    const grid = $("libraryGrid");
+    if (!grid) return;
+    grid.innerHTML = `<p class="field-hint">${i18n.t("library.loading")}</p>`;
+    try {
+      const data = await fetch("/api/library?section=" + encodeURIComponent(libraryState.section))
+        .then((r) => r.json());
+      libraryState.items = data.items || [];
+      libraryState.sections = data.sections || [];
+      libraryState.categories = data.categories || [];
+    } catch (e) {
+      console.warn("[piboard] bibliotheque", e);
+      libraryState.items = [];
+    }
+    renderLibraryFilters();
+    renderLibraryGrid();
+  }
+
+  function renderLibraryFilters() {
+    const sectionSel = $("librarySection");
+    const catSel = $("libraryCategory");
+    if (sectionSel) {
+      sectionSel.innerHTML = libraryState.sections
+        .map((s) => `<option value="${s}" ${s === libraryState.section ? "selected" : ""}>${i18n.t("library.section." + s)}</option>`)
+        .join("");
+    }
+    if (catSel) {
+      const current = catSel.value;
+      catSel.innerHTML = `<option value="">${i18n.t("library.category.any")}</option>` +
+        libraryState.categories.map((c) => `<option value="${escapeHtmlAttr(c)}">${escapeHtml(c)}</option>`).join("");
+      catSel.value = libraryState.categories.includes(current) ? current : "";
+    }
+  }
+
+  function renderLibraryGrid() {
+    const grid = $("libraryGrid");
+    if (!grid) return;
+    const cat = $("libraryCategory").value;
+    const tone = $("libraryTone").value;
+    const q = String($("librarySearch").value || "").trim().toLowerCase();
+
+    const items = libraryState.items.filter((it) => {
+      if (cat && it.category !== cat) return false;
+      if (tone && it.tone !== tone) return false;
+      if (q && !((it.name || "") + " " + (it.category || "") + " " + (it.author || "")).toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    if (!items.length) {
+      grid.innerHTML = `<p class="field-hint">${i18n.t("library.empty")}</p>`;
+      return;
+    }
+
+    grid.innerHTML = items.map((it) => `
+      <div class="library-item" data-id="${escapeHtmlAttr(it.id)}">
+        <img src="${escapeHtmlAttr(it.thumb || it.url)}" alt="" loading="lazy">
+        <span class="library-item-name">${escapeHtml(it.name)}</span>
+        <span class="library-item-meta">${escapeHtml([
+          it.category || "",
+          it.width && it.height ? it.width + "\u00d7" + it.height : "",
+          it.author ? "\u00a9 " + it.author : ""
+        ].filter(Boolean).join(" \u00b7 "))}</span>
+        <button type="button" class="library-item-del" data-origin="${it.origin}"
+                title="${escapeHtmlAttr(i18n.t(it.origin === "user" ? "library.delete" : "library.hide"))}">&times;</button>
+      </div>`).join("");
+
+    grid.querySelectorAll(".library-item").forEach((el) => {
+      onActivate(el, (e) => {
+        if (e && e.target && e.target.closest(".library-item-del")) return;
+        pickLibraryItem(el.dataset.id);
+      });
+      onActivate(el.querySelector(".library-item-del"), async (e) => {
+        if (e) e.stopPropagation();
+        const isUser = el.querySelector(".library-item-del").dataset.origin === "user";
+        // Un element livre est masque, pas efface : il reviendrait a la
+        // mise a jour suivante, et l'utilisateur croirait a un bug.
+        // A shipped item is hidden, not erased: it would come back with
+        // the next update and the user would think it a bug.
+        if (!window.confirm(i18n.t(isUser ? "library.deleteConfirm" : "library.hideConfirm"))) return;
+        await fetch("/api/library/" + encodeURIComponent(el.dataset.id), { method: "DELETE" }).catch(() => null);
+        refreshLibrary();
+      });
+    });
+  }
+
+  async function pickLibraryItem(id) {
+    if (!libraryState.target) return;
+    librarySetStatus(i18n.t("library.copying"));
+    try {
+      const r = await fetch("/api/media/" + encodeURIComponent(libraryState.target) + "/from-library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      const out = await r.json();
+      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      librarySetStatus("");
+      closeLibrary();
+      if (libraryState.onPicked) libraryState.onPicked(out.name);
+    } catch (e) {
+      console.warn("[piboard] copie depuis la bibliotheque", e);
+      librarySetStatus(i18n.t("library.copyFailed"), "err");
+    }
+  }
+
+  async function uploadToLibrary(files) {
+    if (!files || !files.length) return;
+    const form = new FormData();
+    for (const f of files) form.append("images", f);
+    librarySetStatus(i18n.t("library.uploading"));
+    try {
+      const r = await fetch("/api/library/" + encodeURIComponent(libraryState.section), { method: "POST", body: form });
+      const out = await r.json();
+      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      librarySetStatus("");
+      refreshLibrary();
+    } catch (e) {
+      console.warn("[piboard] ajout a la bibliotheque", e);
+      librarySetStatus(i18n.t("library.uploadFailed"), "err");
+    }
+  }
+
+  /* Catalogue en ligne : on liste ce qui est disponible, et chaque
+     element se telecharge a la demande dans la bibliotheque
+     personnelle. Rien n'est rapatrie automatiquement -- une connexion
+     de campagne n'a pas a subir un pre-chargement decide par le
+     tableau de bord.
+     Online catalogue: we list what is available, and each item
+     downloads on demand into the personal library. Nothing is fetched
+     automatically -- a rural connection should not suffer a pre-fetch
+     decided by the dashboard. */
+  async function showLibraryCatalog() {
+    const grid = $("libraryGrid");
+    grid.innerHTML = `<p class="field-hint">${i18n.t("library.loading")}</p>`;
+    let items = [];
+    try {
+      const data = await fetch("/api/library-catalog").then((r) => r.json());
+      items = (data.items || []).filter((i) => i.section === libraryState.section);
+    } catch (e) {
+      grid.innerHTML = `<p class="field-hint">${i18n.t("library.catalogFailed")}</p>`;
+      return;
+    }
+    if (!items.length) {
+      grid.innerHTML = `<p class="field-hint">${i18n.t("library.catalogEmpty")}</p>`;
+      return;
+    }
+    grid.innerHTML = items.map((it, i) => `
+      <div class="library-item library-remote" data-idx="${i}">
+        <img src="${escapeHtmlAttr(it.thumb || it.url)}" alt="" loading="lazy">
+        <span class="library-item-name">${escapeHtml(it.name || it.file || "")}</span>
+        <span class="library-item-meta">${escapeHtml([it.category || "", it.author ? "\u00a9 " + it.author : ""].filter(Boolean).join(" \u00b7 "))}</span>
+        <button type="button" class="btn small library-get">${i18n.t("library.get")}</button>
+      </div>`).join("");
+    grid.querySelectorAll(".library-item").forEach((el) => {
+      onActivate(el.querySelector(".library-get"), async (e) => {
+        if (e) e.stopPropagation();
+        librarySetStatus(i18n.t("library.downloading"));
+        try {
+          const r = await fetch("/api/library-catalog/fetch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ entry: items[Number(el.dataset.idx)] })
+          });
+          const out = await r.json();
+          if (!r.ok) throw new Error(out.error || ("status " + r.status));
+          librarySetStatus("");
+          refreshLibrary();
+        } catch (err) {
+          console.warn("[piboard] telechargement catalogue", err);
+          librarySetStatus(i18n.t("library.downloadFailed"), "err");
+        }
+      });
+    });
+  }
+
   async function refreshPageBgList() {
     const grid = $("pageBgGrid");
     const status = $("pageBgStatus");
@@ -5249,6 +5477,17 @@
     // than click, may not reliably open the native file picker depending
     // on the browser -- that was the exact discrepancy with the slideshow.
     $("ssUploadBtn").addEventListener("click", () => $("ssFileInput").click());
+    /* Meme bibliotheque que le fond de page, section « photos » : la
+       photo choisie est copiee dans le dossier du diaporama, donc elle
+       rejoint les photos televersees et suit exactement le meme chemin
+       ensuite. Rien de specifique au diaporama n'a eu a etre ecrit.
+       Same library as the page background, "photos" section: the chosen
+       photo is copied into the slideshow's folder, so it joins the
+       uploaded photos and follows exactly the same path afterwards.
+       Nothing slideshow-specific had to be written. */
+    $("ssLibraryBtn").addEventListener("click", () => {
+      openLibrary(SS_MEDIA_ID, "photos", () => loadScreensaverMedia());
+    });
     $("ssFileInput").addEventListener("change", async () => {
       const files = $("ssFileInput").files;
       if (!files || !files.length) return;
@@ -6730,12 +6969,37 @@
     onActivate($("pageBgClose"), () => { $("pageBgModal").hidden = true; });
     onActivate($("pageBgDone"), () => { $("pageBgModal").hidden = true; });
     onActivate($("pageBgUpload"), () => $("pageBgFile").click());
+    /* La bibliotheque ecrit dans le dossier media de la page, puis on
+       applique aussitot l'image copiee comme fond : l'utilisateur a
+       choisi une image, il s'attend a la voir, pas a devoir la
+       re-selectionner dans la grille juste en dessous.
+       The library writes into the page's media folder, then the copied
+       image is applied as the background right away: the user picked an
+       image, they expect to see it, not to have to re-select it in the
+       grid just below. */
+    onActivate($("pageBgLibrary"), () => {
+      openLibrary(backgroundMediaId(pageBgIndex), "backgrounds", (name) => {
+        commitPageBackground({ image: name });
+        refreshPageBgList();
+      });
+    });
     onActivate($("pageBgNone"), () => commitPageBackground({ image: "" }));
     $("pageBgFile").addEventListener("change", (e) => uploadPageBackground(e.target.files));
     $("pageBgMode").addEventListener("change", (e) => commitPageBackground({ mode: e.target.value }));
     $("pageBgPosition").addEventListener("change", (e) => commitPageBackground({ position: e.target.value }));
     $("pageBgDim").addEventListener("input", (e) => commitPageBackground({ dim: e.target.value }));
     onActivate($("tileReset"), () => resetTileSettings());
+    onActivate($("libraryClose"), closeLibrary);
+    onActivate($("libraryAdd"), () => $("libraryFile").click());
+    onActivate($("libraryOnline"), showLibraryCatalog);
+    $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));
+    $("librarySection").addEventListener("change", (e) => {
+      libraryState.section = e.target.value;
+      refreshLibrary();
+    });
+    $("libraryCategory").addEventListener("change", renderLibraryGrid);
+    $("libraryTone").addEventListener("change", renderLibraryGrid);
+    $("librarySearch").addEventListener("input", renderLibraryGrid);
     onActivate($("updCheckBtn"), () => checkForUpdatesNow());
     onActivate($("updApplyBtn"), () => openUpdateModal());
     onActivate($("updateBannerInstall"), () => openUpdateModal());

@@ -1,0 +1,3 @@
+{
+  "_comment": "Une entree par fichier du dossier. Les champs absents sont simplement omis a l'affichage. category: libre (nature, abstrait, ville...). tone: light ou dark, pour que l'utilisateur sache si le texte des tuiles restera lisible. / One entry per file in the folder. Missing fields are simply left out of the display. category: free-form (nature, abstract, city...). tone: light or dark, so the user knows whether tile text will stay readable."
+}

@@ -37,6 +37,8 @@ The catalog groups them by family — the same grouping you see when adding a ti
 
 **Personal** — calendar (merge several iCal/.ics calendars, each in its own colour, list and week-grid views, recurring events, iPhone/Google/Nextcloud/Outlook), mailbox (latest messages from an IMAP mailbox, read on tap, nothing stored, strictly read-only), notes (Markdown-lite, checklists, sticky-note colours).
 
+**Image library** — page backgrounds, logos and photos ship with PiBoard and show up wherever an image is picked (page background, Logo tile, slideshow). Your own additions live in `data/` and survive updates; more images download on demand from an online catalogue. Extending the shipped lot: [`docs/LIBRARY.md`](docs/LIBRARY.md).
+
 **Entertainment** — TV guide (French DTT and Canal+, turnkey), **TV channels** (a plain player for an IPTV `.m3u` playlist — PiBoard provides no channels and no content whatsoever; it only works with a playlist you already have), **YouTube** (a video, a playlist, a channel's latest videos or a pasted queue, in YouTube's official privacy-enhanced player — no tracking cookies, no personalized ads; full-screen search window with sorting and paging, using your own free API key), slideshow (photos uploaded from the tile, a local/NAS folder, a USB key, WebDAV, or a URL list; landscape and portrait handled separately).
 
 **Sport** — live scores, motorsport schedule (full F1/MotoGP race-weekend session timetable), league standings (football, rugby, NBA).
@@ -269,6 +271,8 @@ Le catalogue les regroupe par famille — le même classement qu'à l'ajout d'un
 **Maison & énergie** — **couleur Tempo** (l'offre bleu/blanc/rouge d'EDF en bandeau pleine tuile lisible de loin, couleur du lendemain dès publication, jours restants par couleur ; gère correctement la journée Tempo de 6 h à 6 h), **Home Assistant** (vue en lecture seule de vos entités — températures des pièces, portes ouvertes, consommation — mise à jour en direct par WebSocket ; n'appelle aucun service et ne peut rien changer chez vous).
 
 **Personnel** — agenda (fusion de plusieurs calendriers iCal/.ics, chacun dans sa couleur, vues liste et grille semaine, événements récurrents, iPhone/Google/Nextcloud/Outlook), courriel (derniers messages d'une boîte IMAP, lecture au clic, rien n'est stocké, strictement en lecture seule), bloc-notes (Markdown léger, listes à cocher, couleurs post-it).
+
+**Bibliothèque d'images** — des fonds de page, logos et photos sont livrés avec PiBoard et apparaissent partout où l'on choisit une image (fond de page, tuile Logo, diaporama). Vos propres ajouts vivent dans `data/` et survivent aux mises à jour ; d'autres images se téléchargent à la demande depuis un catalogue en ligne. Pour enrichir le lot livré : [`docs/LIBRARY.md`](docs/LIBRARY.md).
 
 **Divertissement** — programme TV (TNT française et Canal+, clé en main), **chaînes TV** (simple lecteur pour une playlist IPTV `.m3u` — PiBoard ne fournit AUCUNE chaîne ni aucun contenu ; la tuile ne fonctionne qu'avec une playlist dont vous disposez déjà), **YouTube** (une vidéo, une playlist, les dernières vidéos d'une chaîne ou une file collée, dans le lecteur officiel de YouTube en mode confidentialité avancée — sans cookies de suivi ni publicité personnalisée ; fenêtre de recherche plein écran avec tri et pagination, avec votre propre clé API gratuite), diaporama (photos téléversées depuis la tuile, dossier local/NAS, clé USB, WebDAV, ou liste d'URLs ; paysage et portrait traités séparément).
 

@@ -185,6 +185,16 @@
           </header>
           <div class="pw-image-mgr-body">
             <button type="button" class="btn small primary" data-act="upload">${esc(i18n.t("image.upload"))}</button>
+            <!-- La bibliotheque partagee (voir la fenetre #libraryModal et
+                 server/library.js) : elle copie l'image choisie dans le
+                 dossier media de CETTE tuile, donc tout ce qui suit --
+                 grille, selection, suppression -- fonctionne sans une
+                 ligne de plus.
+                 The shared library (see the #libraryModal window and
+                 server/library.js): it copies the chosen image into THIS
+                 tile's media folder, so everything that follows -- grid,
+                 selection, deletion -- works without one more line. -->
+            <button type="button" class="btn small" data-act="library">${esc(i18n.t("library.open"))}</button>
             <input type="file" accept="image/*" multiple hidden data-role="file">
             <div class="pw-image-mgr-grid" data-role="grid"></div>
             <p class="pw-image-mgr-status" data-role="status" hidden></p>
@@ -195,6 +205,22 @@
       const file = m.querySelector("[data-role=file]");
       m.querySelector("[data-act=upload]").addEventListener("click", () => file.click());
       file.addEventListener("change", () => this.upload(file.files));
+      /* PiBoard.openLibrary est expose par l'application hote : la tuile
+         ne reimplemente pas la bibliotheque, elle la demande. Si une
+         version plus ancienne de l'application ne la fournit pas, le
+         bouton disparait plutot que d'echouer au clic.
+         PiBoard.openLibrary is exposed by the host application: the tile
+         does not reimplement the library, it asks for it. If an older
+         version of the application does not provide it, the button
+         disappears rather than failing on click. */
+      const libBtn = m.querySelector("[data-act=library]");
+      if (window.PiBoard && typeof window.PiBoard.openLibrary === "function") {
+        libBtn.addEventListener("click", () => {
+          window.PiBoard.openLibrary(this.ctx.instanceId, "logos", () => this.refreshManager());
+        });
+      } else {
+        libBtn.hidden = true;
+      }
       this.modal = m;
       return m;
     }

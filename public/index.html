@@ -217,6 +217,7 @@
       <p class="field-hint" id="pageBgFor"></p>
       <div class="update-actions">
         <button type="button" class="btn small primary" id="pageBgUpload" data-i18n="pagebg.upload">Upload an image</button>
+        <button type="button" class="btn small" id="pageBgLibrary" data-i18n="library.open">Library…</button>
         <button type="button" class="btn small" id="pageBgNone" data-i18n="pagebg.none">No image</button>
         <input type="file" accept="image/*" multiple hidden id="pageBgFile">
       </div>
@@ -663,6 +664,7 @@
           <p class="ss-media-empty" id="ssMediaEmpty" data-i18n="ss.uploaded.empty">No photos uploaded yet.</p>
           <input type="file" id="ssFileInput" accept="image/*" multiple hidden>
           <button type="button" class="btn small" id="ssUploadBtn" data-i18n="ss.uploaded.add">Add photos…</button>
+          <button type="button" class="btn small" id="ssLibraryBtn" data-i18n="library.open">Library…</button>
         </label>
         <label class="field">
           <span data-i18n="ss.interval">Change every (seconds)</span>
@@ -778,6 +780,45 @@
       <nav class="help-nav" id="helpNav"></nav>
       <div class="help-content" id="helpContent"></div>
     </div>
+  </div>
+</div>
+
+<!-- Bibliotheque d'images, partagee par le fond de page, la tuile Logo
+     et le diaporama. Une seule fenetre pour les trois : c'est le meme
+     geste (choisir une image) et il n'y avait aucune raison d'en
+     entretenir trois variantes. L'image choisie est COPIEE dans le
+     dossier de la tuile (voir /api/media/:tileId/from-library), donc
+     retirer une image de la bibliotheque ne vide pas une page.
+     Image library, shared by the page background, the Logo tile and the
+     slideshow. A single window for all three: it is the same gesture
+     (picking an image) and there was no reason to maintain three
+     variants. The chosen image is COPIED into the tile's folder (see
+     /api/media/:tileId/from-library), so removing an image from the
+     library does not empty a page. -->
+<div class="modal modal-stacked" id="libraryModal" hidden>
+  <div class="modal-card library-card">
+    <header class="modal-head">
+      <h2 data-i18n="library.title">Image library</h2>
+      <button class="modal-close" id="libraryClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="library-toolbar">
+      <select id="librarySection"></select>
+      <select id="libraryCategory"></select>
+      <select id="libraryTone">
+        <option value="" data-i18n="library.tone.any">Light or dark</option>
+        <option value="light" data-i18n="library.tone.light">Light</option>
+        <option value="dark" data-i18n="library.tone.dark">Dark</option>
+      </select>
+      <input type="search" id="librarySearch" data-i18n-placeholder="library.search" placeholder="Search…">
+      <span class="library-spacer"></span>
+      <button type="button" class="btn small" id="libraryAdd" data-i18n="library.add">Add my images…</button>
+      <button type="button" class="btn small" id="libraryOnline" data-i18n="library.online">More online…</button>
+      <input type="file" accept="image/*" multiple hidden id="libraryFile">
+    </div>
+    <div class="library-grid" id="libraryGrid"></div>
+    <footer class="library-foot">
+      <p class="field-hint" id="libraryStatus"></p>
+    </footer>
   </div>
 </div>
 

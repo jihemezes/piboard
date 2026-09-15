@@ -45,6 +45,7 @@ const networkScan = require("./networkScan");
 const netHosts = require("./netHosts");
 const hostWatch = require("./hostWatch");
 const youtube = require("./youtube");
+const library = require("./library");
 const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
@@ -1089,6 +1090,20 @@ const mediaUpload = multer({
   }
 });
 
+/* Televersement vers la bibliotheque : en MEMOIRE, contrairement aux
+   photos de tuile. C'est library.addUserFile qui ecrit, apres avoir
+   valide la section, l'extension et rendu le nom unique -- laisser
+   multer ecrire d'abord obligerait a defaire un fichier deja pose en
+   cas de refus.
+   Upload to the library: in MEMORY, unlike tile photos. library.addUserFile
+   does the writing, after validating the section and the extension and
+   making the name unique -- letting multer write first would mean undoing
+   an already-placed file on refusal. */
+const libraryUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 20 * 1024 * 1024, files: 20 }
+});
+
 app.get("/api/media/:tileId", (req, res) => {
   if (!media.isValidTileId(req.params.tileId)) return res.status(400).json({ error: "invalid tile id" });
   try {
@@ -1121,6 +1136,162 @@ app.delete("/api/media/:tileId/:filename", (req, res) => {
     res.json({ ok: true });
   } catch (e) {
     res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+/* ---------- Bibliotheque d'images / image library ----------
+   Voir server/library.js pour le pourquoi des deux origines (lot livre
+   dans public/library/, ajouts de l'utilisateur dans data/library/).
+   Les routes ci-dessous ne font que les exposer ; les tuiles, elles,
+   continuent de passer par l'API media -- choisir une image de la
+   bibliotheque la COPIE dans le dossier de la tuile (derniere route).
+   See server/library.js for the reasoning behind the two origins
+   (shipped lot in public/library/, user additions in data/library/).
+   The routes below merely expose them; the tiles keep going through the
+   media API -- choosing a library image COPIES it into the tile's
+   folder (last route). */
+app.get("/api/library", (req, res) => {
+  try {
+    const section = req.query.section;
+    res.json({
+      sections: library.SECTIONS,
+      categories: library.categories(section),
+      items: library.list(section, { includeHidden: req.query.hidden === "1" })
+    });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/* Les fichiers ne sont PAS servis par express.static sur les deux
+   dossiers : un seul point d'entree, qui resout l'identifiant et refuse
+   tout ce qui n'est pas un element connu. Le lot livre est sous
+   public/, donc deja accessible en statique -- mais passer par ici rend
+   les deux origines identiques pour le client, qui n'a pas a savoir ou
+   vit un fichier.
+   Files are NOT served by express.static over both folders: a single
+   entry point, which resolves the id and refuses anything that is not a
+   known item. The shipped lot lives under public/, hence already
+   statically reachable -- but going through here makes both origins
+   identical to the client, which need not know where a file lives. */
+app.get("/api/library/file/:id", (req, res) => {
+  const full = library.fileOf(decodeURIComponent(req.params.id));
+  if (!full) return res.status(404).end();
+  res.sendFile(full, { maxAge: "7d" });
+});
+
+app.get("/api/library/thumb/:id", (req, res) => {
+  const full = library.thumbFileOf(decodeURIComponent(req.params.id));
+  if (!full) return res.status(404).end();
+  res.sendFile(full, { maxAge: "7d" });
+});
+
+app.post("/api/library/:section", (req, res) => {
+  if (!library.isSection(req.params.section)) return res.status(400).json({ error: "unknown section" });
+  libraryUpload.array("images", 20)(req, res, (err) => {
+    if (err) return res.status(400).json({ error: String(err.message || err) });
+    const added = [];
+    try {
+      for (const f of req.files || []) {
+        added.push(library.addUserFile(req.params.section, f.originalname, f.buffer, {
+          name: req.body && req.body.name,
+          category: req.body && req.body.category,
+          tone: req.body && req.body.tone,
+          author: req.body && req.body.author,
+          license: req.body && req.body.license
+        }));
+      }
+    } catch (e) {
+      return res.status(400).json({ error: String(e.message || e) });
+    }
+    res.json({ ok: true, added });
+  });
+});
+
+/* Suppression d'un ajout personnel, ou masquage d'un element livre :
+   une seule route, le serveur choisit selon l'origine. L'utilisateur
+   fait le meme geste dans les deux cas et obtient le meme resultat
+   visible ; l'interface, elle, dit lequel des deux a eu lieu.
+   Deleting a personal addition, or hiding a shipped item: one route,
+   the server picks by origin. The user makes the same gesture in both
+   cases and gets the same visible result; the interface does say which
+   of the two happened. */
+app.delete("/api/library/:id", (req, res) => {
+  const parsed = library.parseId(decodeURIComponent(req.params.id));
+  if (!parsed) return res.status(400).json({ error: "invalid id" });
+  try {
+    if (parsed.origin === "user") {
+      library.removeUserFile(decodeURIComponent(req.params.id));
+      return res.json({ ok: true, action: "deleted" });
+    }
+    library.setHidden(decodeURIComponent(req.params.id), true);
+    res.json({ ok: true, action: "hidden" });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+/* Catalogue en ligne : lister, puis recuperer un element choisi. Le
+   serveur ne telecharge JAMAIS de lui-meme -- pas de pre-chargement en
+   arriere-plan sur une connexion dont on ne sait rien.
+   Online catalogue: list, then fetch a chosen item. The server NEVER
+   downloads on its own -- no background pre-fetching over a connection
+   we know nothing about. */
+app.get("/api/library-catalog", async (req, res) => {
+  try {
+    res.json(await library.catalog());
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/library-catalog/fetch", express.json({ limit: "8kb" }), async (req, res) => {
+  try {
+    const id = await library.fetchFromCatalog(req.body && req.body.entry);
+    res.json({ ok: true, id });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/library/:id/restore", (req, res) => {
+  const parsed = library.parseId(decodeURIComponent(req.params.id));
+  if (!parsed) return res.status(400).json({ error: "invalid id" });
+  library.setHidden(decodeURIComponent(req.params.id), false);
+  res.json({ ok: true });
+});
+
+/* Le pont entre la bibliotheque et les tuiles : copier l'image choisie
+   dans le dossier media de la tuile. C'est une COPIE et non une
+   reference, pour une raison de fond : une page qui utilise un fond ne
+   doit pas se retrouver nue parce que l'image a ete retiree de la
+   bibliotheque, ou parce qu'une mise a jour a renomme un fichier livre.
+   Le cout est quelques mega-octets dupliques, ce qui est sans commune
+   mesure avec un tableau de bord mural qui se vide tout seul.
+   The bridge between the library and the tiles: copying the chosen
+   image into the tile's media folder. A COPY rather than a reference,
+   for a substantive reason: a page using a background must not end up
+   bare because the image was removed from the library, or because an
+   update renamed a shipped file. The cost is a few duplicated
+   megabytes, nothing next to a wall dashboard emptying itself. */
+app.post("/api/media/:tileId/from-library", express.json({ limit: "8kb" }), (req, res) => {
+  if (!media.isValidTileId(req.params.tileId)) return res.status(400).json({ error: "invalid tile id" });
+  const id = String((req.body && req.body.id) || "");
+  const parsed = library.parseId(id);
+  const source = library.fileOf(id);
+  if (!parsed || !source) return res.status(404).json({ error: "unknown library item" });
+  try {
+    const dir = media.ensureDir(req.params.tileId);
+    const ext = path.extname(parsed.file);
+    let name = media.safeFilename(parsed.file);
+    let n = 1;
+    while (fs.existsSync(path.join(dir, name))) {
+      name = media.safeFilename(path.basename(parsed.file, ext) + "-" + (++n) + ext);
+    }
+    fs.copyFileSync(source, path.join(dir, name));
+    res.json({ ok: true, name, url: "/media/" + req.params.tileId + "/" + encodeURIComponent(name) });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
   }
 });
 
