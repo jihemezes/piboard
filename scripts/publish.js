@@ -127,68 +127,58 @@ if (publishing) {
   }
 }
 
-/* Verification prealable cote GitHub : une release portant deja ce tag
-   fait echouer electron-builder par un 422 "already_exists" -- mais
-   SEULEMENT a la toute fin, apres trois a cinq minutes de construction
-   et l'envoi d'un installeur de 130 Mo. Constate sur la 1.108.1 : une
-   release vide creee par un essai precedent, et tout le travail perdu.
-   On regarde donc AVANT de construire. L'appel est anonyme (depot
-   public) et sans consequence s'il echoue : en cas de doute, on laisse
-   passer plutot que de bloquer une publication legitime.
+/* Preparation de la release AVANT de construire : voir
+   scripts/githubRelease.js. Remplace le controle de la 1.108.2, qui
+   refusait toute release existante -- y compris celle creee, a juste
+   titre, par un autre publieur (GitHub Actions), ce qui faisait
+   echouer le second job et laissait la release sans fichiers Linux.
+   Preparing the release BEFORE building: see scripts/githubRelease.js.
+   Replaces the 1.108.2 check, which refused any existing release --
+   including one rightly created by another publisher (GitHub Actions),
+   making the second job fail and leaving the release without Linux
+   files.
 
-   Pre-flight check on GitHub's side: a release already carrying this tag
-   makes electron-builder fail with a 422 "already_exists" -- but ONLY at
-   the very end, after three to five minutes of building and uploading a
-   130 MB installer. Observed on 1.108.1: an empty release left by an
-   earlier attempt, and all the work wasted. So we look BEFORE building.
-   The call is anonymous (public repository) and inconsequential if it
-   fails: when in doubt we let it through rather than block a legitimate
-   publication. */
-async function existingRelease(tag) {
-  const repo = "jihemezes/piboard";
-  /* Le jeton de publication, s'il est pose (GH_TOKEN pour
-     electron-builder, GITHUB_TOKEN dans Actions), sert aussi ici : sans
-     lui l'API limite a 60 appels par heure et par adresse, et un refus
-     de quota renverrait 403 -- que l'on traite comme \"je ne sais pas\",
-     donc en laissant passer. Avec le jeton, la reponse est fiable.
-     The publishing token, when set (GH_TOKEN for electron-builder,
-     GITHUB_TOKEN in Actions), is used here too: without it the API caps
-     at 60 calls an hour per address, and a quota refusal would answer
-     403 -- which we treat as \"I do not know\", hence letting it through.
-     With the token, the answer is reliable. */
-  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
-  const headers = { "User-Agent": "PiBoard publish", Accept: "application/vnd.github+json" };
-  if (token) headers.Authorization = "Bearer " + token;
-  try {
-    const res = await fetch(`https://api.github.com/repos/${repo}/releases/tags/${tag}`, { headers });
-    if (res.status === 404) return null;
-    if (!res.ok) return null;
-    const data = await res.json();
-    return { assets: (data.assets || []).length, url: data.html_url, draft: !!data.draft };
-  } catch (e) {
-    return null;
-  }
+   `--ensure-only` : prepare la release et s'arrete (job `release`
+   du workflow, lance avant les constructions Linux et macOS).
+   `--ensure-only`: prepares the release and stops (the workflow's
+   `release` job, run before the Linux and macOS builds). */
+const ensureOnly = passthrough.includes("--ensure-only");
+const builderArgs = passthrough.filter((a) => a !== "--ensure-only");
+
+function lastCommitSubject() {
+  const r = spawnSync("git", ["log", "-1", "--format=%s"], { cwd: root, encoding: "utf8" });
+  return r.status === 0 ? String(r.stdout || "").trim() : "";
 }
 
 async function main() {
 if (publishing) {
   const tag = "v" + version;
-  const found = await existingRelease(tag);
-  if (found) {
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
+  if (!token) {
     console.error(
-      `\nUne release ${tag} existe deja sur GitHub` +
-      (found.assets ? ` avec ${found.assets} fichier(s).` : ` mais elle est VIDE (aucun fichier).`) +
-      `\n  ${found.url}\n\n` +
-      (found.assets
-        ? `Publier a nouveau sous ce numero est refuse par GitHub. Passe au numero suivant\n` +
-          `(package.json + tag), ou supprime cette release si elle est ratee.\n`
-        : `Elle vient sans doute d'un essai precedent, ou du workflow GitHub Actions declenche\n` +
-          `par le tag. Supprime-la sur la page ci-dessus (bouton Delete), puis relance\n` +
-          `npm run publish. Le tag git, lui, peut rester s'il pointe sur le bon commit.\n`) +
-      `\nA release ${tag} already exists on GitHub -- delete it or move to the next version\n` +
-      `number before publishing again.\n`
+      `\nAucun jeton GitHub (GH_TOKEN) : impossible de publier.\n` +
+      `No GitHub token (GH_TOKEN): cannot publish.\n`
     );
     process.exit(1);
+  }
+  const rel = require("./githubRelease");
+  try {
+    await rel.ensureRelease({
+      request: rel.makeRequest(token),
+      tag,
+      name: version,
+      body: lastCommitSubject(),
+      prerelease,
+      platforms: rel.platformsOf(builderArgs),
+      log: (m) => console.log("  " + m)
+    });
+  } catch (e) {
+    console.error("\n" + String(e.message || e) + "\n");
+    process.exit(1);
+  }
+  if (ensureOnly) {
+    console.log(`Release ${tag} prete / ready.`);
+    process.exit(0);
   }
 }
 
@@ -205,8 +195,8 @@ console.log(
   `\n`
 );
 
-const args = passthrough.concat(["-c.publish.releaseType=" + releaseType]);
-if (!passthrough.includes("--publish")) args.push("--publish", "always");
+const args = builderArgs.concat(["-c.publish.releaseType=" + releaseType]);
+if (!builderArgs.includes("--publish")) args.push("--publish", "always");
 
 /* electron-builder est appele par son chemin dans node_modules plutot
    que par `npx` : plus rapide, et surtout insensible au PATH sous
@@ -221,7 +211,29 @@ const bin = path.join(
   process.platform === "win32" ? "electron-builder.cmd" : "electron-builder"
 );
 const run = spawnSync(bin, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
-process.exit(run.status === null ? 1 : run.status);
+if (run.status !== 0 || !publishing) process.exit(run.status === null ? 1 : run.status);
+
+/* Un code de retour 0 ne prouve pas que les fichiers sont en ligne :
+   voir verifyPublished. On le verifie donc sur GitHub.
+   Exit code 0 does not prove the files are online: see
+   verifyPublished. So it is checked on GitHub. */
+const relMod = require("./githubRelease");
+const check = await relMod.verifyPublished({
+  request: relMod.makeRequest(process.env.GH_TOKEN || process.env.GITHUB_TOKEN || ""),
+  tag: "v" + version,
+  platforms: relMod.platformsOf(builderArgs)
+});
+if (!check.ok) {
+  console.error(
+    `\nPUBLICATION INCOMPLETE sur GitHub pour v${version} :\n  ` + check.problems.join("\n  ") +
+    `\n\nLa construction a reussi mais les fichiers ne sont pas (tous) dans la release.\n` +
+    `Cherche \"skipped publishing\" dans le journal ci-dessus.\n` +
+    `Build succeeded but the files are not (all) in the release -- look for \"skipped publishing\" above.\n`
+  );
+  process.exit(1);
+}
+console.log(`\nVerifie sur GitHub : fichiers ${relMod.platformsOf(builderArgs).join(", ")} bien presents dans v${version}.`);
+process.exit(0);
 }
 
 main();

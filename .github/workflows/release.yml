@@ -81,8 +81,34 @@ permissions:
   contents: write
 
 jobs:
+  # Creation de la release UNE seule fois, avant les deux constructions
+  # (voir scripts/githubRelease.js). Sans cela, Linux et macOS la
+  # creaient chacun de leur cote : doublons, ou second job en echec.
+  # Creating the release ONCE, before both builds (see
+  # scripts/githubRelease.js). Without it Linux and macOS each created
+  # it: duplicates, or a failing second job.
+  release:
+    name: Prepare the GitHub release
+    if: github.event_name == 'push'
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Create (or reuse) the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: node scripts/publish.js --ensure-only
+
   linux:
     name: Linux (AppImage + deb, x64 + arm64)
+    needs: release
+    # `always()` + test du resultat : en lancement manuel, le job
+    # `release` est saute, et un `needs` saute bloquerait tout.
+    # `always()` + result check: on a manual run the `release` job is
+    # skipped, and a skipped `needs` would block everything.
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
@@ -168,6 +194,8 @@ jobs:
 
   mac:
     name: macOS (DMG + zip, Intel + Apple Silicon)
+    needs: release
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: macos-latest
     env:
       # Pas de certificat Apple : on le dit a electron-builder plutot que

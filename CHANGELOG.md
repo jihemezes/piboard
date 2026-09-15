@@ -1,5 +1,47 @@
 # Changelog
 
+## 1.110.3
+
+- **Publication : fin des releases en double et des fichiers perdus.**
+  La 1.110.2 est sortie en DEUX releases pour le meme tag, sans
+  installeur Windows ni aucun paquet Linux. Deux causes :
+  - electron-builder lance parfois plusieurs publieurs dans le meme
+    processus (le journal affichait deux fois « creating GitHub
+    release »). Chacun, ne trouvant pas la release, en creait une, et
+    GitHub a accepte les deux ;
+  - le controle ajoute en 1.108.2 (« une release existe deja : on
+    s'arrete ») tournait aussi dans GitHub Actions. Le second job
+    trouvait la release creee par le premier et abandonnait.
+
+- **La release est maintenant preparee AVANT toute construction**
+  (`scripts/githubRelease.js`), par un job `release` du workflow dont
+  dependent les jobs Linux et macOS, et par `npm run publish` sur le
+  PC. electron-builder la trouve toujours et n'y ajoute que ses
+  fichiers.
+  - Une release existante n'est plus une erreur. Seul est refuse le cas
+    ou elle contient deja les fichiers de la plateforme publiee (un
+    `.blockmap` seul, reste d'un envoi interrompu, ne compte pas).
+  - Si deux creations se croisent malgre tout, la plus ancienne est
+    gardee et les doublons vides sont supprimes. Si plusieurs doublons
+    contiennent de vrais fichiers, rien n'est supprime et le script
+    s'arrete en listant les releases.
+  - Sans jeton `GH_TOKEN`, la publication s'arrete tout de suite au lieu
+    d'echouer apres la construction.
+
+- **Verification sur GitHub apres chaque publication.** Les jobs Linux
+  de la 1.110.2 etaient VERTS alors qu'aucun paquet Linux n'etait en
+  ligne : le controle du workflow ne regardait que le dossier `dist/`
+  local, et electron-builder peut sauter l'envoi avec un simple
+  avertissement (« skipped publishing ») sans echouer. `publish.js`
+  interroge maintenant la release et exige, pour chaque plateforme,
+  l'installeur ET son fichier de version (`latest*.yml`), et une seule
+  release pour le tag. Sinon, la publication echoue en listant ce qui
+  manque -- le job devient rouge, le PC l'affiche.
+
+- **Tests hors ligne** (`test/githubRelease.test.js`) : un faux GitHub
+  rejoue la course a la creation, le conflit 422, la release creee par
+  un autre publieur et le cas reel de la 1.110.2.
+
 ## 1.110.2
 
 - **Correctif : la bibliotheque d'images restait bloquee sur
