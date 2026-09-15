@@ -514,6 +514,7 @@ const putCalls = [];
    (server/tileConfigs.js), to replay the full remove -> reuse
    journey without a real server. */
 const tileConfigsMock = {};
+const LIBRARY_MOCK = { fail: false, picked: [] };
 
 /* Mock avec etat pour les routes /api/crypto/* (server/crypto.js) :
    permet de simuler un repli sur donnees perimees (priceStale/
@@ -633,6 +634,33 @@ const dom = new JSDOM(html, {
          slideshow. A single available image, which is enough to check
          that a choice does translate into a background on the target
          page. */
+      /* Bibliotheque d'images : deux elements, dont un dont le nom
+         contient du balisage -- c'est precisement l'affichage d'un
+         element qui plantait en 1.110.1 (escapeHtml absent).
+         Image library: two items, one whose name holds markup -- it is
+         precisely rendering an item that crashed in 1.110.1 (missing
+         escapeHtml). */
+      if (/\/api\/media\/[^/?]+\/from-library/.test(u) && method === "POST") {
+        const body = JSON.parse(opts.body || "{}");
+        LIBRARY_MOCK.picked.push(body.id);
+        const folder = (u.match(/\/api\/media\/([^/?]+)/) || [])[1] || "";
+        return json({ ok: true, name: "lib-bleu.png", url: "/media/" + folder + "/lib-bleu.png" });
+      }
+      if (/\/api\/library\?/.test(u) && method === "GET") {
+        if (LIBRARY_MOCK.fail) {
+          return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: "disque illisible" }) });
+        }
+        return json({
+          sections: ["backgrounds", "logos", "photos"],
+          categories: ["Classy"],
+          items: [
+            { id: "builtin:backgrounds:Classy_Blue.png", origin: "builtin", section: "backgrounds", file: "Classy_Blue.png",
+              name: "Classy Blue", category: "Classy", tone: "dark", url: "/api/library/file/x", thumb: null, width: 1920, height: 1200 },
+            { id: "user:backgrounds:perso.png", origin: "user", section: "backgrounds", file: "perso.png",
+              name: "<b>Perso</b> & co", category: null, tone: "light", author: "JM", url: "/api/library/file/y", thumb: null }
+          ]
+        });
+      }
       if (/\/api\/media\//.test(u)) {
         if (method === "POST") return json({ ok: true, uploaded: 1 });
         if (method === "DELETE") return json({ ok: true });
@@ -5757,6 +5785,52 @@ function catalogItemFor(catalog, document, widgetId) {
       bgRows2[1].querySelector("[data-role=bg]").classList.contains("has-bg"));
     assert("et laisse la page 1, sans fond, non marquee",
       !bgRows2[0].querySelector("[data-role=bg]").classList.contains("has-bg"));
+    /* ---------- Bibliotheque d'images (regression 1.110.1) ----------
+       La fenetre restait sur « Chargement... » des qu'il y avait une
+       image a afficher. On ouvre la VRAIE fenetre depuis le fond de
+       page, on verifie que les vignettes apparaissent, que le nom est
+       echappe, qu'un clic applique l'image, puis qu'un echec serveur
+       s'affiche au lieu de laisser « Chargement... ».
+       Image library (1.110.1 regression): the window stayed on
+       "Loading..." as soon as there was an image to show. */
+    {
+      const loadingText = "Chargement";
+      document.getElementById("pageBgLibrary").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(150);
+      const libGrid = document.getElementById("libraryGrid");
+      assert("bibliotheque : la fenetre s'ouvre", document.getElementById("libraryModal").hidden === false);
+      assert("bibliotheque : le chargement ne reste pas affiche", !libGrid.textContent.includes(loadingText));
+      const libItems = libGrid.querySelectorAll(".library-item");
+      assert("bibliotheque : les deux images sont listees", libItems.length === 2);
+      assert("bibliotheque : le nom est echappe, pas interprete",
+        !libGrid.querySelector(".library-item-name b")
+        && libItems[1].querySelector(".library-item-name").textContent === "<b>Perso</b> & co");
+      assert("bibliotheque : les sections sont proposees",
+        document.getElementById("librarySection").options.length === 3);
+      document.getElementById("libraryTone").value = "light";
+      document.getElementById("libraryTone").dispatchEvent(new window.Event("change", { bubbles: true }));
+      assert("bibliotheque : le filtre clair/sombre fonctionne",
+        libGrid.querySelectorAll(".library-item").length === 1);
+      document.getElementById("libraryTone").value = "";
+      document.getElementById("libraryTone").dispatchEvent(new window.Event("change", { bubbles: true }));
+      libGrid.querySelector(".library-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(150);
+      assert("bibliotheque : le clic copie l'image choisie",
+        LIBRARY_MOCK.picked[LIBRARY_MOCK.picked.length - 1] === "builtin:backgrounds:Classy_Blue.png");
+      assert("bibliotheque : la fenetre se ferme apres le choix", document.getElementById("libraryModal").hidden === true);
+      assert("bibliotheque : l'image copiee devient le fond de la page",
+        /lib-bleu\.png/.test(document.querySelectorAll(".board-page")[0].style.backgroundImage));
+
+      LIBRARY_MOCK.fail = true;
+      document.getElementById("pageBgLibrary").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(150);
+      assert("bibliotheque : un echec serveur remplace le message de chargement",
+        !libGrid.textContent.includes(loadingText) && libGrid.querySelector(".library-status-err") !== null);
+      assert("bibliotheque : la cause est affichee",
+        document.getElementById("libraryStatus").textContent.includes("disque illisible"));
+      LIBRARY_MOCK.fail = false;
+      document.getElementById("libraryModal").hidden = true;
+    }
     document.getElementById("pageBgModal").hidden = true;
     document.getElementById("settingsModal").hidden = true;
 

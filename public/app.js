@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.110.1
+   Version 1.110.2
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3724,6 +3724,21 @@
      stayed invisible while no value contained a quote, then it silently
      emptied the Stocks tile's row editor (JSON has one at every key), the
      value read back being truncated to `[{`. */
+  /* Echappement pour du CONTENU HTML (texte entre balises). Il manquait
+     jusqu'en 1.110.2 alors que la bibliotheque d'images l'appelait : la
+     fenetre restait bloquee sur « Chargement... » des qu'elle avait une
+     image a afficher (ReferenceError levee hors du try).
+     Escaping for HTML CONTENT (text between tags). It was missing until
+     1.110.2 although the image library called it: the window stayed
+     stuck on "Loading..." as soon as it had an image to show
+     (ReferenceError thrown outside the try). */
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
   function escapeHtmlAttr(s) {
     return String(s)
       .replace(/&/g, "&amp;")
@@ -4581,6 +4596,8 @@
     section: "backgrounds"
   };
 
+  let libraryLoadSeq = 0;
+
   function openLibrary(target, section, onPicked) {
     libraryState.target = target;
     libraryState.onPicked = onPicked || null;
@@ -4604,18 +4621,47 @@
     const grid = $("libraryGrid");
     if (!grid) return;
     grid.innerHTML = `<p class="field-hint">${i18n.t("library.loading")}</p>`;
+    librarySetStatus("");
+    /* Chaque appel porte un numero : si l'utilisateur change de section
+       pendant un chargement, la reponse la plus ancienne ne vient pas
+       ecraser la plus recente.
+       Each call carries a number: if the user switches section during a
+       load, the older answer does not overwrite the newer one. */
+    const seq = ++libraryLoadSeq;
+    let failure = null;
     try {
-      const data = await fetch("/api/library?section=" + encodeURIComponent(libraryState.section))
-        .then((r) => r.json());
-      libraryState.items = data.items || [];
-      libraryState.sections = data.sections || [];
-      libraryState.categories = data.categories || [];
+      const r = await fetch("/api/library?section=" + encodeURIComponent(libraryState.section));
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ("status " + r.status));
+      if (seq !== libraryLoadSeq) return;
+      libraryState.items = Array.isArray(data.items) ? data.items : [];
+      libraryState.sections = Array.isArray(data.sections) && data.sections.length ? data.sections : ["backgrounds", "logos", "photos"];
+      libraryState.categories = Array.isArray(data.categories) ? data.categories : [];
     } catch (e) {
+      if (seq !== libraryLoadSeq) return;
       console.warn("[piboard] bibliotheque", e);
       libraryState.items = [];
+      failure = e;
     }
-    renderLibraryFilters();
-    renderLibraryGrid();
+    /* L'affichage est lui aussi protege : une erreur ici laissait le
+       message « Chargement... » en place indefiniment, sans rien dire.
+       Un echec doit se VOIR, et se distinguer d'un chargement en cours.
+       Rendering is guarded too: an error here used to leave the
+       "Loading..." message in place forever, silently. A failure must
+       SHOW, and be told apart from a load in progress. */
+    try {
+      renderLibraryFilters();
+      if (failure) {
+        grid.innerHTML = `<p class="field-hint library-status-err">${escapeHtml(i18n.t("library.loadFailed"))}</p>`;
+        librarySetStatus(String(failure.message || failure), "err");
+      } else {
+        renderLibraryGrid();
+      }
+    } catch (e) {
+      console.error("[piboard] affichage de la bibliotheque", e);
+      grid.innerHTML = `<p class="field-hint library-status-err">${escapeHtml(i18n.t("library.loadFailed"))}</p>`;
+      librarySetStatus(String(e.message || e), "err");
+    }
   }
 
   function renderLibraryFilters() {
@@ -4736,9 +4782,12 @@
     grid.innerHTML = `<p class="field-hint">${i18n.t("library.loading")}</p>`;
     let items = [];
     try {
-      const data = await fetch("/api/library-catalog").then((r) => r.json());
+      const r = await fetch("/api/library-catalog");
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ("status " + r.status));
       items = (data.items || []).filter((i) => i.section === libraryState.section);
     } catch (e) {
+      console.warn("[piboard] catalogue en ligne", e);
       grid.innerHTML = `<p class="field-hint">${i18n.t("library.catalogFailed")}</p>`;
       return;
     }

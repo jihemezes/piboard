@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.110.2
+
+- **Correctif : la bibliotheque d'images restait bloquee sur
+  « Chargement... »** des qu'elle avait au moins une image a montrer.
+  Cause : la fonction `escapeHtml`, appelee pour afficher le nom de
+  chaque image et les categories, n'existait pas dans `app.js` (seules
+  les tuiles avaient la leur). L'erreur etait levee APRES le bloc
+  protege, donc sans message : la fenetre gardait son texte de
+  chargement indefiniment. Une bibliotheque vide, elle, s'affichait
+  normalement -- d'ou un defaut passe inapercu jusqu'a l'ajout des
+  premieres images.
+
+- **Un echec se voit desormais** : si la liste ne peut pas etre lue ou
+  affichee, la fenetre l'indique (« La bibliotheque n'a pas pu etre
+  affichee ») avec la cause, au lieu de rester sur « Chargement... ».
+  Le code HTTP de la reponse est aussi verifie (bibliotheque et
+  catalogue en ligne), et un changement rapide de section ne peut plus
+  voir une ancienne reponse ecraser la plus recente.
+
+- **Test fonctionnel** ajoute : ouverture reelle de la fenetre depuis le
+  fond de page, affichage des vignettes, echappement du nom, filtre
+  clair/sombre, choix d'une image appliquee a la page, et affichage
+  d'une erreur serveur.
+
 ## 1.110.1
 
 - **`npm run library:meta`** : remplit le meta.json des sections de la
