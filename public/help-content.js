@@ -2356,16 +2356,14 @@
           <p>En clair : PiBoard est un logiciel libre et gratuit, que vous pouvez utiliser, modifier et redistribuer, à titre privé comme commercial, du moment que la mention de copyright est conservée. Il n'existe <b>ni version payante, ni clé de licence, ni fonction réservée, ni compte à créer</b>. Le logiciel est fourni sans aucune garantie.</p>
           <p>Projet personnel et open source : <a href="https://github.com/jihemezes/piboard" target="_blank">github.com/jihemezes/piboard</a>.</p>
           <h4>Offrir un café</h4>
-          <p>PiBoard est gratuit et le restera. Si l'application vous est utile et que vous voulez soutenir le temps passé dessus, vous pouvez m'offrir un café : <a href="https://ko-fi.com/jihemezes" target="_blank">ko-fi.com/jihemezes</a>.</p>
-          <p>C'est une simple marque de sympathie, sans contrepartie : un don ne donne accès à aucune fonction supplémentaire, n'ouvre droit à aucun support et ne crée aucune obligation. Ne donnez rien si cela vous met la moindre difficulté — utiliser PiBoard, signaler un bug ou proposer une idée fait tout autant plaisir.</p>`,
+          <p>PiBoard est gratuit et le restera. Un don est une simple marque de sympathie, sans contrepartie : il ne donne accès à aucune fonction supplémentaire, n'ouvre droit à aucun support et ne crée aucune obligation. Ne donnez rien si cela vous met la moindre difficulté — utiliser PiBoard, signaler un bug ou proposer une idée fait tout autant plaisir.</p>`,
         en: `
           <p>PiBoard <span id="helpAppVersion">…</span></p>
           <p>© 2026 Jean-Michel Ezes. Released under the <b>MIT</b> license — the full license text ships with the project (<code>LICENSE</code> file at the repository root).</p>
           <p>In plain terms: PiBoard is free software, free of charge, which you may use, modify and redistribute, privately or commercially, as long as the copyright notice is kept. There is <b>no paid version, no licence key, no feature held back and no account to create</b>. It comes with no warranty of any kind.</p>
           <p>Personal, open-source project: <a href="https://github.com/jihemezes/piboard" target="_blank">github.com/jihemezes/piboard</a>.</p>
           <h4>Buy me a coffee</h4>
-          <p>PiBoard is free and will stay free. If it is useful to you and you would like to support the time that goes into it, you can buy me a coffee: <a href="https://ko-fi.com/jihemezes" target="_blank">ko-fi.com/jihemezes</a>.</p>
-          <p>It is a simple token of appreciation, with no strings attached: a donation unlocks no extra feature, entitles you to no support and creates no obligation. Please do not give anything if it would put you in any difficulty — using PiBoard, reporting a bug or suggesting an idea is just as welcome.</p>`
+          <p>PiBoard is free and will stay free. A donation is a simple token of appreciation, with no strings attached: it unlocks no extra feature, entitles you to no support and creates no obligation. Please do not give anything if it would put you in any difficulty — using PiBoard, reporting a bug or suggesting an idea is just as welcome.</p>`
       }
     },
 

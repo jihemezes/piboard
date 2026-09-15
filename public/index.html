@@ -774,6 +774,22 @@
   <div class="modal-card quickstart-card">
     <header class="modal-head">
       <h2 data-i18n="quickstart.title">Getting started</h2>
+      <!-- Bascule de langue en tete du guide. Elle a sa place ICI et pas
+           seulement dans les reglages : au tout premier lancement, la
+           langue par defaut est l'anglais et ce guide est la premiere
+           chose que l'on voit -- demander d'aller la changer dans des
+           reglages qu'on ne sait pas encore ouvrir serait absurde. Le
+           bouton change la langue de TOUTE l'application, pas seulement
+           du guide, et l'enregistre.
+           Language toggle at the head of the guide. It belongs HERE and
+           not only in the settings: on the very first launch the default
+           language is English and this guide is the first thing one
+           sees -- asking the user to change it in settings they do not
+           yet know how to open would be absurd. The button switches the
+           WHOLE application's language, not just the guide's, and saves
+           it. -->
+      <button class="btn small" id="quickStartLang" type="button"
+              data-i18n-title="quickstart.langTitle">Français</button>
       <button class="modal-close" data-close aria-label="Close">&times;</button>
     </header>
     <div class="quickstart-body" id="quickStartBody"></div>
@@ -782,6 +798,7 @@
         <input type="checkbox" id="quickStartAgain">
         <span data-i18n="quickstart.again">Show this guide at every launch</span>
       </label>
+      <button class="btn kofi-btn" id="quickStartKofi" type="button" data-i18n="kofi.button">Buy me a coffee</button>
       <button class="btn primary" id="quickStartClose" data-i18n="quickstart.close">Get started</button>
     </div>
   </div>

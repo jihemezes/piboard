@@ -2735,3 +2735,57 @@ body.editing .grid-stack-item-content.tile-transparent {
   cursor: pointer;
 }
 .page-row .page-bg { color: var(--muted); }
+
+/* ---------- Bouton et encart de don / donation button and block ----------
+   Un bouton plutot qu'un lien, dans le guide de demarrage comme dans
+   l'aide : un lien au fil du texte se confond avec les autres, et se
+   vise mal au doigt sur un ecran tactile. La couleur reste celle des
+   boutons secondaires, avec un simple liseré : proposer un cafe ne
+   justifie pas de crier plus fort que le bouton « C'est parti » juste a
+   cote.
+   A button rather than a link, in the start guide as in the help: a link
+   in running text blends in with the others, and is hard to aim at with
+   a finger on a touchscreen. The colour stays that of secondary buttons,
+   with a simple outline: offering a coffee does not warrant shouting
+   louder than the "Get started" button right next to it. */
+.kofi-btn {
+  border-color: #FF5E5B;
+  color: #FF5E5B;
+}
+.kofi-btn:hover {
+  background: #FF5E5B;
+  color: #fff;
+  border-color: #FF5E5B;
+}
+
+.kofi-block {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--tile-edge);
+}
+.kofi-block p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+/* Le pied du guide aligne la case a cocher a gauche, les deux boutons a
+   droite. flex-wrap : sur un ecran etroit, les boutons passent a la
+   ligne plutot que d'ecraser le libelle de la case.
+   The guide's footer aligns the checkbox left and both buttons right.
+   flex-wrap: on a narrow screen the buttons wrap rather than squashing
+   the checkbox's label. */
+/* La case a cocher reste a gauche, les deux boutons partent ensemble a
+   droite : c'est le margin-left:auto du premier des deux qui cree la
+   coupure, le justify-content: space-between deja present ne sachant
+   pas repartir trois elements de cette facon.
+   The checkbox stays left, both buttons go right together: the
+   margin-left:auto of the first of the two creates the break, the
+   already-present justify-content: space-between being unable to lay
+   out three items that way. */
+.quickstart-foot .kofi-btn { margin-left: auto; }
+
+/* Bascule de langue, dans l'en-tete du guide : discrete, a gauche de la
+   croix de fermeture.
+   Language toggle, in the guide's header: discreet, left of the close
+   cross. */
+.quickstart-card .modal-head #quickStartLang { margin-left: auto; }

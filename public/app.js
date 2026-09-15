@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.108.2
+   Version 1.109.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -5891,10 +5891,14 @@
     // drift on the first edit.
     if (id === "quickstart") {
       const qs = (window.PIBOARD_QUICKSTART || {})[settings.lang === "fr" ? "fr" : "en"];
-      if (qs) content.innerHTML = `<h3>${i18n.fromManifest(sec.title)}</h3>` + qs;
+      if (qs) content.innerHTML = `<h3>${i18n.fromManifest(sec.title)}</h3>` + qs + kofiBlockHtml();
     }
 
     if (id === "about") {
+      // Meme encart qu'au « Demarrage rapide », ajoute apres le texte de
+      // la fiche. Same block as in "Quick start", appended after the
+      // section's text.
+      content.insertAdjacentHTML("beforeend", kofiBlockHtml());
       // Meme source que la version affichee dans les reglages generaux
       // (voir plus haut /api/version) : un seul appel reseau au demarrage
       // aurait suffi, mais la reutilisation d'un cache introduirait un
@@ -6098,6 +6102,42 @@
 
   /* ---------- Guide de demarrage rapide / quick start guide ---------- */
 
+  /* Adresse de dons, en un seul endroit cote interface. Elle existe
+     aussi dans package.json, la fiche AppStream, FUNDING.yml et le
+     README : quatre lecteurs qui ne se parlent pas. Ici, une constante
+     evite au moins de la repeter entre le guide et l'aide.
+     Donation address, in a single place on the interface side. It also
+     exists in package.json, the AppStream metadata, FUNDING.yml and the
+     README: four readers that do not talk to each other. Here a
+     constant at least avoids repeating it between the guide and the
+     help. */
+  const KOFI_URL = "https://ko-fi.com/jihemezes";
+
+  function openKofi() {
+    window.open(KOFI_URL, "_blank", "noopener");
+  }
+
+  /* Encart de don, ajoute en bas du « Démarrage rapide » et de « À
+     propos » de l'aide. Un BOUTON et non un lien : un lien au fil du
+     texte se confond avec les autres, alors que l'intention est ici de
+     proposer quelque chose -- et un bouton se vise au doigt sur un
+     ecran tactile, ce qu'un lien de dix pixels de haut ne permet pas.
+     Le texte reste leger : personne ne doit se sentir redevable d'un
+     logiciel gratuit.
+     Donation block, appended at the bottom of the help's "Quick start"
+     and "About". A BUTTON rather than a link: a link in running text
+     blends in with the others, whereas the intent here is to offer
+     something -- and a button can be aimed at with a finger on a
+     touchscreen, which a ten-pixel-tall link cannot. The wording stays
+     light: nobody should feel indebted over free software. */
+  function kofiBlockHtml() {
+    return `
+      <div class="kofi-block">
+        <p>${i18n.t("kofi.blurb")}</p>
+        <button type="button" class="btn kofi-btn" data-kofi>${i18n.t("kofi.button")}</button>
+      </div>`;
+  }
+
   /* Ouvre le guide. `auto` distingue l'ouverture automatique au lancement
      de l'ouverture manuelle depuis l'aide : dans le second cas la case
      "afficher a chaque lancement" reflete toujours le reglage, mais la
@@ -6113,7 +6153,35 @@
     if (!content) return;
     $("quickStartBody").innerHTML = content;
     $("quickStartAgain").checked = settings.quickStartOnLaunch !== false;
+    // Le bouton annonce la langue vers laquelle il bascule, pas la
+    // langue courante : « Français » quand on est en anglais. C'est la
+    // convention qui se comprend sans avoir a lire l'interface, y
+    // compris quand on ne comprend justement pas la langue affichee.
+    // The button announces the language it switches TO, not the current
+    // one: "Français" while in English. That is the convention one grasps
+    // without reading the interface -- including when one does not
+    // understand the displayed language in the first place.
+    $("quickStartLang").textContent = settings.lang === "fr" ? "English" : "Français";
     $("quickStartModal").hidden = false;
+  }
+
+  /* Bascule la langue de toute l'application depuis le guide, et la
+     conserve. On reaffiche le guide dans la foulee : son contenu est du
+     HTML deja traduit (quickstart-content.js), il ne suit pas le
+     mecanisme data-i18n.
+     Switches the whole application's language from the guide, and keeps
+     it. The guide is re-rendered right after: its content is
+     already-translated HTML (quickstart-content.js), it does not follow
+     the data-i18n mechanism. */
+  function toggleQuickStartLang() {
+    const next = settings.lang === "fr" ? "en" : "fr";
+    settings.lang = next;
+    i18n.setLang(next);
+    const again = $("quickStartAgain").checked;
+    openQuickStart();
+    $("quickStartAgain").checked = again;
+    apiPut("/api/settings", { lang: next })
+      .catch((e) => console.warn("[piboard] langue non enregistree:", e));
   }
 
   function closeQuickStart() {
@@ -6596,6 +6664,17 @@
     onActivate($("btnSettings"), openSettings);
     onActivate($("btnHelp"), openHelp);
     onActivate($("quickStartClose"), closeQuickStart);
+    onActivate($("quickStartLang"), toggleQuickStartLang);
+    /* Les boutons de don de l'aide sont recrees a chaque affichage de
+       section : on ecoute donc au niveau du document plutot que de
+       recabler apres chaque rendu.
+       The help's donation buttons are rebuilt on every section display:
+       so we listen at document level rather than rewiring after each
+       render. */
+    document.addEventListener("click", (e) => {
+      if (e.target.closest("[data-kofi]")) openKofi();
+    });
+    onActivate($("quickStartKofi"), openKofi);
     // La croix de fermeture du modal passe par le gestionnaire generique
     // [data-close] : on lui greffe l'enregistrement de la case, sinon
     // fermer par la croix perdrait le choix qui vient d'etre fait.

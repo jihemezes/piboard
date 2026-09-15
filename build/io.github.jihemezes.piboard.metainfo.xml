@@ -153,6 +153,12 @@
        matching the installed version; an entry per published version is
        therefore to be added here at the same time as in CHANGELOG.md. -->
   <releases>
+    <release version="1.109.0" date="2026-09-14">
+      <description>
+        <p>Quick start guide: language toggle and a donation button; the YouTube key is now listed among the API keys.</p>
+        <p xml:lang="fr">Guide de demarrage : bascule de langue et bouton de don ; la cle YouTube figure desormais parmi les cles API.</p>
+      </description>
+    </release>
     <release version="1.108.2" date="2026-09-14">
       <description>
         <p>Publishing now checks for an existing release before building, and no longer rewrites the lockfile mid-release.</p>

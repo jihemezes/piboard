@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.109.0
+
+- **Bascule de langue en tete du guide de demarrage rapide.** Au tout
+  premier lancement, PiBoard demarre en anglais et ce guide est la
+  premiere chose que l'on voit : demander d'aller changer la langue
+  dans des reglages qu'on ne sait pas encore ouvrir n'avait pas de
+  sens. Le bouton annonce la langue vers laquelle il bascule
+  (« Français » quand on est en anglais), ce qui se comprend meme sans
+  lire la langue affichee, et il change la langue de TOUTE
+  l'application, pas seulement du guide.
+
+- **Bouton « Offrir un café »** dans la barre du bas du guide, a cote de
+  « C'est parti », et au bas des fiches « Démarrage rapide » et « À
+  propos » de l'aide. Un BOUTON et non un lien : un lien au fil du
+  texte se confond avec les autres et se vise mal au doigt sur un ecran
+  tactile. Le lien nu de la fiche « À propos » disparait au profit de
+  ce bouton. Un court texte l'accompagne, volontairement leger --
+  personne ne doit se sentir redevable d'un logiciel gratuit.
+
+- **Le guide annoncait « les cles API : deux tuiles seulement »**, ce
+  qui n'est plus vrai depuis la tuile YouTube. Il en compte desormais
+  trois, avec la nuance qui compte : la LECTURE des videos, playlists et
+  chaines ne demande AUCUNE cle -- seule la recherche en a besoin, et
+  la tuile s'utilise tres bien sans jamais en creer une.
+
 ## 1.108.2
 
 - **La publication verifie d'abord si la release existe deja.**
