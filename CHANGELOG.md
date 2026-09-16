@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.111.1
+
+- **Correctif : aucune sortie de PiBoard en mode tableau de bord.** Le
+  bandeau du bas offrait pages, ajout, edition, reglages et aide, mais
+  pas le menu « Quitter » : la barre d'outils qui le porte est masquee
+  dans ce mode, et le bandeau n'en avait jamais recu l'equivalent. Il
+  propose desormais le menu de sortie (reinitialiser, revenir au
+  bureau, eteindre) et le lancement du cadre photo. Un test de parite
+  verifie maintenant que chaque action de la barre classique a son
+  equivalent dans le bandeau.
+
+- **Correctif : l'extinction refusee sur le Raspberry Pi ne disait pas
+  pourquoi.** Le message etait toujours le meme, et le detail retenait
+  l'echec de `pkexec` -- un dernier recours qui ne peut PAS fonctionner
+  sous le service (setuid neutralise par NoNewPrivileges) -- en masquant
+  la vraie erreur de `systemctl`. Desormais :
+  - `pkexec` n'est plus tente sous le service systemd ;
+  - en cas de refus, PiBoard interroge polkit action par action et
+    identifie la cause : permission absente, session d'un AUTRE
+    utilisateur ouverte, ou programme bloquant l'extinction ;
+  - une fenetre affiche cette cause, la commande exacte qui la corrige
+    et le message systeme d'origine.
+
+- **Nouveau script `install/enable-poweroff.sh`**, qui pose la seule
+  permission d'extinction sans relancer toute l'installation. C'est le
+  cas le plus probable sur un Pi installe avant la 1.104.0 : les mises
+  a jour (automatiques ou par ZIP) tournent sans privileges et ne
+  touchent jamais `/etc`, la permission n'y a donc jamais ete posee.
+  Options `--other-sessions` et `--ignore-inhibit` pour les deux autres
+  causes. Le script verifie la permission aussitot, avec l'identite du
+  service. `install.sh` l'utilise desormais (une seule source).
+
+- **Tests** : classement des causes et lecture des sorties `loginctl` /
+  `systemd-inhibit` (hors ligne) ; bandeau (sortie, cadre photo,
+  parite) et fenetre de refus (trois causes) dans `dom-smoke.js`.
+
 ## 1.111.0
 
 - **Themes de couleurs.** Plus de cinquante themes livres, ranges par

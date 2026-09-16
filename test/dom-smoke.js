@@ -515,6 +515,7 @@ const putCalls = [];
    journey without a real server. */
 const tileConfigsMock = {};
 const LIBRARY_MOCK = { fail: false, picked: [] };
+const SHUTDOWN_MOCK = { answer: { ok: false } };
 
 /* Mock avec etat pour les routes /api/crypto/* (server/crypto.js) :
    permet de simuler un repli sur donnees perimees (priceStale/
@@ -640,6 +641,9 @@ const dom = new JSDOM(html, {
          Image library: two items, one whose name holds markup -- it is
          precisely rendering an item that crashed in 1.110.1 (missing
          escapeHtml). */
+      if (u.includes("/api/system/shutdown") && method === "POST") {
+        return json(SHUTDOWN_MOCK.answer);
+      }
       if (/\/api\/media\/[^/?]+\/from-library/.test(u) && method === "POST") {
         const body = JSON.parse(opts.body || "{}");
         LIBRARY_MOCK.picked.push(body.id);
@@ -6116,6 +6120,85 @@ function catalogItemFor(catalog, document, widgetId) {
        rays: the pictogram of a sun, not a gear -- exactly the confusion
        already documented for the tile settings icon. It now reuses the
        classic toolbar's real lobed gear. */
+    /* Le bandeau doit offrir les memes sorties que la barre d'outils
+       classique, masquee dans ce mode : il n'y avait AUCUN moyen de
+       quitter PiBoard en mode tableau de bord (1.111.1). On verifie par
+       l'effet reel, et on garde une garde de parite pour l'avenir.
+       The bar must offer the same exits as the classic toolbar, hidden
+       in this mode: there was NO way to leave PiBoard in dashboard
+       mode. */
+    {
+      document.getElementById("settingsModal").hidden = true;
+      const dashExit = document.getElementById("dashExit");
+      assert("tableau de bord : le bandeau propose la sortie de PiBoard", !!dashExit);
+      if (dashExit) {
+        dashExit.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+        await sleep(40);
+        assert("tableau de bord : le bouton de sortie ouvre le menu Quitter",
+          document.getElementById("exitMenuModal").hidden === false);
+        document.getElementById("exitMenuModal").hidden = true;
+        assert("tableau de bord : meme pictogramme que la barre classique",
+          dashExit.innerHTML.replace(/\s+/g, "") === document.getElementById("btnExit").innerHTML.replace(/\s+/g, ""));
+      }
+      assert("tableau de bord : le cadre photo est aussi accessible",
+        !!document.getElementById("dashScreensaverNow"));
+      /* Parite : chaque action de la barre classique (hors repli de la
+         barre) a son equivalent dans le bandeau, reconnu a son icone.
+         Parity: every classic toolbar action (except collapsing it) has
+         a bar counterpart, recognised by its icon. */
+      const norm = (el) => el.querySelector("svg").innerHTML.replace(/\s+/g, "");
+      const dashIcons = [...document.querySelectorAll("#dashBar .dash-btn svg")].map((sv) => sv.innerHTML.replace(/\s+/g, ""));
+      const dockOnly = [...document.querySelectorAll("#dockBar .dock-btn")]
+        .filter((b) => !["btnCollapse", "btnEdit", "btnHelp"].includes(b.id))
+        .filter((b) => !dashIcons.includes(norm(b)))
+        .map((b) => b.id);
+      assert("tableau de bord : aucune action de la barre classique n'y manque (" + dockOnly.join(",") + ")",
+        dockOnly.length === 0);
+      document.getElementById("settingsModal").hidden = false;
+    }
+
+    /* Refus d'extinction : la vraie cause et la commande qui la corrige
+       s'affichent, au lieu d'un message unique (1.111.1).
+       Shutdown refused: actual cause and fixing command are shown. */
+    {
+      const realConfirm = window.confirm;
+      window.confirm = () => true;
+      const $d = (id) => document.getElementById(id);
+      const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      SHUTDOWN_MOCK.answer = { ok: false, reason: "not-permitted", cause: "no-rule",
+        detail: "Call to PowerOff failed: Access denied", user: "jeanmichel",
+        fixScript: "/home/jeanmichel/piboard/install/enable-poweroff.sh", fixScriptExists: true };
+      click($d("exitOptionShutdown"));
+      await sleep(80);
+      assert("extinction refusee : une fenetre explique le refus", $d("shutdownDeniedModal").hidden === false);
+      assert("extinction refusee : la cause est nommee (regle absente)",
+        /1\.104\.0/.test($d("shutdownDeniedCause").textContent));
+      assert("extinction refusee : la commande exacte est donnee",
+        $d("shutdownDeniedCmd").hidden === false
+        && $d("shutdownDeniedCmd").textContent === "sudo bash /home/jeanmichel/piboard/install/enable-poweroff.sh jeanmichel");
+      assert("extinction refusee : le message systeme reel est conserve",
+        /Access denied/.test($d("shutdownDeniedDetail").textContent));
+      assert("extinction refusee : le bouton redevient utilisable", $d("exitOptionShutdown").disabled === false);
+      $d("shutdownDeniedModal").hidden = true;
+
+      SHUTDOWN_MOCK.answer = { ok: false, cause: "multiple-sessions", otherUsers: ["bob"], user: "jeanmichel",
+        fixScript: "/x/install/enable-poweroff.sh", fixScriptExists: true, detail: "" };
+      click($d("exitOptionShutdown"));
+      await sleep(80);
+      assert("extinction refusee : autre session nommee, option adaptee proposee",
+        /bob/.test($d("shutdownDeniedCause").textContent)
+        && /--other-sessions$/.test($d("shutdownDeniedCmd").textContent));
+      $d("shutdownDeniedModal").hidden = true;
+
+      SHUTDOWN_MOCK.answer = { ok: false, cause: "unknown", detail: "Failed to connect to bus", fixScriptExists: true, fixScript: "/x" };
+      click($d("exitOptionShutdown"));
+      await sleep(80);
+      assert("extinction refusee : cause inconnue, pas de commande hasardeuse",
+        $d("shutdownDeniedCmd").hidden === true && /Failed to connect/.test($d("shutdownDeniedDetail").textContent));
+      $d("shutdownDeniedModal").hidden = true;
+      window.confirm = realConfirm;
+    }
+
     const dashGear = document.getElementById("dashSettings").innerHTML;
     const dockGear = document.getElementById("btnSettings").innerHTML;
     assert("l'icone de reglages du bandeau est le meme engrenage que la barre d'outils",

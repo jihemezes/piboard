@@ -44,6 +44,9 @@ console.log("== Extinction : reservee a Linux ==");
     assert.ok(typeof out === "object" && typeof out.ok === "boolean",
       "un resultat exploitable, meme en cas de refus");
     if (!out.ok) assert.ok(out.reason, "un refus porte toujours un motif");
+    // 1.111.1 : le refus nomme aussi sa cause, pour l'interface.
+    if (!out.ok) assert.ok(["no-rule", "multiple-sessions", "inhibited", "unknown"].includes(out.cause),
+      "un refus porte une cause exploitable : " + out.cause);
   }
   console.log("  OK   refus propre plutot qu'exception quand le droit manque");
 

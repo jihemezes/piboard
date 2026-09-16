@@ -132,6 +132,17 @@
     <button class="dash-btn" id="dashHelp" data-i18n-title="toolbar.help" title="Help" aria-label="Help">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 3.2 2.4c-.7.2-1.2.9-1.2 1.6v.5"/><path d="M12 17h.01"/></svg>
     </button>
+    <!-- Memes actions que la barre d'outils du mode classique, masquee en
+         mode tableau de bord : sans elles, ce mode n'offrait AUCUNE sortie
+         de PiBoard (1.111.1). Same actions as the classic toolbar, hidden
+         in dashboard mode: without them, that mode offered NO way out. -->
+    <button class="dash-btn" id="dashScreensaverNow" data-i18n-title="toolbar.screensaverNow" title="Start photo frame" aria-label="Start photo frame">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+    </button>
+    <span class="dash-sep"></span>
+    <button class="dash-btn" id="dashExit" data-i18n-title="toolbar.exit" title="Exit dashboard" aria-label="Exit dashboard">
+      <svg viewBox="0 0 24 24"><path d="M12 3v8"/><path d="M7 5.5a8 8 0 1 0 10 0"/></svg>
+    </button>
   </div>
 </div>
 
@@ -419,6 +430,32 @@
     <div class="modal-foot">
       <div class="form-actions">
         <button type="button" class="btn" data-close data-i18n="common.close">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Refus d'extinction : la cause reelle et la commande qui la corrige
+     (1.111.1). Un simple message generique ne permettait pas d'agir.
+     Shutdown refused: the actual cause and the command that fixes it. -->
+<div class="modal modal-stacked" id="shutdownDeniedModal" hidden>
+  <div class="modal-card">
+    <header class="modal-head">
+      <h2 data-i18n="exit.shutdown.deniedTitle">Shutdown refused</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="shutdown-denied-body">
+      <p id="shutdownDeniedCause"></p>
+      <p id="shutdownDeniedFixIntro" hidden data-i18n="exit.shutdown.fixIntro">Run this once on the machine (over SSH or in a terminal), then try again:</p>
+      <pre class="shutdown-denied-cmd" id="shutdownDeniedCmd" hidden></pre>
+      <details>
+        <summary data-i18n="exit.shutdown.details">Technical details</summary>
+        <pre class="shutdown-denied-detail" id="shutdownDeniedDetail"></pre>
+      </details>
+    </div>
+    <div class="modal-foot">
+      <div class="form-actions">
+        <button type="button" class="btn primary" data-close data-i18n="common.close">Close</button>
       </div>
     </div>
   </div>

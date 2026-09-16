@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.111.0
+   Version 1.111.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -6015,13 +6015,42 @@
       const out = await r.json().catch(() => ({}));
       if (out && out.ok) return; // la machine s'eteint / the machine is going down
       console.warn("[piboard] shutdown", out);
-      window.alert(i18n.t("exit.shutdown.denied"));
+      showShutdownDenied(out || {});
     } catch (e) {
       console.warn("[piboard] shutdown", e);
-      window.alert(i18n.t("exit.shutdown.denied"));
+      showShutdownDenied({ cause: "unknown", detail: String(e.message || e) });
     }
     title.textContent = label;
     btn.disabled = false;
+  }
+
+  /* Refus d'extinction : la CAUSE reelle, et la commande exacte qui la
+     corrige quand elle existe. Le message generique d'avant renvoyait
+     toujours a install.sh, meme quand la cause etait ailleurs.
+     Shutdown refused: the actual CAUSE, and the exact command that
+     fixes it when there is one. */
+  function shutdownFixCommand(out) {
+    if (!out.fixScriptExists || !out.fixScript) return "";
+    const user = out.user ? " " + out.user : "";
+    const extra = out.cause === "multiple-sessions" ? " --other-sessions"
+      : out.cause === "inhibited" ? " --ignore-inhibit" : "";
+    if (out.cause === "unknown") return "";
+    return "sudo bash " + out.fixScript + user + extra;
+  }
+
+  function showShutdownDenied(out) {
+    const cause = ["no-rule", "multiple-sessions", "inhibited"].includes(out.cause) ? out.cause : "unknown";
+    let text = i18n.t("exit.shutdown.cause." + cause);
+    if (cause === "multiple-sessions" && out.otherUsers && out.otherUsers.length) text += " (" + out.otherUsers.join(", ") + ")";
+    $("shutdownDeniedCause").textContent = text;
+    const cmd = shutdownFixCommand(out);
+    $("shutdownDeniedCmd").textContent = cmd;
+    $("shutdownDeniedCmd").hidden = !cmd;
+    $("shutdownDeniedFixIntro").hidden = !cmd;
+    const details = [out.detail || ""].concat((out.blockers || []).map((b) => "inhibit: " + b)).filter(Boolean);
+    $("shutdownDeniedDetail").textContent = details.join("\n") || "-";
+    $("exitMenuModal").hidden = true;
+    $("shutdownDeniedModal").hidden = false;
   }
 
   /* ---------- Economiseur d'ecran / screensaver ---------- */
@@ -7643,6 +7672,8 @@
     onActivate($("dashEdit"), () => toggleEdit());
     onActivate($("dashSettings"), openSettings);
     onActivate($("dashHelp"), openHelp);
+    onActivate($("dashScreensaverNow"), () => launchScreensaverNow());
+    onActivate($("dashExit"), () => openExitMenu());
 
     /* Glissement du doigt pour changer de page. Le seuil evite qu'un
        simple appui un peu traine sur une tuile ne fasse defiler la page,

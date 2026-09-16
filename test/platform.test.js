@@ -345,3 +345,43 @@ console.log("== platform.diskUsage : fs.statfs remplace `df` ==");
   }
   console.log("  OK extinction reelle de l'ecran : ordre des methodes et on/off");
 }
+
+/* ---------- Extinction : diagnostic d'un refus (1.111.1) ----------
+   Le message etait identique quelle que soit la cause. On verifie ici
+   le classement des causes et la lecture des sorties systeme reelles.
+   Shutdown: diagnosing a refusal. */
+{
+  const linux = require("../server/platform/linux.js");
+  const C = linux.classifyShutdownFailure;
+  assert.strictEqual(C({ pk: { powerOff: false, multi: false, inhibit: false } }), "no-rule",
+    "power-off refuse : la regle manque (Pi installe avant 1.104.0)");
+  assert.strictEqual(C({ pk: { powerOff: true, multi: false }, otherUsers: ["bob"] }), "multiple-sessions",
+    "autre utilisateur connecte, droit multi-sessions absent");
+  assert.strictEqual(C({ pk: { powerOff: true, multi: true }, otherUsers: ["bob"] }), "unknown",
+    "multi-sessions autorise : ce n'est pas la cause");
+  assert.strictEqual(C({ pk: { powerOff: true, inhibit: false }, blockers: ["x"] }), "inhibited",
+    "verrou bloquant, droit de passer outre absent");
+  assert.strictEqual(C({ pk: { powerOff: null }, error: "Access denied" }), "no-rule",
+    "sans pkcheck, le message systeme suffit a reconnaitre le refus");
+  assert.strictEqual(C({ pk: {}, error: "Failed to connect to bus" }), "unknown");
+
+  const sessions = [
+    "     1 1000 jeanmichel seat0 tty7 active no",
+    "     4 1000 jeanmichel -     pts/0 active no",
+    "     7 1001 bob        -     pts/1 active no",
+    ""
+  ].join("\n");
+  assert.deepStrictEqual(linux.parseOtherUsers(sessions, "jeanmichel"), ["bob"],
+    "seuls les AUTRES utilisateurs comptent");
+  assert.deepStrictEqual(linux.parseOtherUsers("", "jeanmichel"), []);
+
+  const inhibitors = [
+    "ModemManager 0 root 863 ModemManager sleep ModemManager needs to reset devices delay",
+    "Unattended Upgrades Shutdown 0 root 900 unattended-upgr shutdown Stop ongoing upgrades delay",
+    "packagekitd 0 root 1200 packagekitd shutdown:sleep Packages are being installed block"
+  ].join("\n");
+  const blockers = linux.parseBlockers(inhibitors);
+  assert.strictEqual(blockers.length, 1, "seul un verrou BLOQUANT sur l'extinction compte");
+  assert.ok(/packagekitd/.test(blockers[0]));
+  console.log("  OK extinction : causes d'un refus identifiees");
+}

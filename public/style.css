@@ -3129,3 +3129,28 @@ body.editing .grid-stack-item-content.tile-transparent {
 .th-issue.th-good { border-left-color: var(--ok); }
 .th-save-hint { color: var(--danger); }
 .btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Bandeau du tableau de bord : separateur avant la sortie (1.111.1).
+   Dashboard bar: separator before the exit button. */
+.dash-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 4px;
+  background: var(--tile-edge);
+}
+
+/* Refus d'extinction / shutdown refused */
+.shutdown-denied-body { padding: 0 18px 12px; }
+.shutdown-denied-cmd,
+.shutdown-denied-detail {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+}
+.shutdown-denied-detail { user-select: text; color: var(--muted); }

@@ -248,17 +248,125 @@ function exitToDesktop() {
    desktop. Useless on the kiosk (nobody to ask) and redundant with the
    first case, but it catches in-between setups (graphical session
    without the default rule). */
+/* Diagnostic d'un refus (1.111.1). Le message d'erreur etait le meme
+   quelle que soit la cause, et le detail retenait l'echec de pkexec --
+   le dernier recours, qui ne PEUT pas marcher sous le service (setuid
+   neutralise par NoNewPrivileges) -- masquant celui de systemctl. On
+   demande maintenant a polkit, action par action, ce qui est refuse :
+     - power-off                 : la regle PiBoard est absente ou vise
+                                   un autre utilisateur. Cas typique :
+                                   Pi installe avant la 1.104.0 puis mis
+                                   a jour -- les mises a jour ne touchent
+                                   jamais /etc ;
+     - power-off-multiple-sessions : un AUTRE utilisateur a une session
+                                   ouverte (SSH, bureau...) ;
+     - power-off-ignore-inhibit  : un programme bloque l'extinction.
+   `classifyShutdownFailure` est pure, testee hors ligne.
+
+   Diagnosing a refusal (1.111.1). The error message was the same
+   whatever the cause, and the detail kept pkexec's failure -- the last
+   resort, which CANNOT work under the service -- hiding systemctl's. We
+   now ask polkit, action by action, what is refused. */
+const POWER_ACTIONS = {
+  powerOff: "org.freedesktop.login1.power-off",
+  multi: "org.freedesktop.login1.power-off-multiple-sessions",
+  inhibit: "org.freedesktop.login1.power-off-ignore-inhibit"
+};
+
+function classifyShutdownFailure(d) {
+  const pk = d.pk || {};
+  if (pk.powerOff === false) return "no-rule";
+  if ((d.otherUsers || []).length && pk.multi !== true) return "multiple-sessions";
+  if ((d.blockers || []).length && pk.inhibit !== true) return "inhibited";
+  if (pk.powerOff == null && /not authorized|access denied|interactive authentication required/i.test(d.error || "")) return "no-rule";
+  return "unknown";
+}
+
+/* `loginctl list-sessions --no-legend` : colonnes SESSION UID USER ...
+   Utilisateurs AUTRES que celui du service ayant une session. */
+function parseOtherUsers(text, me) {
+  const out = new Set();
+  for (const line of String(text || "").split("\n")) {
+    const cols = line.trim().split(/\s+/);
+    if (cols.length >= 3 && /^\d+$/.test(cols[1]) && cols[2] !== me) out.add(cols[2]);
+  }
+  return [...out];
+}
+
+/* `systemd-inhibit --list --no-legend --no-pager` : WHO UID USER PID COMM
+   WHAT WHY MODE. Verrous BLOQUANTS portant sur l'extinction. */
+function parseBlockers(text) {
+  const out = [];
+  for (const line of String(text || "").split("\n")) {
+    const cols = line.trim().split(/\s+/);
+    if (cols.length < 6 || cols[cols.length - 1] !== "block") continue;
+    if (!cols.some((c) => c.split(":").includes("shutdown"))) continue;
+    out.push(cols.join(" "));
+  }
+  return out;
+}
+
+function runCapture(cmd, args, timeout) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeout || 8000 }, (err, stdout, stderr) => {
+      resolve({ err, code: err ? (typeof err.code === "number" ? err.code : -1) : 0, stdout: String(stdout || ""), stderr: String(stderr || "") });
+    });
+  });
+}
+
+async function diagnoseShutdown(systemctlError) {
+  const me = require("os").userInfo().username;
+  const pk = {};
+  for (const [key, action] of Object.entries(POWER_ACTIONS)) {
+    // pkcheck : 0 = autorise ; 1, 2, 3 = refuse / challenge ; absent = inconnu.
+    const r = await runCapture("pkcheck", ["--action-id", action, "--process", String(process.pid)]);
+    if (r.err && r.err.code === "ENOENT") { pk[key] = null; continue; }
+    pk[key] = r.code === 0;
+  }
+  const sessions = await runCapture("loginctl", ["list-sessions", "--no-legend", "--no-pager"]);
+  const inhib = await runCapture("systemd-inhibit", ["--list", "--no-legend", "--no-pager"]);
+  const d = {
+    error: systemctlError,
+    pk,
+    user: me,
+    otherUsers: parseOtherUsers(sessions.stdout, me),
+    blockers: parseBlockers(inhib.stdout)
+  };
+  d.cause = classifyShutdownFailure(d);
+  return d;
+}
+
+function fixScriptPath() {
+  return require("path").join(__dirname, "..", "..", "install", "enable-poweroff.sh");
+}
+
 function shutdown() {
   return new Promise((resolve) => {
-    execFile("systemctl", ["poweroff"], { timeout: 10000 }, (err) => {
+    execFile("systemctl", ["poweroff"], { timeout: 10000 }, async (err, _out, stderr) => {
       if (!err) return resolve({ ok: true, method: "logind" });
-      execFile("pkexec", ["systemctl", "poweroff"], { timeout: 60000 }, (err2) => {
-        if (!err2) return resolve({ ok: true, method: "pkexec" });
-        resolve({
-          ok: false,
-          reason: "not-permitted",
-          detail: String((err2 && err2.message) || (err && err.message) || "")
-        });
+      const sysErr = String(stderr || err.message || "").trim();
+      /* pkexec n'a de sens qu'avec une session graphique (fenetre de mot
+         de passe). Sous le service systemd il echoue toujours : on ne
+         l'essaie que hors service (application de bureau).
+         pkexec only makes sense with a graphical session (password
+         window). Under the systemd service it always fails: only tried
+         outside the service (desktop application). */
+      if (!process.env.INVOCATION_ID) {
+        const r = await runCapture("pkexec", ["systemctl", "poweroff"], 60000);
+        if (!r.err) return resolve({ ok: true, method: "pkexec" });
+      }
+      let diag = { cause: "unknown", error: sysErr };
+      try { diag = await diagnoseShutdown(sysErr); } catch (e) { /* diagnostic best effort */ }
+      resolve({
+        ok: false,
+        reason: "not-permitted",
+        cause: diag.cause,
+        detail: sysErr,
+        user: diag.user,
+        otherUsers: diag.otherUsers || [],
+        blockers: diag.blockers || [],
+        fixScript: fixScriptPath(),
+        fixScriptExists: require("fs").existsSync(fixScriptPath())
       });
     });
   });
@@ -927,6 +1035,9 @@ module.exports = {
   exitKiosk,
   exitToDesktop,
   shutdown,
+  classifyShutdownFailure,
+  parseOtherUsers,
+  parseBlockers,
   updateSupport,
   restartServer,
   gpuUsage,
