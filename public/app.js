@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.110.3
+   Version 1.111.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -110,7 +110,16 @@
        not reimplement it: they supply their media id, the section that
        concerns them, and what to refresh once the image has been copied
        into their folder. */
-    openLibrary(target, section, onPicked) { openLibrary(target, section, onPicked); }
+    openLibrary(target, section, onPicked) { openLibrary(target, section, onPicked); },
+    /* Ton ("dark" / "light") de la surface ou se trouve un element :
+       une page ou un volet peut avoir son propre theme. Les widgets
+       l'utilisent au lieu de lire <body> directement.
+       Tone of the surface an element sits on: a page or drawer may have
+       its own theme. Widgets use this instead of reading <body>. */
+    toneOf(el) {
+      const host = el && el.closest ? el.closest("[data-tone]") : null;
+      return (host && host.dataset.tone) || document.body.dataset.theme || "dark";
+    }
   };
 
   /* ---------- Petites aides / small helpers ---------- */
@@ -692,43 +701,175 @@
     return { sunrise, sunset };
   }
 
+  /* ============================================================
+     Themes de couleurs (1.111.0)
+     ============================================================
+     Le catalogue, les calculs et le garde-fou de lisibilite sont dans
+     themes.js (module pur, teste hors ligne). Ici : l'APPLICATION des
+     jetons au bon endroit.
+       - theme du board : sur <body>, donc partout (tuiles, volets,
+         fenetres, barre d'outils) ;
+       - theme d'une page (mode tableau de bord) ou d'un volet (mode
+         classique) : sur le conteneur de la page ou du volet, qui
+         redefinit les variables pour ses seuls descendants ;
+       - couleur personnalisee d'une tuile : inchangee, elle l'emporte
+         toujours.
+     Le reglage Jour / Nuit / Auto choisit la variante ; un theme a
+     variante unique l'ignore.
+
+     Colour themes. Catalogue, maths and readability guard live in
+     themes.js (pure module, tested offline). Here: APPLYING the tokens
+     in the right place -- board theme on <body> (everywhere), page or
+     drawer theme on that container only (it redefines the variables for
+     its descendants), a tile's custom colour still wins. Day / Night /
+     Auto picks the variant; a single-variant theme ignores it. */
+  const TH = window.PiBoardThemes;
   const DEFAULT_COLORS = {
     dark: { bg: "#0B0E14", tile: "#141926" },
     light: { bg: "#EFEDE7", tile: "#FFFFFF" }
   };
+  const THEME_VAR_NAMES = Object.values(TH.CSS_VARS);
+  const drawerThemes = { left: null, top: null, right: null };
+  // Apercu en cours (selecteur ou editeur) : remplace temporairement le
+  // theme d'une cible sans rien enregistrer.
+  // Preview in progress (picker or editor): temporarily replaces a
+  // target's theme without saving anything.
+  let themePreview = null; // { target, theme (objet construit) | null = heriter, mode }
 
   function currentColors() {
-    const c = settings.colors || {};
+    const t = TH.piboardTheme(settings.colors);
     return {
-      dark: Object.assign({}, DEFAULT_COLORS.dark, c.dark),
-      light: Object.assign({}, DEFAULT_COLORS.light, c.light)
+      dark: { bg: t.dark.bg, tile: t.dark.tile },
+      light: { bg: t.light.bg, tile: t.light.tile }
     };
   }
 
-  function applyTheme() {
-    let theme = settings.theme;
-    if (theme === "auto") {
+  function userThemes() {
+    const list = Array.isArray(settings && settings.userThemes) ? settings.userThemes : [];
+    return list.map(TH.sanitizeUserTheme).filter(Boolean).map(TH.build);
+  }
+
+  function allThemes() {
+    return [TH.piboardTheme(settings && settings.colors)]
+      .concat(TH.builtinThemes().filter((t) => t.id !== "piboard"))
+      .concat(userThemes());
+  }
+
+  function themeById(id) {
+    if (!id) return null;
+    return allThemes().find((t) => t.id === id) || null;
+  }
+
+  function themeName(t) {
+    if (!t) return i18n.t("theme.inherit");
+    return (t.name && (t.name[i18n.lang] || t.name.fr || t.name.en)) || t.id;
+  }
+
+  function resolvedMode() {
+    let mode = settings.theme;
+    if (mode === "auto") {
       const now = new Date();
       const { sunrise, sunset } = solarTimes(now, settings.latitude, settings.longitude);
       const h = now.getHours() + now.getMinutes() / 60;
-      theme = (h >= sunrise && h < sunset) ? "light" : "dark";
+      mode = (h >= sunrise && h < sunset) ? "light" : "dark";
     }
-    document.body.dataset.theme = theme;
-    // Couleurs personnalisees du fond et des tuiles / custom board & tile colors
-    const colors = currentColors()[theme];
-    document.body.style.setProperty("--bg", colors.bg);
-    document.body.style.setProperty("--tile", colors.tile);
+    return mode === "light" ? "light" : "dark";
+  }
+
+  function setThemeVars(el, theme, mode) {
+    const v = TH.variant(theme, mode);
+    const vars = TH.toCssVars(v, theme.style);
+    for (const [k, val] of Object.entries(vars)) el.style.setProperty(k, val);
+    const tone = TH.toneOf(theme, mode);
+    el.dataset.tone = tone;
+    el.style.colorScheme = tone;
+    return tone;
+  }
+
+  function clearThemeVars(el) {
+    for (const k of THEME_VAR_NAMES) el.style.removeProperty(k);
+    delete el.dataset.tone;
+    el.style.colorScheme = "";
+    delete el.dataset.themeId;
+    el.classList.remove("pb-themed");
+  }
+
+  /* Cibles : { kind: "board" } | { kind: "page", index } | { kind: "drawer", side } */
+  function sameTarget(a, b) {
+    return !!a && !!b && a.kind === b.kind && a.index === b.index && a.side === b.side;
+  }
+
+  function targetThemeId(target) {
+    if (target.kind === "board") return settings.themeId || "piboard";
+    if (target.kind === "drawer") return drawerThemes[target.side] || null;
+    const p = target.index === 0 ? mainPage : pages[target.index - 1];
+    return (p && p.themeId) || null;
+  }
+
+  function targetElement(target) {
+    if (target.kind === "board") return document.body;
+    if (target.kind === "drawer") { const d = drawers.get(target.side); return d ? d.el : null; }
+    const p = pageAt(target.index);
+    return p ? p.el : null;
+  }
+
+  function targetLabel(target) {
+    if (target.kind === "board") return i18n.t("theme.target.board");
+    if (target.kind === "drawer") return i18n.t("theme.drawerFull." + target.side);
+    const p = pageAt(target.index);
+    return (p && p.name) || (i18n.t("dash.page") + " " + (target.index + 1));
+  }
+
+  function allTargets() {
+    const out = [{ kind: "board" }];
+    for (let i = 0; i < pageCount(); i++) out.push({ kind: "page", index: i });
+    for (const side of Object.keys(drawerThemes)) out.push({ kind: "drawer", side });
+    return out;
+  }
+
+  /* Applique TOUS les themes : board, pages, volets. Idempotent.
+     Applies ALL themes: board, pages, drawers. Idempotent. */
+  function applyTheme() {
+    const baseMode = resolvedMode();
+    for (const target of allTargets()) {
+      const el = targetElement(target);
+      if (!el) continue;
+      const preview = themePreview && sameTarget(themePreview.target, target) ? themePreview : null;
+      const mode = preview && preview.mode ? preview.mode : baseMode;
+      let theme;
+      if (preview) theme = preview.theme;
+      else theme = themeById(targetThemeId(target));
+      if (target.kind === "board") {
+        theme = theme || TH.piboardTheme(settings.colors);
+        const tone = setThemeVars(el, theme, mode);
+        // data-theme reste la reference historique des widgets et du CSS.
+        // data-theme stays the historical reference for widgets and CSS.
+        el.dataset.theme = tone;
+        el.dataset.themeId = theme.id;
+      } else if (theme) {
+        setThemeVars(el, theme, mode);
+        el.dataset.themeId = theme.id;
+        el.classList.add("pb-themed");
+      } else if (preview && preview.mode) {
+        // Heriter, mais apercu d'une autre variante : on applique celle
+        // du board dans ce mode. / Inheriting while previewing another
+        // variant: apply the board's in that mode.
+        setThemeVars(el, themeById(settings.themeId || "piboard") || TH.piboardTheme(settings.colors), mode);
+        el.classList.add("pb-themed");
+      } else {
+        clearThemeVars(el);
+      }
+    }
     /* Les tuiles transparentes calculent leur couleur de texte d'apres le
-       fond de PAGE : changer de theme, ou de couleur de fond, change donc
-       la reponse. Sans cette reapplication, un passage en mode jour
-       laissait un texte clair sur un fond desormais clair.
-       Transparent tiles compute their text colour from the PAGE
-       background: switching theme, or background colour, therefore
-       changes the answer. Without this reapplication, switching to day
-       mode left light text on a now-light background. */
+       fond REELLEMENT visible derriere elles : tout changement de theme
+       change la reponse.
+       Transparent tiles compute their text colour from the background
+       actually visible behind them: any theme change changes the
+       answer. */
     for (const rec of tiles.values()) {
       if (rec.conf && rec.conf.settings && rec.conf.settings._transparent) applyTileColor(rec);
     }
+    window.dispatchEvent(new CustomEvent("piboard:theme"));
     clearTimeout(themeTimer);
     if (settings.theme === "auto") themeTimer = setTimeout(applyTheme, 60000);
   }
@@ -884,24 +1025,35 @@
      "rgb(r, g, b)": we convert it before computing its luminance, as
      `relLuminance` expects hexadecimal. Failing a usable measurement, we
      fall back on the declared theme -- never on a silent guess. */
-  function pageIsDark() {
-    let measured = null;
-    try {
-      const surface = (typeof boardEl === "function" && boardEl()) || document.body;
-      measured = getComputedStyle(surface).backgroundColor;
-    } catch (e) { /* pas encore en page / not laid out yet */ }
-    const rgb = String(measured || "").match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
-    if (rgb) {
-      const hex = "#" + [1, 2, 3].map((i) => Number(rgb[i]).toString(16).padStart(2, "0")).join("");
-      // Un fond totalement transparent ne dit rien de ce qu'on voit :
-      // on l'ecarte plutot que de le lire comme du noir.
-      // A fully transparent background says nothing about what is seen:
-      // we discard it rather than read it as black.
-      const alpha = String(measured).match(/^rgba\([^)]*,\s*([\d.]+)\)$/);
-      if (!alpha || Number(alpha[1]) > 0.1) return relLuminance(hex) < 0.5;
+  function pageIsDark(rec) {
+    /* Surface REELLEMENT derriere la tuile : le conteneur theme le plus
+       proche (page, volet), a defaut le board puis <body>. Depuis les
+       themes par page et par volet, deux tuiles transparentes peuvent
+       reposer sur des fonds opposes.
+       The surface actually behind the tile: the nearest themed container
+       (page, drawer), else the board then <body>. Since per-page and
+       per-drawer themes, two transparent tiles may sit on opposite
+       backgrounds. */
+    const start = rec && rec.el ? rec.el.parentElement : ((typeof boardEl === "function" && boardEl()) || document.body);
+    for (let node = start; node && node.nodeType === 1; node = node.parentElement) {
+      let measured = null;
+      try { measured = getComputedStyle(node).backgroundColor; } catch (e) { /* pas encore en page / not laid out yet */ }
+      const rgb = String(measured || "").match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (rgb) {
+        // Un fond totalement transparent ne dit rien de ce qu'on voit.
+        // A fully transparent background says nothing about what is seen.
+        const alpha = String(measured).match(/^rgba\([^)]*,\s*([\d.]+)\)$/);
+        if (!alpha || Number(alpha[1]) > 0.1) {
+          const hex = "#" + [1, 2, 3].map((i) => Number(rgb[i]).toString(16).padStart(2, "0")).join("");
+          return relLuminance(hex) < 0.5;
+        }
+      }
+      // Faute de mesure (jsdom ne resout pas var()), le ton declare du
+      // conteneur theme fait foi. / Without a measurement (jsdom does not
+      // resolve var()), the themed container's declared tone rules.
+      if (node.dataset && node.dataset.tone) return node.dataset.tone === "dark";
+      if (node === document.body) break;
     }
-    // Le theme est pose sur <body> (voir applyTheme), pas sur la racine.
-    // The theme is set on <body> (see applyTheme), not on the root.
     return document.body.dataset.theme !== "light";
   }
 
@@ -939,7 +1091,7 @@
          ended up on a dark page background and became unreadable. This
          is exactly the same reasoning as for a custom tile colour,
          applied to the right surface. */
-      const palette = pageIsDark() ? LIGHT_TEXT_PALETTE : DARK_TEXT_PALETTE;
+      const palette = pageIsDark(rec) ? LIGHT_TEXT_PALETTE : DARK_TEXT_PALETTE;
       for (const prop of OVERRIDE_PROPS) content.style.setProperty(prop, palette[prop]);
       content.style.color = palette["--text"];
       return;
@@ -1222,6 +1374,16 @@
     for (let i = 0; i < pageCount(); i++) applyPageBackground(i);
   }
 
+  /* Identifiant de theme d'une page ou d'un volet : null = herite du
+     board. Un theme disparu (theme perso supprime) redevient null a
+     l'affichage, via themeById -- l'identifiant, lui, est conserve tel
+     quel pour ne rien perdre si le theme est reimporte.
+     Theme id of a page or drawer: null = inherits the board's. */
+  function normalizeThemeId(v) {
+    const id = typeof v === "string" ? v.trim() : "";
+    return /^[a-z0-9-]{1,40}$/i.test(id) ? id : null;
+  }
+
   function normalizeTransition(t) {
     const src = t && typeof t === "object" ? t : {};
     return {
@@ -1244,7 +1406,7 @@
     if (index <= 0) {
       return { index: 0, id: "main", zone: "board", el: $("board"), grid,
         name: mainPage.name, transition: mainPage.transition,
-        background: mainPage.background };
+        background: mainPage.background, themeIdRaw: mainPage.themeId || null };
     }
     const p = pages[index - 1];
     /* "background" fait partie du descripteur au meme titre que le nom
@@ -1261,7 +1423,7 @@
        page's one, and no background image showed beyond page 1, even
        though it was correctly picked, saved and reloaded. */
     return p ? { index, id: p.id, zone: "page:" + p.id, el: p.el, grid: p.grid,
-      name: p.name, transition: p.transition, background: p.background } : null;
+      name: p.name, transition: p.transition, background: p.background, themeIdRaw: p.themeId || null } : null;
   }
 
   function currentZone() {
@@ -1974,7 +2136,8 @@
       name: (layout.mainPage && typeof layout.mainPage.name === "string") ? layout.mainPage.name : "",
       transition: normalizeTransition(layout.mainPage && layout.mainPage.transition),
       dwellSeconds: normalizeDwell(layout.mainPage && layout.mainPage.dwellSeconds),
-      background: normalizeBackground(layout.mainPage && layout.mainPage.background)
+      background: normalizeBackground(layout.mainPage && layout.mainPage.background),
+      themeId: normalizeThemeId(layout.mainPage && layout.mainPage.themeId)
     };
     const existing = new Map(pages.map((p) => [p.id, p]));
     const next = [];
@@ -1986,6 +2149,7 @@
       page.transition = normalizeTransition(raw.transition);
       page.dwellSeconds = normalizeDwell(raw.dwellSeconds);
       page.background = normalizeBackground(raw.background);
+      page.themeId = normalizeThemeId(raw.themeId);
       page.tiles = Array.isArray(raw.tiles) ? raw.tiles : [];
       next.push(page);
     }
@@ -2144,6 +2308,7 @@
     for (const d of drawers.values()) {
       const saved = layout[d.def.layoutKey] || { [d.def.sizeKey]: d.def.defaultSizePct, tiles: [] };
       applyDrawerSize(d.def.side, saved[d.def.sizeKey] || d.def.defaultSizePct);
+      drawerThemes[d.def.side] = normalizeThemeId(saved.themeId);
       for (const conf of saved.tiles || []) { await mountTile(conf, d.def.zone); anyDrawerTiles = true; }
     }
 
@@ -2152,6 +2317,7 @@
     renderPageIndicator();
     applyDisplayMode();
     applyAllBackgrounds();
+    applyTheme();
     $("boardEmpty").hidden = layout.tiles.length > 0;
     updateOverflow();
     for (const d of drawers.values()) {
@@ -2183,7 +2349,7 @@
       tiles: serializeZone(grid, "board"),
       mainPage: { name: mainPage.name, transition: mainPage.transition,
         dwellSeconds: mainPage.dwellSeconds != null ? mainPage.dwellSeconds : null,
-        background: mainPage.background },
+        background: mainPage.background, themeId: mainPage.themeId || null },
       /* Les pages sont enregistrees meme en mode classique : basculer
          d'un mode a l'autre ne doit rien detruire, et une bascule faite
          par erreur doit pouvoir etre annulee sans perte.
@@ -2196,12 +2362,14 @@
         transition: p.transition,
         dwellSeconds: p.dwellSeconds != null ? p.dwellSeconds : null,
         background: p.background,
+        themeId: p.themeId || null,
         tiles: p.grid ? serializeZone(p.grid, "page:" + p.id) : (p.tiles || [])
       }))
     };
     for (const d of drawers.values()) {
       out[d.def.layoutKey] = {
         [d.def.sizeKey]: d.sizePct,
+        themeId: drawerThemes[d.def.side] || null,
         tiles: serializeZone(d.grid, d.def.zone)
       };
     }
@@ -4491,6 +4659,8 @@
                title="${escapeHtmlAttr(i18n.t("settings.pages.dwell"))}">
         <button type="button" class="btn small page-bg${normalizeBackground(p.background).image ? " has-bg" : ""}" data-role="bg"
                 title="${escapeHtmlAttr(i18n.t(normalizeBackground(p.background).image ? "pagebg.btnHas" : "pagebg.btnNone"))}">&#9635;</button>
+        <button type="button" class="btn small page-theme${p.themeIdRaw ? " has-theme" : ""}" data-role="theme"
+                title="${escapeHtmlAttr(i18n.t("theme.pageBtn") + " : " + themeName(themeById(p.themeIdRaw)))}">&#9680;</button>
         <button type="button" class="btn small page-del" data-role="del"
                 title="${escapeHtmlAttr(i18n.t("settings.pages.delete"))}">&times;</button>`;
       const target = i === 0 ? mainPage : pages[i - 1];
@@ -4516,6 +4686,7 @@
         scheduleSave();
       });
       onActivate(row.querySelector("[data-role=bg]"), () => openPageBackground(i));
+      onActivate(row.querySelector("[data-role=theme]"), () => openThemePicker({ kind: "page", index: i }));
       if (i > 0) {
         onActivate(row.querySelector("[data-role=del]"), () => deletePage(i));
       }
@@ -4555,6 +4726,7 @@
 
     $("pageBgModal").hidden = false;
     refreshPageBgList();
+    refreshPageBgThemeHint();
   }
 
   function commitPageBackground(patch) {
@@ -4563,6 +4735,7 @@
     target.background = normalizeBackground(Object.assign({}, target.background, patch));
     applyPageBackground(pageBgIndex);
     refreshPageBgList();
+    refreshPageBgThemeHint();
     // La liste des pages, derriere cette fenetre, porte le marqueur
     // "cette page a un fond" : il doit suivre le changement tout de
     // suite. The pages list, behind this window, carries the "this page
@@ -4571,6 +4744,521 @@
     scheduleSave();
   }
 
+
+
+  /* ============================================================
+     Selecteur de themes et editeur (1.111.0)
+     ============================================================
+     Le selecteur est ancre sur le cote et laisse le tableau visible :
+     un clic sur un theme l'applique AUSSITOT a la cible, pour de vrai,
+     mais en simple apercu -- rien n'est enregistre avant « Appliquer »,
+     et « Annuler » rend l'etat d'avant. L'editeur fonctionne de meme :
+     chaque retouche se voit en direct sur la cible.
+
+     The picker is docked on the side and keeps the board visible:
+     clicking a theme applies it AT ONCE to the target, for real, but as
+     a mere preview -- nothing is saved before "Apply", and "Cancel"
+     restores the previous state. The editor works the same way: every
+     tweak shows live on the target. */
+  const themeUi = {
+    target: null,          // cible en cours / current target
+    selected: undefined,   // id choisi (null = heriter) / chosen id (null = inherit)
+    family: "all",
+    mode: null,            // variante forcee pour l'apercu / variant forced for preview
+    hiddenModals: [],
+    editor: null           // { id, isPiboard, isNew, draft, variant }
+  };
+
+  function hideModalsForPreview() {
+    themeUi.hiddenModals = ["settingsModal", "pageBgModal"].filter((id) => $(id) && !$(id).hidden);
+    for (const id of themeUi.hiddenModals) $(id).hidden = true;
+  }
+
+  function restoreHiddenModals() {
+    for (const id of themeUi.hiddenModals) $(id).hidden = false;
+    themeUi.hiddenModals = [];
+  }
+
+  function targetBackgroundFile(target) {
+    if (!target || target.kind !== "page") return "";
+    const p = target.index === 0 ? mainPage : pages[target.index - 1];
+    return p ? normalizeBackground(p.background).image : "";
+  }
+
+  function openThemePicker(target) {
+    themeUi.target = target;
+    themeUi.selected = targetThemeId(target);
+    themeUi.mode = null;
+    const matching = TH.findMatching(allThemes(), targetBackgroundFile(target));
+    themeUi.family = matching.length ? "match" : "all";
+    hideModalsForPreview();
+    $("themeModal").hidden = false;
+    $("themeFor").textContent = targetLabel(target);
+    renderThemePicker();
+  }
+
+  function previewTheme() {
+    const theme = themeUi.selected ? themeById(themeUi.selected) : null;
+    themePreview = { target: themeUi.target, theme: themeUi.target.kind === "board" ? (theme || TH.piboardTheme(settings.colors)) : theme, mode: themeUi.mode };
+    applyTheme();
+  }
+
+  function closeThemePicker(apply) {
+    const target = themeUi.target;
+    themePreview = null;
+    if (apply && target) {
+      const id = themeUi.selected || null;
+      if (target.kind === "board") {
+        settings.themeId = id || "piboard";
+        apiPut("/api/settings", { themeId: settings.themeId }).catch((e) => console.error("[piboard] theme save failed", e));
+      } else if (target.kind === "drawer") {
+        drawerThemes[target.side] = id;
+        scheduleSave();
+      } else {
+        const p = target.index === 0 ? mainPage : pages[target.index - 1];
+        if (p) p.themeId = id;
+        scheduleSave();
+      }
+    }
+    applyTheme();
+    $("themeModal").hidden = true;
+    restoreHiddenModals();
+    refreshThemeButtons();
+  }
+
+  /* Vignette : un mini tableau peint avec les jetons du theme.
+     Thumbnail: a mini board painted with the theme's tokens. */
+  function themeSwatchHtml(theme, mode) {
+    const v = TH.variant(theme, mode);
+    const st = theme.style;
+    const r = Math.max(0, Math.round(st.radius / 3));
+    const b = st.border ? Math.max(1, Math.round(st.border / 1.5)) : 0;
+    const tile = (w) => `<span class="th-sw-tile" style="flex:${w};background:${v.tile};border:${b}px solid ${v.tileEdge};border-radius:${r}px">
+        <i style="background:${v.text}"></i><i style="background:${v.muted};width:55%"></i>
+        <em style="background:${v.accent}"></em></span>`;
+    return `<span class="th-sw" style="background:${v.bg};font-family:${escapeHtmlAttr(TH.FONTS[st.font])}">
+      <span class="th-sw-row">${tile(2)}${tile(1)}</span>
+      <span class="th-sw-row">${tile(1)}${tile(1)}${tile(1)}</span>
+      <span class="th-sw-aa" style="color:${v.text}">Aa</span></span>`;
+  }
+
+  function renderThemePicker() {
+    const target = themeUi.target;
+    const mode = themeUi.mode || resolvedMode();
+    const themes = allThemes();
+    const matching = TH.findMatching(themes, targetBackgroundFile(target));
+    const families = ["all"].concat(matching.length ? ["match"] : [], TH.FAMILIES,
+      userThemes().length ? ["user"] : []);
+    $("themeFamilies").innerHTML = families.map((f) =>
+      `<button type="button" class="chip${f === themeUi.family ? " active" : ""}" data-family="${f}">${escapeHtml(i18n.t("theme.family." + f))}</button>`
+    ).join("");
+    $("themeFamilies").querySelectorAll("[data-family]").forEach((el) => onActivate(el, () => {
+      themeUi.family = el.dataset.family;
+      renderThemePicker();
+    }));
+
+    let list = themes;
+    if (themeUi.family === "match") list = matching;
+    else if (themeUi.family === "user") list = themes.filter((t) => t.user);
+    else if (themeUi.family !== "all") list = themes.filter((t) => t.families.includes(themeUi.family));
+
+    const cards = [];
+    if (target.kind !== "board") {
+      const inherited = themeById(settings.themeId || "piboard") || TH.piboardTheme(settings.colors);
+      cards.push(`<button type="button" class="th-card th-inherit${themeUi.selected == null ? " selected" : ""}" data-id="">
+        ${themeSwatchHtml(inherited, mode)}
+        <span class="th-name">${escapeHtml(i18n.t("theme.inherit"))}</span>
+        <span class="th-meta">${escapeHtml(themeName(inherited))}</span></button>`);
+    }
+    for (const t of list) {
+      const both = t.dark && t.light;
+      const sel = (themeUi.selected || (target.kind === "board" ? "piboard" : null)) === t.id;
+      cards.push(`<button type="button" class="th-card${sel ? " selected" : ""}" data-id="${escapeHtmlAttr(t.id)}">
+        ${themeSwatchHtml(t, mode)}
+        <span class="th-name">${escapeHtml(themeName(t))}</span>
+        <span class="th-meta">${escapeHtml(both ? i18n.t("theme.dayNight") : i18n.t(TH.toneOf(t, mode) === "dark" ? "theme.fixedDark" : "theme.fixedLight"))}${t.user ? " \u00b7 " + escapeHtml(i18n.t("theme.mine")) : ""}</span></button>`);
+    }
+    $("themeGrid").innerHTML = cards.join("") || `<p class="field-hint">${escapeHtml(i18n.t("theme.none"))}</p>`;
+    $("themeGrid").querySelectorAll(".th-card").forEach((el) => onActivate(el, () => {
+      themeUi.selected = el.dataset.id || null;
+      $("themeGrid").querySelectorAll(".th-card").forEach((c) => c.classList.toggle("selected", c === el));
+      previewTheme();
+      updateThemePickerButtons();
+    }));
+    $("themeModeDark").classList.toggle("active", mode === "dark");
+    $("themeModeLight").classList.toggle("active", mode === "light");
+    updateThemePickerButtons();
+  }
+
+  function updateThemePickerButtons() {
+    const t = themeUi.selected ? themeById(themeUi.selected) : (themeUi.target.kind === "board" ? themeById("piboard") : null);
+    $("themeEdit").disabled = !t || !(t.user || t.id === "piboard");
+    $("themeDuplicate").disabled = !t;
+    $("themeExport").disabled = !t;
+    const sel = themeUi.selected || (themeUi.target.kind === "board" ? "piboard" : null);
+    $("themeCurrent").textContent = i18n.t("theme.selected") + " " + (sel ? themeName(themeById(sel)) : i18n.t("theme.inherit"));
+  }
+
+  /* ---------- Editeur / editor ---------- */
+
+  const EDIT_KEYS = ["bg", "tile", "tileEdge", "text", "muted", "faint", "accent", "onAccent", "fieldBg", "ok", "warn", "danger"];
+
+  function plainTheme(t) {
+    return {
+      id: t.id, name: Object.assign({}, t.name),
+      dark: t.dark ? Object.assign({}, t.dark) : null,
+      light: t.light ? Object.assign({}, t.light) : null,
+      style: Object.assign({}, t.style)
+    };
+  }
+
+  function newUserId() {
+    return "u-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  }
+
+  function openThemeEditor(source, how) {
+    // how: "edit" | "duplicate" | "new" | "import"
+    let draft = plainTheme(source);
+    const isPiboard = how === "edit" && source.id === "piboard";
+    if (how !== "edit") {
+      draft.id = newUserId();
+      if (how === "duplicate") {
+        draft.name = { fr: themeName(source) + " (copie)", en: (source.name.en || themeName(source)) + " (copy)" };
+      }
+    }
+    if (!draft.dark && !draft.light) draft.dark = TH.derive({}, "dark");
+    themeUi.editor = {
+      id: draft.id, isPiboard, isNew: how !== "edit", draft,
+      variant: (themeUi.mode || resolvedMode()) === "light" && draft.light ? "light" : (draft.dark ? "dark" : "light")
+    };
+    $("themeModal").hidden = true;
+    $("themeEditor").hidden = false;
+    renderThemeEditor();
+    previewDraft();
+  }
+
+  function draftTheme() {
+    const e = themeUi.editor;
+    return TH.build({ id: e.draft.id, name: e.draft.name, dark: e.draft.dark, light: e.draft.light, style: e.draft.style, user: !e.isPiboard });
+  }
+
+  function previewDraft() {
+    const e = themeUi.editor;
+    themePreview = { target: themeUi.target, theme: draftTheme(), mode: e.variant };
+    applyTheme();
+    renderReadability();
+  }
+
+  function renderThemeEditor() {
+    const e = themeUi.editor;
+    const d = e.draft;
+    $("thEdName").value = themeName(d);
+    $("thEdName").disabled = e.isPiboard;
+    $("thEdVarDark").classList.toggle("active", e.variant === "dark");
+    $("thEdVarLight").classList.toggle("active", e.variant === "light");
+    const v = d[e.variant];
+    $("thEdHasVariant").checked = !!v;
+    $("thEdHasVariant").disabled = e.isPiboard || (!!v && !d[e.variant === "dark" ? "light" : "dark"]);
+    $("thEdColors").hidden = !v;
+    if (v) {
+      $("thEdColors").innerHTML = EDIT_KEYS.map((k) => `
+        <label class="th-ed-color"><input type="color" data-key="${k}" value="${escapeHtmlAttr(String(v[k]).slice(0, 7))}">
+        <span>${escapeHtml(i18n.t("theme.token." + k))}</span></label>`).join("");
+      $("thEdColors").querySelectorAll("input[type=color]").forEach((inp) => inp.addEventListener("input", () => {
+        v[inp.dataset.key] = inp.value.toUpperCase();
+        if (inp.dataset.key === "accent") {
+          v.onAccent = TH.onColor(v.accent);
+          const oa = $("thEdColors").querySelector('[data-key="onAccent"]');
+          if (oa) oa.value = v.onAccent;
+        }
+        delete v.overlay;
+        previewDraft();
+      }));
+    }
+    $("thEdRadius").value = d.style.radius;
+    $("thEdRadiusVal").textContent = d.style.radius + " px";
+    $("thEdBorder").value = d.style.border;
+    $("thEdBorderVal").textContent = d.style.border + " px";
+    $("thEdFont").innerHTML = TH.FONT_KEYS.map((k) =>
+      `<option value="${k}" ${d.style.font === k ? "selected" : ""} style="font-family:${escapeHtmlAttr(TH.FONTS[k])}">${escapeHtml(i18n.t("theme.font." + k))}</option>`).join("");
+    $("thEdDelete").hidden = e.isNew || e.isPiboard;
+    $("thEdReset").hidden = !e.isPiboard;
+    renderReadability();
+  }
+
+  function renderReadability() {
+    const e = themeUi.editor;
+    if (!e) return;
+    const t = draftTheme();
+    const out = [];
+    let blocking = false;
+    for (const mode of ["dark", "light"]) {
+      if (!t[mode]) continue;
+      for (const is of TH.checkReadability(t[mode])) {
+        if (is.level === "error") blocking = true;
+        out.push(`<li class="th-issue th-${is.level}">${escapeHtml(i18n.t("theme.variant." + mode))} \u2014 ${escapeHtml(i18n.t("theme.check." + is.id))}
+          <span>${is.ratio} : 1 (${escapeHtml(i18n.t("theme.check.min"))} ${is.min})</span></li>`);
+      }
+    }
+    $("thEdChecks").innerHTML = out.length ? out.join("")
+      : `<li class="th-issue th-good">${escapeHtml(i18n.t("theme.check.allGood"))}</li>`;
+    $("thEdSave").disabled = blocking;
+    $("thEdFix").disabled = !out.length;
+    $("thEdSaveHint").hidden = !blocking;
+  }
+
+  function closeThemeEditor(saved) {
+    $("themeEditor").hidden = true;
+    const e = themeUi.editor;
+    themeUi.editor = null;
+    if (saved && e) themeUi.selected = e.isPiboard ? (themeUi.target.kind === "board" ? "piboard" : "piboard") : e.id;
+    $("themeModal").hidden = false;
+    renderThemePicker();
+    previewTheme();
+  }
+
+  async function saveThemeEditor() {
+    const e = themeUi.editor;
+    const t = draftTheme();
+    // Le voile est toujours recalcule : il n'est pas editable.
+    // The overlay is always recomputed: it is not editable.
+    const clean = (v) => { if (!v) return null; const o = Object.assign({}, v); delete o.overlay; return o; };
+    if (e.isPiboard) {
+      settings.colors = { dark: clean(t.dark), light: clean(t.light), style: t.style };
+      await apiPut("/api/settings", { colors: settings.colors }).catch((err) => console.error("[piboard] theme save failed", err));
+    } else {
+      const name = String($("thEdName").value || "").trim() || i18n.t("theme.untitled");
+      const entry = TH.sanitizeUserTheme({ id: e.id, name: { fr: name, en: name }, dark: clean(t.dark), light: clean(t.light), style: t.style });
+      if (!entry) return;
+      const list = (Array.isArray(settings.userThemes) ? settings.userThemes : []).filter((x) => x && x.id !== e.id);
+      list.push(entry);
+      settings.userThemes = list;
+      await apiPut("/api/settings", { userThemes: list }).catch((err) => console.error("[piboard] theme save failed", err));
+    }
+    closeThemeEditor(true);
+  }
+
+  async function deleteUserTheme() {
+    const e = themeUi.editor;
+    if (!e || e.isPiboard || !window.confirm(i18n.t("theme.deleteConfirm"))) return;
+    settings.userThemes = (settings.userThemes || []).filter((x) => x && x.id !== e.id);
+    await apiPut("/api/settings", { userThemes: settings.userThemes }).catch(() => null);
+    if (themeUi.selected === e.id) themeUi.selected = themeUi.target.kind === "board" ? "piboard" : null;
+    themeUi.editor = null;
+    $("themeEditor").hidden = true;
+    $("themeModal").hidden = false;
+    renderThemePicker();
+    previewTheme();
+  }
+
+  /* Pixels d'une image, reduite a 96x96 : assez pour une palette, et
+     rapide meme sur un Raspberry Pi. Remplacable par les tests (jsdom
+     ne dessine pas).
+     An image's pixels, shrunk to 96x96: enough for a palette, and fast
+     even on a Raspberry Pi. Replaceable by tests (jsdom does not draw). */
+  window.PiBoard._imagePixels = function (url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const c = document.createElement("canvas");
+          c.width = 96; c.height = 96;
+          const g = c.getContext("2d");
+          g.drawImage(img, 0, 0, 96, 96);
+          resolve(g.getImageData(0, 0, 96, 96).data);
+        } catch (err) { reject(err); }
+      };
+      img.onerror = () => reject(new Error("image"));
+      img.src = url;
+    });
+  };
+
+  async function themeFromImage(url, label) {
+    const status = $("thEdImgStatus");
+    status.hidden = false;
+    status.textContent = i18n.t("theme.image.working");
+    try {
+      const data = await window.PiBoard._imagePixels(url);
+      const made = TH.themeFromPalette(TH.extractPalette(data, 6), label);
+      if (!made) throw new Error("palette");
+      const e = themeUi.editor;
+      e.draft.dark = made.dark;
+      e.draft.light = made.light;
+      if (!e.isPiboard) e.draft.name = made.name;
+      e.variant = made.preferred;
+      status.hidden = true;
+      renderThemeEditor();
+      previewDraft();
+    } catch (err) {
+      console.warn("[piboard] theme depuis image", err);
+      status.textContent = i18n.t("theme.image.failed");
+    }
+  }
+
+  function exportTheme(t) {
+    const data = plainTheme(t);
+    delete data.id;
+    const blob = new Blob([JSON.stringify({ piboardTheme: 1, theme: data }, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "piboard-theme-" + String(themeName(t)).replace(/[^\w-]+/g, "_") + ".json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  async function importTheme(file) {
+    try {
+      const raw = JSON.parse(await file.text());
+      const src = raw && raw.theme ? raw.theme : raw;
+      const entry = TH.sanitizeUserTheme(Object.assign({}, src, { id: newUserId() }));
+      if (!entry) throw new Error("invalid");
+      openThemeEditor(TH.build(entry), "import");
+    } catch (err) {
+      window.alert(i18n.t("theme.importFailed"));
+    }
+  }
+
+  /* Libelles des boutons de theme dans les reglages (board, pages,
+     volets) : ils affichent le theme en vigueur.
+     Theme button labels in the settings (board, pages, drawers). */
+  function refreshThemeButtons() {
+    const cur = $("setThemeName");
+    if (cur) cur.textContent = themeName(themeById(settings.themeId || "piboard") || TH.piboardTheme(settings.colors));
+    for (const side of Object.keys(drawerThemes)) {
+      const b = document.querySelector(`[data-drawer-theme="${side}"]`);
+      if (b) {
+        const t = themeById(drawerThemes[side]);
+        b.textContent = t ? themeName(t) : i18n.t("theme.inherit");
+        b.classList.toggle("has-theme", !!t);
+      }
+    }
+    if (!$("settingsModal").hidden || themeUi.hiddenModals.includes("settingsModal")) renderPagesEditor();
+    refreshPageBgThemeHint();
+  }
+
+  /* Suggestion dans la fenetre du fond de page : un theme assorti a
+     l'image choisie. Rien n'est applique d'office.
+     Suggestion in the page background window: a theme matching the
+     chosen image. Nothing is applied automatically. */
+  function refreshPageBgThemeHint() {
+    const box = $("pageBgThemeHint");
+    if (!box || $("pageBgModal").hidden) return;
+    const target = { kind: "page", index: pageBgIndex };
+    const matches = TH.findMatching(allThemes(), targetBackgroundFile(target));
+    const current = targetThemeId(target);
+    const show = matches.length && !matches.some((m) => m.id === current);
+    box.hidden = !show;
+    if (show) $("pageBgThemeHintText").textContent = i18n.t("pagebg.themeHint") + " " + matches.map(themeName).join(", ");
+  }
+
+  function wireThemeUi() {
+    onActivate($("themeClose"), () => closeThemePicker(false));
+    onActivate($("themeCancel"), () => closeThemePicker(false));
+    onActivate($("themeApply"), () => closeThemePicker(true));
+    onActivate($("themeModeDark"), () => { themeUi.mode = "dark"; renderThemePicker(); previewTheme(); });
+    onActivate($("themeModeLight"), () => { themeUi.mode = "light"; renderThemePicker(); previewTheme(); });
+    const selectedTheme = () => themeById(themeUi.selected || (themeUi.target.kind === "board" ? "piboard" : "")) ;
+    onActivate($("themeNew"), () => openThemeEditor(TH.build({ id: "new", n: [i18n.t("theme.untitled"), i18n.t("theme.untitled")],
+      dark: TH.variant(TH.piboardTheme(settings.colors), "dark"), light: TH.variant(TH.piboardTheme(settings.colors), "light"), s: TH.DEFAULT_STYLE }), "new"));
+    onActivate($("themeEdit"), () => { const t = selectedTheme(); if (t) openThemeEditor(t, "edit"); });
+    onActivate($("themeDuplicate"), () => { const t = selectedTheme(); if (t) openThemeEditor(t, "duplicate"); });
+    onActivate($("themeExport"), () => { const t = selectedTheme(); if (t) exportTheme(t); });
+    onActivate($("themeImport"), () => $("themeImportFile").click());
+    $("themeImportFile").addEventListener("change", (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (f) importTheme(f);
+    });
+
+    onActivate($("thEdClose"), () => closeThemeEditor(false));
+    onActivate($("thEdCancel"), () => closeThemeEditor(false));
+    onActivate($("thEdSave"), () => saveThemeEditor());
+    onActivate($("thEdDelete"), () => deleteUserTheme());
+    onActivate($("thEdReset"), () => {
+      const e = themeUi.editor;
+      if (!e || !window.confirm(i18n.t("theme.resetConfirm"))) return;
+      e.draft = plainTheme(TH.piboardTheme(null));
+      renderThemeEditor();
+      previewDraft();
+    });
+    const setVariant = (m) => { themeUi.editor.variant = m; renderThemeEditor(); previewDraft(); };
+    onActivate($("thEdVarDark"), () => setVariant("dark"));
+    onActivate($("thEdVarLight"), () => setVariant("light"));
+    $("thEdHasVariant").addEventListener("change", (ev) => {
+      const e = themeUi.editor;
+      const other = e.variant === "dark" ? "light" : "dark";
+      if (ev.target.checked) {
+        const base = e.draft[other];
+        e.draft[e.variant] = base
+          ? TH.derive({ bg: TH.mix(base.bg, e.variant === "dark" ? "#000000" : "#FFFFFF", 0.85),
+              tile: TH.mix(base.tile, e.variant === "dark" ? "#1A1A1A" : "#FFFFFF", 0.8),
+              text: e.variant === "dark" ? "#EDEFF4" : "#1B1F2A", accent: base.accent }, e.variant)
+          : TH.derive({}, e.variant);
+        e.draft[e.variant] = TH.autoFix(e.draft[e.variant]);
+      } else if (e.draft[other]) {
+        e.draft[e.variant] = null;
+      }
+      renderThemeEditor();
+      previewDraft();
+    });
+    $("thEdName").addEventListener("input", (ev) => {
+      const e = themeUi.editor;
+      e.draft.name = { fr: ev.target.value, en: ev.target.value };
+    });
+    $("thEdRadius").addEventListener("input", (ev) => {
+      themeUi.editor.draft.style.radius = Number(ev.target.value);
+      $("thEdRadiusVal").textContent = ev.target.value + " px";
+      previewDraft();
+    });
+    $("thEdBorder").addEventListener("input", (ev) => {
+      themeUi.editor.draft.style.border = Number(ev.target.value);
+      $("thEdBorderVal").textContent = ev.target.value + " px";
+      previewDraft();
+    });
+    $("thEdFont").addEventListener("change", (ev) => {
+      themeUi.editor.draft.style.font = ev.target.value;
+      previewDraft();
+    });
+    onActivate($("thEdDerive"), () => {
+      const e = themeUi.editor;
+      const v = e.draft[e.variant];
+      if (!v) return;
+      e.draft[e.variant] = TH.derive({ bg: v.bg, tile: v.tile, text: v.text, accent: v.accent }, e.variant);
+      renderThemeEditor();
+      previewDraft();
+    });
+    onActivate($("thEdFix"), () => {
+      const e = themeUi.editor;
+      for (const m of ["dark", "light"]) if (e.draft[m]) e.draft[m] = TH.autoFix(TH.derive(e.draft[m], m));
+      renderThemeEditor();
+      previewDraft();
+    });
+    onActivate($("thEdFromLibrary"), () => {
+      openLibrary(null, "backgrounds", (item) => themeFromImage(item.url, item.name), { pickOnly: true });
+    });
+    onActivate($("thEdFromFile"), () => $("thEdImageFile").click());
+    $("thEdImageFile").addEventListener("change", (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      themeFromImage(url, f.name.replace(/\.[^.]+$/, "")).finally(() => setTimeout(() => URL.revokeObjectURL(url), 2000));
+    });
+    onActivate($("thEdFromPage"), () => {
+      const p = boardEl();
+      const bgImg = p && p.style.backgroundImage;
+      const m = String(bgImg || "").match(/url\("?([^")]+)"?\)/);
+      if (!m) { const st = $("thEdImgStatus"); st.hidden = false; st.textContent = i18n.t("theme.image.noPageBg"); return; }
+      themeFromImage(m[1], decodeURIComponent(m[1].split("/").pop()).replace(/\.[^.]+$/, ""));
+    });
+    onActivate($("thEdExport"), () => exportTheme(draftTheme()));
+
+    onActivate($("setThemeChoose"), () => openThemePicker({ kind: "board" }));
+    document.querySelectorAll("[data-drawer-theme]").forEach((b) =>
+      onActivate(b, () => openThemePicker({ kind: "drawer", side: b.dataset.drawerTheme })));
+    onActivate($("pageBgThemeHintBtn"), () => openThemePicker({ kind: "page", index: pageBgIndex }));
+  }
 
   /* ============================================================
      Bibliotheque d'images
@@ -4598,8 +5286,14 @@
 
   let libraryLoadSeq = 0;
 
-  function openLibrary(target, section, onPicked) {
+  /* `opts.pickOnly` : choisir une image SANS la copier nulle part (le
+     rappel recoit { id, url, file }). Sert a tirer un theme d'un fond.
+     `opts.pickOnly`: pick an image WITHOUT copying it anywhere (the
+     callback receives { id, url, file }). Used to derive a theme from a
+     background. */
+  function openLibrary(target, section, onPicked, opts) {
     libraryState.target = target;
+    libraryState.pickOnly = !!(opts && opts.pickOnly);
     libraryState.onPicked = onPicked || null;
     if (section) libraryState.section = section;
     $("libraryModal").hidden = false;
@@ -4732,6 +5426,12 @@
   }
 
   async function pickLibraryItem(id) {
+    if (libraryState.pickOnly) {
+      const it = libraryState.items.find((x) => x.id === id);
+      closeLibrary();
+      if (it && libraryState.onPicked) libraryState.onPicked({ id, url: it.url, file: it.file, name: it.name });
+      return;
+    }
     if (!libraryState.target) return;
     librarySetStatus(i18n.t("library.copying"));
     try {
@@ -5007,6 +5707,7 @@
     $("setDarkTile").value = colors.dark.tile;
     $("setLightBg").value = colors.light.bg;
     $("setLightTile").value = colors.light.tile;
+    refreshThemeButtons();
     fillScreensaverForm();
     fillDesktopAppForm();
     fillMediaToolsForm();
@@ -5041,10 +5742,14 @@
       immersive: $("setImmersive").checked,
       pageAutoAdvance: $("setPageAuto").checked,
       pageAutoSeconds: Math.max(3, Math.min(3600, Number($("setPageAutoSeconds").value) || 30)),
-      colors: {
-        dark: { bg: $("setDarkBg").value, tile: $("setDarkTile").value },
-        light: { bg: $("setLightBg").value, tile: $("setLightTile").value }
-      },
+      /* Les quatre pastilles retouchent le theme PiBoard : on fusionne,
+         pour ne pas effacer ce que l'editeur de themes y a regle.
+         The four swatches tweak the PiBoard theme: merge, so as not to
+         wipe what the theme editor set there. */
+      colors: Object.assign({}, settings.colors, {
+        dark: Object.assign({}, settings.colors && settings.colors.dark, { bg: $("setDarkBg").value, tile: $("setDarkTile").value }),
+        light: Object.assign({}, settings.colors && settings.colors.light, { bg: $("setLightBg").value, tile: $("setLightTile").value })
+      }),
       screensaver: collectScreensaverSettings()
     };
     if (pendingCity) {
@@ -7039,6 +7744,7 @@
     $("pageBgDim").addEventListener("input", (e) => commitPageBackground({ dim: e.target.value }));
     onActivate($("tileReset"), () => resetTileSettings());
     onActivate($("libraryClose"), closeLibrary);
+    wireThemeUi();
     onActivate($("libraryAdd"), () => $("libraryFile").click());
     onActivate($("libraryOnline"), showLibraryCatalog);
     $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));

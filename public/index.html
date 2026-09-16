@@ -223,6 +223,10 @@
       </div>
       <div class="page-bg-grid" id="pageBgGrid"></div>
       <p class="field-hint" id="pageBgStatus" hidden></p>
+      <div class="theme-hint" id="pageBgThemeHint" hidden>
+        <span id="pageBgThemeHintText"></span>
+        <button type="button" class="btn small" id="pageBgThemeHintBtn" data-i18n="pagebg.themeHintBtn">Preview…</button>
+      </div>
       <label class="field">
         <span data-i18n="pagebg.mode">Framing</span>
         <select id="pageBgMode">
@@ -246,6 +250,108 @@
     <div class="modal-foot">
       <div class="form-actions">
         <button type="button" class="btn primary" id="pageBgDone" data-i18n="common.close">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Selecteur de themes : ancre a droite, le tableau reste visible pour
+     l'apercu en direct. Rien n'est enregistre avant « Appliquer ».
+     Theme picker: docked right, the board stays visible for the live
+     preview. Nothing is saved before "Apply". -->
+<div class="modal modal-stacked theme-dock" id="themeModal" hidden>
+  <div class="modal-card theme-card">
+    <header class="modal-head">
+      <h2><span data-i18n="theme.title">Theme</span> — <span id="themeFor"></span></h2>
+      <button class="modal-close" id="themeClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="theme-body">
+      <div class="theme-families" id="themeFamilies"></div>
+      <div class="theme-preview-mode">
+        <span data-i18n="theme.previewAs">Preview as</span>
+        <button type="button" class="chip" id="themeModeDark" data-i18n="settings.theme.dark">Night</button>
+        <button type="button" class="chip" id="themeModeLight" data-i18n="settings.theme.light">Day</button>
+      </div>
+      <div class="theme-grid" id="themeGrid"></div>
+    </div>
+    <div class="modal-foot">
+      <p class="field-hint" id="themeCurrent"></p>
+      <div class="theme-tools">
+        <button type="button" class="btn small" id="themeNew" data-i18n="theme.new">New</button>
+        <button type="button" class="btn small" id="themeDuplicate" data-i18n="theme.duplicate">Duplicate</button>
+        <button type="button" class="btn small" id="themeEdit" data-i18n="theme.edit">Edit</button>
+        <button type="button" class="btn small" id="themeImport" data-i18n="theme.import">Import…</button>
+        <button type="button" class="btn small" id="themeExport" data-i18n="theme.export">Export</button>
+        <input type="file" accept="application/json,.json" hidden id="themeImportFile">
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn" id="themeCancel" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn primary" id="themeApply" data-i18n="theme.apply">Apply</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Editeur de theme / theme editor -->
+<div class="modal modal-stacked theme-dock" id="themeEditor" hidden>
+  <div class="modal-card theme-card">
+    <header class="modal-head">
+      <h2 data-i18n="theme.editor">Theme editor</h2>
+      <button class="modal-close" id="thEdClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="theme-body">
+      <label class="field">
+        <span data-i18n="theme.name">Name</span>
+        <input type="text" id="thEdName" maxlength="60">
+      </label>
+      <div class="field">
+        <span data-i18n="theme.fromImage">Start from an image</span>
+        <div class="theme-row">
+          <button type="button" class="btn small" id="thEdFromLibrary" data-i18n="theme.image.library">Library background…</button>
+          <button type="button" class="btn small" id="thEdFromPage" data-i18n="theme.image.page">Current page background</button>
+          <button type="button" class="btn small" id="thEdFromFile" data-i18n="theme.image.file">Image file…</button>
+          <input type="file" accept="image/*" hidden id="thEdImageFile">
+        </div>
+        <small class="field-hint" id="thEdImgStatus" hidden></small>
+      </div>
+      <div class="theme-variant-tabs">
+        <button type="button" class="chip" id="thEdVarDark" data-i18n="theme.variant.dark">Night variant</button>
+        <button type="button" class="chip" id="thEdVarLight" data-i18n="theme.variant.light">Day variant</button>
+        <label class="checkbox"><input type="checkbox" id="thEdHasVariant"> <span data-i18n="theme.variant.exists">This variant exists</span></label>
+      </div>
+      <div class="th-ed-colors" id="thEdColors"></div>
+      <div class="theme-row">
+        <button type="button" class="btn small" id="thEdDerive" data-i18n="theme.derive">Recompute shades</button>
+        <button type="button" class="btn small" id="thEdFix" data-i18n="theme.fix">Fix readability</button>
+      </div>
+      <div class="th-ed-style">
+        <label class="field">
+          <span><span data-i18n="theme.radius">Tile corners</span> <em id="thEdRadiusVal"></em></span>
+          <input type="range" id="thEdRadius" min="0" max="32" step="1">
+        </label>
+        <label class="field">
+          <span><span data-i18n="theme.border">Border width</span> <em id="thEdBorderVal"></em></span>
+          <input type="range" id="thEdBorder" min="0" max="4" step="0.5">
+        </label>
+        <label class="field">
+          <span data-i18n="theme.font">Font</span>
+          <select id="thEdFont"></select>
+        </label>
+      </div>
+      <div class="field">
+        <span data-i18n="theme.readability">Readability</span>
+        <ul class="th-checks" id="thEdChecks"></ul>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <p class="field-hint th-save-hint" id="thEdSaveHint" data-i18n="theme.saveBlocked" hidden>Some text would be hard to read: fix the colours (or use "Fix readability") before saving.</p>
+      <div class="form-actions">
+        <button type="button" class="btn danger" id="thEdDelete" data-i18n="theme.delete">Delete</button>
+        <button type="button" class="btn danger" id="thEdReset" data-i18n="theme.resetPiboard">Restore original</button>
+        <button type="button" class="btn small" id="thEdExport" data-i18n="theme.export">Export</button>
+        <button type="button" class="btn" id="thEdCancel" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn primary" id="thEdSave" data-i18n="theme.save">Save</button>
       </div>
     </div>
   </div>
@@ -373,13 +479,21 @@
           </select>
         </label>
         <label class="field">
-          <span data-i18n="settings.theme">Theme</span>
+          <span data-i18n="settings.theme">Day / night</span>
           <select id="setTheme">
             <option value="auto" data-i18n="settings.theme.auto">Auto (day / night)</option>
             <option value="dark" data-i18n="settings.theme.dark">Night</option>
             <option value="light" data-i18n="settings.theme.light">Day</option>
           </select>
         </label>
+        <div class="field">
+          <span data-i18n="theme.board">Colour theme</span>
+          <div class="theme-row">
+            <strong id="setThemeName">PiBoard</strong>
+            <button type="button" class="btn small" id="setThemeChoose" data-i18n="theme.choose">Choose…</button>
+          </div>
+          <small class="field-hint" data-i18n="theme.board.hint">Applies to the whole board. Each page (dashboard mode) and each drawer (classic mode) can have its own theme.</small>
+        </div>
         <label class="field city-box">
           <span data-i18n="settings.city">City (sunrise / sunset for the auto theme)</span>
           <input type="text" id="setCity" autocomplete="off" data-i18n-placeholder="settings.city.placeholder" placeholder="Type a city name…">
@@ -411,6 +525,17 @@
           <span data-i18n="settings.drawers.left">Left drawer (width)</span>
           <input type="number" id="setDrawerLeftPct" min="10" max="100" step="1">
         </label>
+        <div class="field drawer-theme-row">
+          <span data-i18n="theme.drawers">Drawer themes</span>
+          <div class="theme-row">
+            <span data-i18n="theme.drawer.left">Left</span>
+            <button type="button" class="btn small drawer-theme" data-drawer-theme="left">—</button>
+            <span data-i18n="theme.drawer.top">Top</span>
+            <button type="button" class="btn small drawer-theme" data-drawer-theme="top">—</button>
+            <span data-i18n="theme.drawer.right">Right</span>
+            <button type="button" class="btn small drawer-theme" data-drawer-theme="right">—</button>
+          </div>
+        </div>
         <label class="field">
           <span data-i18n="settings.drawers.top">Top drawer (height)</span>
           <input type="number" id="setDrawerTopPct" min="10" max="100" step="1">
@@ -422,7 +547,7 @@
       </fieldset>
 
       <fieldset class="form-section">
-        <legend data-i18n="settings.colors">Colors</legend>
+        <legend data-i18n="settings.colors">PiBoard theme colours</legend>
         <div class="field">
           <div class="color-grid">
             <span></span>
@@ -914,6 +1039,7 @@
 <script src="i18n.js"></script>
 <script src="help-content.js"></script>
 <script src="quickstart-content.js"></script>
+<script src="themes.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

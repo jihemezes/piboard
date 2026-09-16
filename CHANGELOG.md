@@ -1,5 +1,67 @@
 # Changelog
 
+## 1.111.0
+
+- **Themes de couleurs.** Plus de cinquante themes livres, ranges par
+  famille : sombres, clairs, tres colores, roses, neutres, monochromes,
+  bichromes et elegants. Un theme change toutes les couleurs de PiBoard
+  (fond, tuiles, textes, accent, etats normal / avertissement / alerte,
+  champs, fenetres) ainsi que l'arrondi des tuiles, l'epaisseur des
+  bordures et la police (polices installees uniquement, rien n'est
+  telecharge). Chaque theme a une variante nuit et/ou jour : avec les
+  deux, il suit le reglage Jour / Nuit / Auto.
+
+- **Le theme PiBoard** reste le theme d'origine et devient modifiable.
+  Les couleurs personnalisees des versions precedentes en sont les
+  retouches : rien ne change a la mise a jour.
+
+- **Themes assortis aux fonds de la bibliotheque**, avec des couleurs
+  mesurees sur les images elles-memes (Classy, Soft, Sport). Quand le
+  fond d'une page correspond a un theme, la fenetre du fond le suggere
+  et le selecteur ouvre la famille « Assortis au fond ». Rien n'est
+  applique d'office.
+
+- **Portee** : tout le board, une seule page (mode tableau de bord,
+  bouton de la ligne de la page) ou un seul volet (mode classique,
+  section Tiroirs). Une page ou un volet sans theme propre prend celui
+  du board ; la couleur personnalisee d'une tuile l'emporte toujours.
+  Le theme d'une page ou d'un volet est enregistre avec le layout.
+  - Les tuiles transparentes reglent leur texte sur le fond REELLEMENT
+    derriere elles (page ou volet), plus sur celui du board seul.
+  - Les cartes en fond « auto » (Trafic, Radar, Avions) suivent le ton
+    de leur surface et changent de fond quand le theme change, au lieu
+    d'attendre un rechargement.
+
+- **Apercu avant d'appliquer.** Le selecteur s'ouvre sur le cote et
+  laisse le tableau visible : un theme touche s'affiche aussitot sur la
+  cible, sans rien enregistrer. « Apercu en Nuit / Jour » montre l'autre
+  variante, « Annuler » rend exactement l'etat precedent.
+
+- **Editeur de themes** : nouveau, dupliquer, modifier (themes perso et
+  PiBoard), douze couleurs par variante, arrondi, bordure et police,
+  visibles en direct ; « Recalculer les nuances » ; export et import en
+  JSON ; suppression ; « Retablir l'original » pour PiBoard.
+  - **Theme tire d'une image** (fond de la bibliotheque, fond de la page
+    affichee ou fichier) : couleurs dominantes calculees sur place par
+    k-moyennes, sans service en ligne ni IA. Une meme image donne
+    toujours le meme theme.
+
+- **Garde-fou de lisibilite** : l'editeur mesure le contraste de chaque
+  texte (WCAG) et bloque l'enregistrement tant qu'un texte serait
+  illisible ; « Corriger la lisibilite » ajuste les couleurs de texte
+  sans toucher aux fonds. Tous les themes livres passent ce controle,
+  verifie par les tests.
+
+- **Feuille de style** : les dernieres couleurs ecrites en dur (texte
+  sur l'accent, rouge d'alerte, vert et orange d'etat) passent par des
+  variables, pour suivre le theme.
+
+- **Tests** : `test/themes.test.js` (lisibilite de chaque theme, calculs
+  de couleurs, palette d'image, nettoyage des themes importes, retouches
+  PiBoard) et un parcours complet dans `dom-smoke.js` (apercu,
+  annulation, application au board, a une page et a un volet,
+  enregistrement, editeur, garde-fou, image, suggestion).
+
 ## 1.110.3
 
 - **Publication : fin des releases en double et des fichiers perdus.**

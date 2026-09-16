@@ -437,7 +437,7 @@
         return;
       }
 
-      const isDay = document.body.dataset.theme === "light";
+      const isDay = window.PiBoard.toneOf(this.ctx.el) === "light";
       const color = (isDay ? s.dayColor : s.nightColor) || (isDay ? "#DCE9F7" : "#0B1220");
       const key = isDay + ":" + color;
       if (this.appliedBgKey === key) return;

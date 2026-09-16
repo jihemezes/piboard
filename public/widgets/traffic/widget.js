@@ -304,7 +304,7 @@
         voyager: "rastertiles/voyager"
       };
       let key = this.ctx.settings.basemap || "voyager";
-      if (key === "auto") key = document.body.dataset.theme === "light" ? "light" : "dark";
+      if (key === "auto") key = window.PiBoard.toneOf(this.ctx.el) === "light" ? "light" : "dark";
       const style = BASEMAPS[key] || BASEMAPS.voyager;
       /* La cle CARTO est passee en parametre `key`. Sans elle, CARTO
          sert depuis peu des tuiles barrees d'un filigrane
@@ -352,6 +352,19 @@
       this.baseLayer = L.tileLayer(this.basemapUrl(), {
         subdomains: "abcd", maxZoom: 19
       }).addTo(this.map);
+
+      /* Fond de carte « auto » : suit le theme de la surface (board, page
+         ou volet), y compris quand il change en cours de route.
+         "auto" basemap: follows the surface's theme (board, page or
+         drawer), including when it changes on the fly. */
+      if (!this._onTheme) {
+        this._onTheme = () => {
+          if (!this.baseLayer) return;
+          const url = this.basemapUrl();
+          if (url !== this.baseLayer._url) this.baseLayer.setUrl(url);
+        };
+        window.addEventListener("piboard:theme", this._onTheme);
+      }
 
       // Couche de flux et couche d'incidents : construites ici, mais PAS
       // ajoutees a la carte tout de suite -- Leaflet chargerait les tuiles
@@ -728,6 +741,7 @@
     }
 
     destroy() {
+      if (this._onTheme) { window.removeEventListener("piboard:theme", this._onTheme); this._onTheme = null; }
       clearInterval(this.scheduleTimer);
       clearInterval(this.uiTimer);
       if (this.closeBoostMenu) document.removeEventListener("pointerup", this.closeBoostMenu);

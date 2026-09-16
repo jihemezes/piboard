@@ -10,6 +10,17 @@
 
 :root {
   --accent: #D6335C;
+  /* Jetons ajoutes avec les themes (1.111.0) : texte pose sur l'accent,
+     couleurs d'etat, epaisseur de bordure des tuiles. Valeurs par defaut
+     = l'apparence d'avant, remplacees par le theme actif (themes.js).
+     Tokens added with themes (1.111.0): text laid on the accent, status
+     colours, tile border width. Defaults = the former look, replaced by
+     the active theme (themes.js). */
+  --on-accent: #FFFFFF;
+  --ok: #4CAF7D;
+  --warn: #E0A63C;
+  --danger: #E0556F;
+  --tile-border-w: 1px;
   --radius: 14px;
   --gap: 10px;
   --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
@@ -142,7 +153,7 @@ body.touch .board.has-overflow::-webkit-scrollbar { width: 12px; }
 
 .grid-stack-item-content {
   background: var(--tile);
-  border: 1px solid var(--tile-edge);
+  border: var(--tile-border-w) solid var(--tile-edge);
   border-radius: var(--radius);
   overflow: hidden;
   display: flex;
@@ -618,7 +629,7 @@ body.touch .modal-card { resize: none; }
   line-height: 1;
   cursor: pointer;
 }
-.catalog-item-wrap .ci-info:hover { background: var(--accent); color: #fff; }
+.catalog-item-wrap .ci-info:hover { background: var(--accent); color: var(--on-accent); }
 
 /* Info-bulle partagee (voir showCatalogTooltip() dans app.js) : position
    fixed calculee en JS, jamais rognee par le defilement du catalogue.
@@ -666,7 +677,7 @@ body.touch .modal-card { resize: none; }
   line-height: 1;
   cursor: pointer;
 }
-.config-picker-row .cp-delete:hover { background: #E0556F; color: #fff; }
+.config-picker-row .cp-delete:hover { background: var(--danger); color: #fff; }
 
 .exit-menu {
   display: flex;
@@ -690,7 +701,7 @@ body.touch .modal-card { resize: none; }
 .exit-option:hover { border-color: var(--accent); }
 .exit-option-title { font-weight: 600; font-size: 14px; }
 .exit-option-desc { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
-.exit-option-warn:hover { border-color: #E0A63C; }
+.exit-option-warn:hover { border-color: var(--warn); }
 
 /* ---------- Formulaires / forms ---------- */
 
@@ -739,7 +750,7 @@ body.touch .modal-card { resize: none; }
    case in app.js): says whether a value is stored, without ever showing
    it. */
 .field-secret-status { display: block; margin-top: 3px; }
-.field-secret-status.field-secret-ok { color: #4CAF50; }
+.field-secret-status.field-secret-ok { color: var(--ok); }
 
 /* Suggestions d'adresse cliquables (voir fieldMarkup() cas "address" et
    les gestionnaires delegues dans app.js) : meme famille visuelle que
@@ -814,7 +825,7 @@ body.touch .modal-card { resize: none; }
 .backups-intro { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 14px; }
 .backups-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
 .backups-msg { font-size: 12.5px; color: var(--accent); margin: 0 0 10px; }
-.backups-msg.backups-msg-error { color: #E0556F; }
+.backups-msg.backups-msg-error { color: var(--danger); }
 .backups-empty { color: var(--muted); font-size: 13px; font-style: italic; text-align: center; padding: 20px 0; }
 
 .backups-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
@@ -838,7 +849,7 @@ body.touch .modal-card { resize: none; }
   margin-top: 0;
   font-size: 12.5px;
 }
-#tileSaveConfigMsg.field-hint-error { color: #E0556F; }
+#tileSaveConfigMsg.field-hint-error { color: var(--danger); }
 
 .btn {
   border: 1px solid var(--tile-edge);
@@ -850,10 +861,10 @@ body.touch .modal-card { resize: none; }
   font-family: var(--font);
   cursor: pointer;
 }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn.primary:hover { filter: brightness(1.1); }
-.btn.danger { color: #E0556F; margin-right: auto; }
-.btn.danger:hover { border-color: #E0556F; }
+.btn.danger { color: var(--danger); margin-right: auto; }
+.btn.danger:hover { border-color: var(--danger); }
 
 .about {
   margin: 18px 0 2px;
@@ -1222,12 +1233,12 @@ body.touch .modal-card { resize: none; }
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent;
 }
-.vkb-key:active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.vkb-key:active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 
 .vkb-key.vkb-wide { flex: 1.6; font-size: 20px; }
 .vkb-key.vkb-space { flex: 5; }
-.vkb-key.vkb-active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.vkb-key.vkb-done { background: var(--accent); color: #fff; border-color: var(--accent); flex: 1.4; font-size: 20px; }
+.vkb-key.vkb-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.vkb-key.vkb-done { background: var(--accent); color: var(--on-accent); border-color: var(--accent); flex: 1.4; font-size: 20px; }
 
 /* Sur un ecran vraiment court en hauteur, des touches de 84px + une
    modale peuvent trop remplir l'ecran : on reduit alors legerement la
@@ -1484,7 +1495,7 @@ body.touch .modal-card { resize: none; }
   font-size: 12px;
   color: var(--faint);
 }
-.media-tool-state.ok { color: var(--good, #4CAF7D); }
+.media-tool-state.ok { color: var(--ok); }
 
 .form-section-plain {
   border: none;
@@ -2559,7 +2570,7 @@ body.dashboard-mode.touch-mode.dash-open .dash-tab { display: none; }
 .dash-page-dot.active {
   background: var(--accent);
   border-color: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 /* Zone reservee aux informations defilantes venues des tuiles. Vide pour
@@ -2925,4 +2936,196 @@ body.editing .grid-stack-item-content.tile-transparent {
   border-top: 1px solid var(--tile-edge);
   min-height: 2em;
 }
-.library-status-err { color: var(--danger, #d05050); }
+.library-status-err { color: var(--danger); }
+
+/* ============================================================
+   Themes de couleurs (1.111.0)
+   ============================================================ */
+
+/* Page ou volet ayant son propre theme : il peint son fond et son texte,
+   les variables qu'il redefinit ne valant que pour ses descendants.
+   Page or drawer with its own theme: it paints its own background and
+   text, the variables it redefines only apply to its descendants. */
+.board.pb-themed {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+.drawer.pb-themed {
+  color: var(--text);
+  font-family: var(--font);
+}
+
+.theme-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.drawer-theme.has-theme,
+.page-theme.has-theme { border-color: var(--accent); color: var(--accent); }
+
+.theme-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--field-bg);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* Selecteur et editeur ancres a droite : pas de voile, le tableau reste
+   visible pour l'apercu en direct.
+   Picker and editor docked right: no veil, the board stays visible for
+   the live preview. */
+.modal.theme-dock {
+  background: transparent;
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 2vh 1.5vw;
+  pointer-events: none;
+}
+.modal.theme-dock .modal-card {
+  pointer-events: auto;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.45);
+}
+.theme-card {
+  width: min(460px, 96vw);
+  max-height: 96vh;
+  resize: none;
+}
+.theme-body {
+  padding: 0 16px 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+.theme-families,
+.theme-preview-mode,
+.theme-variant-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.theme-preview-mode span { color: var(--muted); font-size: 12px; margin-right: 4px; }
+.theme-families .chip,
+.theme-preview-mode .chip,
+.theme-variant-tabs .chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.theme-families .chip.active,
+.theme-preview-mode .chip.active,
+.theme-variant-tabs .chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+.th-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.th-card:hover { border-color: var(--tile-edge); }
+.th-card.selected { border-color: var(--accent); }
+.th-name { font-size: 13px; font-weight: 600; }
+.th-meta { font-size: 11px; color: var(--muted); }
+.th-inherit .th-sw { opacity: 0.75; }
+
+.th-sw {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 72px;
+  padding: 6px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.th-sw-row { display: flex; gap: 4px; flex: 1; }
+.th-sw-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px;
+  min-width: 0;
+}
+.th-sw-tile i { display: block; height: 3px; width: 80%; border-radius: 2px; }
+.th-sw-tile em { position: absolute; left: 4px; right: 4px; bottom: 4px; height: 3px; border-radius: 2px; }
+.th-sw-aa {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.theme-card .modal-foot { border-top: 1px solid var(--tile-edge); padding-top: 10px; }
+.theme-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.theme-tools .btn:disabled { opacity: 0.45; cursor: default; }
+
+.th-ed-colors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
+.th-ed-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.th-ed-color input[type="color"] {
+  width: 38px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  background: none;
+  flex-shrink: 0;
+}
+.th-ed-style { margin-top: 10px; }
+.th-ed-style em { color: var(--muted); font-style: normal; font-size: 12px; }
+.th-checks { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; }
+.th-issue {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-bottom: 3px;
+  border-radius: 5px;
+  border-left: 3px solid var(--tile-edge);
+  background: var(--field-bg);
+}
+.th-issue span { color: var(--muted); white-space: nowrap; }
+.th-issue.th-error { border-left-color: var(--danger); }
+.th-issue.th-warn { border-left-color: var(--warn); }
+.th-issue.th-good { border-left-color: var(--ok); }
+.th-save-hint { color: var(--danger); }
+.btn:disabled { opacity: 0.5; cursor: default; }

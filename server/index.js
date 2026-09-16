@@ -89,6 +89,14 @@ app.use(express.json({ limit: "1mb" }));
 const DEFAULT_SETTINGS = {
   lang: "en",            // en | fr
   theme: "auto",         // auto | dark | light
+  /* Theme de couleurs du board (public/themes.js). "piboard" = le theme
+     d'origine, dont `colors` ci-dessous porte les retouches. Les themes
+     crees dans l'editeur sont dans `userThemes`.
+     Board colour theme (public/themes.js). "piboard" = the original
+     theme, tweaked by `colors` below. Themes made in the editor live in
+     `userThemes`. */
+  themeId: "piboard",
+  userThemes: [],
   cityName: "Paris",     // ville affichee / displayed city name
   latitude: 48.85,       // pour le theme auto (calcul solaire) / for auto theme (solar calc)
   longitude: 2.35,

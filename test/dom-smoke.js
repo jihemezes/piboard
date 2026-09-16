@@ -644,7 +644,7 @@ const dom = new JSDOM(html, {
         const body = JSON.parse(opts.body || "{}");
         LIBRARY_MOCK.picked.push(body.id);
         const folder = (u.match(/\/api\/media\/([^/?]+)/) || [])[1] || "";
-        return json({ ok: true, name: "lib-bleu.png", url: "/media/" + folder + "/lib-bleu.png" });
+        return json({ ok: true, name: "Classy_Blue.png", url: "/media/" + folder + "/Classy_Blue.png" });
       }
       if (/\/api\/library\?/.test(u) && method === "GET") {
         if (LIBRARY_MOCK.fail) {
@@ -5418,7 +5418,7 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("chaque page a son propre dossier d'images",
       /function backgroundMediaId\(index\)[\s\S]{0,400}?"bg-" \+ \(p && p\.index > 0 \? p\.id : "main"\)/.test(appSrc4));
     assert("le fond est enregistre avec la page", /background: p\.background,/.test(appSrc4));
-    assert("et avec le plateau principal", /background: mainPage\.background \}/.test(appSrc4));
+    assert("et avec le plateau principal", /background: mainPage\.background, themeId: mainPage\.themeId \|\| null \}/.test(appSrc4));
     /* Le voile est un element a part, pas un filtre : un filtre sur le
        conteneur aurait AUSSI atteint les tuiles posees dessus.
        The veil is a separate element, not a filter: a filter on the
@@ -5456,7 +5456,8 @@ function catalogItemFor(catalog, document, widgetId) {
       appSrc3.indexOf("if (s._customColor && s._bgColor) {"));
     assert("la branche transparente pose bien une couleur de texte",
       /content\.style\.color = palette\["--text"\]/.test(branch));
-    assert("elle la choisit d'apres le fond de page", /pageIsDark\(\)/.test(branch));
+    // Depuis les themes par page/volet, la surface est celle DE LA TUILE.
+    assert("elle la choisit d'apres le fond reellement derriere la tuile", /pageIsDark\(rec\)/.test(branch));
     assert("elle n'efface plus la couleur sans en remettre",
       !/content\.style\.color = "";/.test(branch));
 
@@ -5466,7 +5467,7 @@ function catalogItemFor(catalog, document, widgetId) {
        computed colour, not the `--bg` variable: a custom theme or page
        colour may have replaced it. */
     assert("le fond de page est mesure, pas suppose",
-      /getComputedStyle\(surface\)\.backgroundColor/.test(appSrc3));
+      /getComputedStyle\(node\)\.backgroundColor/.test(appSrc3));
     assert("un fond totalement transparent n'est pas lu comme du noir",
       /Number\(alpha\[1\]\) > 0\.1/.test(appSrc3));
     // Le theme est pose sur <body> : viser la racine aurait fait echouer
@@ -5819,7 +5820,7 @@ function catalogItemFor(catalog, document, widgetId) {
         LIBRARY_MOCK.picked[LIBRARY_MOCK.picked.length - 1] === "builtin:backgrounds:Classy_Blue.png");
       assert("bibliotheque : la fenetre se ferme apres le choix", document.getElementById("libraryModal").hidden === true);
       assert("bibliotheque : l'image copiee devient le fond de la page",
-        /lib-bleu\.png/.test(document.querySelectorAll(".board-page")[0].style.backgroundImage));
+        /Classy_Blue\.png/.test(document.querySelectorAll(".board-page")[0].style.backgroundImage));
 
       LIBRARY_MOCK.fail = true;
       document.getElementById("pageBgLibrary").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
@@ -5830,6 +5831,188 @@ function catalogItemFor(catalog, document, widgetId) {
         document.getElementById("libraryStatus").textContent.includes("disque illisible"));
       LIBRARY_MOCK.fail = false;
       document.getElementById("libraryModal").hidden = true;
+    }
+
+    /* ---------- Themes de couleurs (1.111.0) ----------
+       Parcours reel : apercu sans enregistrement, annulation, application
+       au board, a une page, a un volet ; editeur avec garde-fou de
+       lisibilite ; theme tire d'une image ; suggestion assortie au fond.
+       Colour themes: real journey -- preview without saving, cancel,
+       apply to the board, a page, a drawer; editor with the readability
+       guard; theme from an image; matching-background suggestion. */
+    {
+      const $d = (id) => document.getElementById(id);
+      const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      const bodyVar = (el, v) => { const x = el.style.getPropertyValue(v).trim(); return /^#/.test(x) ? x.toUpperCase() : x; };
+      const TH = window.PiBoardThemes;
+      const page2 = document.querySelectorAll(".board-page")[0];
+      const settingsPuts = () => putCalls.filter((c) => c.url.includes("/api/settings")).map((c) => JSON.parse(c.body));
+
+      // Suggestion : le fond Classy_Blue vient d'etre choisi pour la page 2.
+      assert("themes : un theme assorti au fond est suggere",
+        $d("pageBgThemeHint").hidden === false && /Bleu royal/.test($d("pageBgThemeHintText").textContent));
+      click($d("pageBgThemeHintBtn"));
+      await sleep(60);
+      assert("themes : le selecteur s'ouvre sur les themes assortis",
+        $d("themeModal").hidden === false
+        && $d("themeFamilies").querySelector(".chip.active").dataset.family === "match"
+        && !!$d("themeGrid").querySelector('[data-id="classy-blue"]'));
+      assert("themes : la fenetre du fond s'efface pour laisser voir l'apercu", $d("pageBgModal").hidden === true);
+      click($d("themeCancel"));
+      await sleep(30);
+      assert("themes : annuler rend la fenetre du fond", $d("pageBgModal").hidden === false);
+
+      // Theme du board : etat initial.
+      assert("themes : le board porte le theme PiBoard au depart",
+        document.body.dataset.themeId === "piboard" && bodyVar(document.body, "--bg") === "#0B0E14");
+      $d("pageBgModal").hidden = true;
+      $d("settingsModal").hidden = false;
+      click($d("setThemeChoose"));
+      await sleep(60);
+      assert("themes : le selecteur du board masque les reglages pendant l'apercu",
+        $d("themeModal").hidden === false && $d("settingsModal").hidden === true);
+      assert("themes : aucune carte « comme le board » pour le board lui-meme", !$d("themeGrid").querySelector(".th-inherit"));
+      const allCards = $d("themeGrid").querySelectorAll(".th-card").length;
+      assert("themes : le catalogue complet est propose (50 themes et plus)", allCards >= 50);
+
+      click($d("themeFamilies").querySelector('[data-family="pink"]'));
+      const pinkIds = [...$d("themeGrid").querySelectorAll(".th-card")].map((c) => c.dataset.id);
+      assert("themes : le filtre Roses ne montre que des themes roses",
+        pinkIds.length >= 5 && pinkIds.every((id) => TH.builtinThemes().find((t) => t.id === id).families.includes("pink")));
+
+      const putsBefore = settingsPuts().length;
+      click($d("themeGrid").querySelector('[data-id="raspberry"]'));
+      await sleep(30);
+      assert("themes : un clic applique l'apercu au board",
+        document.body.dataset.themeId === "raspberry" && bodyVar(document.body, "--bg") === "#1A0710");
+      assert("themes : l'apercu n'enregistre rien", settingsPuts().length === putsBefore);
+      click($d("themeModeLight"));
+      await sleep(30);
+      assert("themes : l'apercu peut montrer la variante jour",
+        bodyVar(document.body, "--bg") === "#FDE7EF" && document.body.dataset.theme === "light");
+      click($d("themeCancel"));
+      await sleep(30);
+      assert("themes : annuler rend exactement le theme d'avant",
+        document.body.dataset.themeId === "piboard" && bodyVar(document.body, "--bg") === "#0B0E14"
+        && document.body.dataset.theme === "dark");
+      assert("themes : annuler rend la fenetre des reglages", $d("settingsModal").hidden === false);
+
+      click($d("setThemeChoose"));
+      await sleep(40);
+      click($d("themeGrid").querySelector('[data-id="paper"]'));
+      click($d("themeApply"));
+      await sleep(60);
+      const lastSettings = settingsPuts().pop() || {};
+      assert("themes : appliquer enregistre le theme du board", lastSettings.themeId === "paper");
+      assert("themes : le style suit le theme (police, arrondi)",
+        /Palatino/.test(bodyVar(document.body, "--font")) && bodyVar(document.body, "--radius") === "6px");
+      assert("themes : le nom du theme s'affiche dans les reglages", $d("setThemeName").textContent === "Papier");
+
+      // Theme d'une page : ne touche que cette page.
+      const putsLayoutBefore = putCalls.filter((c) => c.url.includes("/api/layout")).length;
+      click(document.getElementById("pagesList").querySelectorAll(".page-row")[1].querySelector("[data-role=theme]"));
+      await sleep(40);
+      assert("themes : une page propose d'heriter du board", !!$d("themeGrid").querySelector(".th-inherit.selected"));
+      click($d("themeFamilies").querySelector('[data-family="all"]'));
+      click($d("themeGrid").querySelector('[data-id="highcontrast-light"]'));
+      click($d("themeApply"));
+      await sleep(700);
+      assert("themes : la page porte son propre theme",
+        page2.dataset.themeId === "highcontrast-light" && page2.classList.contains("pb-themed")
+        && bodyVar(page2, "--bg") === "#FFFFFF");
+      assert("themes : le board garde le sien", document.body.dataset.themeId === "paper");
+      const tileInPage = document.createElement("div");
+      page2.appendChild(tileInPage);
+      assert("themes : les widgets lisent le ton de LEUR surface",
+        window.PiBoard.toneOf(tileInPage) === "light" && document.body.dataset.theme === "dark");
+      tileInPage.remove();
+      const layoutPuts = putCalls.filter((c) => c.url.includes("/api/layout"));
+      const savedLayout = JSON.parse(layoutPuts[layoutPuts.length - 1].body);
+      assert("themes : le theme de la page est enregistre avec le layout",
+        layoutPuts.length > putsLayoutBefore && savedLayout.pages[0].themeId === "highcontrast-light"
+        && savedLayout.mainPage.themeId === null);
+      assert("themes : la ligne de la page le signale",
+        document.getElementById("pagesList").querySelectorAll(".page-row")[1].querySelector("[data-role=theme]").classList.contains("has-theme"));
+
+      // Theme d'un volet.
+      click(document.querySelector('[data-drawer-theme="left"]'));
+      await sleep(40);
+      click($d("themeGrid").querySelector('[data-id="neon"]'));
+      click($d("themeApply"));
+      await sleep(700);
+      assert("themes : le volet gauche porte son theme",
+        $d("drawer").dataset.themeId === "neon" && bodyVar($d("drawer"), "--accent") === "#FF2BD6");
+      const layoutPuts2 = putCalls.filter((c) => c.url.includes("/api/layout"));
+      assert("themes : le theme du volet est enregistre",
+        JSON.parse(layoutPuts2[layoutPuts2.length - 1].body).drawer.themeId === "neon");
+      assert("themes : le bouton du volet affiche le theme", document.querySelector('[data-drawer-theme="left"]').textContent === "Néon");
+
+      // Editeur : nouveau theme, garde-fou, correction, enregistrement.
+      click($d("setThemeChoose"));
+      await sleep(40);
+      click($d("themeNew"));
+      await sleep(40);
+      assert("themes : l'editeur s'ouvre a la place du selecteur",
+        $d("themeEditor").hidden === false && $d("themeModal").hidden === true);
+      const colorInput = (k) => $d("thEdColors").querySelector(`[data-key="${k}"]`);
+      const tileHex = colorInput("tile").value;
+      colorInput("text").value = tileHex;
+      colorInput("text").dispatchEvent(new window.Event("input", { bubbles: true }));
+      assert("themes : un texte illisible est signale et bloque l'enregistrement",
+        $d("thEdSave").disabled === true && $d("thEdSaveHint").hidden === false
+        && !!$d("thEdChecks").querySelector(".th-error"));
+      assert("themes : la retouche se voit en direct sur le board",
+        bodyVar(document.body, "--text") === tileHex.toUpperCase());
+      click($d("thEdFix"));
+      await sleep(20);
+      assert("themes : « Corriger la lisibilite » debloque l'enregistrement",
+        $d("thEdSave").disabled === false && !$d("thEdChecks").querySelector(".th-error"));
+      $d("thEdRadius").value = "24";
+      $d("thEdRadius").dispatchEvent(new window.Event("input", { bubbles: true }));
+      assert("themes : l'arrondi se voit en direct", bodyVar(document.body, "--radius") === "24px");
+      $d("thEdName").value = "Mon test";
+      $d("thEdName").dispatchEvent(new window.Event("input", { bubbles: true }));
+      click($d("thEdSave"));
+      await sleep(60);
+      const savedUser = (settingsPuts().pop() || {}).userThemes || [];
+      assert("themes : le theme perso est enregistre dans les reglages",
+        savedUser.length === 1 && savedUser[0].name.fr === "Mon test" && /^u-/.test(savedUser[0].id)
+        && savedUser[0].style.radius === 24);
+      assert("themes : retour au selecteur, theme perso selectionne",
+        $d("themeModal").hidden === false && $d("themeGrid").querySelector(".th-card.selected").dataset.id === savedUser[0].id
+        && !!$d("themeFamilies").querySelector('[data-family="user"]'));
+      assert("themes : un theme perso est modifiable, un theme livre ne l'est pas",
+        $d("themeEdit").disabled === false
+        && (click($d("themeGrid").querySelector('[data-id="neon"]')), $d("themeEdit").disabled === true));
+
+      // Theme tire d'une image (pixels simules : jsdom ne dessine pas).
+      window.PiBoard._imagePixels = async () => {
+        const data = [];
+        for (let i = 0; i < 96 * 96; i++) data.push(...(i % 5 === 0 ? [240, 110, 20] : [12, 20, 48]), 255);
+        return data;
+      };
+      click($d("themeNew"));
+      await sleep(30);
+      click($d("thEdFromLibrary"));
+      await sleep(120);
+      $d("libraryGrid").querySelector(".library-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(80);
+      const imgBg = colorInput("bg") && colorInput("bg").value;
+      assert("themes : la bibliotheque sert a choisir une image sans la copier",
+        LIBRARY_MOCK.picked.length === 1 && $d("libraryModal").hidden === true);
+      assert("themes : le theme tire de l'image reprend ses couleurs",
+        $d("thEdName").value === "Classy Blue" && TH.isDark(imgBg)
+        && /^#[0-9A-F]{6}$/i.test(colorInput("accent").value));
+      assert("themes : un theme tire d'une image est lisible d'emblee", $d("thEdSave").disabled === false);
+      click($d("thEdCancel"));
+      await sleep(30);
+
+      // Retour a l'etat d'origine pour la suite des tests.
+      click($d("themeGrid").querySelector('[data-id="piboard"]'));
+      click($d("themeApply"));
+      await sleep(60);
+      assert("themes : retour au theme PiBoard", document.body.dataset.themeId === "piboard");
+      $d("pageBgModal").hidden = false;
     }
     document.getElementById("pageBgModal").hidden = true;
     document.getElementById("settingsModal").hidden = true;
