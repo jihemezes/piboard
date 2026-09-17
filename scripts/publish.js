@@ -241,6 +241,14 @@ const repair = await relMod.repairRelease({
   log: (m) => console.log("  " + m)
 });
 if (repair.sent) console.log(`  ${repair.sent} fichier(s) televerse(s) apres coup / file(s) uploaded afterwards.`);
+/* Une reprise qui renonce doit DIRE pourquoi : sans cela, la sortie
+   sautait du message d'entree au verdict final, sans rien expliquer.
+   A repair that gives up must SAY why. */
+if (!repair.ok && (repair.problems || []).length) {
+  console.error("\nLa reprise n'a pas pu tout envoyer / the repair could not upload everything :\n  " + repair.problems.join("\n  ") + "\n");
+} else if (!repair.sent) {
+  console.log("  Rien a reprendre : la release contient deja les fichiers attendus. / Nothing to resume.");
+}
 const check = await relMod.verifyPublished({ request, tag: "v" + version, platforms });
 if (!check.ok) {
   console.error(

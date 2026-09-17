@@ -245,6 +245,35 @@ const base = { tag: "v1.2.3", name: "1.2.3", prerelease: false, wait: async () =
     assert.strictEqual(rel.contentType("PiBoard.exe.blockmap"), "application/octet-stream");
   });
 
+  await test("reprise : le nom du disque est traduit en nom publie (cas reel 1.112.2)", async () => {
+    // electron-builder ecrit « PiBoard Setup 1.2.3.exe » et publie
+    // « PiBoard-Setup-1.2.3.exe » : la reprise croyait n'avoir rien a faire.
+    assert.strictEqual(rel.assetName("PiBoard Setup 1.2.3.exe"), "PiBoard-Setup-1.2.3.exe");
+    const local = [
+      { name: "PiBoard Setup 1.2.3.exe", size: 5, path: "/d/a" },
+      { name: "PiBoard Setup 1.2.3.exe.blockmap", size: 1, path: "/d/b" },
+      { name: "latest.yml", size: 1, path: "/d/c" }
+    ];
+    const plan = rel.planUploads(local, { assets: [] }, "win");
+    assert.deepStrictEqual(plan.uploads.map((f) => f.assetName),
+      ["PiBoard-Setup-1.2.3.exe", "PiBoard-Setup-1.2.3.exe.blockmap", "latest.yml"]);
+    const already = { assets: [{ id: 1, name: "PiBoard-Setup-1.2.3.exe", size: 5, state: "uploaded" }] };
+    assert.deepStrictEqual(rel.planUploads(local, already, "win").uploads.map((f) => f.assetName),
+      ["PiBoard-Setup-1.2.3.exe.blockmap", "latest.yml"]);
+  });
+
+  await test("reprise : un fichier absent de la release ET de dist est signale", async () => {
+    const gh = fakeGitHub([{ id: 5, tag_name: "v1.2.3", assets: [] }]);
+    const out = await rel.repairRelease({
+      request: gh.request, tag: "v1.2.3", platforms: ["win"], wait: async () => {},
+      localFiles: [{ name: "PiBoard Setup 1.2.3.exe", size: 5, path: "/d/a" }],
+      uploader: async () => ({ ok: true })
+    });
+    assert.strictEqual(out.sent, 1, "l'exe est bien envoye");
+    assert.strictEqual(out.ok, false);
+    assert.ok(/latest\.yml.*dist/.test(out.problems.join(" ")), out.problems.join(" "));
+  });
+
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS PASSENT");
   process.exit(failures ? 1 : 0);
 })();

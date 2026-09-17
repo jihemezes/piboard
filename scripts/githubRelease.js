@@ -270,10 +270,24 @@ async function verifyPublished(opts) {
 /* Fichiers de dist/ qui appartiennent a la plateforme : les fichiers
    requis, leurs .blockmap et les latest*.yml.
    Files in dist/ belonging to the platform. */
+/* Nom SOUS LEQUEL un fichier est publie. electron-builder ecrit
+   « PiBoard Setup 1.2.3.exe » sur le disque mais le publie en
+   « PiBoard-Setup-1.2.3.exe » : comparer les noms bruts faisait croire
+   a la reprise qu'il n'y avait rien a envoyer (1.112.3).
+   The name a file is PUBLISHED under. electron-builder writes
+   "PiBoard Setup 1.2.3.exe" on disk but publishes it as
+   "PiBoard-Setup-1.2.3.exe": comparing raw names made the repair think
+   there was nothing to upload. */
+function assetName(fileName) {
+  return String(fileName || "").replace(/[ ]/g, "-");
+}
+
 function platformFiles(names, platform) {
   const pats = (REQUIRED_ASSETS[platform] || []).map(([, re]) => re);
-  return (names || []).filter((n) =>
-    pats.some((re) => re.test(n) || re.test(n.replace(/\.blockmap$/i, ""))));
+  return (names || []).filter((n) => {
+    const a = assetName(n);
+    return pats.some((re) => re.test(a) || re.test(a.replace(/\.blockmap$/i, "")));
+  });
 }
 
 /* Ce qu'il reste a envoyer, et les restes a supprimer d'abord : un
@@ -287,7 +301,8 @@ function planUploads(localFiles, release, platform) {
   const stale = [];
   for (const f of localFiles) {
     if (!wanted.includes(f.name)) continue;
-    const found = assets.find((a) => a.name === f.name);
+    f.assetName = assetName(f.name);
+    const found = assets.find((a) => a.name === f.assetName);
     if (!found) { uploads.push(f); continue; }
     const badState = found.state && found.state !== "uploaded";
     const badSize = typeof found.size === "number" && typeof f.size === "number" && found.size !== f.size;
@@ -314,9 +329,9 @@ async function uploadWithRetries(opts) {
   let last = null;
   for (let i = 1; i <= tries; i++) {
     const r = await uploader({ release, file, contentType: contentType(file.name) });
-    if (r && r.ok) { say(`Envoye / uploaded: ${file.name}`); return { ok: true, attempts: i }; }
+    if (r && r.ok) { say(`Envoye / uploaded: ${file.assetName || file.name}`); return { ok: true, attempts: i }; }
     last = r && (r.error || r.status);
-    say(`Echec ${i}/${tries} pour ${file.name} (${last}) / attempt ${i} failed`);
+    say(`Echec ${i}/${tries} pour ${file.assetName || file.name} (${last}) / attempt ${i} failed`);
     if (i < tries) await pause(5000 * i);
   }
   return { ok: false, error: last };
@@ -334,6 +349,19 @@ async function repairRelease(opts) {
   let sent = 0;
   for (const platform of platforms || []) {
     const plan = planUploads(localFiles, release, platform);
+    /* Ce qui manque en ligne ET sur le disque : la reprise n'y peut
+       rien, il faut le dire plutot que de se taire (1.112.3).
+       Missing online AND on disk: the repair cannot help; say so
+       rather than staying silent. */
+    const localNames = localFiles.map((f) => assetName(f.name));
+    for (const label of missingAssets(release, platform)) {
+      const covered = plan.uploads.length && (REQUIRED_ASSETS[platform] || [])
+        .filter(([l]) => l === label)
+        .some(([, re]) => localNames.some((n) => re.test(n)));
+      if (!covered && !localNames.some((n) => (REQUIRED_ASSETS[platform] || []).find(([l]) => l === label)[1].test(n))) {
+        problems.push(`${label} : absent de la release ET de dist/ (a reconstruire) / missing online AND in dist/`);
+      }
+    }
     for (const a of plan.stale) {
       const d = await request("DELETE", `/repos/${REPO}/releases/assets/${a.id}`);
       say(`Reste supprime / leftover removed: ${a.name}` + (d.ok ? "" : ` (HTTP ${d.status})`));
@@ -359,7 +387,7 @@ function makeUploader(token, timeoutMs) {
       const req = https.request({
         method: "POST",
         host: "uploads.github.com",
-        path: `/repos/${REPO}/releases/${release.id}/assets?name=${encodeURIComponent(file.name)}`,
+        path: `/repos/${REPO}/releases/${release.id}/assets?name=${encodeURIComponent(file.assetName || file.name)}`,
         headers: {
           Authorization: "Bearer " + token,
           "User-Agent": "PiBoard publish",
@@ -400,6 +428,7 @@ function listDistFiles(dir) {
 }
 
 module.exports = {
+  assetName,
   makeUploader,
   listDistFiles,
   platformFiles,

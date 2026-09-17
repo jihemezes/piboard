@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.112.3
+
+- **Correctif : la reprise des envois de la 1.112.2 n'envoyait rien.**
+  electron-builder ecrit `dist\PiBoard Setup 1.112.2.exe` (avec des
+  espaces) mais le publie sous `PiBoard-Setup-1.112.2.exe` (avec des
+  tirets). La reprise comparait les noms du disque aux fichiers
+  attendus, n'y reconnaissait rien, et concluait qu'il n'y avait rien a
+  envoyer -- alors que GitHub venait justement de refuser l'installeur
+  (« 500 Error saving asset »). Le nom du disque est desormais traduit
+  en nom publie avant toute comparaison, et l'envoi se fait sous ce nom.
+
+- **Une reprise qui renonce dit pourquoi.** Elle se taisait : la sortie
+  sautait du message d'entree au verdict final sans rien expliquer. Elle
+  liste maintenant ses echecs, et distingue le cas ou un fichier manque
+  a la fois en ligne et dans `dist/` -- la, il faut reconstruire, aucune
+  reprise n'y peut rien.
+
+- **Tests** : traduction du nom (cas reel de la 1.112.2), reprise qui
+  reconnait un fichier deja en ligne, et fichier absent des deux cotes.
+
 ## 1.112.2
 
 - **Publication : les envois refuses par GitHub sont repris.** A la
