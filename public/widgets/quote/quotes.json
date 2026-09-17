@@ -1,46 +1,5739 @@
-[
-  { "en": "The only way to do great work is to love what you do.", "fr": "La seule façon de faire du bon travail est d'aimer ce que l'on fait.", "author": "Steve Jobs" },
-  { "en": "Simplicity is the ultimate sophistication.", "fr": "La simplicité est la sophistication suprême.", "author": "Léonard de Vinci" },
-  { "en": "He who has a why to live can bear almost any how.", "fr": "Celui qui a un pourquoi peut supporter presque tous les comment.", "author": "Friedrich Nietzsche" },
-  { "en": "Well done is better than well said.", "fr": "Bien fait vaut mieux que bien dit.", "author": "Benjamin Franklin" },
-  { "en": "The unexamined life is not worth living.", "fr": "Une vie sans examen ne vaut pas la peine d'être vécue.", "author": "Socrate" },
-  { "en": "Fortune favors the bold.", "fr": "La fortune sourit aux audacieux.", "author": "Virgile" },
-  { "en": "Knowing yourself is the beginning of all wisdom.", "fr": "Se connaître soi-même est le début de toute sagesse.", "author": "Aristote" },
-  { "en": "It is not the mountain we conquer but ourselves.", "fr": "Ce n'est pas la montagne que nous conquérons, mais nous-mêmes.", "author": "Edmund Hillary" },
-  { "en": "The journey of a thousand miles begins with a single step.", "fr": "Un voyage de mille lieues commence toujours par un premier pas.", "author": "Lao Tseu" },
-  { "en": "Nothing is permanent except change.", "fr": "Rien n'est permanent, sauf le changement.", "author": "Héraclite" },
-  { "en": "What does not kill me makes me stronger.", "fr": "Ce qui ne me tue pas me rend plus fort.", "author": "Friedrich Nietzsche" },
-  { "en": "We suffer more in imagination than in reality.", "fr": "Nous souffrons plus souvent en imagination qu'en réalité.", "author": "Sénèque" },
-  { "en": "Luck is what happens when preparation meets opportunity.", "fr": "La chance, c'est quand la préparation rencontre l'opportunité.", "author": "Sénèque" },
-  { "en": "Patience is bitter, but its fruit is sweet.", "fr": "La patience est amère, mais son fruit est doux.", "author": "Jean-Jacques Rousseau" },
-  { "en": "To live is the rarest thing in the world.", "fr": "Vivre est la chose la plus rare au monde.", "author": "Oscar Wilde" },
-  { "en": "Be the change you wish to see in the world.", "fr": "Soyez le changement que vous voulez voir dans le monde.", "author": "Gandhi" },
-  { "en": "In the middle of difficulty lies opportunity.", "fr": "Au cœur de la difficulté réside l'opportunité.", "author": "Albert Einstein" },
-  { "en": "Whether you think you can or you can't, you're right.", "fr": "Que vous pensiez pouvoir ou ne pas pouvoir, vous avez raison.", "author": "Henry Ford" },
-  { "en": "A room without books is like a body without a soul.", "fr": "Une pièce sans livres est comme un corps sans âme.", "author": "Cicéron" },
-  { "en": "The greatest glory is not in never falling, but rising every time we fall.", "fr": "Notre plus grande gloire n'est pas de ne jamais tomber, mais de nous relever à chaque chute.", "author": "Confucius" },
-  { "en": "Do not go where the path may lead; go where there is no path.", "fr": "N'allez pas où le chemin mène ; allez là où il n'y a pas de chemin.", "author": "Ralph Waldo Emerson" },
-  { "en": "Happiness depends upon ourselves.", "fr": "Le bonheur dépend de nous-mêmes.", "author": "Aristote" },
-  { "en": "The wisest have the most authority.", "fr": "Les plus sages ont le plus d'autorité.", "author": "Platon" },
-  { "en": "A friend to all is a friend to none.", "fr": "Un ami pour tous n'est un ami pour personne.", "author": "Aristote" },
-  { "en": "Great minds discuss ideas; small minds discuss people.", "fr": "Les grands esprits discutent d'idées ; les petits esprits discutent des gens.", "author": "attribué à Eleanor Roosevelt" },
-  { "en": "There is nothing permanent except change.", "fr": "Il n'y a rien de permanent, sauf le changement.", "author": "Héraclite" },
-  { "en": "Rather fail with honor than succeed by fraud.", "fr": "Mieux vaut échouer avec honneur que réussir par la fraude.", "author": "Sophocle" },
-  { "en": "Nature does nothing uselessly.", "fr": "La nature ne fait rien en vain.", "author": "Aristote" },
-  { "en": "It is quality rather than quantity that matters.", "fr": "C'est la qualité qui compte, plus que la quantité.", "author": "Sénèque" },
-  { "en": "Man is by nature a social animal.", "fr": "L'homme est par nature un animal social.", "author": "Aristote" },
-  { "en": "The only true wisdom is in knowing you know nothing.", "fr": "La seule vraie sagesse est de savoir qu'on ne sait rien.", "author": "Socrate" },
-  { "en": "No one is free who is not master of himself.", "fr": "Nul n'est libre s'il n'est maître de lui-même.", "author": "Épictète" },
-  { "en": "First say to yourself what you would be, then do what you have to do.", "fr": "Dis-toi d'abord ce que tu veux être, puis fais ce que tu dois faire.", "author": "Épictète" },
-  { "en": "It does not matter how slowly you go as long as you do not stop.", "fr": "Peu importe la lenteur, tant que l'on ne s'arrête pas.", "author": "Confucius" },
-  { "en": "Our lives are shaped by our thoughts.", "fr": "Nos vies sont façonnées par nos pensées.", "author": "Bouddha" },
-  { "en": "The obstacle is the path.", "fr": "L'obstacle est le chemin.", "author": "proverbe zen" },
-  { "en": "A calm sea never made a skilled sailor.", "fr": "Une mer calme n'a jamais fait un bon marin.", "author": "proverbe anglais" },
-  { "en": "Little by little, one walks far.", "fr": "Petit à petit, l'oiseau fait son nid.", "author": "proverbe français" },
-  { "en": "He who is not courageous enough to take risks will accomplish nothing.", "fr": "Qui n'a pas le courage de risquer n'accomplira rien dans la vie.", "author": "Muhammad Ali" },
-  { "en": "Everything you can imagine is real.", "fr": "Tout ce que l'on peut imaginer est réel.", "author": "Pablo Picasso" },
-  { "en": "Style is knowing who you are.", "fr": "Le style, c'est savoir qui l'on est.", "author": "attribué à Gore Vidal" },
-  { "en": "Time you enjoy wasting is not wasted time.", "fr": "Le temps que l'on prend à s'amuser n'est pas du temps perdu.", "author": "attribué à Bertrand Russell" },
-  { "en": "Measure twice, cut once.", "fr": "Mesurez deux fois, coupez une fois.", "author": "proverbe de charpentier" },
-  { "en": "The best time to plant a tree was twenty years ago; the second best time is now.", "fr": "Le meilleur moment pour planter un arbre était il y a vingt ans ; le second, c'est maintenant.", "author": "proverbe chinois" }
-]
+{
+ "version": 2,
+ "categories": [
+  "quote",
+  "jcvd",
+  "chuck"
+ ],
+ "themes": [
+  "wisdom",
+  "life",
+  "work",
+  "science",
+  "art",
+  "nature",
+  "humor"
+ ],
+ "items": [
+  {
+   "id": "q-951721bd",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Une vie sans examen ne vaut pas la peine d'être vécue.",
+   "en": "The unexamined life is not worth living.",
+   "author": {
+    "fr": "Socrate",
+    "en": "Socrates"
+   }
+  },
+  {
+   "id": "q-d866c448",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Je sais que je ne sais rien.",
+   "en": "I know that I know nothing.",
+   "author": {
+    "fr": "Socrate",
+    "en": "Socrates"
+   }
+  },
+  {
+   "id": "q-da7dfc85",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "On ne se baigne jamais deux fois dans le même fleuve.",
+   "en": "No one ever steps in the same river twice.",
+   "author": {
+    "fr": "Héraclite",
+    "en": "Heraclitus"
+   }
+  },
+  {
+   "id": "q-9dcad6c0",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Rien n'est permanent, sauf le changement.",
+   "en": "Nothing endures but change.",
+   "author": {
+    "fr": "Héraclite",
+    "en": "Heraclitus"
+   }
+  },
+  {
+   "id": "q-214517b9",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Un voyage de mille lieues commence par un premier pas.",
+   "en": "A journey of a thousand miles begins with a single step.",
+   "author": {
+    "fr": "Lao Tseu",
+    "en": "Laozi"
+   }
+  },
+  {
+   "id": "q-35856ee1",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Celui qui connaît les autres est sage ; celui qui se connaît lui-même est éclairé.",
+   "en": "He who knows others is wise; he who knows himself is enlightened.",
+   "author": {
+    "fr": "Lao Tseu",
+    "en": "Laozi"
+   }
+  },
+  {
+   "id": "q-e372f7de",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Celui qui sait ne parle pas ; celui qui parle ne sait pas.",
+   "en": "Those who know do not speak; those who speak do not know.",
+   "author": {
+    "fr": "Lao Tseu",
+    "en": "Laozi"
+   }
+  },
+  {
+   "id": "q-fdabfcba",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Peu importe la lenteur, tant que l'on ne s'arrête pas.",
+   "en": "It does not matter how slowly you go, as long as you do not stop.",
+   "author": {
+    "fr": "attribué à Confucius",
+    "en": "attributed to Confucius"
+   }
+  },
+  {
+   "id": "q-3d89e4ce",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Savoir que l'on sait ce que l'on sait, et savoir que l'on ne sait pas ce que l'on ne sait pas : voilà la véritable science.",
+   "en": "To know what you know and to know what you do not know: that is true knowledge.",
+   "author": {
+    "fr": "Confucius",
+    "en": "Confucius"
+   }
+  },
+  {
+   "id": "q-d4d90977",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Ne fais pas aux autres ce que tu ne voudrais pas qu'on te fasse.",
+   "en": "Do not do to others what you would not want done to yourself.",
+   "author": {
+    "fr": "Confucius",
+    "en": "Confucius"
+   }
+  },
+  {
+   "id": "q-704b55a2",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'homme de bien exige tout de lui-même ; l'homme de peu attend tout des autres.",
+   "en": "The noble man seeks what he wants in himself; the small man seeks it in others.",
+   "author": {
+    "fr": "Confucius",
+    "en": "Confucius"
+   }
+  },
+  {
+   "id": "q-764e77e4",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Nous souffrons plus souvent en imagination que dans la réalité.",
+   "en": "We suffer more often in imagination than in reality.",
+   "author": {
+    "fr": "Sénèque",
+    "en": "Seneca"
+   }
+  },
+  {
+   "id": "q-17ff5438",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Ce n'est pas parce que les choses sont difficiles que nous n'osons pas, c'est parce que nous n'osons pas qu'elles sont difficiles.",
+   "en": "It is not because things are difficult that we do not dare; it is because we do not dare that they are difficult.",
+   "author": {
+    "fr": "Sénèque",
+    "en": "Seneca"
+   }
+  },
+  {
+   "id": "q-43e3f5b8",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il n'est pas de vent favorable pour celui qui ne sait où il va.",
+   "en": "No wind is favourable to the one who does not know which port he is heading for.",
+   "author": {
+    "fr": "Sénèque",
+    "en": "Seneca"
+   }
+  },
+  {
+   "id": "q-4e4ba0b2",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Pendant qu'on la remet à plus tard, la vie passe.",
+   "en": "While we are postponing, life speeds by.",
+   "author": {
+    "fr": "Sénèque",
+    "en": "Seneca"
+   }
+  },
+  {
+   "id": "q-57857bc9",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tu as du pouvoir sur ton esprit, pas sur les événements. Prends-en conscience, et tu trouveras la force.",
+   "en": "You have power over your mind, not outside events. Realise this, and you will find strength.",
+   "author": {
+    "fr": "Marc Aurèle",
+    "en": "Marcus Aurelius"
+   }
+  },
+  {
+   "id": "q-89ebe207",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le meilleur moyen de se venger, c'est de ne pas ressembler à celui qui t'a offensé.",
+   "en": "The best revenge is not to be like your enemy.",
+   "author": {
+    "fr": "Marc Aurèle",
+    "en": "Marcus Aurelius"
+   }
+  },
+  {
+   "id": "q-40a48136",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Notre vie est ce que nos pensées en font.",
+   "en": "Our life is what our thoughts make it.",
+   "author": {
+    "fr": "Marc Aurèle",
+    "en": "Marcus Aurelius"
+   }
+  },
+  {
+   "id": "q-829c4498",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Ce qui trouble les hommes, ce ne sont pas les choses, mais les jugements qu'ils portent sur les choses.",
+   "en": "Men are disturbed not by things, but by the views they take of them.",
+   "author": {
+    "fr": "Épictète",
+    "en": "Epictetus"
+   }
+  },
+  {
+   "id": "q-0a414e54",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Nul n'est libre s'il n'est maître de lui-même.",
+   "en": "No man is free who is not master of himself.",
+   "author": {
+    "fr": "Épictète",
+    "en": "Epictetus"
+   }
+  },
+  {
+   "id": "q-a4149701",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il y a ce qui dépend de nous, et ce qui ne dépend pas de nous.",
+   "en": "Some things are within our power, while others are not.",
+   "author": {
+    "fr": "Épictète",
+    "en": "Epictetus"
+   }
+  },
+  {
+   "id": "q-f93e865c",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'homme est par nature un animal politique.",
+   "en": "Man is by nature a political animal.",
+   "author": {
+    "fr": "Aristote",
+    "en": "Aristotle"
+   }
+  },
+  {
+   "id": "q-d9715b7d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Une hirondelle ne fait pas le printemps.",
+   "en": "One swallow does not make a spring.",
+   "author": {
+    "fr": "Aristote",
+    "en": "Aristotle"
+   }
+  },
+  {
+   "id": "q-6b7af7a8",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La nature ne fait rien en vain.",
+   "en": "Nature does nothing in vain.",
+   "author": {
+    "fr": "Aristote",
+    "en": "Aristotle"
+   }
+  },
+  {
+   "id": "q-e5ba45d9",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Cueille le jour présent, sans te soucier du lendemain.",
+   "en": "Seize the day, putting as little trust as possible in tomorrow.",
+   "author": {
+    "fr": "Horace",
+    "en": "Horace"
+   }
+  },
+  {
+   "id": "q-2885054b",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La fortune sourit aux audacieux.",
+   "en": "Fortune favours the bold.",
+   "author": {
+    "fr": "Virgile",
+    "en": "Virgil"
+   }
+  },
+  {
+   "id": "q-a090489e",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tant qu'il y a de la vie, il y a de l'espoir.",
+   "en": "While there is life, there is hope.",
+   "author": {
+    "fr": "Cicéron",
+    "en": "Cicero"
+   }
+  },
+  {
+   "id": "q-2c153d14",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Chaque homme porte la forme entière de l'humaine condition.",
+   "en": "Every man bears the whole form of the human condition.",
+   "author": {
+    "fr": "Montaigne",
+    "en": "Montaigne"
+   }
+  },
+  {
+   "id": "q-f5cb34b7",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Philosopher, c'est apprendre à mourir.",
+   "en": "To philosophise is to learn to die.",
+   "author": {
+    "fr": "Montaigne",
+    "en": "Montaigne"
+   }
+  },
+  {
+   "id": "q-06fe3e51",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Que sais-je ?",
+   "en": "What do I know?",
+   "author": {
+    "fr": "Montaigne",
+    "en": "Montaigne"
+   }
+  },
+  {
+   "id": "q-e26ca288",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il vaut mieux une tête bien faite qu'une tête bien pleine.",
+   "en": "Better a well-made head than a well-filled one.",
+   "author": {
+    "fr": "Montaigne",
+    "en": "Montaigne"
+   }
+  },
+  {
+   "id": "q-cf09cdac",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le monde n'est qu'une branloire pérenne.",
+   "en": "The world is but a perpetual see-saw.",
+   "author": {
+    "fr": "Montaigne",
+    "en": "Montaigne"
+   }
+  },
+  {
+   "id": "q-befaaf4d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le cœur a ses raisons que la raison ne connaît point.",
+   "en": "The heart has its reasons which reason knows nothing of.",
+   "author": {
+    "fr": "Blaise Pascal",
+    "en": "Blaise Pascal"
+   }
+  },
+  {
+   "id": "q-8b54630a",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'homme n'est qu'un roseau, le plus faible de la nature ; mais c'est un roseau pensant.",
+   "en": "Man is but a reed, the weakest in nature; but he is a thinking reed.",
+   "author": {
+    "fr": "Blaise Pascal",
+    "en": "Blaise Pascal"
+   }
+  },
+  {
+   "id": "q-47b67fe9",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tout le malheur des hommes vient d'une seule chose, qui est de ne savoir pas demeurer en repos dans une chambre.",
+   "en": "All of humanity's problems stem from man's inability to sit quietly in a room alone.",
+   "author": {
+    "fr": "Blaise Pascal",
+    "en": "Blaise Pascal"
+   }
+  },
+  {
+   "id": "q-5827b737",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Je n'ai fait celle-ci plus longue que parce que je n'ai pas eu le loisir de la faire plus courte.",
+   "en": "I have made this letter longer only because I have not had the time to make it shorter.",
+   "author": {
+    "fr": "Blaise Pascal",
+    "en": "Blaise Pascal"
+   }
+  },
+  {
+   "id": "q-177fd7a7",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Nous avons tous assez de force pour supporter les maux d'autrui.",
+   "en": "We all have strength enough to endure the misfortunes of others.",
+   "author": {
+    "fr": "La Rochefoucauld",
+    "en": "La Rochefoucauld"
+   }
+  },
+  {
+   "id": "q-a9e6fed2",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'hypocrisie est un hommage que le vice rend à la vertu.",
+   "en": "Hypocrisy is the homage vice pays to virtue.",
+   "author": {
+    "fr": "La Rochefoucauld",
+    "en": "La Rochefoucauld"
+   }
+  },
+  {
+   "id": "q-707a876a",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le soleil ni la mort ne se peuvent regarder fixement.",
+   "en": "Neither the sun nor death can be looked at steadily.",
+   "author": {
+    "fr": "La Rochefoucauld",
+    "en": "La Rochefoucauld"
+   }
+  },
+  {
+   "id": "q-9d502d69",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "C'est une grande folie de vouloir être sage tout seul.",
+   "en": "It is great folly to wish to be wise all by oneself.",
+   "author": {
+    "fr": "La Rochefoucauld",
+    "en": "La Rochefoucauld"
+   }
+  },
+  {
+   "id": "q-bdf6d12d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "On n'est jamais si heureux ni si malheureux qu'on s'imagine.",
+   "en": "We are never as happy or as unhappy as we imagine.",
+   "author": {
+    "fr": "La Rochefoucauld",
+    "en": "La Rochefoucauld"
+   }
+  },
+  {
+   "id": "q-90342906",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La modération est comme la sobriété : on voudrait bien manger davantage, mais on craint de se faire mal.",
+   "en": "Moderation is like sobriety: one would like to eat more, but fears it may do harm.",
+   "author": {
+    "fr": "La Rochefoucauld",
+    "en": "La Rochefoucauld"
+   }
+  },
+  {
+   "id": "q-cf66ed9d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Rien ne sert de courir ; il faut partir à point.",
+   "en": "There is no point in running; one must set off on time.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-2eef3281",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La raison du plus fort est toujours la meilleure.",
+   "en": "The argument of the strongest is always the best.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-72bb85f6",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Patience et longueur de temps font plus que force ni que rage.",
+   "en": "Patience and time achieve more than force or rage.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-cb84b527",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tout flatteur vit aux dépens de celui qui l'écoute.",
+   "en": "Every flatterer lives at the expense of those who listen to him.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-28855213",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "On a souvent besoin d'un plus petit que soi.",
+   "en": "We often need someone smaller than ourselves.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-0ae177a2",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Aide-toi, le ciel t'aidera.",
+   "en": "Help yourself, and heaven will help you.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-b2f7ba59",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il ne faut jamais vendre la peau de l'ours qu'on ne l'ait mis par terre.",
+   "en": "Never sell the bear's skin before you have brought the bear down.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-06b70cc6",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Travaillez, prenez de la peine : c'est le fonds qui manque le moins.",
+   "en": "Work, take pains: it is the capital that fails us least.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-e785cb5f",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "En toute chose il faut considérer la fin.",
+   "en": "In all things, one must consider the end.",
+   "author": {
+    "fr": "La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-da75e895",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Il faut manger pour vivre, et non pas vivre pour manger.",
+   "en": "One should eat to live, not live to eat.",
+   "author": {
+    "fr": "Molière",
+    "en": "Molière"
+   }
+  },
+  {
+   "id": "q-7bbed577",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Que diable allait-il faire dans cette galère ?",
+   "en": "What the devil was he doing in that galley?",
+   "author": {
+    "fr": "Molière",
+    "en": "Molière"
+   }
+  },
+  {
+   "id": "q-93fd08e0",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "On ne meurt qu'une fois, et c'est pour si longtemps.",
+   "en": "We only die once, and it is for such a long time.",
+   "author": {
+    "fr": "Molière",
+    "en": "Molière"
+   }
+  },
+  {
+   "id": "q-987916dd",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Je vis de bonne soupe, et non de beau langage.",
+   "en": "I live on good soup, not on fine words.",
+   "author": {
+    "fr": "Molière",
+    "en": "Molière"
+   }
+  },
+  {
+   "id": "q-d87219e3",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "À vaincre sans péril, on triomphe sans gloire.",
+   "en": "To win without risk is to triumph without glory.",
+   "author": {
+    "fr": "Corneille",
+    "en": "Corneille"
+   }
+  },
+  {
+   "id": "q-91d7996f",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Aux âmes bien nées, la valeur n'attend point le nombre des années.",
+   "en": "In well-born souls, valour does not wait for the number of years.",
+   "author": {
+    "fr": "Corneille",
+    "en": "Corneille"
+   }
+  },
+  {
+   "id": "q-8486da5a",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Ce que l'on conçoit bien s'énonce clairement, et les mots pour le dire arrivent aisément.",
+   "en": "What is well conceived is clearly said, and the words to say it flow with ease.",
+   "author": {
+    "fr": "Boileau",
+    "en": "Boileau"
+   }
+  },
+  {
+   "id": "q-93693cd0",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Vingt fois sur le métier remettez votre ouvrage.",
+   "en": "Put your work back on the loom twenty times.",
+   "author": {
+    "fr": "Boileau",
+    "en": "Boileau"
+   }
+  },
+  {
+   "id": "q-bdb1648e",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Qui ne sait se borner ne sut jamais écrire.",
+   "en": "He who cannot limit himself has never known how to write.",
+   "author": {
+    "fr": "Boileau",
+    "en": "Boileau"
+   }
+  },
+  {
+   "id": "q-44680e7c",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il faut cultiver notre jardin.",
+   "en": "We must cultivate our garden.",
+   "author": {
+    "fr": "Voltaire",
+    "en": "Voltaire"
+   }
+  },
+  {
+   "id": "q-b287bd94",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Le mieux est l'ennemi du bien.",
+   "en": "The best is the enemy of the good.",
+   "author": {
+    "fr": "Voltaire",
+    "en": "Voltaire"
+   }
+  },
+  {
+   "id": "q-4c2ba538",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le travail éloigne de nous trois grands maux : l'ennui, le vice et le besoin.",
+   "en": "Work keeps at bay three great evils: boredom, vice and need.",
+   "author": {
+    "fr": "Voltaire",
+    "en": "Voltaire"
+   }
+  },
+  {
+   "id": "q-568d07dd",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Le secret d'ennuyer est celui de tout dire.",
+   "en": "The secret of being a bore is to tell everything.",
+   "author": {
+    "fr": "Voltaire",
+    "en": "Voltaire"
+   }
+  },
+  {
+   "id": "q-6384a33d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le doute n'est pas un état bien agréable, mais l'assurance est un état ridicule.",
+   "en": "Doubt is not a pleasant condition, but certainty is an absurd one.",
+   "author": {
+    "fr": "Voltaire",
+    "en": "Voltaire"
+   }
+  },
+  {
+   "id": "q-57c1fe23",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'homme est né libre, et partout il est dans les fers.",
+   "en": "Man is born free, and everywhere he is in chains.",
+   "author": {
+    "fr": "Jean-Jacques Rousseau",
+    "en": "Jean-Jacques Rousseau"
+   }
+  },
+  {
+   "id": "q-65c06bf4",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il faut avoir beaucoup étudié pour savoir peu.",
+   "en": "One must have studied a great deal to know a little.",
+   "author": {
+    "fr": "Montesquieu",
+    "en": "Montesquieu"
+   }
+  },
+  {
+   "id": "q-556d6e13",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le bonheur ou le malheur consiste dans une certaine disposition des organes.",
+   "en": "Happiness or unhappiness lies in a certain disposition of the organs.",
+   "author": {
+    "fr": "Montesquieu",
+    "en": "Montesquieu"
+   }
+  },
+  {
+   "id": "q-5f294a95",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Il faut pleurer les hommes à leur naissance, et non pas à leur mort.",
+   "en": "We should weep for men at their birth, not at their death.",
+   "author": {
+    "fr": "Montesquieu",
+    "en": "Montesquieu"
+   }
+  },
+  {
+   "id": "q-bf66c246",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Je pense, donc je suis.",
+   "en": "I think, therefore I am.",
+   "author": {
+    "fr": "Descartes",
+    "en": "Descartes"
+   }
+  },
+  {
+   "id": "q-03e074d7",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le bon sens est la chose du monde la mieux partagée.",
+   "en": "Good sense is the most fairly distributed thing in the world.",
+   "author": {
+    "fr": "Descartes",
+    "en": "Descartes"
+   }
+  },
+  {
+   "id": "q-0d80f1b7",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il ne suffit pas d'avoir l'esprit bon, mais le principal est de l'appliquer bien.",
+   "en": "It is not enough to have a good mind; the main thing is to use it well.",
+   "author": {
+    "fr": "Descartes",
+    "en": "Descartes"
+   }
+  },
+  {
+   "id": "q-7d5fd251",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La plus perdue de toutes les journées est celle où l'on n'a pas ri.",
+   "en": "The most wasted of all days is one without laughter.",
+   "author": {
+    "fr": "Chamfort",
+    "en": "Chamfort"
+   }
+  },
+  {
+   "id": "q-d7d983b4",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Les grandes pensées viennent du cœur.",
+   "en": "Great thoughts come from the heart.",
+   "author": {
+    "fr": "Vauvenargues",
+    "en": "Vauvenargues"
+   }
+  },
+  {
+   "id": "q-779e7421",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Le rire est le soleil qui chasse l'hiver du visage humain.",
+   "en": "Laughter is the sun that drives winter from the human face.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-a935d052",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La musique, c'est du bruit qui pense.",
+   "en": "Music is noise that thinks.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-e021d331",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Ouvrez une école, vous fermerez une prison.",
+   "en": "Open a school, and you will close a prison.",
+   "author": {
+    "fr": "attribué à Victor Hugo",
+    "en": "attributed to Victor Hugo"
+   }
+  },
+  {
+   "id": "q-ddc99782",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Aimer, c'est agir.",
+   "en": "To love is to act.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-dd1ab8c5",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "On résiste à l'invasion des armées ; on ne résiste pas à l'invasion des idées.",
+   "en": "One resists the invasion of armies; one does not resist the invasion of ideas.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-84c40c82",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La mélancolie, c'est le bonheur d'être triste.",
+   "en": "Melancholy is the happiness of being sad.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-d0a009ba",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Ceux qui vivent, ce sont ceux qui luttent.",
+   "en": "Those who live are those who fight.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-7ce3d4b1",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Le bonheur suprême de la vie, c'est la conviction qu'on est aimé.",
+   "en": "The supreme happiness of life is the conviction that we are loved.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-69a593e3",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "La forme, c'est le fond qui remonte à la surface.",
+   "en": "Form is substance rising to the surface.",
+   "author": {
+    "fr": "Victor Hugo",
+    "en": "Victor Hugo"
+   }
+  },
+  {
+   "id": "q-cfe5a54e",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Qu'importe le flacon, pourvu qu'on ait l'ivresse.",
+   "en": "Never mind the bottle, so long as there is the intoxication.",
+   "author": {
+    "fr": "Alfred de Musset",
+    "en": "Alfred de Musset"
+   }
+  },
+  {
+   "id": "q-85b05b56",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La beauté n'est que la promesse du bonheur.",
+   "en": "Beauty is nothing but the promise of happiness.",
+   "author": {
+    "fr": "Stendhal",
+    "en": "Stendhal"
+   }
+  },
+  {
+   "id": "q-48bee0a8",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La gloire est le soleil des morts.",
+   "en": "Glory is the sun of the dead.",
+   "author": {
+    "fr": "Balzac",
+    "en": "Balzac"
+   }
+  },
+  {
+   "id": "q-ee3144de",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Il faut rire et pleurer, aimer, travailler, jouir et souffrir, enfin vibrer autant que possible dans toute son étendue.",
+   "en": "One must laugh and weep, love, work, enjoy and suffer; in short, vibrate as much as possible to one's full extent.",
+   "author": {
+    "fr": "Gustave Flaubert",
+    "en": "Gustave Flaubert"
+   }
+  },
+  {
+   "id": "q-9e9d9cc2",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Les honneurs déshonorent ; le titre dégrade ; la fonction abrutit.",
+   "en": "Honours dishonour, titles degrade, office stupefies.",
+   "author": {
+    "fr": "Gustave Flaubert",
+    "en": "Gustave Flaubert"
+   }
+  },
+  {
+   "id": "q-b9957984",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Le beau est toujours bizarre.",
+   "en": "The beautiful is always strange.",
+   "author": {
+    "fr": "Charles Baudelaire",
+    "en": "Charles Baudelaire"
+   }
+  },
+  {
+   "id": "q-a4cc1bb1",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Il faut être toujours ivre : de vin, de poésie ou de vertu, à votre guise.",
+   "en": "One must always be drunk: on wine, on poetry or on virtue, as you wish.",
+   "author": {
+    "fr": "Charles Baudelaire",
+    "en": "Charles Baudelaire"
+   }
+  },
+  {
+   "id": "q-f2cda526",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Tu m'as donné ta boue et j'en ai fait de l'or.",
+   "en": "You gave me your mud and I turned it into gold.",
+   "author": {
+    "fr": "Charles Baudelaire",
+    "en": "Charles Baudelaire"
+   }
+  },
+  {
+   "id": "q-b16fc602",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "On n'est pas sérieux, quand on a dix-sept ans.",
+   "en": "No one is serious at seventeen.",
+   "author": {
+    "fr": "Arthur Rimbaud",
+    "en": "Arthur Rimbaud"
+   }
+  },
+  {
+   "id": "q-dc41f66e",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Je est un autre.",
+   "en": "I is another.",
+   "author": {
+    "fr": "Arthur Rimbaud",
+    "en": "Arthur Rimbaud"
+   }
+  },
+  {
+   "id": "q-812bd5ae",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "De la musique avant toute chose.",
+   "en": "Music before everything.",
+   "author": {
+    "fr": "Paul Verlaine",
+    "en": "Paul Verlaine"
+   }
+  },
+  {
+   "id": "q-620b0d3a",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Il est grand temps de rallumer les étoiles.",
+   "en": "It is high time to relight the stars.",
+   "author": {
+    "fr": "Guillaume Apollinaire",
+    "en": "Guillaume Apollinaire"
+   }
+  },
+  {
+   "id": "q-c5bc0feb",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Tout, au monde, existe pour aboutir à un livre.",
+   "en": "Everything in the world exists to end up in a book.",
+   "author": {
+    "fr": "Stéphane Mallarmé",
+    "en": "Stéphane Mallarmé"
+   }
+  },
+  {
+   "id": "q-0be2b8ed",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Le véritable voyage de découverte ne consiste pas à chercher de nouveaux paysages, mais à avoir de nouveaux yeux.",
+   "en": "The real voyage of discovery consists not in seeking new landscapes, but in having new eyes.",
+   "author": {
+    "fr": "Marcel Proust",
+    "en": "Marcel Proust"
+   }
+  },
+  {
+   "id": "q-31db8a48",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Les vrais paradis sont les paradis qu'on a perdus.",
+   "en": "The true paradises are the paradises we have lost.",
+   "author": {
+    "fr": "Marcel Proust",
+    "en": "Marcel Proust"
+   }
+  },
+  {
+   "id": "q-6bfd834d",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Soyons reconnaissants aux personnes qui nous donnent du bonheur ; elles sont les charmants jardiniers par qui nos âmes sont fleuries.",
+   "en": "Let us be grateful to people who make us happy; they are the charming gardeners who make our souls blossom.",
+   "author": {
+    "fr": "attribué à Marcel Proust",
+    "en": "attributed to Marcel Proust"
+   }
+  },
+  {
+   "id": "q-7426c8ca",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "On ne voit bien qu'avec le cœur. L'essentiel est invisible pour les yeux.",
+   "en": "One sees clearly only with the heart. What is essential is invisible to the eye.",
+   "author": {
+    "fr": "Antoine de Saint-Exupéry",
+    "en": "Antoine de Saint-Exupéry"
+   }
+  },
+  {
+   "id": "q-080b270f",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Tu deviens responsable pour toujours de ce que tu as apprivoisé.",
+   "en": "You become responsible forever for what you have tamed.",
+   "author": {
+    "fr": "Antoine de Saint-Exupéry",
+    "en": "Antoine de Saint-Exupéry"
+   }
+  },
+  {
+   "id": "q-cb08dc5c",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Toutes les grandes personnes ont d'abord été des enfants. Mais peu d'entre elles s'en souviennent.",
+   "en": "All grown-ups were once children, but few of them remember it.",
+   "author": {
+    "fr": "Antoine de Saint-Exupéry",
+    "en": "Antoine de Saint-Exupéry"
+   }
+  },
+  {
+   "id": "q-faf9bff6",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "C'est le temps que tu as perdu pour ta rose qui fait ta rose si importante.",
+   "en": "It is the time you have spent on your rose that makes your rose so important.",
+   "author": {
+    "fr": "Antoine de Saint-Exupéry",
+    "en": "Antoine de Saint-Exupéry"
+   }
+  },
+  {
+   "id": "q-bc3ff64c",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "La perfection est atteinte, non quand il n'y a plus rien à ajouter, mais quand il n'y a plus rien à retrancher.",
+   "en": "Perfection is achieved not when there is nothing more to add, but when there is nothing left to take away.",
+   "author": {
+    "fr": "Antoine de Saint-Exupéry",
+    "en": "Antoine de Saint-Exupéry"
+   }
+  },
+  {
+   "id": "q-6a9d31e1",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Aimer, ce n'est pas se regarder l'un l'autre, c'est regarder ensemble dans la même direction.",
+   "en": "Love does not consist in gazing at each other, but in looking outward together in the same direction.",
+   "author": {
+    "fr": "Antoine de Saint-Exupéry",
+    "en": "Antoine de Saint-Exupéry"
+   }
+  },
+  {
+   "id": "q-618895a2",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Pour ce qui est de l'avenir, il ne s'agit pas de le prévoir, mais de le rendre possible.",
+   "en": "As for the future, your task is not to foresee it, but to enable it.",
+   "author": {
+    "fr": "Antoine de Saint-Exupéry",
+    "en": "Antoine de Saint-Exupéry"
+   }
+  },
+  {
+   "id": "q-cbbd696f",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Il faut imaginer Sisyphe heureux.",
+   "en": "One must imagine Sisyphus happy.",
+   "author": {
+    "fr": "Albert Camus",
+    "en": "Albert Camus"
+   }
+  },
+  {
+   "id": "q-cffa74ae",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Au milieu de l'hiver, j'apprenais enfin qu'il y avait en moi un été invincible.",
+   "en": "In the midst of winter, I found there was, within me, an invincible summer.",
+   "author": {
+    "fr": "Albert Camus",
+    "en": "Albert Camus"
+   }
+  },
+  {
+   "id": "q-587cbba3",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Mal nommer les choses, c'est ajouter au malheur du monde.",
+   "en": "To name things wrongly is to add to the misfortune of the world.",
+   "author": {
+    "fr": "Albert Camus",
+    "en": "Albert Camus"
+   }
+  },
+  {
+   "id": "q-2f93f0f3",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "L'existence précède l'essence.",
+   "en": "Existence precedes essence.",
+   "author": {
+    "fr": "Jean-Paul Sartre",
+    "en": "Jean-Paul Sartre"
+   }
+  },
+  {
+   "id": "q-752d604d",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "On ne naît pas femme : on le devient.",
+   "en": "One is not born, but rather becomes, a woman.",
+   "author": {
+    "fr": "Simone de Beauvoir",
+    "en": "Simone de Beauvoir"
+   }
+  },
+  {
+   "id": "q-06d77e39",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le pessimisme est d'humeur ; l'optimisme est de volonté.",
+   "en": "Pessimism is a matter of mood; optimism is a matter of will.",
+   "author": {
+    "fr": "Alain",
+    "en": "Alain"
+   }
+  },
+  {
+   "id": "q-64bbd6d5",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Penser, c'est dire non.",
+   "en": "To think is to say no.",
+   "author": {
+    "fr": "Alain",
+    "en": "Alain"
+   }
+  },
+  {
+   "id": "q-2d32eb33",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il faut agir en homme de pensée et penser en homme d'action.",
+   "en": "Act as a man of thought and think as a man of action.",
+   "author": {
+    "fr": "Henri Bergson",
+    "en": "Henri Bergson"
+   }
+  },
+  {
+   "id": "q-2230efcb",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Le bonheur, c'est d'être heureux ; ce n'est pas de faire croire aux autres qu'on l'est.",
+   "en": "Happiness is being happy, not making others believe you are.",
+   "author": {
+    "fr": "Jules Renard",
+    "en": "Jules Renard"
+   }
+  },
+  {
+   "id": "q-52aa330e",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "La paresse, c'est l'habitude de se reposer avant la fatigue.",
+   "en": "Laziness is the habit of resting before you get tired.",
+   "author": {
+    "fr": "Jules Renard",
+    "en": "Jules Renard"
+   }
+  },
+  {
+   "id": "q-094099b0",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Si l'argent ne fait pas le bonheur, rendez-le !",
+   "en": "If money does not buy happiness, give it back!",
+   "author": {
+    "fr": "Jules Renard",
+    "en": "Jules Renard"
+   }
+  },
+  {
+   "id": "q-6c531e02",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "L'homme n'est pas fait pour travailler : la preuve, c'est que cela le fatigue.",
+   "en": "Man is not made for work: the proof is that it tires him.",
+   "author": {
+    "fr": "Tristan Bernard",
+    "en": "Tristan Bernard"
+   }
+  },
+  {
+   "id": "q-c1d61f0b",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "On devrait construire les villes à la campagne, car l'air y est plus pur.",
+   "en": "Cities should be built in the countryside, where the air is purer.",
+   "author": {
+    "fr": "Alphonse Allais",
+    "en": "Alphonse Allais"
+   }
+  },
+  {
+   "id": "q-ea9756e1",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Partir, c'est mourir un peu, mais mourir, c'est partir beaucoup.",
+   "en": "To leave is to die a little, but to die is to leave a lot.",
+   "author": {
+    "fr": "Alphonse Allais",
+    "en": "Alphonse Allais"
+   }
+  },
+  {
+   "id": "q-ab6b06ba",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Ceux qui ne savent rien en savent toujours autant que ceux qui n'en savent pas plus qu'eux.",
+   "en": "Those who know nothing always know as much as those who know no more than they do.",
+   "author": {
+    "fr": "Pierre Dac",
+    "en": "Pierre Dac"
+   }
+  },
+  {
+   "id": "q-46a13571",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Si la matière grise était plus rose, le monde aurait moins les idées noires.",
+   "en": "If grey matter were pinker, the world would have fewer dark thoughts.",
+   "author": {
+    "fr": "Pierre Dac",
+    "en": "Pierre Dac"
+   }
+  },
+  {
+   "id": "q-cce6166e",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Il vaut mieux penser le changement que changer le pansement.",
+   "en": "Better to think about change than to change the bandage.",
+   "author": {
+    "fr": "Francis Blanche",
+    "en": "Francis Blanche"
+   }
+  },
+  {
+   "id": "q-c2f70f36",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Dieu a dit : il faut partager. Les riches auront la nourriture, les pauvres de l'appétit.",
+   "en": "God said: we must share. The rich will get the food, the poor the appetite.",
+   "author": {
+    "fr": "Coluche",
+    "en": "Coluche"
+   }
+  },
+  {
+   "id": "q-b147fb1d",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "L'ennemi est bête : il croit que c'est nous l'ennemi, alors que c'est lui !",
+   "en": "The enemy is stupid: he thinks we are the enemy, when it is him!",
+   "author": {
+    "fr": "Pierre Desproges",
+    "en": "Pierre Desproges"
+   }
+  },
+  {
+   "id": "q-d5077e42",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Se coucher tard nuit.",
+   "en": "Staying up late does harm (a French pun on night).",
+   "author": {
+    "fr": "Raymond Devos",
+    "en": "Raymond Devos"
+   }
+  },
+  {
+   "id": "q-2307ffcb",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Rien, ce n'est pas rien. La preuve, c'est que l'on peut le soustraire.",
+   "en": "Nothing is not nothing. The proof is that you can subtract it.",
+   "author": {
+    "fr": "Raymond Devos",
+    "en": "Raymond Devos"
+   }
+  },
+  {
+   "id": "q-60bd073f",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "L'éternité, c'est long, surtout vers la fin.",
+   "en": "Eternity is very long, especially towards the end.",
+   "author": {
+    "fr": "attribué à Woody Allen",
+    "en": "attributed to Woody Allen"
+   }
+  },
+  {
+   "id": "q-8d788f39",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Je ne veux pas atteindre l'immortalité grâce à mon œuvre. Je veux l'atteindre en ne mourant pas.",
+   "en": "I don't want to achieve immortality through my work. I want to achieve it by not dying.",
+   "author": {
+    "fr": "Woody Allen",
+    "en": "Woody Allen"
+   }
+  },
+  {
+   "id": "q-feaf5247",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Quatre-vingts pour cent de la réussite, c'est d'être là.",
+   "en": "Eighty percent of success is showing up.",
+   "author": {
+    "fr": "Woody Allen",
+    "en": "Woody Allen"
+   }
+  },
+  {
+   "id": "q-926e2dff",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Je ne voudrais pas faire partie d'un club qui accepterait de m'avoir pour membre.",
+   "en": "I refuse to join any club that would have me as a member.",
+   "author": {
+    "fr": "Groucho Marx",
+    "en": "Groucho Marx"
+   }
+  },
+  {
+   "id": "q-1a0085df",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "En dehors du chien, le livre est le meilleur ami de l'homme. Dans le chien, il fait trop noir pour lire.",
+   "en": "Outside of a dog, a book is man's best friend. Inside of a dog it's too dark to read.",
+   "author": {
+    "fr": "Groucho Marx",
+    "en": "Groucho Marx"
+   }
+  },
+  {
+   "id": "q-024a4879",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Je peux résister à tout, sauf à la tentation.",
+   "en": "I can resist everything except temptation.",
+   "author": {
+    "fr": "Oscar Wilde",
+    "en": "Oscar Wilde"
+   }
+  },
+  {
+   "id": "q-ebbeabc0",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Vivre est la chose la plus rare au monde. La plupart des gens existent, c'est tout.",
+   "en": "To live is the rarest thing in the world. Most people exist, that is all.",
+   "author": {
+    "fr": "Oscar Wilde",
+    "en": "Oscar Wilde"
+   }
+  },
+  {
+   "id": "q-a4cb5064",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "L'expérience est le nom que chacun donne à ses erreurs.",
+   "en": "Experience is the name everyone gives to their mistakes.",
+   "author": {
+    "fr": "Oscar Wilde",
+    "en": "Oscar Wilde"
+   }
+  },
+  {
+   "id": "q-8696ebe4",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Il n'y a qu'une chose au monde qui soit pire que de faire parler de soi, c'est de ne pas faire parler de soi.",
+   "en": "There is only one thing in the world worse than being talked about, and that is not being talked about.",
+   "author": {
+    "fr": "Oscar Wilde",
+    "en": "Oscar Wilde"
+   }
+  },
+  {
+   "id": "q-78161284",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Nous sommes tous dans le caniveau, mais certains d'entre nous regardent les étoiles.",
+   "en": "We are all in the gutter, but some of us are looking at the stars.",
+   "author": {
+    "fr": "Oscar Wilde",
+    "en": "Oscar Wilde"
+   }
+  },
+  {
+   "id": "q-ff5be96e",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "S'aimer soi-même est le début d'une histoire d'amour qui durera toute la vie.",
+   "en": "To love oneself is the beginning of a lifelong romance.",
+   "author": {
+    "fr": "Oscar Wilde",
+    "en": "Oscar Wilde"
+   }
+  },
+  {
+   "id": "q-ec02ae4d",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Je ne suis pas assez jeune pour tout savoir.",
+   "en": "I am not young enough to know everything.",
+   "author": {
+    "fr": "Oscar Wilde",
+    "en": "Oscar Wilde"
+   }
+  },
+  {
+   "id": "q-3c1856c2",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "La jeunesse est une chose merveilleuse ; quel crime de la gâcher chez les enfants !",
+   "en": "Youth is a wonderful thing. What a crime to waste it on children.",
+   "author": {
+    "fr": "attribué à George Bernard Shaw",
+    "en": "attributed to George Bernard Shaw"
+   }
+  },
+  {
+   "id": "q-36f0c83f",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "L'annonce de ma mort était très exagérée.",
+   "en": "The report of my death was an exaggeration.",
+   "author": {
+    "fr": "Mark Twain",
+    "en": "Mark Twain"
+   }
+  },
+  {
+   "id": "q-966d93df",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Arrêter de fumer est la chose la plus facile au monde. Je le sais, je l'ai fait des milliers de fois.",
+   "en": "Giving up smoking is the easiest thing in the world. I know because I've done it thousands of times.",
+   "author": {
+    "fr": "attribué à Mark Twain",
+    "en": "attributed to Mark Twain"
+   }
+  },
+  {
+   "id": "q-90d19038",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Les anges peuvent voler parce qu'ils se prennent à la légère.",
+   "en": "Angels can fly because they take themselves lightly.",
+   "author": {
+    "fr": "G. K. Chesterton",
+    "en": "G. K. Chesterton"
+   }
+  },
+  {
+   "id": "q-3080f043",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "J'aime le travail : il me fascine. Je peux rester assis à le regarder pendant des heures.",
+   "en": "I like work: it fascinates me. I can sit and look at it for hours.",
+   "author": {
+    "fr": "Jerome K. Jerome",
+    "en": "Jerome K. Jerome"
+   }
+  },
+  {
+   "id": "q-bddf4fe8",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "J'adore les dates limites. J'aime le sifflement qu'elles font en passant.",
+   "en": "I love deadlines. I love the whooshing noise they make as they go by.",
+   "author": {
+    "fr": "Douglas Adams",
+    "en": "Douglas Adams"
+   }
+  },
+  {
+   "id": "q-ff777c19",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "La lumière croit qu'elle voyage plus vite que tout, mais elle a tort : l'obscurité est toujours arrivée avant elle.",
+   "en": "Light thinks it travels faster than anything but it is wrong: the darkness always got there first.",
+   "author": {
+    "fr": "Terry Pratchett",
+    "en": "Terry Pratchett"
+   }
+  },
+  {
+   "id": "q-cad453fe",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Si j'ai vu plus loin, c'est en me tenant sur les épaules de géants.",
+   "en": "If I have seen further, it is by standing on the shoulders of giants.",
+   "author": {
+    "fr": "Isaac Newton",
+    "en": "Isaac Newton"
+   }
+  },
+  {
+   "id": "q-4b634f5b",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "L'imagination est plus importante que le savoir.",
+   "en": "Imagination is more important than knowledge.",
+   "author": {
+    "fr": "Albert Einstein",
+    "en": "Albert Einstein"
+   }
+  },
+  {
+   "id": "q-ad9ce0da",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "La chose la plus incompréhensible au sujet de l'univers est qu'il soit compréhensible.",
+   "en": "The most incomprehensible thing about the universe is that it is comprehensible.",
+   "author": {
+    "fr": "Albert Einstein",
+    "en": "Albert Einstein"
+   }
+  },
+  {
+   "id": "q-c267664c",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Dieu ne joue pas aux dés.",
+   "en": "God does not play dice.",
+   "author": {
+    "fr": "Albert Einstein",
+    "en": "Albert Einstein"
+   }
+  },
+  {
+   "id": "q-34c4668c",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "La vie, c'est comme une bicyclette : il faut avancer pour ne pas perdre l'équilibre.",
+   "en": "Life is like riding a bicycle. To keep your balance you must keep moving.",
+   "author": {
+    "fr": "Albert Einstein",
+    "en": "Albert Einstein"
+   }
+  },
+  {
+   "id": "q-4e650fd2",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Le plus important est de ne jamais cesser de se poser des questions.",
+   "en": "The important thing is not to stop questioning.",
+   "author": {
+    "fr": "Albert Einstein",
+    "en": "Albert Einstein"
+   }
+  },
+  {
+   "id": "q-c0b99763",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Dans les champs de l'observation, le hasard ne favorise que les esprits préparés.",
+   "en": "In the fields of observation, chance favours only the prepared mind.",
+   "author": {
+    "fr": "Louis Pasteur",
+    "en": "Louis Pasteur"
+   }
+  },
+  {
+   "id": "q-394ab0a2",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Rien ne se perd, rien ne se crée, tout se transforme.",
+   "en": "Nothing is lost, nothing is created, everything is transformed.",
+   "author": {
+    "fr": "Lavoisier",
+    "en": "Lavoisier"
+   }
+  },
+  {
+   "id": "q-210f0c5e",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Dans la vie, rien n'est à craindre, tout est à comprendre.",
+   "en": "Nothing in life is to be feared, it is only to be understood.",
+   "author": {
+    "fr": "attribué à Marie Curie",
+    "en": "attributed to Marie Curie"
+   }
+  },
+  {
+   "id": "q-2dd4348c",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "La philosophie est écrite dans ce grand livre qu'est l'univers, et il est écrit en langue mathématique.",
+   "en": "Philosophy is written in this grand book, the universe, and it is written in the language of mathematics.",
+   "author": {
+    "fr": "Galilée",
+    "en": "Galileo"
+   }
+  },
+  {
+   "id": "q-eb5c9c85",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Donnez-moi un point d'appui, et je soulèverai le monde.",
+   "en": "Give me a place to stand, and I will move the earth.",
+   "author": {
+    "fr": "Archimède",
+    "en": "Archimedes"
+   }
+  },
+  {
+   "id": "q-29e4972f",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Eurêka !",
+   "en": "Eureka!",
+   "author": {
+    "fr": "Archimède",
+    "en": "Archimedes"
+   }
+  },
+  {
+   "id": "q-462f10d4",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "La science est faite de faits comme une maison est faite de pierres ; mais une accumulation de faits n'est pas plus une science qu'un tas de pierres n'est une maison.",
+   "en": "Science is built of facts as a house is built of stones; but a heap of facts is no more a science than a pile of stones is a house.",
+   "author": {
+    "fr": "Henri Poincaré",
+    "en": "Henri Poincaré"
+   }
+  },
+  {
+   "id": "q-a2212b8b",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "C'est par la logique qu'on démontre, c'est par l'intuition qu'on invente.",
+   "en": "It is by logic that we prove, but by intuition that we discover.",
+   "author": {
+    "fr": "Henri Poincaré",
+    "en": "Henri Poincaré"
+   }
+  },
+  {
+   "id": "q-51ef120d",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "C'est ce que nous pensons déjà connaître qui nous empêche souvent d'apprendre.",
+   "en": "It is what we think we already know that often prevents us from learning.",
+   "author": {
+    "fr": "attribué à Claude Bernard",
+    "en": "attributed to Claude Bernard"
+   }
+  },
+  {
+   "id": "q-9da00cb1",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "L'ignorance engendre plus souvent la confiance que le savoir.",
+   "en": "Ignorance more frequently begets confidence than does knowledge.",
+   "author": {
+    "fr": "Charles Darwin",
+    "en": "Charles Darwin"
+   }
+  },
+  {
+   "id": "q-58f0e6f0",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Des affirmations extraordinaires exigent des preuves extraordinaires.",
+   "en": "Extraordinary claims require extraordinary evidence.",
+   "author": {
+    "fr": "Carl Sagan",
+    "en": "Carl Sagan"
+   }
+  },
+  {
+   "id": "q-858dd1ce",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Nous sommes faits de la matière des étoiles.",
+   "en": "We are made of star-stuff.",
+   "author": {
+    "fr": "Carl Sagan",
+    "en": "Carl Sagan"
+   }
+  },
+  {
+   "id": "q-da4afc2e",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Le premier principe est de ne pas vous tromper vous-même, et vous êtes la personne la plus facile à tromper.",
+   "en": "The first principle is that you must not fool yourself, and you are the easiest person to fool.",
+   "author": {
+    "fr": "Richard Feynman",
+    "en": "Richard Feynman"
+   }
+  },
+  {
+   "id": "q-551d0cad",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Je préfère avoir des questions sans réponse que des réponses qu'on ne peut pas remettre en question.",
+   "en": "I would rather have questions that can't be answered than answers that can't be questioned.",
+   "author": {
+    "fr": "attribué à Richard Feynman",
+    "en": "attributed to Richard Feynman"
+   }
+  },
+  {
+   "id": "q-64dd2bed",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Un expert est une personne qui a commis toutes les erreurs possibles dans un domaine très restreint.",
+   "en": "An expert is a person who has made all the mistakes that can be made in a very narrow field.",
+   "author": {
+    "fr": "attribué à Niels Bohr",
+    "en": "attributed to Niels Bohr"
+   }
+  },
+  {
+   "id": "q-8c8eff48",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Toute technologie suffisamment avancée est indiscernable de la magie.",
+   "en": "Any sufficiently advanced technology is indistinguishable from magic.",
+   "author": {
+    "fr": "Arthur C. Clarke",
+    "en": "Arthur C. Clarke"
+   }
+  },
+  {
+   "id": "q-5f2b1a04",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "La violence est le dernier refuge de l'incompétence.",
+   "en": "Violence is the last refuge of the incompetent.",
+   "author": {
+    "fr": "Isaac Asimov",
+    "en": "Isaac Asimov"
+   }
+  },
+  {
+   "id": "q-e75c7e1e",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "La meilleure façon de prédire l'avenir, c'est de l'inventer.",
+   "en": "The best way to predict the future is to invent it.",
+   "author": {
+    "fr": "Alan Kay",
+    "en": "Alan Kay"
+   }
+  },
+  {
+   "id": "q-f29404ea",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Les tests peuvent montrer la présence de bogues, jamais leur absence.",
+   "en": "Testing shows the presence, not the absence of bugs.",
+   "author": {
+    "fr": "Edsger Dijkstra",
+    "en": "Edsger Dijkstra"
+   }
+  },
+  {
+   "id": "q-78f5e42d",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "L'optimisation prématurée est la source de tous les maux.",
+   "en": "Premature optimization is the root of all evil.",
+   "author": {
+    "fr": "Donald Knuth",
+    "en": "Donald Knuth"
+   }
+  },
+  {
+   "id": "q-3fc79fb6",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Il est plus facile de demander pardon que de demander la permission.",
+   "en": "It is easier to ask forgiveness than it is to get permission.",
+   "author": {
+    "fr": "Grace Hopper",
+    "en": "Grace Hopper"
+   }
+  },
+  {
+   "id": "q-758c73dd",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Le silence éternel de ces espaces infinis m'effraie.",
+   "en": "The eternal silence of these infinite spaces frightens me.",
+   "author": {
+    "fr": "Blaise Pascal",
+    "en": "Blaise Pascal"
+   }
+  },
+  {
+   "id": "q-54dc3fb3",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Non seulement Dieu joue aux dés, mais il les jette parfois là où on ne peut pas les voir.",
+   "en": "Not only does God play dice, but he sometimes throws them where they cannot be seen.",
+   "author": {
+    "fr": "Stephen Hawking",
+    "en": "Stephen Hawking"
+   }
+  },
+  {
+   "id": "q-ad9febe5",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Je n'ai pas échoué. J'ai simplement trouvé dix mille solutions qui ne fonctionnent pas.",
+   "en": "I have not failed. I've just found 10,000 ways that won't work.",
+   "author": {
+    "fr": "attribué à Thomas Edison",
+    "en": "attributed to Thomas Edison"
+   }
+  },
+  {
+   "id": "q-401975c7",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Le génie, c'est un pour cent d'inspiration et quatre-vingt-dix-neuf pour cent de transpiration.",
+   "en": "Genius is one percent inspiration and ninety-nine percent perspiration.",
+   "author": {
+    "fr": "Thomas Edison",
+    "en": "Thomas Edison"
+   }
+  },
+  {
+   "id": "q-f785000f",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "L'homme est la plus insensée des espèces : il vénère un Dieu invisible et massacre une nature visible.",
+   "en": "Man is the most insane species: he worships an invisible God and destroys a visible nature.",
+   "author": {
+    "fr": "attribué à Hubert Reeves",
+    "en": "attributed to Hubert Reeves"
+   }
+  },
+  {
+   "id": "q-fcb8ccd7",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "C'est une triste chose de penser que la nature parle et que le genre humain n'écoute pas.",
+   "en": "It is a sad thing to think that nature talks and mankind does not listen.",
+   "author": {
+    "fr": "attribué à Victor Hugo",
+    "en": "attributed to Victor Hugo"
+   }
+  },
+  {
+   "id": "q-898c1f09",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Je suis allé dans les bois parce que je voulais vivre sans hâte.",
+   "en": "I went to the woods because I wished to live deliberately.",
+   "author": {
+    "fr": "Henry David Thoreau",
+    "en": "Henry David Thoreau"
+   }
+  },
+  {
+   "id": "q-3f313658",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Le ciel est sous nos pieds aussi bien qu'au-dessus de nos têtes.",
+   "en": "Heaven is under our feet as well as over our heads.",
+   "author": {
+    "fr": "Henry David Thoreau",
+    "en": "Henry David Thoreau"
+   }
+  },
+  {
+   "id": "q-8c46d9ca",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Adoptez le rythme de la nature : son secret est la patience.",
+   "en": "Adopt the pace of nature: her secret is patience.",
+   "author": {
+    "fr": "Ralph Waldo Emerson",
+    "en": "Ralph Waldo Emerson"
+   }
+  },
+  {
+   "id": "q-dadbcba1",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Dans chaque promenade avec la nature, on reçoit bien plus que ce que l'on cherche.",
+   "en": "In every walk with nature one receives far more than he seeks.",
+   "author": {
+    "fr": "John Muir",
+    "en": "John Muir"
+   }
+  },
+  {
+   "id": "q-ad8dbbd8",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il y a un goût dans la pure amitié où ne peuvent atteindre ceux qui sont nés médiocres.",
+   "en": "There is a taste in pure friendship that those born mediocre can never reach.",
+   "author": {
+    "fr": "Jean de La Bruyère",
+    "en": "Jean de La Bruyère"
+   }
+  },
+  {
+   "id": "q-9b7577a8",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Le printemps est revenu. La terre est comme un enfant qui connaît des poèmes par cœur.",
+   "en": "Spring has returned. The Earth is like a child that knows poems by heart.",
+   "author": {
+    "fr": "Rainer Maria Rilke",
+    "en": "Rainer Maria Rilke"
+   }
+  },
+  {
+   "id": "q-866ecace",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "L'automne est un second printemps où chaque feuille est une fleur.",
+   "en": "Autumn is a second spring when every leaf is a flower.",
+   "author": {
+    "fr": "Albert Camus",
+    "en": "Albert Camus"
+   }
+  },
+  {
+   "id": "q-164fba24",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Le soleil, avec toutes ces planètes qui tournent autour de lui, prend encore le temps de mûrir une grappe de raisin.",
+   "en": "The sun, with all those planets revolving around it, can still ripen a bunch of grapes.",
+   "author": {
+    "fr": "attribué à Galilée",
+    "en": "attributed to Galileo"
+   }
+  },
+  {
+   "id": "q-975208c5",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Tant qu'on n'a pas aimé un animal, une partie de notre âme reste endormie.",
+   "en": "Until one has loved an animal, a part of one's soul remains unawakened.",
+   "author": {
+    "fr": "Anatole France",
+    "en": "Anatole France"
+   }
+  },
+  {
+   "id": "q-136aa3ed",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Le temps passé avec un chat n'est jamais perdu.",
+   "en": "Time spent with cats is never wasted.",
+   "author": {
+    "fr": "attribué à Colette",
+    "en": "attributed to Colette"
+   }
+  },
+  {
+   "id": "q-abc0187e",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Dieu a fait le chat pour donner à l'homme le plaisir de caresser le tigre.",
+   "en": "God made the cat so that man might have the pleasure of caressing the tiger.",
+   "author": {
+    "fr": "attribué à Victor Hugo",
+    "en": "attributed to Victor Hugo"
+   }
+  },
+  {
+   "id": "q-73d64bd8",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Il y a un plaisir dans les bois sans chemin.",
+   "en": "There is a pleasure in the pathless woods.",
+   "author": {
+    "fr": "Lord Byron",
+    "en": "Lord Byron"
+   }
+  },
+  {
+   "id": "q-2abf596d",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Voir un monde dans un grain de sable.",
+   "en": "To see a world in a grain of sand.",
+   "author": {
+    "fr": "William Blake",
+    "en": "William Blake"
+   }
+  },
+  {
+   "id": "q-a79e42ad",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Bien faire vaut mieux que bien dire.",
+   "en": "Well done is better than well said.",
+   "author": {
+    "fr": "Benjamin Franklin",
+    "en": "Benjamin Franklin"
+   }
+  },
+  {
+   "id": "q-6af51415",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Le temps, c'est de l'argent.",
+   "en": "Time is money.",
+   "author": {
+    "fr": "Benjamin Franklin",
+    "en": "Benjamin Franklin"
+   }
+  },
+  {
+   "id": "q-af52fef3",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Tôt couché, tôt levé rend un homme sain, riche et sage.",
+   "en": "Early to bed and early to rise makes a man healthy, wealthy and wise.",
+   "author": {
+    "fr": "Benjamin Franklin",
+    "en": "Benjamin Franklin"
+   }
+  },
+  {
+   "id": "q-a6694b8c",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Un investissement dans le savoir rapporte toujours les meilleurs intérêts.",
+   "en": "An investment in knowledge pays the best interest.",
+   "author": {
+    "fr": "attribué à Benjamin Franklin",
+    "en": "attributed to Benjamin Franklin"
+   }
+  },
+  {
+   "id": "q-b66a67ed",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Fais ce que tu peux, avec ce que tu as, là où tu es.",
+   "en": "Do what you can, with what you have, where you are.",
+   "author": {
+    "fr": "attribué à Theodore Roosevelt",
+    "en": "attributed to Theodore Roosevelt"
+   }
+  },
+  {
+   "id": "q-436a5e2d",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Parle doucement et porte un gros bâton ; tu iras loin.",
+   "en": "Speak softly and carry a big stick; you will go far.",
+   "author": {
+    "fr": "Theodore Roosevelt",
+    "en": "Theodore Roosevelt"
+   }
+  },
+  {
+   "id": "q-8c7c66d9",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Ce n'est pas le critique qui compte, mais celui qui est dans l'arène.",
+   "en": "It is not the critic who counts; the credit belongs to the man who is actually in the arena.",
+   "author": {
+    "fr": "Theodore Roosevelt",
+    "en": "Theodore Roosevelt"
+   }
+  },
+  {
+   "id": "q-589594c8",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "La seule chose dont nous devons avoir peur, c'est la peur elle-même.",
+   "en": "The only thing we have to fear is fear itself.",
+   "author": {
+    "fr": "Franklin D. Roosevelt",
+    "en": "Franklin D. Roosevelt"
+   }
+  },
+  {
+   "id": "q-8482c6a1",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "On peut tromper tout le monde un certain temps, ou certains tout le temps, mais pas tout le monde tout le temps.",
+   "en": "You can fool all the people some of the time, and some of the people all the time, but you cannot fool all the people all the time.",
+   "author": {
+    "fr": "attribué à Abraham Lincoln",
+    "en": "attributed to Abraham Lincoln"
+   }
+  },
+  {
+   "id": "q-ecd36f12",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Que vous pensiez pouvoir ou ne pas pouvoir, vous avez raison.",
+   "en": "Whether you think you can, or you think you can't, you're right.",
+   "author": {
+    "fr": "attribué à Henry Ford",
+    "en": "attributed to Henry Ford"
+   }
+  },
+  {
+   "id": "q-0f9d0e31",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Se réunir est un début, rester ensemble est un progrès, travailler ensemble est la réussite.",
+   "en": "Coming together is a beginning, staying together is progress, and working together is success.",
+   "author": {
+    "fr": "attribué à Henry Ford",
+    "en": "attributed to Henry Ford"
+   }
+  },
+  {
+   "id": "q-1f29bbad",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "La seule façon de faire du bon travail, c'est d'aimer ce que vous faites.",
+   "en": "The only way to do great work is to love what you do.",
+   "author": {
+    "fr": "Steve Jobs",
+    "en": "Steve Jobs"
+   }
+  },
+  {
+   "id": "q-7bbdb6ef",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Votre temps est limité, ne le gâchez pas à vivre la vie de quelqu'un d'autre.",
+   "en": "Your time is limited, so don't waste it living someone else's life.",
+   "author": {
+    "fr": "Steve Jobs",
+    "en": "Steve Jobs"
+   }
+  },
+  {
+   "id": "q-78262d3c",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "On ne peut relier les points qu'en regardant en arrière.",
+   "en": "You can't connect the dots looking forward; you can only connect them looking backwards.",
+   "author": {
+    "fr": "Steve Jobs",
+    "en": "Steve Jobs"
+   }
+  },
+  {
+   "id": "q-bdc686ca",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "On rate cent pour cent des tirs qu'on ne tente pas.",
+   "en": "You miss 100% of the shots you don't take.",
+   "author": {
+    "fr": "Wayne Gretzky",
+    "en": "Wayne Gretzky"
+   }
+  },
+  {
+   "id": "q-c5801374",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "J'ai échoué encore et encore dans ma vie. Et c'est pour cela que je réussis.",
+   "en": "I've failed over and over and over again in my life. And that is why I succeed.",
+   "author": {
+    "fr": "Michael Jordan",
+    "en": "Michael Jordan"
+   }
+  },
+  {
+   "id": "q-aa2d4a3c",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Ce n'est pas de savoir si on est mis à terre, c'est de savoir si on se relève.",
+   "en": "It's not whether you get knocked down; it's whether you get up.",
+   "author": {
+    "fr": "attribué à Vince Lombardi",
+    "en": "attributed to Vince Lombardi"
+   }
+  },
+  {
+   "id": "q-71a4e236",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Déjà essayé. Déjà échoué. N'importe. Essayer encore. Échouer encore. Échouer mieux.",
+   "en": "Ever tried. Ever failed. No matter. Try again. Fail again. Fail better.",
+   "author": {
+    "fr": "Samuel Beckett",
+    "en": "Samuel Beckett"
+   }
+  },
+  {
+   "id": "q-9a3a650b",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Ce qui ne me tue pas me rend plus fort.",
+   "en": "What does not kill me makes me stronger.",
+   "author": {
+    "fr": "Friedrich Nietzsche",
+    "en": "Friedrich Nietzsche"
+   }
+  },
+  {
+   "id": "q-dde361af",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Celui qui a un pourquoi qui lui tient lieu de but peut vivre avec n'importe quel comment.",
+   "en": "He who has a why to live for can bear almost any how.",
+   "author": {
+    "fr": "Friedrich Nietzsche",
+    "en": "Friedrich Nietzsche"
+   }
+  },
+  {
+   "id": "q-31c9dc24",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Il faut avoir un chaos en soi pour accoucher d'une étoile qui danse.",
+   "en": "One must still have chaos in oneself to give birth to a dancing star.",
+   "author": {
+    "fr": "Friedrich Nietzsche",
+    "en": "Friedrich Nietzsche"
+   }
+  },
+  {
+   "id": "q-d0fb07f3",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Savoir ne suffit pas, il faut appliquer ; vouloir ne suffit pas, il faut agir.",
+   "en": "Knowing is not enough; we must apply. Willing is not enough; we must do.",
+   "author": {
+    "fr": "Goethe",
+    "en": "Goethe"
+   }
+  },
+  {
+   "id": "q-0fbf392f",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Impossible n'est pas français.",
+   "en": "Impossible is not French.",
+   "author": {
+    "fr": "attribué à Napoléon Bonaparte",
+    "en": "attributed to Napoléon Bonaparte"
+   }
+  },
+  {
+   "id": "q-2c389172",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Un bon croquis vaut mieux qu'un long discours.",
+   "en": "A good sketch is better than a long speech.",
+   "author": {
+    "fr": "attribué à Napoléon Bonaparte",
+    "en": "attributed to Napoléon Bonaparte"
+   }
+  },
+  {
+   "id": "q-16afe538",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Il faut savoir ce que l'on veut. Quand on le sait, il faut avoir le courage de le dire ; quand on le dit, il faut avoir le courage de le faire.",
+   "en": "One must know what one wants. When one knows, one must have the courage to say it; when one says it, the courage to do it.",
+   "author": {
+    "fr": "attribué à Georges Clemenceau",
+    "en": "attributed to Georges Clemenceau"
+   }
+  },
+  {
+   "id": "q-04c51ac0",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Les hommes n'acceptent le changement que dans la nécessité, et ils ne voient la nécessité que dans la crise.",
+   "en": "People only accept change when they are faced with necessity, and only recognise necessity when a crisis is upon them.",
+   "author": {
+    "fr": "Jean Monnet",
+    "en": "Jean Monnet"
+   }
+  },
+  {
+   "id": "q-aa160845",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "L'important dans la vie, ce n'est point le triomphe, mais le combat.",
+   "en": "The important thing in life is not the triumph but the struggle.",
+   "author": {
+    "fr": "Pierre de Coubertin",
+    "en": "Pierre de Coubertin"
+   }
+  },
+  {
+   "id": "q-da091603",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Cela semble toujours impossible, jusqu'à ce qu'on le fasse.",
+   "en": "It always seems impossible until it's done.",
+   "author": {
+    "fr": "attribué à Nelson Mandela",
+    "en": "attributed to Nelson Mandela"
+   }
+  },
+  {
+   "id": "q-883b6374",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Nous devons apprendre à vivre ensemble comme des frères, sinon nous allons mourir tous ensemble comme des idiots.",
+   "en": "We must learn to live together as brothers or perish together as fools.",
+   "author": {
+    "fr": "Martin Luther King",
+    "en": "Martin Luther King"
+   }
+  },
+  {
+   "id": "q-558a1e10",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "L'obscurité ne peut pas chasser l'obscurité ; seule la lumière le peut.",
+   "en": "Darkness cannot drive out darkness; only light can do that.",
+   "author": {
+    "fr": "Martin Luther King",
+    "en": "Martin Luther King"
+   }
+  },
+  {
+   "id": "q-5bb24226",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Seuls, nous pouvons faire si peu ; ensemble, nous pouvons faire beaucoup.",
+   "en": "Alone we can do so little; together we can do so much.",
+   "author": {
+    "fr": "attribué à Helen Keller",
+    "en": "attributed to Helen Keller"
+   }
+  },
+  {
+   "id": "q-074a73c6",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "La vie est une aventure audacieuse, ou elle n'est rien.",
+   "en": "Life is either a daring adventure or nothing.",
+   "author": {
+    "fr": "Helen Keller",
+    "en": "Helen Keller"
+   }
+  },
+  {
+   "id": "q-88c50489",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "La façon la plus efficace de le faire, c'est de le faire.",
+   "en": "The most effective way to do it, is to do it.",
+   "author": {
+    "fr": "Amelia Earhart",
+    "en": "Amelia Earhart"
+   }
+  },
+  {
+   "id": "q-c43afa26",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Pour commencer, il faut arrêter de parler et commencer à faire.",
+   "en": "The way to get started is to quit talking and begin doing.",
+   "author": {
+    "fr": "attribué à Walt Disney",
+    "en": "attributed to Walt Disney"
+   }
+  },
+  {
+   "id": "q-806de3a1",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "L'art suprême de la guerre, c'est de soumettre l'ennemi sans combat.",
+   "en": "The supreme art of war is to subdue the enemy without fighting.",
+   "author": {
+    "fr": "Sun Tzu",
+    "en": "Sun Tzu"
+   }
+  },
+  {
+   "id": "q-c6993088",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Connais ton ennemi et connais-toi toi-même ; eussiez-vous cent guerres à soutenir, cent fois vous serez victorieux.",
+   "en": "Know your enemy and know yourself, and you can fight a hundred battles without disaster.",
+   "author": {
+    "fr": "Sun Tzu",
+    "en": "Sun Tzu"
+   }
+  },
+  {
+   "id": "q-c7ef66f1",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Soyez comme l'eau, mon ami.",
+   "en": "Be water, my friend.",
+   "author": {
+    "fr": "Bruce Lee",
+    "en": "Bruce Lee"
+   }
+  },
+  {
+   "id": "q-554a16ad",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Je ne crains pas l'homme qui a pratiqué dix mille coups une fois, mais celui qui a pratiqué un coup dix mille fois.",
+   "en": "I fear not the man who has practiced 10,000 kicks once, but the man who has practiced one kick 10,000 times.",
+   "author": {
+    "fr": "attribué à Bruce Lee",
+    "en": "attributed to Bruce Lee"
+   }
+  },
+  {
+   "id": "q-f4f83c74",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Vole comme un papillon, pique comme une abeille.",
+   "en": "Float like a butterfly, sting like a bee.",
+   "author": {
+    "fr": "Muhammad Ali",
+    "en": "Muhammad Ali"
+   }
+  },
+  {
+   "id": "q-8801f4b3",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Je détestais chaque minute d'entraînement, mais je me disais : ne renonce pas, souffre maintenant et vis le reste de ta vie en champion.",
+   "en": "I hated every minute of training, but I said: don't quit, suffer now and live the rest of your life as a champion.",
+   "author": {
+    "fr": "attribué à Muhammad Ali",
+    "en": "attributed to Muhammad Ali"
+   }
+  },
+  {
+   "id": "q-b7f867d7",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Commencez là où vous êtes. Utilisez ce que vous avez. Faites ce que vous pouvez.",
+   "en": "Start where you are. Use what you have. Do what you can.",
+   "author": {
+    "fr": "Arthur Ashe",
+    "en": "Arthur Ashe"
+   }
+  },
+  {
+   "id": "q-bdccf5fb",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Le plaisir dans le travail met la perfection dans l'ouvrage.",
+   "en": "Pleasure in the job puts perfection in the work.",
+   "author": {
+    "fr": "attribué à Aristote",
+    "en": "attributed to Aristotle"
+   }
+  },
+  {
+   "id": "q-ceca98f2",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Le vent se lève ! Il faut tenter de vivre !",
+   "en": "The wind is rising! We must try to live!",
+   "author": {
+    "fr": "Paul Valéry",
+    "en": "Paul Valéry"
+   }
+  },
+  {
+   "id": "q-5c48ddcf",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "La meilleure façon de réaliser ses rêves, c'est de se réveiller.",
+   "en": "The best way to make your dreams come true is to wake up.",
+   "author": {
+    "fr": "attribué à Paul Valéry",
+    "en": "attributed to Paul Valéry"
+   }
+  },
+  {
+   "id": "q-6f1a323f",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tout est dit, et l'on vient trop tard depuis plus de sept mille ans qu'il y a des hommes et qui pensent.",
+   "en": "Everything has been said, and we come too late, after more than seven thousand years of men who think.",
+   "author": {
+    "fr": "Jean de La Bruyère",
+    "en": "Jean de La Bruyère"
+   }
+  },
+  {
+   "id": "q-eeb3d26a",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Je n'ai rien d'autre à offrir que du sang, du labeur, des larmes et de la sueur.",
+   "en": "I have nothing to offer but blood, toil, tears and sweat.",
+   "author": {
+    "fr": "Winston Churchill",
+    "en": "Winston Churchill"
+   }
+  },
+  {
+   "id": "q-8a88879a",
+   "cat": "quote",
+   "theme": "work",
+   "fr": "Ce n'est pas fini tant que ce n'est pas fini.",
+   "en": "It ain't over till it's over.",
+   "author": {
+    "fr": "Yogi Berra",
+    "en": "Yogi Berra"
+   }
+  },
+  {
+   "id": "q-26148ef8",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Petit à petit, l'oiseau fait son nid.",
+   "en": "Little by little, the bird builds its nest.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-109bcbb0",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il ne faut pas mettre la charrue avant les bœufs.",
+   "en": "Don't put the cart before the horse.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-02dd0137",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Qui sème le vent récolte la tempête.",
+   "en": "Sow the wind, reap the whirlwind.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-51d763f1",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Après la pluie, le beau temps.",
+   "en": "After rain comes fair weather.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-76bd3548",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il faut battre le fer pendant qu'il est chaud.",
+   "en": "Strike while the iron is hot.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-de0b160e",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Qui va doucement va sûrement.",
+   "en": "Slow and steady wins the race.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-e23c3800",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'habit ne fait pas le moine.",
+   "en": "The habit does not make the monk.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-616b0b6a",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Mieux vaut tard que jamais.",
+   "en": "Better late than never.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-24c75165",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tout vient à point à qui sait attendre.",
+   "en": "All things come to those who wait.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-e6bb9bbc",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il n'y a pas de fumée sans feu.",
+   "en": "There is no smoke without fire.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-1ee8a29f",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "C'est en forgeant qu'on devient forgeron.",
+   "en": "Practice makes perfect.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-cc5f459d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Les petits ruisseaux font les grandes rivières.",
+   "en": "Little streams make great rivers.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-1b4777a9",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Pierre qui roule n'amasse pas mousse.",
+   "en": "A rolling stone gathers no moss.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-c281c537",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Qui ne risque rien n'a rien.",
+   "en": "Nothing ventured, nothing gained.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-8f77b6ca",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il ne faut jamais dire : Fontaine, je ne boirai pas de ton eau.",
+   "en": "Never say never.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-573cc868",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "À cœur vaillant rien d'impossible.",
+   "en": "Nothing is impossible to a valiant heart.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-cacbcbdf",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Chose promise, chose due.",
+   "en": "A promise made is a debt unpaid.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-6c484c7c",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La nuit porte conseil.",
+   "en": "Sleep on it: the night brings counsel.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-da73ff45",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Vouloir, c'est pouvoir.",
+   "en": "Where there's a will, there's a way.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-6e564238",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Un tiens vaut mieux que deux tu l'auras.",
+   "en": "A bird in the hand is worth two in the bush.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-cafe9042",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Quand le chat n'est pas là, les souris dansent.",
+   "en": "When the cat's away, the mice will play.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-4e3f6533",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Il ne faut pas réveiller le chat qui dort.",
+   "en": "Let sleeping dogs lie.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-973d728f",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "L'appétit vient en mangeant.",
+   "en": "Appetite comes with eating.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-74d6b9d0",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "En avril, ne te découvre pas d'un fil ; en mai, fais ce qu'il te plaît.",
+   "en": "In April, do not shed a thread; in May, do as you please.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-2222872b",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Noël au balcon, Pâques au tison.",
+   "en": "Christmas on the balcony, Easter by the fire.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-c25db6ac",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le meilleur moment pour planter un arbre était il y a vingt ans. Le deuxième meilleur moment est maintenant.",
+   "en": "The best time to plant a tree was twenty years ago. The second best time is now.",
+   "author": {
+    "fr": "proverbe chinois",
+    "en": "Chinese proverb"
+   }
+  },
+  {
+   "id": "q-1ee31fc8",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Celui qui pose une question est bête cinq minutes ; celui qui n'en pose pas le reste toute sa vie.",
+   "en": "He who asks a question is a fool for five minutes; he who does not ask remains a fool forever.",
+   "author": {
+    "fr": "proverbe chinois",
+    "en": "Chinese proverb"
+   }
+  },
+  {
+   "id": "q-67930d22",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Donne un poisson à un homme, il mangera un jour. Apprends-lui à pêcher, il mangera toute sa vie.",
+   "en": "Give a man a fish and you feed him for a day; teach a man to fish and you feed him for a lifetime.",
+   "author": {
+    "fr": "proverbe chinois",
+    "en": "Chinese proverb"
+   }
+  },
+  {
+   "id": "q-e8ea0d33",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Quand le sage montre la lune, l'idiot regarde le doigt.",
+   "en": "When the wise man points at the moon, the fool looks at the finger.",
+   "author": {
+    "fr": "proverbe chinois",
+    "en": "Chinese proverb"
+   }
+  },
+  {
+   "id": "q-d3a4c99e",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Un arbre qui tombe fait plus de bruit qu'une forêt qui pousse.",
+   "en": "A falling tree makes more noise than a growing forest.",
+   "author": {
+    "fr": "proverbe chinois",
+    "en": "Chinese proverb"
+   }
+  },
+  {
+   "id": "q-4629532b",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il vaut mieux allumer une bougie que maudire l'obscurité.",
+   "en": "It is better to light a candle than to curse the darkness.",
+   "author": {
+    "fr": "proverbe chinois",
+    "en": "Chinese proverb"
+   }
+  },
+  {
+   "id": "q-b2088851",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "J'entends et j'oublie. Je vois et je me souviens. Je fais et je comprends.",
+   "en": "I hear and I forget. I see and I remember. I do and I understand.",
+   "author": {
+    "fr": "proverbe chinois",
+    "en": "Chinese proverb"
+   }
+  },
+  {
+   "id": "q-7f7188e4",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tombe sept fois, relève-toi huit.",
+   "en": "Fall seven times, stand up eight.",
+   "author": {
+    "fr": "proverbe japonais",
+    "en": "Japanese proverb"
+   }
+  },
+  {
+   "id": "q-634aee1e",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La grenouille au fond du puits ne connaît pas le grand océan.",
+   "en": "A frog in a well knows nothing of the great ocean.",
+   "author": {
+    "fr": "proverbe japonais",
+    "en": "Japanese proverb"
+   }
+  },
+  {
+   "id": "q-f2bcc0e3",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le clou qui dépasse appelle le marteau.",
+   "en": "The nail that sticks out gets hammered down.",
+   "author": {
+    "fr": "proverbe japonais",
+    "en": "Japanese proverb"
+   }
+  },
+  {
+   "id": "q-18dad9fc",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Même les singes tombent des arbres.",
+   "en": "Even monkeys fall from trees.",
+   "author": {
+    "fr": "proverbe japonais",
+    "en": "Japanese proverb"
+   }
+  },
+  {
+   "id": "q-ba0f0499",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Seul, on va plus vite ; ensemble, on va plus loin.",
+   "en": "If you want to go fast, go alone; if you want to go far, go together.",
+   "author": {
+    "fr": "proverbe africain",
+    "en": "African proverb"
+   }
+  },
+  {
+   "id": "q-fd7bcb64",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "En Afrique, quand un vieillard meurt, c'est une bibliothèque qui brûle.",
+   "en": "In Africa, when an old man dies, a library burns to the ground.",
+   "author": {
+    "fr": "Amadou Hampâté Bâ",
+    "en": "Amadou Hampâté Bâ"
+   }
+  },
+  {
+   "id": "q-797484b7",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'herbe ne pousse pas plus vite si on tire dessus.",
+   "en": "Grass does not grow faster if you pull on it.",
+   "author": {
+    "fr": "proverbe africain",
+    "en": "African proverb"
+   }
+  },
+  {
+   "id": "q-553b88b3",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il faut tout un village pour élever un enfant.",
+   "en": "It takes a village to raise a child.",
+   "author": {
+    "fr": "proverbe africain",
+    "en": "African proverb"
+   }
+  },
+  {
+   "id": "q-5927b01e",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La pluie ne tombe pas sur un seul toit.",
+   "en": "Rain does not fall on one roof alone.",
+   "author": {
+    "fr": "proverbe africain",
+    "en": "African proverb"
+   }
+  },
+  {
+   "id": "q-00684df0",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Si ce que tu as à dire n'est pas plus beau que le silence, alors tais-toi.",
+   "en": "If what you have to say is not more beautiful than silence, keep quiet.",
+   "author": {
+    "fr": "proverbe arabe",
+    "en": "Arabic proverb"
+   }
+  },
+  {
+   "id": "q-5cba82b4",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le chien aboie, la caravane passe.",
+   "en": "The dogs bark, but the caravan moves on.",
+   "author": {
+    "fr": "proverbe arabe",
+    "en": "Arabic proverb"
+   }
+  },
+  {
+   "id": "q-e6f95442",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Ne juge pas un homme avant d'avoir marché une lune dans ses mocassins.",
+   "en": "Do not judge a man until you have walked a moon in his moccasins.",
+   "author": {
+    "fr": "proverbe amérindien",
+    "en": "Native American proverb"
+   }
+  },
+  {
+   "id": "q-49f93ba7",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Si un problème a une solution, inutile de s'inquiéter. S'il n'en a pas, s'inquiéter ne sert à rien.",
+   "en": "If a problem can be solved, there is no use worrying about it. If it can't be solved, worrying will do no good.",
+   "author": {
+    "fr": "Shantideva",
+    "en": "Shantideva"
+   }
+  },
+  {
+   "id": "q-d8a3db0d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Fais confiance, mais vérifie.",
+   "en": "Trust, but verify.",
+   "author": {
+    "fr": "proverbe russe",
+    "en": "Russian proverb"
+   }
+  },
+  {
+   "id": "q-0380861c",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le matin est plus sage que le soir.",
+   "en": "The morning is wiser than the evening.",
+   "author": {
+    "fr": "proverbe russe",
+    "en": "Russian proverb"
+   }
+  },
+  {
+   "id": "q-801bb890",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Le travail n'est pas un loup : il ne s'enfuira pas dans la forêt.",
+   "en": "Work is not a wolf: it won't run off into the forest.",
+   "author": {
+    "fr": "proverbe russe",
+    "en": "Russian proverb"
+   }
+  },
+  {
+   "id": "q-6796d817",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Qui va doucement va sainement et loin.",
+   "en": "He who goes slowly goes safely and far.",
+   "author": {
+    "fr": "proverbe italien",
+    "en": "Italian proverb"
+   }
+  },
+  {
+   "id": "q-6669733b",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Entre dire et faire, il y a la moitié de la mer.",
+   "en": "Between saying and doing lies half the sea.",
+   "author": {
+    "fr": "proverbe italien",
+    "en": "Italian proverb"
+   }
+  },
+  {
+   "id": "q-d11a5e4f",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Dis-moi qui tu fréquentes, et je te dirai qui tu es.",
+   "en": "Tell me who you walk with, and I'll tell you who you are.",
+   "author": {
+    "fr": "proverbe espagnol",
+    "en": "Spanish proverb"
+   }
+  },
+  {
+   "id": "q-294a836d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le temps et la patience font mûrir les nèfles.",
+   "en": "Time and patience ripen the medlars.",
+   "author": {
+    "fr": "proverbe espagnol",
+    "en": "Spanish proverb"
+   }
+  },
+  {
+   "id": "q-422f6acc",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Il n'est pire sourd que celui qui ne veut pas entendre.",
+   "en": "There is none so deaf as those who will not hear.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-c4b775c8",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tout a une fin, sauf la saucisse qui en a deux.",
+   "en": "Everything has an end, except the sausage, which has two.",
+   "author": {
+    "fr": "proverbe allemand",
+    "en": "German proverb"
+   }
+  },
+  {
+   "id": "q-508ca88f",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le temps guérit toutes les blessures.",
+   "en": "Time heals all wounds.",
+   "author": {
+    "fr": "proverbe allemand",
+    "en": "German proverb"
+   }
+  },
+  {
+   "id": "q-f971795b",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Une mer calme n'a jamais fait un bon marin.",
+   "en": "A smooth sea never made a skilled sailor.",
+   "author": {
+    "fr": "proverbe anglais",
+    "en": "English proverb"
+   }
+  },
+  {
+   "id": "q-5e7c7d74",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Les actes parlent plus fort que les mots.",
+   "en": "Actions speak louder than words.",
+   "author": {
+    "fr": "proverbe anglais",
+    "en": "English proverb"
+   }
+  },
+  {
+   "id": "q-d5f96033",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Rome ne s'est pas faite en un jour.",
+   "en": "Rome wasn't built in a day.",
+   "author": {
+    "fr": "proverbe anglais",
+    "en": "English proverb"
+   }
+  },
+  {
+   "id": "q-a12caa2d",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Une pomme chaque jour éloigne le médecin.",
+   "en": "An apple a day keeps the doctor away.",
+   "author": {
+    "fr": "proverbe anglais",
+    "en": "English proverb"
+   }
+  },
+  {
+   "id": "q-f3d599c5",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Mesure deux fois, coupe une fois.",
+   "en": "Measure twice, cut once.",
+   "author": {
+    "fr": "proverbe anglais",
+    "en": "English proverb"
+   }
+  },
+  {
+   "id": "q-cef3d197",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Derrière chaque nuage se cache un rayon de soleil.",
+   "en": "Every cloud has a silver lining.",
+   "author": {
+    "fr": "proverbe anglais",
+    "en": "English proverb"
+   }
+  },
+  {
+   "id": "q-fd314e7c",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Ne compte pas tes poussins avant qu'ils soient éclos.",
+   "en": "Don't count your chickens before they hatch.",
+   "author": {
+    "fr": "proverbe anglais",
+    "en": "English proverb"
+   }
+  },
+  {
+   "id": "q-df55967a",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Ce qui est pour toi ne passera pas à côté de toi.",
+   "en": "What's for you won't go by you.",
+   "author": {
+    "fr": "proverbe écossais",
+    "en": "Scottish proverb"
+   }
+  },
+  {
+   "id": "q-35e90195",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Une société grandit quand des vieillards plantent des arbres à l'ombre desquels ils ne s'assiéront jamais.",
+   "en": "A society grows great when old men plant trees whose shade they know they shall never sit in.",
+   "author": {
+    "fr": "proverbe grec",
+    "en": "Greek proverb"
+   }
+  },
+  {
+   "id": "q-16c402dd",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'obstacle est le chemin.",
+   "en": "The obstacle is the path.",
+   "author": {
+    "fr": "proverbe zen",
+    "en": "Zen proverb"
+   }
+  },
+  {
+   "id": "q-08a99ec1",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Avant l'éveil, couper du bois, porter de l'eau. Après l'éveil, couper du bois, porter de l'eau.",
+   "en": "Before enlightenment, chop wood, carry water. After enlightenment, chop wood, carry water.",
+   "author": {
+    "fr": "proverbe zen",
+    "en": "Zen proverb"
+   }
+  },
+  {
+   "id": "q-57fc4726",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Cela aussi passera.",
+   "en": "This too shall pass.",
+   "author": {
+    "fr": "proverbe persan",
+    "en": "Persian proverb"
+   }
+  },
+  {
+   "id": "q-4c941748",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Qui veut aller loin ménage sa monture.",
+   "en": "He who wants to travel far takes care of his mount.",
+   "author": {
+    "fr": "proverbe français",
+    "en": "French proverb"
+   }
+  },
+  {
+   "id": "q-29e910ad",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Être ou ne pas être, telle est la question.",
+   "en": "To be, or not to be, that is the question.",
+   "author": {
+    "fr": "William Shakespeare",
+    "en": "William Shakespeare"
+   }
+  },
+  {
+   "id": "q-6dc2656c",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Le monde entier est un théâtre, et tous, hommes et femmes, n'en sont que les acteurs.",
+   "en": "All the world's a stage, and all the men and women merely players.",
+   "author": {
+    "fr": "William Shakespeare",
+    "en": "William Shakespeare"
+   }
+  },
+  {
+   "id": "q-8397cc73",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Nous sommes de l'étoffe dont sont faits les rêves.",
+   "en": "We are such stuff as dreams are made on.",
+   "author": {
+    "fr": "William Shakespeare",
+    "en": "William Shakespeare"
+   }
+  },
+  {
+   "id": "q-1c7b5ff5",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Il n'y a rien de bon ni de mauvais, c'est la pensée qui le rend tel.",
+   "en": "There is nothing either good or bad, but thinking makes it so.",
+   "author": {
+    "fr": "William Shakespeare",
+    "en": "William Shakespeare"
+   }
+  },
+  {
+   "id": "q-82a1b477",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La brièveté est l'âme de l'esprit.",
+   "en": "Brevity is the soul of wit.",
+   "author": {
+    "fr": "William Shakespeare",
+    "en": "William Shakespeare"
+   }
+  },
+  {
+   "id": "q-cdbdcd7e",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Nos doutes sont des traîtres qui nous font perdre le bien que nous pourrions souvent gagner, par peur d'essayer.",
+   "en": "Our doubts are traitors, and make us lose the good we oft might win, by fearing to attempt.",
+   "author": {
+    "fr": "William Shakespeare",
+    "en": "William Shakespeare"
+   }
+  },
+  {
+   "id": "q-104af01e",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Tout est bien qui finit bien.",
+   "en": "All's well that ends well.",
+   "author": {
+    "fr": "William Shakespeare",
+    "en": "William Shakespeare"
+   }
+  },
+  {
+   "id": "q-5cbc0ed1",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "L'amour qui meut le soleil et les autres étoiles.",
+   "en": "The love that moves the sun and the other stars.",
+   "author": {
+    "fr": "Dante",
+    "en": "Dante"
+   }
+  },
+  {
+   "id": "q-ebd94048",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Le chemin est toujours meilleur que l'auberge.",
+   "en": "The road is always better than the inn.",
+   "author": {
+    "fr": "Cervantes",
+    "en": "Cervantes"
+   }
+  },
+  {
+   "id": "q-ab3ac93f",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Toutes les familles heureuses se ressemblent ; chaque famille malheureuse l'est à sa façon.",
+   "en": "All happy families are alike; each unhappy family is unhappy in its own way.",
+   "author": {
+    "fr": "Léon Tolstoï",
+    "en": "Leo Tolstoy"
+   }
+  },
+  {
+   "id": "q-e8db9d08",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Les deux guerriers les plus puissants sont la patience et le temps.",
+   "en": "The two most powerful warriors are patience and time.",
+   "author": {
+    "fr": "Léon Tolstoï",
+    "en": "Leo Tolstoy"
+   }
+  },
+  {
+   "id": "q-91db9613",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La beauté sauvera le monde.",
+   "en": "Beauty will save the world.",
+   "author": {
+    "fr": "Fiodor Dostoïevski",
+    "en": "Fyodor Dostoevsky"
+   }
+  },
+  {
+   "id": "q-c7416c07",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Ne me dites pas que la lune brille ; montrez-moi l'éclat de la lumière sur un morceau de verre brisé.",
+   "en": "Don't tell me the moon is shining; show me the glint of light on broken glass.",
+   "author": {
+    "fr": "attribué à Anton Tchekhov",
+    "en": "attributed to Anton Chekhov"
+   }
+  },
+  {
+   "id": "q-8825ad1b",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Si dans le premier acte un fusil est accroché au mur, il doit tirer dans le dernier.",
+   "en": "If in the first act a rifle hangs on the wall, it must be fired in the last.",
+   "author": {
+    "fr": "Anton Tchekhov",
+    "en": "Anton Chekhov"
+   }
+  },
+  {
+   "id": "q-a2ca005f",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Un livre doit être la hache qui brise la mer gelée en nous.",
+   "en": "A book must be the axe for the frozen sea within us.",
+   "author": {
+    "fr": "Franz Kafka",
+    "en": "Franz Kafka"
+   }
+  },
+  {
+   "id": "q-fc1b18db",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Pour que le possible voie le jour, il faut sans cesse tenter l'impossible.",
+   "en": "For the possible to come about, the impossible must be attempted again and again.",
+   "author": {
+    "fr": "attribué à Hermann Hesse",
+    "en": "attributed to Hermann Hesse"
+   }
+  },
+  {
+   "id": "q-93ed3891",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Je ne suis rien. Je ne serai jamais rien. Mais j'ai en moi tous les rêves du monde.",
+   "en": "I am nothing. I shall never be anything. But I have in me all the dreams of the world.",
+   "author": {
+    "fr": "Fernando Pessoa (Álvaro de Campos)",
+    "en": "Fernando Pessoa (Álvaro de Campos)"
+   }
+  },
+  {
+   "id": "q-48fcff45",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "J'ai toujours imaginé que le paradis serait une sorte de bibliothèque.",
+   "en": "I have always imagined that Paradise will be a kind of library.",
+   "author": {
+    "fr": "Jorge Luis Borges",
+    "en": "Jorge Luis Borges"
+   }
+  },
+  {
+   "id": "q-ff2bc058",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Si tu pleures parce que le soleil est parti, tes larmes t'empêcheront de voir les étoiles.",
+   "en": "If you shed tears when you miss the sun, you also miss the stars.",
+   "author": {
+    "fr": "Rabindranath Tagore",
+    "en": "Rabindranath Tagore"
+   }
+  },
+  {
+   "id": "q-6b0d9628",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Vos enfants ne sont pas vos enfants. Ils sont les fils et les filles de l'appel de la vie à elle-même.",
+   "en": "Your children are not your children. They are the sons and daughters of Life's longing for itself.",
+   "author": {
+    "fr": "Khalil Gibran",
+    "en": "Khalil Gibran"
+   }
+  },
+  {
+   "id": "q-117ea969",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La haine ne cesse pas par la haine, mais par l'amour.",
+   "en": "Hatred does not cease by hatred, but only by love.",
+   "author": {
+    "fr": "Bouddha",
+    "en": "Buddha"
+   }
+  },
+  {
+   "id": "q-a24b62fe",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Nous sommes ce que nous pensons. Tout ce que nous sommes naît de nos pensées.",
+   "en": "We are what we think. All that we are arises with our thoughts.",
+   "author": {
+    "fr": "attribué à Bouddha",
+    "en": "attributed to Buddha"
+   }
+  },
+  {
+   "id": "q-629d0463",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Ne pas se moquer, ne pas déplorer, ne pas détester, mais comprendre.",
+   "en": "Not to mock, not to lament, not to detest, but to understand.",
+   "author": {
+    "fr": "Spinoza",
+    "en": "Spinoza"
+   }
+  },
+  {
+   "id": "q-030ec4a5",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Tout ce qui est précieux est aussi difficile que rare.",
+   "en": "All things excellent are as difficult as they are rare.",
+   "author": {
+    "fr": "Spinoza",
+    "en": "Spinoza"
+   }
+  },
+  {
+   "id": "q-221ee36a",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Deux choses remplissent le cœur d'une admiration toujours nouvelle : le ciel étoilé au-dessus de moi et la loi morale en moi.",
+   "en": "Two things fill the mind with ever new admiration: the starry heavens above me and the moral law within me.",
+   "author": {
+    "fr": "Emmanuel Kant",
+    "en": "Immanuel Kant"
+   }
+  },
+  {
+   "id": "q-79110a05",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Aie le courage de te servir de ton propre entendement.",
+   "en": "Have the courage to use your own understanding.",
+   "author": {
+    "fr": "Emmanuel Kant",
+    "en": "Immanuel Kant"
+   }
+  },
+  {
+   "id": "q-4c5b324c",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Rien de grand ne s'est accompli dans le monde sans passion.",
+   "en": "Nothing great in the world has been accomplished without passion.",
+   "author": {
+    "fr": "Hegel",
+    "en": "Hegel"
+   }
+  },
+  {
+   "id": "q-5381b131",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Le talent atteint une cible que personne d'autre ne peut atteindre ; le génie atteint une cible que personne d'autre ne voit.",
+   "en": "Talent hits a target no one else can hit; genius hits a target no one else can see.",
+   "author": {
+    "fr": "Arthur Schopenhauer",
+    "en": "Arthur Schopenhauer"
+   }
+  },
+  {
+   "id": "q-ce7b97b4",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La vie ne peut être comprise qu'en regardant en arrière, mais elle doit être vécue en regardant en avant.",
+   "en": "Life can only be understood backwards; but it must be lived forwards.",
+   "author": {
+    "fr": "Søren Kierkegaard",
+    "en": "Søren Kierkegaard"
+   }
+  },
+  {
+   "id": "q-9aa11af4",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "L'esprit n'est pas un vase à remplir, mais un feu à allumer.",
+   "en": "The mind is not a vessel to be filled, but a fire to be kindled.",
+   "author": {
+    "fr": "attribué à Plutarque",
+    "en": "attributed to Plutarch"
+   }
+  },
+  {
+   "id": "q-d304ec7c",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Goutte à goutte, l'eau creuse la pierre.",
+   "en": "Dripping water hollows out stone.",
+   "author": {
+    "fr": "Ovide",
+    "en": "Ovid"
+   }
+  },
+  {
+   "id": "q-48864c98",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Je suis homme, et rien de ce qui est humain ne m'est étranger.",
+   "en": "I am human, and nothing human is alien to me.",
+   "author": {
+    "fr": "Térence",
+    "en": "Terence"
+   }
+  },
+  {
+   "id": "q-d49caf4d",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Un esprit sain dans un corps sain.",
+   "en": "A sound mind in a sound body.",
+   "author": {
+    "fr": "Juvénal",
+    "en": "Juvenal"
+   }
+  },
+  {
+   "id": "q-4494d0fc",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Il est mauvais, le plan qu'on ne peut pas modifier.",
+   "en": "It is a bad plan that admits of no modification.",
+   "author": {
+    "fr": "Publilius Syrus",
+    "en": "Publilius Syrus"
+   }
+  },
+  {
+   "id": "q-2f014420",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "La seule certitude, c'est que rien n'est certain.",
+   "en": "The only certainty is that nothing is certain.",
+   "author": {
+    "fr": "Pline l'Ancien",
+    "en": "Pliny the Elder"
+   }
+  },
+  {
+   "id": "q-496934e4",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Au royaume des aveugles, les borgnes sont rois.",
+   "en": "In the land of the blind, the one-eyed man is king.",
+   "author": {
+    "fr": "Érasme",
+    "en": "Erasmus"
+   }
+  },
+  {
+   "id": "q-a05aaa84",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Le rire est le propre de l'homme.",
+   "en": "Laughter is the essence of mankind.",
+   "author": {
+    "fr": "Rabelais",
+    "en": "Rabelais"
+   }
+  },
+  {
+   "id": "q-2127c5f6",
+   "cat": "quote",
+   "theme": "wisdom",
+   "fr": "Science sans conscience n'est que ruine de l'âme.",
+   "en": "Science without conscience is but the ruin of the soul.",
+   "author": {
+    "fr": "Rabelais",
+    "en": "Rabelais"
+   }
+  },
+  {
+   "id": "q-91cf9cee",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Heureux qui, comme Ulysse, a fait un beau voyage.",
+   "en": "Happy is he who, like Ulysses, has made a fine voyage.",
+   "author": {
+    "fr": "Joachim du Bellay",
+    "en": "Joachim du Bellay"
+   }
+  },
+  {
+   "id": "q-3bafa315",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Cueillez dès aujourd'hui les roses de la vie.",
+   "en": "Gather the roses of life from today.",
+   "author": {
+    "fr": "Pierre de Ronsard",
+    "en": "Pierre de Ronsard"
+   }
+  },
+  {
+   "id": "q-76a6a430",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Un seul être vous manque, et tout est dépeuplé.",
+   "en": "One single being is missing, and the whole world seems empty.",
+   "author": {
+    "fr": "Lamartine",
+    "en": "Lamartine"
+   }
+  },
+  {
+   "id": "q-71a1561e",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Ô temps, suspends ton vol !",
+   "en": "O time, suspend your flight!",
+   "author": {
+    "fr": "Lamartine",
+    "en": "Lamartine"
+   }
+  },
+  {
+   "id": "q-c9a6bb71",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Seul le silence est grand ; tout le reste est faiblesse.",
+   "en": "Only silence is great; all else is weakness.",
+   "author": {
+    "fr": "Alfred de Vigny",
+    "en": "Alfred de Vigny"
+   }
+  },
+  {
+   "id": "q-ec33af6e",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "On habite avec un cœur plein un monde vide.",
+   "en": "With a full heart, one dwells in an empty world.",
+   "author": {
+    "fr": "Chateaubriand",
+    "en": "Chateaubriand"
+   }
+  },
+  {
+   "id": "q-015357d6",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La vérité est en marche et rien ne l'arrêtera.",
+   "en": "Truth is on the march, and nothing will stop it.",
+   "author": {
+    "fr": "Émile Zola",
+    "en": "Émile Zola"
+   }
+  },
+  {
+   "id": "q-c1d2f9e1",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La vie, voyez-vous, ça n'est jamais si bon ni si mauvais qu'on croit.",
+   "en": "Life, you see, is never as good or as bad as one thinks.",
+   "author": {
+    "fr": "Guy de Maupassant",
+    "en": "Guy de Maupassant"
+   }
+  },
+  {
+   "id": "q-55d96903",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Pour accomplir de grandes choses, il ne suffit pas d'agir, il faut rêver ; il ne suffit pas de calculer, il faut croire.",
+   "en": "To accomplish great things, we must not only act, but also dream; not only plan, but also believe.",
+   "author": {
+    "fr": "Anatole France",
+    "en": "Anatole France"
+   }
+  },
+  {
+   "id": "q-4aec14c9",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Il y a d'autres mondes, mais ils sont dans celui-ci.",
+   "en": "There are other worlds, but they are in this one.",
+   "author": {
+    "fr": "attribué à Paul Éluard",
+    "en": "attributed to Paul Éluard"
+   }
+  },
+  {
+   "id": "q-a2f24720",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Il n'y a pas d'amour heureux.",
+   "en": "There is no happy love.",
+   "author": {
+    "fr": "Louis Aragon",
+    "en": "Louis Aragon"
+   }
+  },
+  {
+   "id": "q-4ffd98d6",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Essayons d'être heureux, ne serait-ce que pour donner l'exemple.",
+   "en": "Let us try to be happy, if only to set an example.",
+   "author": {
+    "fr": "Jacques Prévert",
+    "en": "Jacques Prévert"
+   }
+  },
+  {
+   "id": "q-a163115d",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Le verbe aimer est difficile à conjuguer : son passé n'est pas simple, son présent n'est qu'indicatif, et son futur est toujours conditionnel.",
+   "en": "The verb to love is hard to conjugate: its past is not simple, its present only indicative, and its future always conditional.",
+   "author": {
+    "fr": "attribué à Jean Cocteau",
+    "en": "attributed to Jean Cocteau"
+   }
+  },
+  {
+   "id": "q-1a703d1e",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Ce que le public te reproche, cultive-le : c'est toi.",
+   "en": "What the public criticises in you, cultivate: it is you.",
+   "author": {
+    "fr": "Jean Cocteau",
+    "en": "Jean Cocteau"
+   }
+  },
+  {
+   "id": "q-a6af9edd",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Je ne cherche pas, je trouve.",
+   "en": "I do not seek, I find.",
+   "author": {
+    "fr": "Pablo Picasso",
+    "en": "Pablo Picasso"
+   }
+  },
+  {
+   "id": "q-f0b2fa95",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "L'art est un mensonge qui nous fait comprendre la vérité.",
+   "en": "Art is a lie that makes us realise truth.",
+   "author": {
+    "fr": "Pablo Picasso",
+    "en": "Pablo Picasso"
+   }
+  },
+  {
+   "id": "q-05fd82fb",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Tout enfant est un artiste. Le problème, c'est de rester un artiste en grandissant.",
+   "en": "Every child is an artist. The problem is how to remain an artist once he grows up.",
+   "author": {
+    "fr": "attribué à Pablo Picasso",
+    "en": "attributed to Pablo Picasso"
+   }
+  },
+  {
+   "id": "q-559f5c4f",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Je rêve de peindre, puis je peins mon rêve.",
+   "en": "I dream of painting and then I paint my dream.",
+   "author": {
+    "fr": "Vincent van Gogh",
+    "en": "Vincent van Gogh"
+   }
+  },
+  {
+   "id": "q-0105d469",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Les grandes choses ne se font pas par impulsion, mais par une succession de petites choses réunies.",
+   "en": "Great things are not done by impulse, but by a series of small things brought together.",
+   "author": {
+    "fr": "Vincent van Gogh",
+    "en": "Vincent van Gogh"
+   }
+  },
+  {
+   "id": "q-869bdb16",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "La créativité demande du courage.",
+   "en": "Creativity takes courage.",
+   "author": {
+    "fr": "attribué à Henri Matisse",
+    "en": "attributed to Henri Matisse"
+   }
+  },
+  {
+   "id": "q-30c17455",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "L'art n'est pas ce que vous voyez, mais ce que vous faites voir aux autres.",
+   "en": "Art is not what you see, but what you make others see.",
+   "author": {
+    "fr": "Edgar Degas",
+    "en": "Edgar Degas"
+   }
+  },
+  {
+   "id": "q-4fa74d2f",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "La musique est l'espace entre les notes.",
+   "en": "Music is the space between the notes.",
+   "author": {
+    "fr": "attribué à Claude Debussy",
+    "en": "attributed to Claude Debussy"
+   }
+  },
+  {
+   "id": "q-f22789f7",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Sans la musique, la vie serait une erreur.",
+   "en": "Without music, life would be a mistake.",
+   "author": {
+    "fr": "Friedrich Nietzsche",
+    "en": "Friedrich Nietzsche"
+   }
+  },
+  {
+   "id": "q-4820ae77",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "La nature n'est qu'un dictionnaire.",
+   "en": "Nature is only a dictionary.",
+   "author": {
+    "fr": "Eugène Delacroix",
+    "en": "Eugène Delacroix"
+   }
+  },
+  {
+   "id": "q-7202f4d6",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "L'art ne reproduit pas le visible ; il rend visible.",
+   "en": "Art does not reproduce the visible; it makes visible.",
+   "author": {
+    "fr": "Paul Klee",
+    "en": "Paul Klee"
+   }
+  },
+  {
+   "id": "q-e001be6a",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "L'art est fait pour troubler, la science rassure.",
+   "en": "Art is meant to disturb; science reassures.",
+   "author": {
+    "fr": "Georges Braque",
+    "en": "Georges Braque"
+   }
+  },
+  {
+   "id": "q-365f24ef",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "La mode se démode, le style jamais.",
+   "en": "Fashion changes, but style endures.",
+   "author": {
+    "fr": "attribué à Coco Chanel",
+    "en": "attributed to Coco Chanel"
+   }
+  },
+  {
+   "id": "q-b0079049",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Il n'y a pas d'ami aussi loyal qu'un livre.",
+   "en": "There is no friend as loyal as a book.",
+   "author": {
+    "fr": "Ernest Hemingway",
+    "en": "Ernest Hemingway"
+   }
+  },
+  {
+   "id": "q-1f150a60",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Si vous voulez être écrivain, vous devez faire deux choses avant tout : lire beaucoup et écrire beaucoup.",
+   "en": "If you want to be a writer, you must do two things above all others: read a lot and write a lot.",
+   "author": {
+    "fr": "Stephen King",
+    "en": "Stephen King"
+   }
+  },
+  {
+   "id": "q-671cd9c9",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Celui qui ne lit pas n'aura vécu qu'une seule vie. Celui qui lit aura vécu cinq mille ans.",
+   "en": "The person who doesn't read lives only one life. The reader lives five thousand.",
+   "author": {
+    "fr": "Umberto Eco",
+    "en": "Umberto Eco"
+   }
+  },
+  {
+   "id": "q-1d870f56",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Fonder des bibliothèques, c'était encore construire des greniers publics.",
+   "en": "To found libraries was like building public granaries.",
+   "author": {
+    "fr": "Marguerite Yourcenar",
+    "en": "Marguerite Yourcenar"
+   }
+  },
+  {
+   "id": "q-24a031ec",
+   "cat": "quote",
+   "theme": "art",
+   "fr": "Si vous possédez une bibliothèque et un jardin, vous avez tout ce qu'il vous faut.",
+   "en": "If you have a garden and a library, you have everything you need.",
+   "author": {
+    "fr": "Cicéron",
+    "en": "Cicero"
+   }
+  },
+  {
+   "id": "q-01c46955",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La mort n'est rien pour nous.",
+   "en": "Death is nothing to us.",
+   "author": {
+    "fr": "Épicure",
+    "en": "Epicurus"
+   }
+  },
+  {
+   "id": "q-b9cb3629",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Ce n'est pas tant l'aide de nos amis qui nous aide que notre confiance dans cette aide.",
+   "en": "It is not so much our friends' help that helps us, as the confidence of their help.",
+   "author": {
+    "fr": "Épicure",
+    "en": "Epicurus"
+   }
+  },
+  {
+   "id": "q-adea06d4",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "C'était le meilleur des temps, c'était le pire des temps.",
+   "en": "It was the best of times, it was the worst of times.",
+   "author": {
+    "fr": "Charles Dickens",
+    "en": "Charles Dickens"
+   }
+  },
+  {
+   "id": "q-f54f059a",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Tous ceux qui errent ne sont pas perdus.",
+   "en": "Not all those who wander are lost.",
+   "author": {
+    "fr": "J. R. R. Tolkien",
+    "en": "J. R. R. Tolkien"
+   }
+  },
+  {
+   "id": "q-a0a3b2cf",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Tout ce que nous avons à décider, c'est ce que nous faisons du temps qui nous est imparti.",
+   "en": "All we have to decide is what to do with the time that is given us.",
+   "author": {
+    "fr": "J. R. R. Tolkien",
+    "en": "J. R. R. Tolkien"
+   }
+  },
+  {
+   "id": "q-77238e7f",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Il m'est arrivé de croire jusqu'à six choses impossibles avant le petit-déjeuner.",
+   "en": "Sometimes I've believed as many as six impossible things before breakfast.",
+   "author": {
+    "fr": "Lewis Carroll",
+    "en": "Lewis Carroll"
+   }
+  },
+  {
+   "id": "q-ae948d59",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La vie, c'est ce qui arrive pendant que vous êtes occupé à faire d'autres projets.",
+   "en": "Life is what happens to you while you're busy making other plans.",
+   "author": {
+    "fr": "attribué à John Lennon",
+    "en": "attributed to John Lennon"
+   }
+  },
+  {
+   "id": "q-78e8a8f0",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Une journée sans rire est une journée perdue.",
+   "en": "A day without laughter is a day wasted.",
+   "author": {
+    "fr": "attribué à Charlie Chaplin",
+    "en": "attributed to Charlie Chaplin"
+   }
+  },
+  {
+   "id": "q-e5fa988a",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "La vie est une tragédie vue en gros plan, mais une comédie en plan large.",
+   "en": "Life is a tragedy when seen in close-up, but a comedy in long-shot.",
+   "author": {
+    "fr": "Charlie Chaplin",
+    "en": "Charlie Chaplin"
+   }
+  },
+  {
+   "id": "q-a507671d",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Rien n'est impossible, le mot lui-même dit « je suis possible ».",
+   "en": "Nothing is impossible, the word itself says \"I'm possible\".",
+   "author": {
+    "fr": "attribué à Audrey Hepburn",
+    "en": "attributed to Audrey Hepburn"
+   }
+  },
+  {
+   "id": "q-573ee1b5",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Personne ne peut vous faire sentir inférieur sans votre consentement.",
+   "en": "No one can make you feel inferior without your consent.",
+   "author": {
+    "fr": "attribué à Eleanor Roosevelt",
+    "en": "attributed to Eleanor Roosevelt"
+   }
+  },
+  {
+   "id": "q-36fb1f73",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Il n'y a que deux jours dans l'année où l'on ne peut rien faire : hier et demain.",
+   "en": "There are only two days in the year that nothing can be done: yesterday and tomorrow.",
+   "author": {
+    "fr": "attribué à Dalaï-Lama",
+    "en": "attributed to Dalai Lama"
+   }
+  },
+  {
+   "id": "q-5bceefe9",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Nous ne pouvons pas tous faire de grandes choses, mais nous pouvons faire de petites choses avec un grand amour.",
+   "en": "Not all of us can do great things, but we can do small things with great love.",
+   "author": {
+    "fr": "attribué à Mère Teresa",
+    "en": "attributed to Mother Teresa"
+   }
+  },
+  {
+   "id": "q-2fc94b1f",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Tout est pour le mieux dans le meilleur des mondes possibles.",
+   "en": "All is for the best in the best of all possible worlds.",
+   "author": {
+    "fr": "Voltaire",
+    "en": "Voltaire"
+   }
+  },
+  {
+   "id": "q-ce687f67",
+   "cat": "quote",
+   "theme": "life",
+   "fr": "Rien ne pèse tant qu'un secret.",
+   "en": "Nothing weighs so heavily as a secret.",
+   "author": {
+    "fr": "Jean de La Fontaine",
+    "en": "La Fontaine"
+   }
+  },
+  {
+   "id": "q-bc3309cd",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "La nature ne se presse pas, et pourtant tout s'accomplit.",
+   "en": "Nature does not hurry, yet everything is accomplished.",
+   "author": {
+    "fr": "attribué à Lao Tseu",
+    "en": "attributed to Laozi"
+   }
+  },
+  {
+   "id": "q-4cf4d1fb",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Laissez faire un peu à nature : elle entend mieux ses affaires que nous.",
+   "en": "Let nature have her way a little: she understands her business better than we do.",
+   "author": {
+    "fr": "Montaigne",
+    "en": "Montaigne"
+   }
+  },
+  {
+   "id": "q-db2d0703",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "La Nature est un temple où de vivants piliers laissent parfois sortir de confuses paroles.",
+   "en": "Nature is a temple where living pillars sometimes let out confused words.",
+   "author": {
+    "fr": "Charles Baudelaire",
+    "en": "Charles Baudelaire"
+   }
+  },
+  {
+   "id": "q-fb2e6d45",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Certaines personnes se plaignent que les roses ont des épines ; moi, je suis reconnaissant que les épines aient des roses.",
+   "en": "Some people grumble that roses have thorns; I am grateful that thorns have roses.",
+   "author": {
+    "fr": "Alphonse Karr",
+    "en": "Alphonse Karr"
+   }
+  },
+  {
+   "id": "q-80eb6b74",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Plus ça change, plus c'est la même chose.",
+   "en": "The more things change, the more they stay the same.",
+   "author": {
+    "fr": "Alphonse Karr",
+    "en": "Alphonse Karr"
+   }
+  },
+  {
+   "id": "q-516dc4bb",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "L'espoir est une chose avec des plumes, qui se perche dans l'âme.",
+   "en": "Hope is the thing with feathers that perches in the soul.",
+   "author": {
+    "fr": "Emily Dickinson",
+    "en": "Emily Dickinson"
+   }
+  },
+  {
+   "id": "q-4306fc8c",
+   "cat": "quote",
+   "theme": "nature",
+   "fr": "Je crois qu'une feuille d'herbe n'est rien de moins que le travail des étoiles.",
+   "en": "I believe a leaf of grass is no less than the journey-work of the stars.",
+   "author": {
+    "fr": "Walt Whitman",
+    "en": "Walt Whitman"
+   }
+  },
+  {
+   "id": "q-418a1560",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Passer pour un idiot aux yeux d'un imbécile est une volupté de fin gourmet.",
+   "en": "Passing for an idiot in the eyes of a fool is a gourmet's delight.",
+   "author": {
+    "fr": "Georges Courteline",
+    "en": "Georges Courteline"
+   }
+  },
+  {
+   "id": "q-bb2ff7a3",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Je n'ai jamais laissé l'école interférer avec mon éducation.",
+   "en": "I have never let my schooling interfere with my education.",
+   "author": {
+    "fr": "attribué à Mark Twain",
+    "en": "attributed to Mark Twain"
+   }
+  },
+  {
+   "id": "q-7d658fa3",
+   "cat": "quote",
+   "theme": "humor",
+   "fr": "Deux choses sont infinies : l'univers et la bêtise humaine. Mais pour l'univers, je n'en ai pas la certitude absolue.",
+   "en": "Two things are infinite: the universe and human stupidity; and I'm not sure about the universe.",
+   "author": {
+    "fr": "attribué à Albert Einstein",
+    "en": "attributed to Albert Einstein"
+   }
+  },
+  {
+   "id": "q-178987c4",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "La machine analytique n'a nullement la prétention de créer quoi que ce soit.",
+   "en": "The Analytical Engine has no pretensions whatever to originate anything.",
+   "author": {
+    "fr": "Ada Lovelace",
+    "en": "Ada Lovelace"
+   }
+  },
+  {
+   "id": "q-62f161e1",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Nous ne pouvons voir qu'à une courte distance devant nous, mais nous voyons qu'il reste beaucoup à faire.",
+   "en": "We can only see a short distance ahead, but we can see plenty there that needs to be done.",
+   "author": {
+    "fr": "Alan Turing",
+    "en": "Alan Turing"
+   }
+  },
+  {
+   "id": "q-59003229",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "On ne remarque jamais ce qui a été fait ; on ne peut voir que ce qui reste à faire.",
+   "en": "One never notices what has been done; one can only see what remains to be done.",
+   "author": {
+    "fr": "Marie Curie",
+    "en": "Marie Curie"
+   }
+  },
+  {
+   "id": "q-cc6f9df8",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Nous sommes des poussières d'étoiles.",
+   "en": "We are stardust.",
+   "author": {
+    "fr": "attribué à Hubert Reeves",
+    "en": "attributed to Hubert Reeves"
+   }
+  },
+  {
+   "id": "q-157cb0d7",
+   "cat": "quote",
+   "theme": "science",
+   "fr": "Et pourtant, elle tourne.",
+   "en": "And yet it moves.",
+   "author": {
+    "fr": "attribué à Galilée",
+    "en": "attributed to Galileo"
+   }
+  },
+  {
+   "id": "j-8a3e0f5a",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Je suis aware.",
+   "en": "I am aware.",
+   "author": {
+    "fr": "Jean-Claude Van Damme",
+    "en": "Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-62b9ba70",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Y a des gens qui n'ont pas réussi parce qu'ils ne sont pas aware. Moi je suis aware, tu vois, c'est un exemple.",
+   "en": "Some people haven't made it because they're not aware. Me, I'm aware, you see — that's an example.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-eec8866b",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Arrêtez les clapements ! On n'est pas du show-business, je parle du cœur ici !",
+   "en": "Stop the clapping! We're not show business, I'm speaking from the heart here!",
+   "author": {
+    "fr": "Jean-Claude Van Damme",
+    "en": "Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-8b5c3ff9",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Il faut que tu crois encore plus ce que tu crois, et quand tu commences à croire ce que tu crois, y a personne au monde qui peut te bouger.",
+   "en": "You have to believe what you believe even more, and once you start believing what you believe, nobody in the world can move you.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-1c5a133d",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Quand t'es pas touché de temps en temps, pendant longtemps, tu sens plus la touche.",
+   "en": "When you haven't been touched now and then for a long time, you can't feel the touch anymore.",
+   "author": {
+    "fr": "Jean-Claude Van Damme",
+    "en": "Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-193befdf",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "À l'an 3000, les gens vont se parler avec les yeux, avec des ondes. Ne me prends pas pour un fou : les baleines le font, les dauphins aussi.",
+   "en": "By the year 3000, people will talk to each other with their eyes, with waves. Don't think I'm crazy: whales do it, dolphins too.",
+   "author": {
+    "fr": "Jean-Claude Van Damme",
+    "en": "Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-334882f2",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Je suis fasciné par l'air. Si on enlevait l'air du ciel, tous les oiseaux tomberaient par terre… et les avions aussi.",
+   "en": "I am fascinated by air. If you took the air out of the sky, all the birds would fall to the ground… and the planes too.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-ced22588",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "L'air, tu peux pas le toucher. Ça existe et ça existe pas. It's magic.",
+   "en": "Air, you can't touch it. It exists and it doesn't exist. It's magic.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-b1e85566",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "L'air, c'est un peu comme mon cerveau.",
+   "en": "Air is a bit like my brain.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-291ee770",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "L'eau, c'est quelque chose de concret mais pas concret. L'eau peut me nourrir, mais l'eau peut aussi me porter.",
+   "en": "Water is something concrete but not concrete. Water can feed me, but water can also carry me.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-187909d2",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "L'eau peut tenir des cargos dans la mer, des milliers de tonnes d'acier. C'est quelque chose qui a beaucoup de dimensions, l'eau.",
+   "en": "Water can hold cargo ships at sea, thousands of tons of steel. Water has a lot of dimensions.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-71875013",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Si tu parles à ton eau de Javel pendant que tu fais la vaisselle, elle est moins concentrée.",
+   "en": "If you talk to your bleach while doing the dishes, it gets less concentrated.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-f11f538c",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Quand tu prends confiance en la confiance, tu deviens confiant.",
+   "en": "When you gain confidence in confidence, you become confident.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-ccc1aac3",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Le ridicule n'existe pas, on crée le ridicule.",
+   "en": "Ridicule doesn't exist; we create ridicule.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-3f5a8087",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Ma devise, c'est toujours : se recréer.",
+   "en": "My motto is always: recreate yourself.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-e7cf0302",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Mon modèle, c'est moi-même ! Je connais mes erreurs, mes qualités, mes victoires et mes défaites.",
+   "en": "My role model is myself! I know my mistakes, my qualities, my victories and my defeats.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-0c25d40e",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Si je prends un autre modèle comme modèle, comment veux-tu que ce modèle puisse modeler dans la bonne ligne ?",
+   "en": "If I take another model as my model, how do you expect that model to model in the right line?",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-733de0e5",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Quand tu montes dans un ascenseur, tu penses. Donc on n'est jamais seul spirituellement.",
+   "en": "When you get into a lift, you think. So you are never alone, spiritually.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-ec01eeaf",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Dans l'ascenseur, je suis là. Et je reste là. Jusqu'à ce que les portes s'ouvrent. Et puis je bouge mon enveloppe.",
+   "en": "In the lift, I'm there. And I stay there. Until the doors open. And then I move my envelope.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-2d2ea064",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "La vérité, c'est qu'il n'y a pas de vérité ; la vérité, c'est qu'il faut trouver sa propre vérité.",
+   "en": "The truth is that there is no truth; the truth is you have to find your own truth.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-334c5e2a",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "En vérité, il n'y a pas de meilleur ! En vérité, il y a chacun soi-même !",
+   "en": "In truth, there is no best! In truth, there is everyone themselves!",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-77a4f855",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Le cycle du cosmos dans la vie, c'est une grande roue, faite de choses, de moments, de feelings.",
+   "en": "The cycle of the cosmos in life is a big wheel, made of things, of moments, of feelings.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-b1d98dae",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "On a inventé le temps. Quand je traverse le living-room, ça prend dix secondes ; pour l'oiseau, une seconde ; pour l'oxygène, zéro seconde.",
+   "en": "We invented time. When I cross the living room, it takes ten seconds; for a bird, one second; for oxygen, zero seconds.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-88aceb7f",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "J'adore les cacahuètes. Tu bois une bière, tu en as marre du goût, alors tu manges des cacahuètes. Et après, tu as de nouveau envie de bière.",
+   "en": "I love peanuts. You drink a beer, you get tired of the taste, so you eat peanuts. And then you want beer again.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-d9b88a76",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Les cacahuètes, c'est le mouvement perpétuel à la portée de l'homme.",
+   "en": "Peanuts are perpetual motion within man's reach.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-991edb8b",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Moi, Adam et Ève, j'y crois plus, parce que je suis pas un idiot : la pomme, ça peut pas être mauvais, c'est plein de pectine.",
+   "en": "I don't believe in Adam and Eve anymore, because I'm not an idiot: an apple can't be bad, it's full of pectin.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-81e6c512",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "La plus belle religion, c'est de rentrer en soi-même et de digérer l'essence de la vie.",
+   "en": "The most beautiful religion is to go inside yourself and digest the essence of life.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-1c71850e",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "L'aboutissement de l'instinct, c'est l'amour. Il faut s'aimer d'abord soi-même pour pouvoir aimer les autres.",
+   "en": "The culmination of instinct is love. You have to love yourself first to be able to love others.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-f7309c84",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Un plus un égale un. Y a Jean-Claude, y a Dieu, dans le même corps.",
+   "en": "One plus one equals one. There's Jean-Claude, there's God, in the same body.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-f617a65e",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Les gens qui sont aveugles sont parfois plus aware que les gens qui voient.",
+   "en": "Blind people are sometimes more aware than people who can see.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-713fff4c",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "L'être humain, en général, réacte. Moi, je trouve qu'un être humain doit créer.",
+   "en": "Human beings, in general, react. Me, I think a human being must create.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-48f6807a",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Entre penser et dire, il y a un monde de différences. Et ils sont près !",
+   "en": "Between thinking and saying there's a world of difference. And they're so close!",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-19a0b474",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "It's a paradigm, un « paradigme » comme on dit en français, je crois.",
+   "en": "It's a paradigm, a \"paradigme\" as we say in French, I think.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-6f880f9b",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Quand je demande une question, tu sais à qui je demande ? À moi.",
+   "en": "When I ask a question, you know who I'm asking? Myself.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-2b00b4a6",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Une femme qui est enceinte, par exemple, elle est aware qu'elle attend un enfant.",
+   "en": "A pregnant woman, for example, is aware that she's expecting a child.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-b51cc4d0",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Quand tu joues au go, faut être aware. Si t'es pas aware, tes pierres sont mortes.",
+   "en": "When you play Go, you have to be aware. If you're not aware, your stones are dead.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-ae4591b5",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Marcel Proust, oui. Un peu comme moi. Longtemps, il s'est couché aware.",
+   "en": "Marcel Proust, yes. A bit like me. For a long time, he went to bed aware.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-00cac658",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Si tu téléphones à une voyante et qu'elle ne décroche pas avant que ça sonne, raccroche.",
+   "en": "If you call a psychic and she doesn't pick up before it rings, hang up.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "j-5bf3581d",
+   "cat": "jcvd",
+   "theme": "humor",
+   "fr": "Si tu travailles avec un marteau-piqueur pendant un tremblement de terre, désynchronise-toi, sinon tu travailles pour rien.",
+   "en": "If you use a jackhammer during an earthquake, get out of sync, otherwise you're working for nothing.",
+   "author": {
+    "fr": "attribué à Jean-Claude Van Damme",
+    "en": "attributed to Jean-Claude Van Damme"
+   }
+  },
+  {
+   "id": "c-8f4daed0",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a compté jusqu'à l'infini. Deux fois.",
+   "en": "Chuck Norris counted to infinity. Twice.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-ff75d82f",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne fait pas de pompes : il pousse la Terre vers le bas.",
+   "en": "Chuck Norris doesn't do push-ups. He pushes the Earth down.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-912e6b3f",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut diviser par zéro.",
+   "en": "Chuck Norris can divide by zero.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-79f9eeef",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut claquer une porte tournante.",
+   "en": "Chuck Norris can slam a revolving door.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-591e1066",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne dort pas. Il attend.",
+   "en": "Chuck Norris doesn't sleep. He waits.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-d3dbfc37",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne porte pas de montre. C'est lui qui décide de l'heure qu'il est.",
+   "en": "Chuck Norris doesn't wear a watch. He decides what time it is.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-0faa01ec",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a gagné une partie de Puissance 4 en trois coups.",
+   "en": "Chuck Norris once won a game of Connect Four in three moves.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-fb2b79e0",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "On ne cherche pas Chuck Norris sur Google. C'est Chuck Norris qui vous trouve.",
+   "en": "You don't find Chuck Norris on Google. Chuck Norris finds you.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-82346a63",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne lit pas les livres. Il les fixe jusqu'à ce qu'ils lui donnent l'information.",
+   "en": "Chuck Norris doesn't read books. He stares them down until he gets the information he wants.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-adffa306",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut allumer un feu en frottant deux glaçons.",
+   "en": "Chuck Norris can start a fire by rubbing two ice cubes together.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-94a6f0a8",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Quand Chuck Norris entre dans une pièce, il n'allume pas la lumière : il éteint l'obscurité.",
+   "en": "When Chuck Norris enters a room, he doesn't turn the lights on. He turns the dark off.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-5b48dd9e",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne porte pas de lunettes de soleil pour se protéger du soleil, mais pour protéger le soleil.",
+   "en": "Chuck Norris doesn't wear sunglasses to protect his eyes from the sun, but to protect the sun from his eyes.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-40056cc8",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Superman porte un pyjama Chuck Norris.",
+   "en": "Superman wears Chuck Norris pyjamas.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-c2d0e266",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris sait lire le braille avec les yeux fermés.",
+   "en": "Chuck Norris can read Braille with his eyes closed.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-00502569",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut entendre la langue des signes.",
+   "en": "Chuck Norris can hear sign language.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-9659fe23",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris fait pleurer les oignons.",
+   "en": "Chuck Norris makes onions cry.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-e553bfe6",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne se mouille pas. C'est l'eau qui se Chuck-Norrise.",
+   "en": "Chuck Norris doesn't get wet. Water gets Chuck Norrised.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-98016cf6",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne ment jamais. C'est la vérité qui a tort.",
+   "en": "Chuck Norris never lies. The truth is simply wrong.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-e89eedc4",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Quand Chuck Norris joue au Monopoly, cela affecte l'économie réelle.",
+   "en": "When Chuck Norris plays Monopoly, it affects the actual world economy.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-41e6e356",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Les monstres vérifient sous leur lit que Chuck Norris n'y est pas.",
+   "en": "Monsters check under their beds for Chuck Norris.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-21c234b1",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a résolu un Rubik's Cube d'un seul regard.",
+   "en": "Chuck Norris solved a Rubik's Cube with a single glance.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-70024255",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut tracer un cercle parfait avec une règle.",
+   "en": "Chuck Norris can draw a perfect circle with a ruler.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-62f24200",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a gagné à Tetris sans aligner une seule ligne.",
+   "en": "Chuck Norris beat Tetris without completing a single line.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-0907afe2",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne fait pas de sauvegarde. Ses fichiers n'osent pas se corrompre.",
+   "en": "Chuck Norris doesn't back up. His files wouldn't dare get corrupted.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-a7a7d3ec",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris n'utilise pas de débogueur. Il fixe le code jusqu'à ce qu'il avoue.",
+   "en": "Chuck Norris doesn't use a debugger. He stares at the code until it confesses.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-9c4f037f",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Le mot de passe de Chuck Norris, c'est le nombre pi. En entier.",
+   "en": "Chuck Norris's password is pi. All of it.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-6b3dfb5c",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne boucle pas sa ceinture. C'est la voiture qui s'accroche à lui.",
+   "en": "Chuck Norris doesn't buckle up. The car holds on to him.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-ddb0832c",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut faire bouillir de l'eau rien qu'en la regardant.",
+   "en": "Chuck Norris can boil water just by looking at it.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-c0547733",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut remettre le dentifrice dans le tube.",
+   "en": "Chuck Norris can put toothpaste back in the tube.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-60e1e7d7",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut prendre un selfie avec l'appareil photo arrière.",
+   "en": "Chuck Norris can take a selfie with the rear camera.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-546d9e6e",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut couper un couteau avec du beurre.",
+   "en": "Chuck Norris can cut a knife with butter.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-cae437ef",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris sait où est Charlie.",
+   "en": "Chuck Norris knows where Waldo is.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-375d1262",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut éternuer les yeux ouverts.",
+   "en": "Chuck Norris can sneeze with his eyes open.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-9c1e7b36",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a déjà mangé une seule chips.",
+   "en": "Chuck Norris once ate just one crisp.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-47c428a9",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut ouvrir un paquet de chips en silence au cinéma.",
+   "en": "Chuck Norris can open a bag of crisps silently in a cinema.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-bc1cbc61",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Le Wi-Fi capte mieux quand Chuck Norris est dans la pièce.",
+   "en": "Wi-Fi gets better reception when Chuck Norris is in the room.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-2cace456",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne lit pas le mode d'emploi. C'est le mode d'emploi qui lit Chuck Norris.",
+   "en": "Chuck Norris doesn't read the manual. The manual reads Chuck Norris.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-35c8b6dd",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Quand Chuck Norris fait un 360, il revient à 361.",
+   "en": "When Chuck Norris does a 360, he ends up at 361.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-9e57ee4f",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a demandé des pâtes al dente. Les pâtes ont obéi.",
+   "en": "Chuck Norris asked for his pasta al dente. The pasta obeyed.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-54ac937f",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne suit pas la mode. La mode suit Chuck Norris.",
+   "en": "Chuck Norris doesn't follow fashion. Fashion follows Chuck Norris.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-6a14de6e",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne perd jamais ses clés. Les portes s'ouvrent par respect.",
+   "en": "Chuck Norris never loses his keys. Doors open out of respect.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-487d10cd",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Il y a 1 440 minutes dans une journée. Chuck Norris en utilise 1 441.",
+   "en": "There are 1,440 minutes in a day. Chuck Norris uses 1,441.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-7cdeca8c",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Les panneaux Stop s'arrêtent quand Chuck Norris passe.",
+   "en": "Stop signs stop when Chuck Norris drives by.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-944b57e8",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Le GPS demande son chemin à Chuck Norris.",
+   "en": "The GPS asks Chuck Norris for directions.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-ce9a0674",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne mange pas de miel. Il mâche des abeilles.",
+   "en": "Chuck Norris doesn't eat honey. He chews bees.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-00baca47",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a trouvé la dernière page d'Internet.",
+   "en": "Chuck Norris has found the last page of the Internet.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-fd96d070",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a fini le jeu du dinosaure de Chrome.",
+   "en": "Chuck Norris has finished Chrome's dinosaur game.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-b1413ac6",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut applaudir d'une seule main.",
+   "en": "Chuck Norris can clap with one hand.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-eccb8591",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut plier une feuille de papier en deux plus de huit fois.",
+   "en": "Chuck Norris can fold a sheet of paper in half more than eight times.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-5207cb4c",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut lécher son propre coude.",
+   "en": "Chuck Norris can lick his own elbow.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-f9193ae9",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a lancé un boomerang. Le boomerang n'a pas osé revenir sans permission.",
+   "en": "Chuck Norris threw a boomerang. It didn't dare come back without permission.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-5972dc4c",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut effacer un feutre indélébile.",
+   "en": "Chuck Norris can erase permanent marker.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-087ea0b1",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne vieillit pas. Il monte de niveau.",
+   "en": "Chuck Norris doesn't age. He levels up.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-3f4c8b96",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Personne ne fait de poisson d'avril à Chuck Norris. Son calendrier passe du 31 mars au 2 avril.",
+   "en": "Nobody pranks Chuck Norris on April Fools'. His calendar goes straight from March 31st to April 2nd.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-70f76b76",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut gagner une partie de pierre-feuille-ciseaux avec une pierre contre une feuille.",
+   "en": "Chuck Norris can win rock-paper-scissors with rock against paper.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-f8161c4d",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris ne fait pas la queue. La queue se réorganise autour de lui.",
+   "en": "Chuck Norris doesn't queue. The queue reorganises around him.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-24d4b5cd",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut parler au répondeur avant le bip.",
+   "en": "Chuck Norris can leave a voicemail before the beep.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-304efd9c",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a regardé la fin d'une série avant qu'elle soit tournée.",
+   "en": "Chuck Norris watched the finale of a series before it was filmed.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-b1f3436a",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Les chaussettes de Chuck Norris ne se perdent jamais dans la machine à laver.",
+   "en": "Chuck Norris's socks never go missing in the washing machine.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-2d9dcaf1",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut faire un créneau avec un camion, du premier coup, en marche avant.",
+   "en": "Chuck Norris can parallel park a lorry first time, going forwards.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-efd8ff76",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris n'a pas de mot de passe oublié. Ce sont les sites qui se souviennent de lui.",
+   "en": "Chuck Norris never forgets a password. Websites remember him.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-d05ec78a",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut écrire du HTML qui compile.",
+   "en": "Chuck Norris can write HTML that compiles.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-19880fb8",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris n'a jamais besoin de redémarrer son ordinateur. L'ordinateur se redémarre tout seul, par politesse.",
+   "en": "Chuck Norris never needs to reboot. The computer reboots itself, out of politeness.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-a844b1c5",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Quand Chuck Norris fait de la corde à sauter, c'est la Terre qui tourne.",
+   "en": "When Chuck Norris skips rope, it's the Earth that spins.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-b600e8b3",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut monter un meuble en kit sans notice et sans vis en trop.",
+   "en": "Chuck Norris can assemble flat-pack furniture without instructions and with no screws left over.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-03b81a09",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris peut plier un drap-housse proprement.",
+   "en": "Chuck Norris can fold a fitted sheet neatly.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-97a4b6e8",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a déjà vu un pigeonneau.",
+   "en": "Chuck Norris has seen a baby pigeon.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-51e9a712",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a gagné un concours de regard fixe contre son reflet.",
+   "en": "Chuck Norris won a staring contest against his own reflection.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-c3d726df",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris répond aux e-mails avant qu'ils soient envoyés.",
+   "en": "Chuck Norris answers emails before they are sent.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-5478fa6f",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a fait une sieste de dix minutes. L'horloge a attendu.",
+   "en": "Chuck Norris took a ten-minute nap. The clock waited.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-3760ca86",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "La tour de Pise penche parce qu'elle a vu passer Chuck Norris.",
+   "en": "The Tower of Pisa leans because it saw Chuck Norris walk by.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-b7eddc78",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a coupé un oignon sans pleurer. L'oignon, lui, a pleuré.",
+   "en": "Chuck Norris chopped an onion without crying. The onion cried.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-bbd8edc3",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Quand Chuck Norris va à la plage, les vagues attendent son signal.",
+   "en": "When Chuck Norris goes to the beach, the waves wait for his signal.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  },
+  {
+   "id": "c-f9e25d62",
+   "cat": "chuck",
+   "theme": "humor",
+   "fr": "Chuck Norris a gagné au Scrabble avec le mot « Chuck ». Il a marqué quatre-vingt-dix-neuf mille points.",
+   "en": "Chuck Norris won at Scrabble with the word \"Chuck\". He scored ninety-nine thousand points.",
+   "author": {
+    "fr": "Chuck Norris Fact",
+    "en": "Chuck Norris Fact"
+   }
+  }
+ ]
+}

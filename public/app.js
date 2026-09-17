@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.111.1
+   Version 1.112.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2967,7 +2967,7 @@
                <div class="field-browse-list" hidden></div>
              </div>`
           : "";
-        return `<label class="field field-wide"><span>${label}</span><textarea data-key="${f.key}" autocomplete="off" spellcheck="false">${v}</textarea>${hint}</label>${browseUi}`;
+        return `<label class="field field-wide"><span>${label}</span><textarea data-key="${f.key}" autocomplete="off" spellcheck="false">${escapeHtml(v)}</textarea>${hint}</label>${browseUi}`;
       }
       case "datetime":
         return `<label class="field"><span>${label}</span><input type="datetime-local" data-key="${f.key}" value="${v}">${hint}</label>`;

@@ -1,5 +1,56 @@
 # Changelog
 
+## 1.112.0
+
+- **Tuile Citation : collection multipliee par neuf.** 407 citations,
+  pensees et proverbes du monde entier (contre 44), en francais et en
+  anglais, ranges en sept themes : sagesse et proverbes, vie et amour,
+  travail et volonte, sciences, art et creation, nature, humour. Les
+  attributions ont ete verifiees : les fausses citations celebres ont
+  ete ecartees, y compris plusieurs de l'ancienne collection (« la
+  chance, c'est quand la preparation rencontre l'opportunite » n'est
+  pas de Seneque, « au coeur de la difficulte... » n'est pas
+  d'Einstein...), et une citation d'auteur incertain est signee
+  « attribue a ».
+
+- **Deux nouvelles sources, combinables par cases a cocher :**
+  - **Pensees de Jean-Claude Van Damme** (39) : seules quelques-unes
+    sont sourcees (emissions et interviews datees) et signees de son
+    nom ; les autres, celebres mais sans source, sont signees « attribue
+    a Jean-Claude Van Damme ». Traduites en anglais.
+  - **Blagues hommage a Chuck Norris** (73), disparu le 19 mars 2026 :
+    les classiques « Chuck Norris Facts », signes comme tels. Par
+    respect, aucune ne tourne autour de la mort ou des armes.
+
+- **Frequence des blagues** : de temps en temps (1 sur 10), regulierement
+  (1 sur 4), souvent (1 sur 2) ou autant que les citations. Sans ce
+  dosage, les citations noieraient les perles.
+
+- **Aucune repetition** avant d'avoir montre toute la selection : chaque
+  source est un paquet melange, rebattu une fois epuise. Le suivi est
+  garde par l'ecran (stockage du navigateur) et survit aux redemarrages,
+  sans ecrire dans le layout a chaque citation.
+
+- **Toucher pour la suivante, appui long pour les favoris** (touche F au
+  clavier), avec une etoile et un court message ; option « favoris
+  seulement ». Sans effet en mode edition.
+
+- **Mes citations** : une par ligne, « Texte — Auteur », melangees au
+  reste et toujours affichees.
+
+- **Pictogramme de la source** (desactivable) et reglages ranges en
+  sections Contenu, Themes des citations, Affichage.
+
+- **Correctifs** : le texte d'une citation etait insere comme du HTML
+  (desormais echappe) ; les champs texte multiligne des reglages de
+  tuile inseraient leur valeur sans echappement, ce qu'un `<` suffisait
+  a casser.
+
+- **Tests** : `test/quote.test.js` (integrite de la collection,
+  signatures, fausses attributions ecartees, dosage mesure sur 4000
+  tirages, absence de repetition, citation du jour, favoris) et un
+  parcours reel de la tuile dans `dom-smoke.js`.
+
 ## 1.111.1
 
 - **Correctif : aucune sortie de PiBoard en mode tableau de bord.** Le

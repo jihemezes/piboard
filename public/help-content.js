@@ -1096,30 +1096,44 @@
       group: "tiles",
       title: { fr: "Citation du jour", en: "Quote of the day" },
       sub: {
-        fr: "Une citation issue d'une collection embarquée hors-ligne — aucune connexion requise.",
-        en: "A rotating quote from a bundled offline collection — no internet required."
+        fr: "Citations, pensées et proverbes, pensées de Jean-Claude Van Damme et blagues hommage à Chuck Norris — collection embarquée, hors-ligne.",
+        en: "Quotes, thoughts and proverbs, Jean-Claude Van Damme's musings and Chuck Norris tribute jokes — bundled offline collection."
       },
       html: {
         fr: `
-          <span class="help-size">Taille : 3×1 par défaut, de 1×1 à 12×5</span>
+          <span class="help-size">Taille : 3×1 par défaut, de 1×1 à 12×16</span>
           <h4>Objectif</h4>
           <p>Une touche inspirante ou amusante sur le tableau, sans dépendre d'un service en ligne.</p>
           <h4>Possibilités</h4>
-          <p>La collection de citations est embarquée directement dans PiBoard : la tuile fonctionne donc même sans connexion internet, et change de citation à intervalle régulier. Le texte et le nom de l'auteur s'ajustent automatiquement à la taille de la tuile — sur une tuile réduite, la taille de police diminue plutôt que de couper le texte, et l'auteur reste toujours entièrement visible.</p>
+          <p>Plus de 400 citations, pensées et proverbes du monde entier, en français et en anglais, rangés par thèmes. Leurs attributions ont été vérifiées : les fausses citations célèbres qui circulent partout ont été écartées, et une citation dont l'auteur est incertain est signée « attribué à ».</p>
+          <p>Deux sources humoristiques s'y ajoutent à volonté. <b>Les pensées de Jean-Claude Van Damme</b> : seules quelques-unes sont sourcées (interviews et émissions datées) et signées de son nom ; les autres, célèbres mais sans source, sont signées « attribué à Jean-Claude Van Damme ». En anglais, elles sont traduites. <b>Les blagues hommage à Chuck Norris</b>, disparu le 19 mars 2026 : les « Chuck Norris Facts », ce folklore d'Internet qu'il accueillait avec bonne humeur, signés « Chuck Norris Fact ». Par respect, aucune ne tourne autour de la mort.</p>
+          <p><b>Jamais deux fois le même texte</b> tant que toute la sélection n'a pas défilé ; ce suivi est mémorisé par l'écran et survit aux redémarrages. <b>Toucher la tuile</b> passe au texte suivant. Un <b>appui long</b> (ou la touche F) ajoute le texte affiché aux favoris, ou l'en retire : une étoile le signale. Le texte et la signature s'ajustent automatiquement à la taille de la tuile. En mode édition, toucher la tuile ne change rien.</p>
           <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">Intervalle de rotation</span><span class="help-opt-desc">Durée d'affichage de chaque citation avant de passer à la suivante.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Catégorie</span><span class="help-opt-desc">Filtre éventuel sur le thème des citations, si la collection en propose plusieurs.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Taille du texte</span><span class="help-opt-desc">De 50 % à 200 % : un multiplicateur appliqué par-dessus la taille calculée automatiquement, pour réduire volontairement (marge de sécurité pour une citation longue) ou agrandir.</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Sources</span><span class="help-opt-desc">Trois cases combinables : Citations et pensées, Pensées de Jean-Claude Van Damme, Blagues hommage à Chuck Norris.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fréquence des blagues et pensées</span><span class="help-opt-desc">Quand les citations sont aussi cochées, part laissée à JCVD et Chuck Norris : de temps en temps (1 sur 10), régulièrement (1 sur 4), souvent (1 sur 2), ou autant que les citations. Sans ce dosage, 400 citations noieraient les perles.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Mes citations</span><span class="help-opt-desc">Une par ligne, auteur facultatif après un tiret long : « Texte — Auteur ». Elles se mêlent au reste et s'affichent toujours, même si la source Citations ou un thème est décoché.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Favoris seulement</span><span class="help-opt-desc">N'affiche que les textes gardés par un appui long, quelle que soit leur source.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Thèmes des citations</span><span class="help-opt-desc">Sagesse et proverbes, Vie et amour, Travail et volonté, Sciences, Art et création, Nature, Humour : décochez ceux que vous ne voulez pas voir.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rotation</span><span class="help-opt-desc">Une nouvelle chaque jour (la même toute la journée), ou rotation minutée avec son intervalle.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Signature, pictogramme</span><span class="help-opt-desc">Affichent ou masquent l'auteur et le petit pictogramme de la source (guillemets, étoile de JCVD, poing de Chuck Norris, crayon pour vos citations).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Taille du texte</span><span class="help-opt-desc">De 50 % à 200 % : un multiplicateur appliqué par-dessus la taille calculée automatiquement.</span></div>`,
         en: `
-          <span class="help-size">Size: 3×1 by default, from 1×1 to 12×5</span>
+          <span class="help-size">Size: 3×1 by default, from 1×1 to 12×16</span>
           <h4>Goal</h4>
           <p>An inspiring or fun touch on the board, without depending on an online service.</p>
           <h4>Possibilities</h4>
-          <p>The quote collection is bundled directly inside PiBoard: the tile therefore works even without an internet connection, and changes quotes at a regular interval. The text and author name automatically adjust to the tile's size — on a small tile, the font size shrinks rather than cutting off the text, and the author always stays fully visible.</p>
+          <p>Over 400 quotes, thoughts and proverbs from around the world, in French and English, sorted by theme. Their attributions were checked: the famous fake quotes that circulate everywhere were left out, and a quote whose author is uncertain is signed "attributed to".</p>
+          <p>Two humorous sources can be added at will. <b>Jean-Claude Van Damme's musings</b>: only a few are sourced (dated interviews and shows) and signed with his name; the others, famous but unsourced, are signed "attributed to Jean-Claude Van Damme". In English they are translated. <b>Chuck Norris tribute jokes</b>, as he passed away on 19 March 2026: the "Chuck Norris Facts", the Internet folklore he always took with good humour, signed "Chuck Norris Fact". Out of respect, none of them revolves around death.</p>
+          <p><b>Never the same text twice</b> until the whole selection has been shown; this is remembered by the screen and survives restarts. <b>Tapping the tile</b> moves to the next text. A <b>long press</b> (or the F key) adds the displayed text to favourites, or removes it: a star marks it. Text and signature adjust automatically to the tile's size. In edit mode, tapping the tile does nothing.</p>
           <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">Rotation interval</span><span class="help-opt-desc">How long each quote is shown before moving to the next.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Category</span><span class="help-opt-desc">Optional theme filter on the quotes, if the collection offers several.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Text size</span><span class="help-opt-desc">50% to 200%: a multiplier applied on top of the automatically computed size, to voluntarily shrink (safety margin for a long quote) or enlarge.</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Sources</span><span class="help-opt-desc">Three combinable boxes: Quotes and thoughts, Jean-Claude Van Damme's musings, Chuck Norris tribute jokes.</span></div>
+          <div class="help-opt"><span class="help-opt-name">How often jokes and musings appear</span><span class="help-opt-desc">When quotes are ticked too, the share given to JCVD and Chuck Norris: now and then (1 in 10), regularly (1 in 4), often (1 in 2), or as much as the quotes. Without this, 400 quotes would drown the gems.</span></div>
+          <div class="help-opt"><span class="help-opt-name">My quotes</span><span class="help-opt-desc">One per line, optional author after a dash: "Text — Author". They mix with the rest and always show, even if the Quotes source or a theme is unticked.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Favourites only</span><span class="help-opt-desc">Only shows the texts kept with a long press, whatever their source.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Quote themes</span><span class="help-opt-desc">Wisdom and proverbs, Life and love, Work and willpower, Science, Art and creation, Nature, Humour: untick those you don't want to see.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rotation</span><span class="help-opt-desc">A new one every day (the same all day long), or timed rotation with its interval.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Signature, icon</span><span class="help-opt-desc">Show or hide the author and the small source icon (quotation marks, JCVD's star, Chuck Norris's fist, a pencil for your own quotes).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Text size</span><span class="help-opt-desc">50% to 200%: a multiplier applied on top of the automatically computed size.</span></div>`
       }
     },
 

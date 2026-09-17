@@ -48,7 +48,7 @@ The catalog groups them by family — the same grouping you see when adding a ti
 
 **Page design** — **text** (a page title or a caption: font, size that either fits the tile or stays fixed, weight, colour, position), **logo/image** (an image stored on the PiBoard machine itself, uploaded from the tile: framing, position, rounding, opacity, optional link). Both are *style* tiles: they display no data, they are there to compose a page — and combined with the new transparent background they let you title a page without any visible frame.
 
-**Miscellaneous** — countdown/timer (screen flash, beep, notification webhook), quote of the day (offline, auto-fit text).
+**Miscellaneous** — countdown/timer (screen flash, beep, notification webhook), quote of the day (offline, auto-fit text: over 400 checked quotes, thoughts and proverbs, plus optional Jean-Claude Van Damme musings and Chuck Norris tribute jokes with a frequency setting, your own quotes, no repeat until everything has been shown, tap for the next one, long-press for favourites).
 
 All of them can be added, configured, resized and removed from the tile catalog — see [docs/WIDGETS.md](docs/WIDGETS.md) to write your own, or the in-app help (the "?" button) for a full guide to each one.
 
@@ -282,7 +282,7 @@ Le catalogue les regroupe par famille — le même classement qu'à l'ajout d'un
 
 **Système & réseau** — état système (CPU/RAM/disque/température, adresses IP des cartes réseau avec une fenêtre de configuration complète — passerelle, DHCP, bail, DNS, suffixe de domaine — et courbes d'utilisation en direct au clic), **santé Internet** (latence, gigue et perte de paquets mesurées en continu par le serveur, courbe sur 24 h avec les coupures signalées, tests de débit périodiques et plafonnés, archivage CSV à la demande), analyse réseau (ping du sous-réseau local, recoupé avec la table ARP, liste des hôtes actifs, avec des noms conviviaux exportables et importables en CSV), **veille réseau** (vérifie que les hôtes et services dont vous dépendez répondent — un NAS, un Raspberry Pi, un serveur Umbrel, mais aussi des services distants comme Alexa ou Somfy ; ping, port TCP ou HTTP, choisi automatiquement d'après ce que vous saisissez, avec le motif et la durée de chaque panne), **quotas IA** (barres de progression des limites de votre compte Claude — fenêtres de 5 heures et de 7 jours — avec les heures de réinitialisation ; les pourcentages viennent du service, rien n'est estimé).
 
-**Divers** — compte à rebours / minuteur (flash d'écran, bip, webhook de notification), citation du jour (hors-ligne, ajustement automatique du texte).
+**Divers** — compte à rebours / minuteur (flash d'écran, bip, webhook de notification), citation du jour (hors-ligne, ajustement automatique du texte : plus de 400 citations, pensées et proverbes vérifiés, et au choix les pensées de Jean-Claude Van Damme et des blagues hommage à Chuck Norris avec réglage de fréquence, vos propres citations, aucune répétition avant d'avoir tout vu, toucher pour la suivante, appui long pour les favoris).
 
 Toutes se rajoutent, se configurent, se redimensionnent et se suppriment depuis le catalogue de tuiles — voir [docs/WIDGETS.md](docs/WIDGETS.md) pour en écrire une nouvelle, ou l'aide intégrée (bouton « ? ») pour un guide complet de chacune.
 

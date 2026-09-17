@@ -1003,6 +1003,15 @@ const dom = new JSDOM(html, {
           }
         });
       }
+      /* Fichiers de donnees des tuiles (ex. widgets/quote/quotes.json) :
+         servis tels quels depuis le disque.
+         Tile data files: served from disk as is. */
+      {
+        const m = u.match(/^(?:https?:\/\/[^/]+)?\/?(widgets\/[a-z0-9_-]+\/[a-z0-9_.-]+\.json)(?:\?.*)?$/i);
+        if (m && fs.existsSync(path.join(PUB, m[1]))) {
+          return json(JSON.parse(fs.readFileSync(path.join(PUB, m[1]), "utf8")));
+        }
+      }
       return json({});
     };
     window.EventSource = class {
@@ -6908,6 +6917,110 @@ function catalogItemFor(catalog, document, widgetId) {
       && document.getElementById("updServerHint").hidden === true);
     assert("plateforme non supportee : bandeau masque", document.getElementById("updateBanner").hidden === true);
     document.getElementById("settingsModal").hidden = true;
+  }
+
+  console.log("== Tuile Citation : sources, tirage, favoris (1.112.0) ==");
+  {
+    /* On charge la VRAIE tuile et on l'instancie dans un conteneur de la
+       page : toucher, appui long et reglages sont exerces pour de vrai.
+       The REAL tile is loaded and instantiated in a page container. */
+    let QuoteClass = null;
+    const realRegister = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, klass) => { if (id === "quote") QuoteClass = klass; realRegister.call(window.PiBoard, id, klass); };
+    const sc = document.createElement("script");
+    sc.src = "/widgets/quote/widget.js?t=quote-test";
+    document.head.appendChild(sc);
+    for (let i = 0; i < 40 && !QuoteClass; i++) await sleep(25);
+    window.PiBoard.registerWidget = realRegister;
+    assert("citation : la tuile se charge", !!QuoteClass);
+
+    const host = document.createElement("div");
+    host.style.width = "400px"; host.style.height = "200px";
+    document.body.appendChild(host);
+    const updates = [];
+    const qManifest = catalog.find((m) => m.id === "quote");
+    const defaults = {};
+    for (const f of qManifest.settings) defaults[f.key] = f.default;
+    const makeCtx = (settings, id) => ({
+      el: host, instanceId: id, manifest: qManifest,
+      settings: Object.assign({}, defaults, settings),
+      i18n: { lang: "fr" },
+      updateSettings(patch) { updates.push(patch); }
+    });
+    window.localStorage.removeItem("piboard.quote.q-test");
+    // La suite tourne ici en mode edition : on en sort le temps du test.
+    // The suite runs in edit mode here: leave it for this test.
+    const wasEditingQ = document.body.classList.contains("editing");
+    document.body.classList.remove("editing");
+    const w = new QuoteClass(makeCtx({}, "q-test"));
+    await w.init();
+    await sleep(50);
+    const textOf = () => (host.querySelector(".pwq-text") || {}).textContent || "";
+    const first = textOf();
+    assert("citation : un texte s'affiche", first.length > 0);
+    assert("citation : par defaut, seules les citations sont tirees", host.querySelector(".pw-quote").dataset.cat === "quote");
+    assert("citation : le pictogramme de la source est present", !!host.querySelector(".pwq-icon-quote"));
+
+    const click = () => host.querySelector(".pw-quote").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const shown = new Set([host.querySelector(".pw-quote").dataset.id]);
+    for (let i = 0; i < 30; i++) { click(); shown.add(host.querySelector(".pw-quote").dataset.id); }
+    assert("citation : toucher passe a la suivante, sans jamais repeter (31 tirages, 31 textes)", shown.size === 31);
+    const saved = JSON.parse(window.localStorage.getItem("piboard.quote.q-test") || "{}");
+    assert("citation : l'etat du tirage est memorise pour survivre a un redemarrage", saved.decks && saved.decks.quote && saved.decks.quote.pos >= 31);
+
+    document.body.classList.add("editing");
+    const idBefore = host.querySelector(".pw-quote").dataset.id;
+    click();
+    assert("citation : en mode edition, toucher ne change rien", host.querySelector(".pw-quote").dataset.id === idBefore);
+    document.body.classList.remove("editing");
+
+    // Appui long : favori.
+    const box = host.querySelector(".pw-quote");
+    box.dispatchEvent(new window.MouseEvent("pointerdown", { bubbles: true, button: 0 }));
+    await sleep(700);
+    box.dispatchEvent(new window.MouseEvent("pointerup", { bubbles: true }));
+    box.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const favId = host.querySelector(".pw-quote").dataset.id;
+    assert("citation : l'appui long ajoute aux favoris sans passer a la suivante", favId === idBefore);
+    assert("citation : le favori est enregistre dans les reglages de la tuile",
+      updates.length === 1 && updates[0].favorites.length === 1 && updates[0].favorites[0] === favId);
+    assert("citation : une etoile et un message le signalent",
+      !!host.querySelector(".pwq-fav") && /favoris/.test(host.querySelector(".pwq-toast").textContent));
+
+    // Favoris seulement.
+    w.onSettingsChanged(Object.assign({}, w.ctx.settings, { favoritesOnly: true }));
+    click(); click();
+    assert("citation : « favoris seulement » ne montre que les favoris", host.querySelector(".pw-quote").dataset.id === favId);
+
+    // Sources JCVD et Chuck seules.
+    w.onSettingsChanged(Object.assign({}, w.ctx.settings, { favoritesOnly: false, sourceQuotes: false, sourceJcvd: true, sourceChuck: false }));
+    const author = (host.querySelector(".pwq-author") || {}).textContent || "";
+    assert("citation : decocher une source retire aussitot son texte (JCVD seul)",
+      host.querySelector(".pw-quote").dataset.cat === "jcvd" && /Jean-Claude Van Damme/.test(author));
+    w.onSettingsChanged(Object.assign({}, w.ctx.settings, { sourceJcvd: false, sourceChuck: true, showIcon: false }));
+    assert("citation : Chuck Norris seul, signature « Chuck Norris Fact »",
+      host.querySelector(".pw-quote").dataset.cat === "chuck" && /Chuck Norris Fact/.test(host.querySelector(".pwq-author").textContent));
+    assert("citation : pictogramme desactivable", !host.querySelector(".pwq-icon"));
+
+    // Aucune source : message clair.
+    w.onSettingsChanged(Object.assign({}, w.ctx.settings, { sourceChuck: false }));
+    assert("citation : aucune source cochee, un message l'explique", /Aucune source/.test(host.textContent));
+
+    // Citations perso, echappees.
+    w.onSettingsChanged(Object.assign({}, w.ctx.settings, { customQuotes: "<b>Maison</b> — Moi" }));
+    assert("citation : une citation perso s'affiche, avec son auteur, sans interpreter de HTML",
+      textOf() === "<b>Maison</b>" && !host.querySelector(".pwq-text b") && /Moi/.test(host.querySelector(".pwq-author").textContent));
+
+    // Anglais.
+    w.onSettingsChanged(Object.assign({}, w.ctx.settings, { customQuotes: "", sourceJcvd: true }));
+    w.ctx.i18n.lang = "en";
+    w.onLangChanged();
+    assert("citation : en anglais, les pensees de JCVD sont traduites",
+      /Jean-Claude Van Damme/.test(host.querySelector(".pwq-author").textContent)
+      && !/[éèàç]/.test(textOf()));
+    w.destroy();
+    host.remove();
+    document.body.classList.toggle("editing", wasEditingQ);
   }
 
   console.log("== Sortie du mode edition ==");

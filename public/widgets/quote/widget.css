@@ -33,3 +33,45 @@
   flex-shrink: 0;
 }
 .pw-quote .pwq-author::before { content: "— "; }
+
+/* 1.112.0 : pictogramme de source, favori, message bref, etat vide.
+   Source icon, favourite mark, brief message, empty state. */
+.pw-quote { position: relative; cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
+body.editing .pw-quote { cursor: inherit; }
+.pw-quote .pwq-icon {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.pw-quote .pwq-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pw-quote .pwq-fav {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  color: var(--warn);
+  font-size: 14px;
+  line-height: 1;
+}
+.pw-quote .pwq-toast {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  transform: translateX(-50%);
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 12px;
+  white-space: nowrap;
+}
+.pw-quote .pwq-empty { color: var(--muted); font-size: 13px; }

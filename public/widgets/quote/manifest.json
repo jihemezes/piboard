@@ -1,18 +1,18 @@
 {
   "id": "quote",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Quote of the day",
     "fr": "Citation du jour"
   },
   "titleBar": false,
   "description": {
-    "en": "A rotating quote from a bundled offline collection — no internet required.",
-    "fr": "Une citation issue d'une collection embarquée hors-ligne — aucune connexion requise."
+    "en": "Quotes, thoughts and proverbs (over 400), Jean-Claude Van Damme's musings and Chuck Norris tribute jokes, from a bundled offline collection. Tap for the next one, long-press to keep a favourite.",
+    "fr": "Citations, pensées et proverbes (plus de 400), pensées de Jean-Claude Van Damme et blagues hommage à Chuck Norris, depuis une collection embarquée hors-ligne. Toucher pour la suivante, appui long pour garder un favori."
   },
   "tagline": {
-    "en": "An inspiring quote, refreshed regularly.",
-    "fr": "Une citation inspirante, renouvelée régulièrement."
+    "en": "A quote, a musing or a joke — never twice in a row.",
+    "fr": "Une citation, une pensée ou une blague — jamais deux fois la même."
   },
   "size": {
     "w": 3,
@@ -23,6 +23,221 @@
     "maxH": 16
   },
   "settings": [
+    {
+      "key": "sourceQuotes",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Citations et pensées",
+        "en": "Quotes and thoughts"
+      },
+      "group": {
+        "fr": "Contenu",
+        "en": "Content"
+      }
+    },
+    {
+      "key": "sourceJcvd",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "fr": "Pensées de Jean-Claude Van Damme",
+        "en": "Jean-Claude Van Damme's musings"
+      },
+      "group": {
+        "fr": "Contenu",
+        "en": "Content"
+      },
+      "hint": {
+        "fr": "Seules quelques-unes sont sourcées ; les autres, qui circulent sous son nom, sont signées « attribué à ».",
+        "en": "Only a few are sourced; the others, which circulate under his name, are signed \"attributed to\"."
+      }
+    },
+    {
+      "key": "sourceChuck",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "fr": "Blagues hommage à Chuck Norris",
+        "en": "Chuck Norris tribute jokes"
+      },
+      "group": {
+        "fr": "Contenu",
+        "en": "Content"
+      }
+    },
+    {
+      "key": "funFrequency",
+      "type": "select",
+      "default": "sometimes",
+      "group": {
+        "fr": "Contenu",
+        "en": "Content"
+      },
+      "label": {
+        "fr": "Fréquence des blagues et pensées",
+        "en": "How often jokes and musings appear"
+      },
+      "hint": {
+        "fr": "Quand les citations sont aussi cochées : part laissée à JCVD et Chuck Norris.",
+        "en": "When quotes are ticked too: share given to JCVD and Chuck Norris."
+      },
+      "options": [
+        {
+          "value": "rare",
+          "label": {
+            "fr": "De temps en temps (1 sur 10)",
+            "en": "Now and then (1 in 10)"
+          }
+        },
+        {
+          "value": "sometimes",
+          "label": {
+            "fr": "Régulièrement (1 sur 4)",
+            "en": "Regularly (1 in 4)"
+          }
+        },
+        {
+          "value": "often",
+          "label": {
+            "fr": "Souvent (1 sur 2)",
+            "en": "Often (1 in 2)"
+          }
+        },
+        {
+          "value": "equal",
+          "label": {
+            "fr": "Autant que les citations",
+            "en": "As much as the quotes"
+          }
+        }
+      ]
+    },
+    {
+      "key": "customQuotes",
+      "type": "textarea",
+      "default": "",
+      "group": {
+        "fr": "Contenu",
+        "en": "Content"
+      },
+      "label": {
+        "fr": "Mes citations",
+        "en": "My quotes"
+      },
+      "hint": {
+        "fr": "Une par ligne, auteur facultatif après un tiret long : « Texte — Auteur ». Elles s'affichent toujours, même si la source « Citations et pensées » ou un thème est décoché.",
+        "en": "One per line, optional author after a dash: \"Text — Author\". They always show, even if the \"Quotes and thoughts\" source or a theme is unticked."
+      }
+    },
+    {
+      "key": "favoritesOnly",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "fr": "Favoris seulement",
+        "en": "Favourites only"
+      },
+      "group": {
+        "fr": "Contenu",
+        "en": "Content"
+      },
+      "hint": {
+        "fr": "Un appui long sur la tuile ajoute ou retire la citation affichée des favoris.",
+        "en": "A long press on the tile adds or removes the displayed quote from favourites."
+      }
+    },
+    {
+      "key": "theme_wisdom",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Sagesse et proverbes",
+        "en": "Wisdom and proverbs"
+      },
+      "group": {
+        "fr": "Thèmes des citations",
+        "en": "Quote themes"
+      }
+    },
+    {
+      "key": "theme_life",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Vie et amour",
+        "en": "Life and love"
+      },
+      "group": {
+        "fr": "Thèmes des citations",
+        "en": "Quote themes"
+      }
+    },
+    {
+      "key": "theme_work",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Travail et volonté",
+        "en": "Work and willpower"
+      },
+      "group": {
+        "fr": "Thèmes des citations",
+        "en": "Quote themes"
+      }
+    },
+    {
+      "key": "theme_science",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Sciences",
+        "en": "Science"
+      },
+      "group": {
+        "fr": "Thèmes des citations",
+        "en": "Quote themes"
+      }
+    },
+    {
+      "key": "theme_art",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Art et création",
+        "en": "Art and creation"
+      },
+      "group": {
+        "fr": "Thèmes des citations",
+        "en": "Quote themes"
+      }
+    },
+    {
+      "key": "theme_nature",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Nature",
+        "en": "Nature"
+      },
+      "group": {
+        "fr": "Thèmes des citations",
+        "en": "Quote themes"
+      }
+    },
+    {
+      "key": "theme_humor",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Humour",
+        "en": "Humour"
+      },
+      "group": {
+        "fr": "Thèmes des citations",
+        "en": "Quote themes"
+      }
+    },
     {
       "key": "mode",
       "type": "select",
@@ -35,8 +250,8 @@
         {
           "value": "daily",
           "label": {
-            "en": "New quote every day",
-            "fr": "Nouvelle citation chaque jour"
+            "en": "New one every day",
+            "fr": "Nouvelle chaque jour"
           }
         },
         {
@@ -46,7 +261,11 @@
             "fr": "Rotation minutée"
           }
         }
-      ]
+      ],
+      "group": {
+        "fr": "Affichage",
+        "en": "Display"
+      }
     },
     {
       "key": "intervalMinutes",
@@ -58,6 +277,10 @@
       "label": {
         "en": "Rotate every (minutes)",
         "fr": "Rotation toutes les (minutes)"
+      },
+      "group": {
+        "fr": "Affichage",
+        "en": "Display"
       }
     },
     {
@@ -65,8 +288,25 @@
       "type": "checkbox",
       "default": true,
       "label": {
-        "en": "Show author",
-        "fr": "Afficher l'auteur"
+        "en": "Show signature",
+        "fr": "Afficher la signature"
+      },
+      "group": {
+        "fr": "Affichage",
+        "en": "Display"
+      }
+    },
+    {
+      "key": "showIcon",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Pictogramme de la source",
+        "en": "Source icon"
+      },
+      "group": {
+        "fr": "Affichage",
+        "en": "Display"
       }
     }
   ]
