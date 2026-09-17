@@ -247,7 +247,166 @@ async function verifyPublished(opts) {
   return { ok: false, problems };
 }
 
+
+/* ------------------------------------------------------------
+   Reprise des envois rates (1.112.2)
+   ------------------------------------------------------------
+   GitHub refuse parfois un fichier de 150 Mo : delai depasse
+   (« Request timed out ») ou erreur serveur (« 500 Error saving
+   asset »). electron-builder abandonne au PREMIER echec, sans
+   reessayer, et la release reste incomplete -- c'est ce qui est arrive
+   a la 1.112.1 (AppImage x64, zip mac arm64 et les latest*.yml
+   manquants). PiBoard termine donc le travail lui-meme : il compare ce
+   qui est en ligne a ce qui se trouve dans dist/, et televerse ce qui
+   manque, avec des tentatives espacees.
+
+   Resuming failed uploads. GitHub sometimes refuses a 150 MB file
+   (timeout, or a 500 "Error saving asset"). electron-builder gives up
+   on the FIRST failure without retrying and the release stays
+   incomplete. So PiBoard finishes the job itself: it compares what is
+   online with what sits in dist/ and uploads what is missing, with
+   spaced attempts. */
+
+/* Fichiers de dist/ qui appartiennent a la plateforme : les fichiers
+   requis, leurs .blockmap et les latest*.yml.
+   Files in dist/ belonging to the platform. */
+function platformFiles(names, platform) {
+  const pats = (REQUIRED_ASSETS[platform] || []).map(([, re]) => re);
+  return (names || []).filter((n) =>
+    pats.some((re) => re.test(n) || re.test(n.replace(/\.blockmap$/i, ""))));
+}
+
+/* Ce qu'il reste a envoyer, et les restes a supprimer d'abord : un
+   fichier deja present mais de taille differente, ou qu'un envoi
+   interrompu a laisse dans un etat inutilisable, doit etre remplace.
+   What still needs uploading, and the leftovers to delete first. */
+function planUploads(localFiles, release, platform) {
+  const assets = (release && release.assets) || [];
+  const wanted = platformFiles(localFiles.map((f) => f.name), platform);
+  const uploads = [];
+  const stale = [];
+  for (const f of localFiles) {
+    if (!wanted.includes(f.name)) continue;
+    const found = assets.find((a) => a.name === f.name);
+    if (!found) { uploads.push(f); continue; }
+    const badState = found.state && found.state !== "uploaded";
+    const badSize = typeof found.size === "number" && typeof f.size === "number" && found.size !== f.size;
+    if (badState || badSize) { stale.push(found); uploads.push(f); }
+  }
+  return { uploads, stale };
+}
+
+function contentType(name) {
+  if (/\.ya?ml$/i.test(name)) return "text/yaml";
+  if (/\.blockmap$/i.test(name)) return "application/octet-stream";
+  if (/\.zip$/i.test(name)) return "application/zip";
+  return "application/octet-stream";
+}
+
+/* Envoi d'un fichier, avec reprises. `uploader` est injecte pour les
+   tests ; en vrai, c'est uploadAsset ci-dessous.
+   Uploading one file, with retries. */
+async function uploadWithRetries(opts) {
+  const { uploader, release, file, attempts, wait, log } = opts;
+  const tries = attempts || 3;
+  const pause = wait || sleep;
+  const say = log || (() => {});
+  let last = null;
+  for (let i = 1; i <= tries; i++) {
+    const r = await uploader({ release, file, contentType: contentType(file.name) });
+    if (r && r.ok) { say(`Envoye / uploaded: ${file.name}`); return { ok: true, attempts: i }; }
+    last = r && (r.error || r.status);
+    say(`Echec ${i}/${tries} pour ${file.name} (${last}) / attempt ${i} failed`);
+    if (i < tries) await pause(5000 * i);
+  }
+  return { ok: false, error: last };
+}
+
+/* Complete une release : supprime les restes, renvoie ce qui manque.
+   Completes a release: removes leftovers, uploads what is missing. */
+async function repairRelease(opts) {
+  const { request, uploader, tag, platforms, localFiles, log, wait, attempts } = opts;
+  const say = log || (() => {});
+  const list = releasesForTag(await listReleases(request), tag);
+  if (list.length !== 1) return { ok: false, problems: [`${list.length} release(s) pour ${tag}`] };
+  const release = list[0];
+  const problems = [];
+  let sent = 0;
+  for (const platform of platforms || []) {
+    const plan = planUploads(localFiles, release, platform);
+    for (const a of plan.stale) {
+      const d = await request("DELETE", `/repos/${REPO}/releases/assets/${a.id}`);
+      say(`Reste supprime / leftover removed: ${a.name}` + (d.ok ? "" : ` (HTTP ${d.status})`));
+    }
+    for (const f of plan.uploads) {
+      const r = await uploadWithRetries({ uploader, release, file: f, attempts, wait, log });
+      if (r.ok) sent++;
+      else problems.push(`${f.name}: ${r.error}`);
+    }
+  }
+  return { ok: !problems.length, sent, problems, release };
+}
+
+/* Envoi reel vers GitHub : en FLUX, pour ne pas charger 160 Mo en
+   memoire, avec un delai large (un .dmg met plusieurs minutes).
+   Real upload to GitHub: STREAMED, so a 160 MB file is not loaded into
+   memory, with a generous timeout. */
+function makeUploader(token, timeoutMs) {
+  const https = require("https");
+  const fs = require("fs");
+  return function upload({ release, file, contentType: type }) {
+    return new Promise((resolve) => {
+      const req = https.request({
+        method: "POST",
+        host: "uploads.github.com",
+        path: `/repos/${REPO}/releases/${release.id}/assets?name=${encodeURIComponent(file.name)}`,
+        headers: {
+          Authorization: "Bearer " + token,
+          "User-Agent": "PiBoard publish",
+          Accept: "application/vnd.github+json",
+          "Content-Type": type,
+          "Content-Length": file.size
+        },
+        timeout: timeoutMs || 900000
+      }, (res) => {
+        let body = "";
+        res.on("data", (c) => { body += c; });
+        res.on("end", () => resolve({
+          ok: res.statusCode >= 200 && res.statusCode < 300,
+          status: res.statusCode,
+          error: res.statusCode >= 300 ? "HTTP " + res.statusCode + " " + body.slice(0, 200) : null
+        }));
+      });
+      req.on("timeout", () => { req.destroy(new Error("delai depasse / timed out")); });
+      req.on("error", (e) => resolve({ ok: false, error: String(e.message || e) }));
+      fs.createReadStream(file.path).on("error", (e) => {
+        req.destroy();
+        resolve({ ok: false, error: String(e.message || e) });
+      }).pipe(req);
+    });
+  };
+}
+
+/* Fichiers construits, tels que les attend repairRelease.
+   Built files, as repairRelease expects them. */
+function listDistFiles(dir) {
+  const fs = require("fs");
+  const path = require("path");
+  if (!fs.existsSync(dir)) return [];
+  return fs.readdirSync(dir)
+    .map((name) => ({ name, path: path.join(dir, name) }))
+    .filter((f) => { try { return fs.statSync(f.path).isFile(); } catch (e) { return false; } })
+    .map((f) => Object.assign(f, { size: fs.statSync(f.path).size }));
+}
+
 module.exports = {
+  makeUploader,
+  listDistFiles,
+  platformFiles,
+  planUploads,
+  contentType,
+  uploadWithRetries,
+  repairRelease,
   missingAssets,
   verifyPublished,
   REPO,

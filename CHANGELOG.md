@@ -1,5 +1,28 @@
 # Changelog
 
+## 1.112.2
+
+- **Publication : les envois refuses par GitHub sont repris.** A la
+  1.112.1, GitHub a refuse deux fichiers de plus de 150 Mo -- un delai
+  depasse cote Linux (« Request timed out »), une erreur serveur cote
+  macOS (« 500 Error saving asset »). electron-builder abandonne au
+  PREMIER echec, sans reessayer : la release s'est retrouvee avec 15
+  fichiers sur 18, sans l'AppImage x64, sans le zip mac arm64 et, plus
+  genant, sans les `latest*.yml` dont depend la mise a jour automatique.
+  - Apres la construction, PiBoard compare desormais ce qui est en ligne
+    a ce qui se trouve dans `dist/`, et televerse lui-meme ce qui manque
+    (en flux, pour ne pas charger 160 Mo en memoire), avec trois
+    tentatives espacees.
+  - Un reste d'envoi interrompu (fichier de taille differente ou reste
+    dans un etat inutilisable) est supprime avant d'etre renvoye.
+  - Un echec d'electron-builder ne met plus fin a la publication tout de
+    suite : on complete d'abord, puis la verification decide. Si quelque
+    chose manque encore, l'echec est signale avec la liste.
+
+- **Tests** : plan d'envoi (manquants, restes, fichiers d'une autre
+  plateforme), reprise apres un 500 puis un delai depasse, echec
+  persistant signale, release completee puis conforme.
+
 ## 1.112.1
 
 - **Correctif : texte minuscule dans la tuile Citation sur une tuile

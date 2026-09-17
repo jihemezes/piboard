@@ -211,18 +211,37 @@ const bin = path.join(
   process.platform === "win32" ? "electron-builder.cmd" : "electron-builder"
 );
 const run = spawnSync(bin, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
-if (run.status !== 0 || !publishing) process.exit(run.status === null ? 1 : run.status);
+if (!publishing) process.exit(run.status === null ? 1 : run.status);
+if (run.status !== 0) {
+  console.error("\nLa construction ou l'envoi a echoue : on verifie ce qui manque en ligne avant d'abandonner." +
+    "\nBuild or upload failed: checking what is missing online before giving up.\n");
+}
 
 /* Un code de retour 0 ne prouve pas que les fichiers sont en ligne :
    voir verifyPublished. On le verifie donc sur GitHub.
    Exit code 0 does not prove the files are online: see
    verifyPublished. So it is checked on GitHub. */
 const relMod = require("./githubRelease");
-const check = await relMod.verifyPublished({
-  request: relMod.makeRequest(process.env.GH_TOKEN || process.env.GITHUB_TOKEN || ""),
+const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN || "";
+const request = relMod.makeRequest(token);
+const platforms = relMod.platformsOf(builderArgs);
+/* GitHub refuse parfois un fichier de 150 Mo (delai depasse, ou 500
+   « Error saving asset ») ; electron-builder abandonne alors au premier
+   echec, sans reessayer, et la release reste incomplete. On termine
+   nous-memes ce qui manque, avec des tentatives espacees.
+   GitHub sometimes refuses a 150 MB file; electron-builder gives up on
+   the first failure, leaving the release incomplete. We finish what is
+   missing ourselves, with spaced attempts. */
+const repair = await relMod.repairRelease({
+  request,
+  uploader: relMod.makeUploader(token),
   tag: "v" + version,
-  platforms: relMod.platformsOf(builderArgs)
+  platforms,
+  localFiles: relMod.listDistFiles(path.join(root, "dist")),
+  log: (m) => console.log("  " + m)
 });
+if (repair.sent) console.log(`  ${repair.sent} fichier(s) televerse(s) apres coup / file(s) uploaded afterwards.`);
+const check = await relMod.verifyPublished({ request, tag: "v" + version, platforms });
 if (!check.ok) {
   console.error(
     `\nPUBLICATION INCOMPLETE sur GitHub pour v${version} :\n  ` + check.problems.join("\n  ") +

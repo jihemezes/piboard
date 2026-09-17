@@ -164,6 +164,87 @@ const base = { tag: "v1.2.3", name: "1.2.3", prerelease: false, wait: async () =
     assert.strictEqual(out.ok, true);
   });
 
+  await test("reprise : seuls les fichiers manquants de la plateforme sont envoyes", async () => {
+    const local = [
+      { name: "PiBoard-1.2.3-linux-x86_64.AppImage", size: 10, path: "/d/a" },
+      { name: "PiBoard-1.2.3-linux-x86_64.AppImage.blockmap", size: 2, path: "/d/b" },
+      { name: "latest-linux.yml", size: 1, path: "/d/c" },
+      { name: "PiBoard-1.2.3-mac-x64.dmg", size: 9, path: "/d/d" },
+      { name: "builder-effective-config.yaml", size: 1, path: "/d/e" }
+    ];
+    const release = { assets: [{ id: 1, name: "latest-linux.yml", size: 1, state: "uploaded" }] };
+    const plan = rel.planUploads(local, release, "linux");
+    assert.deepStrictEqual(plan.uploads.map((f) => f.name).sort(),
+      ["PiBoard-1.2.3-linux-x86_64.AppImage", "PiBoard-1.2.3-linux-x86_64.AppImage.blockmap"]);
+    assert.deepStrictEqual(plan.stale, []);
+  });
+
+  await test("reprise : un reste d'envoi interrompu est remplace", async () => {
+    const local = [{ name: "PiBoard-1.2.3-mac-x64.dmg", size: 100, path: "/d/a" }];
+    const partial = { assets: [{ id: 7, name: "PiBoard-1.2.3-mac-x64.dmg", size: 40, state: "starter" }] };
+    const plan = rel.planUploads(local, partial, "mac");
+    assert.deepStrictEqual(plan.stale.map((a) => a.id), [7]);
+    assert.strictEqual(plan.uploads.length, 1);
+    // Taille differente, meme etat "uploaded" : remplace aussi.
+    const wrongSize = { assets: [{ id: 8, name: "PiBoard-1.2.3-mac-x64.dmg", size: 40, state: "uploaded" }] };
+    assert.deepStrictEqual(rel.planUploads(local, wrongSize, "mac").stale.map((a) => a.id), [8]);
+    // Identique : rien a faire.
+    const same = { assets: [{ id: 9, name: "PiBoard-1.2.3-mac-x64.dmg", size: 100, state: "uploaded" }] };
+    assert.deepStrictEqual(rel.planUploads(local, same, "mac").uploads, []);
+  });
+
+  await test("reprise : un envoi refuse par GitHub est retente (cas reel 1.112.1)", async () => {
+    let calls = 0;
+    const r = await rel.uploadWithRetries({
+      file: { name: "x.dmg", size: 1, path: "/d/x" },
+      release: { id: 1 },
+      wait: async () => {},
+      uploader: async () => {
+        calls++;
+        // 500 « Error saving asset », puis delai depasse, puis OK.
+        if (calls === 1) return { ok: false, status: 500, error: "HTTP 500 Error saving asset" };
+        if (calls === 2) return { ok: false, error: "delai depasse" };
+        return { ok: true };
+      }
+    });
+    assert.strictEqual(r.ok, true);
+    assert.strictEqual(calls, 3);
+  });
+
+  await test("reprise : un echec persistant est signale, pas masque", async () => {
+    const r = await rel.uploadWithRetries({
+      file: { name: "x.dmg", size: 1, path: "/d/x" }, release: { id: 1 }, attempts: 2, wait: async () => {},
+      uploader: async () => ({ ok: false, error: "HTTP 500 Error saving asset" })
+    });
+    assert.strictEqual(r.ok, false);
+    assert.ok(/500/.test(r.error));
+  });
+
+  await test("reprise : la release est completee puis rendue conforme", async () => {
+    const gh = fakeGitHub([{ id: 5, tag_name: "v1.2.3", assets: [
+      { id: 1, name: "PiBoard-1.2.3-linux-arm64.AppImage", size: 3, state: "uploaded" },
+      { id: 2, name: "PiBoard-1.2.3-linux-amd64.deb", size: 3, state: "uploaded" },
+      { id: 3, name: "PiBoard-1.2.3-linux-arm64.deb", size: 3, state: "uploaded" },
+      { id: 4, name: "latest-linux-arm64.yml", size: 3, state: "uploaded" }
+    ] }]);
+    const local = ["PiBoard-1.2.3-linux-x86_64.AppImage", "latest-linux.yml"].map((name) => ({ name, size: 3, path: "/d/" + name }));
+    const sentNames = [];
+    const out = await rel.repairRelease({
+      request: gh.request, tag: "v1.2.3", platforms: ["linux"], localFiles: local, wait: async () => {},
+      uploader: async ({ file }) => { sentNames.push(file.name); gh.state.releases[0].assets.push({ id: 90 + sentNames.length, name: file.name, size: file.size, state: "uploaded" }); return { ok: true }; }
+    });
+    assert.strictEqual(out.ok, true);
+    assert.deepStrictEqual(sentNames.sort(), ["PiBoard-1.2.3-linux-x86_64.AppImage", "latest-linux.yml"]);
+    const check = await rel.verifyPublished({ request: gh.request, tag: "v1.2.3", platforms: ["linux"], wait: async () => {}, attempts: 1 });
+    assert.strictEqual(check.ok, true, JSON.stringify(check.problems));
+  });
+
+  await test("reprise : type de contenu correct pour les yml et les zip", () => {
+    assert.strictEqual(rel.contentType("latest-mac.yml"), "text/yaml");
+    assert.strictEqual(rel.contentType("PiBoard-mac-x64.zip"), "application/zip");
+    assert.strictEqual(rel.contentType("PiBoard.exe.blockmap"), "application/octet-stream");
+  });
+
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS PASSENT");
   process.exit(failures ? 1 : 0);
 })();
