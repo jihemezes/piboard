@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.112.1
+
+- **Correctif : texte minuscule dans la tuile Citation sur une tuile
+  large et basse.** La marge interieure etait exprimee en pourcentages
+  (`8% 10%`) ; or un pourcentage vertical se calcule en CSS sur la
+  LARGEUR. Sur une tuile de 620 px de large, pres de 100 px de marge
+  verticale mangeaient presque toute la hauteur, et le texte devait se
+  reduire a quelques pixels. Les marges sont desormais calculees d'apres
+  la hauteur et la largeur reelles de la tuile.
+- Le pictogramme de la source, ajoute en 1.112.0, occupait sa propre
+  ligne et etait agrandi APRES le calcul de la taille du texte. Il est
+  maintenant en filigrane dans le coin, hors du flux, et dimensionne
+  avant la mesure.
+- Test de non-regression avec les dimensions de la tuile signalee.
+
 ## 1.112.0
 
 - **Tuile Citation : collection multipliee par neuf.** 407 citations,

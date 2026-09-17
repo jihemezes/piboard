@@ -218,6 +218,18 @@
       // cap combines height and width.
       const w = box.clientWidth || 100;
       const h = box.clientHeight || 100;
+      // Marges proportionnees a CHAQUE dimension (voir widget.css).
+      // Padding proportional to EACH dimension (see widget.css).
+      const padV = Math.round(Math.min(h * 0.1, w * 0.06));
+      const padH = Math.round(Math.min(w * 0.08, h * 0.4));
+      box.style.padding = padV + "px " + padH + "px";
+      // Le pictogramme s'adapte a la tuile, avant la mesure du texte.
+      // The icon adapts to the tile, before the text is measured.
+      const icon = box.querySelector(".pwq-icon");
+      if (icon) {
+        const size = Math.round(Math.max(12, Math.min(h * 0.22, w * 0.08, 40)));
+        icon.style.width = icon.style.height = size + "px";
+      }
       let lo = 9, hi = Math.max(12, Math.floor(Math.max(h * 0.34, Math.min(w * 0.12, h * 0.6))));
       for (let i = 0; i < 8; i++) {
         const mid = Math.floor((lo + hi + 1) / 2);
@@ -232,8 +244,6 @@
       const scale = Number(this.ctx.settings._textScale) || 1;
       text.style.fontSize = Math.max(6, Math.round(lo * scale)) + "px";
       if (author) author.style.fontSize = Math.max(6, Math.round(lo * 0.42 * scale)) + "px";
-      const icon = box.querySelector(".pwq-icon");
-      if (icon) icon.style.width = icon.style.height = Math.max(12, Math.round(lo * 0.7 * scale)) + "px";
 
       clearTimeout(this.refitTimer);
       this.refitTimer = setTimeout(() => {

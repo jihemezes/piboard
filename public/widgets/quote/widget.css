@@ -5,7 +5,14 @@
   align-items: center;
   justify-content: center;
   gap: 0.3em;
-  padding: 8% 10%;
+  /* Marges posees par widget.js d'apres la hauteur ET la largeur reelles.
+     Un pourcentage vertical en CSS se calcule sur la LARGEUR : sur une
+     tuile tres large et basse, « 8 % » mangeait toute la hauteur et le
+     texte devenait minuscule (1.112.1).
+     Padding set by widget.js from the actual height AND width. A CSS
+     vertical percentage is computed from the WIDTH: on a very wide, low
+     tile, "8%" ate the whole height and the text became tiny. */
+  padding: 6px 10px;
   text-align: center;
   overflow: hidden;
 }
@@ -38,12 +45,18 @@
    Source icon, favourite mark, brief message, empty state. */
 .pw-quote { position: relative; cursor: pointer; -webkit-user-select: none; user-select: none; touch-action: manipulation; }
 body.editing .pw-quote { cursor: inherit; }
+/* Pictogramme en filigrane dans le coin : hors du flux, il ne prend
+   aucune hauteur au texte. / Watermark icon in the corner: out of the
+   flow, it takes no height from the text. */
 .pw-quote .pwq-icon {
-  flex-shrink: 0;
+  position: absolute;
+  top: 6px;
+  left: 8px;
   width: 18px;
   height: 18px;
   color: var(--accent);
-  opacity: 0.85;
+  opacity: 0.55;
+  pointer-events: none;
 }
 .pw-quote .pwq-icon svg {
   width: 100%;

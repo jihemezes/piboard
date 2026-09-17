@@ -6960,6 +6960,25 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("citation : un texte s'affiche", first.length > 0);
     assert("citation : par defaut, seules les citations sont tirees", host.querySelector(".pw-quote").dataset.cat === "quote");
     assert("citation : le pictogramme de la source est present", !!host.querySelector(".pwq-icon-quote"));
+    {
+      /* Tuile tres large et basse (capture de la 1.112.0 : 620 x 120) :
+         les marges doivent suivre la HAUTEUR, pas la largeur, et le
+         pictogramme ne doit pas prendre de place au texte.
+         Very wide, low tile: padding must follow the HEIGHT. */
+      const qb = host.querySelector(".pw-quote");
+      Object.defineProperty(qb, "clientWidth", { configurable: true, get: () => 620 });
+      Object.defineProperty(qb, "clientHeight", { configurable: true, get: () => 120 });
+      w.fit();
+      const pad = qb.style.padding.split(" ").map((x) => parseFloat(x));
+      assert("citation : tuile large et basse, marges verticales a l'echelle de la hauteur (" + qb.style.padding + ")",
+        pad[0] <= 12 && pad[1] >= 30);
+      const ic = qb.querySelector(".pwq-icon");
+      assert("citation : pictogramme reduit a la hauteur de la tuile", parseFloat(ic.style.height) <= 27);
+      const css = fs.readFileSync(path.join(PUB, "widgets/quote/widget.css"), "utf8");
+      assert("citation : pictogramme hors du flux du texte", /\.pwq-icon \{[^}]*position: absolute/.test(css));
+      assert("citation : plus de marge verticale en pourcentage", !/padding:\s*\d+%/.test(css));
+      delete qb.clientWidth; delete qb.clientHeight;
+    }
 
     const click = () => host.querySelector(".pw-quote").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     const shown = new Set([host.querySelector(".pw-quote").dataset.id]);
