@@ -1,0 +1,45 @@
+{
+  "id": "iptvrec",
+  "version": "0.1.0",
+  "name": { "en": "TV recordings", "fr": "Enregistrements TV" },
+  "titleBar": true,
+  "description": {
+    "en": "Shows what the TV channels tile is recording right now (channel, elapsed time, file size), the free space left in the recording folder, and the recordings already made. Each finished recording can be converted to .mp4 or deleted from here. Recordings are started from the TV channels tile with its record button; this tile watches over them and keeps working even when the player tile is closed or on another page.",
+    "fr": "Montre ce que la tuile Chaînes TV est en train d'enregistrer (chaîne, durée écoulée, taille du fichier), l'espace libre restant dans le dossier d'enregistrement, et les enregistrements déjà réalisés. Chaque enregistrement terminé peut être converti en .mp4 ou supprimé depuis ici. Les enregistrements se lancent depuis la tuile Chaînes TV avec son bouton d'enregistrement ; cette tuile les surveille et continue de fonctionner même quand la tuile lecteur est fermée ou sur une autre page."
+  },
+  "tagline": {
+    "en": "What is recording, and what has been recorded.",
+    "fr": "Ce qui enregistre, et ce qui est enregistré."
+  },
+  "size": { "w": 3, "h": 3, "minW": 2, "minH": 2, "maxW": 12, "maxH": 16 },
+  "settings": [
+    {
+      "key": "showFiles",
+      "type": "checkbox",
+      "default": true,
+      "label": { "en": "List the recordings already made", "fr": "Lister les enregistrements déjà réalisés" }
+    },
+    {
+      "key": "maxFiles",
+      "type": "number",
+      "default": 10,
+      "min": 1,
+      "max": 100,
+      "label": { "en": "How many to list", "fr": "Combien en lister" }
+    },
+    {
+      "key": "showFree",
+      "type": "checkbox",
+      "default": true,
+      "label": { "en": "Show free space", "fr": "Afficher l'espace libre" }
+    },
+    {
+      "key": "refreshSeconds",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 300,
+      "label": { "en": "Refresh (seconds)", "fr": "Rafraîchissement (secondes)" }
+    }
+  ]
+}

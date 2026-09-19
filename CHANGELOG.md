@@ -1,5 +1,57 @@
 # Changelog
 
+## 1.113.0
+
+- **Enregistrement d'une chaine, pendant qu'on la regarde.** Le bouton
+  d'enregistrement de la tuile Chaines TV lance et arrete l'enregistrement
+  a la demande, en direct comme en VOD (films et series). Pendant
+  l'enregistrement, le bouton devient une pastille rouge clignotante,
+  avec la duree ecoulee et la taille du fichier a cote.
+  - **ffmpeg RECOPIE les pistes** (`-c copy`) : aucun reencodage, donc un
+    cout processeur negligeable, meme sur un Raspberry Pi.
+  - L'enregistrement vit **cote serveur** : il continue si l'on zappe, si
+    l'on ferme la tuile, ou meme le navigateur. Il ouvre pour cela sa
+    **propre connexion** chez le fournisseur -- un abonnement limite a
+    une seule connexion simultanee en refusera une des deux, ce que
+    l'aide et l'echec affiche rappellent.
+  - **Fichier .ts**, lisible par VLC et la plupart des lecteurs Windows,
+    et surtout lisible meme tronque : une coupure de courant en pleine
+    ecriture laisse un enregistrement utilisable, la ou un .mp4
+    interrompu serait perdu. **Conversion en .mp4 apres coup**, a la
+    demande, sans reencodage non plus.
+  - **Reprise apres coupure** : un flux qui tombe relance
+    l'enregistrement dans une nouvelle partie, et l'arret met les parties
+    bout a bout en un seul fichier.
+  - **Nom automatique** : chaine, programme quand la source en donne un,
+    date et heure. Deux enregistrements lances dans la meme minute ne
+    s'ecrasent pas.
+  - **Garde-fous** : duree maximale (240 minutes par defaut) et arret
+    lorsque l'espace libre passe sous un seuil (1 Go par defaut), tous
+    deux reglables, 0 les desactivant.
+  - **Enregistrement programme** : heure de debut et duree, pour la
+    chaine affichee. Une heure deja passee vise le lendemain ; un
+    rendez-vous manque (PiBoard eteint) est marque comme tel plutot que
+    lance en retard.
+
+- **Nouvelle tuile « Enregistrements TV »** : ce qui enregistre en ce
+  moment (chaine, duree, taille, reconnexion en cours) avec un bouton
+  d'arret, les enregistrements deja realises avec conversion en .mp4 et
+  suppression, et l'espace libre du dossier. Elle fonctionne meme quand
+  la tuile lecteur est fermee ou sur une autre page.
+
+- **Reglages generaux** (section Outils multimedias) : dossier
+  d'enregistrement (un disque USB ou un partage reseau est tres
+  preferable a la carte SD d'un Pi), duree maximale et seuil d'espace
+  disque.
+
+- **Tests** : `test/iptvRecord.test.js` couvre le nommage, les
+  garde-fous, la programmation et la gestion du dossier, puis exerce le
+  VRAI moteur avec un faux ffmpeg -- demarrage, arret propre, coupure du
+  flux, reprise et assemblage des parties. Ce dernier a d'ailleurs
+  attrape un defaut avant livraison : le nettoyage des parties effacait
+  le fichier assemble quand il n'y avait qu'une seule reprise. La
+  nouvelle tuile est testee de bout en bout dans `dom-smoke.js`.
+
 ## 1.112.4
 
 - **Correctif : tuile Citation restant sur « Cette tuile n'a pas pu etre

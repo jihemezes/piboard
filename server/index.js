@@ -61,6 +61,7 @@ const iptv = require("./iptv");
 const iptvAudio = require("./iptvAudio");
 const iptvHlsProxy = require("./iptvHlsProxy");
 const iptvVlc = require("./iptvVlc");
+const iptvRecord = require("./iptvRecord");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -89,6 +90,14 @@ app.use(express.json({ limit: "1mb" }));
 const DEFAULT_SETTINGS = {
   lang: "en",            // en | fr
   theme: "auto",         // auto | dark | light
+  /* Enregistrement IPTV (voir server/iptvRecord.js). Dossier vide =
+     data/recordings. Les deux garde-fous evitent qu'un appui oublie
+     remplisse le disque.
+     IPTV recording. Empty folder = data/recordings. The two guards keep
+     a forgotten tap from filling the disk. */
+  iptvRecordDir: "",
+  iptvRecordMaxMinutes: 240,
+  iptvRecordMinFreeMB: 1024,
   /* Theme de couleurs du board (public/themes.js). "piboard" = le theme
      d'origine, dont `colors` ci-dessous porte les retouches. Les themes
      crees dans l'editeur sont dans `userThemes`.
@@ -2458,6 +2467,131 @@ function xtreamCredsOr400(req, res) {
    Audio re-encoding of a stream (see server/iptvAudio.js): only ever
    requested when the user enables the option on a tile, streams being
    otherwise read directly by the browser. */
+/* ============================================================
+   Enregistrement IPTV (voir server/iptvRecord.js)
+   ============================================================
+   Le dossier vient des reglages et peut etre n'importe ou : disque USB,
+   partage reseau monte... Il est donc resolu ET verifie a chaque appel,
+   jamais suppose. Un dossier vide ramene a data/recordings.
+   IPTV recording. The folder comes from the settings and can be
+   anywhere, so it is resolved AND checked on every call. */
+function recordingDir() {
+  const s = Object.assign({}, DEFAULT_SETTINGS, store.read("settings", {}));
+  const custom = String(s.iptvRecordDir || "").trim();
+  return custom || iptvRecord.defaultDir(store.DATA_DIR);
+}
+
+function recordingLimits() {
+  const s = Object.assign({}, DEFAULT_SETTINGS, store.read("settings", {}));
+  return {
+    maxMinutes: Number(s.iptvRecordMaxMinutes) || 0,
+    minFreeMB: Number(s.iptvRecordMinFreeMB) || 0
+  };
+}
+
+app.get("/api/iptv/recordings", async (req, res) => {
+  const dir = recordingDir();
+  let ready = true;
+  let error = null;
+  try { iptvRecord.ensureDir(dir); } catch (e) { ready = false; error = String(e.message || e); }
+  res.json({
+    dir,
+    ready,
+    error,
+    freeMB: ready ? iptvRecord.freeMB(dir) : null,
+    ffmpeg: await iptvAudio.checkFfmpeg(),
+    ffmpegHint: iptvAudio.installHint(),
+    active: iptvRecord.list(),
+    recent: iptvRecord.recent(),
+    files: ready ? iptvRecord.files(dir) : [],
+    schedules: store.read("iptvSchedules", [])
+  });
+});
+
+app.post("/api/iptv/recordings/start", async (req, res) => {
+  const b = req.body || {};
+  try {
+    const limits = recordingLimits();
+    const rec = await iptvRecord.start({
+      url: b.url,
+      channel: b.channel,
+      programme: b.programme,
+      dir: recordingDir(),
+      maxMinutes: b.maxMinutes || limits.maxMinutes,
+      minFreeMB: limits.minFreeMB
+    });
+    res.json({ ok: true, recording: rec });
+  } catch (e) {
+    const code = e.code === "no-ffmpeg" ? "no-ffmpeg" : "start-failed";
+    res.status(400).json({ error: code, detail: String(e.message || e), hint: iptvAudio.installHint() });
+  }
+});
+
+app.post("/api/iptv/recordings/:id/stop", (req, res) => {
+  const out = iptvRecord.stop(req.params.id, "user");
+  if (!out) return res.status(404).json({ error: "unknown" });
+  res.json({ ok: true, recording: out });
+});
+
+app.post("/api/iptv/recordings/convert", async (req, res) => {
+  try {
+    res.json(Object.assign({ ok: true }, await iptvRecord.convert(recordingDir(), String((req.body || {}).file || ""))));
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e), hint: e.code === "no-ffmpeg" ? iptvAudio.installHint() : null });
+  }
+});
+
+app.delete("/api/iptv/recordings/file", (req, res) => {
+  try {
+    const ok = iptvRecord.remove(recordingDir(), String(req.query.file || ""));
+    res.json({ ok });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+/* Enregistrements programmes : la liste vit dans data/, un rendez-vous
+   par minute suffit (la minute est la granularite offerte a l'ecran).
+   Scheduled recordings: the list lives in data/, a check every minute is
+   enough (the minute is the granularity offered on screen). */
+app.get("/api/iptv/schedules", (req, res) => res.json(store.read("iptvSchedules", [])));
+
+app.put("/api/iptv/schedules", (req, res) => {
+  const list = Array.isArray(req.body) ? req.body.slice(0, 100) : [];
+  store.write("iptvSchedules", list);
+  res.json(list);
+});
+
+async function runDueSchedules() {
+  const list = store.read("iptvSchedules", []);
+  if (!list.length) return;
+  const { due, missed } = iptvRecord.scheduleDue(list, new Date());
+  if (!due.length && !missed.length) return;
+  for (const s of due) {
+    try {
+      await iptvRecord.start({
+        url: s.url, channel: s.channel, programme: s.programme,
+        dir: recordingDir(), scheduled: true,
+        maxMinutes: iptvRecord.scheduleDurationMinutes(s) || recordingLimits().maxMinutes,
+        minFreeMB: recordingLimits().minFreeMB
+      });
+      s.done = true;
+      s.result = "started";
+    } catch (e) {
+      s.done = true;
+      s.result = "failed: " + String(e.message || e);
+    }
+  }
+  /* Un rendez-vous manque (PiBoard eteint a l'heure dite) est marque
+     comme tel plutot que lance en retard : enregistrer la fin d'une
+     emission deja commencee n'a pas ete demande.
+     A missed appointment is marked as such rather than started late. */
+  for (const s of missed) { s.done = true; s.result = s.result || "missed"; }
+  store.write("iptvSchedules", list);
+}
+
+setInterval(() => { runDueSchedules().catch((e) => console.warn("[piboard] enregistrements programmes", e)); }, 60000);
+
 app.get("/api/iptv/audio-fix", async (req, res) => {
   const target = String(req.query.url || "");
   if (!/^https?:\/\//i.test(target)) {

@@ -619,6 +619,15 @@
             <button type="button" class="pwtv-btn pwtv-back" title="${i18n.t("iptv.backToList")}">☰</button>
             <span class="pwtv-current">${escapeHtml(this.current.name)}</span>
             <span class="pwtv-audio-warn" hidden>⚠</span>
+            <!-- Enregistrement : disponible aussi bien en direct qu'en
+                 VOD, d'ou sa place HORS du bloc reserve au direct
+                 (1.113.0). Pastille rouge, duree et taille pendant
+                 l'enregistrement.
+                 Recording: available for live and VOD alike, hence its
+                 place OUTSIDE the live-only block. -->
+            <button type="button" class="pwtv-btn pwtv-record" title="${i18n.t("iptv.record")}">⏺</button>
+            <button type="button" class="pwtv-btn pwtv-schedule" title="${i18n.t("iptv.schedule")}">🕒</button>
+            <span class="pwtv-rec-info" hidden></span>
             ${isVod ? "" : `
               ${this.navList && this.navList.length > 1 ? `<button type="button" class="pwtv-btn pwtv-prevchan" title="${i18n.t("iptv.prevChannel")}">⏮</button>` : ""}
               <button type="button" class="pwtv-btn pwtv-playpause" title="${i18n.t("iptv.pause")}">⏸</button>
@@ -749,7 +758,147 @@
           }
         });
       }
+      const recBtn = this.ctx.el.querySelector(".pwtv-record");
+      if (recBtn) recBtn.addEventListener("click", () => this.toggleRecord());
+      const schedBtn = this.ctx.el.querySelector(".pwtv-schedule");
+      if (schedBtn) schedBtn.addEventListener("click", () => this.addSchedule());
+      this.refreshRecordButton();
       this.attachStream(video, this.current.url);
+    }
+
+    /* ---------- Enregistrement / recording (1.113.0) ----------
+       L'enregistrement vit cote serveur : il continue si l'on zappe, si
+       l'on ferme la tuile ou si le navigateur est ferme. La tuile ne
+       fait qu'ordonner et afficher l'etat.
+       Recording lives server-side: it continues if you zap, close the
+       tile or close the browser. The tile only commands and displays. */
+    async toggleRecord() {
+      const btn = this.ctx.el.querySelector(".pwtv-record");
+      if (!btn || btn.disabled) return;
+      btn.disabled = true;
+      try {
+        if (this.recording) {
+          await fetch("/api/iptv/recordings/" + encodeURIComponent(this.recording.id) + "/stop", { method: "POST" });
+          this.recording = null;
+        } else {
+          const r = await fetch("/api/iptv/recordings/start", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              url: this.current.url,
+              channel: this.current.name,
+              /* Nom du programme quand la source en donne un ; sinon la
+                 chaine et l'horodatage suffisent (voir buildFileName).
+                 Programme name when the source gives one. */
+              programme: this.current.programme || this.current.title || ""
+            })
+          });
+          const data = await r.json();
+          if (!r.ok) throw new Error(data.error === "no-ffmpeg" ? this.ctx.i18n.t("iptv.record.noFfmpeg") : (data.detail || data.error));
+          this.recording = data.recording;
+        }
+        this.refreshRecordButton();
+      } catch (e) {
+        console.warn("[piboard] iptv enregistrement", e);
+        this.setStatus(this.ctx.i18n.t("iptv.record.failed") + " " + String(e.message || e));
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    /* Enregistrement programme de la chaine en cours. La saisie reste
+       volontairement minimale -- heure de debut et duree -- parce qu'un
+       tableau mural se pilote au doigt, souvent de loin : une grille de
+       programmes completerait mal ce format.
+       Scheduled recording of the current channel. Deliberately minimal
+       input -- start time and duration -- because a wall dashboard is
+       driven by finger, often from a distance. */
+    async addSchedule() {
+      const i18n = this.ctx.i18n;
+      const when = window.prompt(i18n.t("iptv.schedule.when"), this.defaultScheduleTime());
+      if (!when) return;
+      const mins = Number(window.prompt(i18n.t("iptv.schedule.duration"), "60"));
+      const startAt = this.parseWhen(when);
+      if (!startAt || !(mins > 0)) {
+        this.setStatus(i18n.t("iptv.schedule.bad"));
+        return;
+      }
+      try {
+        const list = await fetch("/api/iptv/schedules").then((r) => r.json());
+        list.push({
+          id: "s" + Date.now().toString(36),
+          url: this.current.url,
+          channel: this.current.name,
+          startAt: startAt.toISOString(),
+          durationMinutes: Math.round(mins)
+        });
+        await fetch("/api/iptv/schedules", {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(list)
+        });
+        this.setStatus(i18n.t("iptv.schedule.saved") + " " + startAt.toLocaleString());
+      } catch (e) {
+        console.warn("[piboard] iptv programmation", e);
+        this.setStatus(i18n.t("iptv.schedule.failed"));
+      }
+    }
+
+    defaultScheduleTime() {
+      const d = new Date(Date.now() + 3600000);
+      return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+    }
+
+    /* « 20:45 » vise aujourd'hui, ou demain si l'heure est deja passee ;
+       une date complete « 2026-09-20 20:45 » reste possible.
+       "20:45" means today, or tomorrow if already past. */
+    parseWhen(text) {
+      const t = String(text || "").trim();
+      let m = t.match(/^(\d{1,2})[h:](\d{2})$/);
+      if (m) {
+        const d = new Date();
+        d.setSeconds(0, 0);
+        d.setHours(Number(m[1]), Number(m[2]));
+        if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
+        return d;
+      }
+      m = t.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2})[h:](\d{2})$/);
+      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0, 0);
+      return null;
+    }
+
+    /* L'etat vient du serveur, pas d'un compteur local : il reste juste
+       apres un rechargement de page ou un changement de chaine.
+       State comes from the server, so it stays right after a page
+       reload or a channel change. */
+    async refreshRecordButton() {
+      const btn = this.ctx.el.querySelector(".pwtv-record");
+      const info = this.ctx.el.querySelector(".pwtv-rec-info");
+      if (!btn) { clearInterval(this.recTimer); this.recTimer = null; return; }
+      try {
+        const data = await fetch("/api/iptv/recordings").then((r) => r.json());
+        const mine = (data.active || []).find((a) => !this.recording || a.id === this.recording.id)
+          || (data.active || [])[0] || null;
+        this.recording = mine;
+      } catch (e) {
+        /* Serveur injoignable : on garde le dernier etat connu plutot
+           que de pretendre que rien n'enregistre.
+           Server unreachable: keep the last known state. */
+      }
+      const on = !!this.recording;
+      btn.classList.toggle("pwtv-recording", on);
+      btn.textContent = on ? "⏹" : "⏺";
+      btn.title = on ? this.ctx.i18n.t("iptv.record.stop") : this.ctx.i18n.t("iptv.record");
+      if (info) {
+        info.hidden = !on;
+        if (on) {
+          const sec = this.recording.elapsedSec || 0;
+          const mb = Math.round((this.recording.bytes || 0) / 1048576);
+          const clock = Math.floor(sec / 3600) + ":" + String(Math.floor(sec / 60) % 60).padStart(2, "0") + ":" + String(sec % 60).padStart(2, "0");
+          info.textContent = clock + (mb ? " · " + mb + " Mo" : "")
+            + (this.recording.status === "reconnecting" ? " · " + this.ctx.i18n.t("iptv.record.reconnecting") : "");
+        }
+      }
+      clearInterval(this.recTimer);
+      this.recTimer = setInterval(() => this.refreshRecordButton(), on ? 3000 : 15000);
     }
 
     /* onRetry, si fourni, rend le statut reellement cliquable
@@ -1134,6 +1283,7 @@
     }
 
     destroy() {
+      clearInterval(this.recTimer);
       // Essentiel ici : une tuile detruite ne doit surtout pas laisser
       // un flux video tourner en arriere-plan sur un Pi. Essential
       // here: a destroyed tile must absolutely not leave a video stream

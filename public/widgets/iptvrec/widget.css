@@ -1,0 +1,90 @@
+/* Tuile Enregistrements TV. Classes prefixees pw-iptvrec / pwrec-,
+   comme l'exige le controle de non-regression sur les styles.
+   TV recordings tile. Classes namespaced under the tile's root. */
+.pw-iptvrec {
+  height: 100%;
+  overflow-y: auto;
+  padding: 6px 8px;
+  font-size: 13px;
+}
+
+.pw-iptvrec .pwrec-msg {
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pw-iptvrec .pwrec-err { color: var(--danger); }
+
+.pw-iptvrec .pwrec-free {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.pw-iptvrec .pwrec-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.pw-iptvrec .pwrec-list > li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+
+.pw-iptvrec .pwrec-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pw-iptvrec .pwrec-meta {
+  color: var(--muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* Pastille rouge : l'enregistrement en cours doit se voir d'un coup
+   d'oeil depuis l'autre bout de la piece.
+   Red dot: a running recording must be visible at a glance from across
+   the room. */
+.pw-iptvrec .pwrec-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+  animation: pwrec-blink 1.6s ease-in-out infinite;
+}
+
+@keyframes pwrec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pw-iptvrec .pwrec-dot { animation: none; }
+}
+
+.pw-iptvrec .pwrec-active .pwrec-name { color: var(--text); font-weight: 600; }
+
+.pw-iptvrec .pwrec-btn {
+  padding: 2px 7px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.pw-iptvrec .pwrec-btn:hover { border-color: var(--accent); }
+.pw-iptvrec .pwrec-btn:disabled { opacity: 0.5; cursor: default; }
+.pw-iptvrec .pwrec-del:hover { border-color: var(--danger); color: var(--danger); }

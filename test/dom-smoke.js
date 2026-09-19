@@ -517,6 +517,12 @@ const tileConfigsMock = {};
 const LIBRARY_MOCK = { fail: false, picked: [] };
 const SHUTDOWN_MOCK = { answer: { ok: false } };
 const QUOTE_MOCK = { fail: false };
+const REC_MOCK = {
+  dir: "/data/recordings", ready: true, ffmpeg: true, freeMB: 40000, converted: null,
+  active: [{ id: "r1", channel: "Arte", name: "Arte - 2026-09-19 20h41", status: "recording", elapsedSec: 125, bytes: 52428800 }],
+  files: [{ name: "TF1 - 2026-09-18 21h00.ts", bytes: 1073741824, modified: 2 }],
+  recent: [], schedules: []
+};
 
 /* Mock avec etat pour les routes /api/crypto/* (server/crypto.js) :
    permet de simuler un repli sur donnees perimees (priceStale/
@@ -642,6 +648,12 @@ const dom = new JSDOM(html, {
          Image library: two items, one whose name holds markup -- it is
          precisely rendering an item that crashed in 1.110.1 (missing
          escapeHtml). */
+      if (u.includes("/api/iptv/recordings")) {
+        if (method === "POST" && /\/stop$/.test(u)) { REC_MOCK.active = []; return json({ ok: true }); }
+        if (method === "DELETE") { REC_MOCK.files = REC_MOCK.files.filter((f) => !u.includes(encodeURIComponent(f.name))); return json({ ok: true }); }
+        if (method === "POST" && /convert/.test(u)) { REC_MOCK.converted = JSON.parse(opts.body).file; return json({ ok: true }); }
+        return json(REC_MOCK);
+      }
       if (u.includes("/api/system/shutdown") && method === "POST") {
         return json(SHUTDOWN_MOCK.answer);
       }
@@ -7087,6 +7099,61 @@ function catalogItemFor(catalog, document, widgetId) {
     w.destroy();
     host.remove();
     document.body.classList.toggle("editing", wasEditingQ);
+  }
+
+  console.log("== Tuile Enregistrements TV (1.113.0) ==");
+  {
+    let RecClass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, klass) => { if (id === "iptvrec") RecClass = klass; keep.call(window.PiBoard, id, klass); };
+    const sc = document.createElement("script");
+    sc.src = "/widgets/iptvrec/widget.js?t=rec-test";
+    document.head.appendChild(sc);
+    for (let i = 0; i < 40 && !RecClass; i++) await sleep(25);
+    window.PiBoard.registerWidget = keep;
+    assert("enregistrements : la tuile se charge", !!RecClass);
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const w = new RecClass({
+      el: host, instanceId: "rec1",
+      manifest: catalog.find((m) => m.id === "iptvrec"),
+      settings: { showFiles: true, maxFiles: 10, showFree: true, refreshSeconds: 60 },
+      i18n: { lang: "fr" }
+    });
+    await w.init();
+    await sleep(60);
+    assert("enregistrements : l'enregistrement en cours est affiche avec sa duree et sa taille",
+      /Arte/.test(host.textContent) && /0:02:05/.test(host.textContent) && /50 Mo/.test(host.textContent));
+    assert("enregistrements : une pastille rouge le signale", !!host.querySelector(".pwrec-dot"));
+    assert("enregistrements : l'espace libre est affiche", /Espace libre/.test(host.textContent) && /Go/.test(host.textContent));
+    assert("enregistrements : le fichier deja enregistre est liste avec sa taille",
+      /TF1 - 2026-09-18 21h00\.ts/.test(host.textContent) && /1\.0 Go/.test(host.textContent));
+
+    host.querySelector("[data-convert]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    assert("enregistrements : la conversion en mp4 porte sur le bon fichier",
+      REC_MOCK.converted === "TF1 - 2026-09-18 21h00.ts");
+
+    host.querySelector("[data-stop]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    assert("enregistrements : l'arret vide la liste des enregistrements en cours",
+      !host.querySelector(".pwrec-dot") && /Aucun enregistrement en cours/.test(host.textContent));
+
+    /* ffmpeg absent ou dossier inaccessible : la tuile doit le dire,
+       pas afficher une liste vide muette. / A missing ffmpeg or an
+       unreachable folder must be stated. */
+    REC_MOCK.ffmpeg = false;
+    REC_MOCK.ready = false;
+    REC_MOCK.error = "EACCES /mnt/usb";
+    await w.refresh();
+    assert("enregistrements : ffmpeg absent est signale", /ffmpeg/.test(host.textContent));
+    assert("enregistrements : un dossier inaccessible est signale avec sa cause",
+      /EACCES \/mnt\/usb/.test(host.textContent));
+    REC_MOCK.ffmpeg = true;
+    REC_MOCK.ready = true;
+    w.destroy();
+    host.remove();
   }
 
   console.log("== Sortie du mode edition ==");
