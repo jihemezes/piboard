@@ -180,7 +180,7 @@
     },
     {
       "key": "recordDir",
-      "type": "text",
+      "type": "folder",
       "default": "",
       "group": {
         "fr": "Enregistrement",
@@ -248,6 +248,44 @@
       "hint": {
         "fr": "Ajoute un bouton dans la liste des chaînes : enregistrements réalisés, conversion en .mp4, suppression, espace libre.",
         "en": "Adds a button in the channel list: recordings made, conversion to .mp4, deletion, free space."
+      }
+    },
+    {
+      "key": "recordPadBefore",
+      "type": "number",
+      "default": 2,
+      "min": 0,
+      "max": 60,
+      "group": {
+        "fr": "Enregistrement",
+        "en": "Recording"
+      },
+      "label": {
+        "fr": "Commencer X minutes avant",
+        "en": "Start X minutes early"
+      },
+      "hint": {
+        "fr": "Marge appliquée aux enregistrements programmés : les programmes commencent rarement à l'heure exacte.",
+        "en": "Margin applied to scheduled recordings: programmes rarely start exactly on time."
+      }
+    },
+    {
+      "key": "recordPadAfter",
+      "type": "number",
+      "default": 10,
+      "min": 0,
+      "max": 120,
+      "group": {
+        "fr": "Enregistrement",
+        "en": "Recording"
+      },
+      "label": {
+        "fr": "Finir X minutes après",
+        "en": "End X minutes late"
+      },
+      "hint": {
+        "fr": "Même marge à la fin, pour ne pas manquer le dénouement d'un film qui déborde.",
+        "en": "Same margin at the end, so an overrunning film is not cut off."
       }
     }
   ]

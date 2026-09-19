@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.113.2
+
+- **Correctif : le bouton de programmation ne faisait rien.** La saisie
+  passait par `window.prompt`, que l'application de bureau Electron
+  n'implemente PAS -- le clic restait donc sans effet sous Windows. Tout
+  se passe desormais dans la tuile, avec de vrais champs : **jour, heure
+  de debut, heure de fin**. Une fin anterieure au debut designe le
+  lendemain (film qui deborde apres minuit), la fenetre liste les
+  rendez-vous deja pris et permet de les supprimer. Un test verifie
+  qu'aucune tuile n'utilise plus `window.prompt`.
+
+- **Marges avant et apres**, reglables dans les options du lecteur
+  (2 et 10 minutes par defaut) : elles elargissent reellement la plage
+  enregistree, un programme commencant rarement a l'heure exacte et
+  finissant souvent en retard.
+
+- **Explorateur de dossiers** pour choisir ou vont les enregistrements,
+  avec **creation de dossier**. Il parcourt la machine QUI FAIT TOURNER
+  PiBoard -- pas celle qui regarde le tableau : un selecteur de fichiers
+  de navigateur ne verrait que la machine locale, et ne sait de toute
+  facon pas designer un dossier. Sous Windows il propose les lettres de
+  lecteur, ailleurs la racine et les points de montage (`/media`,
+  `/mnt`, `/Volumes`), plus le dossier personnel. Le chemin reste
+  saisissable a la main.
+  - Nouveau type de champ `folder` dans les reglages de tuile, avec son
+    bouton « Parcourir… » ; il resservira pour d'autres tuiles.
+  - Cote serveur (`server/fsBrowse.js`), la portee est etroite a dessein :
+    lister des sous-dossiers et creer un dossier, rien d'autre. Aucun
+    fichier n'est lu ni renvoye, rien n'est supprime, et un nom de
+    dossier qui remonte l'arborescence est refuse.
+
+- **Tests** : `test/fsBrowse.test.js` (noms acceptes et refuses, listage
+  sans les fichiers ni les caches, creation, refus des remontees) ;
+  parcours complet de l'explorateur dans `dom-smoke.js` (emplacements,
+  entree dans un dossier, creation, choix) ; plage horaire d'un
+  enregistrement programme, y compris apres minuit, et application reelle
+  des marges.
+
 ## 1.113.1
 
 - **Correctif majeur : l'enregistrement coupait le visionnage.** En

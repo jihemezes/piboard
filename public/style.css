@@ -3154,3 +3154,45 @@ body.editing .grid-stack-item-content.tile-transparent {
   user-select: all;
 }
 .shutdown-denied-detail { user-select: text; color: var(--muted); }
+
+/* Explorateur de dossiers (1.113.2) / folder browser */
+.field-folder-wrap { display: flex; gap: 6px; align-items: center; }
+.field-folder-wrap input { flex: 1; min-width: 0; }
+.folder-card { width: min(560px, 96vw); max-height: 90vh; }
+.folder-body { padding: 0 16px 10px; overflow-y: auto; flex: 1; }
+.folder-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.folder-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.folder-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+}
+.folder-list li + li { border-top: 1px solid var(--tile-edge); }
+.folder-row {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.folder-row:hover { background: var(--field-bg); }
+.folder-row small { color: var(--muted); margin-left: 6px; }
+.folder-msg { padding: 10px; color: var(--muted); font-size: 12px; }
+.folder-new { display: flex; gap: 6px; }
+.folder-new input { flex: 1; min-width: 0; }

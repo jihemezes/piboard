@@ -63,6 +63,7 @@ const iptvHlsProxy = require("./iptvHlsProxy");
 const iptvVlc = require("./iptvVlc");
 const iptvRecord = require("./iptvRecord");
 const iptvSource = require("./iptvSource");
+const fsBrowse = require("./fsBrowse");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -2473,6 +2474,30 @@ function recordingDir(req) {
   return asked || iptvRecord.defaultDir(store.DATA_DIR);
 }
 
+
+/* Choix d'un dossier sur la machine (voir server/fsBrowse.js) : lister
+   et creer, rien d'autre.
+   Picking a folder on the machine: list and create, nothing else. */
+app.get("/api/fs/roots", (req, res) => {
+  res.json({ roots: fsBrowse.listRoots(), separator: require("path").sep });
+});
+
+app.get("/api/fs/list", (req, res) => {
+  try {
+    res.json(fsBrowse.listDir(String(req.query.path || "")));
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/fs/mkdir", (req, res) => {
+  const b = req.body || {};
+  try {
+    res.json({ ok: true, path: fsBrowse.mkdir(String(b.parent || ""), String(b.name || "")) });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
 
 app.get("/api/iptv/recordings", async (req, res) => {
   const dir = recordingDir(req);

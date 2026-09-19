@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.113.1
+   Version 1.113.2
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2988,6 +2988,15 @@
         return `<label class="field"><span>${label}</span><input type="color" data-key="${f.key}" value="${v || "#000000"}">${hint}</label>`;
       case "time":
         return `<label class="field"><span>${label}</span><input type="time" data-key="${f.key}" value="${v}">${hint}</label>`;
+      /* Champ "folder" : un chemin sur la machine qui fait tourner
+         PiBoard, avec un bouton pour le choisir dans un explorateur de
+         dossiers (et en creer un au besoin). Taper le chemin a la main
+         reste possible -- c'est le meme champ texte.
+         "folder" field: a path on the machine running PiBoard, with a
+         button to pick it in a folder browser (and create one if
+         needed). Typing the path by hand still works. */
+      case "folder":
+        return `<label class="field"><span>${label}</span><div class="field-folder-wrap"><input type="text" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-folder-browse" data-for="${f.key}">${i18n.t("folder.browse")}</button></div>${hint}</label>`;
       case "password":
         return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div>${hint}</label>`;
       /* Champ "secret" : contrairement a "password" ci-dessus, la valeur
@@ -5271,6 +5280,122 @@
     document.querySelectorAll("[data-drawer-theme]").forEach((b) =>
       onActivate(b, () => openThemePicker({ kind: "drawer", side: b.dataset.drawerTheme })));
     onActivate($("pageBgThemeHintBtn"), () => openThemePicker({ kind: "page", index: pageBgIndex }));
+  }
+
+  /* ============================================================
+     Explorateur de dossiers (1.113.2)
+     ============================================================
+     Choisir un dossier SUR LA MACHINE QUI FAIT TOURNER PIBOARD -- pas
+     sur celle qui regarde le tableau. La distinction compte des que le
+     tableau est ouvert depuis un autre poste : un selecteur de fichiers
+     de navigateur, lui, ne verrait que la machine locale, et ne sait de
+     toute facon pas designer un dossier.
+     Picking a folder ON THE MACHINE RUNNING PIBOARD -- not on the one
+     looking at the board. A browser's own file picker would only see
+     the local machine, and cannot designate a folder anyway. */
+  const folderPicker = { onPick: null, current: "", separator: "/" };
+
+  function openFolderPicker(startPath, onPick) {
+    folderPicker.onPick = onPick || null;
+    $("folderModal").hidden = false;
+    $("folderNewName").value = "";
+    $("folderStatus").hidden = true;
+    loadFolder(String(startPath || "").trim());
+  }
+
+  function closeFolderPicker() {
+    $("folderModal").hidden = true;
+    folderPicker.onPick = null;
+  }
+
+  function folderStatus(text, isError) {
+    const el = $("folderStatus");
+    el.hidden = !text;
+    el.textContent = text || "";
+    el.classList.toggle("field-hint-error", !!isError);
+  }
+
+  /* Sans chemin de depart (ou avec un chemin devenu invalide), on
+     propose les points de depart plutot qu'une erreur : disques,
+     dossier personnel, points de montage.
+     Without a starting path (or with one gone invalid), the starting
+     points are offered rather than an error. */
+  async function loadFolder(dir) {
+    const list = $("folderList");
+    list.innerHTML = `<li class="folder-msg">${escapeHtml(i18n.t("common.loading"))}</li>`;
+    if (!dir) return loadRoots();
+    let data;
+    try {
+      const r = await fetch("/api/fs/list?path=" + encodeURIComponent(dir));
+      data = await r.json();
+      if (!r.ok) throw new Error(data.error || "");
+    } catch (e) {
+      folderStatus(i18n.t("folder.unreadable") + " " + String(e.message || e), true);
+      return loadRoots();
+    }
+    folderPicker.current = data.path;
+    $("folderPath").textContent = data.path;
+    $("folderChoose").disabled = false;
+    if (!data.writable) folderStatus(i18n.t("folder.readonly"), true);
+    else folderStatus("");
+    const rows = [];
+    if (data.parent) rows.push(`<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(data.parent)}">↑ ${escapeHtml(i18n.t("folder.up"))}</button></li>`);
+    for (const d of data.dirs) {
+      rows.push(`<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(d.path)}">${escapeHtml(d.name)}</button></li>`);
+    }
+    list.innerHTML = rows.join("") || `<li class="folder-msg">${escapeHtml(i18n.t("folder.empty"))}</li>`;
+    list.querySelectorAll("[data-go]").forEach((b) => onActivate(b, () => loadFolder(b.dataset.go)));
+  }
+
+  async function loadRoots() {
+    const list = $("folderList");
+    try {
+      const data = await fetch("/api/fs/roots").then((r) => r.json());
+      folderPicker.separator = data.separator || "/";
+      folderPicker.current = "";
+      $("folderPath").textContent = i18n.t("folder.roots");
+      $("folderChoose").disabled = true;
+      list.innerHTML = (data.roots || []).map((r) =>
+        `<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(r.path)}">${escapeHtml(r.name)} <small>${escapeHtml(r.path)}</small></button></li>`).join("");
+      list.querySelectorAll("[data-go]").forEach((b) => onActivate(b, () => loadFolder(b.dataset.go)));
+    } catch (e) {
+      list.innerHTML = `<li class="folder-msg">${escapeHtml(i18n.t("folder.unreadable"))}</li>`;
+    }
+  }
+
+  async function createFolder() {
+    const name = String($("folderNewName").value || "").trim();
+    if (!name || !folderPicker.current) return;
+    try {
+      const r = await fetch("/api/fs/mkdir", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parent: folderPicker.current, name })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "");
+      $("folderNewName").value = "";
+      /* On entre dans le dossier cree : c'est presque toujours celui
+         qu'on voulait choisir. We step into the folder just created. */
+      loadFolder(data.path);
+    } catch (e) {
+      folderStatus(i18n.t("folder.createFailed") + " " + String(e.message || e), true);
+    }
+  }
+
+  function wireFolderPicker() {
+    onActivate($("folderClose"), closeFolderPicker);
+    onActivate($("folderCancel"), closeFolderPicker);
+    onActivate($("folderRoots"), () => loadRoots());
+    onActivate($("folderCreate"), () => createFolder());
+    $("folderNewName").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); createFolder(); }
+    });
+    onActivate($("folderChoose"), () => {
+      const pick = folderPicker.current;
+      const cb = folderPicker.onPick;
+      closeFolderPicker();
+      if (cb && pick) cb(pick);
+    });
   }
 
   /* ============================================================
@@ -7789,6 +7914,7 @@
     onActivate($("tileReset"), () => resetTileSettings());
     onActivate($("libraryClose"), closeLibrary);
     wireThemeUi();
+    wireFolderPicker();
     onActivate($("libraryAdd"), () => $("libraryFile").click());
     onActivate($("libraryOnline"), showLibraryCatalog);
     $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));
@@ -7820,6 +7946,18 @@
        saver's WebDAV password) and in tile forms that get regenerated
        dynamically (Slideshow widget) -- a single handler covers both
        without rewiring on every modal open. */
+    /* Explorateur de dossiers, pour les champs "folder". Meme raison
+       qu'au-dessus pour le gestionnaire delegue : ces boutons vivent
+       dans des formulaires regeneres a chaque ouverture.
+       Folder browser, for "folder" fields. */
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".field-folder-browse");
+      if (!btn) return;
+      const input = btn.parentElement.querySelector("input[data-key]");
+      if (!input) return;
+      openFolderPicker(input.value, (chosen) => { input.value = chosen; });
+    });
+
     document.addEventListener("click", (e) => {
       const btn = e.target.closest(".field-password-toggle");
       if (!btn) return;

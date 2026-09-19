@@ -517,6 +517,15 @@ const tileConfigsMock = {};
 const LIBRARY_MOCK = { fail: false, picked: [] };
 const SHUTDOWN_MOCK = { answer: { ok: false } };
 const QUOTE_MOCK = { fail: false };
+const FS_MOCK = {
+  created: null, missing: [], extra: [],
+  dirs(dir) {
+    const base = dir === "/home/jm" ? ["Videos", "Documents"] : [];
+    const made = FS_MOCK.extra.filter((p) => p.startsWith(dir.replace(/\/$/, "") + "/"))
+      .map((p) => p.slice(dir.replace(/\/$/, "").length + 1));
+    return base.concat(made).map((n) => ({ name: n, path: dir.replace(/\/$/, "") + "/" + n }));
+  }
+};
 const REC_MOCK = {
   dir: "/data/recordings", ready: true, ffmpeg: true, freeMB: 40000, converted: null,
   active: [{ id: "r1", channel: "Arte", name: "Arte - 2026-09-19 20h41", status: "recording", elapsedSec: 125, bytes: 52428800 }],
@@ -648,6 +657,25 @@ const dom = new JSDOM(html, {
          Image library: two items, one whose name holds markup -- it is
          precisely rendering an item that crashed in 1.110.1 (missing
          escapeHtml). */
+      if (u.includes("/api/fs/roots")) {
+        return json({ separator: "/", roots: [{ name: "jm", path: "/home/jm" }, { name: "/", path: "/" }] });
+      }
+      if (u.includes("/api/fs/list")) {
+        const asked = decodeURIComponent((u.match(/path=([^&]*)/) || [])[1] || "");
+        if (FS_MOCK.missing.includes(asked)) return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ error: "ENOENT" }) });
+        return json({
+          path: asked, parent: asked === "/" ? null : "/home",
+          writable: true,
+          dirs: FS_MOCK.dirs(asked),
+          breadcrumb: []
+        });
+      }
+      if (u.includes("/api/fs/mkdir") && method === "POST") {
+        const body = JSON.parse(opts.body);
+        FS_MOCK.created = body.name;
+        FS_MOCK.extra.push(body.parent.replace(/\/$/, "") + "/" + body.name);
+        return json({ ok: true, path: body.parent.replace(/\/$/, "") + "/" + body.name });
+      }
       if (u.includes("/api/iptv/recordings")) {
         if (method === "POST" && /\/stop$/.test(u)) { REC_MOCK.active = []; return json({ ok: true }); }
         if (method === "DELETE") { REC_MOCK.files = REC_MOCK.files.filter((f) => !u.includes(encodeURIComponent(f.name))); return json({ ok: true }); }
@@ -7099,6 +7127,89 @@ function catalogItemFor(catalog, document, widgetId) {
     w.destroy();
     host.remove();
     document.body.classList.toggle("editing", wasEditingQ);
+  }
+
+  console.log("== Choix d'un dossier et programmation IPTV (1.113.2) ==");
+  {
+    const $d = (id) => document.getElementById(id);
+    const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+
+    /* window.prompt n'existe PAS dans l'application de bureau Electron :
+       le bouton de programmation ne faisait donc rien sous Windows. Plus
+       aucune tuile ne doit s'en servir.
+       window.prompt does NOT exist in the Electron desktop app. */
+    const widgetsDir = path.join(PUB, "widgets");
+    const usingPrompt = fs.readdirSync(widgetsDir).filter((dir) => {
+      const f = path.join(widgetsDir, dir, "widget.js");
+      if (!fs.existsSync(f)) return false;
+      return /(^|[^.\w])(window\.)?prompt\s*\(/m.test(
+        fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, ""));
+    });
+    assert("aucune tuile n'utilise window.prompt, absent d'Electron (" + usingPrompt.join(",") + ")",
+      usingPrompt.length === 0);
+
+    /* Le champ "folder" des reglages de tuile : un chemin, et un bouton
+       qui ouvre l'explorateur de dossiers du serveur.
+       The "folder" field: a path, and a button opening the browser. */
+    const iptvManifest = catalog.find((m) => m.id === "iptv");
+    const dirField = (iptvManifest.settings || []).find((f) => f.key === "recordDir");
+    assert("enregistrement : le dossier se choisit avec un explorateur", dirField && dirField.type === "folder");
+
+    const host = document.createElement("div");
+    host.innerHTML = `<div class="field-folder-wrap"><input type="text" data-key="recordDir" value=""><button type="button" class="btn small field-folder-browse" data-for="recordDir">Parcourir</button></div>`;
+    document.body.appendChild(host);
+    click(host.querySelector(".field-folder-browse"));
+    await sleep(80);
+    assert("dossier : le bouton ouvre l'explorateur", $d("folderModal").hidden === false);
+    assert("dossier : sans chemin de depart, les emplacements sont proposes",
+      $d("folderList").querySelectorAll("[data-go]").length >= 2
+      && $d("folderChoose").disabled === true);
+
+    click($d("folderList").querySelector('[data-go="/home/jm"]') || $d("folderList").querySelector("[data-go]"));
+    await sleep(80);
+    assert("dossier : entrer dans un dossier montre ses sous-dossiers et permet de le choisir",
+      /Videos|home/.test($d("folderPath").textContent) && $d("folderChoose").disabled === false);
+
+    $d("folderNewName").value = "Enregistrements";
+    click($d("folderCreate"));
+    await sleep(80);
+    assert("dossier : le dossier cree devient le dossier courant",
+      FS_MOCK.created === "Enregistrements" && /Enregistrements$/.test($d("folderPath").textContent));
+
+    click($d("folderChoose"));
+    await sleep(40);
+    assert("dossier : le choix remplit le champ et referme la fenetre",
+      $d("folderModal").hidden === true
+      && /Enregistrements$/.test(host.querySelector("input[data-key]").value));
+    host.remove();
+
+    /* Plage horaire d'un enregistrement programme : une fin avant le
+       debut designe le lendemain, et les marges sont appliquees a
+       l'enregistrement, pas affichees seulement.
+       Time range of a scheduled recording. */
+    {
+      const src = fs.readFileSync(path.join(PUB, "widgets/iptv/widget.js"), "utf8");
+      const body = src.match(/scheduleRange\(dayStr, startStr, endStr\) \{([\s\S]*?)\n    \}/)[1];
+      const scheduleRange = new Function("dayStr", "startStr", "endStr", body);
+      const day = scheduleRange("2026-09-20", "20:45", "22:30");
+      assert("programmation : la plage du soir est comprise",
+        day.startAt.getHours() === 20 && day.startAt.getMinutes() === 45
+        && day.endAt.getHours() === 22 && day.endAt.getDate() === 20);
+      const night = scheduleRange("2026-09-20", "23:30", "01:15");
+      assert("programmation : une fin apres minuit tombe le lendemain",
+        night.endAt.getDate() === 21 && night.endAt.getHours() === 1);
+      assert("programmation : une saisie incomplete est refusee",
+        scheduleRange("", "20:45", "22:30") === null && scheduleRange("2026-09-20", "20h45", "22:30") === null);
+
+      const saveSrc = src.slice(src.indexOf("async saveSchedule()"), src.indexOf("async renderScheduleList()"));
+      assert("programmation : les marges elargissent reellement la plage",
+        /recordPadBefore/.test(saveSrc) && /recordPadAfter/.test(saveSrc)
+        && /range\.startAt\.getTime\(\) - before \* 60000/.test(saveSrc)
+        && /range\.endAt\.getTime\(\) \+ after \* 60000/.test(saveSrc));
+      const iptvSettings = iptvManifest.settings || [];
+      assert("programmation : les marges se reglent dans les options de la tuile",
+        iptvSettings.some((f) => f.key === "recordPadBefore") && iptvSettings.some((f) => f.key === "recordPadAfter"));
+    }
   }
 
   console.log("== Sortie du mode edition ==");

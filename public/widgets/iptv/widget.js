@@ -885,40 +885,123 @@
       }
     }
 
-    /* Enregistrement programme de la chaine en cours. La saisie reste
-       volontairement minimale -- heure de debut et duree -- parce qu'un
-       tableau mural se pilote au doigt, souvent de loin : une grille de
-       programmes completerait mal ce format.
-       Scheduled recording of the current channel. Deliberately minimal
-       input -- start time and duration -- because a wall dashboard is
-       driven by finger, often from a distance. */
+    /* ---------- Programmation (refaite en 1.113.2) ----------
+       La saisie passait par window.prompt : l'application de bureau
+       Electron ne l'implemente PAS, et le bouton ne faisait donc
+       strictement rien sous Windows. Tout se passe desormais dans la
+       tuile, avec de vrais champs date et heure -- ce qui permet au
+       passage de saisir une heure de FIN plutot qu'une duree, et de
+       voir puis supprimer les rendez-vous deja pris.
+       Scheduling used window.prompt, which the Electron desktop app
+       does NOT implement, so the button did nothing at all on Windows.
+       Everything now happens inside the tile, with real date and time
+       fields -- which also allows an END time rather than a duration,
+       and shows the appointments already made. */
     async addSchedule() {
       const i18n = this.ctx.i18n;
-      const when = window.prompt(i18n.t("iptv.schedule.when"), this.defaultScheduleTime());
-      if (!when) return;
-      const mins = Number(window.prompt(i18n.t("iptv.schedule.duration"), "60"));
-      const startAt = this.parseWhen(when);
-      if (!startAt || !(mins > 0)) {
-        this.setStatus(i18n.t("iptv.schedule.bad"));
-        return;
-      }
+      const s = this.ctx.settings;
+      const start = new Date(Date.now() + 3600000);
+      const end = new Date(start.getTime() + 3600000);
+      const day = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+      const hhmm = (d) => String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+      const pad = Math.max(0, Number(s.recordPadBefore) || 0) + Math.max(0, Number(s.recordPadAfter) || 0);
+      this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-bar">
+          <button type="button" class="pwtv-btn pwtv-navback" title="${i18n.t("iptv.back")}">‹</button>
+          <span class="pwtv-title">${i18n.t("iptv.schedule.title")}</span>
+        </div>
+        <div class="pwtv-sched">
+          <p class="pwtv-sched-chan">${escapeHtml(this.current ? this.current.name : "")}</p>
+          <div class="pwtv-sched-form">
+            <label><span>${i18n.t("iptv.schedule.day")}</span><input type="date" class="pwtv-sched-date" value="${day(start)}"></label>
+            <label><span>${i18n.t("iptv.schedule.start")}</span><input type="time" class="pwtv-sched-start" value="${hhmm(start)}"></label>
+            <label><span>${i18n.t("iptv.schedule.end")}</span><input type="time" class="pwtv-sched-end" value="${hhmm(end)}"></label>
+          </div>
+          <p class="pwtv-sched-hint">${pad ? escapeHtml(i18n.t("iptv.schedule.margins").replace("{before}", Math.max(0, Number(s.recordPadBefore) || 0)).replace("{after}", Math.max(0, Number(s.recordPadAfter) || 0))) : ""}</p>
+          <div class="pwtv-sched-actions">
+            <button type="button" class="pwtv-btn pwtv-sched-add">${i18n.t("iptv.schedule.add")}</button>
+          </div>
+          <p class="pwtv-sched-msg" hidden></p>
+          <ul class="pwtv-sched-list"></ul>
+        </div></div>`;
+      this.ctx.el.querySelector(".pwtv-navback").addEventListener("click", () => this.render());
+      this.ctx.el.querySelector(".pwtv-sched-add").addEventListener("click", () => this.saveSchedule());
+      this.renderScheduleList();
+    }
+
+    /* L'heure de fin peut tomber apres minuit : une fin AVANT le debut
+       designe alors le lendemain, comme sur n'importe quel magnetoscope.
+       An end before the start means the next day. */
+    scheduleRange(dayStr, startStr, endStr) {
+      const d = String(dayStr || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      const a = String(startStr || "").match(/^(\d{1,2}):(\d{2})$/);
+      const b = String(endStr || "").match(/^(\d{1,2}):(\d{2})$/);
+      if (!d || !a || !b) return null;
+      const startAt = new Date(Number(d[1]), Number(d[2]) - 1, Number(d[3]), Number(a[1]), Number(a[2]), 0, 0);
+      const endAt = new Date(startAt);
+      endAt.setHours(Number(b[1]), Number(b[2]), 0, 0);
+      if (endAt <= startAt) endAt.setDate(endAt.getDate() + 1);
+      return { startAt, endAt };
+    }
+
+    async saveSchedule() {
+      const i18n = this.ctx.i18n;
+      const s = this.ctx.settings;
+      const el = (c) => this.ctx.el.querySelector(c);
+      const msg = el(".pwtv-sched-msg");
+      const range = this.scheduleRange(el(".pwtv-sched-date").value, el(".pwtv-sched-start").value, el(".pwtv-sched-end").value);
+      const show = (text, err) => { msg.hidden = false; msg.textContent = text; msg.classList.toggle("pwtv-sched-err", !!err); };
+      if (!range) return show(i18n.t("iptv.schedule.bad"), true);
+      /* Les marges sont appliquees ICI, une fois pour toutes : ce qui est
+         enregistre est l'heure REELLE de debut et de fin.
+         Margins are applied HERE, once: what is stored is the ACTUAL
+         start and end time. */
+      const before = Math.max(0, Number(s.recordPadBefore) || 0);
+      const after = Math.max(0, Number(s.recordPadAfter) || 0);
+      const startAt = new Date(range.startAt.getTime() - before * 60000);
+      const endAt = new Date(range.endAt.getTime() + after * 60000);
+      if (endAt <= new Date()) return show(i18n.t("iptv.schedule.past"), true);
       try {
         const list = await fetch("/api/iptv/schedules").then((r) => r.json());
         list.push({
           id: "s" + Date.now().toString(36),
           url: this.current.url,
           channel: this.current.name,
+          programme: this.current.programme || this.current.title || "",
           startAt: startAt.toISOString(),
-          durationMinutes: Math.round(mins)
+          endAt: endAt.toISOString(),
+          durationMinutes: Math.round((endAt - startAt) / 60000)
         });
         await fetch("/api/iptv/schedules", {
           method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(list)
         });
-        this.setStatus(i18n.t("iptv.schedule.saved") + " " + startAt.toLocaleString());
+        show(i18n.t("iptv.schedule.saved") + " " + startAt.toLocaleString());
+        this.renderScheduleList();
       } catch (e) {
         console.warn("[piboard] iptv programmation", e);
-        this.setStatus(i18n.t("iptv.schedule.failed"));
+        show(i18n.t("iptv.schedule.failed"), true);
       }
+    }
+
+    async renderScheduleList() {
+      const i18n = this.ctx.i18n;
+      const ul = this.ctx.el.querySelector(".pwtv-sched-list");
+      if (!ul) return;
+      let list = [];
+      try { list = await fetch("/api/iptv/schedules").then((r) => r.json()); } catch (e) { list = []; }
+      const pending = (list || []).filter((x) => x && !x.done);
+      ul.innerHTML = pending.length ? pending.map((x) => `
+        <li>
+          <span class="pwtv-sched-name">${escapeHtml(x.channel || "")}</span>
+          <span class="pwtv-sched-when">${escapeHtml(new Date(x.startAt).toLocaleString())} · ${escapeHtml(String(x.durationMinutes || 0))} min</span>
+          <button type="button" class="pwtv-btn pwtv-sched-del" data-id="${escapeAttr(x.id)}">✕</button>
+        </li>`).join("") : `<li class="pwtv-sched-empty">${escapeHtml(i18n.t("iptv.schedule.none"))}</li>`;
+      ul.querySelectorAll("[data-id]").forEach((b) => b.addEventListener("click", async () => {
+        const kept = (list || []).filter((x) => x.id !== b.dataset.id);
+        await fetch("/api/iptv/schedules", {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(kept)
+        }).catch(() => null);
+        this.renderScheduleList();
+      }));
     }
 
     /* Les rendez-vous sont tenus PAR LA TUILE : l'enregistrement derive
@@ -927,12 +1010,11 @@
        chaine, puis lance l'enregistrement, qui s'arretera tout seul au
        bout de la duree demandee.
        Appointments are kept BY THE TILE: recording taps the player's
-       stream, so the channel must actually be playing. At the due time
-       the tile tunes to the channel, then starts the recording, which
-       stops by itself after the requested duration. */
+       stream, so the channel must actually be playing. */
     armSchedules() {
       clearInterval(this.schedTimer);
       this.schedTimer = setInterval(() => this.checkSchedules(), 30000);
+      this.checkSchedules();
     }
 
     async checkSchedules() {
@@ -941,6 +1023,9 @@
       try {
         const list = await fetch("/api/iptv/schedules").then((r) => r.json());
         const now = Date.now();
+        /* Une tolerance d'une minute de part et d'autre : la tuile
+           regarde toutes les 30 secondes, et une heure pile ne tombe
+           jamais pile. A minute's tolerance either way. */
         const due = (list || []).find((x) => x && !x.done && Math.abs(Date.parse(x.startAt) - now) < 60000);
         if (!due) return;
         due.done = true;
@@ -962,29 +1047,6 @@
       } finally {
         this.checkingSchedules = false;
       }
-    }
-
-    defaultScheduleTime() {
-      const d = new Date(Date.now() + 3600000);
-      return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
-    }
-
-    /* « 20:45 » vise aujourd'hui, ou demain si l'heure est deja passee ;
-       une date complete « 2026-09-20 20:45 » reste possible.
-       "20:45" means today, or tomorrow if already past. */
-    parseWhen(text) {
-      const t = String(text || "").trim();
-      let m = t.match(/^(\d{1,2})[h:](\d{2})$/);
-      if (m) {
-        const d = new Date();
-        d.setSeconds(0, 0);
-        d.setHours(Number(m[1]), Number(m[2]));
-        if (d.getTime() <= Date.now()) d.setDate(d.getDate() + 1);
-        return d;
-      }
-      m = t.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{1,2})[h:](\d{2})$/);
-      if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]), 0, 0);
-      return null;
     }
 
     /* L'etat vient du serveur, pas d'un compteur local : il reste juste

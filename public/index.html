@@ -368,6 +368,36 @@
   </div>
 </div>
 
+<!-- Explorateur de dossiers de la machine qui fait tourner PiBoard
+     (champ "folder" des reglages de tuile). Folder browser of the
+     machine running PiBoard. -->
+<div class="modal modal-stacked" id="folderModal" hidden>
+  <div class="modal-card folder-card">
+    <header class="modal-head">
+      <h2 data-i18n="folder.title">Choose a folder</h2>
+      <button class="modal-close" id="folderClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="folder-body">
+      <div class="folder-toolbar">
+        <button type="button" class="btn small" id="folderRoots" data-i18n="folder.roots">Locations</button>
+        <code class="folder-path" id="folderPath"></code>
+      </div>
+      <ul class="folder-list" id="folderList"></ul>
+      <div class="folder-new">
+        <input type="text" id="folderNewName" maxlength="100" placeholder="" data-i18n-placeholder="folder.newName">
+        <button type="button" class="btn small" id="folderCreate" data-i18n="folder.create">Create folder</button>
+      </div>
+      <p class="field-hint" id="folderStatus" hidden></p>
+    </div>
+    <div class="modal-foot">
+      <div class="form-actions">
+        <button type="button" class="btn" id="folderCancel" data-i18n="common.cancel">Cancel</button>
+        <button type="button" class="btn primary" id="folderChoose" data-i18n="folder.choose">Choose this folder</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal modal-stacked" id="updateModal" hidden>
   <div class="modal-card update-card">
     <header class="modal-head">
