@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.112.4
+
+- **Correctif : tuile Citation restant sur « Cette tuile n'a pas pu etre
+  chargee ».** Deux causes, toutes deux corrigees.
+  - Les fichiers propres a la tuile (`engine.js` et `quotes.json`, tous
+    deux nouveaux ou remplaces en 1.112.0) etaient demandes SANS le
+    numero de version, alors que `widget.js` et `widget.css` le portent
+    depuis longtemps -- precisement parce que le cache d'un kiosque
+    survit aux mises a jour. Le kiosque pouvait donc servir l'ancien
+    `quotes.json` depuis son cache, ou ne pas aller chercher
+    `engine.js`, pendant que le reste de la tuile etait a jour. Les
+    tuiles disposent desormais de `ctx.assetUrl()`, qui ajoute le
+    numero de version a n'importe lequel de leurs fichiers.
+  - Un echec de chargement remontait au tableau, qui n'affichait que son
+    message generique. La tuile affiche maintenant elle-meme ce qui a
+    echoue et pourquoi (fichier introuvable, code HTTP, collection
+    vide), et un toucher reessaye.
+
+- **Tests** : presence du numero de version sur les fichiers de la
+  tuile, message et cause affiches quand le chargement echoue, reprise
+  au toucher.
+
 ## 1.112.3
 
 - **Correctif : la reprise des envois de la 1.112.2 n'envoyait rien.**

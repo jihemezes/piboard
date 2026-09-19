@@ -516,6 +516,7 @@ const putCalls = [];
 const tileConfigsMock = {};
 const LIBRARY_MOCK = { fail: false, picked: [] };
 const SHUTDOWN_MOCK = { answer: { ok: false } };
+const QUOTE_MOCK = { fail: false };
 
 /* Mock avec etat pour les routes /api/crypto/* (server/crypto.js) :
    permet de simuler un repli sur donnees perimees (priceStale/
@@ -1007,6 +1008,9 @@ const dom = new JSDOM(html, {
          servis tels quels depuis le disque.
          Tile data files: served from disk as is. */
       {
+        if (QUOTE_MOCK.fail && /widgets\/quote\/quotes\.json/.test(u)) {
+          return Promise.resolve({ ok: false, status: 500, json: () => Promise.reject(new Error("nope")) });
+        }
         const m = u.match(/^(?:https?:\/\/[^/]+)?\/?(widgets\/[a-z0-9_-]+\/[a-z0-9_.-]+\.json)(?:\?.*)?$/i);
         if (m && fs.existsSync(path.join(PUB, m[1]))) {
           return json(JSON.parse(fs.readFileSync(path.join(PUB, m[1]), "utf8")));
@@ -6941,11 +6945,13 @@ function catalogItemFor(catalog, document, widgetId) {
     const qManifest = catalog.find((m) => m.id === "quote");
     const defaults = {};
     for (const f of qManifest.settings) defaults[f.key] = f.default;
+    const assetUrls = [];
     const makeCtx = (settings, id) => ({
       el: host, instanceId: id, manifest: qManifest,
       settings: Object.assign({}, defaults, settings),
       i18n: { lang: "fr" },
-      updateSettings(patch) { updates.push(patch); }
+      updateSettings(patch) { updates.push(patch); },
+      assetUrl(file) { const u = "widgets/quote/" + file + "?v=9.9.9"; assetUrls.push(u); return u; }
     });
     window.localStorage.removeItem("piboard.quote.q-test");
     // La suite tourne ici en mode edition : on en sort le temps du test.
@@ -6958,6 +6964,11 @@ function catalogItemFor(catalog, document, widgetId) {
     const textOf = () => (host.querySelector(".pwq-text") || {}).textContent || "";
     const first = textOf();
     assert("citation : un texte s'affiche", first.length > 0);
+    /* Les fichiers de la tuile doivent porter le numero de version,
+       comme widget.js : sinon, apres une mise a jour, le kiosque peut
+       servir l'ancien quotes.json depuis son cache (1.112.4). */
+    assert("citation : les fichiers de la tuile portent le numero de version",
+      assetUrls.some((u) => /engine\.js\?v=9\.9\.9$/.test(u)) && assetUrls.some((u) => /quotes\.json\?v=9\.9\.9$/.test(u)));
     assert("citation : par defaut, seules les citations sont tirees", host.querySelector(".pw-quote").dataset.cat === "quote");
     assert("citation : le pictogramme de la source est present", !!host.querySelector(".pwq-icon-quote"));
     {
@@ -7037,6 +7048,42 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("citation : en anglais, les pensees de JCVD sont traduites",
       /Jean-Claude Van Damme/.test(host.querySelector(".pwq-author").textContent)
       && !/[éèàç]/.test(textOf()));
+    /* Chargement impossible : la tuile doit DIRE pourquoi, au lieu de
+       laisser le tableau afficher « Cette tuile n'a pas pu etre
+       chargee » (1.112.4). Un toucher reessaye.
+       Loading impossible: the tile must SAY why. A tap retries. */
+    {
+      /* Une copie FRAICHE de la tuile : la collection deja chargee est
+         gardee dans la portee du script, un nouvel exemplaire de la
+         classe ne suffirait pas a rejouer le chargement.
+         A FRESH copy of the tile: the already-loaded collection lives in
+         the script's scope. */
+      let BrokenClass = null;
+      const keep = window.PiBoard.registerWidget;
+      window.PiBoard.registerWidget = (id, klass) => { if (id === "quote") BrokenClass = klass; };
+      const sc2 = document.createElement("script");
+      sc2.src = "/widgets/quote/widget.js?t=quote-broken";
+      document.head.appendChild(sc2);
+      for (let i = 0; i < 40 && !BrokenClass; i++) await sleep(25);
+      window.PiBoard.registerWidget = keep;
+      const brokenHost = document.createElement("div");
+      host.appendChild(brokenHost);
+      const broken = new BrokenClass(Object.assign(makeCtx({}, "q-broken"), { el: brokenHost }));
+      QUOTE_MOCK.fail = true;
+      await broken.init();
+      await sleep(80);
+      assert("citation : un chargement impossible est explique dans la tuile",
+        /n'a pas pu être chargée/.test(brokenHost.textContent));
+      assert("citation : la cause exacte est affichee", /HTTP 500/.test(brokenHost.textContent));
+      QUOTE_MOCK.fail = false;
+      brokenHost.querySelector(".pw-quote").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(80);
+      assert("citation : toucher reessaye et la tuile repart",
+        !/n'a pas pu être chargée/.test(brokenHost.textContent) && brokenHost.textContent.trim().length > 0);
+      broken.destroy();
+      brokenHost.remove();
+    }
+
     w.destroy();
     host.remove();
     document.body.classList.toggle("editing", wasEditingQ);

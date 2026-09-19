@@ -88,3 +88,8 @@ body.editing .pw-quote { cursor: inherit; }
   white-space: nowrap;
 }
 .pw-quote .pwq-empty { color: var(--muted); font-size: 13px; }
+
+/* Echec de chargement affiche dans la tuile, avec sa cause (1.112.4).
+   Loading failure shown in the tile, with its cause. */
+.pw-quote .pwq-error { color: var(--danger); }
+.pw-quote .pwq-error small { color: var(--muted); font-size: 0.8em; }

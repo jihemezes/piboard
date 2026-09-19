@@ -21,24 +21,42 @@
       if (window.PiBoardQuoteEngine) return resolve();
       const s = document.createElement("script");
       s.src = src;
-      s.onload = () => resolve();
-      s.onerror = () => reject(new Error("engine"));
+      s.onload = () => {
+        if (window.PiBoardQuoteEngine) resolve();
+        else reject(new Error("engine.js charge mais vide / loaded but empty"));
+      };
+      s.onerror = () => reject(new Error("engine.js introuvable / not found (" + src + ")"));
       document.head.appendChild(s);
     });
   }
 
-  function load(dir) {
+  /* Les fichiers passent par ctx.assetUrl : ils portent alors le numero
+     de version, comme widget.js. Sans cela, apres une mise a jour, le
+     kiosque pouvait servir depuis son cache l'ANCIEN quotes.json (ou
+     ne pas aller chercher engine.js du tout) alors que le reste de la
+     tuile etait a jour (1.112.4).
+     Files go through ctx.assetUrl, so they carry the version number
+     like widget.js. Without it, after an update the kiosk could serve
+     the OLD quotes.json from its cache while the rest of the tile was
+     up to date. */
+  function load(ctx) {
     if (loadPromise) return loadPromise;
-    const base = "widgets/" + dir + "/";
+    const url = (f) => (typeof ctx.assetUrl === "function"
+      ? ctx.assetUrl(f)
+      : "widgets/" + ctx.manifest.dir + "/" + f);
     loadPromise = Promise.all([
-      loadScript(base + "engine.js"),
-      fetch(base + "quotes.json").then((r) => r.json())
+      loadScript(url("engine.js")),
+      fetch(url("quotes.json")).then(async (r) => {
+        if (!r.ok) throw new Error("quotes.json : HTTP " + r.status);
+        try { return await r.json(); } catch (e) { throw new Error("quotes.json illisible / unreadable"); }
+      })
     ]).then(([, data]) => {
       // Ancien format (tableau simple) toujours accepte.
       // Old format (plain array) still accepted.
       DATA = Array.isArray(data)
         ? data.map((q, i) => Object.assign({ id: "legacy-" + i, cat: "quote", theme: "wisdom" }, q))
         : (data.items || []);
+      if (!DATA.length) throw new Error("collection vide / empty collection");
       return DATA;
     }).catch((e) => { loadPromise = null; throw e; });
     return loadPromise;
@@ -57,8 +75,8 @@
   };
 
   const TXT = {
-    fr: { fav: "Ajouté aux favoris", unfav: "Retiré des favoris", noFav: "Aucun favori pour l'instant : un appui long sur une citation l'ajoute.", empty: "Aucune source cochée dans les réglages de la tuile." },
-    en: { fav: "Added to favourites", unfav: "Removed from favourites", noFav: "No favourites yet: long-press a quote to add it.", empty: "No source ticked in the tile settings." }
+    fr: { fav: "Ajouté aux favoris", unfav: "Retiré des favoris", noFav: "Aucun favori pour l'instant : un appui long sur une citation l'ajoute.", empty: "Aucune source cochée dans les réglages de la tuile.", loadFailed: "La collection de citations n'a pas pu être chargée. Touchez pour réessayer." },
+    en: { fav: "Added to favourites", unfav: "Removed from favourites", noFav: "No favourites yet: long-press a quote to add it.", empty: "No source ticked in the tile settings.", loadFailed: "The quote collection could not be loaded. Tap to retry." }
   };
 
   const LONG_PRESS_MS = 600;
@@ -97,7 +115,22 @@
       this.ctx.el.innerHTML = `<div class="pw-quote" role="button" tabindex="0"></div>`;
       const box = this.ctx.el.querySelector(".pw-quote");
       this.bindGestures(box);
-      await load(this.ctx.manifest.dir);
+      /* Un echec de chargement est affiche DANS la tuile, avec sa
+         cause : sinon le tableau ne montrait que « Cette tuile n'a pas
+         pu etre chargee », sans rien pour comprendre. Toucher la tuile
+         reessaye.
+         A loading failure is shown IN the tile, with its cause:
+         otherwise the board only showed the generic "This tile could
+         not be loaded". Tapping the tile retries. */
+      try {
+        await load(this.ctx);
+      } catch (e) {
+        console.error("[piboard] citation : chargement", e);
+        this.loadError = String((e && e.message) || e);
+        this.render();
+        return;
+      }
+      this.loadError = null;
       this.observer = new ResizeObserver(() => this.fit());
       this.observer.observe(this.ctx.el);
       this.show(false);
@@ -124,6 +157,7 @@
       box.addEventListener("click", () => {
         if (editing()) return;
         if (this.longPressed) { this.longPressed = false; return; }
+        if (this.loadError) { this.init(); return; }
         this.show(true);
       });
       box.addEventListener("keydown", (e) => {
@@ -167,6 +201,10 @@
       if (!box) return;
       const s = this.ctx.settings;
       const lang = this.ctx.i18n.lang === "fr" ? "fr" : "en";
+      if (this.loadError) {
+        box.innerHTML = `<div class="pwq-empty pwq-error">${esc(this.t("loadFailed"))}<br><small>${esc(this.loadError)}</small></div>`;
+        return;
+      }
       const q = this.current;
       if (!q) {
         box.innerHTML = `<div class="pwq-empty">${esc(this.t(s.favoritesOnly ? "noFav" : "empty"))}</div>`;

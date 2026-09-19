@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.112.3
+   Version 1.112.4
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2034,6 +2034,19 @@
         instanceId: rec.conf.id,
         manifest: rec.manifest,
         api: widgetApi,
+        /* URL d'un fichier de la tuile (donnees, module...) portant le
+           numero de version, comme widget.js et widget.css. Sans lui,
+           une tuile qui va chercher ses propres fichiers peut recevoir
+           la version d'AVANT la mise a jour, gardee en cache par le
+           kiosque -- le reste de la tuile etant, lui, a jour.
+           URL of one of the tile's files (data, module...) carrying the
+           version number, like widget.js and widget.css. Without it, a
+           tile fetching its own files can get the version from BEFORE
+           the update, kept in the kiosk's cache. */
+        assetUrl(file) {
+          const bust = assetVersion ? "?v=" + encodeURIComponent(assetVersion) : "";
+          return "widgets/" + rec.manifest.dir + "/" + String(file) + bust;
+        },
         /* Permet a une tuile d'ecrire l'un de SES PROPRES reglages, et
            qu'il soit enregistre comme n'importe quel autre. Utilise par
            la tuile Logo/Image, dont le choix du fichier se fait dans un
