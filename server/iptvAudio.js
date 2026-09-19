@@ -180,9 +180,22 @@ function resetCache() {
    detail of that finding), ffmpeg only re-encodes/remuxes what it
    receives -- reuses the already-proven fragmented MP4 muxing logic
    as-is, without duplicating it. */
-function streamTranscoded(url, res, onError, mode, inputStream) {
+/* `opts.pipeSource` : l'entree est un flux, mais c'est le flux BRUT du
+   fournisseur (lu par PiBoard lui-meme), pas la sortie deja transcodee
+   de VLC. Les pistes doivent donc etre traitees comme lorsque ffmpeg
+   allait chercher l'URL tout seul. Cette distinction existe depuis que
+   l'enregistrement derive le flux deja recu, pour n'ouvrir qu'UNE seule
+   connexion chez le fournisseur (1.113.1).
+   `opts.pipeSource`: the input is a stream, but the provider's RAW
+   stream (read by PiBoard itself), not VLC's already-transcoded output.
+   The tracks must therefore be handled as when ffmpeg fetched the URL
+   itself. This distinction exists since recording taps the stream
+   already received, to open only ONE connection to the provider. */
+function streamTranscoded(url, res, onError, mode, inputStream, opts) {
   const fullTranscode = mode === "full";
   const usingPipe = !!inputStream;
+  const rawPipe = usingPipe && !!(opts && opts.pipeSource);
+  const vlcPipe = usingPipe && !rawPipe;
 
   const args = [
     "-hide_banner", "-loglevel", "error",
@@ -233,7 +246,7 @@ function streamTranscoded(url, res, onError, mode, inputStream) {
     // server/iptvVlc.js:spawnTranscode). ffmpeg here only does a simple
     // REMUX (plain copy, no re-encoding): faster and more reliable than
     // a needless second re-encoding pass.
-    ...(usingPipe ? ["-c:v", "copy"] : (fullTranscode
+    ...(vlcPipe ? ["-c:v", "copy"] : (fullTranscode
       ? ["-c:v", "libx264", "-preset", "veryfast", "-crf", "23", "-pix_fmt", "yuv420p"]
       : ["-c:v", "copy"])), // video INTACTE en mode audio seul : c'est ce qui le rend leger / video UNTOUCHED in audio-only mode: what keeps it light
     // aac_adtstoasc : necessaire specifiquement quand l'entree vient de
@@ -258,7 +271,7 @@ function streamTranscoded(url, res, onError, mode, inputStream) {
     // nothing, regardless of channel. Confirmed by the diagnostic tool:
     // "Malformed AAC bitstream detected", "frame=1 ... Conversion
     // failed!".
-    ...(usingPipe ? ["-c:a", "copy", "-bsf:a", "aac_adtstoasc"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
+    ...(vlcPipe ? ["-c:a", "copy", "-bsf:a", "aac_adtstoasc"] : ["-c:a", "aac", "-b:a", "128k", "-ac", "2"]),
     // default_base_moof (pense pour une consommation via MediaSource/
     // appendBuffer, comme le fait hls.js) retire au profit de faststart :
     // ce flux est lu ici en <video src> progressif direct, pas via MSE --

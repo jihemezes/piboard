@@ -132,67 +132,79 @@ test("espace libre : un nombre, ou null si le dossier n'existe pas", () => {
 });
 
 
-/* ---------- Moteur complet, avec un FAUX ffmpeg ----------
-   Un petit script remplace ffmpeg : il ecrit dans le fichier demande,
-   puis s'arrete tout seul (flux coupe) ou attend qu'on l'arrete. Cela
-   exerce pour de vrai la reprise, l'assemblage des parties et l'arret,
-   sans reseau ni ffmpeg.
-   A small script stands in for ffmpeg: it writes to the requested file,
-   then either exits on its own (feed dropped) or waits to be stopped. */
+/* ---------- Moteur complet : derivation du flux du lecteur ----------
+   Aucun ffmpeg, aucun reseau : un flux en memoire joue le role du flux
+   du fournisseur tel que PiBoard le lit pour le lecteur. C'est ce que
+   l'enregistrement derive depuis la 1.113.1 -- plus de seconde
+   connexion.
+   No ffmpeg, no network: an in-memory stream plays the provider's
+   stream as PiBoard reads it for the player. That is what recording
+   taps since 1.113.1 -- no second connection. */
 async function engineTests() {
-  const iptvAudio = require("../server/iptvAudio.js");
+  const { PassThrough } = require("stream");
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "piboard-rec-e2e-"));
-  const fake = path.join(dir, "fake-ffmpeg.js");
-  const flag = path.join(dir, "drop.flag");
-  fs.writeFileSync(fake, `
-    const fs = require("fs");
-    const out = process.argv[process.argv.length - 1];
-    fs.writeFileSync(out, "X".repeat(1000));
-    // Tant que le drapeau existe, on simule un flux qui tombe aussitot.
-    if (fs.existsSync(${JSON.stringify(flag)})) { fs.unlinkSync(${JSON.stringify(flag)}); process.exit(1); }
-    process.on("SIGTERM", () => { fs.appendFileSync(out, "END"); process.exit(0); });
-    setInterval(() => {}, 1000);
-  `);
-  const realFind = iptvAudio.findFfmpeg;
-  // node <script> : le dernier argument reste le fichier de sortie.
-  iptvAudio.findFfmpeg = async () => process.execPath;
-  const realSpawnArgs = R.__testSpawnPrefix;
-  R.__setSpawnPrefix([fake]);
-
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   let ok = 0, ko = 0;
   const check = (name, cond) => { if (cond) { ok++; console.log("  OK   " + name); } else { ko++; console.log("  FAIL " + name); } };
 
-  // 1. Enregistrement simple : demarrage, arret, fichier assemble.
-  const rec = await R.start({ url: "http://example.invalid/live/1.ts", channel: "Arte", dir });
-  check("moteur : l'enregistrement demarre et est listable", R.list().length === 1 && rec.status === "recording");
-  await wait(300);
-  const stopped = R.stop(rec.id, "user");
-  check("moteur : l'arret est pris en compte", !!stopped);
-  await wait(400);
-  const done = R.recent()[0];
-  check("moteur : le fichier final existe et porte le nom de la chaine",
-    done && done.status === "done" && fs.existsSync(path.join(dir, done.file)) && /^Arte - /.test(done.file));
-  check("moteur : l'arret laisse ffmpeg fermer proprement",
-    fs.readFileSync(path.join(dir, done.file), "utf8").endsWith("END"));
-  check("moteur : plus rien n'est en cours", R.list().length === 0);
+  // Sans flux en cours, l'enregistrement refuse plutot que d'ouvrir une
+  // connexion a lui : c'est tout l'objet du correctif.
+  let refused = null;
+  try { await R.start({ sid: "absent", channel: "Arte", dir }); } catch (e) { refused = e; }
+  check("derivation : sans flux en cours, l'enregistrement est refuse",
+    refused && refused.code === "no-stream");
 
-  // 2. Coupure du flux : une deuxieme partie est ecrite, puis assemblee.
-  fs.writeFileSync(flag, "1");
-  const rec2 = await R.start({ url: "http://example.invalid/live/2.ts", channel: "TF1", dir });
-  await wait(2600);   // le temps de la premiere tentative + reprise
-  const live = R.list()[0];
-  check("moteur : apres une coupure, l'enregistrement repart", live && live.retries >= 1);
-  R.stop(rec2.id, "user");
-  await wait(500);
-  const joined = R.recent()[0];
-  const size = joined && fs.statSync(path.join(dir, joined.file)).size;
-  check("moteur : les parties sont assemblees en un seul fichier",
-    joined && joined.status === "done" && size > 1500
-    && !fs.readdirSync(dir).some((n) => /\.part\d+\.ts$/.test(n)));
+  const source = new PassThrough();
+  const closeTap = R.openTap("sid1", source);
+  source.write(Buffer.from("AVANT"));          // avant l'enregistrement
+  await wait(30);
 
-  iptvAudio.findFfmpeg = realFind;
-  R.__setSpawnPrefix(realSpawnArgs || []);
+  const rec = await R.start({ sid: "sid1", channel: "Arte", dir });
+  check("derivation : l'enregistrement demarre sur le flux en cours",
+    rec.status === "recording" && rec.sid === "sid1" && R.list().length === 1);
+  source.write(Buffer.from("PENDANT"));
+  await wait(60);
+
+  // Coupure du flux : le lecteur se reconnecte, le fichier continue.
+  closeTap();
+  await wait(30);
+  check("derivation : une coupure met l'enregistrement en reconnexion",
+    R.list()[0].status === "reconnecting" && R.list()[0].retries === 1);
+  const source2 = new PassThrough();
+  R.openTap("sid1", source2);
+  await wait(30);
+  check("derivation : la nouvelle derivation reprend l'enregistrement", R.list()[0].status === "recording");
+  source2.write(Buffer.from("APRES"));
+  await wait(60);
+
+  const view = R.stop(rec.id, "user");
+  await wait(60);
+  const file = path.join(dir, view.file);
+  const content = fs.existsSync(file) ? fs.readFileSync(file, "utf8") : "";
+  check("derivation : seul ce qui suit l'appui est enregistre", content.startsWith("PENDANT"));
+  check("derivation : la reprise continue le MEME fichier, a la suite", content === "PENDANTAPRES");
+  check("derivation : plus rien n'est en cours, l'enregistrement est termine",
+    R.list().length === 0 && R.recent()[0].status === "done");
+
+  // Fin de la lecture : ce qui en vivait s'arrete.
+  const source3 = new PassThrough();
+  R.openTap("sid2", source3);
+  const rec2 = await R.start({ sid: "sid2", channel: "TF1", dir });
+  source3.write(Buffer.from("X"));
+  await wait(40);
+  R.stopForSid("sid2", "stream-ended");
+  check("derivation : fermer le lecteur arrete son enregistrement", R.list().length === 0);
+  check("derivation : le fichier est conserve", fs.existsSync(path.join(dir, rec2.file)));
+
+  // Un enregistrement sans un octet ne doit pas laisser de fichier vide.
+  const source4 = new PassThrough();
+  R.openTap("sid3", source4);
+  const rec3 = await R.start({ sid: "sid3", channel: "Vide", dir });
+  R.stop(rec3.id, "user");
+  await wait(120);
+  check("derivation : un enregistrement vide ne laisse pas de fichier",
+    !fs.existsSync(path.join(dir, rec3.file)) && R.recent()[0].status === "failed");
+
   fs.rmSync(dir, { recursive: true, force: true });
   return { ok, ko };
 }

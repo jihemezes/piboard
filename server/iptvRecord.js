@@ -1,42 +1,40 @@
 /* ============================================================
    PiBoard - server/iptvRecord.js
-   Enregistrement d'un flux IPTV (direct ou VOD) dans un fichier, pendant
-   que la lecture continue.
+   Enregistrement d'une chaine IPTV PENDANT qu'on la regarde.
 
-   PRINCIPE. ffmpeg RECOPIE les pistes telles quelles (`-c copy`) : pas
-   de reencodage, donc un cout processeur negligeable, meme sur un
-   Raspberry Pi. Un reencodage video, lui, serait hors de portee.
+   UNE SEULE CONNEXION (1.113.1). Un abonnement IPTV n'autorise
+   generalement qu'UN flux simultane. Ouvrir une deuxieme connexion pour
+   enregistrer coupait donc le visionnage -- c'est ce qui s'est passe en
+   1.113.0. L'enregistrement DERIVE desormais les octets deja recus pour
+   le lecteur : PiBoard lit le flux du fournisseur, l'envoie au lecteur,
+   et, quand l'enregistrement est en cours, en ecrit une copie dans un
+   fichier. Zero connexion supplementaire.
+   Consequence assumee : l'enregistrement est lie au visionnage. Changer
+   de chaine ou fermer le lecteur arrete l'enregistrement en cours, et
+   un enregistrement programme suppose que la chaine soit affichee a
+   l'heure dite.
 
-   CONNEXION SEPAREE. L'enregistrement ouvre sa PROPRE connexion vers le
-   fournisseur, independante du lecteur. C'est ce qui permet de zapper,
-   de fermer la tuile ou d'enregistrer a l'heure dite sans rien regarder.
-   Contrepartie : un abonnement limite a une seule connexion simultanee
-   refusera l'une des deux. L'echec est alors immediat et explicite (le
-   fournisseur coupe), et le reglage « Enregistrement » de la tuile le
-   rappelle.
+   FICHIER .ts, tel qu'il sort du fournisseur. C'est le format d'origine
+   (MPEG-TS) : rien n'est reencode, le fichier se lit dans VLC et dans la
+   plupart des lecteurs Windows, et il reste lisible meme tronque -- une
+   coupure de courant en pleine ecriture laisse un enregistrement
+   utilisable, la ou un .mp4 interrompu serait perdu. La conversion en
+   .mp4 se fait apres coup, a la demande, sans reencodage non plus.
 
-   FICHIER .ts, ET RIEN D'AUTRE PENDANT L'ENREGISTREMENT. Le MPEG-TS se
-   lit meme tronque : une coupure de courant en pleine ecriture laisse un
-   fichier utilisable, la ou un .mp4 interrompu est perdu (son index n'est
-   ecrit qu'a la fin). La conversion en .mp4, elle, se fait APRES coup, a
-   la demande, et sans reencodage non plus.
+   REPRISE APRES COUPURE. Quand le flux tombe, le lecteur se reconnecte
+   et une nouvelle derivation prend le relais : les octets repartent dans
+   le MEME fichier, a la suite.
 
-   REPRISE APRES COUPURE. Un flux IPTV tombe regulierement sans que ce
-   soit une panne. Chaque reprise ecrit une PARTIE numerotee
-   (`nom.part1.ts`, `nom.part2.ts`...), et l'arret les assemble en un
-   seul fichier. Assembler des MPEG-TS, c'est les mettre bout a bout :
-   aucune reecriture, aucune perte.
-
-   Recording an IPTV stream (live or VOD) to a file while playback
-   continues. ffmpeg COPIES the tracks as they are (`-c copy`): no
-   re-encoding, so negligible CPU, even on a Raspberry Pi. The recording
-   opens its OWN connection to the provider, independent of the player,
-   which is what allows zapping, closing the tile, or recording at a set
-   time; a subscription limited to one simultaneous connection will
-   refuse one of the two. Files are .ts while recording, because MPEG-TS
-   plays even when truncated; .mp4 conversion happens afterwards, on
-   demand, also without re-encoding. Each reconnection writes a numbered
-   part, and stopping concatenates them into one file.
+   Recording an IPTV channel WHILE watching it. ONE SINGLE CONNECTION: an
+   IPTV subscription usually allows only one simultaneous stream, so
+   opening a second connection to record cut off playback (what happened
+   in 1.113.0). Recording now TAPS the bytes already received for the
+   player: PiBoard reads the provider's stream, sends it to the player
+   and, while recording, writes a copy to a file. No extra connection.
+   Trade-off: recording is tied to playback. The file is the provider's
+   own MPEG-TS, nothing re-encoded, readable even when truncated; .mp4
+   conversion happens afterwards, on demand. When the feed drops, the
+   player reconnects and the new tap continues the SAME file.
    ============================================================ */
 
 "use strict";
@@ -185,13 +183,18 @@ function publicView(rec) {
     id: rec.id,
     name: rec.name,
     channel: rec.channel,
-    file: rec.finalFile || (rec.name + ".ts"),
+    sid: rec.tapSid,
+    file: rec.name + ".ts",
     dir: rec.dir,
     status: rec.status,
     startedAt: rec.startedAt,
     elapsedSec: Math.round((Date.now() - rec.startedAt) / 1000),
     bytes: rec.bytes,
+    /* Nombre de reprises du flux : la tuile affiche « reconnexion » tant
+       qu'aucune derivation n'alimente le fichier.
+       Number of feed resumptions. */
     retries: rec.retries,
+    live: !!rec.tapSid && taps.has(rec.tapSid),
     scheduled: !!rec.scheduled,
     maxMinutes: rec.maxMinutes || 0,
     error: rec.error || null,
@@ -203,109 +206,100 @@ function list() {
   return [...recordings.values()].map(publicView);
 }
 
-function partPath(rec, n) {
-  return path.join(rec.dir, rec.name + (n > 1 ? ".part" + n : "") + ".ts");
+/* ---------- Derivations / taps ----------
+   Une derivation, c'est le flux du fournisseur tel que PiBoard le lit
+   pour le lecteur. Chaque lecture en cours s'enregistre ici sous
+   l'identifiant que le lecteur a choisi (sid), et s'en retire a la fin.
+   A tap is the provider's stream as PiBoard reads it for the player.
+   Each playback registers here under the id the player chose (sid). */
+const taps = new Map();   // sid -> { write(buf), close() }
+
+function openTap(sid, sourceStream) {
+  if (!sid || !sourceStream) return () => {};
+  const tap = { sid, sinks: new Set() };
+  const onData = (buf) => {
+    for (const sink of tap.sinks) {
+      try { sink.write(buf); } catch (e) { /* ecriture perdue, on continue */ }
+    }
+  };
+  sourceStream.on("data", onData);
+  taps.set(sid, tap);
+  const close = () => {
+    sourceStream.off("data", onData);
+    if (taps.get(sid) === tap) taps.delete(sid);
+    /* Le flux est tombe : les enregistrements qui en vivaient restent
+       ouverts, en attente de la derivation suivante (le lecteur se
+       reconnecte). Ils ne sont PAS arretes ici.
+       The feed dropped: recordings living off it stay open, waiting for
+       the next tap. They are NOT stopped here. */
+    for (const rec of recordings.values()) {
+      if (rec.tapSid === sid && rec.status === "recording") {
+        rec.status = "reconnecting";
+        rec.retries++;
+      }
+    }
+  };
+  sourceStream.on("end", close);
+  sourceStream.on("close", close);
+  sourceStream.on("error", close);
+  /* Un enregistrement deja en cours pour ce sid reprend aussitot : c'est
+     la reprise apres coupure, dans le MEME fichier.
+     A recording already running for this sid resumes at once. */
+  for (const rec of recordings.values()) {
+    if (rec.tapSid === sid && !rec.stopping && rec.sink) {
+      tap.sinks.add(rec.sink);
+      rec.status = "recording";
+    }
+  }
+  return close;
 }
 
-function ffmpegArgs(url, out) {
-  return [
-    "-hide_banner", "-loglevel", "error",
-    // Reconnexion interne de ffmpeg : elle rattrape les micro-coupures
-    // sans perdre le fichier. La reprise complete (nouveau processus)
-    // ne sert que lorsqu'elle echoue.
-    // ffmpeg's own reconnection catches micro-drops without losing the
-    // file; a full retry only happens when it gives up.
-    "-reconnect", "1", "-reconnect_streamed", "1", "-reconnect_delay_max", "10",
-    "-rw_timeout", "20000000",
-    "-i", url,
-    "-map", "0",
-    "-c", "copy",
-    // Horodatages recalcules : un flux en direct commence rarement a
-    // zero, et un fichier qui demarre a 3 h 12 deroute les lecteurs.
-    // Timestamps rebuilt: a live feed rarely starts at zero.
-    "-avoid_negative_ts", "make_zero",
-    "-f", "mpegts",
-    "-y", out
-  ];
-}
+function hasTap(sid) { return taps.has(sid); }
+
+/* ---------- Moteur / engine ---------- */
 
 async function start(opts) {
   const o = opts || {};
-  const url = String(o.url || "");
-  if (!/^https?:\/\//i.test(url)) throw new Error("url");
-  const ffmpeg = await iptvAudio.findFfmpeg();
-  if (!ffmpeg) { const e = new Error("ffmpeg"); e.code = "no-ffmpeg"; throw e; }
+  const sid = String(o.sid || "");
+  const tap = taps.get(sid);
+  if (!tap) { const e = new Error("aucun flux en cours / no stream in progress"); e.code = "no-stream"; throw e; }
 
   const dir = ensureDir(o.dir);
   const existing = fs.readdirSync(dir);
   const name = uniqueName(buildFileName({ channel: o.channel, programme: o.programme }), existing);
+  const file = path.join(dir, name + ".ts");
 
   const rec = {
     id: "r" + (++seq) + "-" + Date.now().toString(36),
     name,
     channel: o.channel || "",
-    url,
     dir,
-    ffmpeg,
+    tapSid: sid,
     status: "recording",
     startedAt: Date.now(),
     bytes: 0,
-    part: 1,
     retries: 0,
     maxMinutes: Number(o.maxMinutes) > 0 ? Number(o.maxMinutes) : 0,
     minFreeMB: Number(o.minFreeMB) > 0 ? Number(o.minFreeMB) : 0,
     scheduled: !!o.scheduled,
-    parts: [],
+    file,
     stopping: false,
     stopReason: null,
     error: null
   };
+  /* `flags: "a"` : une reprise apres coupure ecrit a la SUITE du meme
+     fichier, sans rien effacer. / Appending, so a resumption continues
+     the same file. */
+  rec.sink = fs.createWriteStream(file, { flags: "a" });
+  rec.sink.on("error", (e) => { rec.error = String(e.message || e); stop(rec.id, "write-error"); });
+  tap.sinks.add(rec.sink);
   recordings.set(rec.id, rec);
-  spawnPart(rec);
-  rec.watch = setInterval(() => watch(rec), 5000);
+  rec.watch = setInterval(() => watch(rec), 3000);
   return publicView(rec);
 }
 
-function spawnPart(rec) {
-  const out = partPath(rec, rec.part);
-  rec.parts.push(out);
-  rec.current = out;
-  const child = spawn(rec.ffmpeg, spawnPrefix.concat(ffmpegArgs(rec.url, out)), { stdio: ["ignore", "ignore", "pipe"] });
-  rec.child = child;
-  let err = "";
-  child.stderr.on("data", (d) => { err = (err + String(d)).slice(-2000); });
-  child.on("error", (e) => { rec.error = String(e.message || e); });
-  child.on("close", () => {
-    rec.child = null;
-    if (rec.stopping || rec.stopReason) return finish(rec);
-    /* ffmpeg a rendu la main sans qu'on le lui demande : le flux est
-       tombe. On garde ce qui est ecrit et on repart dans une nouvelle
-       partie, qui sera assemblee a l'arret.
-       ffmpeg exited on its own: the feed dropped. Keep what is written
-       and start a new part, concatenated when stopping. */
-    if (err) rec.error = err.split("\n").filter(Boolean).pop() || null;
-    if (!shouldRetry(rec, 20)) {
-      rec.stopReason = "stream-lost";
-      return finish(rec);
-    }
-    rec.status = "reconnecting";
-    const delay = retryDelayMs(rec.retries);
-    rec.retries++;
-    rec.part++;
-    rec.retryTimer = setTimeout(() => {
-      if (rec.stopping) return finish(rec);
-      rec.status = "recording";
-      spawnPart(rec);
-    }, delay);
-  });
-}
-
 function watch(rec) {
-  let bytes = 0;
-  for (const p of rec.parts) {
-    try { bytes += fs.statSync(p).size; } catch (e) { /* partie pas encore creee */ }
-  }
-  rec.bytes = bytes;
+  try { rec.bytes = fs.statSync(rec.file).size; } catch (e) { /* pas encore ecrit */ }
   const reason = stopReason(
     { elapsedMs: Date.now() - rec.startedAt, freeMB: freeMB(rec.dir) },
     { maxMinutes: rec.maxMinutes, minFreeMB: rec.minFreeMB }
@@ -313,50 +307,31 @@ function watch(rec) {
   if (reason) stop(rec.id, reason);
 }
 
-/* Assemblage des parties : mises bout a bout, sans reecriture. Une seule
-   partie est simplement renommee.
-   Concatenating parts: end to end, no rewriting. */
-function concatParts(rec) {
-  const target = path.join(rec.dir, rec.name + ".ts");
-  const present = rec.parts.filter((p) => { try { return fs.statSync(p).size > 0; } catch (e) { return false; } });
-  if (!present.length) return null;
-  if (present.length === 1) {
-    if (present[0] !== target) fs.renameSync(present[0], target);
-  } else {
-    const tmp = target + ".joining";
-    const out = fs.openSync(tmp, "w");
-    try {
-      for (const p of present) fs.writeSync(out, fs.readFileSync(p));
-    } finally {
-      fs.closeSync(out);
-    }
-    fs.renameSync(tmp, target);
-    /* La PREMIERE partie porte deja le nom final (nom.ts) : la supprimer
-       avec les autres effacerait le fichier qu'on vient d'assembler.
-       The FIRST part already bears the final name (name.ts): deleting it
-       along with the others would erase the file just assembled. */
-    for (const p of present) {
-      if (path.resolve(p) === path.resolve(target)) continue;
-      try { fs.unlinkSync(p); } catch (e) { /* deja renomme */ }
-    }
-  }
-  // Les parties vides d'une tentative ratee ne doivent pas trainer.
-  // Empty parts from a failed attempt must not linger.
-  for (const p of rec.parts) {
-    if (p === target) continue;
-    try { if (fs.existsSync(p) && fs.statSync(p).size === 0) fs.unlinkSync(p); } catch (e) { /* rien */ }
-  }
-  return target;
-}
-
 function finish(rec) {
   clearInterval(rec.watch);
-  clearTimeout(rec.retryTimer);
-  let file = null;
-  try { file = concatParts(rec); } catch (e) { rec.error = String(e.message || e); }
-  rec.finalFile = file ? path.basename(file) : null;
-  try { rec.bytes = file ? fs.statSync(file).size : 0; } catch (e) { /* rien */ }
+  const tap = taps.get(rec.tapSid);
+  if (tap) tap.sinks.delete(rec.sink);
+  try { rec.bytes = fs.statSync(rec.file).size; } catch (e) { rec.bytes = 0; }
   rec.status = rec.bytes > 0 ? "done" : "failed";
+  /* Le fichier n'est referme qu'ensuite, et le menage se fait DANS ce
+     rappel : un flux d'ecriture ouvre le fichier au moment ou il en a
+     besoin, parfois apres notre appel. Supprimer avant aurait laisse un
+     fichier vide recree juste apres -- constate en test.
+     The file is closed afterwards, and the cleanup happens IN that
+     callback: a write stream opens the file when it needs to, sometimes
+     after our call. Deleting before would leave an empty file recreated
+     right after -- seen in testing. */
+  try {
+    rec.sink.end(() => {
+      let size = 0;
+      try { size = fs.statSync(rec.file).size; } catch (e) { size = 0; }
+      /* Un fichier vide ferait croire a un enregistrement reussi.
+         An empty file would look like a successful recording. */
+      if (!size) { try { fs.unlinkSync(rec.file); } catch (e) { /* rien */ } }
+      const kept = lastResults.find((v) => v.id === rec.id);
+      if (kept) { kept.bytes = size; kept.status = size > 0 ? "done" : "failed"; }
+    });
+  } catch (e) { /* deja ferme */ }
   rec.endedAt = Date.now();
   const view = publicView(rec);
   recordings.delete(rec.id);
@@ -372,16 +347,18 @@ function stop(id, reason) {
   if (!rec) return null;
   rec.stopping = true;
   rec.stopReason = reason || "user";
-  rec.status = "stopping";
-  clearTimeout(rec.retryTimer);
-  if (rec.child) {
-    // "q" sur l'entree n'est pas possible (stdio ignore) : SIGTERM suffit,
-    // ffmpeg ferme proprement un MPEG-TS.
-    // SIGTERM is enough: ffmpeg closes an MPEG-TS cleanly.
-    try { rec.child.kill("SIGTERM"); } catch (e) { /* deja mort */ }
-    return publicView(rec);
-  }
   return finish(rec);
+}
+
+/* Fin d'une lecture : les enregistrements qui en vivaient s'arretent,
+   puisque le flux qui les alimentait n'existe plus.
+   End of a playback: the recordings living off it stop. */
+function stopForSid(sid, reason) {
+  const out = [];
+  for (const rec of [...recordings.values()]) {
+    if (rec.tapSid === sid) out.push(stop(rec.id, reason || "stream-ended"));
+  }
+  return out;
 }
 
 function recent() { return lastResults.slice(); }
@@ -394,7 +371,17 @@ async function convert(dir, file) {
   if (!ffmpeg) { const e = new Error("ffmpeg"); e.code = "no-ffmpeg"; throw e; }
   const src = path.join(dir, path.basename(file));
   if (!fs.existsSync(src)) throw new Error("introuvable / not found");
+  if (!fs.statSync(src).size) throw new Error("fichier vide / empty file");
   const out = src.replace(/\.ts$/i, "") + ".mp4";
+  /* Ecriture dans un fichier TEMPORAIRE, renomme seulement en cas de
+     succes. En 1.113.0, ffmpeg creait le .mp4 puis echouait, et le
+     fichier vide restait dans la liste comme un enregistrement -- c'est
+     le « mp4 qui reste a 0 » constate. Un echec ne laisse plus rien.
+     Written to a TEMPORARY file, renamed only on success. In 1.113.0,
+     ffmpeg created the .mp4 then failed, and the empty file stayed in
+     the list as if it were a recording. A failure now leaves nothing. */
+  const tmp = out + ".converting";
+  const cleanup = () => { try { fs.unlinkSync(tmp); } catch (e) { /* rien */ } };
   return new Promise((resolve, reject) => {
     const child = spawn(ffmpeg, spawnPrefix.concat([
       "-hide_banner", "-loglevel", "error", "-i", src,
@@ -403,14 +390,21 @@ async function convert(dir, file) {
       // Index up front: the file plays without a full download.
       "-movflags", "+faststart",
       "-bsf:a", "aac_adtstoasc",
-      "-y", out
+      "-f", "mp4",
+      "-y", tmp
     ]), { stdio: ["ignore", "ignore", "pipe"] });
     let err = "";
     child.stderr.on("data", (d) => { err = (err + String(d)).slice(-2000); });
-    child.on("error", (e) => reject(e));
+    child.on("error", (e) => { cleanup(); reject(e); });
     child.on("close", (code) => {
-      if (code === 0 && fs.existsSync(out)) resolve({ file: path.basename(out), bytes: fs.statSync(out).size });
-      else reject(new Error(err.split("\n").filter(Boolean).pop() || ("ffmpeg " + code)));
+      let size = 0;
+      try { size = fs.statSync(tmp).size; } catch (e) { size = 0; }
+      if (code !== 0 || !size) {
+        cleanup();
+        return reject(new Error(err.split("\n").filter(Boolean).pop() || ("ffmpeg " + code)));
+      }
+      fs.renameSync(tmp, out);
+      resolve({ file: path.basename(out), bytes: size });
     });
   });
 }
@@ -419,7 +413,9 @@ function files(dir) {
   let names = [];
   try { names = fs.readdirSync(dir); } catch (e) { return []; }
   return names
-    .filter((n) => /\.(ts|mp4)$/i.test(n) && !/\.part\d+\.ts$/i.test(n))
+    // Ni les parties d'un ancien format, ni une conversion en cours.
+    // Neither old-format parts nor a conversion in progress.
+    .filter((n) => /\.(ts|mp4)$/i.test(n) && !/\.part\d+\.ts$/i.test(n) && !/\.converting$/i.test(n))
     .map((n) => {
       const st = fs.statSync(path.join(dir, n));
       return { name: n, bytes: st.size, modified: st.mtimeMs };
@@ -439,6 +435,7 @@ module.exports = {
   sanitizeName, buildFileName, uniqueName, stopReason, shouldRetry, retryDelayMs,
   scheduleDue, scheduleDurationMinutes, defaultDir,
   // moteur / engine
-  ensureDir, freeMB, start, stop, list, recent, convert, files, remove,
+  ensureDir, freeMB, start, stop, stopForSid, list, recent, convert, files, remove,
+  openTap, hasTap,
   __setSpawnPrefix
 };

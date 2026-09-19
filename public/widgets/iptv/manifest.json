@@ -1,6 +1,6 @@
 {
   "id": "iptv",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "name": {
     "en": "TV channels",
     "fr": "Chaînes TV"
@@ -177,6 +177,78 @@
           }
         }
       ]
+    },
+    {
+      "key": "recordDir",
+      "type": "text",
+      "default": "",
+      "group": {
+        "fr": "Enregistrement",
+        "en": "Recording"
+      },
+      "label": {
+        "fr": "Dossier d'enregistrement",
+        "en": "Recording folder"
+      },
+      "hint": {
+        "fr": "Chemin complet sur la machine qui fait tourner PiBoard, par exemple D:\\\\Videos\\\\PiBoard sous Windows ou /mnt/usb/tv sur le Pi. Vide = le dossier recordings des données de PiBoard.",
+        "en": "Full path on the machine running PiBoard, e.g. D:\\\\Videos\\\\PiBoard on Windows or /mnt/usb/tv on the Pi. Empty = the recordings folder inside PiBoard's data."
+      }
+    },
+    {
+      "key": "recordMaxMinutes",
+      "type": "number",
+      "default": 240,
+      "min": 0,
+      "max": 1440,
+      "group": {
+        "fr": "Enregistrement",
+        "en": "Recording"
+      },
+      "label": {
+        "fr": "Durée maximale (minutes)",
+        "en": "Maximum duration (minutes)"
+      },
+      "hint": {
+        "fr": "L'enregistrement s'arrête tout seul au bout de ce temps. 0 supprime la limite.",
+        "en": "The recording stops by itself after this. 0 removes the limit."
+      }
+    },
+    {
+      "key": "recordMinFreeMB",
+      "type": "number",
+      "default": 1024,
+      "min": 0,
+      "max": 1000000,
+      "group": {
+        "fr": "Enregistrement",
+        "en": "Recording"
+      },
+      "label": {
+        "fr": "Arrêter en dessous de (Mo libres)",
+        "en": "Stop below (MB free)"
+      },
+      "hint": {
+        "fr": "L'enregistrement s'arrête plutôt que de remplir le disque. 0 supprime le garde-fou.",
+        "en": "The recording stops rather than filling the disk. 0 removes the guard."
+      }
+    },
+    {
+      "key": "recordShowList",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "fr": "Enregistrement",
+        "en": "Recording"
+      },
+      "label": {
+        "fr": "Lister les enregistrements dans la tuile",
+        "en": "List the recordings in the tile"
+      },
+      "hint": {
+        "fr": "Ajoute un bouton dans la liste des chaînes : enregistrements réalisés, conversion en .mp4, suppression, espace libre.",
+        "en": "Adds a button in the channel list: recordings made, conversion to .mp4, deletion, free space."
+      }
     }
   ]
 }

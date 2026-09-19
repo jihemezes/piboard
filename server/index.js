@@ -62,6 +62,7 @@ const iptvAudio = require("./iptvAudio");
 const iptvHlsProxy = require("./iptvHlsProxy");
 const iptvVlc = require("./iptvVlc");
 const iptvRecord = require("./iptvRecord");
+const iptvSource = require("./iptvSource");
 const multer = require("multer");
 
 const PORT = Number(process.env.PIBOARD_PORT || 8090);
@@ -90,14 +91,6 @@ app.use(express.json({ limit: "1mb" }));
 const DEFAULT_SETTINGS = {
   lang: "en",            // en | fr
   theme: "auto",         // auto | dark | light
-  /* Enregistrement IPTV (voir server/iptvRecord.js). Dossier vide =
-     data/recordings. Les deux garde-fous evitent qu'un appui oublie
-     remplisse le disque.
-     IPTV recording. Empty folder = data/recordings. The two guards keep
-     a forgotten tap from filling the disk. */
-  iptvRecordDir: "",
-  iptvRecordMaxMinutes: 240,
-  iptvRecordMinFreeMB: 1024,
   /* Theme de couleurs du board (public/themes.js). "piboard" = le theme
      d'origine, dont `colors` ci-dessous porte les retouches. Les themes
      crees dans l'editeur sont dans `userThemes`.
@@ -2475,22 +2468,14 @@ function xtreamCredsOr400(req, res) {
    jamais suppose. Un dossier vide ramene a data/recordings.
    IPTV recording. The folder comes from the settings and can be
    anywhere, so it is resolved AND checked on every call. */
-function recordingDir() {
-  const s = Object.assign({}, DEFAULT_SETTINGS, store.read("settings", {}));
-  const custom = String(s.iptvRecordDir || "").trim();
-  return custom || iptvRecord.defaultDir(store.DATA_DIR);
+function recordingDir(req) {
+  const asked = String((req && (req.query.dir || (req.body || {}).dir)) || "").trim();
+  return asked || iptvRecord.defaultDir(store.DATA_DIR);
 }
 
-function recordingLimits() {
-  const s = Object.assign({}, DEFAULT_SETTINGS, store.read("settings", {}));
-  return {
-    maxMinutes: Number(s.iptvRecordMaxMinutes) || 0,
-    minFreeMB: Number(s.iptvRecordMinFreeMB) || 0
-  };
-}
 
 app.get("/api/iptv/recordings", async (req, res) => {
-  const dir = recordingDir();
+  const dir = recordingDir(req);
   let ready = true;
   let error = null;
   try { iptvRecord.ensureDir(dir); } catch (e) { ready = false; error = String(e.message || e); }
@@ -2511,19 +2496,22 @@ app.get("/api/iptv/recordings", async (req, res) => {
 app.post("/api/iptv/recordings/start", async (req, res) => {
   const b = req.body || {};
   try {
-    const limits = recordingLimits();
     const rec = await iptvRecord.start({
-      url: b.url,
+      /* Dossier et garde-fous viennent des reglages de LA TUILE : c'est
+         la qu'on configure son lecteur, et ils peuvent differer d'une
+         tuile a l'autre. Folder and guards come from THE TILE's
+         settings. */
+      sid: b.sid,
       channel: b.channel,
       programme: b.programme,
-      dir: recordingDir(),
-      maxMinutes: b.maxMinutes || limits.maxMinutes,
-      minFreeMB: limits.minFreeMB
+      dir: String(b.dir || "").trim() || iptvRecord.defaultDir(store.DATA_DIR),
+      maxMinutes: Number(b.maxMinutes) || 0,
+      minFreeMB: Number(b.minFreeMB) || 0
     });
     res.json({ ok: true, recording: rec });
   } catch (e) {
-    const code = e.code === "no-ffmpeg" ? "no-ffmpeg" : "start-failed";
-    res.status(400).json({ error: code, detail: String(e.message || e), hint: iptvAudio.installHint() });
+    const code = e.code === "no-stream" ? "no-stream" : "start-failed";
+    res.status(400).json({ error: code, detail: String(e.message || e) });
   }
 });
 
@@ -2535,7 +2523,7 @@ app.post("/api/iptv/recordings/:id/stop", (req, res) => {
 
 app.post("/api/iptv/recordings/convert", async (req, res) => {
   try {
-    res.json(Object.assign({ ok: true }, await iptvRecord.convert(recordingDir(), String((req.body || {}).file || ""))));
+    res.json(Object.assign({ ok: true }, await iptvRecord.convert(recordingDir(req), String((req.body || {}).file || ""))));
   } catch (e) {
     res.status(400).json({ error: String(e.message || e), hint: e.code === "no-ffmpeg" ? iptvAudio.installHint() : null });
   }
@@ -2543,7 +2531,7 @@ app.post("/api/iptv/recordings/convert", async (req, res) => {
 
 app.delete("/api/iptv/recordings/file", (req, res) => {
   try {
-    const ok = iptvRecord.remove(recordingDir(), String(req.query.file || ""));
+    const ok = iptvRecord.remove(recordingDir(req), String(req.query.file || ""));
     res.json({ ok });
   } catch (e) {
     res.status(400).json({ error: String(e.message || e) });
@@ -2562,35 +2550,16 @@ app.put("/api/iptv/schedules", (req, res) => {
   res.json(list);
 });
 
-async function runDueSchedules() {
-  const list = store.read("iptvSchedules", []);
-  if (!list.length) return;
-  const { due, missed } = iptvRecord.scheduleDue(list, new Date());
-  if (!due.length && !missed.length) return;
-  for (const s of due) {
-    try {
-      await iptvRecord.start({
-        url: s.url, channel: s.channel, programme: s.programme,
-        dir: recordingDir(), scheduled: true,
-        maxMinutes: iptvRecord.scheduleDurationMinutes(s) || recordingLimits().maxMinutes,
-        minFreeMB: recordingLimits().minFreeMB
-      });
-      s.done = true;
-      s.result = "started";
-    } catch (e) {
-      s.done = true;
-      s.result = "failed: " + String(e.message || e);
-    }
-  }
-  /* Un rendez-vous manque (PiBoard eteint a l'heure dite) est marque
-     comme tel plutot que lance en retard : enregistrer la fin d'une
-     emission deja commencee n'a pas ete demande.
-     A missed appointment is marked as such rather than started late. */
-  for (const s of missed) { s.done = true; s.result = s.result || "missed"; }
-  store.write("iptvSchedules", list);
-}
-
-setInterval(() => { runDueSchedules().catch((e) => console.warn("[piboard] enregistrements programmes", e)); }, 60000);
+/* Les rendez-vous ne sont PLUS declenches par le serveur : depuis que
+   l'enregistrement derive le flux du lecteur (une seule connexion, voir
+   server/iptvRecord.js), il faut que la chaine soit EFFECTIVEMENT
+   diffusee. C'est donc la tuile qui, a l'heure dite, se cale sur la
+   chaine et lance l'enregistrement ; le serveur ne fait que conserver la
+   liste (1.113.1).
+   Appointments are NO LONGER fired by the server: since recording taps
+   the player's stream (one single connection), the channel must
+   actually be playing. So the tile tunes to the channel at the due time
+   and starts recording; the server only keeps the list. */
 
 app.get("/api/iptv/audio-fix", async (req, res) => {
   const target = String(req.query.url || "");
@@ -2603,65 +2572,58 @@ app.get("/api/iptv/audio-fix", async (req, res) => {
     res.status(503).json({ error: "ffmpeg not available" });
     return;
   }
-
-  // Pour un flux EN DIRECT (pas VOD -- movies/series fonctionnent deja
-  // sans ceci, confirme par retour utilisateur), VLC recupere le flux
-  // en amont quand il est disponible : certains fournisseurs IPTV
-  // rejettent ffmpeg seul (405), constat confirme par examen du
-  // lecteur de reference officiel, qui utilise libVLC nativement pour
-  // le direct -- voir server/iptvVlc.js pour le detail complet. Repli
-  // PROPRE sur ffmpeg seul si VLC n'est pas installe : certains
-  // fournisseurs n'ont pas ce probleme, la fonctionnalite doit rester
-  // utilisable sans VLC dans ce cas.
-  // For a LIVE stream (not VOD -- movies/series already work without
-  // this, confirmed by user feedback), VLC fetches the stream upstream
-  // when available: some IPTV providers reject ffmpeg alone (405), a
-  // finding confirmed by examining the official reference player,
-  // which uses libVLC natively for live -- see server/iptvVlc.js for
-  // the full detail. CLEAN fallback to ffmpeg alone if VLC isn't
-  // installed: some providers don't have this problem, the feature
-  // must stay usable without VLC in that case.
+  /* `sid` : identifiant de CETTE lecture, choisi par le lecteur. Il sert
+     a l'enregistrement, qui derive les octets de ce flux-ci plutot que
+     d'ouvrir une seconde connexion chez le fournisseur (1.113.1).
+     `sid`: id of THIS playback, chosen by the player. Recording taps
+     this stream's bytes instead of opening a second connection. */
+  const sid = String(req.query.sid || "");
   const isLive = /\/live\//i.test(target) || !/\/(movie|series)\//i.test(target);
   let vlc = null;
   let inputStream;
+  let pipeSource = false;
+  let closeTap = () => {};
   if (isLive && (await iptvVlc.checkVlc())) {
     vlc = iptvVlc.spawnTranscode(target);
     inputStream = vlc.stdout;
-    // Capture de la sortie d'erreur de VLC : absente jusqu'ici, un echec
-    // silencieux du cote VLC (0 octet produit, ffmpeg bloque a attendre
-    // des donnees qui n'arrivent jamais) restait invisible. Journalisee
-    // cote serveur ; a considerer pour un futur ajout au diagnostic si
-    // le besoin s'en fait de nouveau sentir.
-    // Captures VLC's own error output: missing until now, a silent
-    // failure on VLC's side (0 bytes produced, ffmpeg stuck waiting for
-    // data that never arrives) stayed invisible. Logged server-side;
-    // worth adding to the diagnostic tool too if the need arises again.
     let vlcStderr = "";
     vlc.stderr.on("data", (d) => { vlcStderr = (vlcStderr + d.toString()).slice(-500); });
     vlc.on("close", (code) => {
       if (code !== 0 && code !== null) console.warn("[piboard] iptv vlc transcode code", code, vlcStderr.trim());
     });
     vlc.on("error", (e) => console.warn("[piboard] iptv vlc transcode", e.message || e));
+  } else if (sid) {
+    /* Sans VLC, ffmpeg allait chercher l'URL tout seul : PiBoard ne
+       voyait pas passer les octets et ne pouvait donc rien deriver. Il
+       lit desormais le flux lui-meme et le transmet a ffmpeg. Toujours
+       UNE connexion.
+       Without VLC, ffmpeg fetched the URL itself, so PiBoard never saw
+       the bytes and could tap nothing. It now reads the stream itself
+       and hands it to ffmpeg. Still ONE connection. */
+    try {
+      inputStream = await iptvSource.open(target);
+      pipeSource = true;
+    } catch (e) {
+      console.warn("[piboard] iptv source", e.message || e);
+      res.status(502).json({ error: "source", detail: String(e.message || e) });
+      return;
+    }
   }
-
+  if (sid && inputStream) closeTap = iptvRecord.openTap(sid, inputStream);
   res.setHeader("Content-Type", "video/mp4");
   res.setHeader("Cache-Control", "no-store");
-  iptvAudio.streamTranscoded(target, res, undefined, mode, inputStream);
-
-  // VLC est un processus SEPARE de ffmpeg (voir server/iptvAudio.js,
-  // qui arrete deja ffmpeg a la deconnexion) : doit etre arrete ici
-  // independamment, sinon un flux en direct continuerait a etre relaye
-  // dans le vide -- fuite garantie sur un Pi.
-  // VLC is a process SEPARATE from ffmpeg (see server/iptvAudio.js,
-  // which already stops ffmpeg on disconnect): must be stopped here
-  // independently, otherwise a live stream would keep being relayed
-  // into the void -- a guaranteed leak on a Pi.
-  if (vlc) {
-    const killVlc = () => { try { vlc.kill("SIGKILL"); } catch (e) { /* noop */ } };
-    res.on("close", killVlc);
-    res.on("error", killVlc);
-  }
+  iptvAudio.streamTranscoded(target, res, undefined, mode, inputStream, { pipeSource });
+  const done = () => {
+    closeTap();
+    if (vlc) { try { vlc.kill("SIGKILL"); } catch (e) { /* noop */ } }
+    if (inputStream && typeof inputStream.destroy === "function") {
+      try { inputStream.destroy(); } catch (e) { /* noop */ }
+    }
+  };
+  res.on("close", done);
+  res.on("error", done);
 });
+
 
 app.get("/api/iptv/audio-fix-available", async (req, res) => {
   // Le conseil d'installation depend du systeme (voir server/platform/)

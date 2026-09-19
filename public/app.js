@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.113.0
+   Version 1.113.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3658,7 +3658,7 @@
        INSIDE the home, which no existing family covered. */
     { key: "home", ids: ["tempo", "homeassistant"] },
     { key: "personal", ids: ["calendar", "mailbox", "notes"] },
-    { key: "entertainment", ids: ["teleprog", "iptv", "iptvrec", "youtube", "slideshow"] },
+    { key: "entertainment", ids: ["teleprog", "iptv", "youtube", "slideshow"] },
     { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
     /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
        systeme, elle surveille une consommation et un seuil, meme si la
@@ -5720,9 +5720,6 @@
     $("setDarkTile").value = colors.dark.tile;
     $("setLightBg").value = colors.light.bg;
     $("setLightTile").value = colors.light.tile;
-    $("setRecDir").value = settings.iptvRecordDir || "";
-    $("setRecMax").value = settings.iptvRecordMaxMinutes != null ? settings.iptvRecordMaxMinutes : 240;
-    $("setRecFree").value = settings.iptvRecordMinFreeMB != null ? settings.iptvRecordMinFreeMB : 1024;
     refreshThemeButtons();
     fillScreensaverForm();
     fillDesktopAppForm();
@@ -5758,9 +5755,6 @@
       immersive: $("setImmersive").checked,
       pageAutoAdvance: $("setPageAuto").checked,
       pageAutoSeconds: Math.max(3, Math.min(3600, Number($("setPageAutoSeconds").value) || 30)),
-      iptvRecordDir: String($("setRecDir").value || "").trim(),
-      iptvRecordMaxMinutes: Math.max(0, Number($("setRecMax").value) || 0),
-      iptvRecordMinFreeMB: Math.max(0, Number($("setRecFree").value) || 0),
       /* Les quatre pastilles retouchent le theme PiBoard : on fusionne,
          pour ne pas effacer ce que l'editeur de themes y a regle.
          The four swatches tweak the PiBoard theme: merge, so as not to

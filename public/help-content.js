@@ -370,17 +370,22 @@
           <p>N'importe quelle playlist M3U standard à laquelle vous avez légitimement accès. Le projet <b>IPTV-org</b> (iptv-org.github.io) publie de vastes playlists de chaînes en clair, organisées par pays, langue et catégorie — un bon point de départ.</p>
           <h4>Enregistrer une chaîne</h4>
           <p>Pendant la lecture, le bouton <b>⏺</b> lance l'enregistrement de ce que vous regardez, en direct comme en VOD. Le bouton passe au rouge et clignote, avec la durée écoulée et la taille du fichier à côté ; un nouvel appui (<b>⏹</b>) arrête l'enregistrement.</p>
-          <p>L'enregistrement vit <b>côté serveur</b> : il continue si vous changez de chaîne, si vous fermez la tuile ou même le navigateur. Il ouvre pour cela sa <b>propre connexion</b> chez le fournisseur. Attention : un abonnement limité à une seule connexion simultanée en refusera une des deux — l'échec est alors immédiat et affiché.</p>
-          <p>Le fichier est un <b>.ts</b>, lisible par VLC et par la plupart des lecteurs Windows, et surtout lisible <b>même s'il est tronqué</b> : une coupure de courant en pleine écriture laisse un enregistrement utilisable, là où un .mp4 interrompu serait perdu. La conversion en .mp4 se fait après coup, à la demande, depuis la tuile Enregistrements TV, et sans réencodage.</p>
-          <p><b>Reprise après coupure</b> : si le flux tombe, PiBoard relance l'enregistrement et met les morceaux bout à bout à l'arrêt, en un seul fichier. Le nom est construit à partir de la chaîne, du programme quand la source en donne un, et de la date et de l'heure.</p>
-          <p>Le bouton <b>🕒</b> programme un enregistrement de la chaîne affichée : heure de début (« 20:45 », ou une date complète) et durée en minutes. Une heure déjà passée vise le lendemain. Si PiBoard est éteint à l'heure dite, le rendez-vous est marqué comme manqué plutôt que lancé en retard.</p>
-          <p>Le dossier d'enregistrement, la durée maximale et le seuil d'espace disque se règlent dans les réglages généraux, section Outils multimédias. ffmpeg est nécessaire.</p>
+          <p><b>Une seule connexion.</b> Un abonnement IPTV n'autorise généralement qu'un seul flux simultané. L'enregistrement ne se connecte donc pas de son côté : il <b>dérive les octets déjà reçus</b> pour le lecteur. PiBoard lit le flux, l'envoie à l'écran, et en écrit une copie dans un fichier. Conséquence : l'enregistrement est lié au visionnage — changer de chaîne ou fermer le lecteur l'arrête, et seul ce qui suit l'appui est enregistré.</p>
+          <p>Le fichier est un <b>.ts</b>, le format tel qu'il sort du fournisseur : rien n'est réencodé, il se lit dans VLC et la plupart des lecteurs Windows, et il reste lisible <b>même tronqué</b> — une coupure de courant en pleine écriture laisse un enregistrement utilisable, là où un .mp4 interrompu serait perdu.</p>
+          <p><b>Reprise après coupure</b> : si le flux tombe, le lecteur se reconnecte et l'enregistrement continue dans le même fichier, à la suite. Le nom est construit à partir de la chaîne, du programme quand la source en donne un, et de la date et de l'heure.</p>
+          <p>Dans la liste des chaînes, le bouton <b>⏺</b> ouvre les <b>enregistrements déjà réalisés</b> : leur taille, l'espace libre du dossier, <b>mp4</b> pour convertir un fichier (sans réencodage) et <b>✕</b> pour le supprimer. Une conversion qui échoue le dit et ne laisse aucun fichier derrière elle.</p>
+          <p>Le bouton <b>🕒</b> programme un enregistrement de la chaîne affichée : heure de début (« 20:45 », ou une date complète) et durée en minutes. Une heure déjà passée vise le lendemain. Comme l'enregistrement dérive le flux du lecteur, la tuile doit être <b>ouverte et active</b> à l'heure dite : elle se cale alors toute seule sur la chaîne et lance l'enregistrement, qui s'arrête au bout de la durée demandée.</p>
+          <p>ffmpeg est nécessaire (section Outils multimédias des réglages généraux). Le dossier et les garde-fous se règlent dans les options de cette tuile, plus bas.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Adresse de la playlist</span><span class="help-opt-desc">L'URL du fichier .m3u.</span></div>
           <div class="help-opt"><span class="help-opt-name">Catégorie affichée à l'ouverture</span><span class="help-opt-desc">Facultatif. Évite de faire défiler une longue liste à chaque fois.</span></div>
           <div class="help-opt"><span class="help-opt-name">Reprendre automatiquement la dernière chaîne</span><span class="help-opt-desc">Désactivé par défaut : une tuile qui se met à diffuser toute seule sur un écran mural est rarement souhaitable.</span></div>
           <div class="help-opt"><span class="help-opt-name">Démarrer sans le son</span><span class="help-opt-desc">Activé par défaut. Les navigateurs refusent de toute façon de démarrer une vidéo sonore sans interaction préalable.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Plafond de qualité</span><span class="help-opt-desc">720p recommandé sur un Pi.</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Plafond de qualité</span><span class="help-opt-desc">720p recommandé sur un Pi.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Dossier d'enregistrement</span><span class="help-opt-desc">Chemin complet sur la machine qui fait tourner PiBoard : par exemple <code>D:\Videos\PiBoard</code> sous Windows, ou <code>/mnt/usb/tv</code> sur le Pi. Vide = le dossier <code>recordings</code> des données de PiBoard. Sur un Pi, un disque USB ou un partage réseau est très préférable à la carte SD.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Durée maximale</span><span class="help-opt-desc">L'enregistrement s'arrête tout seul au bout de ce temps. 0 supprime la limite.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Arrêter en dessous de (Mo libres)</span><span class="help-opt-desc">Plutôt que de remplir le disque. 0 supprime le garde-fou.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Lister les enregistrements dans la tuile</span><span class="help-opt-desc">Ajoute le bouton ⏺ dans la liste des chaînes.</span></div>`,
         en: `
           <span class="help-size">Size: 5×4 by default, from 3×3 to 12×12</span>
           <div class="help-warn"><b>PiBoard provides no channels and no content whatsoever.</b> This tile is a plain player: it only works if you <b>already</b> have, on your own, a subscription or access to an IPTV service, or a freely available channel playlist. With no playlist of yours, the tile stays empty — that is normal, there is nothing to unlock or configure on PiBoard's side. No service address is provided, suggested or bundled by default, and it is up to you to make sure the source you use is legal in your country.</div>
@@ -411,57 +416,25 @@
           <p>Any standard M3U playlist you have legitimate access to. The <b>IPTV-org</b> project (iptv-org.github.io) publishes large free-to-air playlists organized by country, language and category — a good starting point.</p>
           <h4>Recording a channel</h4>
           <p>While playing, the <b>⏺</b> button records what you are watching, live or VOD alike. The button turns red and blinks, with elapsed time and file size next to it; pressing it again (<b>⏹</b>) stops the recording.</p>
-          <p>The recording lives <b>server-side</b>: it continues if you change channel, close the tile or even the browser. To do so it opens its <b>own connection</b> to the provider. Careful: a subscription limited to one simultaneous connection will refuse one of the two — the failure is then immediate and shown.</p>
-          <p>The file is a <b>.ts</b>, readable by VLC and most Windows players, and above all readable <b>even when truncated</b>: a power cut mid-write leaves a usable recording, where an interrupted .mp4 would be lost. Conversion to .mp4 happens afterwards, on demand, from the TV recordings tile, and without re-encoding.</p>
-          <p><b>Resuming after a drop</b>: if the feed falls over, PiBoard restarts the recording and puts the pieces end to end when stopping, into a single file. The name is built from the channel, the programme when the source gives one, and the date and time.</p>
-          <p>The <b>🕒</b> button schedules a recording of the channel on screen: start time ("20:45", or a full date) and duration in minutes. A time already past means the next day. If PiBoard is off at that time, the appointment is marked as missed rather than started late.</p>
-          <p>The recording folder, the maximum duration and the free-space threshold are set in the general settings, Media tools section. ffmpeg is required.</p>
+          <p><b>One single connection.</b> An IPTV subscription usually allows only one simultaneous stream. The recording therefore does not connect on its own side: it <b>taps the bytes already received</b> for the player. PiBoard reads the stream, sends it to the screen, and writes a copy to a file. Consequence: recording is tied to playback — changing channel or closing the player stops it, and only what follows the press is recorded.</p>
+          <p>The file is a <b>.ts</b>, the format as it comes from the provider: nothing re-encoded, readable in VLC and most Windows players, and readable <b>even when truncated</b> — a power cut mid-write leaves a usable recording, where an interrupted .mp4 would be lost.</p>
+          <p><b>Resuming after a drop</b>: if the feed falls over, the player reconnects and the recording continues in the same file. The name is built from the channel, the programme when the source gives one, and the date and time.</p>
+          <p>In the channel list, the <b>⏺</b> button opens the <b>recordings already made</b>: their size, the folder's free space, <b>mp4</b> to convert a file (without re-encoding) and <b>✕</b> to delete it. A failed conversion says so and leaves no file behind.</p>
+          <p>The <b>🕒</b> button schedules a recording of the channel on screen: start time ("20:45", or a full date) and duration in minutes. A time already past means the next day. Since recording taps the player's stream, the tile must be <b>open and active</b> at that time: it then tunes to the channel by itself and starts the recording, which stops after the requested duration.</p>
+          <p>ffmpeg is required (Media tools section of the general settings). The folder and guards are set in this tile's options, below.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Playlist address</span><span class="help-opt-desc">The .m3u file's URL.</span></div>
           <div class="help-opt"><span class="help-opt-name">Category shown on opening</span><span class="help-opt-desc">Optional. Avoids scrolling a long list every time.</span></div>
           <div class="help-opt"><span class="help-opt-name">Resume the last channel automatically</span><span class="help-opt-desc">Off by default: a tile that starts playing on its own on a wall display is rarely what you want.</span></div>
           <div class="help-opt"><span class="help-opt-name">Start muted</span><span class="help-opt-desc">On by default. Browsers refuse to start a video with sound without prior interaction anyway.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Quality cap</span><span class="help-opt-desc">720p recommended on a Pi.</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Quality cap</span><span class="help-opt-desc">720p recommended on a Pi.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Recording folder</span><span class="help-opt-desc">Full path on the machine running PiBoard: e.g. <code>D:\Videos\PiBoard</code> on Windows, or <code>/mnt/usb/tv</code> on the Pi. Empty = the <code>recordings</code> folder inside PiBoard's data. On a Pi, a USB disk or a network share is far preferable to the SD card.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Maximum duration</span><span class="help-opt-desc">The recording stops by itself after this. 0 removes the limit.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Stop below (MB free)</span><span class="help-opt-desc">Rather than filling the disk. 0 removes the guard.</span></div>
+          <div class="help-opt"><span class="help-opt-name">List the recordings in the tile</span><span class="help-opt-desc">Adds the ⏺ button in the channel list.</span></div>`
       }
     },
 
-    {
-      id: "iptvrec",
-      group: "tiles",
-      title: { fr: "Enregistrements TV", en: "TV recordings" },
-      sub: {
-        fr: "Ce qui enregistre en ce moment, et ce qui a déjà été enregistré.",
-        en: "What is recording right now, and what has been recorded."
-      },
-      html: {
-        fr: `
-          <span class="help-size">Taille : 3×3 par défaut, de 2×2 à 12×16</span>
-          <h4>Objectif</h4>
-          <p>Surveiller les enregistrements lancés depuis la tuile Chaînes TV, sans avoir à garder le lecteur ouvert.</p>
-          <h4>Fonctionnement</h4>
-          <p>La tuile affiche les enregistrements <b>en cours</b> (chaîne, durée écoulée, taille, et « reconnexion » si le flux est retombé), avec un bouton pour arrêter chacun. En dessous, les enregistrements <b>déjà réalisés</b> : <b>mp4</b> convertit le fichier (sans réencodage, donc rapide), <b>✕</b> le supprime après confirmation. L'espace libre du dossier est rappelé en haut.</p>
-          <p>Tout l'état vient du serveur : cette tuile fonctionne même quand la tuile lecteur est fermée, sur une autre page ou sur un autre écran. Si ffmpeg manque, ou si le dossier d'enregistrement est inaccessible, elle le dit clairement.</p>
-          <p>Les enregistrements se <b>lancent</b> depuis la tuile Chaînes TV (boutons ⏺ et 🕒) ; voir sa section d'aide pour le détail.</p>
-          <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">Lister les enregistrements déjà réalisés</span><span class="help-opt-desc">Décochez pour ne garder que ce qui enregistre en ce moment.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Combien en lister</span><span class="help-opt-desc">Les plus récents d'abord.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Afficher l'espace libre</span><span class="help-opt-desc">Celui du dossier d'enregistrement, pas celui du disque système.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">De 3 à 300 secondes.</span></div>`,
-        en: `
-          <span class="help-size">Size: 3×3 by default, from 2×2 to 12×16</span>
-          <h4>Goal</h4>
-          <p>Keep an eye on the recordings started from the TV channels tile, without having to keep the player open.</p>
-          <h4>How it works</h4>
-          <p>The tile shows the recordings <b>in progress</b> (channel, elapsed time, size, and "reconnecting" if the feed dropped), with a button to stop each one. Below, the recordings <b>already made</b>: <b>mp4</b> converts the file (without re-encoding, so quickly), <b>✕</b> deletes it after confirmation. The folder's free space is shown at the top.</p>
-          <p>All state comes from the server: this tile works even when the player tile is closed, on another page or on another screen. If ffmpeg is missing, or the recording folder is unreachable, it says so clearly.</p>
-          <p>Recordings are <b>started</b> from the TV channels tile (⏺ and 🕒 buttons); see its help section for details.</p>
-          <h4>Options</h4>
-          <div class="help-opt"><span class="help-opt-name">List the recordings already made</span><span class="help-opt-desc">Untick to keep only what is recording right now.</span></div>
-          <div class="help-opt"><span class="help-opt-name">How many to list</span><span class="help-opt-desc">Most recent first.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Show free space</span><span class="help-opt-desc">That of the recording folder, not of the system disk.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">From 3 to 300 seconds.</span></div>`
-      }
-    },
     {
       id: "teleprog",
       group: "tiles",

@@ -303,3 +303,20 @@
   color: var(--danger);
   white-space: nowrap;
 }
+
+/* Liste des enregistrements, dans le lecteur (1.113.1).
+   Recordings list, inside the player. */
+.pw-iptv .pwtv-reclist-body { padding: 6px 8px; overflow-y: auto; font-size: 13px; }
+.pw-iptv .pwtv-recmsg { margin: 2px 0 6px; color: var(--muted); font-size: 11px; word-break: break-all; }
+.pw-iptv .pwtv-recerr { color: var(--danger); }
+.pw-iptv .pwtv-reclist-items { list-style: none; margin: 0; padding: 0; }
+.pw-iptv .pwtv-recrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pw-iptv .pwtv-recname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-iptv .pwtv-recsize { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.pw-iptv .pwtv-recdel:hover { border-color: var(--danger); color: var(--danger); }

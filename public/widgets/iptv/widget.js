@@ -225,6 +225,7 @@
     async init() {
       this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${this.ctx.i18n.t("common.loading")}</div></div>`;
       await this.loadPlaylist();
+      this.armSchedules();
     }
 
     onSettingsChanged(settings) {
@@ -338,6 +339,8 @@
         <div class="pwtv-bar">
           ${showBack ? `<button type="button" class="pwtv-btn pwtv-navback" title="${i18n.t("iptv.back")}">‹</button>` : ""}
           <span class="pwtv-title">${escapeHtml(title)}</span>
+          ${this.ctx.settings.recordShowList !== false
+            ? `<button type="button" class="pwtv-btn pwtv-reclist" title="${i18n.t("iptv.record.list")}">⏺</button>` : ""}
         </div>
         ${showSearch ? `<div class="pwtv-searchbar"><input type="search" class="pwtv-search" placeholder="${i18n.t("iptv.search")}" value="${escapeAttr(this.search)}"></div>` : ""}`;
     }
@@ -345,6 +348,71 @@
     wireNavBack(handler) {
       const btn = this.ctx.el.querySelector(".pwtv-navback");
       if (btn) btn.addEventListener("click", handler);
+      const rec = this.ctx.el.querySelector(".pwtv-reclist");
+      if (rec) rec.addEventListener("click", () => this.showRecordings());
+    }
+
+    /* ---------- Liste des enregistrements (1.113.1) ----------
+       Rangee dans le lecteur lui-meme : une tuile separee obligeait a
+       configurer l'enregistrement a deux endroits, et n'apportait rien
+       qui ne puisse tenir ici.
+       Kept inside the player itself: a separate tile meant configuring
+       recording in two places, for nothing this cannot hold. */
+    async showRecordings() {
+      const i18n = this.ctx.i18n;
+      const dir = this.ctx.settings.recordDir || "";
+      this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-bar">
+        <button type="button" class="pwtv-btn pwtv-navback" title="${i18n.t("iptv.back")}">‹</button>
+        <span class="pwtv-title">${i18n.t("iptv.record.list")}</span>
+        </div><div class="pwtv-reclist-body">${i18n.t("common.loading")}</div></div>`;
+      this.ctx.el.querySelector(".pwtv-navback").addEventListener("click", () => this.render());
+      const body = this.ctx.el.querySelector(".pwtv-reclist-body");
+      let data;
+      try {
+        data = await fetch("/api/iptv/recordings?dir=" + encodeURIComponent(dir)).then((r) => r.json());
+      } catch (e) {
+        body.textContent = i18n.t("iptv.record.listFailed");
+        return;
+      }
+      const mb = (b) => (b >= 1073741824 ? (b / 1073741824).toFixed(1) + " Go" : Math.round(b / 1048576) + " Mo");
+      const head = [];
+      if (!data.ffmpeg) head.push(`<p class="pwtv-recmsg pwtv-recerr">${escapeHtml(i18n.t("iptv.record.noFfmpeg"))}</p>`);
+      if (!data.ready) head.push(`<p class="pwtv-recmsg pwtv-recerr">${escapeHtml(i18n.t("iptv.record.dirError"))} ${escapeHtml(data.error || data.dir)}</p>`);
+      head.push(`<p class="pwtv-recmsg">${escapeHtml(data.dir)}${typeof data.freeMB === "number"
+        ? " · " + escapeHtml(i18n.t("iptv.record.free")) + " " + mb(data.freeMB * 1048576) : ""}</p>`);
+      const rows = (data.files || []).map((f) => `
+        <li class="pwtv-recrow">
+          <span class="pwtv-recname">${escapeHtml(f.name)}</span>
+          <span class="pwtv-recsize">${escapeHtml(mb(f.bytes))}</span>
+          ${/\.ts$/i.test(f.name) ? `<button type="button" class="pwtv-btn" data-convert="${escapeAttr(f.name)}" title="${i18n.t("iptv.record.convert")}">mp4</button>` : ""}
+          <button type="button" class="pwtv-btn pwtv-recdel" data-del="${escapeAttr(f.name)}" title="${i18n.t("iptv.record.delete")}">✕</button>
+        </li>`).join("");
+      body.innerHTML = head.join("") + `<ul class="pwtv-reclist-items">${rows
+        || `<li class="pwtv-recmsg">${escapeHtml(i18n.t("iptv.record.none"))}</li>`}</ul>`;
+      body.querySelectorAll("[data-convert]").forEach((b) => b.addEventListener("click", async () => {
+        b.disabled = true;
+        b.textContent = "…";
+        try {
+          const r = await fetch("/api/iptv/recordings/convert", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ file: b.dataset.convert, dir })
+          });
+          const out = await r.json();
+          /* Un echec de conversion doit se VOIR : en 1.113.0 il laissait
+             un .mp4 vide dans la liste, sans un mot.
+             A failed conversion must SHOW. */
+          if (!r.ok) throw new Error(out.error || "");
+        } catch (e) {
+          window.alert(i18n.t("iptv.record.convertFailed") + " " + String(e.message || e));
+        }
+        this.showRecordings();
+      }));
+      body.querySelectorAll("[data-del]").forEach((b) => b.addEventListener("click", async () => {
+        if (!window.confirm(i18n.t("iptv.record.deleteConfirm"))) return;
+        await fetch("/api/iptv/recordings/file?dir=" + encodeURIComponent(dir)
+          + "&file=" + encodeURIComponent(b.dataset.del), { method: "DELETE" }).catch(() => null);
+        this.showRecordings();
+      }));
     }
 
     /* ---------- Mode M3U simple (inchange) ---------- */
@@ -772,7 +840,7 @@
        fait qu'ordonner et afficher l'etat.
        Recording lives server-side: it continues if you zap, close the
        tile or close the browser. The tile only commands and displays. */
-    async toggleRecord() {
+    async toggleRecord(forcedMaxMinutes) {
       const btn = this.ctx.el.querySelector(".pwtv-record");
       if (!btn || btn.disabled) return;
       btn.disabled = true;
@@ -781,20 +849,31 @@
           await fetch("/api/iptv/recordings/" + encodeURIComponent(this.recording.id) + "/stop", { method: "POST" });
           this.recording = null;
         } else {
+          const s = this.ctx.settings;
           const r = await fetch("/api/iptv/recordings/start", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
-              url: this.current.url,
+              /* `sid` designe le flux en cours : l'enregistrement s'y
+                 greffe au lieu d'ouvrir une connexion a lui.
+                 `sid` designates the running stream. */
+              sid: this.sid,
               channel: this.current.name,
               /* Nom du programme quand la source en donne un ; sinon la
                  chaine et l'horodatage suffisent (voir buildFileName).
                  Programme name when the source gives one. */
-              programme: this.current.programme || this.current.title || ""
+              programme: this.current.programme || this.current.title || "",
+              dir: s.recordDir || "",
+              maxMinutes: forcedMaxMinutes > 0 ? forcedMaxMinutes : s.recordMaxMinutes,
+              minFreeMB: s.recordMinFreeMB
             })
           });
           const data = await r.json();
-          if (!r.ok) throw new Error(data.error === "no-ffmpeg" ? this.ctx.i18n.t("iptv.record.noFfmpeg") : (data.detail || data.error));
+          if (!r.ok) {
+            const key = data.error === "no-ffmpeg" ? "iptv.record.noFfmpeg"
+              : data.error === "no-stream" ? "iptv.record.noStream" : null;
+            throw new Error(key ? this.ctx.i18n.t(key) : (data.detail || data.error));
+          }
           this.recording = data.recording;
         }
         this.refreshRecordButton();
@@ -842,6 +921,49 @@
       }
     }
 
+    /* Les rendez-vous sont tenus PAR LA TUILE : l'enregistrement derive
+       le flux du lecteur, la chaine doit donc etre effectivement
+       diffusee a l'heure dite. A l'heure venue, la tuile se cale sur la
+       chaine, puis lance l'enregistrement, qui s'arretera tout seul au
+       bout de la duree demandee.
+       Appointments are kept BY THE TILE: recording taps the player's
+       stream, so the channel must actually be playing. At the due time
+       the tile tunes to the channel, then starts the recording, which
+       stops by itself after the requested duration. */
+    armSchedules() {
+      clearInterval(this.schedTimer);
+      this.schedTimer = setInterval(() => this.checkSchedules(), 30000);
+    }
+
+    async checkSchedules() {
+      if (this.checkingSchedules) return;
+      this.checkingSchedules = true;
+      try {
+        const list = await fetch("/api/iptv/schedules").then((r) => r.json());
+        const now = Date.now();
+        const due = (list || []).find((x) => x && !x.done && Math.abs(Date.parse(x.startAt) - now) < 60000);
+        if (!due) return;
+        due.done = true;
+        due.result = "started";
+        await fetch("/api/iptv/schedules", {
+          method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(list)
+        });
+        const target = (this.navList || this.channels || []).find((c) => c && c.url === due.url)
+          || { name: due.channel, url: due.url };
+        await this.play(target);
+        /* Le flux met un instant a s'etablir : l'enregistrement ne peut
+           deriver que ce qui circule deja.
+           The stream takes a moment to establish. */
+        setTimeout(() => {
+          if (!this.recording) this.toggleRecord(Number(due.durationMinutes) || 0);
+        }, 6000);
+      } catch (e) {
+        console.warn("[piboard] iptv rendez-vous", e);
+      } finally {
+        this.checkingSchedules = false;
+      }
+    }
+
     defaultScheduleTime() {
       const d = new Date(Date.now() + 3600000);
       return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
@@ -875,8 +997,13 @@
       if (!btn) { clearInterval(this.recTimer); this.recTimer = null; return; }
       try {
         const data = await fetch("/api/iptv/recordings").then((r) => r.json());
-        const mine = (data.active || []).find((a) => !this.recording || a.id === this.recording.id)
-          || (data.active || [])[0] || null;
+        /* Seul l'enregistrement de CE flux concerne ce lecteur : deux
+           tuiles sur deux chaines ne doivent pas s'afficher l'une
+           l'autre. Only the recording of THIS stream concerns this
+           player. */
+        const mine = (data.active || []).find((a) => a.sid === this.sid)
+          || (this.recording ? (data.active || []).find((a) => a.id === this.recording.id) : null)
+          || null;
         this.recording = mine;
       } catch (e) {
         /* Serveur injoignable : on garde le dernier etat connu plutot
@@ -971,7 +1098,14 @@
       const isLiveUrl = /\/live\//i.test(url);
       const compatMode = isLiveUrl ? (this.ctx.settings.compatMode === "full" ? "full" : "audio") : this.ctx.settings.compatMode;
       if (compatMode === "audio" || compatMode === "full") {
-        const fixUrl = "/api/iptv/audio-fix?url=" + encodeURIComponent(url) + "&mode=" + compatMode;
+        /* Identifiant de CETTE lecture : c'est lui qui permet a
+           l'enregistrement de deriver ce flux-ci, sans ouvrir de
+           seconde connexion chez le fournisseur (1.113.1).
+           Id of THIS playback: it lets the recording tap this very
+           stream, without opening a second connection. */
+        this.sid = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+        const fixUrl = "/api/iptv/audio-fix?url=" + encodeURIComponent(url)
+          + "&mode=" + compatMode + "&sid=" + encodeURIComponent(this.sid);
         video.src = fixUrl;
         // La lecture n'est tentee qu'UNE FOIS ASSEZ DE DONNEES
         // REELLEMENT DISPONIBLES ("canplay"), pas seulement une fois le
@@ -1284,6 +1418,7 @@
 
     destroy() {
       clearInterval(this.recTimer);
+      clearInterval(this.schedTimer);
       // Essentiel ici : une tuile detruite ne doit surtout pas laisser
       // un flux video tourner en arriere-plan sur un Pi. Essential
       // here: a destroyed tile must absolutely not leave a video stream

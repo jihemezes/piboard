@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.113.1
+
+- **Correctif majeur : l'enregistrement coupait le visionnage.** En
+  1.113.0, il ouvrait sa PROPRE connexion chez le fournisseur ; or un
+  abonnement IPTV n'autorise generalement qu'UN flux simultane, et c'est
+  donc le visionnage qui sautait. L'enregistrement **derive desormais
+  les octets deja recus** : PiBoard lit le flux, l'envoie au lecteur, et
+  en ecrit une copie dans un fichier. **Zero connexion supplementaire.**
+  - Sans VLC, ffmpeg allait chercher l'URL lui-meme et les octets ne
+    passaient pas par PiBoard : le serveur lit maintenant le flux de son
+    cote (`server/iptvSource.js`) avant de le transmettre a ffmpeg.
+  - Contrepartie assumee, ecrite dans l'aide : l'enregistrement est lie
+    au visionnage. Changer de chaine ou fermer le lecteur l'arrete, et
+    seul ce qui suit l'appui est enregistre.
+  - **Reprise apres coupure** : le lecteur se reconnecte, l'enregistrement
+    continue dans le MEME fichier, a la suite (plus de morceaux a
+    assembler).
+
+- **Correctif : « mp4 » creait un fichier vide.** ffmpeg creait le .mp4
+  puis echouait, et le fichier de 0 octet restait dans la liste comme un
+  enregistrement. La conversion ecrit maintenant dans un fichier
+  temporaire, renomme seulement en cas de succes ; un echec ne laisse
+  rien et s'affiche avec sa cause. Un enregistrement qui n'a recu aucun
+  octet ne laisse plus de fichier vide non plus.
+
+- **Configuration deplacee dans les options du lecteur**, ou on la
+  cherche : dossier d'enregistrement (chemin complet, par exemple
+  `D:\Videos\PiBoard` sous Windows), duree maximale et seuil d'espace
+  disque. Elle n'est plus dans les reglages generaux, ou elle passait
+  inapercue.
+
+- **Tuile « Enregistrements TV » supprimee.** La liste des
+  enregistrements (taille, espace libre, conversion en .mp4,
+  suppression) tient dans le lecteur lui-meme : bouton ⏺ de la liste des
+  chaines. Une tuile separee obligeait a configurer a deux endroits.
+
+- **Enregistrement programme** : tenu par la tuile, et non plus par le
+  serveur, puisque la chaine doit etre effectivement diffusee. A l'heure
+  dite, la tuile se cale sur la chaine et lance l'enregistrement, qui
+  s'arrete au bout de la duree demandee. La tuile doit donc etre ouverte
+  et active.
+
+- **Tests** : la derivation est verifiee de bout en bout avec un flux en
+  memoire -- refus quand aucun flux n'est en cours, seuls les octets
+  suivant l'appui enregistres, coupure puis reprise dans le meme
+  fichier, arret a la fermeture du lecteur, et aucun fichier vide
+  laisse derriere. Ce dernier point a d'ailleurs attrape un defaut avant
+  livraison : le fichier etait recree apres sa suppression, parce qu'un
+  flux d'ecriture ouvre le fichier au moment ou il en a besoin.
+
 ## 1.113.0
 
 - **Enregistrement d'une chaine, pendant qu'on la regarde.** Le bouton

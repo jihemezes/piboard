@@ -640,24 +640,6 @@
         </div>
         <small class="field-hint" id="mediaToolsHint"></small>
 
-        <!-- Enregistrement IPTV (1.113.0) : range ici, avec ffmpeg dont
-             il depend. IPTV recording: kept here, with ffmpeg which it
-             depends on. -->
-        <label class="field">
-          <span data-i18n="settings.rec.dir">Recording folder</span>
-          <input type="text" id="setRecDir" autocomplete="off" spellcheck="false" placeholder="data/recordings">
-          <small class="field-hint" data-i18n="settings.rec.dir.hint">Full path on the machine running PiBoard. Leave empty for data/recordings. A USB disk or a mounted network share is strongly preferable to a Raspberry Pi's SD card, which wears out and fills up fast.</small>
-        </label>
-        <label class="field">
-          <span data-i18n="settings.rec.max">Maximum duration (minutes)</span>
-          <input type="number" id="setRecMax" min="0" max="1440" step="5">
-          <small class="field-hint" data-i18n="settings.rec.max.hint">A recording stops by itself after this. 0 removes the limit.</small>
-        </label>
-        <label class="field">
-          <span data-i18n="settings.rec.free">Stop below (MB free)</span>
-          <input type="number" id="setRecFree" min="0" max="1000000" step="128">
-          <small class="field-hint" data-i18n="settings.rec.free.hint">A recording stops rather than filling the disk. 0 removes the guard.</small>
-        </label>
       </fieldset>
 
       <!-- Mise a jour automatique du serveur (Raspberry Pi / Linux) :
