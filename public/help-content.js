@@ -666,6 +666,74 @@
     },
 
     {
+      id: "bambu",
+      group: "tiles",
+      title: { fr: "Imprimante 3D Bambu Lab", en: "Bambu Lab 3D printer" },
+      sub: {
+        fr: "Suivi en direct d'une imprimante Bambu Lab (X1C, P1S, A1, H2D…) : avancement, étape en cours, heure de fin prévue, températures, AMS, erreurs. Lecture seule, par le réseau local ou par le compte Bambu.",
+        en: "Live monitoring of a Bambu Lab printer (X1C, P1S, A1, H2D…): progress, current stage, estimated finish time, temperatures, AMS, errors. Read-only, over the local network or through your Bambu account."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 3×3 par défaut, de 1×1 à 12×12</span>
+          <h4>Objectif</h4>
+          <p>Savoir où en est une impression sans monter à l'atelier ni ouvrir une application : l'avancement, ce que la machine est en train de faire, et à quelle heure ce sera fini.</p>
+          <h4>Lecture seule, et c'est volontaire</h4>
+          <p>La tuile n'envoie <b>aucune commande</b> à l'imprimante. Une seule chose lui est demandée à la connexion — « donne-moi ton état complet » — et plus rien ensuite : c'est l'imprimante qui pousse ses changements. Sur un écran tactile posé dans une pièce de passage, un bouton « arrêter l'impression » se frôle trop facilement.</p>
+          <h4>Deux façons de se connecter</h4>
+          <p><b>Réseau local (recommandé).</b> L'imprimante héberge son propre serveur : PiBoard s'y connecte directement, rien ne sort de chez vous, et l'état arrive en temps réel. Il faut pour cela activer sur l'écran de l'imprimante le <b>mode LAN</b> puis le <b>mode développeur</b> (Réglages → Réseau), avec un redémarrage après la première activation — sans quoi les firmwares récents refusent tout accès local. Le <b>code d'accès LAN</b> (huit chiffres, au même endroit) sert de mot de passe ; il est conservé chiffré sur le PiBoard, dans un fichier distinct des réglages, et ne redescend jamais au navigateur.</p>
+          <p><b>Compte Bambu.</b> Même information, mais par les serveurs de Bambu : utile si le PiBoard n'est pas sur le même réseau que l'imprimante. La connexion se fait depuis la tuile elle-même, qui réclame votre adresse, votre mot de passe, puis le code de vérification envoyé par courriel. Le jeton obtenu est rangé avec les autres secrets.</p>
+          <h4>Trouver son imprimante</h4>
+          <p>Le bouton <b>Rechercher</b> des réglages interroge le réseau : les imprimantes Bambu s'y annoncent d'elles-mêmes. Choisissez la vôtre et l'adresse IP, le numéro de série et le modèle se remplissent seuls — plus besoin de recopier quoi que ce soit depuis un petit écran. Les trois champs restent modifiables à la main.</p>
+          <h4>Ce qui s'affiche</h4>
+          <p>Un anneau d'avancement, l'étape en cours (préchauffage du plateau, nivellement automatique, calibration du débit, mesure micro-lidar, inspection de la première couche, changement de filament, nettoyage de buse…), l'<b>heure de fin prévue</b> autant que le temps restant, la couche en cours sur le total, et le nom de la pièce. Les températures du plateau, de la buse et du caisson apparaissent avec leur consigne <b>quand elle diffère de la mesure</b> : on voit ainsi la chauffe monter, sans lire deux fois le même chiffre le reste du temps.</p>
+          <p>Le <b>caisson</b> n'est affiché que sur les machines qui le mesurent (X1, H2D) : une P1 ou une A1 n'en publie pas, et la tuile préfère ne rien montrer qu'afficher un faux zéro. La <b>H2D</b> affiche ses deux buses.</p>
+          <p>À l'arrêt, plutôt qu'une tuile vide : la dernière impression, son issue, et les températures qui redescendent.</p>
+          <h4>Elle rétrécit sans devenir illisible</h4>
+          <p>L'affichage se dégrade par paliers, mesurés sur la taille réelle de la tuile à l'écran. En grand, tout est là, AMS compris. En réduisant, les bobines partent, puis les températures, puis l'heure de fin, puis l'étape. <b>L'avancement est le dernier à partir</b> : même sur une tuile d'une seule case, on voit où en est l'impression.</p>
+          <h4>Alertes</h4>
+          <p>Fin d'impression et problème (filament épuisé, buse bouchée, panne signalée) peuvent faire clignoter l'écran, jouer un son et appeler un webhook — exactement les mêmes réglages que la tuile Compte à rebours. Les alertes se déclenchent sur <b>changement d'état</b> seulement : une impression terminée ne sonne qu'une fois.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Liaison</span><span class="help-opt-desc">Réseau local (recommandé) ou compte Bambu.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Imprimante</span><span class="help-opt-desc">Recherche sur le réseau ; le choix remplit l'adresse, le numéro de série et le modèle.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Code d'accès LAN</span><span class="help-opt-desc">Les huit chiffres affichés par l'imprimante. Conservé chiffré.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Températures / Étape / Heure de fin / AMS</span><span class="help-opt-desc">Ce que la tuile montre, quand la place le permet.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Bouton caméra</span><span class="help-opt-desc">Ouvre le flux de la caméra intégrée par-dessus le tableau. Liaison locale uniquement.</span></div>
+          <div class="help-opt"><span class="help-opt-name">À l'arrêt, montrer la dernière impression</span><span class="help-opt-desc">Évite une tuile vide entre deux pièces.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Alertes</span><span class="help-opt-desc">Fin d'impression, erreur : clignotement, son, webhook, durée.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">L'imprimante pousse son état d'elle-même ; ce réglage ne fixe que la fréquence de relecture. Inutile de descendre très bas.</span></div>`,
+        en: `
+          <span class="help-size">Size: 3×3 by default, from 1×1 to 12×12</span>
+          <h4>Goal</h4>
+          <p>Know where a print stands without walking up to the workshop or opening an app: progress, what the machine is doing, and when it will be done.</p>
+          <h4>Read-only, deliberately</h4>
+          <p>The tile sends <b>no command</b> to the printer. It asks one single thing on connecting — "give me your full state" — and nothing afterwards: the printer pushes its own changes. On a touchscreen sitting in a busy room, a "stop the print" button is brushed far too easily.</p>
+          <h4>Two ways to connect</h4>
+          <p><b>Local network (recommended).</b> The printer hosts its own server: PiBoard connects straight to it, nothing leaves your home, and the state arrives in real time. This requires turning on <b>LAN mode</b> then <b>Developer mode</b> on the printer's screen (Settings → Network), with a reboot after first enabling it — recent firmwares refuse all local access otherwise. The <b>LAN access code</b> (eight digits, same place) is the password; it is stored encrypted on the PiBoard, in a file separate from the settings, and never comes back down to the browser.</p>
+          <p><b>Bambu account.</b> The same information, but through Bambu's servers: useful when the PiBoard is not on the same network as the printer. Signing in happens from the tile itself, which asks for your address, your password, then the verification code emailed to you. The resulting token is filed with the other secrets.</p>
+          <h4>Finding your printer</h4>
+          <p>The <b>Search</b> button in the settings queries the network: Bambu printers announce themselves there. Pick yours and the IP address, serial number and model fill themselves in — nothing to copy from a small screen. The three fields stay editable by hand.</p>
+          <h4>What it shows</h4>
+          <p>A progress ring, the current stage (heatbed preheating, auto bed levelling, extrusion calibration, micro lidar measurement, first-layer inspection, filament change, nozzle cleaning…), the <b>estimated finish time</b> as well as the remaining time, the current layer out of the total, and the part's name. Bed, nozzle and chamber temperatures appear with their target <b>when it differs from the reading</b>, so you watch the heat climb without reading the same number twice the rest of the time.</p>
+          <p>The <b>chamber</b> is only shown on machines that measure it (X1, H2D): a P1 or an A1 publishes none, and the tile would rather show nothing than a false zero. The <b>H2D</b> shows both its nozzles.</p>
+          <p>When idle, rather than an empty tile: the last print, how it ended, and the temperatures coming back down.</p>
+          <h4>It shrinks without becoming unreadable</h4>
+          <p>The display degrades in steps, measured on the tile's real size on screen. Large, everything is there, AMS included. As it shrinks the spools go, then the temperatures, then the finish time, then the stage. <b>Progress is the last thing to go</b>: even on a single-cell tile you can see where the print stands.</p>
+          <h4>Alerts</h4>
+          <p>Print finished and problems (filament runout, clogged nozzle, a reported fault) can flash the screen, play a sound and call a webhook — exactly the same settings as the Countdown tile. Alerts fire on <b>state change</b> only: a finished print rings once.</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Link</span><span class="help-opt-desc">Local network (recommended) or Bambu account.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Printer</span><span class="help-opt-desc">Searches the network; the choice fills in address, serial number and model.</span></div>
+          <div class="help-opt"><span class="help-opt-name">LAN access code</span><span class="help-opt-desc">The eight digits shown by the printer. Stored encrypted.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Temperatures / Stage / Finish time / AMS</span><span class="help-opt-desc">What the tile shows, when there is room for it.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Camera button</span><span class="help-opt-desc">Opens the built-in camera's stream over the board. Local link only.</span></div>
+          <div class="help-opt"><span class="help-opt-name">When idle, show the last print</span><span class="help-opt-desc">Avoids an empty tile between two parts.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Alerts</span><span class="help-opt-desc">Print finished, error: flash, sound, webhook, duration.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">The printer pushes its state on its own; this only sets how often it is re-read. No need to go very low.</span></div>`
+      }
+    },
+
+    {
       id: "homeassistant",
       group: "tiles",
       title: { fr: "Home Assistant", en: "Home Assistant" },

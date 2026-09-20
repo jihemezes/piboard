@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.115.0
+
+- **Nouvelle tuile : Imprimante 3D Bambu Lab** (X1C, P1S, A1, H2D...).
+  Avancement, etape en cours (prechauffage, nivellement, calibration du
+  debit, micro-lidar, inspection de la premiere couche, changement de
+  filament...), heure de fin prevue autant que temps restant, couche en
+  cours sur le total, nom de la piece, temperatures du plateau, de la
+  buse et du caisson, bobines et humidite des AMS, erreurs HMS avec
+  leur code.
+
+- **Deux voies au choix.** Liaison DIRECTE au reseau local : rien ne
+  sort de chez soi et l'imprimante pousse son etat d'elle-meme. Ou
+  liaison par le COMPTE Bambu, quand le PiBoard n'est pas sur le meme
+  reseau ; la connexion se fait depuis la tuile, code de verification
+  compris, et le jeton rejoint le coffre chiffre.
+
+- **LECTURE SEULE, deliberement.** Une seule commande est jamais
+  envoyee a l'imprimante -- « donne-moi ton etat complet », a la
+  connexion. Sur un ecran tactile pose dans une piece de passage, un
+  bouton « arreter l'impression » se frole trop facilement.
+
+- **L'affichage se degrade par paliers**, mesures sur la taille reelle
+  de la tuile a l'ecran : les bobines partent, puis les temperatures,
+  puis l'heure de fin, puis l'etape. L'avancement est le dernier a
+  partir -- meme sur une tuile d'une seule case, on voit ou en est
+  l'impression.
+
+- **Ce que la machine ne mesure pas n'est pas affiche** : pas de
+  caisson sur une P1 ou une A1, qui n'en publient pas ; deux buses sur
+  une H2D. Et une consigne de temperature n'est montree que si elle
+  DIFFERE de la mesure : on voit alors la chauffe monter, sans lire
+  deux fois le meme chiffre le reste du temps.
+
+- **Recherche des imprimantes sur le reseau** depuis les reglages : les
+  machines Bambu s'y annoncent d'elles-memes, et le choix remplit
+  l'adresse, le numero de serie et le modele. Nouveau type de champ
+  « discover », generique, reutilisable par toute tuile suivant un
+  materiel qui s'annonce sur le reseau.
+
+- **Alertes** de fin d'impression et de panne : clignotement, son et
+  webhook, exactement les memes reglages que la tuile Compte a rebours.
+  Elles se declenchent sur CHANGEMENT d'etat seulement -- une
+  impression terminee ne sonne qu'une fois, pas a chaque
+  rafraichissement.
+
+- **Veille utile** : machine a l'arret, la tuile montre la derniere
+  impression, son issue et les temperatures qui redescendent, plutot
+  qu'un cadre vide.
+
+- Le code d'acces LAN et le jeton du compte vivent dans le coffre
+  chiffre et ne redescendent JAMAIS au navigateur ; un test le
+  verifie. Nouvelle dependance : « mqtt » (JavaScript pur, sans binaire
+  natif).
+
 ## 1.114.0
 
 - **Tuile Scores : le TOP 14 et la PRO D2 sont desormais lus chez la

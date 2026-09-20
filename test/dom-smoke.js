@@ -7309,6 +7309,154 @@ function catalogItemFor(catalog, document, widgetId) {
     window.fetch = realFetch;
   }
 
+  console.log("== Tuile Imprimante 3D : paliers, températures, alertes (1.115.0) ==");
+  {
+    /* La VRAIE tuile, avec un etat d'imprimante fige cote serveur. On
+       verifie ce qui se voit et ce qui se tait : le caisson d'une
+       machine qui n'en a pas, l'ordre dans lequel l'affichage se
+       degrade, et qu'une impression terminee ne sonne qu'une fois.
+       The REAL tile with a frozen printer state. */
+    let BambuClass = null;
+    const realRegister = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, klass) => { if (id === "bambu") BambuClass = klass; realRegister.call(window.PiBoard, id, klass); };
+    const sc = document.createElement("script");
+    sc.src = "/widgets/bambu/widget.js?t=bambu-test";
+    document.head.appendChild(sc);
+    for (let i = 0; i < 40 && !BambuClass; i++) await sleep(25);
+    window.PiBoard.registerWidget = realRegister;
+    assert("imprimante : la tuile se charge", !!BambuClass);
+
+    const bambuServer = require(path.join(ROOT, "server", "bambu.js"));
+    const REPORT = {
+      gcode_state: "RUNNING", stg_cur: 2, mc_percent: 37, mc_remaining_time: 138,
+      layer_num: 84, total_layer_num: 240,
+      bed_temper: 45, bed_target_temper: 60,
+      nozzle_temper: 219.8, nozzle_target_temper: 220, chamber_temper: 34,
+      subtask_name: "Boitier capteur v3", printer_type: "X1C", hms: [],
+      ams: { tray_now: "2", ams: [{ id: "0", humidity: "3", tray: [
+        { id: "0", tray_type: "PLA", tray_color: "FF6A13FF" },
+        { id: "2", tray_type: "PETG", tray_color: "1B7F4BFF" }] }] }
+    };
+    let serve = { connected: true, hasData: true, printer: bambuServer.snapshot(REPORT, { model: "X1C", name: "Atelier" }) };
+    const asked = [];
+    const realFetch = window.fetch;
+    window.fetch = (url, opts) => {
+      const u = String(url);
+      if (u.indexOf("/api/bambu/") === 0) {
+        asked.push(u);
+        return Promise.resolve({ ok: true, status: 200, json: async () => serve });
+      }
+      return realFetch(url, opts);
+    };
+
+    const host = document.createElement("div");
+    host.style.width = "420px"; host.style.height = "340px";
+    document.body.appendChild(host);
+    const bManifest = catalog.find((m) => m.id === "bambu");
+    assert("imprimante : la tuile est au catalogue", !!bManifest);
+    const defaults = {};
+    for (const f of bManifest.settings) defaults[f.key] = f.default;
+    const alerts = [];
+    const notified = [];
+    const makeCtx = (over) => ({
+      el: host, instanceId: "b-test", manifest: bManifest,
+      settings: Object.assign({}, defaults, { host: "192.168.1.42", serial: "01P00A", model: "X1C", showAms: true }, over || {}),
+      i18n: { lang: "fr", t: (k) => i18nKeys[k] || k },
+      api: {
+        startAlert: (o) => alerts.push(o),
+        notify: (u) => notified.push(u)
+      },
+      updateSettings() {}
+    });
+    const i18nKeys = {
+      "bambu.finishAt": "Fin à {time}", "bambu.layer": "couche {n}/{total}",
+      "bambu.bed": "plateau", "bambu.nozzle": "buse", "bambu.chamber": "caisson",
+      "bambu.humidity": "humidité {n}", "bambu.alert.finished": "Impression terminée : {name}",
+      "bambu.err.auth": "Refusé par l'imprimante. Vérifiez le code d'accès LAN, et que le mode LAN ET le mode développeur sont bien activés tous les deux.",
+      "bambu.alert.problem": "Problème : {name} {code}", "common.loading": "Chargement"
+    };
+
+    const w = new BambuClass(makeCtx());
+    await w.init();
+    await sleep(60);
+    const root = host.querySelector(".pw-bambu");
+    /* jsdom ne calcule aucune mise en page : les dimensions sont
+       imposees, comme le ferait un vrai navigateur.
+       jsdom computes no layout: sizes are forced. */
+    const size = (wpx, hpx) => {
+      Object.defineProperty(root, "clientWidth", { configurable: true, get: () => wpx });
+      Object.defineProperty(root, "clientHeight", { configurable: true, get: () => hpx });
+      w.render();
+    };
+    size(420, 340);
+    assert("imprimante : le secret ne transite jamais par l'URL",
+      asked.length > 0 && !asked.some((u) => /accessCode|code=/.test(u)));
+    assert("imprimante : tuile spacieuse, palier complet", root.dataset.level === "full");
+    assert("imprimante : l'avancement est affiché", /37\s*%/.test(root.textContent));
+    assert("imprimante : l'étape en cours est traduite", /Préchauffage du plateau/.test(root.textContent));
+    assert("imprimante : l'heure de fin ET le temps restant", /Fin à \d{2}:\d{2}/.test(root.textContent) && /2 h 18/.test(root.textContent));
+    assert("imprimante : la couche en cours", /couche 84\/240/.test(root.textContent));
+    assert("imprimante : le nom de la pièce", /Boitier capteur v3/.test(root.textContent));
+    assert("imprimante : le plateau chauffe, la consigne est montrée à côté de la mesure",
+      /45°/.test(root.textContent) && /60°/.test(root.textContent));
+    /* La buse est A la consigne : repeter « 220 → 220 » n'apprendrait
+       rien, seule la mesure doit rester. */
+    const nozzleCell = Array.from(root.querySelectorAll(".pwb-temp")).find((c) => /buse/.test(c.textContent));
+    assert("imprimante : une buse déjà à température n'affiche pas deux fois le même nombre",
+      !!nozzleCell && !nozzleCell.querySelector(".pwb-temp-tgt"));
+    assert("imprimante : le caisson d'une X1C est affiché", /caisson/.test(root.textContent));
+    assert("imprimante : les bobines de l'AMS, celle qui sort mise en évidence",
+      root.querySelectorAll(".pwb-tray").length === 2 && root.querySelectorAll(".pwb-tray-on").length === 1);
+
+    /* Dégradation : on rétrécit et on vérifie CE QUI DISPARAIT, dans
+       l'ordre promis -- l'avancement en dernier. */
+    const shrink = size;
+    shrink(280, 220);
+    assert("imprimante : en rétrécissant, l'AMS part avant les températures",
+      root.dataset.level === "rich" && !root.querySelector(".pwb-tray") && !!root.querySelector(".pwb-temp"));
+    shrink(220, 160);
+    assert("imprimante : puis les températures, l'heure de fin reste",
+      root.dataset.level === "mid" && !root.querySelector(".pwb-temp") && /Fin à/.test(root.textContent));
+    shrink(180, 120);
+    assert("imprimante : puis l'heure de fin, l'étape reste",
+      root.dataset.level === "lite" && !/Fin à/.test(root.textContent) && /Préchauffage/.test(root.textContent));
+    shrink(90, 70);
+    assert("imprimante : au plus petit, il ne reste QUE l'avancement",
+      root.dataset.level === "bare" && /37\s*%/.test(root.textContent) && !/Préchauffage/.test(root.textContent));
+    shrink(420, 340);
+
+    /* Alertes : sur CHANGEMENT d'état seulement. Sans cette mémoire, le
+       tableau sonnerait à chaque rafraîchissement. */
+    serve = { connected: true, hasData: true, printer: bambuServer.snapshot(Object.assign({}, REPORT, { gcode_state: "FINISH", mc_percent: 100 }), { model: "X1C" }) };
+    await w.refresh();
+    assert("imprimante : la fin d'impression déclenche une alerte", alerts.length === 1);
+    await w.refresh();
+    await w.refresh();
+    assert("imprimante : elle ne sonne qu'une fois, pas à chaque rafraîchissement", alerts.length === 1);
+
+    serve = { connected: true, hasData: true, printer: bambuServer.snapshot(Object.assign({}, REPORT, { gcode_state: "FAILED", hms: [{ attr: 50331648, code: 65538 }] }), { model: "X1C" }) };
+    await w.refresh();
+    assert("imprimante : une panne déclenche une alerte distincte", alerts.length === 2);
+    assert("imprimante : le code de panne est affiché", /0300_0000_0001_0002/.test(root.textContent));
+
+    /* Machines sans caisson : ne rien afficher plutôt qu'un faux zéro. */
+    serve = { connected: true, hasData: true, printer: bambuServer.snapshot(REPORT, { model: "P1S" }) };
+    await w.refresh();
+    assert("imprimante : une P1S n'affiche pas de caisson qu'elle ne mesure pas",
+      !/caisson/.test(root.textContent));
+
+    /* Refus de l'imprimante : la cause la plus fréquente est nommée,
+       plutôt qu'une attente sans fin. */
+    serve = { connected: false, hasData: false, errorKind: "auth", printer: null };
+    await w.refresh();
+    assert("imprimante : un refus explique le mode développeur",
+      /développeur/i.test(root.textContent));
+
+    w.destroy();
+    host.remove();
+    window.fetch = realFetch;
+  }
+
   console.log("== Choix d'un dossier et programmation IPTV (1.113.2) ==");
   {
     const $d = (id) => document.getElementById(id);

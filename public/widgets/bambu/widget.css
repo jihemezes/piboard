@@ -1,0 +1,262 @@
+/* Tuile Imprimante 3D Bambu Lab.
+   Toutes les classes sont prefixees pwb- et vivent sous .pw-bambu :
+   rien ne peut deborder sur le reste du tableau.
+   Every class is namespaced under .pw-bambu. */
+
+.pw-bambu {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 100%;
+  padding: 6px;
+  box-sizing: border-box;
+  color: var(--text);
+  font-family: var(--font);
+  overflow: hidden;
+}
+
+.pw-bambu .pwb-msg {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 0.85em;
+  padding: 0 8px;
+}
+
+.pw-bambu .pwb-err { color: var(--danger); }
+.pw-bambu .pwb-err small { color: var(--muted); font-size: 0.85em; word-break: break-word; }
+
+.pw-bambu .pwb-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: 0;
+}
+
+.pw-bambu .pwb-name {
+  flex: 1;
+  font-size: 0.8em;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pw-bambu .pwb-badge-err {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.2em;
+  height: 1.2em;
+  border-radius: 50%;
+  background: var(--danger);
+  color: var(--on-accent);
+  font-size: 0.75em;
+  font-weight: 700;
+}
+
+.pw-bambu .pwb-icon,
+.pw-bambu .pwb-btn {
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 2px 8px;
+  font: inherit;
+  font-size: 0.8em;
+  cursor: pointer;
+}
+
+/* L'anneau d'avancement est dessine en CSS pur (un degrade conique) :
+   pas de canvas, pas de SVG a redimensionner, et il suit la couleur
+   d'accent du theme choisi pour le tableau.
+   The progress ring is pure CSS, and follows the board's accent. */
+.pw-bambu .pwb-ring {
+  position: relative;
+  flex: 0 0 auto;
+  width: min(60%, 9em);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background: conic-gradient(var(--accent) calc(var(--pct, 0) * 1%), var(--faint) 0);
+  display: grid;
+  place-items: center;
+}
+
+.pw-bambu .pwb-ring-in {
+  position: absolute;
+  inset: 12%;
+  border-radius: 50%;
+  background: var(--tile);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 4px;
+  box-sizing: border-box;
+  text-align: center;
+}
+
+.pw-bambu .pwb-pct { font-size: 1.6em; font-weight: 700; line-height: 1; }
+
+.pw-bambu .pwb-stage {
+  font-size: 0.6em;
+  color: var(--muted);
+  line-height: 1.1;
+  max-width: 100%;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.pw-bambu .pwb-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  gap: 4px 10px;
+  font-size: 0.8em;
+}
+
+.pw-bambu .pwb-finish { font-weight: 600; }
+.pw-bambu .pwb-remain,
+.pw-bambu .pwb-layer,
+.pw-bambu .pwb-outcome { color: var(--muted); }
+
+.pw-bambu .pwb-file {
+  font-size: 0.75em;
+  color: var(--muted);
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pw-bambu .pwb-temps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 12px;
+  width: 100%;
+}
+
+.pw-bambu .pwb-temp {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  font-size: 0.8em;
+}
+
+.pw-bambu .pwb-temp-ico { color: var(--muted); }
+.pw-bambu .pwb-temp-val { font-weight: 600; }
+.pw-bambu .pwb-temp-lbl { color: var(--muted); font-size: 0.85em; }
+
+/* Une consigne differente de la mesure signale une chauffe ou un
+   refroidissement en cours : c'est l'information, pas la decoration.
+   A target differing from the reading means heating or cooling. */
+.pw-bambu .pwb-heating .pwb-temp-val { color: var(--warn); }
+.pw-bambu .pwb-temp-tgt { color: var(--warn); font-size: 0.85em; }
+
+.pw-bambu .pwb-ams {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.pw-bambu .pwb-ams-unit { display: flex; align-items: center; gap: 5px; }
+.pw-bambu .pwb-trays { display: flex; gap: 3px; }
+
+.pw-bambu .pwb-tray {
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 3px;
+  border: 1px solid var(--tile-edge);
+  background: var(--faint);
+}
+
+/* La bobine engagee est cerclee de la couleur d'accent : d'un coup
+   d'oeil on sait laquelle sort. The engaged spool is ringed. */
+.pw-bambu .pwb-tray-on { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pw-bambu .pwb-hum { font-size: 0.7em; color: var(--muted); }
+
+.pw-bambu .pwb-errors {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  font-size: 0.7em;
+  color: var(--danger);
+}
+
+.pw-bambu .pwb-cam {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+  display: grid;
+  place-items: center;
+  z-index: 2;
+}
+
+.pw-bambu .pwb-cam-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.pw-bambu .pwb-cam-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  border: none;
+  background: var(--tile);
+  color: var(--text);
+  border-radius: 50%;
+  width: 1.8em;
+  height: 1.8em;
+  font: inherit;
+  cursor: pointer;
+  z-index: 3;
+}
+
+.pw-bambu .pwb-login {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  max-width: 18em;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.pw-bambu .pwb-login-title { font-size: 0.85em; color: var(--muted); }
+
+.pw-bambu .pwb-login input {
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  border-radius: var(--radius);
+  padding: 5px 8px;
+  font: inherit;
+  font-size: 0.85em;
+}
+
+.pw-bambu .pwb-login-msg { color: var(--muted); font-size: 0.75em; }
+
+/* Aux plus petites tailles, l'anneau prend toute la place : il ne reste
+   que l'avancement, ce qui est le but.
+   At the smallest sizes only the progress ring remains. */
+.pw-bambu[data-level="bare"] { padding: 2px; }
+.pw-bambu[data-level="bare"] .pwb-head { display: none; }
+.pw-bambu[data-level="bare"] .pwb-ring { width: min(92%, 92cqh); }
+.pw-bambu[data-level="lite"] .pwb-head { display: none; }

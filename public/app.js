@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.114.0
+   Version 1.115.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2995,6 +2995,34 @@
          "folder" field: a path on the machine running PiBoard, with a
          button to pick it in a folder browser (and create one if
          needed). Typing the path by hand still works. */
+      /* Champ "discover" : une liste construite en interrogeant le
+         PiBoard plutot qu'ecrite dans le manifeste -- les appareils
+         presents sur le reseau ne sont connus qu'au moment ou l'on
+         ouvre les reglages. Le manifeste declare "source" (la route a
+         interroger) et, facultativement, "fills" : les autres champs
+         du formulaire que le choix doit remplir (adresse, numero de
+         serie, modele...). Generique par construction : premier usage
+         par la tuile Imprimante 3D, reutilisable pour tout materiel
+         qui s'annonce sur le reseau.
+         "discover" field: a list built by asking the PiBoard rather
+         than written in the manifest -- devices on the network are
+         only known when the settings are opened. The manifest declares
+         "source" and, optionally, "fills": the sibling fields the
+         choice must fill in. */
+      case "discover": {
+        const fills = JSON.stringify(f.fills || {}).replace(/"/g, "&quot;");
+        return `<div class="field field-discover" data-discover-src="${escapeHtmlAttr(f.source || "")}" data-discover-fills="${fills}">
+          <span>${label}</span>
+          <div class="field-discover-wrap">
+            <select data-key="${f.key}" data-discover-select>
+              <option value="${escapeHtmlAttr(String(v))}" selected>${v ? escapeHtmlAttr(String(v)) : i18n.t("discover.none")}</option>
+            </select>
+            <button type="button" class="btn small field-discover-scan">${i18n.t("discover.scan")}</button>
+          </div>
+          <small class="field-hint field-discover-msg"></small>
+          ${hint}
+        </div>`;
+      }
       case "folder":
         return `<label class="field"><span>${label}</span><div class="field-folder-wrap"><input type="text" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-folder-browse" data-for="${f.key}">${i18n.t("folder.browse")}</button></div>${hint}</label>`;
       case "password":
@@ -3665,7 +3693,7 @@
        couvrait.
        Home & energy: Tempo and Home Assistant both speak of what happens
        INSIDE the home, which no existing family covered. */
-    { key: "home", ids: ["tempo", "homeassistant"] },
+    { key: "home", ids: ["tempo", "homeassistant", "bambu"] },
     { key: "personal", ids: ["calendar", "mailbox", "notes"] },
     { key: "entertainment", ids: ["teleprog", "iptv", "youtube", "slideshow"] },
     { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
@@ -5379,6 +5407,72 @@
       loadFolder(data.path);
     } catch (e) {
       folderStatus(i18n.t("folder.createFailed") + " " + String(e.message || e), true);
+    }
+  }
+
+  /* Recherche d'appareils pour les champs "discover" (voir
+     fieldMarkup). Un seul gestionnaire delegue : les champs
+     n'existent qu'a l'ouverture des reglages d'une tuile.
+     Device search for "discover" fields: one delegated handler. */
+  function wireDiscoverFields() {
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest && e.target.closest(".field-discover-scan");
+      if (!btn) return;
+      const field = btn.closest(".field-discover");
+      const msg = field.querySelector(".field-discover-msg");
+      const sel = field.querySelector("[data-discover-select]");
+      const src = field.dataset.discoverSrc;
+      if (!src) return;
+      btn.disabled = true;
+      msg.textContent = i18n.t("discover.searching");
+      try {
+        const res = await fetch(src, { cache: "no-store" });
+        const data = await res.json();
+        const list = data.printers || data.items || [];
+        if (!list.length) {
+          msg.textContent = data.error ? i18n.t("discover.failed") + " " + data.error : i18n.t("discover.empty");
+          return;
+        }
+        const current = sel.value;
+        sel.innerHTML = list.map((it) => {
+          const value = it.serial || it.id || "";
+          const text = [it.name || it.model || value, it.model && it.name ? "(" + it.model + ")" : "", it.host || ""]
+            .filter(Boolean).join(" ");
+          return `<option value="${escapeHtmlAttr(value)}" data-item="${escapeHtmlAttr(JSON.stringify(it))}" ${value === current ? "selected" : ""}>${escapeHtmlAttr(text)}</option>`;
+        }).join("");
+        msg.textContent = i18n.t("discover.found").replace("{n}", String(list.length));
+        applyDiscoverChoice(field);
+      } catch (err) {
+        msg.textContent = i18n.t("discover.failed") + " " + (err.message || err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    document.addEventListener("change", (e) => {
+      const sel = e.target.closest && e.target.closest("[data-discover-select]");
+      if (sel) applyDiscoverChoice(sel.closest(".field-discover"));
+    });
+  }
+
+  /* Le choix remplit les champs voisins declares dans "fills" : on evite
+     ainsi de recopier a la main une adresse IP et un numero de serie
+     releves sur un petit ecran.
+     The choice fills the sibling fields declared in "fills". */
+  function applyDiscoverChoice(field) {
+    if (!field) return;
+    const sel = field.querySelector("[data-discover-select]");
+    const opt = sel && sel.selectedOptions && sel.selectedOptions[0];
+    if (!opt || !opt.dataset.item) return;
+    let item = null;
+    try { item = JSON.parse(opt.dataset.item); } catch (e) { return; }
+    let fills = {};
+    try { fills = JSON.parse(field.dataset.discoverFills || "{}"); } catch (e) { fills = {}; }
+    const form = field.closest("form") || field.parentElement;
+    for (const key of Object.keys(fills)) {
+      const value = item[fills[key]];
+      if (value == null || value === "") continue;
+      const input = form.querySelector(`[data-key="${key}"]`);
+      if (input) input.value = value;
     }
   }
 
@@ -7915,6 +8009,7 @@
     onActivate($("libraryClose"), closeLibrary);
     wireThemeUi();
     wireFolderPicker();
+    wireDiscoverFields();
     onActivate($("libraryAdd"), () => $("libraryFile").click());
     onActivate($("libraryOnline"), showLibraryCatalog);
     $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));

@@ -1,0 +1,479 @@
+{
+  "id": "bambu",
+  "version": "1.0.0",
+  "name": {
+    "en": "Bambu Lab 3D printer",
+    "fr": "Imprimante 3D Bambu Lab"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Live monitoring of a Bambu Lab printer (X1C, P1S, A1, H2D…): progress, current stage (heating, bed levelling, calibration, printing), estimated finish time, current layer, bed, nozzle and chamber temperatures, AMS contents and humidity, HMS errors. Direct link over your local network (nothing leaves your home) or through your Bambu account. Read-only: the tile never sends a command to the printer. The display degrades gracefully as the tile shrinks, down to progress alone.",
+    "fr": "Suivi en direct d'une imprimante Bambu Lab (X1C, P1S, A1, H2D…) : avancement, étape en cours (chauffe, nivellement, calibration, impression), heure de fin prévue, couche en cours, températures du plateau, de la buse et du caisson, contenu et humidité des AMS, erreurs HMS. Liaison directe au réseau local (rien ne sort de chez vous) ou par le compte Bambu. Lecture seule : la tuile n'envoie aucune commande à l'imprimante. L'affichage se dégrade proprement quand la tuile rétrécit, jusqu'à ne garder que l'avancement."
+  },
+  "tagline": {
+    "en": "Your 3D print, at a glance.",
+    "fr": "Votre impression 3D, d'un coup d'œil."
+  },
+  "size": {
+    "w": 3,
+    "h": 3,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "mode",
+      "type": "select",
+      "default": "lan",
+      "label": {
+        "en": "Link",
+        "fr": "Liaison"
+      },
+      "options": [
+        {
+          "value": "lan",
+          "label": {
+            "en": "Local network (recommended)",
+            "fr": "Réseau local (recommandé)"
+          }
+        },
+        {
+          "value": "cloud",
+          "label": {
+            "en": "Bambu account (cloud)",
+            "fr": "Compte Bambu (cloud)"
+          }
+        }
+      ],
+      "hint": {
+        "en": "The local link depends on no outside service and refreshes in real time. It requires turning on <b>LAN mode</b> then <b>Developer mode</b> on the printer's screen (Settings → Network), with a reboot after first enabling it.",
+        "fr": "Le réseau local ne dépend d'aucun service extérieur et rafraîchit en temps réel. Il exige d'activer sur l'écran de l'imprimante le <b>mode LAN</b> puis le <b>mode développeur</b> (Réglages → Réseau), avec un redémarrage après la première activation."
+      }
+    },
+    {
+      "key": "printer",
+      "type": "discover",
+      "default": "",
+      "source": "/api/bambu/discover",
+      "fills": {
+        "host": "host",
+        "serial": "serial",
+        "model": "model",
+        "printerName": "name"
+      },
+      "label": {
+        "en": "Printer",
+        "fr": "Imprimante"
+      },
+      "hint": {
+        "en": "\"Search\" queries the local network: Bambu printers announce themselves there. On the cloud link the list comes from your account once signed in below. You can also fill the three fields by hand.",
+        "fr": "« Rechercher » interroge le réseau local : les imprimantes Bambu s'y annoncent d'elles-mêmes. En liaison cloud, la liste vient de votre compte une fois la connexion établie ci-dessous. Vous pouvez aussi remplir les trois champs à la main."
+      }
+    },
+    {
+      "key": "host",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Printer IP address",
+        "fr": "Adresse IP de l'imprimante"
+      },
+      "hint": {
+        "en": "Shown on the printer's screen under Settings → Network. Not needed on the cloud link.",
+        "fr": "Visible sur l'écran de l'imprimante, Réglages → Réseau. Inutile en liaison cloud."
+      }
+    },
+    {
+      "key": "serial",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Serial number",
+        "fr": "Numéro de série"
+      }
+    },
+    {
+      "key": "model",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Model (X1C, P1S, A1, H2D…)",
+        "fr": "Modèle (X1C, P1S, A1, H2D…)"
+      },
+      "hint": {
+        "en": "Decides what the tile can show: only enclosed machines measure the chamber, only the H2D has two nozzles.",
+        "fr": "Détermine ce que la tuile peut afficher : seules les machines fermées mesurent le caisson, seule la H2D porte deux buses."
+      }
+    },
+    {
+      "key": "accessCode",
+      "type": "secret",
+      "default": "",
+      "label": {
+        "en": "LAN access code",
+        "fr": "Code d'accès LAN"
+      },
+      "hint": {
+        "en": "Eight digits, on the printer's screen (Settings → Network). Stored encrypted on the PiBoard, in a file separate from the tile settings, so it never ends up in a layout backup.",
+        "fr": "Huit chiffres, sur l'écran de l'imprimante (Réglages → Réseau). Conservé chiffré sur le PiBoard, dans un fichier distinct des réglages de la tuile : il ne part donc jamais dans une sauvegarde de disposition."
+      }
+    },
+    {
+      "key": "region",
+      "type": "select",
+      "default": "eu",
+      "label": {
+        "en": "Bambu account region",
+        "fr": "Région du compte Bambu"
+      },
+      "options": [
+        {
+          "value": "eu",
+          "label": {
+            "en": "Europe",
+            "fr": "Europe"
+          }
+        },
+        {
+          "value": "us",
+          "label": {
+            "en": "North America",
+            "fr": "Amérique du Nord"
+          }
+        },
+        {
+          "value": "cn",
+          "label": {
+            "en": "China",
+            "fr": "Chine"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Cloud link only. Signing in happens from the tile itself: it asks for your address, your password, then the verification code emailed to you.",
+        "fr": "Uniquement pour la liaison cloud. La connexion au compte se fait depuis la tuile elle-même : elle réclame votre adresse, votre mot de passe, puis le code de vérification reçu par courriel."
+      }
+    },
+    {
+      "key": "showTemps",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "label": {
+        "en": "Temperatures (bed, nozzle, chamber)",
+        "fr": "Températures (plateau, buse, caisson)"
+      }
+    },
+    {
+      "key": "showStage",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "label": {
+        "en": "Current stage (heating, levelling, calibration…)",
+        "fr": "Étape en cours (chauffe, nivellement, calibration…)"
+      }
+    },
+    {
+      "key": "showFinish",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "label": {
+        "en": "Estimated finish time and current layer",
+        "fr": "Heure de fin prévue et couche en cours"
+      }
+    },
+    {
+      "key": "showAms",
+      "type": "checkbox",
+      "default": false,
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "label": {
+        "en": "AMS contents and humidity",
+        "fr": "Contenu et humidité des AMS"
+      },
+      "hint": {
+        "en": "Spools with their real colour, the engaged filament, and each unit's humidity level.",
+        "fr": "Les bobines avec leur couleur réelle, le filament engagé, et le taux d'humidité de chaque unité."
+      }
+    },
+    {
+      "key": "showIdleDetails",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "label": {
+        "en": "When idle, show the last print and temperatures",
+        "fr": "À l'arrêt, montrer la dernière impression et les températures"
+      },
+      "hint": {
+        "en": "Rather than an empty tile: the last print's name, how it ended, and enough to see the machine cooling down.",
+        "fr": "Plutôt qu'une tuile vide : le nom de la dernière impression, son issue, et de quoi voir que la machine refroidit."
+      }
+    },
+    {
+      "key": "showCamera",
+      "type": "checkbox",
+      "default": false,
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "label": {
+        "en": "Camera button (opens the stream in a window)",
+        "fr": "Bouton caméra (ouvre le flux en fenêtre)"
+      },
+      "hint": {
+        "en": "The built-in camera's stream, shown over the board when the button is tapped. Requires the local link.",
+        "fr": "Le flux de la caméra intégrée, affiché par-dessus le tableau de bord au toucher du bouton. Nécessite la liaison locale."
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 5,
+      "min": 2,
+      "max": 120,
+      "step": 1,
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "label": {
+        "en": "Refresh (seconds)",
+        "fr": "Rafraîchissement (secondes)"
+      },
+      "hint": {
+        "en": "The printer pushes its state on its own; this only sets how often the tile re-reads that already-received state. No need to go very low.",
+        "fr": "L'imprimante pousse son état d'elle-même ; ce réglage ne fixe que la fréquence à laquelle la tuile relit cet état déjà reçu. Inutile de descendre très bas."
+      }
+    },
+    {
+      "key": "alertOnFinish",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Alert when the print finishes",
+        "fr": "Prévenir à la fin de l'impression"
+      }
+    },
+    {
+      "key": "alertOnError",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Alert on error, failure or unexpected pause",
+        "fr": "Prévenir en cas d'erreur, d'échec ou de pause imprévue"
+      },
+      "hint": {
+        "en": "Filament runout, clogged nozzle, a fault reported by the printer: this is when you want to be interrupted.",
+        "fr": "Filament épuisé, buse bouchée, panne signalée par l'imprimante : c'est le moment où l'on veut être dérangé."
+      }
+    },
+    {
+      "key": "flashScreen",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Flash the whole screen",
+        "fr": "Faire clignoter tout l'écran"
+      }
+    },
+    {
+      "key": "playSound",
+      "type": "checkbox",
+      "default": true,
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Play a sound (needs speakers on the screen)",
+        "fr": "Jouer un son (nécessite des haut-parleurs sur l'écran)"
+      }
+    },
+    {
+      "key": "soundChoice",
+      "type": "select",
+      "default": "beep-double",
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Sound",
+        "fr": "Son"
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ],
+      "hint": {
+        "en": "All sounds are synthesized on the fly (no audio files, works offline).",
+        "fr": "Tous les sons sont synthétisés à la volée (aucun fichier audio, fonctionne hors-ligne)."
+      }
+    },
+    {
+      "key": "alertDurationSeconds",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 300,
+      "step": 5,
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Alert duration (seconds)",
+        "fr": "Durée de l'alerte (secondes)"
+      }
+    },
+    {
+      "key": "notifyUrl",
+      "type": "text",
+      "default": "",
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Notification webhook URL (optional, {message} = the text below)",
+        "fr": "URL webhook de notification (optionnel, {message} = le texte ci-dessous)"
+      }
+    },
+    {
+      "key": "notifyMethod",
+      "type": "select",
+      "default": "GET",
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Webhook method",
+        "fr": "Méthode du webhook"
+      },
+      "options": [
+        {
+          "value": "GET",
+          "label": {
+            "en": "GET",
+            "fr": "GET"
+          }
+        },
+        {
+          "value": "POST",
+          "label": {
+            "en": "POST (body = message)",
+            "fr": "POST (corps = message)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "notifyMessage",
+      "type": "text",
+      "default": "",
+      "group": {
+        "en": "Alerts",
+        "fr": "Alertes"
+      },
+      "label": {
+        "en": "Notification message (optional)",
+        "fr": "Message de la notification (optionnel)"
+      }
+    }
+  ]
+}

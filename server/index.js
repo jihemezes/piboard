@@ -59,6 +59,7 @@ const astronomy = require("./astronomy");
 const backups = require("./backups");
 const iptv = require("./iptv");
 const iptvAudio = require("./iptvAudio");
+const { spawn } = require("child_process");
 const iptvHlsProxy = require("./iptvHlsProxy");
 const iptvVlc = require("./iptvVlc");
 const iptvRecord = require("./iptvRecord");
@@ -2120,6 +2121,120 @@ app.get("/api/network-config", async (req, res) => {
     console.warn("[piboard] config reseau:", e.message || e);
     res.status(500).json({ error: String(e.message || e), adapters: [] });
   }
+});
+
+/* ---------- Imprimantes 3D Bambu Lab (lecture seule) ----------
+   Voir server/bambu.js. Le code d'acces LAN et le jeton du compte
+   vivent dans le coffre chiffre (tileSecrets) et ne sont JAMAIS
+   renvoyes au navigateur : les routes ne sortent qu'un etat
+   d'imprimante.
+   See server/bambu.js. The LAN access code and the account token live
+   in the encrypted vault and are NEVER returned to the browser. */
+const bambu = require("./bambu");
+
+function bambuConfig(req) {
+  const tileId = req.params.tileId;
+  return {
+    id: tileId,
+    mode: String(req.query.mode || "lan") === "cloud" ? "cloud" : "lan",
+    host: String(req.query.host || "").trim(),
+    serial: String(req.query.serial || "").trim(),
+    model: String(req.query.model || "").trim(),
+    name: String(req.query.name || "").trim(),
+    region: String(req.query.region || "eu"),
+    code: tileSecrets.get(tileId, "accessCode") || "",
+    token: tileSecrets.get(tileId, "cloudToken") || ""
+  };
+}
+
+app.get("/api/bambu/:tileId/status", (req, res) => {
+  const cfg = bambuConfig(req);
+  res.set("Cache-Control", "no-store");
+  if (!cfg.serial) return res.status(400).json({ error: "missing_serial" });
+  if (cfg.mode === "lan" && (!cfg.host || !cfg.code)) return res.status(400).json({ error: "missing_lan_settings" });
+  if (cfg.mode === "cloud" && !cfg.token) return res.status(400).json({ error: "missing_token" });
+  try {
+    res.json(bambu.status(cfg));
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e), code: e.code || null });
+  }
+});
+
+app.delete("/api/bambu/:tileId/link", (req, res) => {
+  res.json({ closed: bambu.close(bambuConfig(req)) });
+});
+
+/* Recherche des imprimantes presentes sur le reseau local (SSDP). */
+app.get("/api/bambu/discover", async (req, res) => {
+  res.set("Cache-Control", "no-store");
+  try {
+    res.json({ printers: await bambu.discover(Number(req.query.timeout) || 4000) });
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e), printers: [] });
+  }
+});
+
+/* Connexion au compte Bambu : identifiants, puis code de verification.
+   Le jeton obtenu est range dans le coffre, jamais renvoye. */
+app.post("/api/bambu/:tileId/cloud-login", async (req, res) => {
+  const tileId = req.params.tileId;
+  const account = String((req.body && req.body.account) || "").trim();
+  const password = String((req.body && req.body.password) || "");
+  const code = String((req.body && req.body.code) || "").trim();
+  try {
+    const out = code ? await bambu.cloudVerify(account, code) : await bambu.cloudLogin(account, password);
+    if (out.ok && out.token) {
+      tileSecrets.set(tileId, "cloudToken", out.token);
+      return res.json({ ok: true });
+    }
+    res.json({ ok: false, needCode: !!out.needCode, error: out.error || null });
+  } catch (e) {
+    res.status(502).json({ ok: false, error: String(e.message || e) });
+  }
+});
+
+/* Imprimantes rattachees au compte, une fois le jeton obtenu. */
+app.get("/api/bambu/:tileId/cloud-printers", async (req, res) => {
+  const token = tileSecrets.get(req.params.tileId, "cloudToken");
+  res.set("Cache-Control", "no-store");
+  if (!token) return res.status(400).json({ error: "missing_token", printers: [] });
+  try {
+    res.json({ printers: await bambu.cloudPrinters(token) });
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e), printers: [] });
+  }
+});
+
+/* Camera de l'imprimante. Le flux est en RTSPS, qu'aucun navigateur ne
+   sait lire : ffmpeg le convertit en une suite d'images JPEG
+   (multipart/x-mixed-replace), qu'une simple balise <img> affiche sans
+   lecteur video ni bibliotheque. Cinq images par seconde suffisent
+   largement pour surveiller une impression, et c'est autant de charge
+   en moins sur un Raspberry Pi.
+   The printer's camera speaks RTSPS, which no browser can read: ffmpeg
+   turns it into an MJPEG stream that a plain <img> tag displays. */
+app.get("/api/bambu/:tileId/camera", async (req, res) => {
+  const host = String(req.query.host || "").trim();
+  const code = tileSecrets.get(req.params.tileId, "accessCode") || "";
+  if (!host || !code) return res.status(400).end();
+  const ffmpeg = await iptvAudio.findFfmpeg();
+  if (!ffmpeg) return res.status(503).json({ error: "ffmpeg_missing" });
+
+  const url = "rtsps://bblp:" + encodeURIComponent(code) + "@" + host + ":322/streaming/live/1";
+  const child = spawn(ffmpeg, [
+    "-hide_banner", "-loglevel", "error",
+    // Le certificat de l'imprimante est auto-signe (voir server/bambu.js).
+    "-rtsp_transport", "tcp", "-tls_verify", "0",
+    "-i", url,
+    "-f", "mpjpeg", "-q:v", "6", "-r", "5", "-an", "-"
+  ]);
+  res.set("Content-Type", "multipart/x-mixed-replace; boundary=ffmpeg");
+  res.set("Cache-Control", "no-store");
+  child.stdout.pipe(res);
+  child.stderr.on("data", (d) => console.warn("[piboard] bambu camera:", String(d).trim()));
+  const stop = () => { try { child.kill("SIGKILL"); } catch (e) { /* deja mort */ } };
+  req.on("close", stop);
+  child.on("error", (e) => { console.warn("[piboard] bambu camera:", e.message || e); stop(); res.end(); });
 });
 
 /* ---------- Home Assistant (lecture seule) / read-only ----------

@@ -1,0 +1,260 @@
+/* Tests hors ligne du suivi d'imprimante Bambu Lab (server/bambu.js) et
+   des paliers d'affichage de la tuile. Aucun reseau, aucune imprimante :
+   on verifie les decisions, pas la plomberie MQTT.
+
+   Le rapport de reference reproduit la forme reelle publiee par une X1C
+   (champs et unites), y compris le fait que l'imprimante n'envoie un
+   etat COMPLET qu'une fois, puis uniquement des differences.
+
+   Offline tests of the Bambu Lab printer monitoring and the tile's
+   display levels. No network, no printer. */
+"use strict";
+
+const assert = require("assert");
+const B = require("../server/bambu.js");
+const W = require("../public/widgets/bambu/widget.js");
+
+let failures = 0;
+function test(name, fn) {
+  try { fn(); console.log("  OK   " + name); }
+  catch (e) { failures++; console.log("  FAIL " + name + "\n       " + e.message); }
+}
+
+const FULL = {
+  gcode_state: "RUNNING",
+  stg_cur: 2,
+  mc_percent: 37,
+  mc_remaining_time: 138,
+  layer_num: 84,
+  total_layer_num: 240,
+  bed_temper: 58.5,
+  bed_target_temper: 60,
+  nozzle_temper: 219.8,
+  nozzle_target_temper: 220,
+  chamber_temper: 34,
+  subtask_name: "Boitier capteur v3",
+  gcode_file: "/data/Metadata/plate_1.gcode",
+  printer_type: "X1C",
+  spd_lvl: 2,
+  cooling_fan_speed: "12",
+  wifi_signal: "-48dBm",
+  lights_report: [{ node: "chamber_light", mode: "on" }],
+  hms: [],
+  ams: {
+    tray_now: "2",
+    ams: [{
+      id: "0", humidity: "3", temp: "28",
+      tray: [
+        { id: "0", tray_type: "PLA", tray_color: "FF6A13FF", remain: 62 },
+        { id: "1", tray_type: "", tray_color: "" },
+        { id: "2", tray_type: "PETG", tray_color: "1B7F4BFF", remain: 88 },
+        { id: "3", tray_type: "", tray_color: "" }
+      ]
+    }]
+  }
+};
+
+console.log("== Imprimante 3D Bambu Lab ==");
+
+test("fusion : l'imprimante n'envoie que des differences, l'etat reste complet", () => {
+  // C'est LE piege du protocole : sans fusion, la tuile clignoterait
+  // entre un etat complet et trois champs.
+  let state = B.mergeReport(null, FULL);
+  state = B.mergeReport(state, { mc_percent: 38, nozzle_temper: 220.1 });
+  assert.strictEqual(state.mc_percent, 38, "le nouveau chiffre est pris");
+  assert.strictEqual(state.bed_temper, 58.5, "l'ancien est conserve");
+  assert.strictEqual(state.subtask_name, "Boitier capteur v3");
+});
+
+test("fusion : un objet imbrique est fusionne, pas remplace", () => {
+  const state = B.mergeReport({ a: { x: 1, y: 2 } }, { a: { y: 3 } });
+  assert.deepStrictEqual(state.a, { x: 1, y: 3 });
+});
+
+test("fusion : un tableau remplace l'ancien (les plateaux arrivent complets)", () => {
+  const state = B.mergeReport({ hms: [{ attr: 1, code: 2 }] }, { hms: [] });
+  assert.deepStrictEqual(state.hms, []);
+});
+
+test("etat servi a la tuile : l'essentiel y est, dans une forme unique", () => {
+  const p = B.snapshot(FULL, { model: "X1C", name: "Atelier" });
+  assert.strictEqual(p.printing, true);
+  assert.strictEqual(p.percent, 37);
+  assert.strictEqual(p.layer, 84);
+  assert.strictEqual(p.totalLayers, 240);
+  assert.strictEqual(p.printName, "Boitier capteur v3");
+  assert.strictEqual(p.bed.current, 58.5);
+  assert.strictEqual(p.bed.target, 60);
+  assert.strictEqual(p.nozzles.length, 1);
+  assert.strictEqual(p.nozzles[0].target, 220);
+  assert.strictEqual(p.name, "Atelier");
+});
+
+test("etape : le code est traduit dans les deux langues", () => {
+  const p = B.snapshot(FULL, { model: "X1C" });
+  assert.strictEqual(p.stage, 2);
+  assert.strictEqual(p.stageLabel.fr, "Préchauffage du plateau");
+  assert.strictEqual(p.stageLabel.en, "Heatbed preheating");
+  assert.strictEqual(B.stageLabel(10).fr, "Inspection de la première couche");
+  assert.strictEqual(B.stageLabel(255).en, "Idle");
+});
+
+test("etape : un code inconnu ne fabrique pas un libelle faux", () => {
+  // Bambu en ajoute a chaque firmware : mieux vaut ne rien dire.
+  assert.strictEqual(B.stageLabel(9999), null);
+  assert.strictEqual(B.snapshot({ gcode_state: "RUNNING", stg_cur: 9999 }).stageLabel, null);
+});
+
+test("etat general : traduit lui aussi, et l'inconnu ne casse rien", () => {
+  assert.strictEqual(B.stateLabel("FINISH").fr, "Terminée");
+  assert.strictEqual(B.stateLabel("running").en, "Printing", "la casse est indifferente");
+  assert.strictEqual(B.stateLabel("BIDULE"), null);
+});
+
+test("temps restant : des minutes, et l'heure de fin qui en decoule", () => {
+  assert.strictEqual(B.remainingMs(138), 138 * 60000);
+  const at = B.finishAt(138, new Date("2026-09-20T12:00:00Z"));
+  assert.strictEqual(at.toISOString(), "2026-09-20T14:18:00.000Z");
+});
+
+test("temps restant : une valeur invraisemblable en minutes est relue en secondes", () => {
+  // La documentation communautaire hesite entre minutes et secondes :
+  // plutot que d'annoncer une fin dans deux ans, on choisit la lecture
+  // qui a un sens.
+  assert.strictEqual(B.remainingMs(36000), 36000 * 1000);
+  assert.strictEqual(B.remainingMs(null), null);
+  assert.strictEqual(B.remainingMs(-5), null);
+});
+
+test("machine a l'arret : pas d'heure de fin inventee", () => {
+  const p = B.snapshot(Object.assign({}, FULL, { gcode_state: "FINISH" }));
+  assert.strictEqual(p.printing, false);
+  assert.strictEqual(p.finishAt, null);
+  assert.strictEqual(p.printName, "Boitier capteur v3", "la derniere impression reste nommee");
+});
+
+test("modele : le caisson n'est affiche que sur les machines qui le mesurent", () => {
+  assert.strictEqual(B.capabilities("X1C").chamber, true);
+  assert.strictEqual(B.capabilities("P1S").chamber, false);
+  assert.strictEqual(B.capabilities("A1 mini").chamber, false);
+  assert.strictEqual(B.snapshot(FULL, { model: "P1S" }).chamber, null, "pas de 0 °C pour un caisson absent");
+  assert.strictEqual(B.snapshot(FULL, { model: "X1C" }).chamber.current, 34);
+});
+
+test("modele : la H2D porte deux buses", () => {
+  assert.strictEqual(B.capabilities("H2D").nozzles, 2);
+  const h2d = B.snapshot(Object.assign({}, FULL, {
+    device: { extruder: { info: [{ temp: 2200, target_temp: 220 }, { temp: 1800, target_temp: 180 }] } }
+  }), { model: "H2D" });
+  assert.strictEqual(h2d.nozzles.length, 2);
+  assert.strictEqual(h2d.nozzles[0].current, 220);
+  assert.strictEqual(h2d.nozzles[1].target, 180);
+  assert.strictEqual(h2d.chamber.current, 34);
+});
+
+test("nom de l'impression : le fichier sert de repli, sans chemin ni extension", () => {
+  assert.strictEqual(B.printName({ gcode_file: "/data/Metadata/support gauche.gcode.3mf" }), "support gauche",
+    "les deux extensions enchainees sont retirees");
+  assert.strictEqual(B.printName({ gcode_file: "/cache/piece.3mf" }), "piece");
+  assert.strictEqual(B.printName({}), "");
+});
+
+test("erreurs : le code lisible est celui de la base d'aide de Bambu", () => {
+  assert.strictEqual(B.hmsCode(50331648, 65538), "0300_0000_0001_0002");
+  assert.strictEqual(B.hmsCode("pas un nombre", 1), null);
+  const p = B.snapshot(Object.assign({}, FULL, { hms: [{ attr: 50331648, code: 65538 }] }));
+  assert.strictEqual(p.errors.length, 1);
+  assert.ok(/wiki\.bambulab\.com/.test(p.errors[0].url), "un lien vers l'explication");
+});
+
+test("AMS : les bobines presentes, leur couleur, celle qui est engagee", () => {
+  const p = B.snapshot(FULL, { model: "X1C" });
+  assert.strictEqual(p.ams.length, 1);
+  assert.strictEqual(p.ams[0].humidity, 3);
+  const trays = p.ams[0].trays;
+  assert.strictEqual(trays.length, 2, "les plateaux vides ne sont pas montres");
+  assert.strictEqual(trays[0].color, "#FF6A13", "la transparence est retiree de la couleur");
+  assert.strictEqual(trays[1].active, true, "le plateau 2 est celui qui sort");
+  assert.strictEqual(trays[0].active, false);
+});
+
+test("decouverte : les entetes SSDP de Bambu donnent serie, modele et adresse", () => {
+  const msg = [
+    "NOTIFY * HTTP/1.1", "HOST: 239.255.255.250:1990",
+    "Location: 192.168.1.42", "NT: urn:bambulab-com:device:3dprinter:1",
+    "USN: 01P00A123456789", "DevModel.bambu.com: BL-P001",
+    "DevName.bambu.com: Atelier", "DevVersion.bambu.com: 01.08.03.00", "", ""
+  ].join("\r\n");
+  const p = B.parseSsdp(msg, "192.168.1.42");
+  assert.strictEqual(p.serial, "01P00A123456789");
+  assert.strictEqual(p.host, "192.168.1.42");
+  assert.strictEqual(p.model, "BL-P001");
+  assert.strictEqual(p.name, "Atelier");
+  assert.strictEqual(B.parseSsdp("rien du tout", "1.2.3.4"), null, "un message etranger est ignore");
+});
+
+test("compte Bambu : jeton obtenu, ou code de verification a reclamer", () => {
+  assert.deepStrictEqual(B.loginOutcome({ accessToken: "abc" }), { ok: true, token: "abc" });
+  assert.strictEqual(B.loginOutcome({ loginType: "verifyCode" }).needCode, true);
+  assert.strictEqual(B.loginOutcome({ loginType: "tfa", tfaKey: "k" }).needCode, true);
+  assert.strictEqual(B.loginOutcome({ error: "mauvais mot de passe" }).ok, false);
+});
+
+test("compte Bambu : le nom d'utilisateur MQTT sort du jeton lui-meme", () => {
+  const body = Buffer.from(JSON.stringify({ username: "u_1234567" }), "utf8").toString("base64");
+  assert.strictEqual(B.userIdFromToken("entete." + body + ".signature"), "u_1234567");
+  assert.strictEqual(B.userIdFromToken("pas un jeton"), null);
+});
+
+test("compte Bambu : l'hote depend de la region, avec un repli sur l'Europe", () => {
+  assert.strictEqual(B.cloudHost("us"), "us.mqtt.bambulab.com");
+  assert.strictEqual(B.cloudHost("cn"), "cn.mqtt.bambulab.com");
+  assert.strictEqual(B.cloudHost("bidule"), "eu.mqtt.bambulab.com");
+});
+
+test("diagnostic : chaque panne courante recoit une cause nommee", () => {
+  assert.strictEqual(B.describeError(new Error("connect ECONNREFUSED 192.168.1.42:8883")), "refused");
+  assert.strictEqual(B.describeError(new Error("connect ETIMEDOUT")), "unreachable");
+  assert.strictEqual(B.describeError(new Error("Connection refused: Not authorized")), "auth");
+  assert.strictEqual(B.describeError(new Error("getaddrinfo ENOTFOUND x")), "dns");
+});
+
+console.log("== Paliers d'affichage de la tuile ==");
+
+test("palier : plus la tuile est petite, plus on retire", () => {
+  assert.strictEqual(W.levelFor(420, 320), "full");
+  assert.strictEqual(W.levelFor(280, 220), "rich");
+  assert.strictEqual(W.levelFor(220, 160), "mid");
+  assert.strictEqual(W.levelFor(180, 120), "lite");
+  assert.strictEqual(W.levelFor(90, 70), "bare");
+});
+
+test("palier : l'avancement est le dernier a partir", () => {
+  // C'est l'engagement de la tuile : quelle que soit sa taille, on voit
+  // ou en est l'impression.
+  for (const name of Object.keys(W.SHOWN)) {
+    assert.ok(W.SHOWN[name], name);
+  }
+  assert.strictEqual(W.SHOWN.bare.temps, false);
+  assert.strictEqual(W.SHOWN.bare.ams, false);
+  assert.strictEqual(W.SHOWN.bare.stage, false);
+  assert.strictEqual(W.SHOWN.full.ams, true);
+  // Une tuile aplatie retombe sur le palier reduit, pas sur le complet.
+  assert.strictEqual(W.levelFor(600, 80), "bare");
+});
+
+test("duree : lisible de loin, dans les deux langues", () => {
+  assert.strictEqual(W.duration(138 * 60000, "fr"), "2 h 18");
+  assert.strictEqual(W.duration(120 * 60000, "fr"), "2 h");
+  assert.strictEqual(W.duration(7 * 60000, "fr"), "7 min");
+  assert.strictEqual(W.duration(138 * 60000, "en"), "2h 18m");
+  assert.strictEqual(W.duration(null, "fr"), "");
+});
+
+test("temperature : une mesure absente n'affiche pas zero", () => {
+  assert.strictEqual(W.temp(58.5), "59°");
+  assert.strictEqual(W.temp(null), "—");
+});
+
+console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS PASSENT");
+process.exit(failures ? 1 : 0);
