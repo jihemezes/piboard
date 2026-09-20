@@ -1,18 +1,18 @@
 {
   "id": "iptv",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "name": {
     "en": "TV channels",
     "fr": "Chaînes TV"
   },
   "titleBar": true,
   "description": {
-    "en": "PiBoard provides NO channels and no content: this tile is a plain player, usable only if you already have, on your own, a subscription / access to an IPTV service or a freely available playlist. Reads a channel playlist (.m3u/.m3u8, the standard format VLC and Kodi use) and plays a channel right in the tile. Browse the list, filter by category or search by name, tap a channel to watch it. Only the channel list goes through the PiBoard; video streams are read directly by the browser. Performance note: a Raspberry Pi 4 handles 720p comfortably, 1080p is borderline once the rest of the dashboard is running alongside — the per-tile scheduling (see the matching help section) is worth using so it doesn't run around the clock.",
-    "fr": "PiBoard ne fournit AUCUNE chaîne ni aucun contenu : cette tuile est un simple lecteur, utilisable uniquement si vous disposez déjà par vous-même d'un abonnement / accès à un service IPTV ou d'une playlist en libre accès. Lit une playlist de chaînes (.m3u/.m3u8, le format standard que lisent VLC et Kodi) et diffuse une chaîne directement dans la tuile. Parcourez la liste, filtrez par catégorie ou cherchez par nom, touchez une chaîne pour la regarder. Seule la liste des chaînes transite par le PiBoard ; les flux vidéo sont lus directement par le navigateur. Note de performance : un Raspberry Pi 4 tient le 720p confortablement, le 1080p est limite une fois le reste du tableau en fonctionnement à côté — la planification par tuile (voir la section d'aide correspondante) vaut le coup pour qu'elle ne tourne pas en permanence."
+    "en": "PiBoard provides NO channels and no content: this tile is a plain player, usable only if you already have, on your own, a subscription / access to an IPTV service or a freely available playlist. Reads a channel playlist (.m3u/.m3u8, the standard format VLC and Kodi use) and plays a channel right in the tile. Browse the list, filter by category or search by name, tap a channel to watch it. The list and live channels go through the PiBoard (IPTV platforms do not send the authorization a browser requires); movies and series are read directly by the browser. A button RECORDS what you are watching to a file by tapping the stream already received — no extra connection to the provider, which usually allows only one: scheduled recordings with margins before and after, resumption after a dropped feed, duration and free-space guards, a list of the recordings and conversion to .mp4. Performance note: a Raspberry Pi 4 handles 720p comfortably, 1080p is borderline once the rest of the dashboard is running alongside — the per-tile scheduling (see the matching help section) is worth using so it doesn't run around the clock.",
+    "fr": "PiBoard ne fournit AUCUNE chaîne ni aucun contenu : cette tuile est un simple lecteur, utilisable uniquement si vous disposez déjà par vous-même d'un abonnement / accès à un service IPTV ou d'une playlist en libre accès. Lit une playlist de chaînes (.m3u/.m3u8, le format standard que lisent VLC et Kodi) et diffuse une chaîne directement dans la tuile. Parcourez la liste, filtrez par catégorie ou cherchez par nom, touchez une chaîne pour la regarder. La liste et les chaînes en direct transitent par le PiBoard (les plateformes IPTV n'envoient pas l'autorisation qu'exige un navigateur) ; les films et séries sont lus directement par le navigateur. Un bouton permet d'ENREGISTRER dans un fichier ce que vous regardez, en dérivant le flux déjà reçu — aucune connexion supplémentaire chez le fournisseur, qui n'en autorise généralement qu'une : enregistrements programmés avec marges avant et après, reprise après coupure, garde-fous de durée et d'espace disque, liste des enregistrements et conversion en .mp4. Note de performance : un Raspberry Pi 4 tient le 720p confortablement, le 1080p est limite une fois le reste du tableau en fonctionnement à côté — la planification par tuile (voir la section d'aide correspondante) vaut le coup pour qu'elle ne tourne pas en permanence."
   },
   "tagline": {
-    "en": "Watch a channel from an .m3u playlist.",
-    "fr": "Regarder une chaîne depuis une playlist .m3u."
+    "en": "Watch a channel from an .m3u playlist, and record it.",
+    "fr": "Regarder une chaîne depuis une playlist .m3u, et l'enregistrer."
   },
   "size": {
     "w": 5,

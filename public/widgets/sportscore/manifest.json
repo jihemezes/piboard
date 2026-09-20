@@ -1,14 +1,14 @@
 {
   "id": "sportscore",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "name": {
     "en": "Live sports scores",
     "fr": "Scores sportifs en direct"
   },
   "titleBar": true,
   "description": {
-    "en": "Live and upcoming scores for football, rugby (Top 14), or any other ESPN-covered competition via its code. For an upcoming match that isn't today, the time and date (DD/MM) alternate automatically.",
-    "fr": "Scores en direct et à venir de football, de rugby (Top 14), ou de toute autre compétition couverte par ESPN via son code. Pour un match à venir qui n'est pas aujourd'hui, l'heure et la date (jj/mm) alternent automatiquement."
+    "en": "Live and upcoming scores for football, rugby (Top 14), or any other ESPN-covered competition via its code. The host club is shown on top and the visiting one below; live matches then just-finished ones come first. For an upcoming match that isn't today, the time and date (DD/MM) alternate automatically.",
+    "fr": "Scores en direct et à venir de football, de rugby (Top 14), ou de toute autre compétition couverte par ESPN via son code. Le club qui reçoit est affiché en haut, celui qui se déplace en bas ; les matchs en direct puis ceux qui viennent de se terminer passent en premier. Pour un match à venir qui n'est pas aujourd'hui, l'heure et la date (jj/mm) alternent automatiquement."
   },
   "tagline": {
     "en": "Live and upcoming scores for your teams.",

@@ -4325,6 +4325,39 @@ function catalogItemFor(catalog, document, widgetId) {
     }
     for (const w of missing) console.log("       absent du README : " + w);
     assert("chaque widget livre est cite dans le README", missing.length === 0);
+
+    /* La documentation suit-elle le code ? Chaque fonctionnalite notable
+       d'une tuile doit se retrouver dans sa description (le texte du
+       catalogue) ET dans sa section d'aide, dans les DEUX langues. Ce
+       controle est ne d'un decalage reel : l'enregistrement IPTV existait
+       depuis trois versions sans etre mentionne dans la description de
+       la tuile, et celle-ci affirmait encore que les flux ne passaient
+       pas par le PiBoard (1.113.3).
+       Does the documentation follow the code? Each notable tile feature
+       must appear in its description (the catalog text) AND in its help
+       section, in BOTH languages. */
+    {
+      const helpSrc = fs.readFileSync(path.join(PUB, "help-content.js"), "utf8");
+      const manifestOf = (id) => JSON.parse(fs.readFileSync(path.join(PUB, "widgets", id, "manifest.json"), "utf8"));
+      const documented = [];
+      const checkText = (label, text, needles) => {
+        const miss = needles.filter((n) => !text.includes(n));
+        if (miss.length) documented.push(label + " -> " + miss.join(", "));
+      };
+      const iptv = manifestOf("iptv");
+      checkText("description iptv FR", iptv.description.fr, ["ENREGISTRER", "programmés"]);
+      checkText("description iptv EN", iptv.description.en, ["RECORDS", "scheduled recordings"]);
+      const quote = manifestOf("quote");
+      checkText("description citation FR", quote.description.fr, ["Van Damme", "Chuck Norris"]);
+      checkText("description citation EN", quote.description.en, ["Van Damme", "Chuck Norris"]);
+      const image = manifestOf("image");
+      checkText("description image FR", image.description.fr, ["bibliothèque"]);
+      checkText("description image EN", image.description.en, ["library"]);
+      checkText("aide FR", helpSrc, ["Enregistrer une chaîne", "Thèmes de couleurs", "Parcourir…", "Marges appliquées".slice(0, 6)]);
+      checkText("aide EN", helpSrc, ["Recording a channel", "Colour themes", "Browse…", "margins"]);
+      for (const d of documented) console.log("       non documente : " + d);
+      assert("la description et l'aide de chaque tuile suivent ses fonctionnalites", documented.length === 0);
+    }
   }
 
   console.log("== Catalogue : classement des tuiles ==");
@@ -7127,6 +7160,102 @@ function catalogItemFor(catalog, document, widgetId) {
     w.destroy();
     host.remove();
     document.body.classList.toggle("editing", wasEditingQ);
+  }
+
+  console.log("== Tuile Scores : match termine, club qui recoit en haut (1.113.4) ==");
+  {
+    /* La VRAIE tuile est instanciee, avec une reponse ESPN figee : celle
+       du vendredi soir ou le Stade Toulousain se deplacait au RC Vannes.
+       Deux regressions sont couvertes : le score d'un match termine la
+       veille doit s'afficher (la tuile ne demandait que la journee
+       d'ESPN, et son cache pouvait resservir la reponse precedente), et
+       le club qui RECOIT doit etre en haut.
+       The REAL tile with a frozen ESPN answer. */
+    let SportClass = null;
+    const realRegister = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, klass) => { if (id === "sportscore") SportClass = klass; realRegister.call(window.PiBoard, id, klass); };
+    const sc = document.createElement("script");
+    sc.src = "/widgets/sportscore/widget.js?t=sport-test";
+    document.head.appendChild(sc);
+    for (let i = 0; i < 40 && !SportClass; i++) await sleep(25);
+    window.PiBoard.registerWidget = realRegister;
+    assert("scores : la tuile se charge", !!SportClass);
+
+    const answer = { events: [
+      { date: "2026-09-19T18:55:00Z",
+        status: { type: { state: "post", shortDetail: "FT" } },
+        competitions: [{ competitors: [
+          { homeAway: "away", score: "31", team: { displayName: "Stade Toulousain" } },
+          { homeAway: "home", score: "13", team: { displayName: "RC Vannes" } }
+        ] }] },
+      { date: "2026-09-26T18:55:00Z",
+        status: { type: { state: "pre" } },
+        competitions: [{ competitors: [
+          { homeAway: "home", score: "0", team: { displayName: "Stade Toulousain" } },
+          { homeAway: "away", score: "0", team: { displayName: "Bayonne" } }
+        ] }] }
+    ] };
+
+    const asked = [];
+    const realFetch = window.fetch;
+    window.fetch = (url, opts) => {
+      const u = String(url);
+      if (u.indexOf("/api/proxy") === 0) {
+        asked.push({ url: u, opts: opts || {} });
+        return Promise.resolve({ ok: true, status: 200, json: async () => answer });
+      }
+      return realFetch(url, opts);
+    };
+
+    const host = document.createElement("div");
+    host.style.width = "400px"; host.style.height = "240px";
+    document.body.appendChild(host);
+    const sManifest = catalog.find((m) => m.id === "sportscore");
+    const defaults = {};
+    for (const f of sManifest.settings) defaults[f.key] = f.default;
+    const w = new SportClass({
+      el: host, instanceId: "s-test", manifest: sManifest,
+      settings: Object.assign({}, defaults, { league: "rugby:270559", refresh: 2 }),
+      i18n: { lang: "fr", t: (k) => k },
+      api: { proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u) },
+      updateSettings() {},
+      assetUrl(file) { return "widgets/sportscore/" + file + "?v=9.9.9"; }
+    });
+    await w.init();
+    await sleep(80);
+
+    const target = decodeURIComponent((asked[0] || {}).url || "");
+    assert("scores : une fenetre de dates est demandee, pas la seule journee d'ESPN",
+      /[?&]dates=\d{8}-\d{8}/.test(target));
+    /* Sans cela, l'URL etant identique d'un rafraichissement a l'autre,
+       le kiosque pouvait resservir la reponse de la veille : l'heure de
+       coup d'envoi restait affichee apres la fin du match. */
+    assert("scores : la reponse n'est pas prise dans le cache du navigateur",
+      (asked[0] || {}).opts.cache === "no-store" && /[?&]_=\d+/.test((asked[0] || {}).url));
+
+    const rows = host.querySelectorAll("li");
+    assert("scores : les deux matchs sont affiches", rows.length === 2);
+    const names = (li) => Array.from(li.querySelectorAll(".pws-team-name")).map((n) => n.textContent);
+    assert("scores : le match termine hier soir passe en premier, avec son score",
+      /31/.test(rows[0].textContent) && /13/.test(rows[0].textContent));
+    assert("scores : celui qui recoit est en haut, celui qui se deplace en bas",
+      names(rows[0])[0] === "RC Vannes" && names(rows[0])[1] === "Stade Toulousain");
+    assert("scores : le vainqueur est mis en evidence",
+      rows[0].querySelectorAll(".pws-winner").length === 1
+      && /Toulousain/.test(rows[0].querySelector(".pws-winner").textContent));
+    assert("scores : un match a venir garde son horaire et reste sans score",
+      !/pws-score/.test(rows[1].innerHTML) && names(rows[1])[0] === "Stade Toulousain");
+
+    /* Le rafraichissement doit VRAIMENT repartir chercher les donnees :
+       c'est ce que l'utilisateur regle a 2 minutes. */
+    const before = asked.length;
+    await w.refresh();
+    assert("scores : chaque rafraichissement interroge de nouveau la source", asked.length === before + 1);
+    assert("scores : et jamais avec la meme URL", asked[before].url !== asked[before - 1].url);
+
+    w.destroy();
+    host.remove();
+    window.fetch = realFetch;
   }
 
   console.log("== Choix d'un dossier et programmation IPTV (1.113.2) ==");

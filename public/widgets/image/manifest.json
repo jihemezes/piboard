@@ -1,7 +1,7 @@
 {
   "id": "image",
   "dir": "image",
-  "version": "0.4.2",
+  "version": "0.5.0",
   "name": {
     "en": "Logo / Image",
     "fr": "Logo / Image"
@@ -11,8 +11,8 @@
     "fr": "Une image ou un logo stocké en local."
   },
   "description": {
-    "en": "A style tile: displays an image stored on the PiBoard machine itself (no external address, nothing to fetch from the Internet). Upload it from the tile's settings; it is kept in the data/ folder and therefore survives updates. Framing, crop (zoom and choice of the visible part), position, rounding and opacity are adjustable, and an optional link opens a page when the image is clicked.",
-    "fr": "Une tuile de style : affiche une image stockée sur la machine PiBoard elle-même (aucune adresse externe, rien à récupérer sur Internet). Vous la téléversez depuis les réglages de la tuile ; elle est conservée dans le dossier data/ et survit donc aux mises à jour. Le cadrage, le recadrage (zoom et choix de la partie visible), la position, l'arrondi et l'opacité sont réglables, et un lien optionnel ouvre une page au clic sur l'image."
+    "en": "A style tile: displays an image stored on the PiBoard machine itself (no external address, nothing to fetch from the Internet). Upload it from the tile's settings; it is kept in the data/ folder and therefore survives updates. Framing, crop (zoom and choice of the visible part), position, rounding and opacity are adjustable, and an optional link opens a page when the image is clicked. The image can also be picked from PiBoard's shared library (shipped backgrounds, logos and your own images), common to the Logo/Image tile and to page backgrounds.",
+    "fr": "Une tuile de style : affiche une image stockée sur la machine PiBoard elle-même (aucune adresse externe, rien à récupérer sur Internet). Vous la téléversez depuis les réglages de la tuile ; elle est conservée dans le dossier data/ et survit donc aux mises à jour. Le cadrage, le recadrage (zoom et choix de la partie visible), la position, l'arrondi et l'opacité sont réglables, et un lien optionnel ouvre une page au clic sur l'image. L'image peut aussi être choisie dans la bibliothèque partagée de PiBoard (fonds livrés, logos et vos propres images), commune à la tuile Logo/Image et aux fonds de page."
   },
   "size": {
     "w": 2,

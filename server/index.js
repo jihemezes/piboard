@@ -1834,6 +1834,15 @@ app.get("/api/proxy", async (req, res) => {
     const body = await upstream.text();
     res.status(upstream.status);
     res.set("Content-Type", upstream.headers.get("content-type") || "text/plain; charset=utf-8");
+    /* Ce proxy ne sert que des donnees vivantes (flux RSS, scores). Sans
+       cette entete, le navigateur du kiosque pouvait garder la reponse
+       precedente pour une URL identique et afficher indefiniment des
+       donnees perimees -- un match termine restait annonce a son heure
+       de coup d'envoi (1.113.4).
+       This proxy only serves live data; without this header the kiosk
+       browser could keep serving the previous answer for an identical
+       URL. */
+    res.set("Cache-Control", "no-store, max-age=0");
     res.send(body);
   } catch (e) {
     res.status(502).json({ error: "upstream fetch failed", detail: String(e.message || e) });

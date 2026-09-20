@@ -1,5 +1,54 @@
 # Changelog
 
+## 1.113.4
+
+- **Tuile Scores : le score d'un match termine la veille s'affiche enfin.**
+  Deux causes, corrigees toutes les deux. D'une part, ESPN interroge sans
+  parametre ne renvoie qu'UNE journee, la sienne (fuseau americain) : un
+  match joue le vendredi soir en France sortait du tableau au moment
+  meme ou son score etait publie. La tuile demande desormais
+  explicitement les deux jours ecoules et la semaine a venir. D'autre
+  part, l'URL etant identique d'un rafraichissement a l'autre, le cache
+  du navigateur du kiosque pouvait resservir la reponse de la veille --
+  l'heure de coup d'envoi restait alors affichee des heures apres la fin
+  du match, quel que soit l'intervalle de rafraichissement regle. Les
+  appels portent maintenant un horodatage et interdisent le cache, et le
+  proxy de PiBoard ne se laisse plus mettre en cache non plus.
+
+- **Le club qui recoit est affiche en haut, celui qui se deplace en bas.**
+  L'ordre suit desormais explicitement l'indication d'ESPN plutot que la
+  place dans la liste ; quand l'information manque (terrain neutre),
+  l'ordre d'origine est conserve plutot qu'invente.
+
+- Les rencontres sont classees : en direct d'abord, puis celles qui
+  viennent de se terminer, puis les prochaines, puis les plus anciennes.
+  Le filtre par equipe reconnait aussi la ville et l'abreviation (« Toulouse »
+  trouve le Stade Toulousain).
+
+- Le choix et la mise en ordre des matchs vivent dans un module pur
+  (`public/widgets/sportscore/engine.js`), teste hors ligne, et la tuile
+  elle-meme est exercee de bout en bout avec le cas reel
+  Vannes - Stade Toulousain.
+
+## 1.113.3
+
+- **Documentation remise a jour.** La description de la tuile Chaines TV
+  -- le texte qu'on lit dans le catalogue avant d'ajouter une tuile --
+  ne parlait toujours pas de l'enregistrement, arrive trois versions
+  plus tot, et affirmait encore que « seule la liste des chaines transite
+  par le PiBoard », ce qui n'est plus vrai pour le direct depuis que le
+  flux passe par lui. Description et accroche refaites dans les deux
+  langues.
+
+- La description de la tuile Logo/Image ne mentionnait pas la
+  bibliotheque partagee, qu'elle utilise pourtant depuis la 1.110.0.
+
+- **Test de non-regression sur la documentation** : chaque
+  fonctionnalite notable doit se retrouver dans la description de sa
+  tuile ET dans sa section d'aide, dans les deux langues. C'est ce
+  controle qui manquait : l'aide etait bien a jour, mais rien ne
+  verifiait les descriptions du catalogue.
+
 ## 1.113.2
 
 - **Correctif : le bouton de programmation ne faisait rien.** La saisie

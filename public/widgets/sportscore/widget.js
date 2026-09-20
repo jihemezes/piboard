@@ -8,6 +8,32 @@
 (function () {
   "use strict";
 
+  /* Le moteur (choix et mise en ordre des matchs) est un module pur,
+     teste hors ligne. Charge via ctx.assetUrl : il porte alors le
+     numero de version, sans quoi le kiosque pourrait en servir une
+     ancienne copie depuis son cache.
+     The engine (picking and ordering matches) is a pure, offline-tested
+     module, loaded through ctx.assetUrl so it carries the version. */
+  let enginePromise = null;
+  function loadEngine(ctx) {
+    if (window.PiBoardSportEngine) return Promise.resolve(window.PiBoardSportEngine);
+    if (enginePromise) return enginePromise;
+    const src = typeof ctx.assetUrl === "function"
+      ? ctx.assetUrl("engine.js")
+      : "widgets/" + ctx.manifest.dir + "/engine.js";
+    enginePromise = new Promise((resolve, reject) => {
+      const s = document.createElement("script");
+      s.src = src;
+      s.onload = () => {
+        if (window.PiBoardSportEngine) resolve(window.PiBoardSportEngine);
+        else reject(new Error("engine.js charge mais vide / loaded but empty"));
+      };
+      s.onerror = () => reject(new Error("engine.js introuvable / not found (" + src + ")"));
+      document.head.appendChild(s);
+    });
+    return enginePromise;
+  }
+
   function localTime(iso, lang) {
     const d = new Date(iso);
     return d.toLocaleTimeString(lang === "fr" ? "fr-FR" : "en-GB", { hour: "2-digit", minute: "2-digit" });
@@ -41,6 +67,12 @@
 
     async init() {
       this.ctx.el.innerHTML = `<div class="pw-sport"><div class="pws-err">${this.ctx.i18n.t("common.loading")}</div></div>`;
+      try { this.engine = await loadEngine(this.ctx); }
+      catch (e) {
+        console.warn("[piboard/sportscore]", e);
+        this.ctx.el.innerHTML = `<div class="pw-sport"><div class="pws-err">${this.ctx.i18n.t("sport.error")}</div></div>`;
+        return;
+      }
       await this.refresh();
       this.arm();
       clearInterval(this.blinkTimer);
@@ -78,32 +110,47 @@
         // an old value without ":" is a soccer slug.
         const raw = (s.customLeague || "").trim() || s.league || "soccer:fifa.world";
         const [sport, league] = raw.includes(":") ? raw.split(":") : ["soccer", raw];
-        const url = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard`;
-        const data = await fetch(this.ctx.api.proxyUrl(url)).then((r) => {
+        // Sans fenetre de dates, ESPN ne renvoie qu'UNE journee, la
+        // sienne (fuseau americain) : un match joue hier soir en France
+        // disparaissait du tableau alors que son score venait d'etre
+        // publie. On demande donc explicitement les jours autour
+        // d'aujourd'hui (1.113.4).
+        // Without a date window ESPN returns only its OWN single day.
+        const now = new Date();
+        const win = this.engine.dateWindow(now, 2, 7);
+        const url = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=${win}`;
+        // « no-store » + horodatage : l'URL etant identique d'un
+        // rafraichissement a l'autre, le cache du kiosque pouvait servir
+        // la reponse de la veille -- l'heure de coup d'envoi restait
+        // alors affichee bien apres la fin du match (1.113.4).
+        // no-store + timestamp: the URL being identical between
+        // refreshes, the kiosk cache could serve yesterday's answer.
+        const data = await fetch(this.ctx.api.proxyUrl(url) + "&_=" + Date.now(), {
+          cache: "no-store",
+          headers: { "Cache-Control": "no-cache" }
+        }).then((r) => {
           if (!r.ok) throw new Error("status " + r.status);
           return r.json();
         });
 
-        let events = data.events || [];
-        const filter = (s.teamFilter || "").trim().toLowerCase();
-        if (filter) {
-          events = events.filter((ev) =>
-            (ev.competitions[0].competitors || []).some((c) =>
-              (c.team.displayName || "").toLowerCase().includes(filter)));
-        }
-        events = events.slice(0, Math.max(1, Number(s.maxItems) || 5));
+        const events = this.engine.pick(data.events || [], {
+          now,
+          filter: s.teamFilter,
+          max: Number(s.maxItems) || 5
+        });
 
         if (!events.length) {
           el.innerHTML = `<div class="pw-sport"><div class="pws-empty">${this.ctx.i18n.t("sport.empty")}</div></div>`;
           return;
         }
 
-        const now = new Date();
         const rows = events.map((ev) => {
           const comp = ev.competitions[0];
           const state = ev.status.type.state; // pre | in | post
-          const home = comp.competitors.find((c) => c.homeAway === "home");
-          const away = comp.competitors.find((c) => c.homeAway === "away");
+          // Celui qui RECOIT en haut, celui qui se DEPLACE en bas.
+          // Host on top, visitor below.
+          const { home, away } = this.engine.orderCompetitors(comp);
+          if (!home || !away) return "";
           const showScore = state !== "pre";
           const homeWin = state === "post" && Number(home.score) > Number(away.score);
           const awayWin = state === "post" && Number(away.score) > Number(home.score);
