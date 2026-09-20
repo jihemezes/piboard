@@ -384,7 +384,7 @@
         <li class="pwtv-recrow">
           <span class="pwtv-recname">${escapeHtml(f.name)}</span>
           <span class="pwtv-recsize">${escapeHtml(mb(f.bytes))}</span>
-          ${/\.ts$/i.test(f.name) ? `<button type="button" class="pwtv-btn" data-convert="${escapeAttr(f.name)}" title="${i18n.t("iptv.record.convert")}">mp4</button>` : ""}
+          ${/\.ts$/i.test(f.name) ? `<button type="button" class="pwtv-btn pwtv-btn-text" data-convert="${escapeAttr(f.name)}" title="${i18n.t("iptv.record.convert")}">mp4</button>` : ""}
           <button type="button" class="pwtv-btn pwtv-recdel" data-del="${escapeAttr(f.name)}" title="${i18n.t("iptv.record.delete")}">✕</button>
         </li>`).join("");
       body.innerHTML = head.join("") + `<ul class="pwtv-reclist-items">${rows
@@ -918,7 +918,7 @@
           </div>
           <p class="pwtv-sched-hint">${pad ? escapeHtml(i18n.t("iptv.schedule.margins").replace("{before}", Math.max(0, Number(s.recordPadBefore) || 0)).replace("{after}", Math.max(0, Number(s.recordPadAfter) || 0))) : ""}</p>
           <div class="pwtv-sched-actions">
-            <button type="button" class="pwtv-btn pwtv-sched-add">${i18n.t("iptv.schedule.add")}</button>
+            <button type="button" class="pwtv-btn pwtv-btn-text pwtv-sched-add">${i18n.t("iptv.schedule.add")}</button>
           </div>
           <p class="pwtv-sched-msg" hidden></p>
           <ul class="pwtv-sched-list"></ul>

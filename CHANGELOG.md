@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.115.7
+
+- **Correctif d'affichage : le bouton « Programmer » de la tuile
+  Chaines TV avait une allure d'ovale traverse par du texte.** Il
+  reutilisait la classe des boutons ICONE de la barre de lecture, qui
+  impose un carre de 30 x 30 -- un mot entier y depassait de toutes
+  parts. Les boutons portant un libelle ont desormais leur propre
+  variant, qui se dimensionne sur son contenu. Le bouton « mp4 » de la
+  liste des enregistrements etait dans le meme cas et est corrige lui
+  aussi.
+
+- Un controle de non-regression parcourt TOUS les boutons de la tuile :
+  aucun de ceux qui portent un mot ne peut se contenter de la classe
+  des icones. Il verifie aussi que cette classe impose bien une taille
+  fixe -- autrement dit que la cause reste celle qu'on croit.
+
 ## 1.115.6
 
 - **« BL-P001 » s'affiche desormais « X1 Carbon ».** Bambu ne publie

@@ -174,6 +174,20 @@
   touch-action: manipulation;
 }
 .pwtv-btn:hover { background: var(--tile-edge); }
+/* Bouton PORTANT UN LIBELLE. La regle ci-dessus taille un carre de
+   30x30 pour une icone : un mot entier y depassait de toutes parts, ce
+   qui donnait a « Programmer » son allure d'ovale traverse par du texte
+   (1.115.7). Un bouton texte se dimensionne sur son contenu.
+   Button CARRYING A LABEL: the rule above sizes a 30x30 square for an
+   icon, and a whole word overflowed it in every direction. */
+.pwtv-btn-text {
+  width: auto;
+  height: auto;
+  min-height: 28px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
 /* Curseur de volume : largeur fixe modeste, la barre de controle etant
    deja chargee (retour, precedent, pause, suivant, muet, volume, plein
    ecran). Volume slider: modest fixed width, the control bar already

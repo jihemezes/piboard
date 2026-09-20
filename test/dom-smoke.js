@@ -7649,6 +7649,49 @@ function catalogItemFor(catalog, document, widgetId) {
     window.fetch = realFetch;
   }
 
+  console.log("== Chaines TV : un bouton qui porte un mot n'est pas une icone (1.115.7) ==");
+  {
+    /* Signale a l'usage : le bouton « Programmer » avait une allure
+       d'ovale traverse par du texte. La regle .pwtv-btn taille un carre
+       de 30x30 pour une ICONE ; un mot entier y depasse de toutes
+       parts. Le controle vaut pour tous les boutons de la tuile, pas
+       seulement celui-la.
+       A button carrying a WORD must not use the icon-only class. */
+    const src = fs.readFileSync(path.join(PUB, "widgets/iptv/widget.js"), "utf8");
+    const css = fs.readFileSync(path.join(PUB, "widgets/iptv/widget.css"), "utf8");
+
+    assert("bouton texte : la tuile a une classe distincte pour les boutons a libelle",
+      /\.pwtv-btn-text\s*\{/.test(css));
+    /* La classe icone impose une taille fixe : c'est bien elle le
+       probleme, et c'est bien le variant texte qui la libere. */
+    const iconRule = css.slice(css.indexOf(".pwtv-btn {"), css.indexOf(".pwtv-btn:hover"));
+    assert("bouton texte : la classe icone impose bien une taille fixe (c'est la cause)",
+      /width:\s*30px/.test(iconRule) && /height:\s*30px/.test(iconRule));
+    const textRule = css.slice(css.indexOf(".pwtv-btn-text {"), css.indexOf("}", css.indexOf(".pwtv-btn-text {")));
+    assert("bouton texte : le variant rend la largeur et la hauteur au contenu",
+      /width:\s*auto/.test(textRule) && /height:\s*auto/.test(textRule));
+
+    /* Aucun bouton portant un MOT ne doit se contenter de la classe
+       icone. On lit les boutons du source de la tuile. */
+    const offenders = [];
+    const re = /<button[^>]*class="([^"]*pwtv-btn[^"]*)"[^>]*>([\s\S]*?)<\/button>/g;
+    let m;
+    while ((m = re.exec(src))) {
+      const classes = m[1];
+      // Libelle debarrasse des expressions : ce qui reste est le texte vu.
+      const label = m[2].replace(/\$\{[^}]*\}/g, "").replace(/\s+/g, " ").trim();
+      const isWord = /[A-Za-z\u00C0-\u024F]{3,}/.test(label);
+      if (isWord && classes.indexOf("pwtv-btn-text") < 0) offenders.push(label);
+    }
+    for (const o of offenders) console.log("       bouton a libelle sans classe texte : " + o);
+    assert("bouton texte : aucun bouton portant un mot n'utilise la classe des icones",
+      offenders.length === 0);
+    /* Et le bouton « Programmer », lui, la porte bien -- c'est le cas
+       qui a ete signale. */
+    assert("bouton texte : « Programmer » est bien un bouton texte",
+      /class="pwtv-btn pwtv-btn-text pwtv-sched-add"/.test(src));
+  }
+
   console.log("== Choix d'un dossier et programmation IPTV (1.113.2) ==");
   {
     const $d = (id) => document.getElementById(id);
