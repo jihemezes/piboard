@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.114.0
+
+- **Tuile Scores : le TOP 14 et la PRO D2 sont desormais lus chez la
+  Ligue Nationale de Rugby**, source officielle, et non plus chez ESPN.
+  Verification faite sur les deux API : le tableau d'ESPN **ignore
+  purement et simplement son propre parametre de dates** sur le rugby
+  (il renvoie toujours SA journee, calee sur le fuseau americain) et sa
+  liste de clubs a une saison de retard -- le RC Vannes n'y figure meme
+  pas. D'ou le symptome signale : le match du samedi soir disparaissait
+  sans avoir jamais affiche son score, et celui du dimanche soir
+  n'apparaissait qu'en milieu de journee. La page de la LNR, elle,
+  contient la journee en cours au complet, samedi et dimanche, scores
+  compris. La tuile Classement lisait deja la LNR pour la meme raison
+  depuis la 1.96.2.
+
+- Une tuile deja reglee sur le Top 14 **bascule toute seule** sur la
+  nouvelle source : l'ancien code ESPN est redirige, il n'y a rien a
+  reconfigurer. La PRO D2 est ajoutee a la liste des competitions.
+
+- Le lecteur de la page LNR rend les matchs au format d'ESPN : le
+  filtre, la mise en ordre et l'affichage restent communs aux deux
+  sources. Il est teste sur un EXTRAIT VERBATIM de la page reelle
+  (Castres - Toulon, Vannes - Stade Toulousain, Bordeaux-Begles - Stade
+  Francais de la J3 2026-2027), et la tuile entiere est exercee de bout
+  en bout sur cette meme page.
+
 ## 1.113.4
 
 - **Tuile Scores : le score d'un match termine la veille s'affiche enfin.**

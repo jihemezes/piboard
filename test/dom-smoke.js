@@ -7215,7 +7215,7 @@ function catalogItemFor(catalog, document, widgetId) {
     for (const f of sManifest.settings) defaults[f.key] = f.default;
     const w = new SportClass({
       el: host, instanceId: "s-test", manifest: sManifest,
-      settings: Object.assign({}, defaults, { league: "rugby:270559", refresh: 2 }),
+      settings: Object.assign({}, defaults, { league: "soccer:fra.1", refresh: 2 }),
       i18n: { lang: "fr", t: (k) => k },
       api: { proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u) },
       updateSettings() {},
@@ -7252,6 +7252,57 @@ function catalogItemFor(catalog, document, widgetId) {
     await w.refresh();
     assert("scores : chaque rafraichissement interroge de nouveau la source", asked.length === before + 1);
     assert("scores : et jamais avec la meme URL", asked[before].url !== asked[before - 1].url);
+
+
+    /* ---- Rugby francais : la source est la LNR, pas ESPN ----
+       Meme tuile, meme rendu, mais la page reelle de la LNR (fixture
+       verbatim) : c'est elle qui porte le score du match de la veille
+       et le RC Vannes, absent de la base d'ESPN. */
+    {
+      const lnrHtml = fs.readFileSync(path.join(__dirname, "fixtures", "lnr-top14-calendrier.html"), "utf8");
+      const seen = [];
+      window.fetch = (url, opts) => {
+        const u = String(url);
+        if (u.indexOf("/api/proxy") === 0) {
+          seen.push(decodeURIComponent(u));
+          return Promise.resolve({ ok: true, status: 200, text: async () => lnrHtml });
+        }
+        return realFetch(url, opts);
+      };
+      const lnrHost = document.createElement("div");
+      lnrHost.style.width = "400px"; lnrHost.style.height = "240px";
+      document.body.appendChild(lnrHost);
+      // « rugby:270559 » est l'ANCIEN code ESPN : une tuile deja posee
+      // doit basculer toute seule sur la LNR, sans reglage a refaire.
+      const lw = new SportClass({
+        el: lnrHost, instanceId: "s-lnr", manifest: sManifest,
+        settings: Object.assign({}, defaults, { league: "rugby:270559", teamFilter: "", maxItems: 5 }),
+        i18n: { lang: "fr", t: (k) => k },
+        api: { proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u) },
+        updateSettings() {},
+        assetUrl(file) { return "widgets/sportscore/" + file + "?v=9.9.9"; }
+      });
+      await lw.init();
+      await sleep(80);
+      assert("scores : le rugby francais est lu chez la LNR, plus chez ESPN",
+        seen.some((u) => /top14\.lnr\.fr\/calendrier-et-resultats/.test(u)) && !seen.some((u) => /espn/.test(u)));
+      const lnrRows = lnrHost.querySelectorAll("li");
+      const vannes = Array.from(lnrRows).find((li) => /Vannes/.test(li.textContent));
+      assert("scores : le match du RC Vannes existe (ESPN ne connait pas ce club)", !!vannes);
+      const vNames = Array.from(vannes.querySelectorAll(".pws-team-name")).map((n) => n.textContent);
+      assert("scores : Vannes recoit, il est donc en haut ; Toulouse se deplace, en bas",
+        vNames[0] === "RC Vannes" && vNames[1] === "Stade Toulousain");
+      const vScores = Array.from(vannes.querySelectorAll(".pws-score")).map((n) => n.textContent);
+      assert("scores : le score du match de la veille est affiche (23 - 29)",
+        vScores[0] === "23" && vScores[1] === "29");
+      assert("scores : le vainqueur en deplacement est mis en evidence",
+        /Toulousain/.test((vannes.querySelector(".pws-winner") || {}).textContent || ""));
+      const bx = Array.from(lnrRows).find((li) => /Bordeaux/.test(li.textContent));
+      assert("scores : le match du soir meme est annonce, sans score",
+        !!bx && !bx.querySelector(".pws-score") && /21:05|21h05/.test(bx.textContent));
+      lw.destroy();
+      lnrHost.remove();
+    }
 
     w.destroy();
     host.remove();
