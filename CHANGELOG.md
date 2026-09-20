@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.115.6
+
+- **« BL-P001 » s'affiche desormais « X1 Carbon ».** Bambu ne publie
+  pas le nom commercial de la machine mais un code interne, que la
+  tuile montrait tel quel.
+
+- **Et ce code masquait un vrai defaut** : la detection du caisson
+  cherchait « X1 » dans le nom recu, ce que « BL-P001 » ne contient
+  pas. Une X1 Carbon n'affichait donc PAS la temperature de son
+  caisson, alors qu'elle la mesure. Les codes connus (X1, X1 Carbon,
+  P1P, P1S, A1, A1 mini, H2D) decident maintenant du nom affiche ET de
+  ce que la machine sait mesurer -- caisson, nombre de buses.
+
+- **Le bouton camera n'apparaissait pas en liaison cloud.** Son flux
+  passe pourtant TOUJOURS par le reseau local : il ne transite jamais
+  par Bambu. Le bouton s'affiche donc des que l'adresse IP et le code
+  d'acces LAN sont connus, quelle que soit la liaison choisie pour
+  l'etat. Il reste soumis a la place disponible, comme le reste.
+
+- L'humidite d'un AMS est affichee sur son echelle (« 2/5 ») plutot
+  qu'en nombre nu, qui ne disait pas s'il fallait s'en inquieter.
+
 ## 1.115.5
 
 - **Correctif : le courtier de Bambu refusait la connexion

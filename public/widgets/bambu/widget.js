@@ -241,7 +241,7 @@
        through the same relay as the TV channels. */
     openCamera() {
       const s = this.ctx.settings;
-      if (!s.host) return;
+      if (!s.host) return;   // le flux passe par le reseau local, jamais par Bambu
       this.cameraOpen = true;
       this.render();
     }
@@ -401,7 +401,7 @@
       parts.push(`<div class="pwb-head">
         <span class="pwb-name">${esc(p.name || p.model || t("bambu.printer"))}</span>
         ${p.errors.length ? `<span class="pwb-badge pwb-badge-err" title="${esc(p.errors[0].code)}">!</span>` : ""}
-        ${show.extras && s.showCamera && s.mode !== "cloud" ? `<button type="button" class="pwb-icon" data-act="camera" title="${esc(t("bambu.camera"))}">◉</button>` : ""}
+        ${show.extras && s.showCamera && st.camera ? `<button type="button" class="pwb-icon" data-act="camera" title="${esc(t("bambu.camera"))}">◉</button>` : ""}
       </div>`);
 
       parts.push(`<div class="pwb-ring" style="--pct:${percent}">

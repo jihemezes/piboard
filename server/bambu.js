@@ -110,14 +110,48 @@ function stateLabel(code) {
   return GCODE_STATES[String(code || "").toUpperCase()] || null;
 }
 
-/* ---------- Ce que le modele sait faire ----------
-   Le caisson n'est mesure que sur les machines fermees ; seule la H2D
-   porte deux buses. Sans ce filtre, la tuile afficherait « 0 °C » pour
-   un caisson qui n'existe pas -- pire qu'une absence.
-   What the model can do: only enclosed machines measure the chamber,
-   only the H2D has two nozzles. */
+/* ---------- Modeles ----------
+   Bambu ne publie PAS le nom commercial de la machine : le cloud et
+   l'annonce reseau donnent un code interne (« BL-P001 » pour une X1
+   Carbon). L'afficher tel quel n'apprend rien -- et, plus grave, la
+   detection du caisson qui cherchait « X1 » dans ce code echouait :
+   une X1 Carbon n'affichait donc pas la temperature de son caisson
+   (1.115.6).
+   Bambu does NOT publish the commercial name: cloud and network
+   announcement give an internal code ("BL-P001" for an X1 Carbon).
+   Showing it raw teaches nothing -- and, worse, chamber detection
+   looked for "X1" in that code and failed. */
+const MODELS = {
+  "BL-P001": { name: "X1 Carbon", chamber: true, nozzles: 1 },
+  "BL-P002": { name: "X1", chamber: true, nozzles: 1 },
+  "C11": { name: "P1P", chamber: false, nozzles: 1 },
+  "C12": { name: "P1S", chamber: false, nozzles: 1 },
+  "C13": { name: "P1S", chamber: false, nozzles: 1 },
+  "N1": { name: "A1 mini", chamber: false, nozzles: 1 },
+  "N2S": { name: "A1", chamber: false, nozzles: 1 },
+  "O1D": { name: "H2D", chamber: true, nozzles: 2 },
+  "O1E": { name: "H2D Pro", chamber: true, nozzles: 2 }
+};
+
+/* Nom lisible d'un modele : son code interne s'il est connu, sinon ce
+   que l'on nous a donne -- jamais rien d'invente.
+   Readable model name; never anything invented. */
+function modelName(model) {
+  const raw = String(model || "").trim();
+  const known = MODELS[raw.toUpperCase()];
+  if (known) return known.name;
+  // « 3DPrinter-X1-Carbon » et autres libelles deja lisibles.
+  return raw.replace(/^3DPrinter-/i, "").replace(/-/g, " ");
+}
+
 function capabilities(model) {
-  const m = String(model || "").toUpperCase();
+  const raw = String(model || "").trim();
+  const known = MODELS[raw.toUpperCase()];
+  if (known) return { chamber: known.chamber, nozzles: known.nozzles, camera: true };
+  /* Modele inconnu (une machine sortie apres cette version) : on se
+     rabat sur le nom commercial s'il y est.
+     Unknown model: fall back to the commercial name if present. */
+  const m = raw.toUpperCase();
   const isH2 = /H2/.test(m);
   return {
     chamber: isH2 || /X1|X2/.test(m),
@@ -264,7 +298,8 @@ function snapshot(report, opts) {
 
   const percent = num(r.mc_percent);
   return {
-    model: o.model || r.printer_type || "",
+    model: modelName(o.model || r.printer_type || ""),
+    modelCode: o.model || r.printer_type || "",
     name: o.name || "",
     state,
     stateLabel: stateLabel(state),
@@ -754,7 +789,7 @@ const sweeper = setInterval(() => {
 sweeper.unref && sweeper.unref();
 
 module.exports = {
-  STAGES, GCODE_STATES, stageLabel, stateLabel, capabilities, mergeReport,
+  STAGES, GCODE_STATES, MODELS, modelName, stageLabel, stateLabel, capabilities, mergeReport,
   remainingMs, finishAt, hmsCode, hmsUrl, hmsList, parseAms, printName, snapshot,
   parseSsdp, discover, loginOutcome, userIdFromToken, cloudLogin, cloudVerify,
   cloudSendCode, cloudUserId, mqttUsername, cloudPrinters, cloudHost, cloudApiHost, cloudZone, CLOUD_HOSTS, describeError, diagnose, status, close

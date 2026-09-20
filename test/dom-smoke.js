@@ -7450,6 +7450,42 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("imprimante : une P1S n'affiche pas de caisson qu'elle ne mesure pas",
       !/caisson/.test(root.textContent));
 
+    /* Le bouton caméra : son flux passe TOUJOURS par le réseau local,
+       même quand l'état vient du cloud. Il doit donc apparaître dès que
+       l'adresse et le code d'accès sont connus, et pas seulement en
+       liaison locale (1.115.6). */
+    {
+      const camCtx = makeCtx({ showCamera: true, mode: "cloud" });
+      const camHost = document.createElement("div");
+      camHost.style.width = "420px"; camHost.style.height = "340px";
+      document.body.appendChild(camHost);
+      camCtx.el = camHost;
+      const cw2 = new BambuClass(camCtx);
+      serve = { connected: true, hasData: true, camera: true,
+        printer: bambuServer.snapshot(REPORT, { model: "BL-P001" }) };
+      await cw2.init();
+      await sleep(60);
+      const croot2 = camHost.querySelector(".pw-bambu");
+      Object.defineProperty(croot2, "clientWidth", { configurable: true, get: () => 420 });
+      Object.defineProperty(croot2, "clientHeight", { configurable: true, get: () => 340 });
+      cw2.render();
+      assert("imprimante : en liaison cloud, le bouton caméra est bien là si l'adresse locale est connue",
+        !!croot2.querySelector("[data-act='camera']"));
+      /* Sans adresse ni code, il n'a aucun sens : il disparait. */
+      serve = Object.assign({}, serve, { camera: false });
+      await cw2.refresh();
+      cw2.render();
+      assert("imprimante : sans adresse locale, le bouton caméra ne s'affiche pas",
+        !croot2.querySelector("[data-act='camera']"));
+      /* Le code interne de Bambu ne doit pas s'afficher tel quel. */
+      assert("imprimante : « BL-P001 » est affiché comme « X1 Carbon »",
+        /X1 Carbon/.test(croot2.textContent) && !/BL-P001/.test(croot2.textContent));
+      assert("imprimante : et son caisson est bien mesuré, malgré le code interne",
+        /caisson/.test(croot2.textContent));
+      cw2.destroy();
+      camHost.remove();
+    }
+
     /* Refus de l'imprimante : la cause la plus fréquente est nommée,
        plutôt qu'une attente sans fin. */
     serve = { connected: false, hasData: false, errorKind: "auth", problem: "auth", printer: null,

@@ -81,8 +81,8 @@
         "fr": "Adresse IP de l'imprimante"
       },
       "hint": {
-        "en": "Shown on the printer's screen under Settings → Network. Not needed on the cloud link.",
-        "fr": "Visible sur l'écran de l'imprimante, Réglages → Réseau. Inutile en liaison cloud."
+        "fr": "Visible sur l'écran de l'imprimante, Réglages → Réseau. Facultative en liaison cloud — mais nécessaire si vous voulez le bouton caméra, dont le flux passe toujours par le réseau local.",
+        "en": "Shown on the printer's screen under Settings → Network. Optional on the cloud link — but needed for the camera button, whose stream always goes over the local network."
       }
     },
     {
@@ -235,8 +235,8 @@
         "fr": "Bouton caméra (ouvre le flux en fenêtre)"
       },
       "hint": {
-        "en": "The built-in camera's stream, shown over the board when the button is tapped. Requires the local link.",
-        "fr": "Le flux de la caméra intégrée, affiché par-dessus le tableau de bord au toucher du bouton. Nécessite la liaison locale."
+        "fr": "Le flux de la caméra intégrée, affiché par-dessus le tableau au toucher du bouton. Il passe <b>toujours par le réseau local</b>, même quand l'état de l'imprimante vient du cloud : renseignez donc l'adresse IP et le code d'accès LAN ci-dessus, sans quoi le bouton n'apparaît pas. Il faut aussi de la place : le bouton s'efface sur une tuile trop petite.",
+        "en": "The built-in camera's stream, shown over the board when the button is tapped. It <b>always goes over the local network</b>, even when the printer's state comes from the cloud, so fill in the IP address and the LAN access code above or the button will not appear. It also needs room: the button disappears on a small tile."
       }
     },
     {

@@ -2182,6 +2182,14 @@ app.get("/api/bambu/:tileId/status", async (req, res) => {
       st.cloudOnline = await bambuCloudOnline(req.params.tileId, cfg.serial, cfg.region);
     }
     st.problem = bambu.diagnose(st, { cloudOnline: st.cloudOnline });
+    /* La camera se regarde TOUJOURS sur le reseau local, meme quand
+       l'etat vient du cloud : son flux ne transite pas par Bambu. Le
+       bouton n'a donc de sens que si l'adresse et le code d'acces sont
+       connus -- c'est ce que ce drapeau dit a la tuile, sans lui
+       reveler le code (1.115.6).
+       The camera is always watched over the local network, even when
+       the state comes from the cloud. */
+    st.camera = !!(cfg.host && cfg.code);
     res.json(st);
   } catch (e) {
     res.status(502).json({ error: String(e.message || e), code: e.code || null });

@@ -133,6 +133,28 @@ test("machine a l'arret : pas d'heure de fin inventee", () => {
   assert.strictEqual(p.printName, "Boitier capteur v3", "la derniere impression reste nommee");
 });
 
+test("modele : le code interne de Bambu est traduit en nom commercial", () => {
+  /* Bambu ne publie pas le nom commercial : « BL-P001 » EST une X1
+     Carbon. L'afficher brut n'apprend rien (1.115.6). */
+  assert.strictEqual(B.modelName("BL-P001"), "X1 Carbon");
+  assert.strictEqual(B.modelName("C12"), "P1S");
+  assert.strictEqual(B.modelName("O1D"), "H2D");
+  assert.strictEqual(B.modelName("bl-p001"), "X1 Carbon", "la casse est indifferente");
+  assert.strictEqual(B.modelName("3DPrinter-X1-Carbon"), "X1 Carbon", "libelle deja lisible : nettoye");
+  assert.strictEqual(B.modelName("machine inconnue"), "machine inconnue", "on n'invente pas de nom");
+  assert.strictEqual(B.snapshot(FULL, { model: "BL-P001" }).model, "X1 Carbon");
+});
+
+test("modele : le code interne decide AUSSI de ce qui est affichable", () => {
+  /* Le vrai degat du code brut : la detection du caisson cherchait
+     « X1 » dans « BL-P001 » et echouait -- une X1 Carbon n'affichait
+     donc pas la temperature de son caisson. */
+  assert.strictEqual(B.capabilities("BL-P001").chamber, true, "une X1 Carbon mesure bien son caisson");
+  assert.strictEqual(B.snapshot(FULL, { model: "BL-P001" }).chamber.current, 34);
+  assert.strictEqual(B.capabilities("C12").chamber, false, "une P1S ne le publie pas");
+  assert.strictEqual(B.capabilities("O1D").nozzles, 2, "la H2D et ses deux buses, par son code");
+});
+
 test("modele : le caisson n'est affiche que sur les machines qui le mesurent", () => {
   assert.strictEqual(B.capabilities("X1C").chamber, true);
   assert.strictEqual(B.capabilities("P1S").chamber, false);
