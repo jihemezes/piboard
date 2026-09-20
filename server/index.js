@@ -2154,13 +2154,13 @@ function bambuConfig(req) {
    The online state as Bambu sees it, cached for a minute: it is what
    tells an off printer from a LAN-only one from a real link problem. */
 const bambuOnlineCache = new Map();
-async function bambuCloudOnline(tileId, serial) {
+async function bambuCloudOnline(tileId, serial, region) {
   const token = tileSecrets.get(tileId, "cloudToken");
   if (!token || !serial) return null;
   const hit = bambuOnlineCache.get(tileId);
   if (hit && Date.now() - hit.at < 60000) return hit.map[serial] != null ? hit.map[serial] : null;
   try {
-    const list = await bambu.cloudPrinters(token);
+    const list = await bambu.cloudPrinters(token, region);
     const map = {};
     for (const p of list) map[p.serial] = !!p.online;
     bambuOnlineCache.set(tileId, { at: Date.now(), map });
@@ -2179,7 +2179,7 @@ app.get("/api/bambu/:tileId/status", async (req, res) => {
   try {
     const st = bambu.status(cfg);
     if (cfg.mode === "cloud" && !st.hasData) {
-      st.cloudOnline = await bambuCloudOnline(req.params.tileId, cfg.serial);
+      st.cloudOnline = await bambuCloudOnline(req.params.tileId, cfg.serial, cfg.region);
     }
     st.problem = bambu.diagnose(st, { cloudOnline: st.cloudOnline });
     res.json(st);
@@ -2214,12 +2214,13 @@ app.post("/api/bambu/:tileId/cloud-login", async (req, res) => {
   try {
     /* Renvoi du code, sans repasser par le mot de passe. */
     if (resend) {
-      const sent = await bambu.cloudSendCode(account);
+      const sent = await bambu.cloudSendCode(account, String((req.body && req.body.region) || ""));
       return res.json({ ok: false, needCode: true, resent: sent.ok, error: sent.error || null });
     }
+    const region = String((req.body && req.body.region) || "");
     const out = code
-      ? await bambu.cloudVerify(account, code, tfaKey)
-      : await bambu.cloudLogin(account, password);
+      ? await bambu.cloudVerify(account, code, tfaKey, region)
+      : await bambu.cloudLogin(account, password, region);
     if (out.ok && out.token) {
       tileSecrets.set(tileId, "cloudToken", out.token);
       return res.json({ ok: true });
@@ -2236,7 +2237,7 @@ app.get("/api/bambu/:tileId/cloud-printers", async (req, res) => {
   res.set("Cache-Control", "no-store");
   if (!token) return res.status(400).json({ error: "missing_token", printers: [] });
   try {
-    res.json({ printers: await bambu.cloudPrinters(token) });
+    res.json({ printers: await bambu.cloudPrinters(token, String(req.query.region || "")) });
   } catch (e) {
     res.status(502).json({ error: String(e.message || e), printers: [] });
   }

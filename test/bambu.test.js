@@ -225,10 +225,30 @@ test("compte Bambu : le nom d'utilisateur MQTT sort du jeton lui-meme", () => {
   assert.strictEqual(B.userIdFromToken("pas un jeton"), null);
 });
 
-test("compte Bambu : l'hote depend de la region, avec un repli sur l'Europe", () => {
-  assert.strictEqual(B.cloudHost("us"), "us.mqtt.bambulab.com");
-  assert.strictEqual(B.cloudHost("cn"), "cn.mqtt.bambulab.com");
-  assert.strictEqual(B.cloudHost("bidule"), "eu.mqtt.bambulab.com");
+test("compte Bambu : seuls les DEUX hotes qui existent vraiment sont utilises", () => {
+  /* Le bug de la 1.115.3 : l'hote etait FABRIQUE a partir du code de
+     region, ce qui donnait « eu.mqtt.bambulab.com » -- un nom qui
+     n'existe pas. Tout compte europeen echouait sur un ENOTFOUND avant
+     meme d'essayer de se connecter. Il n'y a que le mondial et le
+     chinois. */
+  const REAL = ["us.mqtt.bambulab.com", "cn.mqtt.bambulab.com"];
+  for (const r of ["eu", "us", "global", "cn", "bidule", "", null, undefined, "EU"]) {
+    assert.ok(REAL.indexOf(B.cloudHost(r)) >= 0, "region « " + r + " » -> " + B.cloudHost(r));
+  }
+  assert.strictEqual(B.cloudHost("cn"), "cn.mqtt.bambulab.com", "la Chine a bien son infrastructure");
+  assert.strictEqual(B.cloudHost("eu"), "us.mqtt.bambulab.com",
+    "l'Europe est servie par l'infrastructure mondiale, pas par un hote europeen");
+  assert.strictEqual(B.cloudApiHost("cn"), "api.bambulab.cn");
+  assert.strictEqual(B.cloudApiHost("eu"), "api.bambulab.com");
+});
+
+test("compte Bambu : aucun nom d'hote n'est assemble a partir d'un code", () => {
+  // La regle qui empeche le bug de revenir : les hotes sont une liste
+  // fermee, pas une concatenation.
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "server", "bambu.js"), "utf8");
+  assert.ok(!/["'`]\s*\+\s*["'`]\.mqtt\.bambulab\.com/.test(src),
+    "un hote MQTT ne doit jamais etre construit par concatenation");
+  assert.deepStrictEqual(Object.keys(B.CLOUD_HOSTS).sort(), ["china", "global"]);
 });
 
 test("diagnostic : chaque panne courante recoit une cause nommee", () => {
@@ -274,6 +294,33 @@ test("liaison muette : une connexion qui ne s'etablit pas finit par se dire", ()
   assert.strictEqual(B.diagnose({ connected: false, hasData: false, errorKind: "auth", diag: {} }), "auth");
 });
 
+/* ---------- Verification en ligne, si le reseau est la ----------
+   Un test hors ligne ne peut pas dire qu'un nom d'hote existe ; celui-ci
+   le demande vraiment au DNS. Sans reseau, il s'abstient plutot que
+   d'echouer a tort -- c'est le cas sur une machine de construction
+   isolee.
+   An offline test cannot tell whether a host name exists; this one
+   really asks DNS, and abstains when there is no network. */
+async function dnsCheck() {
+  const dns = require("dns").promises;
+  let reachable = true;
+  try { await dns.lookup("api.bambulab.com"); }
+  catch (e) { reachable = false; }
+  if (!reachable) {
+    console.log("  (ignore) verification DNS des hotes Bambu : pas de reseau");
+    return;
+  }
+  for (const host of [B.cloudHost("eu"), B.cloudHost("cn"), B.cloudApiHost("eu")]) {
+    try {
+      await dns.lookup(host);
+      console.log("  OK   l'hote " + host + " existe bel et bien");
+    } catch (e) {
+      failures++;
+      console.log("  FAIL l'hote " + host + " n'existe pas (" + e.code + ")");
+    }
+  }
+}
+
 console.log("== Paliers d'affichage de la tuile ==");
 
 test("palier : plus la tuile est petite, plus on retire", () => {
@@ -311,5 +358,7 @@ test("temperature : une mesure absente n'affiche pas zero", () => {
   assert.strictEqual(W.temp(null), "—");
 });
 
-console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS PASSENT");
-process.exit(failures ? 1 : 0);
+dnsCheck().then(() => {
+  console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS PASSENT");
+  process.exit(failures ? 1 : 0);
+});

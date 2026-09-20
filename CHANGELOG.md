@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.115.4
+
+- **Correctif : la liaison cloud visait un serveur qui n'existe pas.**
+  L'adresse du courtier etait FABRIQUEE a partir du code de region, ce
+  qui donnait « eu.mqtt.bambulab.com » pour un compte europeen -- un nom
+  qui ne se resout nulle part, d'ou l'echec ENOTFOUND avant meme la
+  moindre tentative de connexion. Verification faite au DNS : Bambu n'a
+  que DEUX points d'entree, « us.mqtt.bambulab.com » qui sert le monde
+  entier, Europe comprise, et « cn.mqtt.bambulab.com » pour la Chine.
+
+- Les hotes sont desormais une liste fermee, jamais une concatenation,
+  et l'API HTTP suit la meme plateforme (api.bambulab.com ou
+  api.bambulab.cn). Le reglage ne propose plus que les deux cas reels :
+  « Reste du monde (Europe comprise) » et « Chine ». Une tuile deja
+  reglee sur l'Europe bascule toute seule sur la bonne adresse.
+
+- Deux tests l'empechent de revenir : l'un verifie qu'aucune region,
+  meme farfelue, ne produit autre chose qu'un des deux hotes reels et
+  qu'aucun nom n'est assemble par concatenation ; l'autre demande
+  vraiment au DNS si ces hotes existent, et s'abstient proprement quand
+  la machine n'a pas de reseau.
+
 ## 1.115.3
 
 - **La tuile ne reste plus indefiniment sur « Connexion a

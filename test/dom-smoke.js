@@ -7490,7 +7490,7 @@ function catalogItemFor(catalog, document, widgetId) {
       let hasToken = false;
       window.fetch = (url, opts) => {
         const u = String(url);
-        if (/\/cloud-printers$/.test(u)) {
+        if (/\/cloud-printers(\?|$)/.test(u)) {
           calls.push({ u });
           return Promise.resolve({
             ok: hasToken, status: hasToken ? 200 : 400,
@@ -7502,6 +7502,9 @@ function catalogItemFor(catalog, document, widgetId) {
         if (/\/cloud-login$/.test(u)) {
           const body = JSON.parse(opts.body);
           calls.push({ u, body });
+          // La plateforme doit accompagner la connexion : sans elle, le
+          // serveur ne saurait pas a quelle infrastructure s'adresser.
+          if (body.region === undefined) throw new Error("region absente de la demande de connexion");
           if (body.resend) return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: false, needCode: true, resent: true }) });
           if (body.code) { hasToken = true; return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true }) }); }
           return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: false, needCode: true }) });

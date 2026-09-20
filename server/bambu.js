@@ -362,11 +362,11 @@ function parseSsdp(text, fallbackIp) {
    courriel. Le module ne conserve rien lui-meme : le jeton remonte a
    l'appelant, qui le range avec les autres secrets.
    Two steps: credentials, then the emailed verification code. */
-function apiPost(path, body) {
+function apiPost(path, body, region) {
   return new Promise((resolve, reject) => {
     const payload = Buffer.from(JSON.stringify(body), "utf8");
     const req = https.request({
-      host: "api.bambulab.com", path, method: "POST",
+      host: cloudApiHost(region), path, method: "POST",
       headers: { "Content-Type": "application/json", "Content-Length": payload.length, "User-Agent": "PiBoard" },
       timeout: 15000
     }, (res) => {
@@ -386,10 +386,10 @@ function apiPost(path, body) {
   });
 }
 
-function apiGet(path, token) {
+function apiGet(path, token, region) {
   return new Promise((resolve, reject) => {
     const req = https.request({
-      host: "api.bambulab.com", path, method: "GET",
+      host: cloudApiHost(region), path, method: "GET",
       headers: { Authorization: "Bearer " + token, "User-Agent": "PiBoard" }, timeout: 15000
     }, (res) => {
       let data = "";
@@ -428,8 +428,8 @@ function loginOutcome(json) {
    personne n'avait demande (1.115.1).
    Requesting the emailed code. AN INDISPENSABLE STEP, and the one that
    was missing: answering "a code is needed" does not send it. */
-async function cloudSendCode(account) {
-  const json = await apiPost("/v1/user-service/user/sendemail/code", { email: account, type: "codeLogin" });
+async function cloudSendCode(account, region) {
+  const json = await apiPost("/v1/user-service/user/sendemail/code", { email: account, type: "codeLogin" }, region);
   const j = json || {};
   if (j.success === false && (j.error || j.message)) {
     return { ok: false, error: j.error || j.message };
@@ -437,12 +437,12 @@ async function cloudSendCode(account) {
   return { ok: true };
 }
 
-async function cloudLogin(account, password) {
-  const out = loginOutcome(await apiPost("/v1/user-service/user/login", { account, password, apiError: "" }));
+async function cloudLogin(account, password, region) {
+  const out = loginOutcome(await apiPost("/v1/user-service/user/login", { account, password, apiError: "" }, region));
   /* Le code n'arrive que si on le demande explicitement. */
   if (!out.ok && out.needCode && !out.tfa) {
     try {
-      const sent = await cloudSendCode(account);
+      const sent = await cloudSendCode(account, region);
       if (!sent.ok) return Object.assign({}, out, { error: sent.error });
     } catch (e) {
       return Object.assign({}, out, { error: String(e.message || e) });
@@ -451,11 +451,11 @@ async function cloudLogin(account, password) {
   return out;
 }
 
-async function cloudVerify(account, code, tfaKey) {
+async function cloudVerify(account, code, tfaKey, region) {
   if (tfaKey) {
-    return loginOutcome(await apiPost("/api/sign-in/tfa", { tfaKey, tfaCode: code }));
+    return loginOutcome(await apiPost("/api/sign-in/tfa", { tfaKey, tfaCode: code }, region));
   }
-  return loginOutcome(await apiPost("/v1/user-service/user/login", { account, code }));
+  return loginOutcome(await apiPost("/v1/user-service/user/login", { account, code }, region));
 }
 
 /* Numero d'utilisateur : il est ecrit dans le jeton lui-meme (JWT), le
@@ -470,8 +470,8 @@ function userIdFromToken(token) {
   } catch (e) { return null; }
 }
 
-async function cloudPrinters(token) {
-  const json = await apiGet("/v1/iot-service/api/user/bind", token);
+async function cloudPrinters(token, region) {
+  const json = await apiGet("/v1/iot-service/api/user/bind", token, region);
   const list = (json && json.devices) || [];
   return list.map((d) => ({
     serial: d.dev_id, name: d.name, model: d.dev_product_name || d.dev_model_name || "",
@@ -479,9 +479,33 @@ async function cloudPrinters(token) {
   }));
 }
 
+/* ---------- Ou se trouve le cloud de Bambu ----------
+   IL N'Y A QUE DEUX POINTS D'ENTREE, verifies par resolution DNS :
+   « us.mqtt.bambulab.com », qui sert le MONDE ENTIER, Europe comprise,
+   et « cn.mqtt.bambulab.com » pour la Chine. Le « eu.mqtt.bambulab.com »
+   que cette fonction fabriquait jusqu'ici n'existe pas : tout compte
+   europeen echouait sur un ENOTFOUND avant meme d'essayer de se
+   connecter (1.115.4). Le nom de l'hote ne doit donc JAMAIS etre
+   assemble a partir d'un code de region.
+   THERE ARE ONLY TWO ENDPOINTS, checked by DNS: us... serves the whole
+   world, Europe included, and cn... serves China. The eu... host this
+   function used to build does not exist. The host name must therefore
+   NEVER be assembled from a region code. */
+const CLOUD_HOSTS = {
+  global: { mqtt: "us.mqtt.bambulab.com", api: "api.bambulab.com" },
+  china: { mqtt: "cn.mqtt.bambulab.com", api: "api.bambulab.cn" }
+};
+
+function cloudZone(region) {
+  return String(region || "").toLowerCase() === "cn" ? "china" : "global";
+}
+
 function cloudHost(region) {
-  const r = String(region || "eu").toLowerCase();
-  return (r === "cn" ? "cn" : r === "us" ? "us" : "eu") + ".mqtt.bambulab.com";
+  return CLOUD_HOSTS[cloudZone(region)].mqtt;
+}
+
+function cloudApiHost(region) {
+  return CLOUD_HOSTS[cloudZone(region)].api;
 }
 
 /* ============================================================
@@ -688,5 +712,5 @@ module.exports = {
   STAGES, GCODE_STATES, stageLabel, stateLabel, capabilities, mergeReport,
   remainingMs, finishAt, hmsCode, hmsUrl, hmsList, parseAms, printName, snapshot,
   parseSsdp, discover, loginOutcome, userIdFromToken, cloudLogin, cloudVerify,
-  cloudSendCode, cloudPrinters, cloudHost, describeError, diagnose, status, close
+  cloudSendCode, cloudPrinters, cloudHost, cloudApiHost, cloudZone, CLOUD_HOSTS, describeError, diagnose, status, close
 };

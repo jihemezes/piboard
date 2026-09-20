@@ -256,7 +256,8 @@
        Is the token already in the vault? */
     async checkCloudToken() {
       try {
-        const res = await fetch("/api/bambu/" + encodeURIComponent(this.ctx.instanceId) + "/cloud-printers", { cache: "no-store" });
+        const res = await fetch("/api/bambu/" + encodeURIComponent(this.ctx.instanceId)
+          + "/cloud-printers?region=" + encodeURIComponent(this.ctx.settings.region || ""), { cache: "no-store" });
         const data = await res.json();
         if (res.ok) {
           this.tokenReady = true;
@@ -313,7 +314,8 @@
         const res = await fetch("/api/bambu/" + encodeURIComponent(this.ctx.instanceId) + "/cloud-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ account, password, code, tfaKey: (this.login && this.login.tfaKey) || "", resend })
+          body: JSON.stringify({ account, password, code, region: this.ctx.settings.region || "",
+            tfaKey: (this.login && this.login.tfaKey) || "", resend })
         });
         const data = await res.json();
         if (data.ok) {

@@ -123,24 +123,17 @@
     {
       "key": "region",
       "type": "select",
-      "default": "eu",
+      "default": "global",
       "label": {
-        "en": "Bambu account region",
-        "fr": "Région du compte Bambu"
+        "fr": "Plateforme Bambu",
+        "en": "Bambu platform"
       },
       "options": [
         {
-          "value": "eu",
+          "value": "global",
           "label": {
-            "en": "Europe",
-            "fr": "Europe"
-          }
-        },
-        {
-          "value": "us",
-          "label": {
-            "en": "North America",
-            "fr": "Amérique du Nord"
+            "en": "Rest of the world (Europe included)",
+            "fr": "Reste du monde (Europe comprise)"
           }
         },
         {
@@ -152,8 +145,8 @@
         }
       ],
       "hint": {
-        "en": "Cloud link only. Signing in happens from the tile itself: it asks for your address, your password, then the verification code emailed to you.",
-        "fr": "Uniquement pour la liaison cloud. La connexion au compte se fait depuis la tuile elle-même : elle réclame votre adresse, votre mot de passe, puis le code de vérification reçu par courriel."
+        "fr": "Bambu n'a que deux infrastructures : une mondiale, qui sert l'Europe, et une chinoise. Laissez « Reste du monde » sauf si votre compte a été créé sur la plateforme chinoise. Uniquement pour la liaison cloud.",
+        "en": "Bambu has only two infrastructures: a worldwide one, which serves Europe, and a Chinese one. Leave \"Rest of the world\" unless your account was created on the Chinese platform. Cloud link only."
       }
     },
     {
