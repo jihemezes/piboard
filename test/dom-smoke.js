@@ -7501,6 +7501,26 @@ function catalogItemFor(catalog, document, widgetId) {
       await sleep(60);
       const croot = cloudHost.querySelector(".pw-bambu");
 
+      /* 0. LA SAISIE NE DOIT PAS ETRE EFFACEE. Signale a l'usage sur la
+            1.115.1 : la tuile se rafraichissant toutes les quelques
+            secondes, chaque rendu reconstruisait le panneau -- et le
+            vidait au milieu de la frappe. On ne pouvait meme pas finir
+            d'ecrire son adresse.
+            TYPING MUST NOT BE WIPED: each refresh rebuilt the panel. */
+      {
+        const field = croot.querySelector("[data-login-account]");
+        assert("cloud : le panneau de connexion est bien la", !!field);
+        field.value = "jm@exa";                      // saisie en cours
+        await cw.refresh();                          // un tic de la minuterie
+        await sleep(20);
+        await cw.refresh();
+        await sleep(20);
+        const still = croot.querySelector("[data-login-account]");
+        assert("cloud : un rafraîchissement n'efface PAS l'adresse en cours de saisie",
+          !!still && still.value === "jm@exa");
+        assert("cloud : et c'est bien le même champ, pas un champ neuf", still === field);
+      }
+
       /* 1. Sans numero de serie, la tuile doit proposer de se connecter
             -- et surtout PAS renvoyer vers les reglages. */
       assert("cloud : sans jeton, le panneau de connexion s'affiche (et non « choisissez votre imprimante »)",
@@ -7514,6 +7534,14 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("cloud : le mot de passe part sans le code", calls.some((c) => c.body && c.body.password && !c.body.code));
       assert("cloud : la tuile demande ensuite le code de vérification",
         !!croot.querySelector("[data-login-code]") && !croot.querySelector("[data-login-password]"));
+      assert("cloud : l'adresse est reportée à l'étape du code, pas à retaper",
+        (croot.querySelector("[data-login-account]") || {}).value === "jm@example.com");
+      /* Et là encore, un tic de minuterie ne doit pas vider le code. */
+      croot.querySelector("[data-login-code]").value = "12";
+      await cw.refresh();
+      await sleep(20);
+      assert("cloud : un rafraîchissement n'efface pas le code en cours de saisie",
+        (croot.querySelector("[data-login-code]") || {}).value === "12");
 
       // 3. Le renvoi du code est possible sans ressaisir le mot de passe.
       await cw.submitLogin(true);

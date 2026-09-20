@@ -81,6 +81,7 @@
       this.cameraOpen = false;
       this.login = null;         // panneau de connexion au compte, si besoin
       this.tokenReady = false;   // jeton du compte deja dans le coffre ?
+      this.loginOpen = false;    // panneau de saisie a l'ecran : ne rien reecrire
       this.cloudList = [];       // imprimantes rattachees au compte
     }
 
@@ -94,6 +95,10 @@
 
     arm() {
       clearInterval(this.timer);
+      // Rien a rafraichir tant qu'on saisit ses identifiants : la
+      // minuterie ne repart qu'une fois la connexion faite.
+      // Nothing to refresh while credentials are being typed.
+      if (this.loginOpen) return;
       const s = Math.max(2, Number(this.ctx.settings.refresh) || 5);
       this.timer = setInterval(() => this.refresh(), s * 1000);
     }
@@ -137,6 +142,15 @@
 
     async refresh() {
       const s = this.ctx.settings;
+      /* TANT QUE L'ON SAISIT, ON NE REECRIT RIEN. La tuile se
+         rafraichit toutes les quelques secondes ; comme chaque rendu
+         reconstruit le contenu, le panneau de connexion etait remplace
+         par un panneau NEUF -- donc vide -- au milieu de la frappe. On
+         ne pouvait meme pas finir d'ecrire son adresse (1.115.2).
+         WHILE THE USER IS TYPING, NOTHING IS REWRITTEN. Each render
+         rebuilds the content, so the sign-in panel was replaced by a
+         FRESH, empty one mid-typing. */
+      if (this.loginOpen) return;
       /* En liaison cloud, la connexion au compte vient AVANT tout le
          reste : sans elle on ne connait meme pas la liste des
          imprimantes, donc pas leur numero de serie. Reclamer le numero
@@ -263,6 +277,7 @@
        liste, et la liste pour se connecter a une machine).
        Picking the printer among the account's, inside the tile. */
     renderPrinterPick() {
+      this.loginOpen = false;
       const t = (k) => this.ctx.i18n.t(k);
       const list = this.cloudList || [];
       this.el.innerHTML = `<div class="pwb-login">
@@ -292,6 +307,8 @@
       const code = (root.querySelector("[data-login-code]") || {}).value || "";
       const msg = root.querySelector("[data-login-msg]");
       if (msg) msg.textContent = this.ctx.i18n.t("bambu.login.working");
+      // L'adresse est conservee d'une etape a l'autre.
+      this.login = Object.assign({}, this.login, { account });
       try {
         const res = await fetch("/api/bambu/" + encodeURIComponent(this.ctx.instanceId) + "/cloud-login", {
           method: "POST",
@@ -301,7 +318,9 @@
         const data = await res.json();
         if (data.ok) {
           this.login = null;
+          this.loginOpen = false;           // la minuterie peut repartir
           this.tokenReady = false;          // on relit la liste du compte
+          this.arm();
           return this.refresh();
         }
         this.login = {
@@ -332,7 +351,7 @@
       if (st.setup) return void (el.innerHTML = `<div class="pwb-msg">${esc(t("bambu.setup"))}</div>`);
 
       if (this.login || st.failed === "missing_token") {
-        return void (el.innerHTML = this.loginHtml());
+        return void this.showLogin();
       }
 
       if (st.failed) {
@@ -457,6 +476,42 @@
       </div>`;
     }
 
+    /* Le panneau n'est ECRIT QU'UNE FOIS. S'il est deja a l'ecran, on
+       ne remplace que ce qui a change (le message, et le passage du mot
+       de passe au code) : les champs deja remplis restent intacts.
+       The panel is WRITTEN ONLY ONCE; afterwards only what changed is
+       replaced, so filled fields survive. */
+    showLogin() {
+      const wantCode = !!(this.login && this.login.needCode);
+      const already = this.el.querySelector(".pwb-login");
+      const sameStep = already && (!!already.querySelector("[data-login-code]") === wantCode);
+      if (sameStep) {
+        const msg = this.el.querySelector("[data-login-msg]");
+        if (msg) msg.textContent = this.loginMessage();
+        return;
+      }
+      /* On change d'etape (mot de passe -> code) : l'adresse deja
+         saisie est reportee plutot que d'etre a retaper.
+         Moving to the code step: the address already typed is carried
+         over rather than retyped. */
+      const typed = (this.el.querySelector("[data-login-account]") || {}).value;
+      if (typed && this.login) this.login.account = typed;
+      this.loginOpen = true;
+      clearInterval(this.timer);
+      this.el.innerHTML = this.loginHtml();
+      const first = this.el.querySelector(wantCode ? "[data-login-code]" : "[data-login-account]");
+      if (first && first.focus) first.focus();
+    }
+
+    loginMessage() {
+      const t = (k) => this.ctx.i18n.t(k);
+      const l = this.login || {};
+      return l.error
+        || (l.resent ? t("bambu.login.codeSent") : "")
+        || (l.tfaKey ? t("bambu.login.tfa") : "")
+        || (l.needCode ? t("bambu.login.codeSent") : "");
+    }
+
     loginHtml() {
       const t = (k) => this.ctx.i18n.t(k);
       const l = this.login || {};
@@ -468,10 +523,7 @@
     : `<input type="password" data-login-password placeholder="${esc(t("bambu.login.password"))}" autocomplete="off">`}
         <button type="button" class="pwb-btn" data-act="login">${esc(l.needCode ? t("bambu.login.verify") : t("bambu.login.send"))}</button>
         ${l.needCode && !l.tfaKey ? `<button type="button" class="pwb-btn" data-act="resend">${esc(t("bambu.login.resend"))}</button>` : ""}
-        <small data-login-msg class="pwb-login-msg">${esc(l.error
-    || (l.resent ? t("bambu.login.codeSent") : "")
-    || (l.tfaKey ? t("bambu.login.tfa") : "")
-    || (l.needCode ? t("bambu.login.codeSent") : ""))}</small>
+        <small data-login-msg class="pwb-login-msg">${esc(this.loginMessage())}</small>
       </div>`;
     }
 

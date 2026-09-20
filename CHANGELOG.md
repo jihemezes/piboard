@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.115.2
+
+- **Correctif : impossible de saisir ses identifiants Bambu, le champ se
+  vidait pendant la frappe.** La tuile se rafraichit toutes les
+  quelques secondes, et chaque rafraichissement RECONSTRUISAIT le
+  panneau de connexion : au milieu d'une adresse de courriel, le champ
+  etait remplace par un champ neuf, donc vide. Le panneau n'est
+  desormais ecrit qu'UNE fois ; tant qu'on y saisit quelque chose, la
+  minuterie est suspendue et seul le message d'etat est mis a jour.
+
+- L'adresse deja saisie est **reportee** au passage a l'etape du code,
+  au lieu d'etre a retaper, et le curseur se place tout seul dans le
+  champ attendu.
+
+- Un test rejoue exactement le cas signale : on tape une adresse
+  incomplete, deux tics de rafraichissement passent, et le champ doit
+  contenir toujours la meme chose -- dans le meme element, pas dans un
+  champ recree.
+
 ## 1.115.1
 
 - **Correctif : la connexion au compte Bambu ne pouvait pas aboutir.**
