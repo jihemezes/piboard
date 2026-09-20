@@ -361,15 +361,29 @@
       }
 
       if (!st.printer) {
-        /* Pas encore d'etat : soit la liaison se monte, soit elle est
-           refusee -- et dans ce cas la cause est presque toujours le
-           mode developpeur non active. On le dit, plutot que de laisser
-           tourner un message d'attente sans fin.
-           No state yet: almost always Developer mode left off. */
-        const hint = st.errorKind === "auth" ? t("bambu.err.auth")
-          : st.errorKind === "unreachable" || st.errorKind === "refused" ? t("bambu.err.unreachable")
-            : t("bambu.connecting");
-        return void (el.innerHTML = `<div class="pwb-msg">${esc(hint)}</div>`);
+        /* Pas encore d'etat. Le serveur dit POURQUOI quand il le sait :
+           une attente sans fin n'apprend rien, et le cas le plus
+           frequent -- une imprimante en mode LAN uniquement, donc
+           absente du cloud -- se nomme (1.115.3).
+           No state yet: the server says WHY when it knows. The
+           commonest case, a LAN-only printer that is therefore absent
+           from the cloud, is named. */
+        const KEYS = {
+          auth: "bambu.err.auth",
+          unreachable: "bambu.err.unreachable",
+          dns: "bambu.err.unreachable",
+          subscribe: "bambu.err.subscribe",
+          "no-connect": "bambu.err.noConnect",
+          "printer-offline": "bambu.err.offline",
+          "cloud-silent": "bambu.err.cloudSilent",
+          "lan-silent": "bambu.err.lanSilent"
+        };
+        const key = KEYS[st.problem];
+        if (!key) return void (el.innerHTML = `<div class="pwb-msg">${esc(t("bambu.connecting"))}</div>`);
+        return void (el.innerHTML = `<div class="pwb-msg pwb-err">${esc(t("bambu.err.title"))}
+          <small>${esc(t(key))}</small>
+          ${st.error ? `<small class="pwb-detail">${esc(st.error)}</small>` : ""}
+          <button type="button" class="pwb-btn" data-act="retry">${esc(t("bambu.retry"))}</button></div>`);
       }
 
       const p = st.printer;

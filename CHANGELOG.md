@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.115.3
+
+- **La tuile ne reste plus indefiniment sur « Connexion a
+  l'imprimante... ».** Signale a l'usage : connexion au compte reussie,
+  puis plus rien, et aucun moyen de savoir pourquoi. La liaison tient
+  desormais un journal de bord (connectee ? abonnee ? combien de
+  messages recus ?), et la tuile NOMME la cause au lieu de la subir.
+
+- **La cause la plus frequente est enfin dite : le mode LAN UNIQUEMENT
+  coupe l'imprimante des serveurs de Bambu.** Les deux reglages
+  s'excluent -- une machine en mode LAN n'apparait pas dans le cloud,
+  quelle que soit la qualite de la connexion au compte. C'est
+  exactement le piege quand on vient d'activer ce mode pour essayer la
+  liaison locale. La tuile s'appuie sur l'etat « en ligne » que Bambu
+  lui-meme rapporte pour le dire sans ambiguite, et oriente vers la
+  liaison locale.
+
+- **Un abonnement refuse n'est plus un echec silencieux.** Le cas se
+  produit quand le numero de serie ne correspond pas a une machine du
+  compte : la connexion reste etablie, mais aucun message n'arrivera
+  jamais. Il est maintenant detecte et explique.
+
+- La demande d'etat complet est **repetee** au demarrage (2 s, 6 s,
+  15 s) tant que rien n'est arrive : par le cloud, le premier envoi
+  peut partir avant que l'imprimante ne soit a l'ecoute.
+
+- Les premieres secondes restent un simple « Connexion... » : on ne
+  crie pas a la panne au bout de trois secondes.
+
 ## 1.115.2
 
 - **Correctif : impossible de saisir ses identifiants Bambu, le champ se

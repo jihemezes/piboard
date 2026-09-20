@@ -7373,6 +7373,9 @@ function catalogItemFor(catalog, document, widgetId) {
       "bambu.bed": "plateau", "bambu.nozzle": "buse", "bambu.chamber": "caisson",
       "bambu.humidity": "humidité {n}", "bambu.alert.finished": "Impression terminée : {name}",
       "bambu.err.auth": "Refusé par l'imprimante. Vérifiez le code d'accès LAN, et que le mode LAN ET le mode développeur sont bien activés tous les deux.",
+      "bambu.err.title": "Imprimante injoignable", "bambu.connecting": "Connexion à l'imprimante…",
+      "bambu.err.offline": "Bambu indique cette imprimante hors ligne. Si elle est allumée, elle est presque sûrement en mode LAN uniquement : ce mode la coupe des serveurs de Bambu.",
+      "bambu.err.cloudSilent": "Connecté à Bambu, mais l'imprimante ne dit rien. Passez cette tuile en liaison locale, ou désactivez ce mode sur l'imprimante.",
       "bambu.alert.problem": "Problème : {name} {code}", "common.loading": "Chargement"
     };
 
@@ -7447,10 +7450,31 @@ function catalogItemFor(catalog, document, widgetId) {
 
     /* Refus de l'imprimante : la cause la plus fréquente est nommée,
        plutôt qu'une attente sans fin. */
-    serve = { connected: false, hasData: false, errorKind: "auth", printer: null };
+    serve = { connected: false, hasData: false, errorKind: "auth", problem: "auth", printer: null };
     await w.refresh();
     assert("imprimante : un refus explique le mode développeur",
       /développeur/i.test(root.textContent));
+
+    /* Liaison établie mais muette : le cas signalé à l'usage sur la
+       1.115.2, où la tuile restait indéfiniment sur « Connexion… ».
+       Elle doit désormais NOMMER la cause. */
+    serve = { connected: true, hasData: false, problem: "printer-offline", printer: null,
+      diag: { mode: "cloud", waitedMs: 30000, subscribed: true, messages: 0 } };
+    await w.refresh();
+    assert("imprimante : une machine hors ligne côté Bambu est annoncée comme telle, pas en « Connexion… »",
+      !/Connexion à l'imprimante/.test(root.textContent) && /mode LAN uniquement/i.test(root.textContent));
+    serve = { connected: true, hasData: false, problem: "cloud-silent", printer: null,
+      diag: { mode: "cloud", waitedMs: 30000, subscribed: true, messages: 0 } };
+    await w.refresh();
+    assert("imprimante : une liaison cloud muette oriente vers la liaison locale",
+      /liaison locale/i.test(root.textContent));
+    /* Au tout début en revanche, « Connexion… » reste la bonne réponse :
+       on ne crie pas à la panne au bout de trois secondes. */
+    serve = { connected: true, hasData: false, problem: null, printer: null,
+      diag: { mode: "cloud", waitedMs: 2000, subscribed: true, messages: 0 } };
+    await w.refresh();
+    assert("imprimante : dans les premières secondes, on attend sans alarmer",
+      /Connexion à l'imprimante/.test(root.textContent));
 
     /* ---- Liaison cloud : le parcours de connexion en entier ----
        Regression de la 1.115.0, signalee a l'usage : en mode cloud la

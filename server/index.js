@@ -2147,14 +2147,42 @@ function bambuConfig(req) {
   };
 }
 
-app.get("/api/bambu/:tileId/status", (req, res) => {
+/* Etat « en ligne » tel que Bambu le voit, mis en cache une minute :
+   c'est LUI qui tranche entre une imprimante eteinte, une imprimante en
+   mode LAN uniquement (donc absente du cloud) et un vrai probleme de
+   liaison. Sans cette information, une tuile muette reste inexplicable.
+   The online state as Bambu sees it, cached for a minute: it is what
+   tells an off printer from a LAN-only one from a real link problem. */
+const bambuOnlineCache = new Map();
+async function bambuCloudOnline(tileId, serial) {
+  const token = tileSecrets.get(tileId, "cloudToken");
+  if (!token || !serial) return null;
+  const hit = bambuOnlineCache.get(tileId);
+  if (hit && Date.now() - hit.at < 60000) return hit.map[serial] != null ? hit.map[serial] : null;
+  try {
+    const list = await bambu.cloudPrinters(token);
+    const map = {};
+    for (const p of list) map[p.serial] = !!p.online;
+    bambuOnlineCache.set(tileId, { at: Date.now(), map });
+    return map[serial] != null ? map[serial] : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+app.get("/api/bambu/:tileId/status", async (req, res) => {
   const cfg = bambuConfig(req);
   res.set("Cache-Control", "no-store");
   if (!cfg.serial) return res.status(400).json({ error: "missing_serial" });
   if (cfg.mode === "lan" && (!cfg.host || !cfg.code)) return res.status(400).json({ error: "missing_lan_settings" });
   if (cfg.mode === "cloud" && !cfg.token) return res.status(400).json({ error: "missing_token" });
   try {
-    res.json(bambu.status(cfg));
+    const st = bambu.status(cfg);
+    if (cfg.mode === "cloud" && !st.hasData) {
+      st.cloudOnline = await bambuCloudOnline(req.params.tileId, cfg.serial);
+    }
+    st.problem = bambu.diagnose(st, { cloudOnline: st.cloudOnline });
+    res.json(st);
   } catch (e) {
     res.status(502).json({ error: String(e.message || e), code: e.code || null });
   }

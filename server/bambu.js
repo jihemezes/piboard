@@ -523,7 +523,15 @@ function open(cfg) {
 
   const link = {
     cfg, report: null, connected: false, lastMessageAt: 0, lastReadAt: Date.now(),
-    error: null, errorKind: null, client: null
+    error: null, errorKind: null, client: null,
+    /* Journal de bord de la liaison. Sans lui, une tuile qui reste sur
+       « Connexion... » ne dit RIEN de ce qui bloque : connectee ou pas,
+       abonnee ou refusee, silencieuse ou bavarde. C'est ce qui manquait
+       pour diagnostiquer quoi que ce soit (1.115.3).
+       A log of the link: without it, a tile stuck on "Connecting..."
+       says NOTHING about what is blocking. */
+    openedAt: Date.now(), connectedAt: 0, subscribed: false,
+    subscribeError: null, messages: 0, attempts: 0
   };
 
   const client = mqtt.connect("mqtts://" + host + ":8883", {
@@ -544,21 +552,46 @@ function open(cfg) {
   link.client = client;
 
   const topic = "device/" + cfg.serial + "/report";
+  const askAll = () => {
+    /* Une seule commande est jamais envoyee : « donne-moi ton etat
+       complet ». Sans elle, il faudrait attendre le prochain
+       changement pour afficher quoi que ce soit. Elle est repetee
+       quelques fois au debut : par le cloud, le premier envoi peut
+       partir avant que l'imprimante ne soit a l'ecoute.
+       The only command ever sent, repeated a few times at first: over
+       the cloud the first one can leave before the printer listens. */
+    client.publish("device/" + cfg.serial + "/request", JSON.stringify({
+      pushing: { sequence_id: String(link.attempts++), command: "pushall", version: 1, push_target: 1 }
+    }));
+  };
   client.on("connect", () => {
     link.connected = true;
+    link.connectedAt = Date.now();
     link.error = null;
     link.errorKind = null;
-    client.subscribe(topic, () => {
-      /* Une seule commande est jamais envoyee : « donne-moi ton etat
-         complet ». Sans elle, il faudrait attendre le prochain
-         changement pour afficher quoi que ce soit.
-         The only command ever sent: "give me your full state". */
-      client.publish("device/" + cfg.serial + "/request", JSON.stringify({
-        pushing: { sequence_id: "0", command: "pushall", version: 1, push_target: 1 }
-      }));
+    client.subscribe(topic, { qos: 0 }, (err, granted) => {
+      /* Un abonnement REFUSE est un echec silencieux : la connexion
+         reste etablie, mais aucun message n'arrivera jamais. Le cas se
+         produit quand le numero de serie ne correspond pas a une
+         machine du compte.
+         A REFUSED subscription is a silent failure: the connection
+         stays up but no message will ever arrive. */
+      const refused = !err && Array.isArray(granted)
+        && granted.some((g) => g && Number(g.qos) === 128);
+      if (err || refused) {
+        link.subscribeError = err ? String(err.message || err) : "refusé / refused";
+        return;
+      }
+      link.subscribed = true;
+      askAll();
+      for (const delay of [2000, 6000, 15000]) {
+        const t2 = setTimeout(() => { if (!link.messages && link.connected) askAll(); }, delay);
+        t2.unref && t2.unref();
+      }
     });
   });
   client.on("message", (t, payload) => {
+    link.messages++;
     let json = null;
     try { json = JSON.parse(payload.toString("utf8")); } catch (e) { return; }
     if (!json || !json.print) return;
@@ -589,8 +622,45 @@ function status(cfg) {
     error: link.error,
     errorKind: link.errorKind,
     ageMs: link.lastMessageAt ? Date.now() - link.lastMessageAt : null,
+    /* De quoi expliquer une attente qui dure, au lieu de la subir. */
+    diag: {
+      mode: cfg.mode || "lan",
+      waitedMs: Date.now() - link.openedAt,
+      connectedAt: link.connectedAt || null,
+      subscribed: link.subscribed,
+      subscribeError: link.subscribeError,
+      messages: link.messages,
+      serial: cfg.serial
+    },
     printer: link.report ? snapshot(link.report, { model: cfg.model, name: cfg.name }) : null
   };
+}
+
+/* ---------- Pourquoi rien n'arrive ? ----------
+   Une liaison etablie mais muette a des causes bien identifiees, et
+   elles sont differentes selon la voie. La plus frequente en cloud :
+   l'imprimante est en MODE LAN UNIQUEMENT, elle ne parle donc pas aux
+   serveurs de Bambu -- les deux reglages s'excluent, et c'est
+   exactement le piege quand on vient d'activer le mode LAN pour
+   essayer la liaison locale.
+   Why nothing arrives. The commonest cloud cause: the printer is in
+   LAN-ONLY mode, so it does not talk to Bambu's servers at all -- the
+   two settings exclude each other. */
+function diagnose(st, opts) {
+  const o = opts || {};
+  const d = (st && st.diag) || {};
+  const waited = d.waitedMs || 0;
+  if (st && st.hasData) return null;
+  if (st && st.errorKind === "auth") return "auth";
+  if (st && st.errorKind === "unreachable") return "unreachable";
+  if (st && st.errorKind === "dns") return "dns";
+  if (d.subscribeError) return "subscribe";
+  if (!st || !st.connected) return waited > 20000 ? "no-connect" : null;
+  // Connecte, abonne, mais silencieux.
+  if (waited < 15000) return null;             // on laisse sa chance
+  if (o.cloudOnline === false) return "printer-offline";
+  if (d.mode === "cloud") return "cloud-silent";
+  return "lan-silent";
 }
 
 function close(cfg) {
@@ -618,5 +688,5 @@ module.exports = {
   STAGES, GCODE_STATES, stageLabel, stateLabel, capabilities, mergeReport,
   remainingMs, finishAt, hmsCode, hmsUrl, hmsList, parseAms, printName, snapshot,
   parseSsdp, discover, loginOutcome, userIdFromToken, cloudLogin, cloudVerify,
-  cloudSendCode, cloudPrinters, cloudHost, describeError, status, close
+  cloudSendCode, cloudPrinters, cloudHost, describeError, diagnose, status, close
 };

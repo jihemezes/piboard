@@ -238,6 +238,42 @@ test("diagnostic : chaque panne courante recoit une cause nommee", () => {
   assert.strictEqual(B.describeError(new Error("getaddrinfo ENOTFOUND x")), "dns");
 });
 
+test("liaison muette : la cause est nommee, pas subie", () => {
+  /* Le cas signale a l'usage sur la 1.115.2 : connecte au cloud, mais
+     « Connexion a l'imprimante... » pour toujours. Une imprimante en
+     mode LAN UNIQUEMENT est coupee des serveurs de Bambu -- les deux
+     reglages s'excluent. */
+  const connectedSilent = (mode, waited) => ({
+    connected: true, hasData: false,
+    diag: { mode, waitedMs: waited, subscribed: true, messages: 0 }
+  });
+  assert.strictEqual(B.diagnose(connectedSilent("cloud", 3000)), null, "on laisse sa chance au demarrage");
+  assert.strictEqual(B.diagnose(connectedSilent("cloud", 30000)), "cloud-silent");
+  assert.strictEqual(B.diagnose(connectedSilent("cloud", 30000), { cloudOnline: false }), "printer-offline",
+    "Bambu la dit hors ligne : c'est la reponse la plus precise");
+  assert.strictEqual(B.diagnose(connectedSilent("lan", 30000)), "lan-silent");
+});
+
+test("liaison muette : un abonnement refuse ne passe pas pour une attente", () => {
+  // Echec silencieux typique : connecte, mais rien n'arrivera jamais.
+  assert.strictEqual(B.diagnose({
+    connected: true, hasData: false,
+    diag: { mode: "cloud", waitedMs: 3000, subscribeError: "refusé / refused" }
+  }), "subscribe");
+});
+
+test("liaison muette : des donnees recues valent mieux qu'un diagnostic", () => {
+  assert.strictEqual(B.diagnose({ connected: true, hasData: true, diag: { waitedMs: 999999 } }), null);
+});
+
+test("liaison muette : une connexion qui ne s'etablit pas finit par se dire", () => {
+  const st = { connected: false, hasData: false, diag: { mode: "cloud", waitedMs: 5000 } };
+  assert.strictEqual(B.diagnose(st), null);
+  st.diag.waitedMs = 30000;
+  assert.strictEqual(B.diagnose(st), "no-connect");
+  assert.strictEqual(B.diagnose({ connected: false, hasData: false, errorKind: "auth", diag: {} }), "auth");
+});
+
 console.log("== Paliers d'affichage de la tuile ==");
 
 test("palier : plus la tuile est petite, plus on retire", () => {
