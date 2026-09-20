@@ -2177,7 +2177,7 @@ app.get("/api/bambu/:tileId/status", async (req, res) => {
   if (cfg.mode === "lan" && (!cfg.host || !cfg.code)) return res.status(400).json({ error: "missing_lan_settings" });
   if (cfg.mode === "cloud" && !cfg.token) return res.status(400).json({ error: "missing_token" });
   try {
-    const st = bambu.status(cfg);
+    const st = await bambu.status(cfg);
     if (cfg.mode === "cloud" && !st.hasData) {
       st.cloudOnline = await bambuCloudOnline(req.params.tileId, cfg.serial, cfg.region);
     }

@@ -32,6 +32,10 @@
 
 .pw-bambu .pwb-err { color: var(--danger); }
 .pw-bambu .pwb-err small { color: var(--muted); font-size: 0.85em; word-break: break-word; }
+/* Detail technique : utile pour diagnostiquer, discret pour ne pas
+   voler la vedette au message principal.
+   Technical detail: useful to diagnose, discreet by design. */
+.pw-bambu .pwb-detail { opacity: 0.75; font-size: 0.78em; }
 
 .pw-bambu .pwb-head {
   display: flex;

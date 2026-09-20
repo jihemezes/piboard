@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.115.5
+
+- **Correctif : le courtier de Bambu refusait la connexion
+  (« Not authorized »).** Le nom d'utilisateur MQTT attendu est
+  « u_<numero de compte> », et ce numero se demande AU COMPTE
+  (/v1/design-user-service/my/preference) -- le jeton ne sert que de
+  mot de passe. Le deduire du seul jeton, comme le faisait la 1.115.4,
+  donnait un nom vide ou faux des que ses champs ne portaient pas ce
+  qu'on esperait. Le numero est desormais demande au compte, le jeton
+  ne servant que de repli, et sa resolution est mise en cache.
+
+- **Le message d'un refus distingue enfin les deux liaisons.** En
+  liaison cloud, la tuile affichait « verifiez le code d'acces LAN et
+  le mode developpeur » -- un conseil qui envoie chercher au mauvais
+  endroit quand on ne passe pas par le reseau local. Le message cloud
+  dit ce qu'il en est : le compte est reconnu, c'est l'identite MQTT
+  ou l'expiration du jeton qui est en cause.
+
+- La tuile affiche desormais **l'identite presentee au courtier** et
+  d'ou elle vient (du compte ou du jeton) : de quoi diagnostiquer un
+  refus au lieu de le deviner.
+
 ## 1.115.4
 
 - **Correctif : la liaison cloud visait un serveur qui n'existe pas.**

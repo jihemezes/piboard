@@ -219,10 +219,33 @@ test("compte Bambu : demander le code est une etape a part entiere", () => {
   assert.ok(/cloudSendCode/.test(login), "et il est appele depuis la connexion, pas laisse a l'appelant");
 });
 
-test("compte Bambu : le nom d'utilisateur MQTT sort du jeton lui-meme", () => {
-  const body = Buffer.from(JSON.stringify({ username: "u_1234567" }), "utf8").toString("base64");
-  assert.strictEqual(B.userIdFromToken("entete." + body + ".signature"), "u_1234567");
+test("compte Bambu : le nom d'utilisateur MQTT se demande au COMPTE", () => {
+  /* Correctif 1.115.5 : le courtier attend « u_<numero de compte> », et
+     ce numero s'obtient aupres du compte. Le deduire du seul jeton
+     donnait un nom vide ou faux -- d'ou « Not authorized ». Le jeton
+     n'est qu'un repli. */
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "server", "bambu.js"), "utf8");
+  assert.ok(/design-user-service\/my\/preference/.test(src),
+    "le numero de compte est demande a l'API du compte");
+  const resolver = src.slice(src.indexOf("async function mqttUsername"), src.indexOf("const links"));
+  assert.ok(/cloudUserId/.test(resolver) && /userIdFromToken/.test(resolver),
+    "avec le jeton en repli quand l'appel echoue");
+});
+
+test("compte Bambu : le repli par le jeton accepte les champs possibles", () => {
+  const jwt = (payload) => "entete." + Buffer.from(JSON.stringify(payload), "utf8").toString("base64") + ".signature";
+  assert.strictEqual(B.userIdFromToken(jwt({ username: "u_1234567" })), "u_1234567");
+  assert.strictEqual(B.userIdFromToken(jwt({ uid: 1234567 })), "u_1234567", "le prefixe est ajoute si besoin");
+  assert.strictEqual(B.userIdFromToken(jwt({ preferred_username: "u_9" })), "u_9");
+  assert.strictEqual(B.userIdFromToken(jwt({ autre: 1 })), null, "rien d'exploitable : on ne devine pas");
   assert.strictEqual(B.userIdFromToken("pas un jeton"), null);
+});
+
+test("refus du courtier : le message distingue le cloud du reseau local", () => {
+  // Afficher « vérifiez le code d'accès LAN » a quelqu'un qui est en
+  // liaison cloud l'envoie chercher au mauvais endroit.
+  assert.strictEqual(B.diagnose({ connected: false, hasData: false, errorKind: "auth", diag: { mode: "cloud" } }), "cloud-auth");
+  assert.strictEqual(B.diagnose({ connected: false, hasData: false, errorKind: "auth", diag: { mode: "lan" } }), "auth");
 });
 
 test("compte Bambu : seuls les DEUX hotes qui existent vraiment sont utilises", () => {

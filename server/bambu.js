@@ -458,16 +458,52 @@ async function cloudVerify(account, code, tfaKey, region) {
   return loginOutcome(await apiPost("/v1/user-service/user/login", { account, code }, region));
 }
 
-/* Numero d'utilisateur : il est ecrit dans le jeton lui-meme (JWT), le
-   nom d'utilisateur MQTT en decoulant directement.
-   The user id is inside the token itself (a JWT). */
+/* ---------- Nom d'utilisateur MQTT ----------
+   Le courtier de Bambu attend « u_<numero de compte> ». Ce numero
+   s'obtient AUPRES DU COMPTE (/v1/design-user-service/my/preference) ;
+   le jeton ne sert que de mot de passe. Le deduire du seul jeton --
+   ce que faisait la 1.115.4 -- donne un nom vide ou faux des que les
+   champs du jeton ne portent pas ce qu'on esperait, et le courtier
+   repond alors « Not authorized » (1.115.5). Le jeton reste un repli
+   quand l'appel echoue.
+   Bambu's broker expects "u_<account id>", and that id comes FROM THE
+   ACCOUNT, not from the token. Deriving it from the token alone gives
+   an empty or wrong name and the broker answers "Not authorized". */
 function userIdFromToken(token) {
   const parts = String(token || "").split(".");
   if (parts.length < 2) return null;
   try {
     const body = JSON.parse(Buffer.from(parts[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"));
-    return body.username || (body.uid != null ? "u_" + body.uid : null);
+    const raw = body.username || body.preferred_username || body.uid || body.userId || body.sub;
+    if (raw == null || raw === "") return null;
+    const v = String(raw);
+    return /^u_/.test(v) ? v : "u_" + v;
   } catch (e) { return null; }
+}
+
+async function cloudUserId(token, region) {
+  const json = await apiGet("/v1/design-user-service/my/preference", token, region);
+  const uid = json && (json.uid != null ? json.uid : (json.userId != null ? json.userId : null));
+  if (uid == null || uid === "") throw new Error("numéro de compte introuvable / account id not found");
+  const v = String(uid);
+  return /^u_/.test(v) ? v : "u_" + v;
+}
+
+/* Une resolution par jeton suffit : le numero de compte ne change pas. */
+const userIds = new Map();
+async function mqttUsername(token, region) {
+  if (userIds.has(token)) return userIds.get(token);
+  let out = null, source = "";
+  try {
+    out = await cloudUserId(token, region);
+    source = "compte / account";
+  } catch (e) {
+    out = userIdFromToken(token);
+    source = out ? "jeton / token" : "";
+  }
+  const entry = { username: out, source };
+  userIds.set(token, entry);
+  return entry;
 }
 
 async function cloudPrinters(token, region) {
@@ -542,7 +578,7 @@ function open(cfg) {
 
   const cloud = cfg.mode === "cloud";
   const host = cloud ? cloudHost(cfg.region) : cfg.host;
-  const username = cloud ? (userIdFromToken(cfg.token) || "") : "bblp";
+  const username = cloud ? (cfg.username || "") : "bblp";
   const password = cloud ? cfg.token : cfg.code;
 
   const link = {
@@ -555,7 +591,8 @@ function open(cfg) {
        A log of the link: without it, a tile stuck on "Connecting..."
        says NOTHING about what is blocking. */
     openedAt: Date.now(), connectedAt: 0, subscribed: false,
-    subscribeError: null, messages: 0, attempts: 0
+    subscribeError: null, messages: 0, attempts: 0,
+    username, usernameSource: cfg.usernameSource || ""
   };
 
   const client = mqtt.connect("mqtts://" + host + ":8883", {
@@ -631,11 +668,17 @@ function open(cfg) {
   return link;
 }
 
-function status(cfg) {
+async function status(cfg) {
   const k = key(cfg);
   let link = links.get(k);
   if (!link) {
-    link = open(cfg);
+    const full = Object.assign({}, cfg);
+    if (cfg.mode === "cloud") {
+      const who = await mqttUsername(cfg.token, cfg.region);
+      full.username = who.username || "";
+      full.usernameSource = who.source;
+    }
+    link = open(full);
     links.set(k, link);
   }
   link.lastReadAt = Date.now();
@@ -654,7 +697,9 @@ function status(cfg) {
       subscribed: link.subscribed,
       subscribeError: link.subscribeError,
       messages: link.messages,
-      serial: cfg.serial
+      serial: cfg.serial,
+      username: link.username || null,
+      usernameSource: link.usernameSource || null
     },
     printer: link.report ? snapshot(link.report, { model: cfg.model, name: cfg.name }) : null
   };
@@ -675,7 +720,7 @@ function diagnose(st, opts) {
   const d = (st && st.diag) || {};
   const waited = d.waitedMs || 0;
   if (st && st.hasData) return null;
-  if (st && st.errorKind === "auth") return "auth";
+  if (st && st.errorKind === "auth") return d.mode === "cloud" ? "cloud-auth" : "auth";
   if (st && st.errorKind === "unreachable") return "unreachable";
   if (st && st.errorKind === "dns") return "dns";
   if (d.subscribeError) return "subscribe";
@@ -712,5 +757,5 @@ module.exports = {
   STAGES, GCODE_STATES, stageLabel, stateLabel, capabilities, mergeReport,
   remainingMs, finishAt, hmsCode, hmsUrl, hmsList, parseAms, printName, snapshot,
   parseSsdp, discover, loginOutcome, userIdFromToken, cloudLogin, cloudVerify,
-  cloudSendCode, cloudPrinters, cloudHost, cloudApiHost, cloudZone, CLOUD_HOSTS, describeError, diagnose, status, close
+  cloudSendCode, cloudUserId, mqttUsername, cloudPrinters, cloudHost, cloudApiHost, cloudZone, CLOUD_HOSTS, describeError, diagnose, status, close
 };

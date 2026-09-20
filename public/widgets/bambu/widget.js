@@ -372,6 +372,7 @@
            from the cloud, is named. */
         const KEYS = {
           auth: "bambu.err.auth",
+          "cloud-auth": "bambu.err.cloudAuth",
           unreachable: "bambu.err.unreachable",
           dns: "bambu.err.unreachable",
           subscribe: "bambu.err.subscribe",
@@ -385,6 +386,8 @@
         return void (el.innerHTML = `<div class="pwb-msg pwb-err">${esc(t("bambu.err.title"))}
           <small>${esc(t(key))}</small>
           ${st.error ? `<small class="pwb-detail">${esc(st.error)}</small>` : ""}
+          ${st.diag && st.diag.username ? `<small class="pwb-detail">${esc(t("bambu.err.identity")
+    .replace("{user}", st.diag.username).replace("{source}", st.diag.usernameSource || "?"))}</small>` : ""}
           <button type="button" class="pwb-btn" data-act="retry">${esc(t("bambu.retry"))}</button></div>`);
       }
 

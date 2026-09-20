@@ -7374,6 +7374,8 @@ function catalogItemFor(catalog, document, widgetId) {
       "bambu.humidity": "humidité {n}", "bambu.alert.finished": "Impression terminée : {name}",
       "bambu.err.auth": "Refusé par l'imprimante. Vérifiez le code d'accès LAN, et que le mode LAN ET le mode développeur sont bien activés tous les deux.",
       "bambu.err.title": "Imprimante injoignable", "bambu.connecting": "Connexion à l'imprimante…",
+      "bambu.err.cloudAuth": "Le courtier de Bambu a refusé la connexion. Le compte est bien reconnu, c'est donc l'identité MQTT qui ne convient pas, ou le jeton qui a expiré.",
+      "bambu.err.identity": "Identité présentée : {user} (issue du {source})",
       "bambu.err.offline": "Bambu indique cette imprimante hors ligne. Si elle est allumée, elle est presque sûrement en mode LAN uniquement : ce mode la coupe des serveurs de Bambu.",
       "bambu.err.cloudSilent": "Connecté à Bambu, mais l'imprimante ne dit rien. Passez cette tuile en liaison locale, ou désactivez ce mode sur l'imprimante.",
       "bambu.alert.problem": "Problème : {name} {code}", "common.loading": "Chargement"
@@ -7450,10 +7452,22 @@ function catalogItemFor(catalog, document, widgetId) {
 
     /* Refus de l'imprimante : la cause la plus fréquente est nommée,
        plutôt qu'une attente sans fin. */
-    serve = { connected: false, hasData: false, errorKind: "auth", problem: "auth", printer: null };
+    serve = { connected: false, hasData: false, errorKind: "auth", problem: "auth", printer: null,
+      diag: { mode: "lan" } };
     await w.refresh();
-    assert("imprimante : un refus explique le mode développeur",
+    assert("imprimante : en liaison locale, un refus explique le mode développeur",
       /développeur/i.test(root.textContent));
+
+    /* En liaison cloud, le même refus n'a rien à voir avec le code
+       d'accès LAN : l'envoyer chercher là serait l'envoyer au mauvais
+       endroit (1.115.5). */
+    serve = { connected: false, hasData: false, errorKind: "auth", problem: "cloud-auth", printer: null,
+      diag: { mode: "cloud", username: "u_1234567", usernameSource: "compte / account" } };
+    await w.refresh();
+    assert("imprimante : en liaison cloud, le refus ne parle PAS du code d'accès LAN",
+      !/code d'accès LAN/i.test(root.textContent) && /courtier/i.test(root.textContent));
+    assert("imprimante : l'identité présentée est affichée, pour pouvoir diagnostiquer",
+      /u_1234567/.test(root.textContent));
 
     /* Liaison établie mais muette : le cas signalé à l'usage sur la
        1.115.2, où la tuile restait indéfiniment sur « Connexion… ».
