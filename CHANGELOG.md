@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.115.1
+
+- **Correctif : la connexion au compte Bambu ne pouvait pas aboutir.**
+  Deux causes, signalees a l'usage, corrigees toutes les deux.
+
+- D'abord, **le panneau de connexion n'etait jamais atteint** : en
+  liaison cloud la tuile reclamait d'abord un numero de serie... qu'on
+  ne peut connaitre qu'une fois connecte au compte. Elle restait donc
+  sur « choisissez votre imprimante » sans jamais proposer de se
+  connecter. La connexion passe desormais avant tout le reste, et une
+  fois le jeton obtenu la tuile propose **les imprimantes du compte** :
+  plus rien a saisir a la main, ni adresse IP ni numero de serie.
+
+- Ensuite, **le code de verification n'etait pas demande**. Repondre
+  « il me faut un code » ne le fait pas partir : Bambu attend un appel
+  explicite (`sendemail/code`, type `codeLogin`), que Bambu Studio fait
+  juste apres. La tuile attendait donc un courriel que personne n'avait
+  demande. L'appel est ajoute, avec un bouton **« Renvoyer le code »**
+  qui ne repasse pas par le mot de passe.
+
+- La double authentification par **application** (et non par courriel)
+  est reconnue a part et passe par son propre point d'entree.
+
+- Le parcours entier -- mot de passe, code, renvoi, choix de
+  l'imprimante -- est rejoue de bout en bout par un test, ainsi que le
+  fait que la demande de code soit bien emise.
+
 ## 1.115.0
 
 - **Nouvelle tuile : Imprimante 3D Bambu Lab** (X1C, P1S, A1, H2D...).

@@ -7452,6 +7452,93 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("imprimante : un refus explique le mode développeur",
       /développeur/i.test(root.textContent));
 
+    /* ---- Liaison cloud : le parcours de connexion en entier ----
+       Regression de la 1.115.0, signalee a l'usage : en mode cloud la
+       tuile reclamait d'abord un numero de serie... qu'on ne peut
+       connaitre qu'une fois connecte. Le panneau de connexion n'etait
+       donc JAMAIS atteint. Et le code de verification n'etait pas
+       demande a Bambu : repondre « il me faut un code » ne le fait pas
+       partir, il faut l'exiger.
+       The 1.115.0 regression: the sign-in panel was unreachable, and
+       the emailed code was never actually requested. */
+    {
+      const calls = [];
+      let hasToken = false;
+      window.fetch = (url, opts) => {
+        const u = String(url);
+        if (/\/cloud-printers$/.test(u)) {
+          calls.push({ u });
+          return Promise.resolve({
+            ok: hasToken, status: hasToken ? 200 : 400,
+            json: async () => (hasToken
+              ? { printers: [{ serial: "01P00A999", name: "Atelier", model: "X1C", online: true }] }
+              : { error: "missing_token", printers: [] })
+          });
+        }
+        if (/\/cloud-login$/.test(u)) {
+          const body = JSON.parse(opts.body);
+          calls.push({ u, body });
+          if (body.resend) return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: false, needCode: true, resent: true }) });
+          if (body.code) { hasToken = true; return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: true }) }); }
+          return Promise.resolve({ ok: true, status: 200, json: async () => ({ ok: false, needCode: true }) });
+        }
+        if (u.indexOf("/api/bambu/") === 0) return Promise.resolve({ ok: true, status: 200, json: async () => serve });
+        return realFetch(url, opts);
+      };
+
+      const cloudHost = document.createElement("div");
+      cloudHost.style.width = "420px"; cloudHost.style.height = "340px";
+      document.body.appendChild(cloudHost);
+      const saved = [];
+      const cw = new BambuClass({
+        el: cloudHost, instanceId: "b-cloud", manifest: bManifest,
+        settings: Object.assign({}, defaults, { mode: "cloud", region: "eu", serial: "", host: "" }),
+        i18n: { lang: "fr", t: (k) => i18nKeys[k] || k },
+        api: { startAlert() {}, notify() {} },
+        updateSettings(patch) { saved.push(patch); }
+      });
+      await cw.init();
+      await sleep(60);
+      const croot = cloudHost.querySelector(".pw-bambu");
+
+      /* 1. Sans numero de serie, la tuile doit proposer de se connecter
+            -- et surtout PAS renvoyer vers les reglages. */
+      assert("cloud : sans jeton, le panneau de connexion s'affiche (et non « choisissez votre imprimante »)",
+        !!croot.querySelector("[data-login-account]") && !/bambu\.setup/.test(croot.textContent));
+
+      // 2. Identifiants : le code doit etre reclame a Bambu.
+      croot.querySelector("[data-login-account]").value = "jm@example.com";
+      croot.querySelector("[data-login-password]").value = "secret";
+      await cw.submitLogin(false);
+      await sleep(30);
+      assert("cloud : le mot de passe part sans le code", calls.some((c) => c.body && c.body.password && !c.body.code));
+      assert("cloud : la tuile demande ensuite le code de vérification",
+        !!croot.querySelector("[data-login-code]") && !croot.querySelector("[data-login-password]"));
+
+      // 3. Le renvoi du code est possible sans ressaisir le mot de passe.
+      await cw.submitLogin(true);
+      await sleep(30);
+      assert("cloud : le code peut être renvoyé sans repasser par le mot de passe",
+        calls.some((c) => c.body && c.body.resend === true));
+
+      // 4. Le code valide donne le jeton, puis la liste du compte.
+      croot.querySelector("[data-login-code]").value = "123456";
+      await cw.submitLogin(false);
+      await sleep(60);
+      assert("cloud : le code est envoyé pour vérification", calls.some((c) => c.body && c.body.code === "123456"));
+      assert("cloud : une fois connecté, la tuile propose les imprimantes du compte",
+        /Atelier/.test(croot.textContent));
+
+      // 5. Le choix est enregistre dans les reglages de la tuile.
+      croot.querySelector("[data-act='pick']").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
+      assert("cloud : choisir une imprimante enregistre son numéro de série",
+        saved.length === 1 && saved[0].serial === "01P00A999" && saved[0].model === "X1C");
+
+      cw.destroy();
+      cloudHost.remove();
+    }
+
     w.destroy();
     host.remove();
     window.fetch = realFetch;

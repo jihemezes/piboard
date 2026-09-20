@@ -195,9 +195,28 @@ test("decouverte : les entetes SSDP de Bambu donnent serie, modele et adresse", 
 
 test("compte Bambu : jeton obtenu, ou code de verification a reclamer", () => {
   assert.deepStrictEqual(B.loginOutcome({ accessToken: "abc" }), { ok: true, token: "abc" });
-  assert.strictEqual(B.loginOutcome({ loginType: "verifyCode" }).needCode, true);
-  assert.strictEqual(B.loginOutcome({ loginType: "tfa", tfaKey: "k" }).needCode, true);
+  assert.strictEqual(B.loginOutcome({ success: false, loginType: "verifyCode" }).needCode, true);
   assert.strictEqual(B.loginOutcome({ error: "mauvais mot de passe" }).ok, false);
+});
+
+test("compte Bambu : la double authentification par application est reconnue a part", () => {
+  // Elle passe par un autre point d'entree, avec la cle remise ici.
+  const out = B.loginOutcome({ loginType: "tfa", tfaKey: "cle-123" });
+  assert.strictEqual(out.needCode, true);
+  assert.strictEqual(out.tfa, true);
+  assert.strictEqual(out.tfaKey, "cle-123");
+});
+
+test("compte Bambu : demander le code est une etape a part entiere", () => {
+  /* C'est le correctif de la 1.115.1 : repondre « il me faut un code »
+     ne le fait pas partir. Sans cet appel, la tuile attendait un
+     courriel que personne n'avait demande. */
+  assert.strictEqual(typeof B.cloudSendCode, "function");
+  const src = require("fs").readFileSync(require("path").join(__dirname, "..", "server", "bambu.js"), "utf8");
+  assert.ok(/sendemail\/code/.test(src), "le point d'entree d'envoi du code est appele");
+  assert.ok(/type: "codeLogin"/.test(src), "avec le type attendu par Bambu");
+  const login = src.slice(src.indexOf("async function cloudLogin"), src.indexOf("async function cloudVerify"));
+  assert.ok(/cloudSendCode/.test(login), "et il est appele depuis la connexion, pas laisse a l'appelant");
 });
 
 test("compte Bambu : le nom d'utilisateur MQTT sort du jeton lui-meme", () => {

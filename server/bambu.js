@@ -413,15 +413,48 @@ function loginOutcome(json) {
   if (j.accessToken) return { ok: true, token: j.accessToken };
   const type = String(j.loginType || "").toLowerCase();
   if (type.indexOf("verify") >= 0 || type === "emailcode") return { ok: false, needCode: true };
-  if (type.indexOf("tfa") >= 0) return { ok: false, needCode: true, tfaKey: j.tfaKey || null };
-  return { ok: false, error: j.error || j.message || "identifiants refusés / credentials refused" };
+  /* Double authentification par application : un autre point d'entree,
+     avec la cle remise par la reponse.
+     App-based two-factor: a different endpoint, with the key handed
+     back by this answer. */
+  if (type.indexOf("tfa") >= 0) return { ok: false, needCode: true, tfa: true, tfaKey: j.tfaKey || null };
+  return { ok: false, error: j.error || j.message || j.code || "identifiants refusés / credentials refused" };
+}
+
+/* Demande du code par courriel. ETAPE INDISPENSABLE, et c'est ce qui
+   manquait en 1.115.0 : repondre « il me faut un code » ne le fait pas
+   partir. Bambu Studio appelle ce point d'entree juste apres avoir vu
+   « verifyCode » -- sans lui, la tuile attendait un courriel que
+   personne n'avait demande (1.115.1).
+   Requesting the emailed code. AN INDISPENSABLE STEP, and the one that
+   was missing: answering "a code is needed" does not send it. */
+async function cloudSendCode(account) {
+  const json = await apiPost("/v1/user-service/user/sendemail/code", { email: account, type: "codeLogin" });
+  const j = json || {};
+  if (j.success === false && (j.error || j.message)) {
+    return { ok: false, error: j.error || j.message };
+  }
+  return { ok: true };
 }
 
 async function cloudLogin(account, password) {
-  return loginOutcome(await apiPost("/v1/user-service/user/login", { account, password }));
+  const out = loginOutcome(await apiPost("/v1/user-service/user/login", { account, password, apiError: "" }));
+  /* Le code n'arrive que si on le demande explicitement. */
+  if (!out.ok && out.needCode && !out.tfa) {
+    try {
+      const sent = await cloudSendCode(account);
+      if (!sent.ok) return Object.assign({}, out, { error: sent.error });
+    } catch (e) {
+      return Object.assign({}, out, { error: String(e.message || e) });
+    }
+  }
+  return out;
 }
 
-async function cloudVerify(account, code) {
+async function cloudVerify(account, code, tfaKey) {
+  if (tfaKey) {
+    return loginOutcome(await apiPost("/api/sign-in/tfa", { tfaKey, tfaCode: code }));
+  }
   return loginOutcome(await apiPost("/v1/user-service/user/login", { account, code }));
 }
 
@@ -585,5 +618,5 @@ module.exports = {
   STAGES, GCODE_STATES, stageLabel, stateLabel, capabilities, mergeReport,
   remainingMs, finishAt, hmsCode, hmsUrl, hmsList, parseAms, printName, snapshot,
   parseSsdp, discover, loginOutcome, userIdFromToken, cloudLogin, cloudVerify,
-  cloudPrinters, cloudHost, describeError, status, close
+  cloudSendCode, cloudPrinters, cloudHost, describeError, status, close
 };

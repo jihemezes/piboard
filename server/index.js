@@ -2181,13 +2181,22 @@ app.post("/api/bambu/:tileId/cloud-login", async (req, res) => {
   const account = String((req.body && req.body.account) || "").trim();
   const password = String((req.body && req.body.password) || "");
   const code = String((req.body && req.body.code) || "").trim();
+  const tfaKey = String((req.body && req.body.tfaKey) || "").trim();
+  const resend = !!(req.body && req.body.resend);
   try {
-    const out = code ? await bambu.cloudVerify(account, code) : await bambu.cloudLogin(account, password);
+    /* Renvoi du code, sans repasser par le mot de passe. */
+    if (resend) {
+      const sent = await bambu.cloudSendCode(account);
+      return res.json({ ok: false, needCode: true, resent: sent.ok, error: sent.error || null });
+    }
+    const out = code
+      ? await bambu.cloudVerify(account, code, tfaKey)
+      : await bambu.cloudLogin(account, password);
     if (out.ok && out.token) {
       tileSecrets.set(tileId, "cloudToken", out.token);
       return res.json({ ok: true });
     }
-    res.json({ ok: false, needCode: !!out.needCode, error: out.error || null });
+    res.json({ ok: false, needCode: !!out.needCode, tfaKey: out.tfaKey || null, error: out.error || null });
   } catch (e) {
     res.status(502).json({ ok: false, error: String(e.message || e) });
   }

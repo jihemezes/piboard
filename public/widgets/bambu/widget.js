@@ -80,6 +80,8 @@
       this.lastAlertKey = "";
       this.cameraOpen = false;
       this.login = null;         // panneau de connexion au compte, si besoin
+      this.tokenReady = false;   // jeton du compte deja dans le coffre ?
+      this.cloudList = [];       // imprimantes rattachees au compte
     }
 
     async init() {
@@ -113,7 +115,9 @@
         const act = btn.dataset.act;
         if (act === "camera") this.openCamera();
         else if (act === "camera-close") this.closeCamera();
-        else if (act === "login") this.submitLogin();
+        else if (act === "login") this.submitLogin(false);
+        else if (act === "resend") this.submitLogin(true);
+        else if (act === "pick") this.pickPrinter(btn);
         else if (act === "retry") this.refresh();
       });
     }
@@ -133,6 +137,20 @@
 
     async refresh() {
       const s = this.ctx.settings;
+      /* En liaison cloud, la connexion au compte vient AVANT tout le
+         reste : sans elle on ne connait meme pas la liste des
+         imprimantes, donc pas leur numero de serie. Reclamer le numero
+         d'abord enfermait la tuile dans « choisissez votre imprimante »
+         et le panneau de connexion n'etait jamais atteint (1.115.1).
+         On the cloud link, signing in comes BEFORE everything else:
+         without it we do not even know the printer list, hence no
+         serial number. Asking for the serial first locked the tile out
+         of its own sign-in panel. */
+      if (s.mode === "cloud" && !this.tokenReady) {
+        const ok = await this.checkCloudToken();
+        if (!ok) return this.render();
+        if (!s.serial) { this.state = { pickPrinter: true }; return this.renderPrinterPick(); }
+      }
       if (!s.serial || (s.mode !== "cloud" && !s.host)) {
         this.state = { setup: true };
         return this.render();
@@ -219,7 +237,55 @@
       this.render();
     }
 
-    async submitLogin() {
+    /* Le jeton est-il deja dans le coffre ? La reponse decide entre le
+       panneau de connexion et la suite.
+       Is the token already in the vault? */
+    async checkCloudToken() {
+      try {
+        const res = await fetch("/api/bambu/" + encodeURIComponent(this.ctx.instanceId) + "/cloud-printers", { cache: "no-store" });
+        const data = await res.json();
+        if (res.ok) {
+          this.tokenReady = true;
+          this.cloudList = data.printers || [];
+          this.login = null;
+          return true;
+        }
+        this.login = this.login || {};
+        return false;
+      } catch (e) {
+        this.state = { failed: String(e.message || e) };
+        return false;
+      }
+    }
+
+    /* Choix de l'imprimante parmi celles du compte, dans la tuile : on
+       evite l'oeuf et la poule (il faut etre connecte pour connaitre la
+       liste, et la liste pour se connecter a une machine).
+       Picking the printer among the account's, inside the tile. */
+    renderPrinterPick() {
+      const t = (k) => this.ctx.i18n.t(k);
+      const list = this.cloudList || [];
+      this.el.innerHTML = `<div class="pwb-login">
+        <div class="pwb-login-title">${esc(t("bambu.pick.title"))}</div>
+        ${list.length ? list.map((p) => `<button type="button" class="pwb-btn" data-act="pick" data-serial="${esc(p.serial)}"
+            data-model="${esc(p.model)}" data-name="${esc(p.name)}">${esc(p.name || p.serial)}${p.model ? " — " + esc(p.model) : ""}</button>`).join("")
+    : `<small class="pwb-login-msg">${esc(t("bambu.pick.empty"))}</small>`}
+      </div>`;
+    }
+
+    pickPrinter(btn) {
+      this.ctx.updateSettings({
+        serial: btn.dataset.serial,
+        model: btn.dataset.model || "",
+        printerName: btn.dataset.name || ""
+      });
+      this.ctx.settings = Object.assign({}, this.ctx.settings, {
+        serial: btn.dataset.serial, model: btn.dataset.model || "", printerName: btn.dataset.name || ""
+      });
+      this.refresh();
+    }
+
+    async submitLogin(resend) {
       const root = this.el;
       const account = (root.querySelector("[data-login-account]") || {}).value || "";
       const password = (root.querySelector("[data-login-password]") || {}).value || "";
@@ -230,13 +296,23 @@
         const res = await fetch("/api/bambu/" + encodeURIComponent(this.ctx.instanceId) + "/cloud-login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ account, password, code })
+          body: JSON.stringify({ account, password, code, tfaKey: (this.login && this.login.tfaKey) || "", resend })
         });
         const data = await res.json();
-        if (data.ok) { this.login = null; return this.refresh(); }
-        this.login = { account, needCode: !!data.needCode, error: data.error || null };
+        if (data.ok) {
+          this.login = null;
+          this.tokenReady = false;          // on relit la liste du compte
+          return this.refresh();
+        }
+        this.login = {
+          account,
+          needCode: !!data.needCode,
+          tfaKey: data.tfaKey || (this.login && this.login.tfaKey) || null,
+          resent: !!data.resent,
+          error: data.error || null
+        };
       } catch (e) {
-        this.login = { account, error: String(e.message || e) };
+        this.login = { account, needCode: !!(this.login && this.login.needCode), error: String(e.message || e) };
       }
       this.render();
     }
@@ -252,6 +328,7 @@
       const show = SHOWN[level];
       const st = this.state || {};
 
+      if (st.pickPrinter) return void this.renderPrinterPick();
       if (st.setup) return void (el.innerHTML = `<div class="pwb-msg">${esc(t("bambu.setup"))}</div>`);
 
       if (this.login || st.failed === "missing_token") {
@@ -390,7 +467,11 @@
     ? `<input type="text" data-login-code placeholder="${esc(t("bambu.login.code"))}" inputmode="numeric" autocomplete="off">`
     : `<input type="password" data-login-password placeholder="${esc(t("bambu.login.password"))}" autocomplete="off">`}
         <button type="button" class="pwb-btn" data-act="login">${esc(l.needCode ? t("bambu.login.verify") : t("bambu.login.send"))}</button>
-        <small data-login-msg class="pwb-login-msg">${esc(l.error || (l.needCode ? t("bambu.login.codeSent") : ""))}</small>
+        ${l.needCode && !l.tfaKey ? `<button type="button" class="pwb-btn" data-act="resend">${esc(t("bambu.login.resend"))}</button>` : ""}
+        <small data-login-msg class="pwb-login-msg">${esc(l.error
+    || (l.resent ? t("bambu.login.codeSent") : "")
+    || (l.tfaKey ? t("bambu.login.tfa") : "")
+    || (l.needCode ? t("bambu.login.codeSent") : ""))}</small>
       </div>`;
     }
 
