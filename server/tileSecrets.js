@@ -117,6 +117,29 @@ function has(tileId, key) {
   return Object.prototype.hasOwnProperty.call(readVault(), vaultKey(tileId, key));
 }
 
+/* Tout le coffre, en clair, groupe par tuile. Reserve au CLONE (voir
+   clone.js), qui doit trier les secrets par nature avant de decider
+   lesquels emporter -- ce qu'un acces valeur par valeur ne permet pas.
+   Rien d'autre n'a de raison d'appeler cette fonction.
+   The whole vault in the clear, grouped by tile. Reserved for the
+   CLONE, which must sort secrets by nature before deciding which ones
+   travel. Nothing else has any reason to call this. */
+function all() {
+  const v = readVault();
+  const out = {};
+  for (const stored of Object.keys(v)) {
+    const at = stored.indexOf("::");
+    if (at < 0) continue;
+    const tileId = stored.slice(0, at);
+    const key = stored.slice(at + 2);
+    const value = decrypt(v[stored]);
+    if (value == null || value === "") continue;
+    out[tileId] = out[tileId] || {};
+    out[tileId][key] = value;
+  }
+  return out;
+}
+
 // Appele quand une tuile est supprimee : evite d'accumuler indefiniment
 // des secrets orphelins. Called when a tile is removed: avoids piling up
 // orphaned secrets forever.
@@ -130,4 +153,4 @@ function clearTile(tileId) {
   if (changed) writeVault(v);
 }
 
-module.exports = { set, get, has, clearTile };
+module.exports = { set, get, has, clearTile, all };

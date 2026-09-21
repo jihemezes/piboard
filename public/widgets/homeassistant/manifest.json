@@ -44,9 +44,10 @@
         "fr": "Jeton d'accès de longue durée"
       },
       "hint": {
-        "en": "Created in Home Assistant under your profile, at the bottom of the page. Stored encrypted, never sent back to the browser.",
-        "fr": "À créer dans Home Assistant, dans votre profil, en bas de page. Conservé chiffré, jamais renvoyé au navigateur."
-      }
+        "en": "Created in Home Assistant under your profile, at the bottom of the page. Stored encrypted, never sent back to the browser. Nature: <b>personal credential</b> — it is yours. A clone only carries it if you explicitly tick that family.",
+        "fr": "À créer dans Home Assistant, dans votre profil, en bas de page. Conservé chiffré, jamais renvoyé au navigateur. Nature : <b>identifiant personnel</b> — il vaut pour vous. Un clone ne l'emporte que si vous cochez explicitement cette famille."
+      },
+      "sensitivity": "personal"
     },
     {
       "key": "lines",

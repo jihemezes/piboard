@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.117.0
+   Version 1.118.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -5588,6 +5588,257 @@
     modal.hidden = false;
   }
 
+  /* ---------- Clone complet d'une installation ----------
+     Export : les cases cochees decident de ce qui part. Import : on
+     REGARDE d'abord (combien de tuiles, quelle version, quels chemins
+     demandent une decision), on choisit les dossiers introuvables, puis
+     on applique -- et une sauvegarde de securite est prise cote serveur
+     juste avant d'ecrire.
+     Export: the checkboxes decide what travels. Import: look first,
+     choose the missing folders, then apply -- with a safety backup
+     taken server-side just before writing. */
+  let cloneFile = null;          // le fichier choisi, en attente d'application
+  let cloneInfo = null;          // ce que le serveur en a dit
+  const clonePathChoices = {};   // "tuile|reglage" -> dossier choisi
+
+  function cloneOptions() {
+    return {
+      includeImages: $("cloneImages").checked,
+      includeServiceKeys: $("cloneServiceKeys").checked,
+      includePersonalSecrets: $("clonePersonal").checked,
+      passphrase: $("clonePersonal").checked ? $("clonePassphrase").value : ""
+    };
+  }
+
+  async function exportClone() {
+    const btn = $("cloneExportBtn");
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const res = await fetch("/api/clone/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cloneOptions())
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      const name = (res.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name ? name[1] : "piboard-clone.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      showBackupsMsg(i18n.t("clone.exported").replace("{size}", formatSize(blob.size)));
+    } catch (e) {
+      showBackupsMsg(i18n.t("clone.exportFailed") + " " + (e.message || e), true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = was;
+    }
+  }
+
+  function formatSize(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return n + " o";
+    if (n < 1024 * 1024) return Math.round(n / 1024) + " Ko";
+    if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + " Mo";
+    return (n / (1024 * 1024 * 1024)).toFixed(2) + " Go";
+  }
+
+  function showBackupsMsg(text, isError) {
+    const el = $("backupsMsg");
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = text;
+    el.classList.toggle("backups-msg-error", !!isError);
+  }
+
+  /* Premier temps : on regarde sans rien ecrire. */
+  async function inspectClone(file) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/clone/inspect", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
+  }
+
+  function cloneSummaryHtml(info) {
+    const c = info.counts || {};
+    const m = info.manifest || {};
+    const contents = m.contents || {};
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtmlAttr(label)}</span><b>${escapeHtmlAttr(String(value))}</b></div>`;
+    let html = '<div class="clone-summary">';
+    html += line(i18n.t("clone.info.made"), new Date(m.createdAt || Date.now()).toLocaleString(i18n.lang === "fr" ? "fr-FR" : "en-GB"));
+    html += line(i18n.t("clone.info.from"), (m.platform || "?") + (m.appVersion ? " · v" + m.appVersion : ""));
+    html += line(i18n.t("clone.info.tiles"), (c.tiles || 0) + (c.pages ? " · " + i18n.t("clone.info.pages").replace("{n}", c.pages) : ""));
+    html += line(i18n.t("clone.info.images"), contents.images ? (c.media + c.library) + " · " + formatSize(contents.mediaBytes || 0) : i18n.t("clone.info.none"));
+    html += line(i18n.t("clone.info.serviceKeys"), contents.serviceKeys ? i18n.t("common.yes") : i18n.t("common.no"));
+    html += line(i18n.t("clone.info.personal"), contents.personalSecrets
+      ? (contents.encrypted ? i18n.t("clone.info.encrypted") : i18n.t("common.yes")) : i18n.t("common.no"));
+    html += "</div>";
+
+    if (!info.intact) html += `<p class="clone-warn">${escapeHtmlAttr(i18n.t("clone.damaged"))}</p>`;
+    if (info.newer) html += `<p class="clone-warn">${escapeHtmlAttr(i18n.t("clone.newer"))}</p>`;
+    if (info.needsPassphrase) {
+      html += `<label class="field"><span>${escapeHtmlAttr(i18n.t("clone.passphraseAsk"))}</span>
+        <input type="password" id="cloneImportPassphrase" autocomplete="off"></label>`;
+    }
+
+    /* Les chemins : ce qui a ete traduit tout seul, et ce qui attend
+       une decision. C'est le coeur du « sans reconfigurer ». */
+    const paths = info.paths || [];
+    if (paths.length) {
+      html += `<h4>${escapeHtmlAttr(i18n.t("clone.paths.title"))}</h4><div class="clone-paths">`;
+      for (const p of paths) {
+        const id = p.tile + "|" + p.key;
+        const chosen = clonePathChoices[id] || p.to;
+        html += `<div class="clone-path${p.needsChoice && !clonePathChoices[id] ? " clone-path-todo" : ""}">
+          <div class="clone-path-head"><b>${escapeHtmlAttr(p.widget)}</b> · ${escapeHtmlAttr(p.key)}</div>
+          <div class="clone-path-from">${escapeHtmlAttr(p.from)}</div>
+          <div class="clone-path-to">${chosen
+    ? "→ " + escapeHtmlAttr(chosen)
+    : escapeHtmlAttr(i18n.t("clone.paths.missing"))}</div>
+          <button type="button" class="btn small clone-path-pick" data-path="${escapeHtmlAttr(id)}">${escapeHtmlAttr(i18n.t("folder.browse"))}</button>
+        </div>`;
+      }
+      html += "</div>";
+    }
+    return html;
+  }
+
+  function openClonePreview(file, info) {
+    cloneFile = file;
+    cloneInfo = info;
+    for (const k of Object.keys(clonePathChoices)) delete clonePathChoices[k];
+    $("cloneModalTitle").textContent = i18n.t("clone.preview.title");
+    $("cloneBody").innerHTML = cloneSummaryHtml(info);
+    $("cloneActions").hidden = false;
+    $("cloneApplyBtn").disabled = false;
+    $("cloneModal").hidden = false;
+  }
+
+  async function applyCloneNow() {
+    if (!cloneFile) return;
+    const btn = $("cloneApplyBtn");
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const form = new FormData();
+      form.append("file", cloneFile);
+      form.append("paths", JSON.stringify(clonePathChoices));
+      const pass = $("cloneImportPassphrase");
+      if (pass) form.append("passphrase", pass.value);
+      const res = await fetch("/api/clone/import", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      $("cloneModalTitle").textContent = i18n.t("clone.report.title");
+      $("cloneBody").innerHTML = cloneReportHtml(data);
+      $("cloneActions").hidden = true;
+    } catch (e) {
+      $("cloneBody").innerHTML = `<p class="clone-warn">${escapeHtmlAttr(i18n.t("clone.importFailed") + " " + (e.message || e))}</p>`;
+      btn.disabled = false;
+    } finally {
+      btn.textContent = was;
+    }
+  }
+
+  /* Rapport d'import : ce qui a ete pose, ce qui reste a faire. Sans
+     lui, un clone « reussi » peut laisser trois tuiles muettes sans
+     qu'on comprenne pourquoi.
+     Without this report, a "successful" clone can leave three tiles
+     silent with no explanation. */
+  function cloneReportHtml(data) {
+    const r = data.report || {};
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtmlAttr(label)}</span><b>${escapeHtmlAttr(String(value))}</b></div>`;
+    let html = '<div class="clone-summary">';
+    html += line(i18n.t("clone.report.config"), (r.config || []).length);
+    html += line(i18n.t("clone.report.images"), (r.media || 0) + (r.library || 0));
+    html += line(i18n.t("clone.report.secrets"), r.secrets || 0);
+    html += line(i18n.t("clone.report.paths"), (r.paths || []).length);
+    html += "</div>";
+
+    const todo = [];
+    for (const w of r.warnings || []) {
+      if (w.kind === "path") todo.push(i18n.t("clone.report.pathTodo").replace("{widget}", w.widget).replace("{key}", w.key).replace("{from}", w.from));
+      else if (w.kind === "passphrase") todo.push(i18n.t("clone.report.passphraseMissing"));
+      else if (w.kind === "passphrase-wrong") todo.push(i18n.t("clone.report.passphraseWrong"));
+      else if (w.kind === "secret") todo.push(i18n.t("clone.report.secretFailed").replace("{key}", w.key));
+    }
+    /* Les secrets NON emportes sont a ressaisir : c'est la premiere
+       cause de tuile muette apres un clone. */
+    const contents = (data.info && data.info.manifest && data.info.manifest.contents) || {};
+    if (!contents.serviceKeys) todo.push(i18n.t("clone.report.noServiceKeys"));
+    if (!contents.personalSecrets) todo.push(i18n.t("clone.report.noPersonal"));
+
+    if (todo.length) {
+      html += `<h4>${escapeHtmlAttr(i18n.t("clone.report.todo"))}</h4><ul class="clone-todo">`;
+      for (const t of todo) html += `<li>${escapeHtmlAttr(t)}</li>`;
+      html += "</ul>";
+    }
+    if (data.safety) html += `<p class="hint">${escapeHtmlAttr(i18n.t("clone.report.safety"))}</p>`;
+    html += `<div class="form-actions"><button type="button" class="btn primary" id="cloneReloadBtn">${escapeHtmlAttr(i18n.t("clone.report.reload"))}</button></div>`;
+    return html;
+  }
+
+  function wireClone() {
+    const personal = $("clonePersonal");
+    if (personal) {
+      const sync = () => {
+        $("clonePassphraseField").hidden = !personal.checked;
+        $("clonePersonalWarn").hidden = !personal.checked;
+      };
+      personal.addEventListener("change", sync);
+      sync();
+    }
+    const exportBtn = $("cloneExportBtn");
+    if (exportBtn) onActivate(exportBtn, exportClone);
+
+    const importBtn = $("cloneImportBtn");
+    const input = $("cloneImportInput");
+    if (importBtn && input) {
+      onActivate(importBtn, () => input.click());
+      input.addEventListener("change", async () => {
+        const file = input.files && input.files[0];
+        input.value = "";
+        if (!file) return;
+        showBackupsMsg(i18n.t("clone.reading"));
+        try {
+          openClonePreview(file, await inspectClone(file));
+          showBackupsMsg("");
+          $("backupsMsg").hidden = true;
+        } catch (e) {
+          showBackupsMsg(i18n.t("clone.importFailed") + " " + (e.message || e), true);
+        }
+      });
+    }
+
+    const apply = $("cloneApplyBtn");
+    if (apply) onActivate(apply, applyCloneNow);
+
+    /* Choix d'un dossier pour un chemin sans equivalent : on reutilise
+       le selecteur de dossier deja present, plutot qu'un champ texte ou
+       il faudrait taper un chemin a l'aveugle.
+       Reuses the existing folder picker rather than a blind text box. */
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest && e.target.closest(".clone-path-pick");
+      if (!btn) return;
+      const id = btn.dataset.path;
+      openFolderPicker("", (picked) => {
+        clonePathChoices[id] = picked;
+        if (cloneInfo) $("cloneBody").innerHTML = cloneSummaryHtml(cloneInfo);
+      });
+    });
+    document.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "cloneReloadBtn") location.reload();
+    });
+  }
+
   function wireContribute() {
     const bug = $("btnReportBug");
     const feature = $("btnRequestFeature");
@@ -8152,6 +8403,7 @@
     wireFolderPicker();
     wireDiscoverFields();
     wireContribute();
+    wireClone();
     onActivate($("libraryAdd"), () => $("libraryFile").click());
     onActivate($("libraryOnline"), showLibraryCatalog);
     $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));

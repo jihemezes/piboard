@@ -2498,7 +2498,21 @@
           <h4>Export et import de fichier</h4>
           <p>Chaque sauvegarde peut être téléchargée en fichier (utile pour la conserver hors du Raspberry Pi, ou pour la transférer vers un autre PiBoard). Un fichier peut aussi être importé : il devient une nouvelle entrée de l'historique, puis est immédiatement restauré. Un fichier qui ne provient pas de PiBoard, ou corrompu, est rejeté proprement plutôt que d'abîmer la configuration actuelle.</p>
           <h4>Restauration</h4>
-          <p>Toujours précédée d'une confirmation explicite : c'est une action irréversible, qui remplace entièrement la configuration actuelle. Après confirmation, la page se recharge pour repartir d'un état propre.</p>`,
+          <p>Toujours précédée d'une confirmation explicite : c'est une action irréversible, qui remplace entièrement la configuration actuelle. Après confirmation, la page se recharge pour repartir d'un état propre.</p>
+          <h4>Clone complet : reconstruire ailleurs</h4>
+          <p>La sauvegarde ci-dessus reste <b>locale</b> : elle sert à revenir en arrière sur cette machine. Le <b>clone</b>, lui, est un fichier qu'on <b>emporte</b> — une archive ZIP qui contient en plus les images (fonds d'écran, photos du diaporama, bibliothèque personnelle) et, si vous le demandez, les secrets. Il reconstruit le même tableau de bord sur une autre machine, y compris d'un système à l'autre.</p>
+          <h4>Les secrets, en deux familles</h4>
+          <p>Une clé TomTom et votre mot de passe de messagerie n'ont pas la même nature, et chaque famille fait l'objet d'une case à cocher distincte :</p>
+          <div class="help-opt"><span class="help-opt-name">Clés de service</span><span class="help-opt-desc">TomTom, CARTO, Google… Elles identifient PiBoard auprès d'un fournisseur, pas vous. Les emporter évite de refaire trois inscriptions.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Identifiants personnels</span><span class="help-opt-desc">Mot de passe du courriel, jeton Home Assistant, code d'accès de l'imprimante. Décochés par défaut. Si vous les emportez, une <b>phrase de passe</b> facultative chiffre cette partie de l'archive ; sans elle, ils y figurent en clair et le fichier est à traiter comme un trousseau de clés.</span></div>
+          <p>Ce qui n'est pas coché ne part pas — y compris les clés qui, aujourd'hui, dorment en clair dans les réglages des tuiles : elles en sont retirées à l'export.</p>
+          <h4>Les dossiers suivent</h4>
+          <p>C'est le vrai sujet d'un passage de Windows à macOS ou Linux : <code>C:\Users\vous\Videos\PiBoard</code> n'existe pas ailleurs. À l'import, un dossier <b>standard</b> (Vidéos, Images, Documents, Téléchargements, Musique, Bureau) est <b>retraduit automatiquement</b> vers son équivalent, sous-dossiers compris, et les noms français de Windows sont reconnus. Un dossier qui n'a pas d'équivalent — un disque <code>D:</code>, un partage réseau — vous est <b>demandé</b> avec le sélecteur de dossiers habituel, plutôt que de pointer dans le vide.</p>
+          <h4>Ce qui ne voyage jamais</h4>
+          <p>L'identité de la <b>machine</b>, par opposition à celle du tableau de bord : l'historique système, les mesures de la ligne internet, les compteurs de quota déjà consommés, et les enregistrements TV programmés. Les importer ferait croire à la nouvelle machine qu'elle a déjà consommé le quota d'une autre.</p>
+          <h4>Avant d'écraser</h4>
+          <p>L'import se fait en deux temps. Un <b>aperçu</b> d'abord : d'où vient le clone, quelle version, combien de tuiles et de pages, quel poids d'images, et la liste des dossiers — ceux qui ont été retraduits et ceux qui attendent votre choix. Un clone <b>incomplet ou abîmé</b> est refusé à ce stade grâce à une empreinte, plutôt que d'être appliqué à moitié ; un clone venu d'une version plus récente que la vôtre est signalé.</p>
+          <p>Ensuite seulement l'écriture, précédée d'une <b>sauvegarde automatique</b> de la configuration actuelle — elle apparaît dans la liste ci-dessus et permet de revenir en arrière en un clic. Un <b>rapport d'import</b> conclut : ce qui a été restauré, et surtout ce qu'il vous reste à faire, comme les secrets que le clone n'emportait pas et qui sont à ressaisir. Sans ce rapport, un clone « réussi » peut laisser trois tuiles muettes sans qu'on comprenne pourquoi.</p>`,
         en: `
           <h4>Access</h4>
           <p>The "Backup & restore…" button at the bottom of general settings.</p>
@@ -2510,7 +2524,21 @@
           <h4>File export and import</h4>
           <p>Any backup can be downloaded as a file (handy to keep it off the Raspberry Pi, or to move it to another PiBoard). A file can also be imported: it becomes a new history entry, then is immediately restored. A file that doesn't come from PiBoard, or is corrupted, is cleanly rejected rather than damaging the current configuration.</p>
           <h4>Restoring</h4>
-          <p>Always preceded by an explicit confirmation: it's an irreversible action that entirely replaces the current configuration. After confirming, the page reloads to start from a clean state.</p>`
+          <p>Always preceded by an explicit confirmation: it's an irreversible action that entirely replaces the current configuration. After confirming, the page reloads to start from a clean state.</p>
+          <h4>Full clone: rebuilding elsewhere</h4>
+          <p>The backup above stays <b>local</b>: it is for stepping back on this machine. A <b>clone</b> is a file you <b>carry</b> — a ZIP archive that also holds the images (wallpapers, slideshow photos, personal library) and, if you ask for them, the secrets. It rebuilds the same dashboard on another machine, across operating systems.</p>
+          <h4>Secrets, in two families</h4>
+          <p>A TomTom key and your mail password are not the same kind of thing, and each family has its own checkbox:</p>
+          <div class="help-opt"><span class="help-opt-name">Service keys</span><span class="help-opt-desc">TomTom, CARTO, Google… They identify PiBoard to a provider, not you. Carrying them saves redoing three sign-ups.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Personal credentials</span><span class="help-opt-desc">Mail password, Home Assistant token, printer access code. Unticked by default. If you carry them, an optional <b>passphrase</b> encrypts that part of the archive; without it they sit in the clear and the file must be treated like a keyring.</span></div>
+          <p>What is not ticked does not travel — including the keys that today sit in the clear inside tile settings: they are stripped on export.</p>
+          <h4>Folders follow</h4>
+          <p>This is the real subject when moving from Windows to macOS or Linux: <code>C:\Users\you\Videos\PiBoard</code> exists nowhere else. On import a <b>standard</b> folder (Videos, Pictures, Documents, Downloads, Music, Desktop) is <b>translated automatically</b> to its equivalent, subfolders included, and Windows' French names are recognised. A folder with no equivalent — a <code>D:</code> drive, a network share — is <b>asked for</b> with the usual folder picker rather than left pointing nowhere.</p>
+          <h4>What never travels</h4>
+          <p>The <b>machine's</b> identity as opposed to the dashboard's: the system history, the internet line measurements, the already-consumed quota counters, and scheduled TV recordings. Importing those would make the new machine believe it had already used another one's quota.</p>
+          <h4>Before overwriting</h4>
+          <p>Importing happens in two steps. A <b>preview</b> first: where the clone comes from, which version, how many tiles and pages, how much image weight, and the list of folders — those translated and those awaiting your choice. An <b>incomplete or damaged</b> clone is refused at this stage thanks to a checksum, rather than half-applied; a clone from a newer version than yours is flagged.</p>
+          <p>Only then the writing, preceded by an <b>automatic backup</b> of the current configuration — it shows up in the list above and lets you step back in one click. An <b>import report</b> closes the operation: what was restored and, above all, what is left for you to do, such as the secrets the clone did not carry. Without that report, a "successful" clone can leave three tiles silent with no explanation.</p>`
       }
     },
 

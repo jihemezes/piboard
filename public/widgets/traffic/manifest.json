@@ -32,13 +32,14 @@
         "fr": "Clé API TomTom"
       },
       "hint": {
-        "en": "Free tier: 2500 requests/day. Get one at developer.tomtom.com. This tile's schedule is designed to comfortably stay under that limit — see the live counter on the tile and the README for the details.",
-        "fr": "Offre gratuite : 2500 requêtes/jour. À obtenir sur developer.tomtom.com. Le calendrier de cette tuile est conçu pour rester confortablement sous cette limite — voir le compteur en direct sur la tuile et le README pour le détail."
+        "en": "Free tier: 2500 requests/day. Get one at developer.tomtom.com. This tile's schedule is designed to comfortably stay under that limit — see the live counter on the tile and the README for the details. Nature: <b>service key</b> — it identifies PiBoard to a provider, not you. A clone can carry it with no personal risk.",
+        "fr": "Offre gratuite : 2500 requêtes/jour. À obtenir sur developer.tomtom.com. Le calendrier de cette tuile est conçu pour rester confortablement sous cette limite — voir le compteur en direct sur la tuile et le README pour le détail. Nature : <b>clé de service</b> — elle identifie PiBoard auprès d'un fournisseur, pas vous. Un clone peut l'emporter sans risque personnel."
       },
       "group": {
         "en": "Location & map",
         "fr": "Emplacement & carte"
-      }
+      },
+      "sensitivity": "service"
     },
     {
       "key": "city",

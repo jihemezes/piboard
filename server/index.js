@@ -2601,6 +2601,79 @@ app.post("/api/backups/import", backupUpload.single("file"), (req, res) => {
   }
 });
 
+/* ---------- Clone complet d'une installation ----------
+   Voir server/clone.js. A la difference de la sauvegarde, qui reste
+   locale, le clone est un fichier qu'on EMPORTE : il contient les
+   images et, au choix, les secrets tries par nature. L'import prend
+   TOUJOURS une sauvegarde de securite juste avant d'ecrire -- c'est la
+   seule facon de revenir en arriere si le clone ne donne pas ce qu'on
+   esperait.
+   See server/clone.js. Unlike a backup, which stays local, a clone is
+   a file one CARRIES. Importing always takes a safety backup first. */
+const clone = require("./clone");
+const cloneUpload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 * 1024 } });
+
+function cloneFileName(version) {
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  return "piboard-clone-" + stamp + (version ? "-v" + version : "") + ".zip";
+}
+
+app.post("/api/clone/export", (req, res) => {
+  const b = req.body || {};
+  try {
+    const made = clone.buildClone({
+      includeServiceKeys: !!b.includeServiceKeys,
+      includePersonalSecrets: !!b.includePersonalSecrets,
+      includeImages: !!b.includeImages,
+      passphrase: b.passphrase || "",
+      appVersion: APP_VERSION
+    });
+    res.set("Content-Type", "application/zip");
+    res.set("Content-Disposition", 'attachment; filename="' + cloneFileName(APP_VERSION) + '"');
+    res.set("Cache-Control", "no-store");
+    res.send(made.buffer);
+  } catch (e) {
+    console.error("[piboard] clone export:", e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/* Ce que contient un clone, sans rien ecrire : c'est l'apercu montre
+   avant d'ecraser quoi que ce soit.
+   What a clone contains, writing nothing. */
+app.post("/api/clone/inspect", cloneUpload.single("file"), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    res.json(clone.inspectClone(req.file.buffer, { appVersion: APP_VERSION }));
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e), code: e.code || null });
+  }
+});
+
+app.post("/api/clone/import", cloneUpload.single("file"), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    let paths = {};
+    try { paths = JSON.parse(req.body.paths || "{}"); } catch (e) { paths = {}; }
+
+    /* Sauvegarde de securite AVANT d'ecrire : on doit pouvoir revenir
+       en arriere en un clic. Safety backup before writing. */
+    let safety = null;
+    try { safety = backups.create(APP_VERSION, "Avant import d'un clone / before clone import"); }
+    catch (e) { console.warn("[piboard] clone: sauvegarde de securite impossible", e.message || e); }
+
+    const out = clone.applyClone(req.file.buffer, {
+      paths,
+      passphrase: req.body.passphrase || "",
+      appVersion: APP_VERSION
+    });
+    res.json({ ok: true, safety: safety && safety.id ? safety.id : null, report: out.report, info: out.info });
+  } catch (e) {
+    console.error("[piboard] clone import:", e);
+    res.status(400).json({ error: String(e.message || e), code: e.code || null });
+  }
+});
+
 /* ---------- IPTV : playlist de chaines / channel playlist ----------
    Voir server/iptv.js. Seule la LISTE transite par le serveur (question
    de CORS) ; les flux video sont lus directement par le navigateur.

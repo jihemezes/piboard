@@ -88,7 +88,8 @@
       "group": {
         "en": "Source",
         "fr": "Source"
-      }
+      },
+      "isPath": true
     },
     {
       "key": "webdavUrl",
@@ -125,13 +126,14 @@
         "fr": "Mot de passe WebDAV"
       },
       "hint": {
-        "en": "Stored and shown in plain text in this tile's settings, like the rest of PiBoard (no login, trusted LAN only). See the README for details and for rclone as a keyless alternative.",
-        "fr": "Stocké et affiché en clair dans les paramètres de cette tuile, comme le reste de PiBoard (pas d'authentification, réseau local de confiance uniquement). Voir le README pour le détail et pour rclone comme alternative sans identifiants."
+        "en": "Stored and shown in plain text in this tile's settings, like the rest of PiBoard (no login, trusted LAN only). See the README for details and for rclone as a keyless alternative. Nature: <b>personal credential</b> — it is yours. A clone only carries it if you explicitly tick that family.",
+        "fr": "Stocké et affiché en clair dans les paramètres de cette tuile, comme le reste de PiBoard (pas d'authentification, réseau local de confiance uniquement). Voir le README pour le détail et pour rclone comme alternative sans identifiants. Nature : <b>identifiant personnel</b> — il vaut pour vous. Un clone ne l'emporte que si vous cochez explicitement cette famille."
       },
       "group": {
         "en": "Source",
         "fr": "Source"
-      }
+      },
+      "sensitivity": "personal"
     },
     {
       "key": "images",

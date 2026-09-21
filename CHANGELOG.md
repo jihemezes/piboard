@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.118.0
+
+- **Clone complet de l'installation.** A cote de la sauvegarde locale,
+  qui sert a revenir en arriere sur cette machine, une archive ZIP qu'on
+  emporte : pages, tuiles, themes, fonds d'ecran, photos du diaporama et
+  bibliotheque personnelle. Le but est de remonter le MEME tableau de
+  bord ailleurs -- d'un Windows vers un Mac ou un Linux, et l'inverse --
+  sans reconfigurer quoi que ce soit.
+
+- **Les secrets voyagent en deux familles, chacune avec sa case.** Les
+  CLES DE SERVICE (TomTom, CARTO, Google...) identifient PiBoard aupres
+  d'un fournisseur et pas l'utilisateur : cochees par defaut. Les
+  IDENTIFIANTS PERSONNELS (mot de passe de messagerie, jeton Home
+  Assistant, code d'acces de l'imprimante) sont decoches par defaut, et
+  une phrase de passe facultative chiffre cette partie de l'archive
+  (scrypt + AES-256-GCM). Ce qui n'est pas coche ne part pas, y compris
+  les cles qui dorment en clair dans les reglages des tuiles : elles en
+  sont retirees a l'export.
+
+- **Les dossiers sont retraduits a l'import.** Un dossier standard
+  (Videos, Images, Documents, Telechargements, Musique, Bureau) retrouve
+  son equivalent sur le nouveau systeme, sous-dossiers compris, et les
+  noms francais de Windows sont reconnus. Un dossier sans equivalent --
+  un disque D:, un partage reseau -- est DEMANDE avec le selecteur de
+  dossiers, plutot que de pointer dans le vide.
+
+- **Ce qui n'est pas le tableau de bord ne voyage pas** : historique
+  systeme, mesures de la ligne internet, compteurs de quota deja
+  consommes, enregistrements TV programmes. Ce sont des faits de la
+  MACHINE, et les importer ferait croire a la nouvelle qu'elle a deja
+  consomme le quota d'une autre.
+
+- **Apercu, empreinte, sauvegarde, rapport.** L'import montre d'abord
+  d'ou vient le clone, sa version, le nombre de tuiles et de pages, le
+  poids des images et le sort de chaque dossier. Une empreinte SHA-256
+  fait refuser une archive abimee ou incomplete AVANT qu'elle ne soit a
+  moitie appliquee. L'ecriture est precedee d'une sauvegarde automatique
+  de la configuration en place, et suivie d'un rapport qui dit ce qui
+  reste a faire -- les secrets non emportes, notamment.
+
+- **Lecture et ecriture ZIP ajoutees sans dependance** (`server/zip.js`),
+  verifiees dans les deux sens contre l'outil `unzip` du systeme.
+
 ## 1.117.0
 
 - **Deux boutons « Déclarer un bug » et « Demander une fonctionnalité »**,

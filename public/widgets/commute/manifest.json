@@ -58,13 +58,14 @@
         "fr": "Clé API TomTom"
       },
       "hint": {
-        "en": "Same free key as the Traffic tile (developer.tomtom.com, 2500 requests/day). This tile has its own daily counter (shown on the tile) — if you also use the Traffic tile, both draw from the same account quota.",
-        "fr": "Même clé gratuite que la tuile Trafic (developer.tomtom.com, 2500 requêtes/jour). Cette tuile a son propre compteur quotidien (affiché sur la tuile) — si vous utilisez aussi la tuile Trafic, les deux puisent dans le même quota de compte."
+        "en": "Same free key as the Traffic tile (developer.tomtom.com, 2500 requests/day). This tile has its own daily counter (shown on the tile) — if you also use the Traffic tile, both draw from the same account quota. Nature: <b>service key</b> — it identifies PiBoard to a provider, not you. A clone can carry it with no personal risk.",
+        "fr": "Même clé gratuite que la tuile Trafic (developer.tomtom.com, 2500 requêtes/jour). Cette tuile a son propre compteur quotidien (affiché sur la tuile) — si vous utilisez aussi la tuile Trafic, les deux puisent dans le même quota de compte. Nature : <b>clé de service</b> — elle identifie PiBoard auprès d'un fournisseur, pas vous. Un clone peut l'emporter sans risque personnel."
       },
       "group": {
         "en": "Main route",
         "fr": "Trajet principal"
-      }
+      },
+      "sensitivity": "service"
     },
     {
       "key": "direction",

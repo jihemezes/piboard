@@ -80,6 +80,15 @@ const platform = require("../server/platform");
     let proc;
     try {
       proc = iptvVlc.spawnTranscode("http://127.0.0.1:1/nonexistent");
+      /* L'echec du spawn arrive de maniere ASYNCHRONE : sans cette ecoute,
+         un environnement sans VLC (conteneur de test) fait tomber le
+         processus APRES que la suite a annonce sa reussite.
+         The spawn failure is ASYNCHRONOUS: without this listener a
+         VLC-less environment crashes the process after the suite has
+         already reported success. */
+      proc.on("error", (e) => {
+        console.log("  (spawn asynchrone echoue, vlc absent de cet environnement :", e.code || e.message, ")");
+      });
       assert.ok(proc && proc.stdout && proc.stderr, "spawnTranscode doit renvoyer un child_process avec stdout/stderr");
       proc.kill("SIGKILL");
       console.log("  OK");

@@ -200,13 +200,14 @@
         "fr": "Mot de passe"
       },
       "hint": {
-        "en": "Stored encrypted on the PiBoard, in a file separate from the tile settings — it therefore never ends up in a layout backup or a shared configuration. Prefer an app password when your provider offers one (Gmail, Yahoo, iCloud): it can be revoked on its own, without changing your main account password.",
-        "fr": "Conservé chiffré sur le PiBoard, dans un fichier distinct des réglages de la tuile — il ne se retrouve donc jamais dans une sauvegarde de disposition ou une configuration partagée. Préférez un mot de passe d'application quand votre fournisseur en propose (Gmail, Yahoo, iCloud) : il se révoque seul, sans changer le mot de passe principal de votre compte."
+        "en": "Stored encrypted on the PiBoard, in a file separate from the tile settings — it therefore never ends up in a layout backup or a shared configuration. Prefer an app password when your provider offers one (Gmail, Yahoo, iCloud): it can be revoked on its own, without changing your main account password. Nature: <b>personal credential</b> — it is yours. A clone only carries it if you explicitly tick that family.",
+        "fr": "Conservé chiffré sur le PiBoard, dans un fichier distinct des réglages de la tuile — il ne se retrouve donc jamais dans une sauvegarde de disposition ou une configuration partagée. Préférez un mot de passe d'application quand votre fournisseur en propose (Gmail, Yahoo, iCloud) : il se révoque seul, sans changer le mot de passe principal de votre compte. Nature : <b>identifiant personnel</b> — il vaut pour vous. Un clone ne l'emporte que si vous cochez explicitement cette famille."
       },
       "group": {
         "en": "Connection",
         "fr": "Connexion"
-      }
+      },
+      "sensitivity": "personal"
     },
     {
       "key": "folder",

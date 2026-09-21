@@ -977,8 +977,49 @@
         <input type="file" id="backupImportInput" accept=".json,application/json" hidden>
       </div>
       <p class="backups-msg" id="backupsMsg" hidden></p>
+
+      <!-- Clone complet : un fichier qu'on EMPORTE sur une autre
+           machine, images comprises et secrets au choix. La sauvegarde
+           ci-dessus, elle, reste locale.
+           Full clone: a file one CARRIES to another machine. -->
+      <fieldset class="clone-box">
+        <legend data-i18n="clone.title">Full clone (another machine)</legend>
+        <p class="backups-intro" data-i18n="clone.intro">A clone rebuilds this dashboard on another machine, from Windows to macOS or Linux, with nothing to reconfigure. Folder settings are translated on arrival; those with no equivalent are asked for.</p>
+        <label class="field checkbox"><input type="checkbox" id="cloneImages" checked><span data-i18n="clone.images">Include images (wallpapers, slideshow, personal library)</span></label>
+        <label class="field checkbox"><input type="checkbox" id="cloneServiceKeys" checked><span data-i18n="clone.serviceKeys">Include service keys (TomTom, CARTO, Google…)</span></label>
+        <label class="field checkbox"><input type="checkbox" id="clonePersonal"><span data-i18n="clone.personal">Include personal credentials (mail password, tokens, access codes)</span></label>
+        <label class="field" id="clonePassphraseField" hidden>
+          <span data-i18n="clone.passphrase">Passphrase protecting those credentials (optional)</span>
+          <input type="password" id="clonePassphrase" autocomplete="off" spellcheck="false">
+        </label>
+        <small class="field-hint" id="clonePersonalWarn" hidden data-i18n="clone.personalWarn">Without a passphrase these credentials travel in the clear inside the file: treat it like a keyring.</small>
+        <div class="backups-actions">
+          <button type="button" class="btn primary" id="cloneExportBtn" data-i18n="clone.export">Create a clone…</button>
+          <button type="button" class="btn" id="cloneImportBtn" data-i18n="clone.import">Import a clone…</button>
+          <input type="file" id="cloneImportInput" accept=".zip,application/zip" hidden>
+        </div>
+      </fieldset>
+
       <ul class="backups-list" id="backupsList"></ul>
       <p class="backups-empty" id="backupsEmpty" hidden data-i18n="backups.empty">No backup yet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- Apercu d'un clone avant de l'appliquer, puis rapport d'import.
+     La meme fenetre sert aux deux temps : on regarde, on decide des
+     chemins, on applique, on lit ce qui s'est passe.
+     Clone preview then import report, in one window. -->
+<div class="modal" id="cloneModal" hidden>
+  <div class="modal-card clone-modal-card">
+    <header class="modal-head">
+      <h2 id="cloneModalTitle" data-i18n="clone.preview.title">Import this clone?</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="clone-body" id="cloneBody"></div>
+    <div class="form-actions" id="cloneActions">
+      <button type="button" class="btn" data-close data-i18n="common.cancel">Cancel</button>
+      <button type="button" class="btn danger" id="cloneApplyBtn" data-i18n="clone.apply">Import</button>
     </div>
   </div>
 </div>

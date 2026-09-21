@@ -7705,6 +7705,119 @@ function catalogItemFor(catalog, document, widgetId) {
     window.fetch = realFetch;
   }
 
+  console.log("== Clone complet : options, apercu, rapport (1.118.0) ==");
+  {
+    const $c = (id) => document.getElementById(id);
+    $c("backupsModal").hidden = false;
+
+    // Les trois cases : ce qui part est un CHOIX, pas un defaut cache.
+    assert("clone : les images, les cles de service et les identifiants sont trois cases distinctes",
+      !!$c("cloneImages") && !!$c("cloneServiceKeys") && !!$c("clonePersonal"));
+    assert("clone : les identifiants personnels ne partent PAS par defaut",
+      $c("clonePersonal").checked === false);
+    assert("clone : les images et les cles de service, si", $c("cloneImages").checked && $c("cloneServiceKeys").checked);
+
+    /* La phrase de passe et l'avertissement n'apparaissent que si l'on
+       demande a emporter des identifiants : sinon ils n'ont pas de
+       sens. */
+    assert("clone : sans identifiants personnels, pas de phrase de passe demandee",
+      $c("clonePassphraseField").hidden === true && $c("clonePersonalWarn").hidden === true);
+    $c("clonePersonal").checked = true;
+    $c("clonePersonal").dispatchEvent(new window.Event("change", { bubbles: true }));
+    await sleep(20);
+    assert("clone : en les demandant, la phrase de passe et l'avertissement apparaissent",
+      $c("clonePassphraseField").hidden === false && $c("clonePersonalWarn").hidden === false);
+    assert("clone : l'avertissement dit que sans phrase, c'est en clair",
+      /clair/i.test($c("clonePersonalWarn").textContent));
+    $c("clonePersonal").checked = false;
+    $c("clonePersonal").dispatchEvent(new window.Event("change", { bubbles: true }));
+
+    /* L'export : les cases cochees doivent arriver telles quelles au
+       serveur. On intercepte l'appel. */
+    const calls = [];
+    const realFetch = window.fetch;
+    window.fetch = (url, opts) => {
+      const u = String(url);
+      if (u.indexOf("/api/clone/") === 0) {
+        calls.push({ u, opts });
+        if (u.endsWith("/export")) {
+          return Promise.resolve({
+            ok: true, status: 200,
+            headers: { get: () => 'attachment; filename="piboard-clone-test.zip"' },
+            blob: async () => ({ size: 1234 })
+          });
+        }
+        return Promise.resolve({ ok: true, status: 200, json: async () => inspectAnswer });
+      }
+      return realFetch(url, opts);
+    };
+    /* jsdom ne sait pas fabriquer d'URL d'objet : on la simule, c'est
+       une limite de l'environnement de test et non du code.
+       jsdom has no object URLs: stubbed, a test-environment limit. */
+    const realCreate = window.URL.createObjectURL, realRevoke = window.URL.revokeObjectURL;
+    window.URL.createObjectURL = () => "blob:test";
+    window.URL.revokeObjectURL = () => {};
+    $c("cloneImages").checked = false;
+    $c("cloneServiceKeys").checked = true;
+    $c("cloneExportBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    const sent = JSON.parse(calls[0].opts.body);
+    assert("clone : l'export transmet exactement les cases cochees",
+      sent.includeImages === false && sent.includeServiceKeys === true && sent.includePersonalSecrets === false);
+    assert("clone : et la taille obtenue est annoncee (" + $c("backupsMsg").textContent + ")",
+      /Ko|Mo|o\b/.test($c("backupsMsg").textContent));
+
+    /* L'apercu : on REGARDE avant d'ecraser. Le clone vient de
+       Windows, une machine Linux l'importe : un chemin est traduit,
+       l'autre attend une decision. */
+    const inspectAnswer = {
+      intact: true, newer: false, needsPassphrase: false,
+      manifest: {
+        createdAt: "2026-09-21T18:00:00.000Z", platform: "win32", appVersion: "1.118.0",
+        contents: { images: true, mediaBytes: 5 * 1024 * 1024, serviceKeys: true, personalSecrets: false, encrypted: false }
+      },
+      counts: { tiles: 6, pages: 2, media: 12, library: 3 },
+      widgets: ["iptv", "slideshow"],
+      paths: [
+        { tile: "t-iptv", widget: "iptv", key: "recordDir", from: "C:\\Users\\JMEzes\\Videos\\PiBoard", to: "/home/jm/Videos/PiBoard", needsChoice: false },
+        { tile: "t-diapo", widget: "slideshow", key: "folderPath", from: "D:\\Photos", to: null, needsChoice: true }
+      ]
+    };
+    const fakeFile = { name: "clone.zip", size: 1000 };
+    const input = $c("cloneImportInput");
+    Object.defineProperty(input, "files", { configurable: true, get: () => [fakeFile] });
+    input.dispatchEvent(new window.Event("change", { bubbles: true }));
+    await sleep(80);
+
+    assert("clone : l'apercu s'ouvre avant toute ecriture", $c("cloneModal").hidden === false);
+    const body = $c("cloneBody").textContent;
+    assert("clone : il dit d'ou vient le clone", /win32/.test(body) && /1\.118\.0/.test(body));
+    assert("clone : combien de tuiles et de pages", /6/.test(body) && /2 pages/.test(body));
+    assert("clone : et le poids des images", /5[.,]0 Mo|5 Mo/.test(body));
+    assert("clone : le chemin traduit tout seul est montre",
+      /\/home\/jm\/Videos\/PiBoard/.test(body));
+    assert("clone : celui sans equivalent est signale comme tel",
+      /pas d'équivalent/i.test(body) && !!$c("cloneBody").querySelector(".clone-path-todo"));
+    assert("clone : rien n'a encore ete envoye au serveur pour ecriture",
+      !calls.some((c) => c.u.endsWith("/import")));
+
+    /* Le dossier manquant se choisit avec le selecteur de dossiers,
+       pas en tapant un chemin a l'aveugle. */
+    const picks = $c("cloneBody").querySelectorAll(".clone-path-pick");
+    assert("clone : chaque chemin a son bouton de choix", picks.length === 2);
+    picks[1].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    assert("clone : le selecteur de dossiers s'ouvre", $c("folderModal").hidden === false);
+    $c("folderCancel").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+
+    $c("cloneModal").hidden = true;
+    $c("backupsModal").hidden = true;
+    window.fetch = realFetch;
+    window.URL.createObjectURL = realCreate;
+    window.URL.revokeObjectURL = realRevoke;
+  }
+
   console.log("== Participer : declarer un bug, demander une fonctionnalite (1.117.0) ==");
   {
     const $c = (id) => document.getElementById(id);
