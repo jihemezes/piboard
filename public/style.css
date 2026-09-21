@@ -2611,9 +2611,45 @@ body.dashboard-mode.touch-mode.dash-open .dash-tab { display: none; }
   stroke-linecap: round;
   stroke-linejoin: round;
 }
-body.touch .dash-btn, body.touch-mode .dash-btn { width: 40px; height: 40px; }
-body.touch .dash-btn svg, body.touch-mode .dash-btn svg { width: 22px; height: 22px; }
-body.touch .dash-page-dot, body.touch-mode .dash-page-dot { min-width: 34px; height: 34px; border-radius: 17px; font-size: 14px; }
+/* ---------- Bandeau du mode Tableau de bord, au doigt ----------
+   Un ecran tactile est souvent PETIT : c'est exactement la ou le
+   bandeau etait le moins utilisable. L'agrandissement precedent
+   (30 -> 40 px) restait timide et tout paraissait minuscule. Les
+   commandes, les pastilles de page et les prises (languette, zone
+   sensible du bas) passent donc au DOUBLE de leur taille de base
+   (1.116.0). Le bandeau se retire de lui-meme : la hauteur qu'il prend
+   n'est payee que lorsqu'on s'en sert.
+   A touchscreen is often SMALL, which is exactly where this bar was
+   least usable. The previous bump was timid; controls, page dots and
+   grips now go to DOUBLE their base size. The bar slides away, so the
+   height it takes is only paid while it is used. */
+body.touch .dash-bar, body.touch-mode .dash-bar {
+  gap: 28px;
+  padding: 12px 24px;
+  min-height: 76px;
+}
+body.touch .dash-btn, body.touch-mode .dash-btn { width: 60px; height: 60px; border-radius: 16px; }
+body.touch .dash-btn svg, body.touch-mode .dash-btn svg { width: 36px; height: 36px; }
+body.touch .dash-actions, body.touch-mode .dash-actions { gap: 8px; }
+body.touch .dash-pages, body.touch-mode .dash-pages { gap: 12px; }
+body.touch .dash-page-dot, body.touch-mode .dash-page-dot {
+  min-width: 48px;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 24px;
+  font-size: 20px;
+}
+/* Le texte defilant suit sans ecraser le reste : une taille doublee en
+   ferait l'element dominant d'une barre de commandes.
+   The ticker follows without dominating a bar of controls. */
+body.touch .dash-ticker, body.touch-mode .dash-ticker { font-size: 18px; }
+/* Les PRISES, elles, comptent autant que les boutons : sans elles on
+   ne fait pas sortir le bandeau.
+   The GRIPS matter as much as the buttons: without them the bar does
+   not come out. */
+body.touch .dash-hotzone, body.touch-mode .dash-hotzone { height: 28px; }
+body.touch .dash-tab, body.touch-mode .dash-tab { width: 148px; height: 32px; border-radius: 16px 16px 0 0; }
+body.touch .dash-tab-grip, body.touch-mode .dash-tab-grip { width: 60px; height: 6px; margin-top: 10px; }
 
 /* ---------- Tuile transparente / transparent tile ----------
    Prend le fond de la page au lieu du sien : c'est la meme surface qui

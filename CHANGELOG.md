@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.116.0
+
+- **Le bandeau du mode Tableau de bord double de taille en mode
+  tactile.** Un ecran tactile est souvent PETIT, et c'est justement la
+  que ses commandes etaient le moins utilisables : l'agrandissement
+  existant (30 -> 40 px) restait timide et tout paraissait minuscule.
+  Boutons, pastilles de page, espacements et marges passent au double
+  de leur taille de base.
+
+- **Les prises suivent, et elles comptaient autant** : la languette du
+  bord inferieur et la zone sensible qui fait sortir le bandeau
+  doublent elles aussi. Sans elles, on ne fait pas sortir le bandeau du
+  tout -- les agrandir a moitie n'aurait regle que la moitie du
+  probleme.
+
+- Le texte defilant grandit sans doubler : a 26 px il serait devenu
+  l'element dominant d'une barre qui est faite de commandes.
+
+- Un test lit les regles reelles et verifie le RAPPORT entre la taille
+  tactile et la taille de base -- les valeurs pourront changer, le
+  doublement restera. Il verifie aussi que chaque regle vaut pour les
+  deux facons d'etre en tactile : l'ecran detecte comme tel, et le mode
+  force dans les reglages.
+
 ## 1.115.8
 
 - **Bloc-notes : le texte peut desormais descendre a 8 pixels**, contre

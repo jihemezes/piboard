@@ -6240,6 +6240,54 @@ function catalogItemFor(catalog, document, widgetId) {
         .map((b) => b.id);
       assert("tableau de bord : aucune action de la barre classique n'y manque (" + dockOnly.join(",") + ")",
         dockOnly.length === 0);
+      /* Au DOIGT, le bandeau doit vraiment doubler. Un ecran tactile
+         est souvent petit : c'est la que ses commandes etaient le moins
+         utilisables, et l'agrandissement precedent (30 -> 40 px)
+         restait timide (1.116.0). On lit les regles reelles, jsdom ne
+         calculant pas les feuilles de style.
+         On a finger the bar must really double. */
+      {
+        const css = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+        const ruleFor = (selector) => {
+          const at = css.indexOf(selector);
+          if (at < 0) return "";
+          return css.slice(at, css.indexOf("}", at));
+        };
+        const px = (rule, prop) => {
+          const m = new RegExp(prop + ":\\s*(\\d+)px").exec(rule);
+          return m ? Number(m[1]) : null;
+        };
+        const base = ruleFor("\n.dash-btn {");
+        const touch = ruleFor("body.touch .dash-btn, body.touch-mode .dash-btn");
+        assert("tactile : les boutons du bandeau font le double de leur taille de base ("
+          + px(base, "width") + " -> " + px(touch, "width") + ")",
+          px(touch, "width") === px(base, "width") * 2 && px(touch, "height") === px(base, "height") * 2);
+
+        const dotBase = ruleFor("\n.dash-page-dot {");
+        const dotTouch = ruleFor("body.touch .dash-page-dot, body.touch-mode .dash-page-dot");
+        assert("tactile : les pastilles de page aussi",
+          px(dotTouch, "height") === px(dotBase, "height") * 2);
+
+        /* Les PRISES comptent autant : sans elles, on ne fait pas
+           sortir le bandeau du bas de l'ecran. */
+        const zoneBase = ruleFor("\n.dash-hotzone {");
+        const zoneTouch = ruleFor("body.touch .dash-hotzone, body.touch-mode .dash-hotzone");
+        assert("tactile : la zone sensible qui fait sortir le bandeau est doublée",
+          px(zoneTouch, "height") === px(zoneBase, "height") * 2);
+        const tabBase = ruleFor("\n.dash-tab {");
+        const tabTouch = ruleFor("body.touch .dash-tab, body.touch-mode .dash-tab");
+        assert("tactile : la languette est doublée",
+          px(tabTouch, "width") === px(tabBase, "width") * 2 && px(tabTouch, "height") === px(tabBase, "height") * 2);
+
+        /* Les deux façons d'être en tactile doivent être traitées
+           ensemble : l'écran tactile détecté, et le mode forcé dans les
+           réglages. */
+        for (const sel of ["dash-bar", "dash-btn", "dash-page-dot", "dash-hotzone", "dash-tab"]) {
+          const rule = "body.touch ." + sel + ", body.touch-mode ." + sel;
+          assert("tactile : « " + sel + " » vaut pour l'écran tactile ET pour le mode forcé",
+            css.indexOf(rule) >= 0);
+        }
+      }
       document.getElementById("settingsModal").hidden = false;
     }
 
