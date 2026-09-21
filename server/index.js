@@ -1057,6 +1057,23 @@ app.get("/api/changelog", (req, res) => {
   }
 });
 
+/* Les NOUVEAUTES, qui ne sont PAS le changelog : meme format bilingue,
+   mais ecrites pour qui se sert de PiBoard plutot que pour qui le
+   developpe -- seules y figurent les versions qui ont apporte ou change
+   une fonctionnalite. Le changelog reste servi par la route ci-dessus,
+   et reste la reference technique.
+   What's new, which is NOT the changelog: same bilingual format, but
+   written for whoever uses PiBoard rather than whoever develops it --
+   only versions that added or changed a feature appear. */
+app.get("/api/whatsnew", (req, res) => {
+  try {
+    const text = fs.readFileSync(path.join(__dirname, "..", "WHATSNEW.md"), "utf8");
+    res.set("Content-Type", "text/plain; charset=utf-8").send(text);
+  } catch (e) {
+    res.status(404).json({ error: "whatsnew not found" });
+  }
+});
+
 app.get("/api/settings", (req, res) => {
   res.json(Object.assign({}, DEFAULT_SETTINGS, store.read("settings", {})));
 });

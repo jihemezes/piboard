@@ -106,19 +106,36 @@ const RSS_FEED_XML = `<?xml version="1.0"?>
 </channel>
 </rss>`;
 
-const CHANGELOG_FIXTURE = `# Changelog
+/* Fixture des NOUVEAUTES (et non du changelog) : une version recente
+   DATEE, une recente SANS date, et une version anterieure au seuil de
+   repli (1.87.0) pour que le bouton d'historique ait matiere a cacher.
+   What's new fixture: a recent DATED version, a recent one with NO
+   date, and one older than the fold threshold. */
+const WHATSNEW_FIXTURE = `# Nouveautes / What's new
 
-## 9.9.9
+## 9.9.9 - 2026-04-12
 
-- **Fonctionnalite test FR** -- description courte.
+**Fonctionnalite test FR**
+
+Description courte.
 
 ---
 
-- **Test feature EN** -- short description.
+**Test feature EN**
+
+Short description.
 
 ## 9.9.8
 
-- Version simple sans separation bilingue.
+Version simple sans separation bilingue.
+
+## 1.50.0
+
+**Ancienne fonctionnalite FR**
+
+---
+
+**Old feature EN**
 `;
 
 const SPORT_TODAY = new Date(); SPORT_TODAY.setHours(12, 0, 0, 0);
@@ -855,8 +872,8 @@ const dom = new JSDOM(html, {
           ]
         });
       }
-      if (u.includes("/api/changelog")) {
-        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(CHANGELOG_FIXTURE) });
+      if (u.includes("/api/whatsnew")) {
+        return Promise.resolve({ ok: true, status: 200, text: () => Promise.resolve(WHATSNEW_FIXTURE) });
       }
       if (u.includes("/data/saints-fr.json")) {
         // Cles du jour et du lendemain calculees dynamiquement (le test
@@ -3420,17 +3437,32 @@ function catalogItemFor(catalog, document, widgetId) {
       assert(`entree '${id}' presente dans le sommaire de l'aide`, !!nav.querySelector(`[data-help-id="${id}"]`));
     });
 
-    console.log("== Aide : section Nouveautes (changelog) ==");
+    console.log("== Aide : section Nouveautes ==");
     const changelogItem = nav.querySelector('[data-help-id="changelog"]');
     assert("entree 'Nouveautes' presente dans le sommaire", !!changelogItem);
     changelogItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     tries = 0;
     while (!document.getElementById("helpContent").querySelector(".help-changelog") && tries++ < 60) await sleep(50);
     const changelogText = document.getElementById("helpContent").textContent;
-    assert("changelog : les deux versions de test apparaissent", changelogText.includes("9.9.9") && changelogText.includes("9.9.8"));
-    assert("changelog : bloc francais affiche (langue active = fr)", changelogText.includes("Fonctionnalite test FR"));
-    assert("changelog : bloc anglais NON affiche (filtre par langue)", !changelogText.includes("Test feature EN"));
-    assert("changelog : version sans separation bilingue affichee integralement", changelogText.includes("Version simple sans separation bilingue"));
+    assert("nouveautes : les deux versions recentes apparaissent", changelogText.includes("9.9.9") && changelogText.includes("9.9.8"));
+    assert("nouveautes : bloc francais affiche (langue active = fr)", changelogText.includes("Fonctionnalite test FR"));
+    assert("nouveautes : bloc anglais NON affiche (filtre par langue)", !changelogText.includes("Test feature EN"));
+    assert("nouveautes : version sans separation bilingue affichee integralement", changelogText.includes("Version simple sans separation bilingue"));
+    assert("nouveautes : la date devient un mois lisible, pas une date ISO",
+      changelogText.toLowerCase().includes("avril 2026") && !changelogText.includes("2026-04-12"));
+    assert("nouveautes : une version sans date n'affiche aucun mois invente",
+      !document.querySelector('.help-changelog-version:nth-of-type(2) .help-changelog-date'));
+
+    console.log("== Aide : l'historique ancien est replie derriere un bouton ==");
+    const moreBtn = document.getElementById("whatsnewMore");
+    assert("bouton d'historique present (une version < 1.87.0 existe)", !!moreBtn);
+    assert("l'ancienne version n'est PAS lisible avant le clic",
+      document.getElementById("whatsnewOld") && document.getElementById("whatsnewOld").hidden === true);
+    moreBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("apres le clic, l'ancienne version est affichee",
+      document.getElementById("whatsnewOld").hidden === false
+      && document.getElementById("whatsnewOld").textContent.includes("Ancienne fonctionnalite FR"));
+    assert("le bouton disparait une fois utilise", !document.getElementById("whatsnewMore"));
 
     console.log("== Aide : section A propos (version, licence, copyright) ==");
     const aboutItem = nav.querySelector('[data-help-id="about"]');

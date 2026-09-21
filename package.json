@@ -1,6 +1,6 @@
 {
   "name": "piboard",
-  "version": "1.118.0",
+  "version": "1.119.0",
   "description": "Tile-based kiosk dashboard for Raspberry Pi / Tableau de bord kiosque a tuiles pour Raspberry Pi",
   "author": "Jean-Michel Ezes (jihemezes)",
   "license": "MIT",
@@ -24,7 +24,8 @@
     "dist:linux": "npm install --no-save && npm run clean && electron-builder --linux --x64 --arm64 --publish never",
     "publish:linux": "npm install --no-save && npm run clean && node scripts/publish.js --linux --x64 --arm64",
     "dist:mac": "npm install --no-save && npm run clean && electron-builder --mac --x64 --arm64 --publish never",
-    "publish:mac": "npm install --no-save && npm run clean && node scripts/publish.js --mac --x64 --arm64"
+    "publish:mac": "npm install --no-save && npm run clean && node scripts/publish.js --mac --x64 --arm64",
+    "whatsnew-dates": "node tools/whatsnew-dates.js"
   },
   "engines": {
     "node": ">=18.15"

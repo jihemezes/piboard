@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.118.0
+   Version 1.119.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -7477,23 +7477,84 @@
     return html;
   }
 
-  /* Chaque version du CHANGELOG.md est bilingue, separee par une ligne
-     "---" (voir CHANGELOG.md) : n'affiche que le bloc correspondant a la
-     langue active plutot que le doublon FR+EN complet.
-     Each CHANGELOG.md version is bilingual, split by a "---" line (see
-     CHANGELOG.md): shows only the block matching the active language
-     rather than the full FR+EN duplicate. */
-  function renderChangelog(raw, lang) {
-    const versions = raw.replace(/\r\n/g, "\n").split(/\n(?=## )/).map((part) => {
-      const m = part.match(/^##\s+(\S+)\s*\n([\s\S]*)$/);
-      return m ? { version: m[1], body: m[2] } : null;
+  /* Chaque version est bilingue, separee par une ligne "---" (voir
+     WHATSNEW.md et CHANGELOG.md, meme format) : n'affiche que le bloc
+     correspondant a la langue active plutot que le doublon FR+EN
+     complet. Une date facultative suit la version : "## 1.87.0 -
+     2026-04-12".
+     Each version is bilingual, split by a "---" line (see WHATSNEW.md
+     and CHANGELOG.md, same format): shows only the block matching the
+     active language. An optional date follows the version. */
+  function parseVersions(raw) {
+    return raw.replace(/\r\n/g, "\n").split(/\n(?=## )/).map((part) => {
+      const m = part.match(/^##\s+(\S+)(?:\s*[-—]\s*(\d{4}-\d{2}-\d{2}))?\s*\n([\s\S]*)$/);
+      return m ? { version: m[1], date: m[2] || null, body: m[3] } : null;
     }).filter(Boolean);
+  }
+
+  /* Une date ISO devient "avril 2026" / "April 2026" : le mois situe une
+     nouveaute bien mieux qu'un numero de version, et le jour exact
+     n'apporte rien a qui revient apres six mois.
+     An ISO date becomes "April 2026": the month places a feature far
+     better than a version number, and the exact day adds nothing. */
+  function monthLabel(iso, lang) {
+    const d = new Date(iso + "T12:00:00");
+    if (isNaN(d)) return "";
+    try {
+      const s = d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { month: "long", year: "numeric" });
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    } catch (e) { return iso; }
+  }
+
+  function versionBlockHtml({ version, date, body }, lang) {
+    const halves = body.split(/\n-{3,}\n/);
+    const chosen = halves.length >= 2 ? (lang === "fr" ? halves[0] : halves[1]) : body;
+    const when = date ? ` <span class="help-changelog-date">${monthLabel(date, lang)}</span>` : "";
+    return `<h4 class="help-changelog-version">v${version}${when}</h4>` + mdLiteToHtml(chosen.trim());
+  }
+
+  function renderChangelog(raw, lang) {
+    const versions = parseVersions(raw);
     if (!versions.length) return `<p class="help-sub">${i18n.t("help.changelogEmpty")}</p>`;
-    return versions.map(({ version, body }) => {
-      const halves = body.split(/\n-{3,}\n/);
-      const chosen = halves.length >= 2 ? (lang === "fr" ? halves[0] : halves[1]) : body;
-      return `<h4 class="help-changelog-version">v${version}</h4>` + mdLiteToHtml(chosen.trim());
-    }).join("");
+    return versions.map((v) => versionBlockHtml(v, lang)).join("");
+  }
+
+  /* Seuil de repli de l'historique. 1.87.0 est la version du MODE
+     TABLEAU DE BORD : tout ce qui precede decrit une application qui
+     n'avait pas encore de pages, et n'interesse plus qu'a titre
+     d'archive. La page s'ouvre donc sur les nouveautes recentes, le
+     reste tenant derriere un bouton.
+     History fold threshold. 1.87.0 is the DASHBOARD MODE release:
+     everything before it describes an app that had no pages yet. */
+  const WHATSNEW_FOLD = "1.87.0";
+
+  function cmpVersion(a, b) {
+    const pa = String(a).split("."), pb = String(b).split(".");
+    for (let i = 0; i < 3; i++) {
+      const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+
+  /* Rend les nouveautes en deux parties : les versions recentes, puis
+     l'historique replie derriere un bouton. Le bouton n'apparait que
+     s'il y a effectivement quelque chose a replier.
+     Renders what's new in two parts: recent versions, then the older
+     history folded behind a button that only appears if there is
+     something to fold. */
+  function renderWhatsNew(raw, lang) {
+    const versions = parseVersions(raw);
+    if (!versions.length) return `<p class="help-sub">${i18n.t("help.changelogEmpty")}</p>`;
+    const recent = versions.filter((v) => cmpVersion(v.version, WHATSNEW_FOLD) >= 0);
+    const older = versions.filter((v) => cmpVersion(v.version, WHATSNEW_FOLD) < 0);
+    let html = (recent.length ? recent : versions).map((v) => versionBlockHtml(v, lang)).join("");
+    if (recent.length && older.length) {
+      html += `<button type="button" class="btn help-whatsnew-more" id="whatsnewMore">${i18n.t("help.whatsnewMore")}</button>`;
+      html += `<div class="help-whatsnew-old" id="whatsnewOld" hidden>`
+        + older.map((v) => versionBlockHtml(v, lang)).join("") + `</div>`;
+    }
+    return html;
   }
 
   /* Aide d'un SEUL widget, ouverte par-dessus sa fenetre de
@@ -7600,20 +7661,27 @@
         if (helpActiveId !== "changelog") return;
         const zone = document.createElement("div");
         zone.className = "help-changelog";
-        zone.innerHTML = renderChangelog(changelogRaw, i18n.lang);
+        zone.innerHTML = renderWhatsNew(changelogRaw, i18n.lang);
         content.appendChild(zone);
+        /* Depliage de l'historique ancien : le bouton disparait une fois
+           utilise, il n'y a rien a replier ensuite.
+           Unfolding the older history: the button disappears once used,
+           there is nothing to fold back. */
+        const more = zone.querySelector("#whatsnewMore");
+        const old = zone.querySelector("#whatsnewOld");
+        if (more && old) more.addEventListener("click", () => { old.hidden = false; more.remove(); });
       };
       if (changelogRaw) {
         renderNow();
       } else {
-        fetch("/api/changelog").then((r) => {
+        fetch("/api/whatsnew").then((r) => {
           if (!r.ok) throw new Error("status " + r.status);
           return r.text();
         }).then((text) => {
           changelogRaw = text;
           renderNow();
         }).catch((e) => {
-          console.warn("[piboard] changelog indisponible:", e);
+          console.warn("[piboard] nouveautes indisponibles / what's new unavailable:", e);
           if (helpActiveId === "changelog") {
             const err = document.createElement("p");
             err.className = "help-sub";

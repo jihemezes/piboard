@@ -2668,8 +2668,8 @@
       group: "credits",
       title: { fr: "Nouveautés", en: "What's new" },
       sub: {
-        fr: "L'historique des versions de PiBoard, directement depuis le tableau.",
-        en: "PiBoard's version history, right from the board."
+        fr: "Ce que PiBoard sait faire de plus, version apres version. Les correctifs, eux, sont dans le CHANGELOG.md du projet.",
+        en: "What PiBoard can do that it could not before, release after release. Fixes live in the project's CHANGELOG.md."
       },
       html: {
         fr: `<p class="help-sub">Chargement…</p>`,

@@ -1,5 +1,70 @@
 # Changelog
 
+## 1.119.0
+
+- **La section « Nouveautes » de l'aide n'est plus un rendu du
+  CHANGELOG.** Elle a sa propre source, `WHATSNEW.md`, ou ne figurent
+  que les versions ayant apporte ou change une FONCTIONNALITE, decrites
+  par ce qu'elles permettent et non par la facon dont elles sont faites.
+  Filtrer le changelog automatiquement n'etait pas possible : la
+  difference entre un correctif et une fonctionnalite est une question
+  de sens, pas de forme. Le CHANGELOG.md, lui, ne change pas d'un iota
+  et reste la reference technique.
+
+- **104 entrees ecrites a partir des 268 versions du journal**, des
+  1.0.0 a aujourd'hui. Les versions qui ne corrigeaient qu'un bug, ou
+  qui ne faisaient que renommer quelque chose, n'y figurent pas du tout.
+
+- **L'historique ancien est replie.** La page s'ouvre sur les versions
+  a partir de 1.87.0 -- celle du mode tableau de bord, qui est la vraie
+  rupture -- et le reste tient derriere « Afficher l'historique plus
+  ancien ». Le bouton disparait une fois utilise.
+
+- **Chaque version peut porter son mois** (« v1.115.0  septembre
+  2026 »), ce qui situe une nouveaute bien mieux qu'un numero. Une
+  installation n'etant pas un depot git, la date est INSCRITE dans le
+  fichier plutot que calculee a l'affichage : `npm run whatsnew-dates`
+  la renseigne depuis les etiquettes du depot, et l'outil previent
+  plutot que d'ecrire des dates partielles quand le clone est
+  superficiel. Une version sans etiquette reste simplement sans mois.
+
+- Nouvelle route `/api/whatsnew`, sur le modele de `/api/changelog`, et
+  nouveau fichier de tests `test/whatsnew.test.js` : ordre decroissant,
+  aucune version en double, les deux blocs de langue presents pour
+  CHACUNE, dates plausibles et coherentes avec l'ordre, seuil de repli
+  identique a celui du code, et aucun titre d'entree qui s'annonce comme
+  un correctif.
+
+---
+
+- **The help's "What's new" section is no longer a rendering of the
+  CHANGELOG.** It has its own source, `WHATSNEW.md`, holding only the
+  releases that added or changed a FEATURE, described by what they let
+  you do rather than how they are built. Filtering the changelog
+  automatically was not possible: the difference between a fix and a
+  feature is a matter of meaning, not of form. CHANGELOG.md itself is
+  untouched and remains the technical reference.
+
+- **104 entries written from the log's 268 releases**, from 1.0.0
+  onwards. Fix-only and rename-only releases do not appear at all.
+
+- **The older history is folded.** The page opens on releases from
+  1.87.0 -- dashboard mode, the real turning point -- with the rest
+  behind "Show the older history". The button disappears once used.
+
+- **Each release can carry its month**, which places a feature far
+  better than a version number. An installation is not a git
+  repository, so the date is WRITTEN into the file rather than computed
+  at display time: `npm run whatsnew-dates` fills it from the
+  repository's tags, and warns rather than writing partial dates from a
+  shallow clone.
+
+- New `/api/whatsnew` route and a new `test/whatsnew.test.js` suite:
+  descending order, no duplicates, both language blocks present for
+  EVERY entry, plausible dates consistent with the order, a fold
+  threshold identical to the code's, and no entry title announcing a
+  fix.
+
 ## 1.118.0
 
 - **Clone complet de l'installation.** A cote de la sauvegarde locale,
