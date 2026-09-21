@@ -1,5 +1,24 @@
 # Changelog
 
+## 1.115.8
+
+- **Bloc-notes : le texte peut desormais descendre a 8 pixels**, contre
+  12 auparavant. Sur un ecran de bureau, ou l'on lit a soixante
+  centimetres, une taille pensee pour une dalle tactile regardee a
+  travers la piece est enorme -- et 12 px restait trop gros pour tenir
+  une vraie liste dans une tuile.
+
+- La borne vaut pour les DEUX modes : la taille imposee comme
+  l'ajustement automatique, qui ne descendait pas non plus sous 12 px.
+  Les deux partagent maintenant une seule constante, ce qu'un test
+  verifie -- elles ne pourront plus diverger.
+
+- **Correctif de test** : la mise en scene de la tuile Scores utilisait
+  des dates ecrites en dur. Elles ont vieilli : le match « termine hier
+  soir » etait sorti de la fenetre de fraicheur et le test echouait un
+  beau matin sans que le code ait bouge. Les dates sont maintenant
+  relatives a l'instant du test.
+
 ## 1.115.7
 
 - **Correctif d'affichage : le bouton « Programmer » de la tuile

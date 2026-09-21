@@ -1033,7 +1033,7 @@
           <h4>Objectif</h4>
           <p>Un pense-bête toujours visible, du style liste de courses, mot pour la famille, ou rappel du jour.</p>
           <h4>Possibilités</h4>
-          <p>Le texte accepte un Markdown léger (titres, gras, italique, barré) et surtout des listes à cocher interactives — tapez <code>[ ] Lait</code> pour créer une case à cocher directement cliquable sur l'écran, très pratique pour une liste de courses partagée à la maison. Le contenu est enregistré côté serveur et donc partagé entre tous les écrans PiBoard de la maison si vous en avez plusieurs. Le style « post-it » (couleur au choix) donne un rendu chaleureux ; la taille du texte s'ajuste automatiquement à la taille de la tuile, ou peut être fixée manuellement.</p>
+          <p>Le texte accepte un Markdown léger (titres, gras, italique, barré) et surtout des listes à cocher interactives — tapez <code>[ ] Lait</code> pour créer une case à cocher directement cliquable sur l'écran, très pratique pour une liste de courses partagée à la maison. Le contenu est enregistré côté serveur et donc partagé entre tous les écrans PiBoard de la maison si vous en avez plusieurs. Le style « post-it » (couleur au choix) donne un rendu chaleureux ; la taille du texte s'ajuste automatiquement à la taille de la tuile, ou peut être fixée manuellement — jusqu'à 8 pixels, ce qui permet d'afficher beaucoup de texte quand PiBoard tourne sur un écran de bureau plutôt que sur une dalle tactile regardée de loin.</p>
 
           <h4>La barre d'outils</h4>
           <p>Touchez la note pour passer en édition : une petite barre d'outils apparaît alors en haut de la tuile. Elle ne s'affiche qu'en édition, car elle agit sur le texte source. Chaque bouton fonctionne en <b>bascule</b> : le réappuyer retire la mise en forme au lieu de l'empiler.</p>
@@ -1053,7 +1053,7 @@
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Couleur post-it</span><span class="help-opt-desc">Couleur de la tuile elle-même, ou une teinte post-it (jaune, vert, bleu, rose, orange).</span></div>
           <div class="help-opt"><span class="help-opt-name">Ajuster automatiquement</span><span class="help-opt-desc">La taille du texte s'adapte à la taille de la tuile.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Taille du texte</span><span class="help-opt-desc">Utilisée si l'ajustement automatique est désactivé.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Taille du texte</span><span class="help-opt-desc">Utilisée si l'ajustement automatique est désactivé. De 8 à 40 pixels : les petites valeurs servent surtout sur un écran de bureau, où l'on lit à 60 cm et où une taille pensée pour être vue à travers la pièce devient énorme.</span></div>
           <div class="help-opt"><span class="help-opt-name">Lecture seule</span><span class="help-opt-desc">Empêche la modification du texte tout en gardant les cases à cocher interactives — pratique pour une liste préparée à l'avance que l'on ne veut faire que cocher.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher l'horodatage et le compteur de mots</span><span class="help-opt-desc">Petites informations discrètes en bas de la tuile.</span></div>`,
         en: `
@@ -1061,7 +1061,7 @@
           <h4>Goal</h4>
           <p>An always-visible reminder board, for a shopping list, a note to the family, or today's reminder.</p>
           <h4>Possibilities</h4>
-          <p>The text accepts light Markdown (headings, bold, italics, strikethrough) and, most usefully, interactive checklists — type <code>[ ] Milk</code> to create a checkbox directly clickable on screen, very handy for a shopping list shared at home. The content is saved server-side and therefore shared across every PiBoard screen in the house if you have several. The "sticky note" style (choice of color) gives a warm look; text size adapts automatically to the tile's size, or can be set manually.</p>
+          <p>The text accepts light Markdown (headings, bold, italics, strikethrough) and, most usefully, interactive checklists — type <code>[ ] Milk</code> to create a checkbox directly clickable on screen, very handy for a shopping list shared at home. The content is saved server-side and therefore shared across every PiBoard screen in the house if you have several. The "sticky note" style (choice of color) gives a warm look; text size adapts automatically to the tile's size, or can be set manually — down to 8 pixels, which fits a lot of text in when PiBoard runs on a desktop screen rather than a touchscreen seen from across the room.</p>
 
           <h4>The toolbar</h4>
           <p>Tap the note to start editing: a small toolbar then appears at the top of the tile. It only shows while editing, since it acts on the source text. Each button is a <b>toggle</b>: pressing it again removes the formatting instead of stacking it.</p>
@@ -1081,7 +1081,7 @@
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Sticky-note color</span><span class="help-opt-desc">The tile's own color, or a sticky-note tint (yellow, green, blue, pink, orange).</span></div>
           <div class="help-opt"><span class="help-opt-name">Auto-fit text</span><span class="help-opt-desc">Text size adapts to the tile's size.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Text size</span><span class="help-opt-desc">Used if auto-fit is disabled.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Text size</span><span class="help-opt-desc">Used if auto-fit is disabled. From 8 to 40 pixels: small values are mostly for a desktop screen, where you read from 60 cm and a size meant to be seen across the room becomes enormous.</span></div>
           <div class="help-opt"><span class="help-opt-name">Read-only</span><span class="help-opt-desc">Prevents editing the text while keeping checkboxes interactive — handy for a list prepared in advance that should only be checked off.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show timestamp and word count</span><span class="help-opt-desc">Small discreet info at the bottom of the tile.</span></div>`
       }

@@ -7181,14 +7181,22 @@ function catalogItemFor(catalog, document, widgetId) {
     window.PiBoard.registerWidget = realRegister;
     assert("scores : la tuile se charge", !!SportClass);
 
+    /* Les dates sont RELATIVES a maintenant. Figees, elles vieillissent :
+       un match « termine hier soir » ecrit en dur finit par sortir de la
+       fenetre de fraicheur, et le test echoue un beau matin sans que le
+       code ait bouge -- c'est arrive.
+       Dates are RELATIVE to now: hard-coded ones age out of the
+       freshness window and the test fails one morning on its own. */
+    const hoursAgo = (h) => new Date(Date.now() - h * 3600000).toISOString();
+    const daysAhead = (d) => new Date(Date.now() + d * 86400000).toISOString();
     const answer = { events: [
-      { date: "2026-09-19T18:55:00Z",
+      { date: hoursAgo(14),
         status: { type: { state: "post", shortDetail: "FT" } },
         competitions: [{ competitors: [
           { homeAway: "away", score: "31", team: { displayName: "Stade Toulousain" } },
           { homeAway: "home", score: "13", team: { displayName: "RC Vannes" } }
         ] }] },
-      { date: "2026-09-26T18:55:00Z",
+      { date: daysAhead(6),
         status: { type: { state: "pre" } },
         competitions: [{ competitors: [
           { homeAway: "home", score: "0", team: { displayName: "Stade Toulousain" } },
@@ -7647,6 +7655,30 @@ function catalogItemFor(catalog, document, widgetId) {
     w.destroy();
     host.remove();
     window.fetch = realFetch;
+  }
+
+  console.log("== Bloc-notes : le texte peut descendre a 8 px (1.115.8) ==");
+  {
+    /* Sur un ecran de bureau, on lit a 60 cm : la borne de 12 px,
+       pensee pour une dalle tactile regardee de loin, etait trop
+       haute. Elle vaut pour la taille imposee ET pour l'ajustement
+       automatique -- les deux doivent bouger ensemble.
+       On a desktop screen the 12px floor was too high; it applies to
+       both the fixed size and auto-fit. */
+    const mf = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/notes/manifest.json"), "utf8"));
+    const fontField = mf.settings.find((f) => f.key === "fontSize");
+    assert("bloc-notes : le reglage descend jusqu'a 8 px", fontField.min === 8);
+    assert("bloc-notes : et monte toujours a 40", fontField.max === 40);
+    assert("bloc-notes : la petite taille est expliquee (ecran de bureau)",
+      /bureau/.test(fontField.hint.fr) && /desktop/.test(fontField.hint.en));
+
+    const src = fs.readFileSync(path.join(PUB, "widgets/notes/widget.js"), "utf8");
+    assert("bloc-notes : une seule borne basse, partagee par les deux modes",
+      /const MIN_FONT_PX = 8;/.test(src)
+      && /let lo = MIN_FONT_PX/.test(src)
+      && /Math\.max\(MIN_FONT_PX/.test(src));
+    assert("bloc-notes : plus aucune borne de 12 px en dur",
+      !/let lo = 12/.test(src));
   }
 
   console.log("== Chaines TV : un bouton qui porte un mot n'est pas une icone (1.115.7) ==");

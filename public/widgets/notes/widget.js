@@ -6,6 +6,14 @@
 (function () {
   "use strict";
 
+  /* Taille de texte la plus petite acceptee, pour l'ajustement
+     automatique comme pour la taille imposee. Descendre a 8 px n'a de
+     sens que sur un ecran de bureau, ou l'on lit a 60 cm ; c'est
+     precisement le cas d'usage qui manquait (1.115.8).
+     Smallest accepted text size, for both auto-fit and a fixed size.
+     Going down to 8px only makes sense on a desktop screen. */
+  const MIN_FONT_PX = 8;
+
   function escapeHtml(s) {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
@@ -627,7 +635,14 @@
     fit() {
       const s = this.ctx.settings;
       if (!s.autoFit) {
-        this.view.style.fontSize = (s.fontSize || 16) + "px";
+        /* La borne basse suit celle du reglage : sur un ecran de bureau
+           regarde a 60 cm, une taille pensee pour etre lue a travers la
+           piece est enorme (1.115.8).
+           The lower bound matches the setting's: on a desktop screen
+           seen from 60 cm, a size meant to be read across the room is
+           enormous. */
+        const px = Math.max(MIN_FONT_PX, Math.min(40, Number(s.fontSize) || 16));
+        this.view.style.fontSize = px + "px";
         return;
       }
       if (this.view.hidden) return;
@@ -642,7 +657,7 @@
       // note) never overflows vertically and the search converges to a
       // huge font that eats the whole tile. The cap also follows the
       // smaller dimension to stay sane on a narrow or short tile.
-      let lo = 12, hi = Math.min(30, Math.max(14, Math.floor(Math.min(w, h) * 0.16)));
+      let lo = MIN_FONT_PX, hi = Math.min(30, Math.max(14, Math.floor(Math.min(w, h) * 0.16)));
       for (let i = 0; i < 7; i++) {
         const mid = Math.floor((lo + hi + 1) / 2);
         this.view.style.fontSize = mid + "px";

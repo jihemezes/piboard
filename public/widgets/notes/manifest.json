@@ -1,6 +1,6 @@
 {
   "id": "notes",
-  "version": "0.5.1",
+  "version": "0.6.0",
   "name": {
     "en": "Notes",
     "fr": "Bloc-notes"
@@ -83,18 +83,26 @@
       "label": {
         "en": "Auto-fit text size to the tile",
         "fr": "Ajuster automatiquement la taille du texte"
+      },
+      "hint": {
+        "fr": "Le texte grandit ou rétrécit tout seul pour remplir la tuile, entre 8 et 30 pixels. Décochez pour imposer votre propre taille ci-dessous.",
+        "en": "The text grows or shrinks on its own to fill the tile, between 8 and 30 pixels. Uncheck to impose your own size below."
       }
     },
     {
       "key": "fontSize",
       "type": "number",
       "default": 16,
-      "min": 12,
+      "min": 8,
       "max": 40,
       "step": 1,
       "label": {
-        "en": "Text size when auto-fit is off (px)",
-        "fr": "Taille du texte si ajustement désactivé (px)"
+        "fr": "Taille du texte si ajustement désactivé (px)",
+        "en": "Text size when auto-fit is off (px)"
+      },
+      "hint": {
+        "fr": "De 8 à 40 pixels. Les petites valeurs sont surtout utiles sur un écran de bureau, où l'on est assis à 60 cm de la dalle : une taille pensée pour être lue à travers la pièce y devient énorme. Sur un écran tactile regardé de loin, restez au-dessus de 14.",
+        "en": "From 8 to 40 pixels. Small values are mostly useful on a desktop screen, where you sit 60 cm away: a size meant to be read across the room looks enormous there. On a touchscreen seen from a distance, stay above 14."
       }
     },
     {
