@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.117.0
+
+- **Deux boutons « Déclarer un bug » et « Demander une fonctionnalité »**,
+  dans les reglages generaux, section **Participer**, juste sous les
+  mises a jour -- la ou le numero de version est affiche, puisque c'est
+  precisement ce qu'un rapport doit porter.
+
+- **Le ticket s'ouvre deja rempli** : version de PiBoard, plateforme
+  (le modele exact du Raspberry Pi quand c'en est un), mode bureau ou
+  navigateur, definition de l'ecran, langue, et un canevas de questions
+  -- ce qui se passe, ce qui etait attendu, comment reproduire, quelle
+  tuile. Le tout DANS LA LANGUE DE L'INTERFACE. Rien n'est envoye par
+  PiBoard : la page s'ouvre, on lit, on corrige, on publie soi-meme.
+
+- **Un QR code pour le mode kiosque.** Sur un Pi en plein ecran il n'y
+  a ni clavier ni barre d'adresse : un clic droit -- ou un appui long
+  au doigt -- sur l'un des deux boutons affiche le meme lien en QR
+  code, a viser avec son telephone. Le QR sert aussi de repli
+  automatique si l'ouverture d'un onglet est bloquee.
+
+- **Nouveau module : un generateur de QR code ecrit a la main**
+  (`public/qrcode.js`), sans dependance ni appel reseau, donc
+  reutilisable ailleurs dans PiBoard. Les quarante versions, les quatre
+  niveaux de correction, mode octet. Sa sortie a ete comparee MODULE
+  PAR MODULE a une implementation de reference sur 1280 combinaisons --
+  aucune difference ; le test embarque les empreintes de ces matrices.
+  La bibliotheque de reference n'est PAS une dependance du projet :
+  elle a servi une fois, a la mise au point.
+
+- **Le groupe d'aide « Remerciements » devient « Le projet »** : il
+  contient aussi A propos, le journal des versions et, desormais, une
+  page expliquant ce que contient un rapport et comment le QR code
+  depanne en kiosque. La page « Remerciements » elle-meme garde son
+  nom -- ce sont bien des remerciements.
+
+- Deux defauts trouves par les tests en chemin : le generateur
+  s'appuyait sur TextEncoder, absent de certains environnements (UTF-8
+  desormais encode a la main), et la premiere mouture s'arretait a la
+  version 10, trop courte pour une URL de ticket pre-rempli.
+
 ## 1.116.0
 
 - **Le bandeau du mode Tableau de bord double de taille en mode

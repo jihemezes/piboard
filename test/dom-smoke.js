@@ -7705,6 +7705,114 @@ function catalogItemFor(catalog, document, widgetId) {
     window.fetch = realFetch;
   }
 
+  console.log("== Participer : declarer un bug, demander une fonctionnalite (1.117.0) ==");
+  {
+    const $c = (id) => document.getElementById(id);
+    // Les boutons vivent dans les reglages generaux, sous les mises a jour.
+    document.getElementById("settingsModal").hidden = false;
+    assert("participer : la section est dans les reglages generaux", !!$c("secContribute"));
+    {
+      /* Voisinage voulu : le numero de version est juste au-dessus, car
+         c'est l'information qu'un rapport de bug doit porter. On lit la
+         SOURCE et non le DOM : la fenetre de reglages se reorganise en
+         colonnes a l'execution, ce qui change l'ordre des elements sans
+         rien dire de l'intention.
+         The settings window reflows into columns at runtime, so the
+         authored order is what carries the intent. */
+      const src = fs.readFileSync(path.join(PUB, "index.html"), "utf8");
+      const iu = src.indexOf('id="secUpdates"');
+      const ic = src.indexOf('id="secContribute"');
+      assert("participer : elle est placee juste apres les mises a jour", iu > 0 && ic > iu);
+      // Jusqu'au DEBUT de la balise qui porte l'identifiant, sans quoi
+      // on compterait la section elle-meme.
+      const between = src.slice(src.indexOf("</fieldset>", iu), src.lastIndexOf("<fieldset", ic));
+      assert("participer : aucune autre section ne s'intercale",
+        (between.match(/<fieldset/g) || []).length === 0);
+      assert("participer : les deux sections sont dans la fenetre de reglages",
+        !!$c("settingsModal").querySelector("#secContribute") && !!$c("settingsModal").querySelector("#secUpdates"));
+    }
+    const bug = $c("btnReportBug"), feature = $c("btnRequestFeature");
+    assert("participer : les deux boutons existent", !!bug && !!feature);
+
+    /* Le ticket s'ouvre PRE-REMPLI. On intercepte l'ouverture pour lire
+       l'URL sans quitter la page. */
+    const opened = [];
+    const realOpen = window.open;
+    window.open = (u) => { opened.push(u); return { focus() {} }; };
+    bug.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("participer : le bouton ouvre un ticket sur le depot du projet",
+      opened.length === 1 && opened[0].indexOf("https://github.com/jihemezes/piboard/issues/new?") === 0);
+
+    const params = new URL(opened[0]).searchParams;
+    const body = params.get("body") || "";
+    assert("participer : le ticket porte un titre reconnaissable", /^\[Bug\]/.test(params.get("title") || ""));
+    assert("participer : il est etiquete", params.get("labels") === "bug");
+    /* Ce que doit porter un rapport exploitable : version, plateforme,
+       langue -- sinon on passe trois messages a les reclamer. */
+    assert("participer : la version de PiBoard est dans le rapport", /PiBoard : v/.test(body));
+    assert("participer : la plateforme aussi", /Plateforme|Platform/.test(body));
+    assert("participer : et les questions qui font un rapport utile",
+      /Ce qui se passe|What happens/.test(body) && /reproduire|reproduce/.test(body));
+
+    feature.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    const featureBody = new URL(opened[1]).searchParams.get("body") || "";
+    assert("participer : la demande de fonctionnalite a son propre canevas",
+      /Le besoin|The need/.test(featureBody) && !/reproduire|reproduce/.test(featureBody));
+    assert("participer : et sa propre etiquette",
+      new URL(opened[1]).searchParams.get("labels") === "enhancement");
+
+    /* La langue de l'interface commande la langue du canevas. */
+    const wasLang = window.PiBoardI18n.lang;
+    if (wasLang !== "en") {
+      window.PiBoardI18n.setLang("en");
+      await sleep(40);
+      opened.length = 0;
+      bug.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      const enBody = new URL(opened[0]).searchParams.get("body") || "";
+      assert("participer : en anglais, le canevas est en anglais",
+        /What happens/.test(enBody) && !/Ce qui se passe/.test(enBody));
+      window.PiBoardI18n.setLang(wasLang);
+      await sleep(40);
+    }
+    window.open = realOpen;
+
+    /* En kiosque il n'y a ni clavier ni barre d'adresse : l'appui long
+       (clic droit) donne un QR code a viser au telephone. */
+    opened.length = 0;
+    bug.dispatchEvent(new window.MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    await sleep(40);
+    assert("participer : un clic droit ouvre le QR plutot qu'un onglet",
+      $c("qrModal").hidden === false && opened.length === 0);
+    const svg = $c("qrImage").querySelector("svg");
+    assert("participer : un vrai QR code est dessine", !!svg && /<path/.test(svg.outerHTML));
+    assert("participer : le lien affiche est celui du ticket",
+      $c("qrUrl").textContent.indexOf("github.com/jihemezes/piboard/issues/new") > 0);
+    /* Le QR doit encoder EXACTEMENT ce lien : un code qui mene ailleurs
+       serait pire qu'une absence de code. */
+    const qr = require(path.join(PUB, "qrcode.js"));
+    const expected = qr.toSvg($c("qrUrl").textContent, { level: "M" });
+    const pathOf = (x) => /<path d="([^"]*)"/.exec(x)[1];
+    assert("participer : le code encode bien ce lien, et pas un autre",
+      pathOf(svg.outerHTML) === pathOf(expected));
+    $c("qrClose").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("participer : la fenetre se ferme", $c("qrModal").hidden === true);
+    document.getElementById("settingsModal").hidden = true;
+
+    /* Le groupe d'aide ne s'appelle plus « Remerciements » : il
+       contient aussi A propos, le journal des versions et desormais
+       cette page-ci. */
+    assert("participer : le groupe d'aide est renomme « Le projet »",
+      window.PiBoardI18n.t("help.group.credits") === "Le projet"
+      || window.PiBoardI18n.t("help.group.credits") === "The project");
+    const pages = (window.PIBOARD_HELP || []).filter((p) => p.group === "credits").map((p) => p.id);
+    assert("participer : la page d'aide existe et vit dans ce groupe (" + pages.join(",") + ")",
+      pages.indexOf("contribute") >= 0 && pages.indexOf("about") >= 0);
+  }
+
   console.log("== Bloc-notes : le texte peut descendre a 8 px (1.115.8) ==");
   {
     /* Sur un ecran de bureau, on lit a 60 cm : la borne de 12 px,

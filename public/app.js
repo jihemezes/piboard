@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.116.0
+   Version 1.117.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -5476,6 +5476,142 @@
     }
   }
 
+  /* ---------- Participer : signaler un bug, demander une fonction ----------
+     Le ticket est OUVERT PRE-REMPLI : version, plateforme, langue et un
+     canevas de questions. Un rapport qui arrive avec ces elements se
+     traite ; un « ca marche pas » ne se traite pas. Rien n'est envoye
+     par PiBoard : la page s'ouvre, on lit, on corrige, on publie
+     soi-meme.
+     The ticket opens PRE-FILLED: version, platform, language and a
+     short template. Nothing is sent by PiBoard: the page opens, you
+     read, edit and post it yourself. */
+  const REPO_URL = "https://github.com/jihemezes/piboard";
+  const contributeInfo = { version: "", platform: "", desktop: false };
+
+  function contributeContext() {
+    const nav = window.navigator || {};
+    const ua = String(nav.userAgent || "");
+    const guess = /Windows/.test(ua) ? "Windows"
+      : /Mac OS X|Macintosh/.test(ua) ? "macOS"
+        : /Android/.test(ua) ? "Android"
+          : /iPhone|iPad/.test(ua) ? "iOS"
+            : /Linux|X11/.test(ua) ? "Linux" : "?";
+    return {
+      version: contributeInfo.version || "?",
+      platform: contributeInfo.platform || guess,
+      mode: contributeInfo.desktop ? "application de bureau / desktop application"
+        : "navigateur / browser",
+      browser: ua.slice(0, 160),
+      screen: (window.screen ? window.screen.width + "x" + window.screen.height : "?")
+        + (document.body.classList.contains("touch") || document.body.classList.contains("touch-mode")
+          ? " (tactile / touch)" : ""),
+      lang: i18n.lang
+    };
+  }
+
+  /* Les deux canevas, dans la langue de l'interface : un rapport ecrit
+     dans sa langue est un rapport qu'on ecrit vraiment.
+     The two templates, in the interface language. */
+  function contributeBody(kind) {
+    const c = contributeContext();
+    const facts = [
+      "- PiBoard : v" + c.version,
+      "- " + (c.lang === "fr" ? "Plateforme" : "Platform") + " : " + c.platform + " (" + c.mode + ")",
+      "- " + (c.lang === "fr" ? "Écran" : "Screen") + " : " + c.screen,
+      "- " + (c.lang === "fr" ? "Langue" : "Language") + " : " + c.lang,
+      "- " + (c.lang === "fr" ? "Navigateur" : "Browser") + " : " + c.browser
+    ].join("\n");
+
+    if (kind === "bug") {
+      return c.lang === "fr"
+        ? "## Ce qui se passe\n\n\n\n## Ce que j'attendais\n\n\n\n## Comment le reproduire\n\n1. \n2. \n3. \n\n## Tuile concernée\n\n\n\n## Contexte technique\n\n" + facts
+          + "\n\n<!-- Une capture d'écran aide beaucoup : glissez-la dans ce champ. -->\n"
+        : "## What happens\n\n\n\n## What I expected\n\n\n\n## How to reproduce it\n\n1. \n2. \n3. \n\n## Tile concerned\n\n\n\n## Technical context\n\n" + facts
+          + "\n\n<!-- A screenshot helps a lot: drop one into this field. -->\n";
+    }
+    return c.lang === "fr"
+      ? "## Le besoin\n\n\n\n## Comment je m'en servirais\n\n\n\n## Ce que je fais aujourd'hui à la place\n\n\n\n## Contexte technique\n\n" + facts + "\n"
+      : "## The need\n\n\n\n## How I would use it\n\n\n\n## What I do instead today\n\n\n\n## Technical context\n\n" + facts + "\n";
+  }
+
+  function contributeUrl(kind) {
+    const c = contributeContext();
+    const title = kind === "bug"
+      ? (c.lang === "fr" ? "[Bug] " : "[Bug] ")
+      : (c.lang === "fr" ? "[Idée] " : "[Idea] ");
+    const q = new URLSearchParams({
+      title: title,
+      body: contributeBody(kind),
+      labels: kind === "bug" ? "bug" : "enhancement"
+    });
+    return REPO_URL + "/issues/new?" + q.toString();
+  }
+
+  /* Ouvrir le lien : dans un onglet quand c'est possible, sinon par le
+     QR code -- en kiosque sur le Pi il n'y a ni clavier ni barre
+     d'adresse, et le QR est alors la SEULE voie praticable.
+     Open in a tab when possible, otherwise through the QR code: on a
+     kiosk Pi there is no keyboard and no address bar. */
+  function openContribute(kind) {
+    const url = contributeUrl(kind);
+    const win = window.open(url, "_blank", "noopener");
+    if (!win) openQr(url, i18n.t(kind === "bug" ? "contribute.bug" : "contribute.feature"));
+  }
+
+  /* ---------- Fenetre QR ----------
+     Generique : elle affiche le lien qu'on lui donne. Le generateur
+     (public/qrcode.js) est autonome, donc utilisable pour toute autre
+     chose plus tard.
+     Generic: it shows whatever link it is given. */
+  function openQr(url, title) {
+    const modal = $("qrModal");
+    if (!modal) return;
+    $("qrTitle").textContent = title || i18n.t("qr.title");
+    $("qrUrl").textContent = url;
+    const box = $("qrImage");
+    try {
+      /* Correction haute : le code est souvent lu de biais, sur un
+         ecran brillant, par un telephone tenu a la main.
+         High correction: read at an angle, off a glossy screen. */
+      box.innerHTML = window.PiBoardQR.toSvg(url, {
+        level: "M",
+        dark: getComputedStyle(document.body).getPropertyValue("--text").trim() || "#000",
+        light: getComputedStyle(document.body).getPropertyValue("--tile").trim() || "#fff"
+      });
+      box.dataset.failed = "";
+    } catch (e) {
+      // Un lien trop long pour un QR : on le dit, et le lien reste copiable.
+      box.innerHTML = "";
+      box.dataset.failed = String(e.message || e);
+      box.textContent = i18n.t("qr.tooLong");
+    }
+    modal.hidden = false;
+  }
+
+  function wireContribute() {
+    const bug = $("btnReportBug");
+    const feature = $("btnRequestFeature");
+    if (bug) {
+      onActivate(bug, () => openContribute("bug"));
+      bug.addEventListener("contextmenu", (e) => { e.preventDefault(); openQr(contributeUrl("bug"), i18n.t("contribute.bug")); });
+    }
+    if (feature) {
+      onActivate(feature, () => openContribute("feature"));
+      feature.addEventListener("contextmenu", (e) => { e.preventDefault(); openQr(contributeUrl("feature"), i18n.t("contribute.feature")); });
+    }
+    const qrClose = $("qrClose");
+    if (qrClose) onActivate(qrClose, () => { $("qrModal").hidden = true; });
+    const qrCopy = $("qrCopy");
+    if (qrCopy) {
+      onActivate(qrCopy, () => {
+        const text = $("qrUrl").textContent;
+        if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+        qrCopy.textContent = i18n.t("qr.copied");
+        setTimeout(() => { qrCopy.textContent = i18n.t("qr.copy"); }, 2000);
+      });
+    }
+  }
+
   function wireFolderPicker() {
     onActivate($("folderClose"), closeFolderPicker);
     onActivate($("folderCancel"), closeFolderPicker);
@@ -7639,7 +7775,12 @@
     // avoids a stale version string after an update. Fails silently: the
     // HTML's static fallback text stays shown if the call fails.
     fetch("/api/version").then((r) => r.json()).then((d) => {
-      if (d && d.version) $("appVersion").textContent = "v" + d.version;
+      if (!d) return;
+      if (d.version) $("appVersion").textContent = "v" + d.version;
+      // Memorise pour le pre-remplissage d'un ticket (voir openContribute).
+      contributeInfo.version = d.version || "";
+      contributeInfo.platform = d.platformName || "";
+      contributeInfo.desktop = !!d.desktop;
     }).catch(() => {});
 
     grid = GridStack.init({
@@ -8010,6 +8151,7 @@
     wireThemeUi();
     wireFolderPicker();
     wireDiscoverFields();
+    wireContribute();
     onActivate($("libraryAdd"), () => $("libraryFile").click());
     onActivate($("libraryOnline"), showLibraryCatalog);
     $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));

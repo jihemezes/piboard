@@ -529,6 +529,29 @@
 </div>
 
 <!-- Parametres globaux / global settings -->
+<!-- Fenetre QR : ouvrir un lien sur son telephone. Indispensable sur
+     le Pi en kiosque (ni clavier ni barre d'adresse), commode partout
+     ailleurs. Volontairement generique : elle affiche le lien qu'on lui
+     donne, d'ou qu'il vienne.
+     QR window: open a link on your phone. Indispensable on a kiosk Pi,
+     handy everywhere else. Deliberately generic. -->
+<div class="modal" id="qrModal" hidden>
+  <div class="modal-card qr-card">
+    <header class="modal-head">
+      <h2 id="qrTitle" data-i18n="qr.title">Open on your phone</h2>
+      <button type="button" class="icon-btn" id="qrClose" aria-label="Close">✕</button>
+    </header>
+    <div class="modal-body qr-body">
+      <div id="qrImage" class="qr-image"></div>
+      <p class="hint" id="qrHint" data-i18n="qr.hint">Point your phone's camera at the code. The link opens there, with the report already filled in.</p>
+      <p class="qr-url" id="qrUrl"></p>
+      <div class="qr-actions">
+        <button type="button" class="btn small" id="qrCopy" data-i18n="qr.copy">Copy the link</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal" id="settingsModal" hidden>
   <div class="modal-card">
     <header class="modal-head">
@@ -750,6 +773,30 @@
         </div>
         <small class="field-hint" id="updDesktopHint" hidden data-i18n="update.desktopHint">In the Windows desktop application, updates are handled by the application itself: it checks on startup and offers to install. The setting above chooses which versions it offers.</small>
         <small class="field-hint" id="updServerHint" data-i18n="update.hint">New versions are fetched from the releases published on GitHub. Your settings, tiles and photos (the data/ folder) are kept. The server restarts at the end and the dashboard reloads by itself.</small>
+      </fieldset>
+
+      <!-- Participer : deux boutons qui ouvrent un ticket GitHub deja
+           rempli (version, plateforme, canevas de questions). Places
+           juste sous les mises a jour, la ou le numero de version est
+           affiche : c'est precisement l'information qu'un rapport de
+           bug doit transporter, et c'est la qu'on vient quand quelque
+           chose ne tourne pas rond.
+           Contribute: two buttons opening a pre-filled GitHub issue,
+           right under the updates section where the version number
+           lives -- exactly what a bug report must carry. -->
+      <fieldset class="form-section" id="secContribute">
+        <legend data-i18n="settings.section.contribute">Contributing</legend>
+        <p class="hint" data-i18n="contribute.intro">PiBoard is an open-source personal project. A clear report is worth ten vague ones: these two buttons open a ticket already filled with your version, your platform and the right questions.</p>
+        <div class="contribute-actions">
+          <button type="button" class="btn" id="btnReportBug">
+            <span aria-hidden="true">🐞</span> <span data-i18n="contribute.bug">Report a bug</span>
+          </button>
+          <button type="button" class="btn" id="btnRequestFeature">
+            <span aria-hidden="true">💡</span> <span data-i18n="contribute.feature">Request a feature</span>
+          </button>
+        </div>
+        <small class="field-hint" data-i18n="contribute.hint">Opens github.com in a new tab. A GitHub account is needed to post — creating one is free. Nothing is sent from PiBoard: you see and edit the text before posting it yourself.</small>
+        <p class="hint"><a href="https://github.com/jihemezes/piboard/issues" target="_blank" rel="noopener" data-i18n="contribute.browse">Browse existing tickets</a></p>
       </fieldset>
 
       <fieldset class="form-section">
@@ -1104,6 +1151,7 @@
 <script src="/vendor/gridstack/gridstack-all.js"></script>
 <script src="/vendor/leaflet/leaflet.js"></script>
 <script src="chart-time-axis.js"></script>
+<script src="qrcode.js"></script>
 <script src="i18n.js"></script>
 <script src="help-content.js"></script>
 <script src="quickstart-content.js"></script>

@@ -1015,7 +1015,27 @@ app.delete("/api/tile-configs/:widgetId/:title", (req, res) => {
 const APP_VERSION = require("../package.json").version;
 
 app.get("/api/version", (req, res) => {
-  res.json({ version: APP_VERSION });
+  /* La plateforme accompagne la version : c'est ce qu'un rapport de bug
+     doit porter, et le navigateur ne sait pas distinguer un Raspberry
+     Pi d'un PC sous Linux (voir « Participer » dans les reglages).
+     The platform travels with the version: it is what a bug report must
+     carry, and the browser cannot tell a Raspberry Pi from a Linux PC. */
+  const names = { win32: "Windows", darwin: "macOS", linux: "Linux" };
+  let platformName = names[process.platform] || process.platform;
+  if (process.platform === "linux") {
+    try {
+      const model = fs.readFileSync("/proc/device-tree/model", "utf8").replace(/\0+$/, "").trim();
+      if (model) platformName = model;             // « Raspberry Pi 4 Model B Rev 1.5 »
+    } catch (e) { /* machine sans arborescence materielle : Linux tout court */ }
+  }
+  res.json({
+    version: APP_VERSION,
+    platform: process.platform,
+    platformName,
+    arch: process.arch,
+    node: process.versions.node,
+    desktop: !!process.versions.electron
+  });
 });
 
 // Sert le contenu brut de CHANGELOG.md (a la racine du projet, pas dans

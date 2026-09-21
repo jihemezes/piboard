@@ -2514,7 +2514,7 @@
       }
     },
 
-    /* ================= REMERCIEMENTS / CREDITS ================= */
+    /* ================= LE PROJET / THE PROJECT ================= */
     {
       id: "about",
       group: "credits",
@@ -2538,6 +2538,36 @@
           <p>Personal, open-source project: <a href="https://github.com/jihemezes/piboard" target="_blank">github.com/jihemezes/piboard</a>.</p>
           <h4>Buy me a coffee</h4>
           <p>PiBoard is free and will stay free. A donation is a simple token of appreciation, with no strings attached: it unlocks no extra feature, entitles you to no support and creates no obligation. Please do not give anything if it would put you in any difficulty — using PiBoard, reporting a bug or suggesting an idea is just as welcome.</p>`
+      }
+    },
+
+    {
+      id: "contribute",
+      group: "credits",
+      title: { fr: "Signaler un bug, proposer une idée", en: "Report a bug, suggest an idea" },
+      sub: {
+        fr: "Deux boutons dans les réglages généraux, et ce qu'ils envoient.",
+        en: "Two buttons in the general settings, and what they send."
+      },
+      html: {
+        fr: `
+          <h4>Où sont les boutons</h4>
+          <p>Dans les <b>réglages généraux</b>, section <b>Participer</b>, juste sous « Mises à jour ». Ce voisinage n'est pas un hasard : c'est là qu'est affiché le numéro de version, et c'est précisément l'information qu'un rapport de bug doit porter.</p>
+          <h4>Ce qui part avec votre rapport</h4>
+          <p>Le ticket s'ouvre <b>déjà rempli</b> : la version de PiBoard, la plateforme (le modèle exact de votre Raspberry Pi si c'en est un, sinon Windows, macOS ou Linux), le mode — application de bureau ou navigateur —, la définition de l'écran, la langue de l'interface, et un canevas de questions. Pour un bug : ce qui se passe, ce qui était attendu, comment le reproduire, quelle tuile est concernée. Pour une idée : le besoin, l'usage, ce que vous faites aujourd'hui à la place. Le tout <b>dans la langue de l'interface</b>.</p>
+          <p><b>Rien n'est envoyé par PiBoard.</b> La page GitHub s'ouvre avec le texte prêt : vous le lisez, le corrigez, ajoutez une capture d'écran si vous en avez une, et c'est vous qui publiez. Un compte GitHub est nécessaire pour cela ; en créer un est gratuit.</p>
+          <h4>Sur un écran de kiosque</h4>
+          <p>Sur un Raspberry Pi en plein écran, il n'y a ni clavier ni barre d'adresse : ouvrir GitHub y est pénible. Un <b>clic droit</b> — ou un <b>appui long</b> au doigt — sur l'un des deux boutons affiche alors un <b>QR code</b> à viser avec votre téléphone. Le rapport pré-rempli s'ouvre là-bas, où vous avez un vrai clavier et votre appareil photo pour la capture d'écran.</p>
+          <p>Le générateur de QR code est écrit dans PiBoard et fonctionne <b>sans connexion</b> : aucune image n'est téléchargée, rien n'est envoyé à un service extérieur pour fabriquer le code.</p>`,
+        en: `
+          <h4>Where the buttons are</h4>
+          <p>In the <b>general settings</b>, under <b>Contributing</b>, right below "Updates". That neighbourhood is no accident: the version number is displayed there, and that is exactly what a bug report must carry.</p>
+          <h4>What travels with your report</h4>
+          <p>The ticket opens <b>already filled in</b>: the PiBoard version, the platform (the exact model of your Raspberry Pi if that is what you run, otherwise Windows, macOS or Linux), the mode — desktop application or browser —, the screen resolution, the interface language, and a short set of questions. For a bug: what happens, what you expected, how to reproduce it, which tile is concerned. For an idea: the need, the use, what you do instead today. All of it <b>in the interface's language</b>.</p>
+          <p><b>Nothing is sent by PiBoard.</b> The GitHub page opens with the text ready: you read it, correct it, add a screenshot if you have one, and you are the one who posts. A GitHub account is needed for that; creating one is free.</p>
+          <h4>On a kiosk screen</h4>
+          <p>On a full-screen Raspberry Pi there is no keyboard and no address bar, which makes opening GitHub painful. A <b>right-click</b> — or a <b>long press</b> with a finger — on either button then shows a <b>QR code</b> to point your phone at. The pre-filled report opens there, where you have a real keyboard and a camera for the screenshot.</p>
+          <p>The QR code generator is written inside PiBoard and works <b>offline</b>: no image is downloaded and nothing is sent to an outside service to build the code.</p>`
       }
     },
 
