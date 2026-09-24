@@ -133,6 +133,15 @@
       "help.search": "Search help topics…",
       "help.searchEmpty": "No matching topic.",
       "help.changelogError": "Couldn't load what's new.",
+
+      /* Diagnostic des fuseaux horaires / time zone diagnostic (tzfix.js) */
+      "tzfix.title": "Time zones",
+      "tzfix.upToDate": "The time zone database embedded in this build is up to date on every zone PiBoard watches. Nothing is being corrected.",
+      "tzfix.stale": "The time zone database embedded in this build (Chromium/Electron, not your system's) predates a legal time change. PiBoard corrects the following zones itself, so the clock stays right:",
+      "tzfix.embedded": "embedded database:",
+      "tzfix.legal": "legal time:",
+      "tzfix.selfClearing": "This correction applies only for as long as it is needed: it stops by itself once a PiBoard build with an up-to-date database is installed.",
+      "tzfix.pickerMark": "(corrected by PiBoard)",
       "help.changelogEmpty": "No version history found.",
       "help.whatsnewMore": "Show the older history",
       "help.group.presentation": "Overview",
@@ -1232,6 +1241,15 @@
       "help.search": "Rechercher dans l'aide…",
       "help.searchEmpty": "Aucun sujet correspondant.",
       "help.changelogError": "Impossible de charger les nouveautés.",
+
+      /* Diagnostic des fuseaux horaires / time zone diagnostic (tzfix.js) */
+      "tzfix.title": "Fuseaux horaires",
+      "tzfix.upToDate": "La base de fuseaux embarquée dans cette version est à jour sur tous les fuseaux surveillés par PiBoard. Aucune correction n'est appliquée.",
+      "tzfix.stale": "La base de fuseaux embarquée dans cette version (celle de Chromium/Electron, pas celle de votre système) est antérieure à un changement d'heure légale. PiBoard corrige lui-même les fuseaux suivants, pour que l'horloge reste juste :",
+      "tzfix.embedded": "base embarquée :",
+      "tzfix.legal": "heure légale :",
+      "tzfix.selfClearing": "Cette correction ne s'applique que tant qu'elle est nécessaire : elle cesse d'elle-même dès qu'une version de PiBoard avec une base à jour est installée.",
+      "tzfix.pickerMark": "(corrigé par PiBoard)",
       "help.changelogEmpty": "Aucun historique de version trouvé.",
       "help.whatsnewMore": "Afficher l'historique plus ancien",
       "help.group.presentation": "Présentation",

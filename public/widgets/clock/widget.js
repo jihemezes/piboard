@@ -36,6 +36,19 @@
      which is all this widget ever does elsewhere.
      Empty or invalid zone: silently falls back to the system's time. */
   function nowInZone(tz) {
+    /* Depuis la 1.120.0, le calcul vit dans public/tzfix.js, qui
+       rattrape en plus les fuseaux dont la base embarquee dans
+       Chromium/Electron est perimee (cas du Maroc, passe a GMT le
+       20/09/2026). Le corps ci-dessous reste comme repli strict si le
+       module n'a pas ete charge -- une tuile chargee seule dans un
+       harnais de test, par exemple : le comportement redevient alors
+       exactement celui d'avant.
+       Since 1.120.0 the calculation lives in public/tzfix.js, which
+       additionally catches up zones whose database embedded in
+       Chromium/Electron is out of date (Morocco, moved to GMT on
+       2026-09-20). The body below stays as a strict fallback when the
+       module was not loaded. */
+    if (window.PiBoardTzFix) return window.PiBoardTzFix.nowInZone(tz);
     if (!tz) return new Date();
     try {
       const parts = new Intl.DateTimeFormat("en-US", {

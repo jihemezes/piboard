@@ -219,8 +219,8 @@
         "fr": "Fuseau horaire"
       },
       "hint": {
-        "en": "Leave on “System's own” to use the device's own time zone (the historical, default behavior).",
-        "fr": "Laissez sur « Fuseau du système » pour utiliser le fuseau de l'appareil (comportement historique, par défaut)."
+        "en": "Leave on “System's own” to use the device's own time zone (the historical, default behavior). A zone marked “(corrected by PiBoard)” is one whose legal time changed more recently than the zone database embedded in this build: PiBoard puts it right itself, and the mark disappears once a build with an up-to-date database is installed. See Help → About.",
+        "fr": "Laissez sur « Fuseau du système » pour utiliser le fuseau de l'appareil (comportement historique, par défaut). Un fuseau marqué « (corrigé par PiBoard) » est un fuseau dont l'heure légale a changé plus récemment que la base de fuseaux embarquée dans cette version : PiBoard le rectifie lui-même, et la mention disparaît dès qu'une version avec une base à jour est installée. Voir Aide → À propos."
       },
       "group": {
         "en": "Time zone",

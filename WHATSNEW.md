@@ -33,6 +33,30 @@
 # Nouveautes / What's new
 
 
+## 1.121.0
+
+**PiBoard s'installe enfin sans mystere sur un Mac**
+
+Au premier lancement, macOS annonce que PiBoard est « endommage ». Il ne l'est pas : il n'est pas notarise par Apple, ce qui suppose un compte payant. Sur les Mac Apple Silicon, ce refus ne laisse aucune porte de sortie visible, et l'on croit a un telechargement rate. Une nouvelle fiche d'aide « Application de bureau macOS » dit ce qui se passe et donne la commande a lancer une fois, le README aussi, et le message de mise a jour la rappelle -- parce que chaque nouvelle copie telechargee ramene le probleme. Au passage, la tuile Enregistrements TV rejoint sa famille, a cote des Chaines TV.
+
+---
+
+**PiBoard installs on a Mac without the mystery**
+
+On first launch macOS announces that PiBoard is "damaged". It is not: it is not notarized by Apple, which requires a paid account. On Apple Silicon Macs that refusal leaves no visible way out, and one assumes a failed download. A new "macOS desktop app" help section explains what happens and gives the command to run once, the README too, and the update message repeats it -- because every newly downloaded copy brings the problem back. Along the way, the TV recordings tile joins its family, next to TV channels.
+
+## 1.120.0
+
+**L'heure juste meme quand un pays vient de changer d'heure**
+
+Le Maroc est repasse a GMT le 20 septembre 2026. La base de fuseaux que PiBoard lit est celle de Chromium, figee a la construction de l'application : elle mettra des mois a le savoir, et aucune mise a jour de Windows ou du Raspberry Pi n'y changera quoi que ce soit. PiBoard corrige donc lui-meme les fuseaux concernes, les signale dans la liste de choix, et cesse de corriger tout seul le jour ou ce n'est plus necessaire. Le detail se lit dans Aide -> A propos.
+
+---
+
+**The right time even when a country has just changed its own**
+
+Morocco moved back to GMT on 20 September 2026. The time zone database PiBoard reads is Chromium's, frozen when the application was built: it will take months to find out, and no Windows or Raspberry Pi update will change that. PiBoard therefore corrects the affected zones itself, flags them in the picker, and stops correcting on its own once it is no longer needed. The details are under Help -> About.
+
 ## 1.119.0
 
 **Nouveautes : une page ecrite pour qui se sert de PiBoard**

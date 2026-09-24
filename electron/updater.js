@@ -182,9 +182,27 @@ function wireEvents() {
             "dans le navigateur. Telecharge le fichier .dmg correspondant a ton Mac " +
             "(arm64 pour Apple Silicon, x64 pour Intel), ouvre-le et glisse PiBoard dans " +
             "Applications par-dessus l'ancienne version. Tes tuiles et tes reglages sont conserves.\n\n" +
+            /* Le rappel qui manquait (1.121.0). La copie qu'on vient de
+               telecharger porte a son tour l'attribut de quarantaine :
+               elle rouvrira donc sur « PiBoard est endommage », alors
+               meme que la version precedente fonctionnait. Sans cette
+               ligne, chaque mise a jour ramene le probleme du premier
+               lancement, et rien a l'ecran ne fait le lien.
+               The reminder that was missing (1.121.0): the freshly
+               downloaded copy carries the quarantine attribute in its
+               turn, so it reopens on "PiBoard is damaged" even though
+               the previous version worked. */
+            "Ensuite, relance cette commande une fois dans le Terminal, sans quoi macOS refusera " +
+            "d'ouvrir la nouvelle copie en la disant « endommagee » (elle ne l'est pas : PiBoard " +
+            "n'est pas notarise par Apple, faute de compte developpeur payant) :\n" +
+            "    xattr -dr com.apple.quarantine /Applications/PiBoard.app\n\n" +
             "On macOS the installation is manual: the version's page will open in the browser. " +
             "Download the .dmg matching your Mac (arm64 for Apple Silicon, x64 for Intel), open it " +
-            "and drag PiBoard into Applications over the old version. Your tiles and settings are kept."
+            "and drag PiBoard into Applications over the old version. Your tiles and settings are kept.\n" +
+            "Then run this command once in Terminal, or macOS will refuse to open the new copy, " +
+            "calling it \"damaged\" (it is not: PiBoard is not notarized by Apple, for want of a " +
+            "paid developer account):\n" +
+            "    xattr -dr com.apple.quarantine /Applications/PiBoard.app"
         }
       : {
           type: "info",
@@ -220,7 +238,21 @@ function wireEvents() {
       type: "info",
       title: "PiBoard",
       message: "PiBoard est a jour / PiBoard is up to date",
-      detail: `Version ${app.getVersion()}`
+      /* Sur Mac, on profite du seul moment calme -- celui ou il n'y a
+         rien a installer -- pour dire que la mise a jour y est manuelle.
+         L'apprendre le jour ou une version sort, au milieu d'une
+         manipulation, est la plus mauvaise facon de le decouvrir.
+         On a Mac we use the one calm moment -- nothing to install -- to
+         say that updating is manual there. Learning it on the day a
+         release lands is the worst way to find out. */
+      detail: `Version ${app.getVersion()}` + (MANUAL_UPDATE_ON_MAC
+        ? "\n\nSous macOS, PiBoard ne se met pas a jour tout seul : il previent quand une version " +
+          "existe et ouvre sa page, l'installation restant manuelle. C'est la contrepartie d'une " +
+          "application non notarisee par Apple, ce qui suppose un compte developpeur payant.\n\n" +
+          "On macOS, PiBoard does not update itself: it announces a new version and opens its page, " +
+          "the installation staying manual. That is the price of an application not notarized by " +
+          "Apple, which requires a paid developer account."
+        : "")
     };
     if (win) dialog.showMessageBox(win, options);
     else dialog.showMessageBox(options);

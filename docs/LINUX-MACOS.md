@@ -122,13 +122,43 @@ Installation : ouvrir le `.dmg`, glisser PiBoard dans *Applications*.
 **L'application n'est pas signée par Apple** (cela suppose un compte
 développeur payant). Deux conséquences, connues et acceptées :
 
-1. **Premier lancement bloqué par Gatekeeper** (« PiBoard est
-   endommagé » ou « ne peut pas être ouvert »). Sur macOS 12 à 14 :
-   clic droit sur l'application → *Ouvrir*. Sur macOS 15 Sequoia et
-   suivants, le clic droit ne suffit plus : tenter d'ouvrir une fois,
-   puis *Réglages Système → Confidentialité et sécurité → Ouvrir quand
-   même*. En dernier recours, dans le Terminal :
-   `xattr -cr /Applications/PiBoard.app`.
+1. **Premier lancement bloqué par Gatekeeper.** Le message dépend de
+   l'architecture, et cette différence est ce qui rend le sujet
+   déroutant :
+   - **Mac Intel** : « développeur non identifié ». Un clic droit sur
+     l'application → *Ouvrir* suffit sur macOS 12 à 14 ; sur macOS 15
+     Sequoia et suivants, Apple a supprimé ce raccourci — tenter
+     d'ouvrir une fois, puis *Réglages Système → Confidentialité et
+     sécurité → Ouvrir quand même*.
+   - **Mac Apple Silicon** : « **PiBoard est endommagé et ne peut pas
+     être ouvert** », sec, **sans aucune option de contournement**.
+     Aucune des deux manipulations ci-dessus ne débloque ce cas, et
+     l'utilisateur conclut naturellement à un téléchargement raté ou à
+     une version cassée — il réessaie alors d'autres versions, en vain.
+     La seule issue est de retirer l'attribut de quarantaine, dans le
+     Terminal :
+
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/PiBoard.app
+     ```
+
+   Cette commande agit sur **cette copie précise** et rien d'autre :
+   aucune protection du système n'est désactivée. Elle est à refaire
+   après chaque nouveau téléchargement, mise à jour comprise — la
+   nouvelle copie arrive avec son propre attribut de quarantaine.
+
+   À noter, pour ne pas partir sur une fausse piste : l'application
+   **porte bien une signature ad-hoc** (electron-builder en pose une
+   d'office sur arm64, sans quoi le noyau refuserait tout simplement de
+   l'exécuter). Passer `identity: "-"` dans `electron-builder.yml` ne
+   changerait donc strictement rien — c'est la **notarisation** qui
+   manque, pas la signature. La seule correction réelle est un compte
+   développeur Apple payant.
+
+   Tout ceci est aussi expliqué à l'utilisateur dans l'aide intégrée,
+   fiche « Application de bureau macOS », et dans le README — un
+   fichier `docs/` ne se lit qu'après avoir eu le problème, et
+   seulement si l'on sait qu'il existe.
 2. **Pas de mise à jour automatique** : l'installation est confiée à
    Squirrel.Mac, qui refuse par conception une application non signée.
    Attention, ce refus n'arrive pas où on l'attend : la vérification et
@@ -362,12 +392,41 @@ Install: open the `.dmg`, drag PiBoard into *Applications*.
 **The app is not signed by Apple** (that requires a paid developer
 account). Two known and accepted consequences:
 
-1. **First launch blocked by Gatekeeper** ("PiBoard is damaged" or
-   "cannot be opened"). On macOS 12 to 14: right-click the app →
-   *Open*. On macOS 15 Sequoia and later, right-click no longer
-   suffices: try opening once, then *System Settings → Privacy &
-   Security → Open Anyway*. As a last resort, in Terminal:
-   `xattr -cr /Applications/PiBoard.app`.
+1. **First launch blocked by Gatekeeper.** The message depends on the
+   architecture, and that difference is what makes the subject
+   confusing:
+   - **Intel Mac**: "unidentified developer". A right-click on the app →
+     *Open* is enough on macOS 12 to 14; on macOS 15 Sequoia and later
+     Apple removed that shortcut — try opening once, then *System
+     Settings → Privacy & Security → Open Anyway*.
+   - **Apple Silicon Mac**: "**PiBoard is damaged and can't be
+     opened**", blunt, **with no way around it**. Neither of the two
+     routes above unblocks that case, and the user naturally concludes
+     the download failed or the build is broken — then tries other
+     versions, in vain. The only way out is to remove the quarantine
+     attribute, in Terminal:
+
+     ```bash
+     xattr -dr com.apple.quarantine /Applications/PiBoard.app
+     ```
+
+   That command acts on **that one copy** and nothing else: no system
+   protection is turned off. It must be repeated after each new
+   download, updates included — the new copy arrives with its own
+   quarantine attribute.
+
+   Worth noting, so as not to chase the wrong lead: the application
+   **does carry an ad-hoc signature** (electron-builder applies one by
+   default on arm64, without which the kernel would simply refuse to
+   execute it). Setting `identity: "-"` in `electron-builder.yml` would
+   therefore change nothing at all — what is missing is
+   **notarization**, not the signature. The only real fix is a paid
+   Apple developer account.
+
+   All of this is also explained to the user in the built-in help,
+   "macOS desktop app" section, and in the README — a `docs/` file is
+   only read after having the problem, and only if one knows it
+   exists.
 2. **No automatic update**: installing is handed to Squirrel.Mac, which
    refuses an unsigned application by design. Beware, that refusal does
    not happen where one expects: the check and the download succeed

@@ -2874,6 +2874,20 @@
           Etc: { en: "Other", fr: "Autre" }
         };
         const emptyLabel = f.emptyLabel || { en: "— System's own —", fr: "— Fuseau du système —" };
+        /* Fuseaux dont PiBoard rattrape lui-meme le decalage parce que
+           la base embarquee dans Chromium/Electron est en retard (voir
+           public/tzfix.js). On les marque ICI, au moment du choix :
+           l'utilisateur qui selectionne « Casablanca » voit tout de
+           suite que l'heure affichee ne sera pas celle de la base, et
+           n'ira pas chercher un bug ailleurs. La marque disparait
+           d'elle-meme quand Electron rattrape son retard, puisque
+           correctedZones() ne rend que les fuseaux REELLEMENT corriges.
+           Zones whose offset PiBoard fixes itself because the database
+           embedded in Chromium/Electron lags (see public/tzfix.js).
+           Flagged HERE, at choosing time; the flag disappears by itself
+           once Electron catches up. */
+        const fixed = new Set(window.PiBoardTzFix ? window.PiBoardTzFix.correctedZones() : []);
+        const fixedMark = i18n.t("tzfix.pickerMark");
         let body = `<option value="" ${v ? "" : "selected"}>${i18n.fromManifest(emptyLabel)}</option>`;
         const byGroup = new Map();
         const order = [];
@@ -2888,7 +2902,10 @@
         order.sort((a, b) => a.localeCompare(b));
         body += order.map((g) => {
           const items = [...byGroup.get(g)].sort((a, b) => a.city.localeCompare(b.city));
-          const optsHtml = items.map((it) => `<option value="${it.value}" ${String(it.value) === String(v) ? "selected" : ""}>${escapeHtmlAttr(it.city)}</option>`).join("");
+          const optsHtml = items.map((it) => {
+            const city = it.city + (fixed.has(it.value) ? " " + fixedMark : "");
+            return `<option value="${it.value}" ${String(it.value) === String(v) ? "selected" : ""}>${escapeHtmlAttr(city)}</option>`;
+          }).join("");
           return `<optgroup label="${escapeHtmlAttr(g)}">${optsHtml}</optgroup>`;
         }).join("");
         return `<label class="field"><span>${label}</span><select data-key="${f.key}">${body}</select>${hint}</label>`;
@@ -3695,7 +3712,17 @@
        INSIDE the home, which no existing family covered. */
     { key: "home", ids: ["tempo", "homeassistant", "bambu"] },
     { key: "personal", ids: ["calendar", "mailbox", "notes"] },
-    { key: "entertainment", ids: ["teleprog", "iptv", "youtube", "slideshow"] },
+    /* « Enregistrements TV » se range a cote de « Chaines TV », dont
+       elle est le pendant : l'une lance l'enregistrement, l'autre le
+       surveille. Elle avait ete livree sans etre classee et tombait
+       donc dans « Divers », loin de la tuile avec laquelle elle
+       s'utilise -- le classement par famille n'a d'interet que s'il est
+       tenu a jour a chaque nouvelle tuile.
+       "TV recordings" sits next to "TV channels", its counterpart: one
+       starts the recording, the other watches over it. It shipped
+       unclassified and therefore landed in "Miscellaneous", far from
+       the tile it is used with. */
+    { key: "entertainment", ids: ["teleprog", "iptv", "iptvrec", "youtube", "slideshow"] },
     { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
     /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
        systeme, elle surveille une consommation et un seuil, meme si la
@@ -7652,6 +7679,7 @@
         const el = document.getElementById("helpAppVersion");
         if (el && d && d.version) el.textContent = "v" + d.version;
       }).catch(() => {});
+      renderTzFixDiagnostic();
     }
 
     if (id === "changelog") {
@@ -7700,6 +7728,51 @@
         });
       }
     }
+  }
+
+  /* ---------- Diagnostic des fuseaux horaires / time zone diagnostic ----
+
+     POURQUOI CETTE LIGNE. Une horloge fausse d'une heure ne se voit pas :
+     elle a l'air parfaitement normale, et c'est ce qui la rend couteuse
+     -- le Maroc est passe a GMT un dimanche, et l'ecran a menti jusqu'a
+     ce que quelqu'un s'en apercoive. On affiche donc ICI, noir sur
+     blanc, ce que la base de fuseaux embarquee croit, ce que la loi dit,
+     et ce que PiBoard corrige de lui-meme (voir public/tzfix.js).
+
+     Elle ne raconte volontairement RIEN quand il n'y a rien a dire : si
+     la base embarquee est a jour sur tous les fuseaux surveilles, une
+     seule ligne rassurante, pas un tableau.
+
+     WHY THIS LINE. A clock that is one hour off looks perfectly normal,
+     which is what makes it expensive. So we show, in plain sight, what
+     the embedded zone database believes, what the law says, and what
+     PiBoard corrects on its own (see public/tzfix.js). It deliberately
+     says almost nothing when there is nothing to say. */
+  function renderTzFixDiagnostic() {
+    const host = document.getElementById("helpTzFix");
+    if (!host) return;
+    if (!window.PiBoardTzFix) { host.innerHTML = ""; return; }
+    const rep = window.PiBoardTzFix.report();
+    if (!rep.zones.length) { host.innerHTML = ""; return; }
+    const title = `<h4>${escapeHtml(i18n.t("tzfix.title"))}</h4>`;
+    if (!rep.correctedCount) {
+      host.innerHTML = title + `<p class="help-sub">${escapeHtml(i18n.t("tzfix.upToDate"))}</p>`;
+      return;
+    }
+    const rows = rep.zones.filter((z) => z.corrected).map((z) => {
+      const label = i18n.fromManifest(z.label);
+      // « Casablanca : la base embarquee dit UTC+1, la loi dit UTC —
+      // PiBoard corrige. » Le nom du fuseau ET le libelle du pays :
+      // l'un se retrouve dans les reglages, l'autre se comprend.
+      return `<li><b>${escapeHtml(z.zone)}</b> — ${escapeHtml(label)}<br>`
+        + `<span class="help-sub">${escapeHtml(i18n.t("tzfix.embedded"))} ${escapeHtml(z.embeddedText)}`
+        + ` · ${escapeHtml(i18n.t("tzfix.legal"))} ${escapeHtml(z.expectedText)}`
+        + ` · ${escapeHtml(z.source)}</span></li>`;
+    }).join("");
+    host.innerHTML = title
+      + `<p class="help-sub">${escapeHtml(i18n.t("tzfix.stale"))}</p>`
+      + `<ul>${rows}</ul>`
+      + `<p class="help-sub">${escapeHtml(i18n.t("tzfix.selfClearing"))}</p>`;
   }
 
   /* ---------- Debordement du tableau / board overflow ----------

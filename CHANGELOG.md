@@ -1,5 +1,212 @@
 # Changelog
 
+## 1.121.0
+
+- **macOS : « PiBoard est endommage » enfin explique, la ou on le
+  lit.** Premier essai sur un Mac Apple Silicon : l'application etait
+  « impossible a faire fonctionner », sur plusieurs versions d'affilee.
+  Le contournement existait pourtant -- trois lignes dans
+  `docs/LINUX-MACOS.md`, un fichier qu'on ne lit qu'APRES avoir eu le
+  probleme, et seulement si l'on sait qu'il existe.
+
+- **Le diagnostic, corrige en cours de route.** La premiere hypothese
+  -- une application sans aucune signature, que le noyau arm64 refuse
+  d'executer -- etait FAUSSE, et le correctif qui en decoulait
+  (`identity: "-"` dans electron-builder.yml) aurait ete un placebo.
+  La preuve : retirer le seul attribut de quarantaine suffit a lancer
+  l'application. Si elle n'avait porte aucune signature, cela n'aurait
+  rien change. electron-builder pose donc bien une signature ad-hoc
+  d'office sur arm64 ; ce qui manque est la NOTARISATION, qui suppose
+  un compte developpeur Apple payant. Aucune ligne de configuration
+  n'est donc touchee : le correctif est ailleurs.
+
+- **Ce qui change vraiment** : la difference Intel / Apple Silicon est
+  nommee partout. Sur Intel, Gatekeeper dit « developpeur non
+  identifie » et le clic droit suffit ; sur Apple Silicon il dit
+  « endommage », sechement, SANS AUCUNE option de contournement -- d'ou
+  la conviction d'un telechargement rate et les essais repetes d'autres
+  versions. La seule issue, `xattr -dr com.apple.quarantine
+  /Applications/PiBoard.app`, figure desormais dans l'aide integree, le
+  README et `docs/LINUX-MACOS.md`.
+
+- **Nouvelle fiche d'aide « Application de bureau macOS »** (groupe
+  Plateformes & donnees), bilingue : ce que le message veut vraiment
+  dire, la commande, le fait qu'elle ne desactive AUCUNE protection du
+  systeme, la marche a suivre selon la version de macOS (le clic droit
+  a disparu avec macOS 15), et le choix arm64 / x64.
+
+- **Le rappel qui manquait a la mise a jour.** Le dialogue macOS
+  disait de glisser le nouveau `.dmg` par-dessus l'ancien, sans
+  prevenir que la copie fraichement telechargee porte a son tour
+  l'attribut de quarantaine : chaque mise a jour ramenait donc
+  « endommage », en donnant toutes les apparences d'une regression. La
+  commande est maintenant rappelee dans ce dialogue meme. Et le message
+  « PiBoard est a jour » dit desormais, sur Mac, que la mise a jour y
+  est manuelle -- au moment calme, plutot qu'en pleine manipulation.
+
+- **Tuile « Enregistrements TV » classee et documentee.** Livree sans
+  famille, elle tombait dans « Divers », loin de « Chaines TV » avec
+  laquelle elle s'utilise, et n'etait citee nulle part dans le README.
+  Deux tests etaient rouges depuis sa livraison ; ils passent.
+
+- **README remis a jour** : le compte de widgets annonce (30) ne
+  correspondait plus a la realite (35), la tuile Enregistrements TV est
+  decrite dans les deux langues, et la section « Application de bureau »
+  porte un paragraphe « Premier lancement sur macOS » avec la commande.
+
+- `test/helpContent.test.js` gagne deux blocs : la fiche macOS doit
+  porter la commande EXACTE, distinguer Intel d'Apple Silicon, nommer
+  l'absence de notarisation plutot que de seulement la contourner, et
+  annoncer que le probleme revient a chaque telechargement ; et le
+  dialogue de mise a jour doit rappeler cette meme commande.
+
+---
+
+- **macOS: "PiBoard is damaged" explained at last, where it is read.**
+  First try on an Apple Silicon Mac: the application was "impossible to
+  run", across several versions. The workaround existed -- three lines
+  in `docs/LINUX-MACOS.md`, a file one only reads AFTER having the
+  problem.
+
+- **The diagnosis, corrected along the way.** The first hypothesis -- an
+  application with no signature at all, which the arm64 kernel refuses
+  to execute -- was WRONG, and the fix that followed from it
+  (`identity: "-"`) would have been a placebo. The proof: removing the
+  quarantine attribute alone is enough to launch the app; with no
+  signature at all that would have changed nothing. electron-builder
+  does apply an ad-hoc signature on arm64; what is missing is
+  NOTARIZATION, which requires a paid Apple developer account. No
+  configuration line is touched.
+
+- **What actually changes**: the Intel / Apple Silicon difference is
+  named everywhere. On Intel, Gatekeeper says "unidentified developer"
+  and a right-click is enough; on Apple Silicon it says "damaged",
+  bluntly, WITH NO way around it. The only way out, `xattr -dr
+  com.apple.quarantine /Applications/PiBoard.app`, now appears in the
+  built-in help, the README and `docs/LINUX-MACOS.md`.
+
+- **New help section "macOS desktop app"**, bilingual: what the message
+  really means, the command, the fact that it disables NO system
+  protection, what to do depending on the macOS version, and the
+  arm64 / x64 choice.
+
+- **The reminder missing from updates.** The macOS dialog said to drag
+  the new `.dmg` over the old one, without warning that the freshly
+  downloaded copy carries the quarantine attribute in its turn: every
+  update brought "damaged" back, looking exactly like a regression. The
+  command is now repeated in that dialog. And the "PiBoard is up to
+  date" message now states, on a Mac, that updating is manual there.
+
+- **"TV recordings" tile classified and documented.** Shipped without a
+  family, it fell into "Miscellaneous", far from "TV channels", and was
+  cited nowhere in the README. Two tests had been red since it shipped;
+  they pass.
+
+- **README refreshed**: the announced widget count (30) no longer
+  matched reality (35), the TV recordings tile is described in both
+  languages, and the "Desktop application" section carries a "First
+  launch on macOS" paragraph with the command.
+
+- `test/helpContent.test.js` gains two blocks covering the macOS
+  section and the update dialog's reminder.
+
+## 1.120.0
+
+- **Rattrapage des fuseaux horaires dont la base embarquee est perimee**
+  (`public/tzfix.js`). PiBoard n'embarque aucune table de fuseaux : il
+  lit celle compilee dans ICU par Chromium/Electron, figee a la
+  construction de l'application. Contre-intuitif mais decisif : cette
+  base ne lit PAS `/usr/share/zoneinfo` et ne depend donc en rien du
+  systeme -- mettre a jour Windows ou le paquet `tzdata` d'un Raspberry
+  Pi ne change strictement rien a l'heure affichee. Quand un pays change
+  d'heure legale, il faut attendre une tzdata a jour dans ICU, puis une
+  version d'Electron qui l'embarque, puis une reconstruction : plusieurs
+  mois pendant lesquels l'horloge est fausse d'une heure sans que rien
+  ne le signale.
+
+- **Premier cas traite : le Maroc**, repasse a GMT/UTC+0 le 20 septembre
+  2026 a 02h00 locales, de facon permanente, l'exception du Ramadan
+  etant abolie (decret n° 2.26.530, BO du 29/06/2026). Une ICU 78.2
+  (tzdata 2025c) rend toujours `Africa/Casablanca` a UTC+1.
+
+- **La correction est conditionnelle, jamais aveugle.** Pour chaque
+  fuseau de la table, on demande a `Intl` le decalage qu'il croit et on
+  ne corrige QUE s'il differe de celui que la table annonce. Le jour ou
+  Electron rattrape son retard, la comparaison tombe juste et la
+  correction cesse d'elle-meme : la ligne devient inerte sans qu'il
+  faille y revenir. Une table qui aurait corrige en aveugle aurait au
+  contraire casse l'affichage a ce moment precis -- c'est le piege de ce
+  sujet.
+
+- **Portee assumee** : un override decrit un decalage FIXE a partir d'un
+  instant, ce qui est exactement la forme des changements d'heure legale
+  recents. Un fuseau conservant une heure d'ete saisonniere ne peut pas
+  y etre decrit : il faudrait embarquer ses regles, donc une tzdata --
+  refuse.
+
+- **Ce qui change a l'ecran** : la tuile Horloge affiche l'heure juste
+  pour un fuseau corrige (`nowInZone` delegue au module, le calcul
+  d'origine restant en repli strict si le script n'est pas charge) ; le
+  selecteur de fuseau marque « (corrige par PiBoard) » les entrees
+  concernees, au moment du choix ; et Aide -> A propos porte une
+  rubrique « Fuseaux horaires » disant ce que la base embarquee croit,
+  ce que dit la loi et la reference du texte -- une seule ligne
+  rassurante quand il n'y a rien a corriger. Ces marques disparaissent
+  d'elles-memes avec la correction.
+
+- **Aide mise a jour** : rubrique Horloge (le paragraphe « Quand un pays
+  change d'heure legale »), infobulle du reglage Fuseau horaire, et
+  liste des options, dans les deux langues.
+
+- Nouveau fichier de tests `test/tzfix.test.js` : fonctions pures,
+  hors ligne, avec des instants figes de part et d'autre de la bascule
+  marocaine -- y compris le cas qui compte, celui d'une base DEJA a jour,
+  ou la correction doit valoir zero.
+
+---
+
+- **Catching up time zones whose embedded database is out of date**
+  (`public/tzfix.js`). PiBoard ships no time zone table: it reads the
+  one compiled into ICU by Chromium/Electron, frozen when the
+  application was built. Counter-intuitive but decisive: that database
+  does NOT read `/usr/share/zoneinfo` and therefore owes nothing to the
+  system -- updating Windows or a Raspberry Pi's `tzdata` package
+  changes nothing in the displayed time. When a country changes its
+  legal time, the wait is months long, and the clock is an hour off
+  throughout with nothing to signal it.
+
+- **First case handled: Morocco**, back on GMT/UTC+0 since 20 September
+  2026 at 02:00 local, permanently, the Ramadan exception being
+  abolished (decree n° 2.26.530). ICU 78.2 (tzdata 2025c) still renders
+  `Africa/Casablanca` at UTC+1.
+
+- **The correction is conditional, never blind.** For each zone in the
+  table we ask `Intl` what offset it believes and correct ONLY when it
+  differs from the table's. Once Electron catches up, the comparison
+  matches and the correction stops by itself. A table correcting blindly
+  would have broken the display at exactly that moment.
+
+- **Deliberate scope**: an override describes a FIXED offset from an
+  instant, which is the shape of recent legal time changes. A zone
+  keeping seasonal DST cannot be described there -- that would mean
+  embedding tzdata, which is refused.
+
+- **On screen**: the Clock tile shows the right time for a corrected
+  zone (`nowInZone` delegates to the module, the original calculation
+  staying as a strict fallback); the zone picker flags the entries
+  concerned with "(corrected by PiBoard)"; and Help -> About carries a
+  "Time zones" section stating what the embedded database believes, what
+  the law says and the reference -- a single reassuring line when there
+  is nothing to correct.
+
+- **Help updated**: Clock section, the Time zone setting's hint and the
+  options list, in both languages.
+
+- New test file `test/tzfix.test.js`: pure functions, offline, with
+  frozen instants on both sides of the Moroccan switch -- including the
+  case that matters, an ALREADY up-to-date database, where the
+  correction must be zero.
+
 ## 1.119.0
 
 - **La section « Nouveautes » de l'aide n'est plus un rendu du

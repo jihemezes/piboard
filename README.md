@@ -11,7 +11,7 @@
 ### Features
 
 - **Tile grid** — 12-column grid, tiles are moved and resized by drag and drop (edit mode), layout is saved on the server so every screen shows the same board.
-- **30 widgets** — weather, clock, calendar, mail, traffic, TV guide, slideshow, stocks, Home Assistant, energy tariff, and more (full list below). Adding a widget to the collection is just adding a folder — see [docs/WIDGETS.md](docs/WIDGETS.md).
+- **35 widgets** — weather, clock, calendar, mail, traffic, TV guide, slideshow, stocks, Home Assistant, energy tariff, and more (full list below). Adding a widget to the collection is just adding a folder — see [docs/WIDGETS.md](docs/WIDGETS.md).
 - **Hidden toolbar** — a discreet pull tab at the bottom edge reveals the toolbar: add tile, edit mode, settings, built-in help, and an "exit dashboard" menu with three choices — reset the dashboard (a plain reload), return to the Raspberry Pi OS desktop without relaunching it (handy for a one-off task on the touchscreen, no keyboard or SSH needed), or, on Linux only, shut the computer down properly after a confirmation (the polkit permission is granted by the installer; on a machine installed before 1.104.0, run `sudo bash install/enable-poweroff.sh` once). In dashboard mode the same exit menu is in the bottom bar. Nothing else ever covers the board.
 - **Touch mode** — an opt-in setting that enlarges every interactive target (buttons, handles, pull tabs, form fields) for fingers on a touchscreen. Config windows then automatically arrange into 1–3 columns based on content, to cut down on scrolling.
 - **Screen saver** — up to 5 time slots that turn the screen black (a software overlay — no physical power-off, kept off by design for reliability) or into a photo-frame slideshow, with a manual "start now" toolbar button too, independent of the schedule. Useful overnight or when no one's around. A touch/click/key wakes it up instantly; while still inside a scheduled slot, it goes back to sleep on its own after a configurable idle delay if nothing else happens.
@@ -40,7 +40,7 @@ The catalog groups them by family — the same grouping you see when adding a ti
 
 **Image library** — page backgrounds, logos and photos ship with PiBoard and show up wherever an image is picked (page background, Logo tile, slideshow). Your own additions live in `data/` and survive updates; more images download on demand from an online catalogue. Extending the shipped lot: [`docs/LIBRARY.md`](docs/LIBRARY.md).
 
-**Entertainment** — TV guide (French DTT and Canal+, turnkey), **TV channels** (a plain player for an IPTV `.m3u` playlist — PiBoard provides no channels and no content whatsoever; it only works with a playlist you already have; records the channel you are watching to a file, by tapping the stream already received so no second connection is opened to the provider, with the recordings listed in the tile, conversion to .mp4, resumption after a dropped feed and duration/free-space guards), **YouTube** (a video, a playlist, a channel's latest videos or a pasted queue, in YouTube's official privacy-enhanced player — no tracking cookies, no personalized ads; full-screen search window with sorting and paging, using your own free API key), slideshow (photos uploaded from the tile, a local/NAS folder, a USB key, WebDAV, or a URL list; landscape and portrait handled separately).
+**Entertainment** — TV guide (French DTT and Canal+, turnkey), **TV channels** (a plain player for an IPTV `.m3u` playlist — PiBoard provides no channels and no content whatsoever; it only works with a playlist you already have; records the channel you are watching to a file, by tapping the stream already received so no second connection is opened to the provider, with the recordings listed in the tile, conversion to .mp4, resumption after a dropped feed and duration/free-space guards), **TV recordings** (the previous tile's companion: what is recording right now — channel, elapsed time, file size —, the free space left, and the recordings already made, convertible to .mp4 or deletable from the tile; it keeps watching even when the player tile is closed or on another page), **YouTube** (a video, a playlist, a channel's latest videos or a pasted queue, in YouTube's official privacy-enhanced player — no tracking cookies, no personalized ads; full-screen search window with sorting and paging, using your own free API key), slideshow (photos uploaded from the tile, a local/NAS folder, a USB key, WebDAV, or a URL list; landscape and portrait handled separately).
 
 **Sport** — live scores, motorsport schedule (full F1/MotoGP race-weekend session timetable), league standings (football, rugby, NBA).
 
@@ -123,9 +123,36 @@ works there unmodified.
 The Windows installer is built with `npm install && npm run dist` **on
 Windows** (full instructions: [`docs/WINDOWS.md`](docs/WINDOWS.md)); the
 Linux and macOS packages are built by GitHub Actions on every pushed tag
-(which format to pick, differences, known limits — including the lack of
-automatic updates on macOS without an Apple signature:
+(which format to pick, differences, known limits:
 [`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)).
+
+#### First launch on macOS: "PiBoard is damaged"
+
+On first launch macOS refuses to open PiBoard with the message
+**"PiBoard is damaged and can't be opened"**. The application is not
+damaged: it simply is not **notarized** by Apple, which requires a paid
+developer account this free project does not have. macOS puts a
+"quarantine" attribute on every downloaded file, and for a non-notarized
+application it renders that as this misleading message — especially on
+Apple Silicon, where it offers no way around it.
+
+Drag PiBoard into *Applications*, then run **once** in Terminal:
+
+```bash
+xattr -dr com.apple.quarantine /Applications/PiBoard.app
+```
+
+PiBoard then opens normally, at that launch and every later one. The
+command removes the quarantine attribute from that one copy; it has to
+be repeated after each **new** download. Nothing is disabled
+system-wide, and macOS's protection stays whole for everything else.
+
+A consequence of the same missing notarization: **automatic updates do
+not work on macOS** — `electron-updater` refuses to replace an unsigned
+application. PiBoard now says so explicitly instead of failing without
+explanation: on a Mac, checking for updates points to the releases page,
+where the `.dmg` is downloaded again. On Windows and Linux, automatic
+updating works normally.
 
 ### Side drawer (for map-first or content-first screens)
 
@@ -247,7 +274,7 @@ Several widgets call free, keyless public APIs: Open-Meteo (weather, geocoding, 
 ### Fonctionnalités
 
 - **Grille de tuiles** — grille 12 colonnes, tuiles déplaçables et redimensionnables en glisser-déposer (mode édition), disposition enregistrée côté serveur : tous les écrans affichent le même tableau.
-- **30 widgets** — météo, horloge, agenda, courriel, trafic, programme TV, diaporama, bourse, Home Assistant, tarif électrique, et d'autres (liste complète plus bas). Ajouter un widget à la collection = ajouter un dossier — voir [docs/WIDGETS.md](docs/WIDGETS.md).
+- **35 widgets** — météo, horloge, agenda, courriel, trafic, programme TV, diaporama, bourse, Home Assistant, tarif électrique, et d'autres (liste complète plus bas). Ajouter un widget à la collection = ajouter un dossier — voir [docs/WIDGETS.md](docs/WIDGETS.md).
 - **Barre d'outils escamotable** — une languette discrète en bas d'écran révèle la barre : ajout de tuile, mode édition, paramètres, aide intégrée, et un menu « quitter le tableau de bord » à trois choix — réinitialiser le tableau de bord (un simple rechargement), revenir au bureau de Raspberry Pi OS sans le relancer (pratique pour une tâche ponctuelle sur l'écran tactile, sans clavier ni SSH), ou, sous Linux seulement, éteindre proprement l'ordinateur après confirmation (la permission polkit est accordée par l'installeur ; sur une machine installée avant la 1.104.0, lancez une fois `sudo bash install/enable-poweroff.sh`). En mode tableau de bord, le même menu de sortie est dans le bandeau du bas. Rien d'autre n'empiète jamais sur le tableau.
 - **Mode tactile** — un réglage optionnel qui agrandit toutes les cibles interactives (boutons, poignées, languettes, champs de formulaire) pour les doigts sur un écran tactile. Les fenêtres de configuration se répartissent alors automatiquement sur 1 à 3 colonnes selon leur contenu, pour limiter le défilement.
 - **Économiseur d'écran** — jusqu'à 5 plages horaires qui font passer l'écran au noir (un calque logiciel — jamais d'extinction physique, volontairement évitée pour la fiabilité) ou en diaporama façon cadre photo, avec aussi un bouton « lancer maintenant » dans la barre d'outils, indépendant du calendrier. Utile la nuit ou quand personne n'est présent. Un tap/clic/touche le réveille instantanément ; tant qu'on reste dans une plage programmée, il repart tout seul en veille après un délai d'inactivité réglable si rien ne se passe.
@@ -276,7 +303,7 @@ Le catalogue les regroupe par famille — le même classement qu'à l'ajout d'un
 
 **Bibliothèque d'images** — des fonds de page, logos et photos sont livrés avec PiBoard et apparaissent partout où l'on choisit une image (fond de page, tuile Logo, diaporama). Vos propres ajouts vivent dans `data/` et survivent aux mises à jour ; d'autres images se téléchargent à la demande depuis un catalogue en ligne. Pour enrichir le lot livré : [`docs/LIBRARY.md`](docs/LIBRARY.md).
 
-**Divertissement** — programme TV (TNT française et Canal+, clé en main), **chaînes TV** (simple lecteur pour une playlist IPTV `.m3u` — PiBoard ne fournit AUCUNE chaîne ni aucun contenu ; la tuile ne fonctionne qu'avec une playlist dont vous disposez déjà ; enregistre dans un fichier la chaîne que vous regardez, en dérivant le flux déjà reçu pour n'ouvrir aucune connexion supplémentaire chez le fournisseur, avec la liste des enregistrements dans la tuile, conversion en .mp4, reprise après coupure et garde-fous de durée et d'espace disque), **YouTube** (une vidéo, une playlist, les dernières vidéos d'une chaîne ou une file collée, dans le lecteur officiel de YouTube en mode confidentialité avancée — sans cookies de suivi ni publicité personnalisée ; fenêtre de recherche plein écran avec tri et pagination, avec votre propre clé API gratuite), diaporama (photos téléversées depuis la tuile, dossier local/NAS, clé USB, WebDAV, ou liste d'URLs ; paysage et portrait traités séparément).
+**Divertissement** — programme TV (TNT française et Canal+, clé en main), **chaînes TV** (simple lecteur pour une playlist IPTV `.m3u` — PiBoard ne fournit AUCUNE chaîne ni aucun contenu ; la tuile ne fonctionne qu'avec une playlist dont vous disposez déjà ; enregistre dans un fichier la chaîne que vous regardez, en dérivant le flux déjà reçu pour n'ouvrir aucune connexion supplémentaire chez le fournisseur, avec la liste des enregistrements dans la tuile, conversion en .mp4, reprise après coupure et garde-fous de durée et d'espace disque), **enregistrements TV** (tuile compagnon de la précédente : ce qui est en cours d'enregistrement — chaîne, durée écoulée, taille du fichier —, l'espace libre restant, et les enregistrements déjà réalisés, convertibles en .mp4 ou supprimables depuis la tuile ; elle continue de surveiller même quand la tuile lecteur est fermée ou sur une autre page), **YouTube** (une vidéo, une playlist, les dernières vidéos d'une chaîne ou une file collée, dans le lecteur officiel de YouTube en mode confidentialité avancée — sans cookies de suivi ni publicité personnalisée ; fenêtre de recherche plein écran avec tri et pagination, avec votre propre clé API gratuite), diaporama (photos téléversées depuis la tuile, dossier local/NAS, clé USB, WebDAV, ou liste d'URLs ; paysage et portrait traités séparément).
 
 **Sport** — scores en direct, sports mécaniques (programme complet des séances d'un week-end F1/MotoGP), classements (football, rugby, NBA).
 
@@ -356,9 +383,40 @@ L'installeur Windows se construit avec `npm install && npm run dist`
 **sous Windows** (marche à suivre complète :
 [`docs/WINDOWS.md`](docs/WINDOWS.md)) ; les paquets Linux et macOS sont
 construits par GitHub Actions à chaque tag poussé (quel format choisir,
-différences, limites connues — dont l'absence de mise à jour automatique
-sous macOS sans signature Apple :
+différences, limites connues :
 [`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)).
+
+#### Premier lancement sur macOS : « PiBoard est endommagé »
+
+Au premier lancement, macOS refuse d'ouvrir PiBoard avec le message
+**« PiBoard est endommagé et ne peut pas être ouvert »**. L'application
+n'est pas endommagée : elle n'est simplement pas **notarisée** par
+Apple, ce qui suppose un compte développeur payant que ce projet
+gratuit n'a pas. macOS pose un attribut de « quarantaine » sur tout
+fichier téléchargé, et pour une application non notarisée il traduit
+cela par ce message trompeur — particulièrement sur Apple Silicon, où
+il ne propose aucun contournement.
+
+Glissez PiBoard dans *Applications*, puis lancez **une fois** dans le
+Terminal :
+
+```bash
+xattr -dr com.apple.quarantine /Applications/PiBoard.app
+```
+
+PiBoard s'ouvre ensuite normalement, à ce lancement et à tous les
+suivants. La commande retire l'attribut de quarantaine sur cette copie
+précise ; elle est à refaire après chaque **nouveau** téléchargement.
+Rien n'est désactivé au niveau du système, et la protection de macOS
+reste entière pour tout le reste.
+
+Conséquence de la même absence de notarisation : **la mise à jour
+automatique ne fonctionne pas sous macOS** — `electron-updater` refuse
+de remplacer une application non signée. PiBoard le dit désormais
+explicitement au lieu d'échouer sans explication : sur Mac, la
+recherche de mise à jour renvoie vers la page des versions, où l'on
+retélécharge le `.dmg`. Sur Windows et Linux, la mise à jour
+automatique fonctionne normalement.
 
 ### Tiroir latéral (pour les écrans dédiés à une carte ou un contenu principal)
 

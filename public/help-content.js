@@ -235,6 +235,7 @@
           <h4>Possibilités</h4>
           <p>En mode digital, l'heure occupe l'espace disponible et se recalcule automatiquement à chaque redimensionnement de la tuile. Sur une tuile large et basse, placez la date à côté de l'heure plutôt qu'en dessous pour mieux exploiter la largeur. En mode analogique, le cadran se cale automatiquement à gauche et la date à droite dès que celle-ci est affichée — le cadran garde ainsi toute la hauteur de la tuile plutôt que de se la partager avec le texte en dessous. En mode digital, la même bascule s'applique dès qu'un fuseau supplémentaire, le numéro de semaine ou le prochain événement sont activés : l'heure se cale à gauche plutôt que de rester centrée au-dessus d'extras empilés, ce qui la comprimerait et nuirait à sa lisibilité. Le format de la date va du complet (jour de semaine inclus) au court (JJ/MM/AAAA), utile pour libérer de la place sur une petite tuile. Le saint du jour, une tradition française, s'ajoute en option à côté de la date (uniquement quand la langue de l'interface est le français) — sa disposition (en dessous ou côte à côte) bascule automatiquement sur « côte à côte » si la tuile est trop basse pour une 2e ligne, afin de ne jamais faire déborder la tuile. Le fond jour/nuit optionnel donne un repère visuel supplémentaire (par exemple un dégradé sombre la nuit), en suivant automatiquement le même thème solaire que le reste du tableau.</p>
           <p><b>Fuseaux horaires</b> : une liste déroulante complète (tous les fuseaux IANA, regroupés par continent) permet de choisir un fuseau qui remplace celui du système pour l'heure principale affichée — pratique pour plusieurs tuiles Horloge, chacune sur un fuseau différent. Jusqu'à 3 fuseaux secondaires supplémentaires s'affichent en petit dans la même tuile, façon horloge mondiale compacte.</p>
+          <p><b>Quand un pays change d'heure légale.</b> PiBoard n'embarque pas sa propre table de fuseaux : il lit celle de Chromium/Electron, qui est figée au moment où l'application a été construite — et qui, contrairement à ce qu'on croit, <b>ne dépend pas du tout de votre système</b>. Mettre à jour Windows ou le paquet <code>tzdata</code> du Raspberry Pi ne change donc rien à l'heure affichée. Quand un pays change d'heure légale, cette base met plusieurs mois à rattraper son retard, et l'horloge est fausse d'une heure entre-temps sans que rien ne le signale. PiBoard embarque donc une courte liste de corrections datées (<code>public/tzfix.js</code>) : le premier cas est le <b>Maroc</b>, repassé à GMT (UTC+0) le 20 septembre 2026, de façon permanente et sans plus d'exception pendant le Ramadan. La correction n'est appliquée que si la base embarquée est effectivement en retard, et <b>cesse d'elle-même</b> dès qu'une version à jour est installée — il n'y a rien à faire ni à défaire. Les fuseaux concernés sont marqués « (corrigé par PiBoard) » dans la liste déroulante, et le détail (ce que dit la base, ce que dit la loi, la référence du texte) figure dans <b>Aide → À propos</b>.</p>
           <p><b>Numéro de semaine</b> : affiché en petit sous la date, selon la convention <b>ISO 8601</b> (norme internationale, la plus courante en Europe) ou une convention <b>simple</b> (semaine 1 = celle qui contient le 1er janvier).</p>
           <p><b>Alarmes</b> : jusqu'à 5 alarmes indépendantes, chacune avec son heure, ses jours (tous les jours, jours ouvrés, ou week-end), son libellé et son son — réutilise le même système d'alerte (flash plein écran + son généré) que le widget Compte à rebours. Un bouton « Arrêter » apparaît directement sur la tuile pendant qu'une alarme sonne, mais <b>toucher ou cliquer n'importe où sur l'écran l'arrête aussi</b> — une pastille le rappelle pendant que l'alarme sonne. Pas de bouton « Repousser », choix assumé. <b>Les alarmes sonnent toujours à l'heure réelle du système</b>, jamais selon un fuseau horaire affiché à titre de référence.</p>
           <p><b>Prochain événement</b> : une ligne compacte alimentée par une adresse de calendrier (.ics) propre à la tuile Horloge, indépendante d'une éventuelle tuile Agenda — la tuile continue ainsi de fonctionner seule, même sans tuile Agenda sur le tableau. Limite à connaître : seuls les événements simples (non récurrents) sont détectés pour l'instant, une réunion hebdomadaire définie par une règle de récurrence n'apparaîtra pas.</p>
@@ -248,7 +249,7 @@
           <div class="help-opt"><span class="help-opt-name">Disposition heure et date</span><span class="help-opt-desc">Uniquement en mode digital avec la date affichée : sous l'heure, ou côte à côte (mieux adapté aux tuiles larges et basses).</span></div>
           <div class="help-opt"><span class="help-opt-name">Fond jour/nuit</span><span class="help-opt-desc">Bascule automatiquement avec le thème du tableau. Tant qu'il est activé, il prend le pas sur la couleur personnalisée définie dans la section Apparence de la tuile.</span></div>
           <div class="help-opt"><span class="help-opt-name">Couleur de jour / de nuit</span><span class="help-opt-desc">Les deux couleurs du fond jour/nuit, si celui-ci est activé.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Fuseau horaire</span><span class="help-opt-desc">Nom IANA (ex. « America/New_York »). Vide = fuseau du système.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fuseau horaire</span><span class="help-opt-desc">Nom IANA (ex. « America/New_York »). Vide = fuseau du système. « (corrigé par PiBoard) » signale un fuseau dont l'heure légale a changé après la base embarquée.</span></div>
           <div class="help-opt"><span class="help-opt-name">Fuseaux supplémentaires 1 à 3</span><span class="help-opt-desc">Libellé + fuseau IANA chacun. Laisser vide pour ne pas utiliser un emplacement.</span></div>
           <div class="help-opt"><span class="help-opt-name">Numéro de semaine</span><span class="help-opt-desc">Affichage et convention (ISO 8601 ou simple).</span></div>
           <div class="help-opt"><span class="help-opt-name">Alarmes 1 à 5</span><span class="help-opt-desc">Chacune : activée, heure, libellé, jours, son.</span></div>
@@ -260,6 +261,7 @@
           <h4>Possibilities</h4>
           <p>In digital mode, the time fills the available space and automatically recalculates on every tile resize. On a wide, short tile, place the date next to the time rather than below it to make better use of the width. In analog mode, the face automatically sits on the left and the date on the right as soon as the date is shown — the face keeps the tile's full height instead of sharing it with the text below. In digital mode, the same switch happens as soon as an extra time zone, the week number, or the next event is turned on: the time sits on the left rather than staying centered above stacked extras, which would squeeze it and hurt its legibility. The date format ranges from full (weekday included) to short (MM/DD/YYYY), handy for freeing up room on a small tile. The name day, a French tradition, can be added next to the date (only when the interface language is French) — its arrangement (below or side by side) automatically switches to "side by side" when the tile is too short for a 2nd line, so it never overflows the tile. The optional day/night background gives an extra visual cue (e.g. a dark gradient at night), automatically following the same solar theme as the rest of the board.</p>
           <p><b>Time zones</b>: a full drop-down list (every IANA time zone, grouped by continent) lets you pick a zone that replaces the system's for the main displayed time — handy for several Clock tiles, each on a different zone. Up to 3 extra secondary zones show up small in the same tile, for a compact world-clock feel.</p>
+          <p><b>When a country changes its legal time.</b> PiBoard ships no time zone table of its own: it reads Chromium/Electron's, which is frozen when the application was built and — contrary to what one would expect — <b>does not depend on your system at all</b>. Updating Windows, or the Raspberry Pi's <code>tzdata</code> package, therefore changes nothing in the displayed time. When a country changes its legal time, that database takes months to catch up, and the clock is an hour off in the meantime with nothing to signal it. PiBoard therefore ships a short list of dated corrections (<code>public/tzfix.js</code>); the first case is <b>Morocco</b>, back on GMT (UTC+0) since 20 September 2026, permanently and with no further Ramadan exception. The correction is applied only while the embedded database is actually behind, and <b>stops by itself</b> once an up-to-date build is installed — there is nothing to do and nothing to undo. Affected zones are flagged “(corrected by PiBoard)” in the drop-down list, and the details (what the database says, what the law says, the reference) appear under <b>Help → About</b>.</p>
           <p><b>Week number</b>: shown small below the date, following either the <b>ISO 8601</b> convention (international standard, most common in Europe) or a <b>simple</b> one (week 1 = the week containing January 1st).</p>
           <p><b>Alarms</b>: up to 5 independent alarms, each with its own time, days (every day, weekdays, or weekend), label and sound — reuses the same alert system (full-screen flash + generated sound) as the Countdown widget. A "Stop" button appears right on the tile while an alarm rings, but <b>tapping or clicking anywhere on the screen also stops it</b> — a chip reminds you of this while it rings. No "Snooze" button, a deliberate choice. <b>Alarms always ring at the system's real time</b>, never according to a time zone shown for reference.</p>
           <p><b>Next event</b>: a compact line fed by a calendar address (.ics) of the Clock tile's own, independent from any Calendar tile — the tile therefore keeps working on its own, even without a Calendar tile on the board. A limit worth knowing: only simple (non-recurring) events are currently detected, a weekly meeting defined via a recurrence rule won't show up.</p>
@@ -273,7 +275,7 @@
           <div class="help-opt"><span class="help-opt-name">Time and date arrangement</span><span class="help-opt-desc">Digital mode with date shown only: below the time, or side by side (better suited to wide, short tiles).</span></div>
           <div class="help-opt"><span class="help-opt-name">Day/night background</span><span class="help-opt-desc">Automatically switches with the board's theme. While enabled, it takes precedence over the custom color set in the tile's Appearance section.</span></div>
           <div class="help-opt"><span class="help-opt-name">Day / night color</span><span class="help-opt-desc">The two colors of the day/night background, if enabled.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Time zone</span><span class="help-opt-desc">IANA name (e.g. "America/New_York"). Empty = system time zone.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Time zone</span><span class="help-opt-desc">IANA name (e.g. "America/New_York"). Empty = system time zone. “(corrected by PiBoard)” flags a zone whose legal time changed after the embedded database.</span></div>
           <div class="help-opt"><span class="help-opt-name">Extra zones 1 to 3</span><span class="help-opt-desc">A label + an IANA zone each. Leave empty to not use a slot.</span></div>
           <div class="help-opt"><span class="help-opt-name">Week number</span><span class="help-opt-desc">Display and convention (ISO 8601 or simple).</span></div>
           <div class="help-opt"><span class="help-opt-name">Alarms 1 to 5</span><span class="help-opt-desc">Each: enabled, time, label, days, sound.</span></div>
@@ -2267,6 +2269,70 @@
       }
     },
 
+    /* ================= APPLICATION DE BUREAU MACOS / MACOS DESKTOP APP =================
+       Fiche ecrite apres un cas reel : PiBoard etait « impossible a
+       faire fonctionner » sur un Mac Apple Silicon, sur plusieurs
+       versions d'affilee, faute d'une ligne de Terminal enfouie dans
+       docs/LINUX-MACOS.md -- un fichier qu'on ne lit qu'APRES avoir eu
+       le probleme, et seulement si l'on sait qu'il existe. Le
+       contournement vit donc desormais dans l'aide integree, la ou on
+       le cherche.
+       Written after a real case: PiBoard was "impossible to run" on an
+       Apple Silicon Mac, across several versions, for want of one
+       Terminal line buried in docs/LINUX-MACOS.md -- a file one only
+       reads AFTER having the problem. */
+    {
+      id: "macos-app",
+      group: "platform",
+      title: { fr: "Application de bureau macOS", en: "macOS desktop app" },
+      sub: {
+        fr: "« PiBoard est endommagé » au premier lancement, et la mise à jour manuelle.",
+        en: "\"PiBoard is damaged\" on first launch, and manual updating."
+      },
+      html: {
+        fr: `
+          <h4>« PiBoard est endommagé et ne peut pas être ouvert »</h4>
+          <p>C'est le message que macOS affiche au premier lancement, et il est <b>trompeur</b> : l'application n'est ni corrompue, ni incomplète, ni mal téléchargée. Elle n'est simplement pas <b>notarisée</b> par Apple — une formalité qui exige un compte développeur payant (99 $ par an) que ce projet gratuit et open source n'a pas.</p>
+          <p>Ce qui se passe réellement : macOS pose un attribut invisible dit « de quarantaine » sur tout fichier venu d'Internet. Au lancement, il vérifie que l'application est notarisée ; comme elle ne l'est pas, il refuse. Sur les Mac Intel, ce refus prend la forme du message clément « développeur non identifié », qu'un clic droit → <i>Ouvrir</i> suffit à contourner. Sur les Mac <b>Apple Silicon</b> (M1 et suivants), il prend la forme sèche d'« endommagé », <b>sans aucune option de contournement</b> — d'où l'impression d'un téléchargement raté, et l'envie bien naturelle de réessayer avec une autre version, en vain.</p>
+
+          <h4>La marche à suivre, une fois pour toutes</h4>
+          <p>Ouvrez le <code>.dmg</code>, glissez PiBoard dans <i>Applications</i>, puis lancez <b>une seule fois</b> cette commande dans le Terminal (Applications → Utilitaires → Terminal) :</p>
+          <p><code>xattr -dr com.apple.quarantine /Applications/PiBoard.app</code></p>
+          <p>PiBoard s'ouvre ensuite normalement, à ce lancement comme à tous les suivants. La commande retire l'attribut de quarantaine <b>sur cette copie précise</b>, et rien d'autre : aucune protection de macOS n'est désactivée, et le reste du système continue d'être vérifié exactement comme avant.</p>
+          <p><b>À refaire après chaque nouveau téléchargement.</b> Une version que vous installez plus tard arrive avec son propre attribut de quarantaine : elle affichera de nouveau « endommagé », même si la précédente fonctionnait parfaitement. Ce n'est pas une régression, c'est le même mécanisme qui recommence.</p>
+
+          <h4>Si le Terminal vous rebute</h4>
+          <p>Sur macOS 12 à 14, un <b>clic droit sur PiBoard → Ouvrir</b>, puis <i>Ouvrir</i> dans la fenêtre d'avertissement, suffit parfois. Sur macOS 15 et suivants, ce raccourci a été supprimé par Apple : il faut tenter le lancement, puis aller dans <b>Réglages Système → Confidentialité et sécurité</b>, y trouver la mention de PiBoard apparue après la tentative, et cliquer sur <b>Ouvrir quand même</b>. Sur un Mac Apple Silicon affichant « endommagé », aucune de ces deux voies ne fonctionne : seule la commande <code>xattr</code> ci-dessus débloque la situation.</p>
+
+          <h4>Les mises à jour sont manuelles sur Mac</h4>
+          <p>Pour la même raison, PiBoard <b>ne se met pas à jour tout seul</b> sous macOS : le mécanisme d'Apple (Squirrel) refuse de remplacer une application non signée. PiBoard ne fait donc pas semblant — quand une version existe, il l'annonce et ouvre sa page de téléchargement, à vous de glisser le nouveau <code>.dmg</code> par-dessus l'ancien, puis de relancer la commande <code>xattr</code>. <b>Vos tuiles, vos réglages et vos images sont conservés</b> : ils vivent hors de l'application.</p>
+          <p>Sous Windows et sous Linux, la mise à jour automatique fonctionne normalement ; cette limite est propre à macOS.</p>
+
+          <h4>Versions et architectures</h4>
+          <p>macOS 12 (Monterey) et suivants. Deux fichiers sont publiés à chaque version : <code>mac-arm64</code> pour les Mac Apple Silicon (M1, M2, M3, M4…) et <code>mac-x64</code> pour les Mac Intel. Prendre le mauvais fichier fonctionne quand même, par émulation Rosetta, mais consomme plus de mémoire et de batterie — autant prendre le bon.</p>`,
+        en: `
+          <h4>"PiBoard is damaged and can't be opened"</h4>
+          <p>This is what macOS shows on first launch, and it is <b>misleading</b>: the application is neither corrupted, nor incomplete, nor badly downloaded. It simply is not <b>notarized</b> by Apple — a formality requiring a paid developer account ($99 a year) that this free, open-source project does not have.</p>
+          <p>What actually happens: macOS puts an invisible "quarantine" attribute on every file coming from the internet. At launch it checks that the application is notarized; as it is not, it refuses. On Intel Macs that refusal takes the mild form of "unidentified developer", which a right-click → <i>Open</i> is enough to get past. On <b>Apple Silicon</b> Macs (M1 and later) it takes the blunt form of "damaged", <b>with no way around it at all</b> — hence the impression of a failed download, and the natural urge to try another version, in vain.</p>
+
+          <h4>What to do, once and for all</h4>
+          <p>Open the <code>.dmg</code>, drag PiBoard into <i>Applications</i>, then run this command <b>once</b> in Terminal (Applications → Utilities → Terminal):</p>
+          <p><code>xattr -dr com.apple.quarantine /Applications/PiBoard.app</code></p>
+          <p>PiBoard then opens normally, at that launch and every later one. The command removes the quarantine attribute <b>from that one copy</b>, and nothing else: no macOS protection is turned off, and the rest of the system keeps being checked exactly as before.</p>
+          <p><b>To be repeated after each new download.</b> A version you install later arrives with its own quarantine attribute: it will show "damaged" again, even though the previous one worked perfectly. This is not a regression, it is the same mechanism starting over.</p>
+
+          <h4>If Terminal puts you off</h4>
+          <p>On macOS 12 to 14, a <b>right-click on PiBoard → Open</b>, then <i>Open</i> in the warning dialog, is sometimes enough. On macOS 15 and later Apple removed that shortcut: you have to attempt the launch, then go to <b>System Settings → Privacy &amp; Security</b>, find the PiBoard entry that appeared after the attempt, and click <b>Open Anyway</b>. On an Apple Silicon Mac showing "damaged", neither route works: only the <code>xattr</code> command above unblocks it.</p>
+
+          <h4>Updates are manual on a Mac</h4>
+          <p>For the same reason, PiBoard <b>does not update itself</b> on macOS: Apple's mechanism (Squirrel) refuses to replace an unsigned application. So PiBoard does not pretend — when a version exists it announces it and opens its download page, leaving you to drag the new <code>.dmg</code> over the old one, then run the <code>xattr</code> command again. <b>Your tiles, settings and images are kept</b>: they live outside the application.</p>
+          <p>On Windows and Linux automatic updating works normally; this limit is specific to macOS.</p>
+
+          <h4>Versions and architectures</h4>
+          <p>macOS 12 (Monterey) and later. Two files are published with every release: <code>mac-arm64</code> for Apple Silicon Macs (M1, M2, M3, M4…) and <code>mac-x64</code> for Intel Macs. Picking the wrong one still works, through Rosetta emulation, but uses more memory and battery — better to pick the right one.</p>`
+      }
+    },
+
     /* ================= APPLICATION DE BUREAU WINDOWS / WINDOWS DESKTOP APP ================= */
     {
       id: "windows-app",
@@ -2554,6 +2620,7 @@
       html: {
         fr: `
           <p>PiBoard <span id="helpAppVersion">…</span></p>
+          <div id="helpTzFix"></div>
           <p>© 2026 Jean-Michel Ezes. Publié sous licence <b>MIT</b> — un texte complet de la licence accompagne le projet (fichier <code>LICENSE</code> à la racine).</p>
           <p>En clair : PiBoard est un logiciel libre et gratuit, que vous pouvez utiliser, modifier et redistribuer, à titre privé comme commercial, du moment que la mention de copyright est conservée. Il n'existe <b>ni version payante, ni clé de licence, ni fonction réservée, ni compte à créer</b>. Le logiciel est fourni sans aucune garantie.</p>
           <p>Projet personnel et open source : <a href="https://github.com/jihemezes/piboard" target="_blank">github.com/jihemezes/piboard</a>.</p>
@@ -2561,6 +2628,7 @@
           <p>PiBoard est gratuit et le restera. Un don est une simple marque de sympathie, sans contrepartie : il ne donne accès à aucune fonction supplémentaire, n'ouvre droit à aucun support et ne crée aucune obligation. Ne donnez rien si cela vous met la moindre difficulté — utiliser PiBoard, signaler un bug ou proposer une idée fait tout autant plaisir.</p>`,
         en: `
           <p>PiBoard <span id="helpAppVersion">…</span></p>
+          <div id="helpTzFix"></div>
           <p>© 2026 Jean-Michel Ezes. Released under the <b>MIT</b> license — the full license text ships with the project (<code>LICENSE</code> file at the repository root).</p>
           <p>In plain terms: PiBoard is free software, free of charge, which you may use, modify and redistribute, privately or commercially, as long as the copyright notice is kept. There is <b>no paid version, no licence key, no feature held back and no account to create</b>. It comes with no warranty of any kind.</p>
           <p>Personal, open-source project: <a href="https://github.com/jihemezes/piboard" target="_blank">github.com/jihemezes/piboard</a>.</p>

@@ -4865,6 +4865,36 @@ function catalogItemFor(catalog, document, widgetId) {
     const styles = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
     assert("la classe commune .pb-taxis est definie une seule fois, dans la feuille globale",
       /\.pb-taxis\s*\{/.test(styles));
+
+    /* Rattrapage des fuseaux (1.120.0) : le module doit etre charge
+       AVANT app.js et avant les tuiles, sans quoi la tuile Horloge
+       retombe silencieusement sur son calcul de repli -- et l'heure
+       d'un fuseau corrige redevient fausse d'une heure, sans le
+       moindre message. Exactement le genre de regression qu'on ne voit
+       pas a l'oeil.
+       Time zone catch-up (1.120.0): the module must load BEFORE app.js,
+       otherwise the Clock tile silently falls back and a corrected
+       zone is an hour off again, with no message at all. */
+    assert("le module de rattrapage des fuseaux est charge avant app.js",
+      html5.indexOf("tzfix.js") > 0 && html5.indexOf("tzfix.js") < html5.indexOf("app.js\"></script>"));
+    const clockSrc = fs.readFileSync(path.join(PUB, "widgets/clock/widget.js"), "utf8");
+    assert("l'horloge delegue le calcul du fuseau au module de rattrapage",
+      /PiBoardTzFix/.test(clockSrc));
+    const appSrc5 = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+    assert("le selecteur de fuseau marque les fuseaux corriges",
+      /correctedZones\(\)/.test(appSrc5) && /tzfix\.pickerMark/.test(appSrc5));
+    assert("la rubrique A propos porte le diagnostic des fuseaux",
+      /renderTzFixDiagnostic/.test(appSrc5)
+      && /helpTzFix/.test(fs.readFileSync(path.join(PUB, "help-content.js"), "utf8")));
+    const i18nSrc5 = fs.readFileSync(path.join(PUB, "i18n.js"), "utf8");
+    for (const key of ["tzfix.title", "tzfix.upToDate", "tzfix.stale", "tzfix.embedded",
+      "tzfix.legal", "tzfix.selfClearing", "tzfix.pickerMark"]) {
+      // Deux occurrences attendues : une par langue. Two per key: one
+      // per language -- a key present in only one shows up in the other
+      // language as its own raw name on screen.
+      assert("diagnostic des fuseaux : « " + key + " » est traduit dans les deux langues",
+        i18nSrc5.split('"' + key + '"').length === 3);
+    }
   }
 
   console.log("== Tuiles de style : tailles de depart et acces au gestionnaire d'images ==");

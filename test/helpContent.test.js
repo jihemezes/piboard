@@ -346,4 +346,59 @@ console.log("== Avions : noms d'aeroport documentes (1.94.0) ==")
 }
 console.log("  OK");
 
+/* Premier lancement sur macOS (1.121.0).
+   Ce qui est verifie ici n'est pas cosmetique : sans la commande exacte,
+   la fiche ne sert a rien -- c'est precisement l'information qui
+   manquait, et son absence a rendu PiBoard « impossible a faire
+   fonctionner » sur un Mac Apple Silicon pendant plusieurs versions.
+   On verifie aussi que la fiche dit que le probleme REVIENT a chaque
+   telechargement : sans cela, l'utilisateur croit a une regression a la
+   premiere mise a jour.
+   macOS first launch (1.121.0). Not cosmetic: without the exact
+   command the section is useless, and it must also say the problem
+   COMES BACK on every download. */
+console.log("== macOS : premier lancement et mise a jour manuelle (1.121.0) ==");
+{
+  const e = entryById("macos-app");
+  for (const [lang, html] of [["fr", e.html.fr], ["en", e.html.en]]) {
+    assert.ok(/xattr -dr com\.apple\.quarantine \/Applications\/PiBoard\.app/.test(html),
+      `${lang} : la commande exacte doit figurer telle quelle`);
+    assert.ok(/Apple Silicon/.test(html),
+      `${lang} : le cas Apple Silicon doit etre distingue de l'Intel`);
+    assert.ok(/Intel/.test(html), `${lang} : le cas Intel doit etre decrit`);
+    assert.ok(/15/.test(html), `${lang} : le changement de macOS 15 doit etre dit`);
+  }
+  assert.ok(/notaris/i.test(e.html.fr) && /notariz/i.test(e.html.en),
+    "la vraie cause -- l'absence de notarisation -- doit etre nommee, pas seulement contournee");
+  assert.ok(/chaque nouveau téléchargement/.test(e.html.fr) && /each new download/.test(e.html.en),
+    "le retour du probleme a chaque telechargement doit etre annonce");
+  assert.ok(/conservé/.test(e.html.fr) && /kept/.test(e.html.en),
+    "la conservation des tuiles et reglages a la mise a jour doit rassurer");
+}
+console.log("  OK");
+
+/* Le rappel xattr doit aussi vivre dans le dialogue de mise a jour
+   macOS : c'est le seul endroit ou l'utilisateur se trouve au moment
+   precis ou il va telecharger une copie qui sera, elle aussi, en
+   quarantaine. Le dire uniquement dans l'aide reviendrait a compter sur
+   le fait qu'il la relise.
+   The xattr reminder must also live in the macOS update dialog: the one
+   place the user is at the very moment they download a copy that will
+   itself be quarantined. */
+console.log("== macOS : le dialogue de mise a jour rappelle la commande (1.121.0) ==");
+{
+  const updater = fs.readFileSync(path.join(__dirname, "..", "electron", "updater.js"), "utf8");
+  assert.ok(/MANUAL_UPDATE_ON_MAC/.test(updater), "le detournement macOS doit exister");
+  assert.ok(/xattr -dr com\.apple\.quarantine \/Applications\/PiBoard\.app/.test(updater),
+    "le dialogue de mise a jour macOS doit rappeler la commande exacte");
+  assert.ok(/endommagee|damaged/i.test(updater),
+    "le dialogue doit nommer le message que macOS affichera, pour que le lien se fasse");
+  // Le message « a jour » doit, sur Mac, dire que la mise a jour y est
+  // manuelle -- au moment calme, pas dans l'urgence d'une release.
+  const upToDate = updater.slice(updater.indexOf("update-not-available"), updater.indexOf("update-downloaded"));
+  assert.ok(/MANUAL_UPDATE_ON_MAC/.test(upToDate),
+    "le message « PiBoard est a jour » doit signaler la mise a jour manuelle sur Mac");
+}
+console.log("  OK");
+
 console.log("Tous les tests d'aide sont passes.");
