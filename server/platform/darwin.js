@@ -328,9 +328,104 @@ function shutdown() {
   return Promise.resolve({ ok: false, reason: "unsupported" });
 }
 
+/* ---------- Memoire utilisee / memory in use ----------
+
+   POURQUOI NE PAS SE FIER A os.freemem() ICI. Sur macOS, cette valeur
+   ne compte que les pages STRICTEMENT libres -- celles que le systeme
+   n'a affectees a rien du tout. Or macOS remplit deliberement la RAM
+   inoccupee de cache fichier, de pages inactives et de pages
+   compressees, toutes immediatement recuperables des qu'un programme
+   en reclame. Un Mac en parfaite sante tourne donc en permanence avec
+   quelques centaines de Mo "libres", et le calcul total - libre donne
+   99 % quelle que soit la charge reelle : un indicateur qui affiche
+   toujours la meme chose n'informe de rien, et inquiete pour rien.
+   Constate sur un Mac mini 32 Gio : 99,5 % affiche par PiBoard contre
+   83 % au Moniteur d'activite.
+
+   CE QU'ON CALCULE A LA PLACE : exactement la "Memoire utilisee" du
+   Moniteur d'activite, c'est-a-dire la somme des trois lignes qu'il
+   detaille lui-meme --
+     memoire de l'application = pages anonymes - pages purgeables
+     memoire residente        = pages wired down
+     memoire compressee       = pages occupees par le compresseur
+   Verifie contre un releve reel (16 Kio par page sur Apple Silicon) :
+   compressee 12,50 contre 12,51 Gio affiches, cache 4,57 contre 4,60,
+   residente 3,54 contre 3,61, total 26,5 contre 27,3. L'ecart residuel
+   tient a ce que le Moniteur y ajoute une part de memoire noyau qu'il
+   ne detaille pas, et aux quelques secondes separant les deux releves.
+
+   WHY NOT TRUST os.freemem() HERE. On macOS that value counts only
+   STRICTLY free pages. macOS deliberately fills unused RAM with file
+   cache, inactive and compressed pages, all immediately reclaimable, so
+   a perfectly healthy Mac permanently runs with a few hundred MB
+   "free", and total - free reads 99% whatever the real load -- a gauge
+   that always shows the same thing informs of nothing and worries for
+   nothing. We compute Activity Monitor's "Memory Used" instead: app
+   memory (anonymous - purgeable) + wired + compressor, checked against
+   a real reading. */
+
+/* Analyse la sortie de `vm_stat`. Fonction PURE : elle prend le texte
+   et la taille totale de la RAM, et ne touche ni au systeme ni au
+   reseau -- toute la logique delicate est donc testable hors ligne, y
+   compris depuis un Raspberry Pi.
+   La taille de page est lue dans l'en-tete plutot que supposee : elle
+   vaut 4096 octets sur les Mac Intel et 16384 sur Apple Silicon, et
+   se tromper d'un facteur quatre passerait inapercu sur un graphique.
+   Parses `vm_stat`'s output. PURE function. The page size is read from
+   the header rather than assumed: 4096 bytes on Intel Macs, 16384 on
+   Apple Silicon, and being off by a factor of four would go unnoticed
+   on a chart. */
+function parseVmStat(raw, totalBytes) {
+  const text = String(raw || "");
+  const header = /page size of (\d+) bytes/.exec(text);
+  const pageSize = header ? Number(header[1]) : 0;
+  if (!pageSize || !Number.isFinite(totalBytes) || totalBytes <= 0) return null;
+
+  const pages = (label) => {
+    const re = new RegExp("^" + label + ":\\s+(\\d+)\\.?\\s*$", "mi");
+    const m = re.exec(text);
+    return m ? Number(m[1]) : null;
+  };
+  const anonymous = pages("Anonymous pages");
+  const wired = pages("Pages wired down");
+  const compressor = pages("Pages occupied by compressor");
+  // Les pages purgeables sont deja comprises dans les pages anonymes :
+  // elles sont abandonnables sans ecriture, donc pas "utilisees".
+  // Purgeable pages are already part of the anonymous ones: droppable
+  // without a write, therefore not "used".
+  const purgeable = pages("Pages purgeable") || 0;
+  if (anonymous === null || wired === null || compressor === null) return null;
+
+  const appPages = Math.max(0, anonymous - purgeable);
+  const usedBytes = (appPages + wired + compressor) * pageSize;
+  // Un releve incoherent (somme au-dela du total physique) trahirait un
+  // format inattendu : mieux vaut ne rien afficher qu'un chiffre faux.
+  // An inconsistent reading would betray an unexpected format: better
+  // to show nothing than a wrong figure.
+  if (usedBytes <= 0 || usedBytes > totalBytes) return null;
+
+  const cachedPages = pages("File-backed pages");
+  return {
+    totalBytes,
+    usedBytes,
+    cachedBytes: cachedPages === null ? null : cachedPages * pageSize
+  };
+}
+
+function memoryUsage() {
+  return new Promise((resolve) => {
+    execFile("vm_stat", [], { timeout: 3000 }, (err, stdout) => {
+      if (err || !stdout) return resolve(null);
+      resolve(parseVmStat(stdout, require("os").totalmem()));
+    });
+  });
+}
+
 module.exports = {
   setDisplayPower,
   id,
+  parseVmStat,
+  memoryUsage,
   networkDetails,
   parseNetstatRoutes,
   parseScutilDns,

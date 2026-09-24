@@ -407,10 +407,17 @@ function gpuRead() {
 
 app.get("/api/system", async (req, res) => {
   try {
-    const [cpu, disk, gpu] = await Promise.all([cpuPercent(), platform.diskUsage(), gpuRead()]);
-    const totalMemGB = os.totalmem() / 1073741824;
-    const freeMemGB = os.freemem() / 1073741824;
-    const usedMemGB = totalMemGB - freeMemGB;
+    /* La memoire passe par la couche plateforme depuis la 1.122.0 :
+       os.freemem() ne repond a la bonne question que sous Windows. Voir
+       les notes de server/platform/darwin.js (pages strictement libres)
+       et linux.js (MemFree contre MemAvailable).
+       Memory goes through the platform layer since 1.122.0:
+       os.freemem() only answers the right question on Windows. */
+    const [cpu, disk, gpu, mem] = await Promise.all([
+      cpuPercent(), platform.diskUsage(), gpuRead(), platform.memoryUsage()
+    ]);
+    const totalMemGB = (mem ? mem.totalBytes : os.totalmem()) / 1073741824;
+    const usedMemGB = (mem ? mem.usedBytes : os.totalmem() - os.freemem()) / 1073741824;
     res.json({
       hostname: os.hostname(),
       uptimeSec: os.uptime(),
@@ -1996,9 +2003,17 @@ async function historySample() {
     // une requete HTTP du serveur vers lui-meme.
     // Same sources as /api/system, without going through the route: this
     // avoids an HTTP request from the server to itself.
-    const [cpu, disk, gpu] = await Promise.all([cpuPercent(), platform.diskUsage(), gpuRead()]);
-    const totalMem = os.totalmem();
-    const memPercent = ((totalMem - os.freemem()) / totalMem) * 100;
+    const [cpu, disk, gpu, mem] = await Promise.all([
+      cpuPercent(), platform.diskUsage(), gpuRead(), platform.memoryUsage()
+    ]);
+    /* Meme source que /api/system, sans quoi la courbe et la jauge de
+       la meme tuile se contrediraient -- deux chiffres differents pour
+       la meme chose, cote a cote.
+       Same source as /api/system, otherwise the chart and the gauge of
+       the same tile would contradict each other. */
+    const totalMem = mem ? mem.totalBytes : os.totalmem();
+    const usedMem = mem ? mem.usedBytes : totalMem - os.freemem();
+    const memPercent = totalMem ? (usedMem / totalMem) * 100 : 0;
     const h = historyLoad();
     h.points.push({
       t: Date.now(),

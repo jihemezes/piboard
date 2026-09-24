@@ -1015,7 +1015,74 @@ async function networkDetails() {
   return { adapters, domain: fallbackDns.domain || null };
 }
 
+/* ---------- Memoire utilisee / memory in use ----------
+
+   MEME PIEGE QUE macOS, EN PLUS DISCRET. `os.freemem()` rend ici
+   MemFree, c'est-a-dire la memoire qui n'est affectee a RIEN. Le cache
+   fichier et les tampons, eux, sont comptes comme utilises alors que le
+   noyau les rend a la premiere demande. Sur un Raspberry Pi qui tourne
+   depuis quelques jours, le cache occupe l'essentiel de ce qui reste :
+   la tuile montre donc une memoire quasi pleine alors que rien ne
+   manque. C'est le meme mensonge qu'`os.freemem()` sous macOS, en
+   moins spectaculaire -- donc plus longtemps invisible.
+
+   MemAvailable, publie par le noyau depuis Linux 3.14, est l'estimation
+   FAITE PAR LE NOYAU de ce qu'une application peut obtenir sans
+   declencher d'echange : c'est exactement la question posee. On ne la
+   recalcule pas a partir de Cached et Buffers -- cette approximation
+   repandue surestime, le noyau gardant une part du cache non
+   liberable.
+
+   SAME TRAP AS macOS, QUIETER. `os.freemem()` returns MemFree here --
+   memory assigned to NOTHING. File cache and buffers count as used
+   although the kernel hands them back on first demand. MemAvailable,
+   published since Linux 3.14, is the KERNEL'S OWN estimate of what an
+   application can obtain without swapping: exactly the question asked.
+   We do not recompute it from Cached and Buffers -- that widespread
+   approximation overestimates. */
+
+/* Fonction PURE sur le contenu de /proc/meminfo, donc testable partout,
+   y compris depuis un Mac ou un PC Windows.
+   PURE function over /proc/meminfo's contents, testable anywhere. */
+function parseMeminfo(raw) {
+  const text = String(raw || "");
+  const kb = (label) => {
+    const m = new RegExp("^" + label + ":\\s+(\\d+)\\s*kB\\s*$", "mi").exec(text);
+    return m ? Number(m[1]) * 1024 : null;
+  };
+  const totalBytes = kb("MemTotal");
+  if (!totalBytes) return null;
+  /* Repli sur MemFree pour les noyaux anterieurs a 3.14, qui ne
+     publient pas MemAvailable : on retombe alors sur le comportement
+     d'avant, jamais sur une absence d'affichage.
+     Falls back to MemFree on kernels older than 3.14, which do not
+     publish MemAvailable: the previous behaviour, never a blank. */
+  const availableBytes = kb("MemAvailable");
+  const available = availableBytes === null ? kb("MemFree") : availableBytes;
+  if (available === null) return null;
+  const usedBytes = Math.max(0, totalBytes - available);
+  if (usedBytes > totalBytes) return null;
+  const cached = kb("Cached");
+  const buffers = kb("Buffers");
+  return {
+    totalBytes,
+    usedBytes,
+    cachedBytes: cached === null ? null : cached + (buffers || 0)
+  };
+}
+
+function memoryUsage() {
+  return new Promise((resolve) => {
+    fs.readFile("/proc/meminfo", "utf8", (err, raw) => {
+      if (err || !raw) return resolve(null);
+      resolve(parseMeminfo(raw));
+    });
+  });
+}
+
 module.exports = {
+  parseMeminfo,
+  memoryUsage,
   setDisplayPower,
   displayPowerCommands,
   id,

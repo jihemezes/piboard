@@ -53,6 +53,7 @@
 "use strict";
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 const IMPLEMENTATIONS = {
@@ -108,6 +109,35 @@ function diskUsage() {
       });
     });
   });
+}
+
+/* ---------- Memoire utilisee / memory in use ----------
+   Chaque plateforme repond a la meme question -- combien de memoire est
+   REELLEMENT prise, du point de vue de l'utilisateur -- avec la source
+   qui lui convient : vm_stat sous macOS, /proc/meminfo sous Linux,
+   os.freemem() sous Windows (le seul des trois ou il dit juste). Voir
+   la note de chaque fichier pour le detail.
+
+   Le repli sur `os` n'est pas de la prudence gratuite : sans lui, une
+   sortie de vm_stat inattendue ferait disparaitre la jauge de memoire
+   de la tuile Etat systeme, ce qui est PIRE qu'un chiffre imparfait --
+   on ne saurait meme pas qu'il y a un probleme. Le chiffre approche
+   revient alors, comme avant cette version.
+
+   Each platform answers the same question with its own source. The
+   fallback on `os` is not idle caution: without it an unexpected
+   vm_stat output would make the memory gauge vanish, which is WORSE
+   than an imperfect figure. */
+async function memoryUsage() {
+  if (typeof impl.memoryUsage === "function") {
+    try {
+      const r = await impl.memoryUsage();
+      if (r && r.totalBytes > 0 && Number.isFinite(r.usedBytes)) return r;
+    } catch (e) { /* repli ci-dessous / fallback below */ }
+  }
+  const totalBytes = os.totalmem();
+  if (!totalBytes) return null;
+  return { totalBytes, usedBytes: Math.max(0, totalBytes - os.freemem()), cachedBytes: null };
 }
 
 /* ---------- Detection de volumes a la mode POSIX / POSIX-style volume detection ----------
@@ -348,6 +378,7 @@ module.exports = {
   cpuTemperature: impl.cpuTemperature,
   filesystemRoot: impl.filesystemRoot,
   diskUsage,
+  memoryUsage,
   scanMountRootsPosix,
   registerKioskController,
   setImmersive,

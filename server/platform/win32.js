@@ -770,7 +770,44 @@ function shutdown() {
   return Promise.resolve({ ok: false, reason: "unsupported" });
 }
 
+/* ---------- Memoire utilisee / memory in use ----------
+
+   LE SEUL DES TROIS SYSTEMES OU os.freemem() REPOND A LA BONNE
+   QUESTION. Sous Windows, Node rend `ullAvailPhys` de l'API
+   GlobalMemoryStatusEx : la memoire physique REELLEMENT disponible
+   pour un programme, cache systeme deduit -- exactement ce que le
+   Gestionnaire des taches appelle "Disponible". Rien a corriger ici,
+   contrairement a macOS (pages strictement libres) et a Linux
+   (MemFree).
+
+   Cette fonction existe donc uniquement pour que les trois plateformes
+   exposent la MEME surface : l'appelant n'a jamais a savoir sur quoi il
+   tourne. C'est la regle du dossier, et c'est ce qui a permis de
+   corriger macOS sans toucher a une seule ligne de server/index.js
+   specifique a un systeme.
+
+   THE ONLY ONE OF THE THREE WHERE os.freemem() ANSWERS THE RIGHT
+   QUESTION. On Windows, Node returns GlobalMemoryStatusEx's
+   `ullAvailPhys`: the physical memory actually available to a program,
+   system cache deducted -- exactly what Task Manager calls "Available".
+   Nothing to correct. This function exists so all three platforms
+   expose the SAME surface. */
+function memoryUsage() {
+  const os = require("os");
+  const totalBytes = os.totalmem();
+  const freeBytes = os.freemem();
+  if (!totalBytes || !Number.isFinite(freeBytes)) return Promise.resolve(null);
+  return Promise.resolve({
+    totalBytes,
+    usedBytes: Math.max(0, totalBytes - freeBytes),
+    // Windows n'expose pas separement la taille du cache par cette API.
+    // Windows does not expose the cache size separately through it.
+    cachedBytes: null
+  });
+}
+
 module.exports = {
+  memoryUsage,
   setDisplayPower,
   id,
   networkDetails,

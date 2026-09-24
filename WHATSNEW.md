@@ -33,6 +33,18 @@
 # Nouveautes / What's new
 
 
+## 1.122.0
+
+**La jauge de memoire dit enfin la verite**
+
+Sur un Mac, l'Etat systeme annoncait une memoire pleine a 99 % en permanence, meme sur une machine aux deux tiers libre : macOS garde volontairement tres peu de memoire « strictement libre », le reste servant de cache immediatement recuperable. PiBoard affiche desormais le meme chiffre que le Moniteur d'activite. Le Raspberry Pi beneficie de la meme correction, plus discrete : le cache fichier n'y est plus compte comme occupe.
+
+---
+
+**The memory gauge tells the truth at last**
+
+On a Mac, System status announced 99% memory in use permanently, even on a machine two-thirds free: macOS deliberately keeps very little "strictly free" memory, the rest serving as immediately reclaimable cache. PiBoard now shows the same figure as Activity Monitor. The Raspberry Pi gets the same fix, more quietly: file cache no longer counts as occupied.
+
 ## 1.121.0
 
 **PiBoard s'installe enfin sans mystere sur un Mac**

@@ -1,5 +1,97 @@
 # Changelog
 
+## 1.122.0
+
+- **Etat systeme : la jauge de memoire disait n'importe quoi sur Mac**
+  -- 99,5 % en permanence sur un Mac mini de 32 Gio dont le Moniteur
+  d'activite affichait 83 %. Cause : `os.freemem()` ne compte, sous
+  macOS, que les pages STRICTEMENT libres. Or macOS remplit
+  deliberement la RAM inoccupee de cache fichier, de pages inactives et
+  de pages compressees, toutes recuperables des qu'un programme en
+  reclame. Une machine en parfaite sante tourne donc en permanence avec
+  quelques centaines de Mo "libres" : le calcul `total - libre`
+  affichait la saturation quelle que soit la charge reelle. Un
+  indicateur qui montre toujours la meme chose n'informe de rien, et
+  inquiete pour rien.
+
+- **On calcule desormais la « Memoire utilisee » du Moniteur
+  d'activite**, c'est-a-dire la somme des trois lignes qu'il detaille
+  lui-meme : memoire de l'application (pages anonymes moins purgeables),
+  memoire residente (wired) et memoire compressee, lues dans `vm_stat`.
+  La taille de page est lue dans l'en-tete plutot que supposee -- 4096
+  octets sur Intel, 16384 sur Apple Silicon, et se tromper d'un facteur
+  quatre serait passe inapercu sur un graphique.
+
+- **Verifie contre un releve reel**, pas contre une formule : sur un Mac
+  mini 32 Gio, compressee 12,50 contre 12,51 Gio affiches par le
+  Moniteur, cache 4,57 contre 4,60, residente 3,54 contre 3,61, total
+  26,5 contre 27,3. Ce releve est fige dans `test/platform.test.js`, qui
+  verifie aussi que l'ANCIEN calcul annoncait bien 99 % sur ces memes
+  chiffres -- si quelqu'un y revient un jour, le test le dira.
+
+- **Le meme travers corrige sous Linux**, en moins spectaculaire donc
+  plus longtemps invisible : `os.freemem()` y rend `MemFree`, qui
+  compte le cache fichier comme utilise alors que le noyau le rend a la
+  premiere demande. On lit maintenant `MemAvailable`, l'estimation du
+  noyau lui-meme de ce qu'une application peut obtenir sans echange --
+  exactement la question posee. Repli sur `MemFree` pour les noyaux
+  anterieurs a Linux 3.14. Sous Windows, rien ne change : c'est le seul
+  des trois ou `os.freemem()` repondait deja a la bonne question, et la
+  fonction n'y existe que pour que les trois plateformes exposent la
+  meme surface.
+
+- **La courbe et la jauge partagent desormais la meme source.** Elles
+  etaient calculees a deux endroits differents de `server/index.js` ;
+  corriger l'un sans l'autre aurait donne deux chiffres differents pour
+  la meme chose, cote a cote dans la meme tuile.
+
+- **Repli assume** : si la lecture echoue ou rend un format inattendu,
+  la couche commune retombe sur l'ancien calcul plutot que de masquer
+  la jauge. Une jauge absente serait pire qu'un chiffre imparfait -- on
+  ne saurait meme pas qu'il y a un probleme.
+
+- **Aide mise a jour** (fiche Etat systeme, les deux langues) : ce que
+  « RAM » veut dire sur chacun des trois systemes, et pourquoi le
+  chiffre a change.
+
+---
+
+- **System status: the memory gauge was meaningless on a Mac** -- 99.5%
+  permanently on a 32 GiB Mac mini whose Activity Monitor showed 83%.
+  Cause: on macOS `os.freemem()` counts only STRICTLY free pages, while
+  macOS deliberately fills unused RAM with reclaimable cache, inactive
+  and compressed pages. A perfectly healthy machine therefore
+  permanently runs with a few hundred MB "free", and `total - free` read
+  saturation whatever the real load.
+
+- **We now compute Activity Monitor's "Memory Used"**: app memory
+  (anonymous minus purgeable), wired and compressed, read from
+  `vm_stat`. The page size is read from the header rather than assumed
+  -- 4096 bytes on Intel, 16384 on Apple Silicon.
+
+- **Checked against a real reading**, not against a formula: compressed
+  12.50 against the 12.51 GiB displayed, cache 4.57 against 4.60, wired
+  3.54 against 3.61, total 26.5 against 27.3. That reading is frozen in
+  `test/platform.test.js`, which also checks that the OLD calculation
+  did read 99% on those same figures.
+
+- **Same flaw fixed on Linux**, quieter hence invisible for longer:
+  `os.freemem()` returns `MemFree` there, counting file cache as used.
+  We now read `MemAvailable`, the kernel's own estimate. Falls back to
+  `MemFree` on kernels older than 3.14. On Windows nothing changes: the
+  only one of the three where `os.freemem()` already answered the right
+  question.
+
+- **The chart and the gauge now share one source.** They were computed
+  in two different places, so fixing one without the other would have
+  shown two different figures for the same thing, side by side.
+
+- **Deliberate fallback**: an unexpected format falls back to the old
+  calculation rather than hiding the gauge. A missing gauge would be
+  worse than an imperfect figure.
+
+- **Help updated** (System status section, both languages).
+
 ## 1.121.0
 
 - **macOS : « PiBoard est endommage » enfin explique, la ou on le

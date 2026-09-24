@@ -385,3 +385,121 @@ console.log("== platform.diskUsage : fs.statfs remplace `df` ==");
   assert.ok(/packagekitd/.test(blockers[0]));
   console.log("  OK extinction : causes d'un refus identifiees");
 }
+
+/* ================= MEMOIRE UTILISEE / MEMORY IN USE (1.122.0) =================
+   Le releve macOS ci-dessous est REEL : Mac mini 32 Gio, Apple Silicon
+   (donc 16 Kio par page), capture en meme temps qu'une copie d'ecran du
+   Moniteur d'activite. C'est ce qui permet de verifier le calcul contre
+   ce que le systeme affiche lui-meme, plutot que contre une formule
+   trouvee en ligne -- et depuis n'importe quelle machine, Pi compris.
+
+   The macOS reading below is REAL: 32 GiB Apple Silicon Mac mini (hence
+   16 KiB pages), captured alongside an Activity Monitor screenshot.
+   That is what lets the calculation be checked against what the system
+   itself displays, from any machine. */
+{
+  const GiB = 1024 ** 3;
+  const VM_STAT = [
+    "Mach Virtual Memory Statistics: (page size of 16384 bytes)",
+    "Pages free:                                    10859.",
+    "Pages active:                                 492044.",
+    "Pages inactive:                               492609.",
+    "Pages speculative:                               281.",
+    "Pages throttled:                                   0.",
+    "Pages wired down:                             231835.",
+    "Pages purgeable:                                   2.",
+    "File-backed pages:                            299223.",
+    "Anonymous pages:                              685711.",
+    "Pages stored in compressor:                  1582322.",
+    "Pages occupied by compressor:                 819216.",
+    ""
+  ].join("\n");
+  const TOTAL = 34359738368;
+
+  const mac = darwin.parseVmStat(VM_STAT, TOTAL);
+  assert.ok(mac, "le releve macOS doit etre interprete");
+  assert.strictEqual(mac.totalBytes, TOTAL);
+  /* Le Moniteur d'activite affichait 27,27 Gio utilises. On tolere un
+     ecart d'un gigaoctet : il ajoute une part de memoire noyau qu'il ne
+     detaille pas, et les deux releves sont separes de quelques
+     secondes. Ce qui compte est l'ORDRE DE GRANDEUR -- 26,5 et non 31,8
+     comme le donnait os.freemem().
+     Activity Monitor showed 27.27 GiB used. A one-gigabyte tolerance:
+     what matters is the ORDER OF MAGNITUDE -- 26.5, not the 31.8
+     os.freemem() used to give. */
+  const usedGiB = mac.usedBytes / GiB;
+  assert.ok(Math.abs(usedGiB - 27.27) < 1,
+    `macOS : ${usedGiB.toFixed(2)} Gio attendu proche des 27,27 du Moniteur d'activite`);
+  assert.ok(Math.abs(mac.cachedBytes / GiB - 4.60) < 0.1,
+    "macOS : les fichiers mis en cache doivent retomber sur les 4,60 Gio affiches");
+
+  /* LE TEST QUI DIT POURQUOI CE CORRECTIF EXISTE : l'ancien calcul, sur
+     ce meme releve, annoncait 99 % sur une machine qui n'etait qu'aux
+     deux tiers. Si un jour quelqu'un revient a os.freemem() sous macOS,
+     cette ligne le dira.
+     THE TEST THAT SAYS WHY THIS FIX EXISTS: the old calculation
+     announced 99% on a machine that was two-thirds full. */
+  const oldPercent = ((TOTAL - 10859 * 16384) / TOTAL) * 100;
+  assert.ok(oldPercent > 99, "l'ancien calcul annoncait bien la saturation");
+  assert.ok(mac.usedBytes / TOTAL * 100 < 90,
+    "le nouveau calcul ne doit plus annoncer une machine saturee");
+
+  assert.strictEqual(darwin.parseVmStat("", TOTAL), null, "sortie vide : aucun chiffre invente");
+  assert.strictEqual(darwin.parseVmStat(VM_STAT, 0), null, "total inconnu : aucun chiffre invente");
+  assert.strictEqual(darwin.parseVmStat("page size of 0 bytes", TOTAL), null,
+    "taille de page absurde : aucun chiffre invente");
+  /* Un releve dont la somme depasserait la RAM physique trahit un
+     format inattendu : on prefere ne rien rendre. A reading exceeding
+     physical RAM betrays an unexpected format. */
+  assert.strictEqual(darwin.parseVmStat(VM_STAT, 1024 * 1024 * 1024), null,
+    "somme superieure au total physique : releve ecarte");
+  // Taille de page Intel (4096) : le calcul doit suivre l'en-tete et
+  // non supposer 16 Kio. Intel page size: follow the header.
+  const intel = darwin.parseVmStat(VM_STAT.replace("16384 bytes", "4096 bytes"), TOTAL);
+  assert.ok(Math.abs(intel.usedBytes * 4 - mac.usedBytes) < 4,
+    "la taille de page est bien lue dans l'en-tete, pas supposee");
+  console.log("  OK macOS : la memoire utilisee retombe sur le Moniteur d'activite");
+
+  /* Linux : MemAvailable, et non MemFree. Le releve ci-dessous est
+     celui d'un Pi ou le cache occupe l'essentiel de la memoire -- le
+     cas exact ou les deux valeurs divergent.
+     Linux: MemAvailable, not MemFree. */
+  const MEMINFO = [
+    "MemTotal:        8127816 kB",
+    "MemFree:          214536 kB",
+    "MemAvailable:    6520140 kB",
+    "Buffers:          132048 kB",
+    "Cached:          5904312 kB",
+    "SwapTotal:        102396 kB",
+    ""
+  ].join("\n");
+  const lin = linux.parseMeminfo(MEMINFO);
+  assert.ok(lin, "le /proc/meminfo doit etre interprete");
+  assert.strictEqual(lin.totalBytes, 8127816 * 1024);
+  assert.strictEqual(lin.usedBytes, (8127816 - 6520140) * 1024, "utilise = total - MemAvailable");
+  assert.ok(lin.usedBytes / lin.totalBytes * 100 < 25,
+    "avec MemAvailable, un Pi dont le cache est plein n'est pas annonce sature");
+  const viaMemFree = (8127816 - 214536) / 8127816 * 100;
+  assert.ok(viaMemFree > 95, "MemFree seul aurait annonce la saturation");
+  assert.strictEqual(lin.cachedBytes, (5904312 + 132048) * 1024, "cache = Cached + Buffers");
+  // Noyau anterieur a 3.14 : pas de MemAvailable, repli sur MemFree
+  // plutot que rien. Pre-3.14 kernel: fall back to MemFree, not to null.
+  const old = linux.parseMeminfo(MEMINFO.split("\n").filter((l) => !/^MemAvailable/.test(l)).join("\n"));
+  assert.ok(old && old.usedBytes === (8127816 - 214536) * 1024, "repli sur MemFree si MemAvailable absent");
+  assert.strictEqual(linux.parseMeminfo(""), null);
+  assert.strictEqual(linux.parseMeminfo("MemTotal: 8127816 kB"), null, "sans memoire libre, aucun chiffre invente");
+  console.log("  OK Linux : MemAvailable plutot que MemFree");
+
+  /* L'interface commune : les trois plateformes exposent memoryUsage,
+     et la couche partagee rend toujours quelque chose d'exploitable --
+     une jauge absente serait pire qu'un chiffre approche.
+     The shared interface: all three expose memoryUsage, and the shared
+     layer always returns something usable. */
+  for (const [name, mod] of [["linux", linux], ["win32", win32], ["darwin", darwin]]) {
+    assert.strictEqual(typeof mod.memoryUsage, "function", name + " : memoryUsage doit exister");
+  }
+  assert.strictEqual(typeof platform.memoryUsage, "function",
+    "la couche commune doit exposer memoryUsage");
+}
+
+console.log("Tests plateforme : memoire OK");
