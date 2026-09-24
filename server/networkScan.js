@@ -228,6 +228,114 @@ async function preferredCidr() {
    exit code even for a "host unreachable" (see the detailed note in
    server/platform/win32.js). */
 
+/* ---------- Sonde UDP : forcer la resolution ARP DEPUIS PiBoard ----------
+
+   LE PROBLEME QU'ELLE RESOUT, constate sur un Mac mini Apple Silicon.
+   Le balayage reposait entierement sur `ping`, lance en PROCESSUS
+   ENFANT. Or macOS attribue la permission « Reseau local » a un
+   processus, et l'enfant ici est /sbin/ping -- un binaire signe Apple,
+   etranger au paquet de PiBoard. La permission accordee a PiBoard ne
+   le couvre pas : ses paquets sont jetes SILENCIEUSEMENT, sans erreur
+   ni code de retour anormal. Resultat : un balayage qui ne ramenait que
+   la machine elle-meme (se pinger ne sort jamais sur le reseau) et les
+   quelques adresses deja presentes dans la table ARP.
+
+   Le diagnostic a ete etabli par la mesure, pas par le raisonnement :
+   la MEME commande, memes arguments et meme parallelisme, lancee depuis
+   le Terminal, ramenait 36 machines la ou PiBoard en voyait 2. Seul le
+   contexte d'execution differait.
+
+   CE QU'ON FAIT : un datagramme UDP vers chaque adresse, emis par la
+   socket de PiBoard LUI-MEME. Le noyau doit alors resoudre l'adresse
+   MAC de la destination avant d'emettre, ce qui remplit la table ARP --
+   et c'est cette table, lue juste apres, qui donne les machines
+   vivantes. Le trafic etant emis par PiBoard, il est correctement
+   attribue, et la permission deja accordee s'applique.
+
+   POURQUOI SUR LES TROIS PLATEFORMES et non sous macOS seulement :
+   c'est du dgram Node pur, sans une seule ligne specifique a un
+   systeme, et le gain existe partout. Une machine dont le pare-feu
+   bloque l'ICMP -- un PC Windows en profil « reseau public », une
+   imprimante, une camera -- ne repond pas au ping mais repond TOUJOURS
+   a l'ARP, qui travaille en couche 2 et ne se filtre pas. Le balayage
+   voit donc desormais des machines qu'il manquait aussi sur le Pi.
+
+   Port 9 (« discard ») : service defini par la RFC 863 precisement pour
+   etre ignore. Aucun hote n'agit sur ce datagramme ; on ne cherche
+   d'ailleurs aucune reponse -- seul l'effet de bord sur la table ARP
+   nous interesse. Les erreurs d'emission (hote injoignable, reseau
+   sature) sont ignorees une par une : sur 254 adresses, la plupart ne
+   correspondent a rien, et c'est le cas NORMAL.
+
+   Forcing ARP resolution FROM PiBoard's own socket. macOS attributes
+   the "Local Network" permission per process, and the child here is
+   /sbin/ping -- an Apple-signed binary foreign to PiBoard's bundle, so
+   PiBoard's granted permission does not cover it and its packets are
+   dropped SILENTLY. Established by measurement, not reasoning: the same
+   command, same arguments and concurrency, run from Terminal returned
+   36 machines where PiBoard saw 2.
+   We now send a UDP datagram to each address from PiBoard's own socket:
+   the kernel must resolve the destination's MAC before sending, which
+   fills the ARP table read just afterwards. Done on all three platforms
+   -- it is pure Node dgram, and the gain is universal: a host whose
+   firewall blocks ICMP still always answers ARP, which works at layer 2
+   and cannot be filtered. Port 9 ("discard", RFC 863) is defined to be
+   ignored; we seek no reply, only the side effect. */
+const UDP_POKE_PORT = 9;
+/* Delai laisse au noyau pour resoudre les adresses avant qu'on relise
+   la table. Volontairement court : le balayage ping qui suit dure
+   plusieurs secondes et sert lui-meme de temps de repos, la table
+   n'etant lue qu'apres lui.
+   Kept deliberately short: the ping sweep that follows lasts several
+   seconds and doubles as the settle time. */
+const UDP_POKE_SETTLE_MS = 600;
+/* Garde-fou : si une notification d'emission n'arrivait jamais, le
+   balayage ne doit pas rester bloque indefiniment.
+   Guard: the scan must never hang if a send notification never comes. */
+const UDP_POKE_MAX_MS = 8000;
+
+function udpPoke(ips) {
+  return new Promise((resolve) => {
+    let socket;
+    try {
+      socket = dgram.createSocket("udp4");
+    } catch (e) {
+      return resolve(false); // pas de sonde : on garde le ping seul / no probe: ping alone
+    }
+    let done = false;
+    let timer = null;
+    const finish = (ok) => {
+      if (done) return;
+      done = true;
+      if (timer) clearTimeout(timer);
+      try { socket.close(); } catch (e) { /* deja fermee / already closed */ }
+      resolve(ok);
+    };
+    timer = setTimeout(() => finish(false), UDP_POKE_MAX_MS);
+    socket.on("error", () => finish(false));
+    try {
+      socket.bind(() => {
+        const payload = Buffer.alloc(1);
+        let pending = ips.length;
+        if (!pending) return finish(true);
+        for (const ip of ips) {
+          // Le rappel recoit une erreur pour la plupart des adresses --
+          // aucune machine derriere. On la jette : l'echec est le cas
+          // attendu, et la resolution ARP a eu lieu de toute facon.
+          // The callback gets an error for most addresses -- no machine
+          // behind them. Discarded: failure is the expected case, and
+          // ARP resolution happened regardless.
+          socket.send(payload, 0, payload.length, UDP_POKE_PORT, ip, () => {
+            if (--pending === 0) setTimeout(() => finish(true), UDP_POKE_SETTLE_MS);
+          });
+        }
+      });
+    } catch (e) {
+      finish(false);
+    }
+  });
+}
+
 function pingHost(ip) {
   return new Promise((resolve) => {
     if (!isValidIp(ip)) return resolve(false);
@@ -372,6 +480,15 @@ async function performScan(cidrOverride) {
 
   const selfAddrs = new Set(detectSubnets().map((s) => s.address));
 
+  /* La sonde UDP D'ABORD, le ping ensuite : la sonde remplit la table
+     ARP en une seconde, et la duree du balayage ping sert ensuite de
+     temps de repos au noyau pour achever ses resolutions. L'inverse
+     aurait ajoute une attente pour rien.
+     The UDP probe FIRST, then the ping: the probe fills the ARP table
+     in a second, and the ping sweep's own duration then serves as the
+     kernel's settle time. */
+  await udpPoke(ips);
+
   const aliveFromPing = [];
   await mapWithConcurrency(ips, PING_CONCURRENCY, async (ip) => {
     if (await pingHost(ip)) aliveFromPing.push(ip);
@@ -457,6 +574,7 @@ module.exports = {
   preferredCidr,
   parseCidr,
   hostRangeFromCidr,
+  udpPoke,
   parseArpTable,
   parseArpEntries,
   parseArpDarwin,

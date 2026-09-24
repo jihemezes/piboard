@@ -1,5 +1,104 @@
 # Changelog
 
+## 1.123.0
+
+- **Analyse reseau : le balayage ne sortait pas de la machine sous
+  macOS.** Sur un Mac mini Apple Silicon, la tuile ne ramenait que deux
+  lignes -- le Mac lui-meme (se pinger ne sort jamais sur le reseau) et
+  une adresse deja presente dans la table ARP -- la ou le reseau compte
+  trente-six machines.
+
+- **La cause, etablie par la mesure et non par le raisonnement.** macOS
+  attribue l'autorisation « Reseau local » a un PROCESSUS. Or PiBoard ne
+  pinguait pas lui-meme : il lancait /sbin/ping en processus enfant, un
+  binaire signe Apple etranger a son paquet. L'autorisation accordee a
+  PiBoard -- verifiee, cochee dans les Reglages Systeme -- ne couvrait
+  pas cet enfant, dont les paquets etaient jetes SILENCIEUSEMENT : ni
+  erreur, ni code de retour anormal, ni la moindre trace. Le test
+  decisif : la MEME commande, memes arguments et meme parallelisme de
+  32, lancee depuis le Terminal, ramenait les trente-six machines.
+  Seul le contexte d'execution differait.
+
+  Deux hypotheses precedentes avaient ete ecartees par ce meme genre de
+  mesure : la confidentialite du reseau local prise globalement
+  (l'autorisation etait bien accordee, et le ping manuel passait), puis
+  une erreur d'arguments BSD (la commande exacte de PiBoard rendait 0).
+
+- **La correction : une sonde UDP emise par PiBoard LUI-MEME.** Un
+  datagramme vers chaque adresse du sous-reseau oblige le noyau a
+  resoudre l'adresse MAC de la destination avant d'emettre, ce qui
+  remplit la table ARP -- table lue juste apres, et qui donne les
+  machines vivantes. Le trafic etant emis par PiBoard, il est
+  correctement attribue et l'autorisation deja accordee s'applique.
+  Port 9 (« discard », RFC 863), defini pour etre ignore : aucun hote
+  n'agit dessus et aucune reponse n'est attendue, seul l'effet de bord
+  sur la table ARP est recherche.
+
+- **Applique aux TROIS plateformes, et non a macOS seulement.** C'est du
+  dgram Node pur, sans une ligne specifique a un systeme -- donc aucun
+  test de plateforme ajoute -- et le gain est universel : une machine
+  dont le pare-feu bloque l'ICMP (un PC Windows en profil « reseau
+  public », une imprimante, une camera) ne repond pas au ping mais
+  repond TOUJOURS a l'ARP, qui travaille en couche 2 et ne se filtre
+  pas. Le balayage voit donc desormais des appareils qu'il manquait
+  aussi sur le Raspberry Pi.
+
+- **Ordre choisi : sonde puis ping.** La sonde remplit la table en une
+  seconde, et la duree du balayage ping qui suit sert de temps de repos
+  au noyau pour achever ses resolutions -- la table n'etant lue qu'apres
+  lui. L'inverse aurait ajoute une attente pour rien.
+
+- **Le ping est conserve** : il reste la source qui marche partout
+  ailleurs, et la sonde le complete plutot qu'elle ne le remplace.
+
+- `test/networkScan.test.js` verifie ce qui casserait le balayage entier
+  si la sonde tournait mal : qu'elle rend TOUJOURS la main, et vite,
+  face a 254 adresses muettes -- le cas normal. Une sonde qui se figerait
+  laisserait la tuile sur « Analyse en cours... » indefiniment, sans
+  jamais rien afficher.
+
+- **Aide mise a jour** (fiche Analyse reseau, les deux langues) : les
+  trois moyens employes, pourquoi l'ARP rattrape ce que le ping manque,
+  et quoi verifier sur un Mac si l'analyse reste vide.
+
+---
+
+- **Network scan: the sweep never left the machine on macOS.** On an
+  Apple Silicon Mac mini the tile returned two lines -- the Mac itself
+  and one address already in the ARP table -- on a network of
+  thirty-six machines.
+
+- **The cause, established by measurement, not reasoning.** macOS grants
+  the "Local Network" permission to a PROCESS. PiBoard did not ping
+  itself: it ran /sbin/ping as a child process, an Apple-signed binary
+  foreign to its bundle. The permission granted to PiBoard -- checked,
+  toggled on in System Settings -- did not cover that child, whose
+  packets were dropped SILENTLY: no error, no abnormal exit code, no
+  trace. The decisive test: the same command, same arguments and same
+  concurrency of 32, run from Terminal, returned all thirty-six
+  machines.
+
+- **The fix: a UDP probe sent by PiBoard ITSELF.** A datagram to each
+  address forces the kernel to resolve the destination's MAC before
+  sending, filling the ARP table read just afterwards. Port 9
+  ("discard", RFC 863), defined to be ignored; only the side effect is
+  sought.
+
+- **Applied to all THREE platforms.** It is pure Node dgram, no
+  system-specific line, and the gain is universal: a host whose firewall
+  blocks ICMP still always answers ARP, which works at layer 2 and
+  cannot be filtered.
+
+- **Order: probe then ping**, so the ping sweep's duration doubles as
+  the kernel's settle time. The ping is kept: the probe complements it
+  rather than replacing it.
+
+- `test/networkScan.test.js` checks what would break the whole scan:
+  that the probe ALWAYS returns, and quickly, against 254 silent
+  addresses -- the normal case.
+
+- **Help updated** (Network scan section, both languages).
+
 ## 1.122.0
 
 - **Etat systeme : la jauge de memoire disait n'importe quoi sur Mac**

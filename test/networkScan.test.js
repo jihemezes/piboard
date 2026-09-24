@@ -186,4 +186,52 @@ console.log("== parseArpDarwin : format macOS/BSD (arp -an), octets MAC sans zer
   console.log("  OK entree vide/malformee sans planter");
 }
 
+/* ================= SONDE UDP / UDP PROBE (1.123.0) =================
+   La sonde force la resolution ARP depuis le processus de PiBoard, au
+   lieu de compter sur un `ping` lance en processus enfant -- que macOS
+   prive de la permission « Reseau local » accordee a l'application,
+   d'ou un balayage qui ne ramenait que la machine elle-meme.
+
+   CE QU'ON PEUT TESTER HORS LIGNE : pas l'effet sur la table ARP, qui
+   demande un vrai reseau et de vraies machines. Mais on peut verifier
+   ce qui casserait le balayage entier si ca tournait mal -- que la
+   sonde rend TOUJOURS la main, et vite, meme quand rien ne repond.
+   C'est exactement le cas normal : sur 254 adresses, la grande majorite
+   ne correspond a aucune machine. Les adresses utilisees sont celles de
+   la RFC 5737, reservees a la documentation et jamais routees.
+
+   WHAT CAN BE TESTED OFFLINE: not the effect on the ARP table, which
+   needs a real network. But we can check what would break the whole
+   scan if it went wrong -- that the probe ALWAYS returns, and quickly,
+   even when nothing answers. RFC 5737 addresses, never routed. */
+{
+  const { udpPoke } = require("../server/networkScan");
+  assert.strictEqual(typeof udpPoke, "function", "la sonde doit etre exposee");
+
+  const started = Date.now();
+  const ips = [];
+  for (let i = 1; i <= 254; i++) ips.push("192.0.2." + i);
+  udpPoke(ips).then((ok) => {
+    const ms = Date.now() - started;
+    assert.strictEqual(ok, true, "une sonde sans aucune reponse reste un succes");
+    /* Le garde-fou interne est a 8 s. Depasser signifierait que le
+       balayage entier peut se figer -- le pire defaut possible ici,
+       puisque la tuile resterait sur « Analyse en cours... » sans
+       jamais rien afficher.
+       The internal guard is 8 s. Exceeding it would mean the whole scan
+       can freeze -- the worst possible fault, the tile staying on
+       "Scanning..." forever. */
+    assert.ok(ms < 8000, `la sonde doit rendre la main vite (${ms} ms)`);
+    console.log(`  OK sonde UDP : 254 adresses muettes, main rendue en ${ms} ms`);
+
+    return udpPoke([]);
+  }).then((ok) => {
+    assert.strictEqual(ok, true, "une liste vide ne doit ni planter ni bloquer");
+    console.log("  OK sonde UDP : liste vide traitee sans blocage");
+  }).catch((e) => {
+    console.error("  FAIL sonde UDP :", e.message);
+    process.exitCode = 1;
+  });
+}
+
 console.log("\n>>> TOUS LES TESTS NETWORKSCAN PASSENT");

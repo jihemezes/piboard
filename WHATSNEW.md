@@ -33,6 +33,18 @@
 # Nouveautes / What's new
 
 
+## 1.123.0
+
+**L'analyse reseau voit enfin tout le reseau**
+
+Sur un Mac, la tuile ne trouvait que la machine elle-meme : macOS jetait sans rien dire les paquets du balayage, parce qu'ils etaient emis par la commande ping et non par PiBoard. Le balayage sonde desormais le reseau depuis PiBoard lui-meme. Benefice pour tout le monde, Raspberry Pi compris : les appareils dont le pare-feu ignore le ping -- imprimantes, cameras, PC Windows en reseau public -- apparaissent maintenant eux aussi.
+
+---
+
+**The network scan finally sees the whole network**
+
+On a Mac the tile found only the machine itself: macOS silently dropped the sweep's packets, because they came from the ping command rather than from PiBoard. The sweep now probes the network from PiBoard itself. Everyone gains, Raspberry Pi included: devices whose firewall ignores ping -- printers, cameras, Windows PCs on a public network -- now show up too.
+
 ## 1.122.0
 
 **La jauge de memoire dit enfin la verite**
