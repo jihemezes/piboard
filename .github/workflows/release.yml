@@ -87,13 +87,39 @@ jobs:
   # Creating the release ONCE, before both builds (see
   # scripts/githubRelease.js). Without it Linux and macOS each created
   # it: duplicates, or a failing second job.
+  # VERSIONS DES ACTIONS, ET POURQUOI CELLES-CI. GitHub a retire Node 20
+  # de ses machines le 23 septembre 2026 : les actions qui le declaraient
+  # sont depuis FORCEES sur Node 24, ce qui marche mais produit un
+  # avertissement a chaque execution. Les versions ci-dessous (checkout
+  # et setup-node en v5, upload-artifact en v7) declarent Node 24
+  # elles-memes, ce qui fait taire l'avertissement en disant la verite
+  # plutot qu'en la masquant.
+  #
+  # Un avertissement permanent n'est jamais anodin : on finit par ne plus
+  # lire les journaux, et c'est alors un VRAI probleme qui passe pour du
+  # bruit. C'est la seule raison de cette montee de version -- il n'y a
+  # aucun gain fonctionnel a en attendre.
+  #
+  # `node-version: 22` plus bas est SANS RAPPORT : c'est le Node qui
+  # execute PiBoard et electron-builder, pas celui qui execute les
+  # actions. Les deux se choisissent separement, et confondre les deux
+  # ferait changer la version avec laquelle l'application est construite.
+  #
+  # ACTION VERSIONS, AND WHY THESE. GitHub removed Node 20 from its
+  # runners on 23 September 2026, so actions declaring it are FORCED onto
+  # Node 24 -- which works, but warns on every run. The versions below
+  # declare Node 24 themselves, silencing the warning by telling the
+  # truth rather than hiding it. A permanent warning is never harmless:
+  # one stops reading the logs, and a REAL problem then looks like noise.
+  # `node-version: 22` below is UNRELATED: that is the Node running
+  # PiBoard and electron-builder, not the one running the actions.
   release:
     name: Prepare the GitHub release
     if: github.event_name == 'push'
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - name: Create (or reuse) the release
@@ -111,9 +137,9 @@ jobs:
     if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: ubuntu-22.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -175,7 +201,7 @@ jobs:
 
       - name: Keep the build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: piboard-linux-build-log
           path: build-linux.log
@@ -183,7 +209,7 @@ jobs:
 
       - name: Keep the packages as artifacts (manual run only)
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: piboard-linux
           path: |
@@ -204,9 +230,9 @@ jobs:
       # it search (and sometimes fail) on the machine.
       CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -224,7 +250,7 @@ jobs:
 
       - name: Keep the build log on failure
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: piboard-mac-build-log
           path: build-mac.log
@@ -232,7 +258,7 @@ jobs:
 
       - name: Keep the packages as artifacts (manual run only)
         if: github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: piboard-mac
           path: |

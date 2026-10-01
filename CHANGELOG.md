@@ -1,5 +1,69 @@
 # Changelog
 
+## 1.127.2
+
+- **Avertissement Node 20 a chaque execution du workflow.** GitHub a
+  retire Node 20 de ses machines le 23 septembre 2026 : les actions qui
+  le declaraient sont depuis FORCEES sur Node 24. Tout fonctionnait --
+  les publications 1.127.0 et 1.127.1 en temoignent -- mais chaque
+  execution affichait un avertissement.
+
+- **Actions montees aux versions qui declarent Node 24** :
+  `actions/checkout` et `actions/setup-node` passent en v5,
+  `actions/upload-artifact` en v7. L'avertissement disparait parce que
+  les actions disent desormais la verite sur leur execution, pas parce
+  qu'on l'a masque.
+
+- **Pourquoi s'en occuper pour un simple avertissement.** Un
+  avertissement permanent dans un journal n'est jamais anodin : on finit
+  par ne plus lire les journaux du tout, et c'est alors un VRAI probleme
+  qui passe pour du bruit. Meme raison que la distinction introduite en
+  1.127.1 entre « release incomplete » et « verification impossible ».
+
+- **Aucun gain fonctionnel attendu**, et aucun changement dans
+  l'application : ce correctif ne touche que
+  `.github/workflows/release.yml`.
+
+- **Precision consignee dans le fichier** : le `node-version: 22` des
+  jobs est SANS RAPPORT avec ces versions d'actions. C'est le Node qui
+  execute PiBoard et electron-builder, pas celui qui execute les
+  actions ; les confondre ferait changer la version avec laquelle
+  l'application est construite.
+
+- **Reserve** : les deux etapes `upload-artifact` ne servent qu'aux
+  executions manuelles et a la conservation du journal en cas d'echec --
+  elles ne sont PAS sur le chemin d'une publication. Un probleme avec la
+  v7 ne pourrait donc pas casser une release, et il se verrait au
+  premier lancement manuel.
+
+---
+
+- **Node 20 warning on every workflow run.** GitHub removed Node 20 from
+  its runners on 23 September 2026, so actions declaring it are FORCED
+  onto Node 24. Everything worked -- the 1.127.0 and 1.127.1
+  publications attest to it -- but every run printed a warning.
+
+- **Actions bumped to the versions that declare Node 24**:
+  `actions/checkout` and `actions/setup-node` to v5,
+  `actions/upload-artifact` to v7. The warning goes away because the
+  actions now tell the truth about their runtime, not because it was
+  hidden.
+
+- **Why bother for a mere warning.** A permanent warning in a log is
+  never harmless: one stops reading logs altogether, and a REAL problem
+  then looks like noise. The same reasoning as 1.127.1's distinction
+  between "incomplete release" and "could not verify".
+
+- **No functional gain expected**, and no change in the application:
+  this fix touches only `.github/workflows/release.yml`.
+
+- **Noted in the file**: the jobs' `node-version: 22` is UNRELATED to
+  these action versions -- that is the Node running PiBoard and
+  electron-builder.
+
+- **Caveat**: the two `upload-artifact` steps serve only manual runs and
+  keeping the log on failure -- they are NOT on a publication's path.
+
 ## 1.127.1
 
 - **Publication en echec alors que tout avait reussi.** Sur la 1.127.0,
