@@ -33,6 +33,18 @@
 # Nouveautes / What's new
 
 
+## 1.124.0
+
+**Installer ffmpeg sur un Mac, enfin possible depuis PiBoard**
+
+Windows proposait ffmpeg a l'installation, Linux avait un bouton, macOS n'avait rien du tout : la tuile Chaines TV signalait son absence sans dire comment y remedier. Un bouton l'installe desormais aussi sur Mac, par simple telechargement dans le dossier de PiBoard -- sans mot de passe, sans Homebrew et sans rien changer au systeme. Et partout, les messages disent maintenant ou aller pour regler le probleme.
+
+---
+
+**Installing ffmpeg on a Mac, at last, from PiBoard**
+
+Windows offered ffmpeg at install time, Linux had a button, macOS had nothing at all: the TV channels tile reported its absence without saying how to fix it. A button now installs it on a Mac too, by a simple download into PiBoard's folder -- no password, no Homebrew, no system change. And everywhere, the messages now say where to go to fix it.
+
 ## 1.123.0
 
 **L'analyse reseau voit enfin tout le reseau**

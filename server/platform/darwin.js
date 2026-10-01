@@ -203,12 +203,177 @@ function chromiumInstallHint() {
   return { fr: "brew install --cask chromium", en: "brew install --cask chromium" };
 }
 
+/* Dossier ou PiBoard depose les outils qu'il telecharge lui-meme. Il
+   suit les donnees de l'utilisateur (~/Library/Application Support/
+   PiBoard/data sous l'application de bureau), donc inscriptible,
+   conserve d'une mise a jour a l'autre, et efface avec le reste si
+   l'utilisateur fait le menage.
+   Where PiBoard drops the tools it downloads itself: alongside the
+   user's data, hence writable and preserved across updates. */
+function mediaToolDir(tool) {
+  const path = require("path");
+  const base = process.env.PIBOARD_DATA || path.join(__dirname, "..", "..", "data");
+  return path.join(base, tool);
+}
+
 function ffmpegCandidates() {
-  return ["ffmpeg", "/opt/homebrew/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/opt/local/bin/ffmpeg"];
+  /* Le binaire telecharge par PiBoard est verifie EN PREMIER, comme sous
+     Windows avec celui que depose l'installeur : c'est le cas le plus
+     probable des lors que l'utilisateur a clique sur le bouton.
+     Les chemins Homebrew et MacPorts suivent, en absolu -- une
+     application lancee depuis le Finder n'herite PAS du PATH du
+     Terminal, et /opt/homebrew/bin n'y figure jamais. Chercher "ffmpeg"
+     par son nom seul suffirait depuis un terminal et echouerait dans
+     l'application : le piege exact qui a deja coute deux diagnostics
+     sur ce systeme.
+     The binary PiBoard downloads is checked FIRST, as on Windows. The
+     Homebrew and MacPorts paths follow, absolute -- an application
+     launched from the Finder does NOT inherit the Terminal's PATH. */
+  return [
+    require("path").join(mediaToolDir("ffmpeg"), "ffmpeg"),
+    "ffmpeg",
+    "/opt/homebrew/bin/ffmpeg",
+    "/usr/local/bin/ffmpeg",
+    "/opt/local/bin/ffmpeg"
+  ];
 }
 
 function ffmpegInstallHint() {
   return { fr: "brew install ffmpeg", en: "brew install ffmpeg" };
+}
+
+/* ---------- Installation de ffmpeg sur macOS / installing ffmpeg on macOS ----
+
+   LE MANQUE COMBLE. Windows propose ffmpeg a l'installation (etape
+   facultative de l'installeur NSIS, voir build/installer.nsh) et Linux
+   offre un vrai bouton via apt. macOS n'avait RIEN : ni bouton, ni
+   proposition -- seulement la chaine « brew install ffmpeg » affichee
+   en texte, dans une section des reglages que rien n'invite a ouvrir au
+   moment ou la tuile IPTV echoue. L'utilisateur constatait une panne
+   sans savoir qu'une commande la reglait.
+
+   POURQUOI PAS HOMEBREW. Il aurait fallu qu'il soit deja installe, ce
+   qui n'a rien d'acquis, et l'installer A LA PLACE de l'utilisateur est
+   hors de question : Homebrew ecrit dans /opt/homebrew et modifie la
+   configuration du shell. Un tableau de bord n'a pas a remanier le
+   systeme de qui que ce soit sans le lui demander. On telecharge donc
+   un binaire autonome, dans le dossier de donnees de PiBoard, qui
+   n'engage que PiBoard et disparait avec lui.
+
+   ET LA QUARANTAINE ? Elle ne s'applique pas ici, contrairement a ce
+   qu'on pourrait craindre apres les deboires du premier lancement
+   (voir docs/LINUX-MACOS.md). L'attribut com.apple.quarantine est pose
+   par l'application QUI TELECHARGE, via LaunchServices -- un
+   navigateur, Mail. Un fichier recupere par PiBoard lui-meme en HTTP
+   n'en porte pas, et Gatekeeper ne l'inspecte donc pas.
+
+   MEME SOURCE QUE WINDOWS : le binaire est rehéberge dans une release
+   dediee du depot PiBoard, pas pris chez un tiers au moment du
+   telechargement. Voir l'en-tete de build/installer.nsh pour le detail
+   de provenance et de licence (GPL) : cette licence ne s'applique qu'au
+   binaire telecharge, jamais au code de PiBoard.
+
+   FILLING THE GAP. Windows offers ffmpeg at install time and Linux has
+   a real button via apt. macOS had NOTHING. Homebrew is not assumed --
+   installing it on the user's behalf would rewrite /opt/homebrew and
+   their shell configuration, which a dashboard has no business doing.
+   A standalone binary is downloaded into PiBoard's own data folder
+   instead. Quarantine does not apply: com.apple.quarantine is set by
+   the DOWNLOADING application through LaunchServices, and a file
+   fetched by PiBoard over HTTP carries none. The binary is re-hosted in
+   a dedicated PiBoard release, as on Windows. */
+
+/* Une entree par outil et par architecture. VLC est volontairement
+   absent : il se distribue en .app de plusieurs centaines de mega-
+   octets, que deposer dans un dossier de donnees n'aurait aucun sens --
+   sur macOS il s'installe normalement, et la chaine affichee suffit.
+   One entry per tool and architecture. VLC is deliberately absent: it
+   ships as a several-hundred-megabyte .app. */
+const MEDIA_DOWNLOADS = {
+  ffmpeg: {
+    arm64: {
+      url: "https://github.com/jihemezes/piboard/releases/download/ffmpeg-macos-v8.1.2/ffmpeg-piboard-macos-arm64.zip",
+      binary: "ffmpeg"
+    },
+    x64: {
+      url: "https://github.com/jihemezes/piboard/releases/download/ffmpeg-macos-v8.1.2/ffmpeg-piboard-macos-x64.zip",
+      binary: "ffmpeg"
+    }
+  }
+};
+
+function mediaDownloadFor(tool) {
+  const byArch = MEDIA_DOWNLOADS[tool];
+  if (!byArch) return null;
+  return byArch[process.arch === "arm64" ? "arm64" : "x64"] || null;
+}
+
+/* Sert a l'interface : ce qui sera pose, et ou. Sous Linux la meme
+   fonction rend des noms de paquets ; ici, un binaire et son dossier.
+   Feeds the interface: what will be placed, and where. */
+function mediaPackages(tool) {
+  const dl = mediaDownloadFor(tool);
+  return dl ? [tool + " (" + process.arch + ")"] : null;
+}
+
+function installMediaTool(tool) {
+  const dl = mediaDownloadFor(tool);
+  if (!dl) return Promise.resolve({ ok: false, reason: "unknown-tool" });
+
+  const fs = require("fs");
+  const path = require("path");
+  const os = require("os");
+  const dir = mediaToolDir(tool);
+  const archive = path.join(os.tmpdir(), "piboard-" + tool + "-" + process.pid + ".zip");
+
+  return new Promise((resolve) => {
+    /* curl plutot qu'un client HTTP maison : il est present sur TOUT
+       macOS depuis toujours, suit les redirections (GitHub renvoie vers
+       son stockage d'objets) et gere seul les delais et les reprises.
+       Ecrire cent lignes de suivi de redirections pour refaire moins
+       bien n'aurait servi personne.
+       curl rather than a hand-rolled HTTP client: present on EVERY
+       macOS, follows redirects (GitHub points to its object storage)
+       and handles timeouts and retries by itself. */
+    const curl = ["-L", "--fail", "--silent", "--show-error",
+      "--connect-timeout", "30", "--retry", "2", "-o", archive, dl.url];
+    execFile("/usr/bin/curl", curl, { timeout: 15 * 60 * 1000 }, (err, _out, stderr) => {
+      if (err) {
+        try { fs.unlinkSync(archive); } catch (e) { /* rien a nettoyer / nothing to clean */ }
+        /* Distinguer « pas de reseau » de « fichier absent du depot »
+           n'est pas du luxe : le second veut dire que la release n'a pas
+           encore ete publiee pour cette architecture, et l'utilisateur
+           n'y peut rien -- lui faire verifier sa connexion serait le
+           lancer sur une fausse piste.
+           Telling "no network" from "file missing from the repository"
+           apart matters: the second means the release has not been
+           published for this architecture, and the user can do nothing
+           about it. */
+        const text = String(stderr || err.message || "");
+        const notFound = /404|not found/i.test(text);
+        return resolve({ ok: false, reason: notFound ? "not-published" : "download-failed", detail: text.slice(-500) });
+      }
+      try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { /* verifie ci-dessous / checked below */ }
+      // `ditto -x -k` est l'outil d'archives d'Apple : il comprend les
+      // zip produits sur macOS, attributs compris, la ou unzip les
+      // aplatit. Apple's own archive tool, unlike unzip.
+      execFile("/usr/bin/ditto", ["-x", "-k", archive, dir], { timeout: 5 * 60 * 1000 }, (xErr, _o, xStderr) => {
+        try { fs.unlinkSync(archive); } catch (e) { /* temporaire / temporary */ }
+        if (xErr) return resolve({ ok: false, reason: "extract-failed", detail: String(xStderr || xErr.message).slice(-500) });
+        const binary = path.join(dir, dl.binary);
+        if (!fs.existsSync(binary)) {
+          return resolve({ ok: false, reason: "extract-failed", detail: "binaire absent de l'archive / binary missing from archive" });
+        }
+        /* Le bit d'execution ne survit pas a tous les zip : le reposer
+           explicitement evite un « fichier present mais inutilisable »,
+           panne d'autant plus deroutante que tout semble en place.
+           The execute bit does not survive every zip: setting it back
+           avoids a "present but unusable" file. */
+        try { fs.chmodSync(binary, 0o755); } catch (e) { /* non bloquant / non blocking */ }
+        resolve({ ok: true, packages: mediaPackages(tool), path: binary });
+      });
+    });
+  });
 }
 
 /* Le binaire VLC reel se trouve a l'interieur du bundle .app, pas de
@@ -447,6 +612,11 @@ module.exports = {
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,
+  mediaInstallMode: "download",
+  mediaToolDir,
+  mediaDownloadFor,
+  mediaPackages,
+  installMediaTool,
   chromiumCandidates,
   chromiumInstallHint,
   vlcCandidates,

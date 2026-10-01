@@ -4162,7 +4162,16 @@
         hint.textContent = "";
         hint.hidden = true;
       } else if (mediaTools.canInstall) {
-        hint.textContent = i18n.t("settings.media.hint.button");
+        /* Deux installations tres differentes derriere le meme bouton :
+           un gestionnaire de paquets qui demande un mot de passe, ou un
+           simple telechargement qui n'en demande aucun. Annoncer l'un
+           pour l'autre laisserait attendre une fenetre qui ne vient
+           jamais -- ou inquieter pour une elevation de privileges qui
+           n'a pas lieu.
+           Two very different installations behind one button. */
+        hint.textContent = mediaTools.installMode === "download"
+          ? i18n.t("settings.media.hint.download")
+          : i18n.t("settings.media.hint.button");
         hint.hidden = false;
       } else {
         /* Commande a taper : on ne montre que celles des outils
@@ -4209,9 +4218,19 @@
     const hint = $("mediaToolsHint");
     if (hint) {
       hint.hidden = false;
-      hint.textContent = reason === "no-auth-agent"
-        ? i18n.t("settings.media.error.noauth")
-        : i18n.t("settings.media.error");
+      /* Chaque motif appelle une conduite DIFFERENTE, et les confondre
+         enverrait l'utilisateur sur une fausse piste : « pas encore
+         publie » ne se corrige pas de son cote et ne doit pas lui faire
+         verifier sa connexion, la ou un echec de telechargement, lui,
+         se retente.
+         Each reason calls for a DIFFERENT course of action. */
+      const messages = {
+        "no-auth-agent": "settings.media.error.noauth",
+        "not-published": "settings.media.error.notPublished",
+        "download-failed": "settings.media.error.download",
+        "extract-failed": "settings.media.error.extract"
+      };
+      hint.textContent = i18n.t(messages[reason] || "settings.media.error");
     }
   }
 

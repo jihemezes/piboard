@@ -1117,6 +1117,15 @@ module.exports = {
   chromiumInstallHint,
   vlcCandidates,
   vlcInstallHint,
+  /* Comment l'installation se fait ici, pour que l'interface dise la
+     verite sans jamais tester le systeme elle-meme : "package" ouvre le
+     gestionnaire de paquets et demande un mot de passe, "download"
+     recupere un binaire et n'en demande aucun. Le message affiche avant
+     de cliquer differe donc, et promettre une fenetre de mot de passe
+     qui ne viendra jamais serait deroutant.
+     How installation happens here, so the interface can tell the truth
+     without ever testing the system itself. */
+  mediaInstallMode: "package",
   mediaPackages,
   installMediaTool
 };

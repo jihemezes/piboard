@@ -423,6 +423,12 @@ module.exports = {
      from win32.js and darwin.js, and the caller must check for them --
      that is exactly how it knows whether it can offer a button or only
      display a command. */
+  /* "package", "download", ou absent quand la plateforme ne sait pas
+     installer ces outils depuis l'interface (Windows, ou l'installeur
+     s'en charge a part).
+     "package", "download", or absent when the platform cannot install
+     those tools from the interface. */
+  mediaInstallMode: impl.mediaInstallMode,
   mediaPackages: impl.mediaPackages,
   installMediaTool: impl.installMediaTool,
   // Exposees pour les tests unitaires, qui doivent pouvoir verifier les

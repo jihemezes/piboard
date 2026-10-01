@@ -1,5 +1,117 @@
 # Changelog
 
+## 1.124.0
+
+- **macOS etait la seule plateforme a ne RIEN proposer pour ffmpeg.**
+  Windows l'offre a l'installation (etape facultative de l'installeur
+  NSIS), Linux a un vrai bouton via apt -- et macOS se contentait
+  d'afficher « brew install ffmpeg » en texte, dans une section des
+  reglages que rien n'invite a ouvrir au moment ou la tuile IPTV
+  echoue. Constat verifie dans le code : `installMediaTool` et
+  `mediaPackages` etaient absents de darwin.js, donc
+  `/api/system/media-tools` rendait `canInstall: false` et le bouton
+  n'apparaissait jamais.
+
+- **Bouton d'installation sur macOS, par telechargement direct.** Un
+  binaire autonome (~40 Mo) est depose dans le dossier de donnees de
+  PiBoard. Aucun mot de passe, aucune modification du systeme.
+
+- **Pourquoi pas Homebrew.** Il aurait fallu qu'il soit deja installe,
+  ce qui n'a rien d'acquis, et l'installer A LA PLACE de l'utilisateur
+  est hors de question : Homebrew ecrit dans /opt/homebrew et modifie la
+  configuration du shell. Un tableau de bord n'a pas a remanier le
+  systeme de quelqu'un sans le lui demander. Si Homebrew ou MacPorts est
+  deja la, en revanche, PiBoard trouve leur ffmpeg et ne telecharge
+  rien.
+
+- **La quarantaine ne s'applique pas ici**, contrairement a ce qu'on
+  pouvait craindre apres la 1.121.0 : l'attribut com.apple.quarantine
+  est pose par l'application QUI TELECHARGE, via LaunchServices (un
+  navigateur, Mail). Un fichier recupere par PiBoard lui-meme en HTTP
+  n'en porte pas, et Gatekeeper ne l'inspecte donc pas.
+
+- **Chemins ABSOLUS pour Homebrew et MacPorts** dans la liste des
+  candidats. Une application lancee depuis le Finder n'herite pas du
+  PATH du Terminal et /opt/homebrew/bin n'y figure jamais : chercher
+  « ffmpeg » par son seul nom marche en developpement et echoue chez
+  l'utilisateur. C'est le meme piege qui a coute deux diagnostics
+  errones sur ce systeme (1.121.0 et 1.123.0) ; un test le verrouille
+  desormais.
+
+- **L'interface dit ce qui va REELLEMENT se passer.** Nouveau champ
+  `installMode`, annonce par la couche plateforme et non devine :
+  « package » (gestionnaire de paquets, mot de passe demande) ou
+  « download » (binaire recupere, aucun mot de passe). Le message
+  d'avant-clic promettait jusqu'ici une fenetre de mot de passe a tout
+  le monde -- elle ne serait jamais venue sur un Mac.
+
+- **Des erreurs qui distinguent les causes** : « pas encore publie pour
+  ce processeur » ne se corrige pas du cote de l'utilisateur et ne doit
+  pas l'envoyer verifier sa connexion, la ou un echec de telechargement,
+  lui, se retente.
+
+- **Les messages de la tuile IPTV disent maintenant OU regler le
+  probleme**, et plus seulement qu'il existe : « ffmpeg est absent de
+  cette machine » devient « ... Installez-le depuis Reglages > Outils
+  multimedias, ou PiBoard s'en charge pour vous sous Linux et macOS ».
+
+- **Aide mise a jour** (fiche Chaines TV, les deux langues) : les trois
+  voies d'installation selon le systeme, ce que chacune demande et ce
+  qu'elle touche.
+
+- DEPENDANCE A SATISFAIRE AVANT QUE LE BOUTON FONCTIONNE : l'archive
+  doit etre publiee dans une release dediee du depot, comme cela se fait
+  deja pour Windows (voir l'en-tete de build/installer.nsh), sous le tag
+  `ffmpeg-macos-v8.1.2` et aux noms `ffmpeg-piboard-macos-arm64.zip` et
+  `ffmpeg-piboard-macos-x64.zip`. Tant qu'elle ne l'est pas, le bouton
+  repond « pas encore publie pour ce processeur » -- un message juste,
+  et non une erreur obscure.
+
+---
+
+- **macOS was the only platform offering NOTHING for ffmpeg.** Windows
+  offers it at install time, Linux has a real button via apt, and macOS
+  merely displayed "brew install ffmpeg" as text in a settings section
+  nothing invites you to open when the IPTV tile fails.
+
+- **Install button on macOS, by direct download**: a standalone binary
+  (~40 MB) placed in PiBoard's data folder. No password, no system
+  change.
+
+- **Why not Homebrew.** It would have to be installed already, and
+  installing it ON THE USER'S BEHALF is out of the question: it writes
+  into /opt/homebrew and changes their shell configuration. If Homebrew
+  or MacPorts is already there, PiBoard finds their ffmpeg and downloads
+  nothing.
+
+- **Quarantine does not apply here**: com.apple.quarantine is set by the
+  DOWNLOADING application through LaunchServices, and a file fetched by
+  PiBoard over HTTP carries none.
+
+- **ABSOLUTE paths for Homebrew and MacPorts**: an application launched
+  from the Finder does not inherit the Terminal's PATH. The same trap
+  that cost two wrong diagnoses on this system; a test now locks it
+  down.
+
+- **The interface states what will ACTUALLY happen**: a new
+  `installMode` field, announced by the platform layer -- "package"
+  (password asked) or "download" (none). The pre-click message used to
+  promise a password window to everyone.
+
+- **Errors that tell causes apart**: "not published yet for this
+  processor" cannot be fixed by the user and must not send them checking
+  their connection.
+
+- **The IPTV tile's messages now say WHERE to fix it**, not merely that
+  something is missing.
+
+- **Help updated** (TV channels section, both languages).
+
+- DEPENDENCY BEFORE THE BUTTON WORKS: the archive must be published in a
+  dedicated repository release, as already done for Windows, under tag
+  `ffmpeg-macos-v8.1.2`. Until then the button answers "not published
+  yet for this processor" -- a truthful message, not an obscure error.
+
 ## 1.123.0
 
 - **Analyse reseau : le balayage ne sortait pas de la machine sous

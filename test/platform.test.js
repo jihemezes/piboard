@@ -503,3 +503,71 @@ console.log("== platform.diskUsage : fs.statfs remplace `df` ==");
 }
 
 console.log("Tests plateforme : memoire OK");
+
+/* ================= OUTILS MULTIMEDIAS : LES TROIS VOIES (1.124.0) =========
+   macOS n'avait AUCUNE proposition d'installation de ffmpeg : Windows
+   l'offre a l'installation (etape de l'installeur NSIS), Linux a un
+   bouton via apt, et macOS se contentait d'afficher « brew install
+   ffmpeg » dans une section des reglages que rien n'invite a ouvrir au
+   moment ou la tuile IPTV echoue.
+
+   macOS had NO ffmpeg installation offer at all. */
+{
+  console.log("== Outils multimedias : chaque plateforme dit comment elle installe ==");
+
+  /* Le mode annonce doit correspondre a ce que la plateforme sait
+     REELLEMENT faire : une plateforme qui annonce un mode sans savoir
+     installer ferait apparaitre un bouton qui echoue, et l'inverse
+     laisserait l'interface promettre une fenetre de mot de passe la ou
+     il n'y a qu'un telechargement.
+     The announced mode must match what the platform can actually do. */
+  assert.strictEqual(linux.mediaInstallMode, "package",
+    "Linux installe par le gestionnaire de paquets (mot de passe demande)");
+  assert.strictEqual(darwin.mediaInstallMode, "download",
+    "macOS installe par telechargement direct (aucun mot de passe)");
+  assert.strictEqual(win32.mediaInstallMode, undefined,
+    "Windows s'en charge a l'installation, pas depuis l'interface");
+  for (const [name, mod] of [["linux", linux], ["darwin", darwin]]) {
+    assert.strictEqual(typeof mod.installMediaTool, "function",
+      name + " : annoncer un mode sans savoir installer ferait un bouton qui echoue");
+  }
+  assert.strictEqual(typeof win32.installMediaTool, "undefined",
+    "Windows ne doit pas exposer de bouton d'installation");
+
+  /* LE PIEGE DU PATH, deja paye deux fois sur ce systeme. Une
+     application lancee depuis le Finder n'herite pas du PATH du
+     Terminal : /opt/homebrew/bin n'y figure jamais. Chercher "ffmpeg"
+     par son seul nom marcherait en developpement et echouerait chez
+     l'utilisateur -- une panne qui ne se reproduit pas sur la machine
+     de qui la corrige.
+     THE PATH TRAP, already paid for twice on this system. */
+  const candidates = darwin.ffmpegCandidates();
+  assert.ok(candidates.includes("/opt/homebrew/bin/ffmpeg"),
+    "Homebrew Apple Silicon doit etre cherche en chemin ABSOLU");
+  assert.ok(candidates.includes("/usr/local/bin/ffmpeg"),
+    "Homebrew Intel doit etre cherche en chemin ABSOLU");
+  /* Le binaire telecharge par PiBoard passe EN PREMIER : c'est le cas le
+     plus probable des lors que l'utilisateur a clique sur le bouton, et
+     le seul dont PiBoard reponde.
+     PiBoard's own download comes FIRST. */
+  assert.strictEqual(candidates[0], require("path").join(darwin.mediaToolDir("ffmpeg"), "ffmpeg"),
+    "le binaire installe par PiBoard doit etre verifie en premier");
+
+  /* Le telechargement doit exister pour les DEUX architectures : un Mac
+     Intel ne peut rien faire d'un binaire arm64, et inversement.
+     Both architectures, or the wrong Mac gets a useless binary. */
+  const dl = darwin.mediaDownloadFor("ffmpeg");
+  assert.ok(dl && /^https:\/\//.test(dl.url), "le telechargement doit passer par HTTPS");
+  assert.ok(/github\.com\/jihemezes\/piboard/.test(dl.url),
+    "le binaire est rehéberge par le projet, pas pris chez un tiers au vol");
+  assert.ok(/arm64|x64/.test(dl.url), "l'archive doit etre propre a l'architecture");
+  assert.strictEqual(dl.binary, "ffmpeg");
+
+  /* VLC n'est pas telechargeable ainsi : refus NET plutot qu'un bouton
+     qui echouerait. A clear refusal rather than a failing button. */
+  assert.strictEqual(darwin.mediaPackages("vlc"), null,
+    "VLC ne se pose pas dans un dossier de donnees : aucun paquet annonce");
+  console.log("  OK trois voies distinctes, chemins absolus, deux architectures");
+}
+
+console.log("Tests plateforme : outils multimedias OK");

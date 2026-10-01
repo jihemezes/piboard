@@ -1548,6 +1548,15 @@ app.get("/api/system/media-tools", async (req, res) => {
   );
   res.json({
     canInstall,
+    /* Comment l'installation se fera, dit par la couche plateforme et
+       non devine ici : "package" (gestionnaire de paquets, mot de passe
+       demande) ou "download" (binaire recupere, aucun mot de passe).
+       L'interface s'en sert pour annoncer ce qui va REELLEMENT se
+       passer -- promettre une fenetre de mot de passe qui ne viendra
+       jamais serait deroutant, et l'inverse inquietant.
+       How the installation will happen, stated by the platform layer
+       rather than guessed here. */
+    installMode: platform.mediaInstallMode || null,
     tools: {
       ffmpeg: {
         installed: await iptvAudio.checkFfmpeg(),
