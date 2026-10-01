@@ -1023,6 +1023,35 @@
         </div>
       </fieldset>
 
+      <!-- Une PAGE du mode tableau de bord : l'echelon qui manquait
+           entre la configuration d'une tuile et le clone de toute
+           l'installation. Composer une page ici et la reproduire
+           ailleurs, sans rien ecraser d'autre.
+           ONE dashboard page: the level that was missing between a
+           tile's configuration and a full clone. -->
+      <fieldset class="clone-box" id="pageTransferBox">
+        <legend data-i18n="pagex.title">Dashboard page</legend>
+        <p class="backups-intro" data-i18n="pagex.intro">Saves a single page — its tiles, their settings, its background, its images and its own theme — to rebuild it on another machine without touching anything else there. Tile identifiers are regenerated on import, so the same page can be imported several times without one overwriting another.</p>
+        <label class="field">
+          <span data-i18n="pagex.page">Page to save</span>
+          <select id="pagexPage"></select>
+        </label>
+        <label class="field checkbox"><input type="checkbox" id="pagexImages" checked><span data-i18n="pagex.images">Include the background and the tiles' images</span></label>
+        <label class="field checkbox"><input type="checkbox" id="pagexServiceKeys" checked><span data-i18n="pagex.serviceKeys">Include service keys (TomTom, CARTO, Google…)</span></label>
+        <label class="field checkbox"><input type="checkbox" id="pagexPersonal"><span data-i18n="pagex.personal">Include personal credentials of this page's tiles</span></label>
+        <label class="field" id="pagexPassphraseField" hidden>
+          <span data-i18n="pagex.passphrase">Passphrase protecting those credentials (optional)</span>
+          <input type="password" id="pagexPassphrase" autocomplete="off" spellcheck="false">
+        </label>
+        <small class="field-hint" id="pagexPersonalWarn" hidden data-i18n="pagex.personalWarn">Without a passphrase these credentials travel in the clear inside the file: treat it like a keyring.</small>
+        <div class="backups-actions">
+          <button type="button" class="btn primary" id="pagexExportBtn" data-i18n="pagex.export">Save this page…</button>
+          <button type="button" class="btn" id="pagexImportBtn" data-i18n="pagex.import">Import a page…</button>
+          <input type="file" id="pagexImportInput" accept=".zip,application/zip" hidden>
+        </div>
+        <p class="backups-msg" id="pagexMsg" hidden></p>
+      </fieldset>
+
       <ul class="backups-list" id="backupsList"></ul>
       <p class="backups-empty" id="backupsEmpty" hidden data-i18n="backups.empty">No backup yet.</p>
     </div>
@@ -1043,6 +1072,25 @@
     <div class="form-actions" id="cloneActions">
       <button type="button" class="btn" data-close data-i18n="common.cancel">Cancel</button>
       <button type="button" class="btn danger" id="cloneApplyBtn" data-i18n="clone.apply">Import</button>
+    </div>
+  </div>
+</div>
+
+<!-- Apercu avant import d'une page, et choix de la destination. Rien
+     n'est ecrit avant « Importer » : cette fenetre sert justement a
+     pouvoir renoncer en connaissance de cause.
+     Preview before importing a page, and the destination choice.
+     Nothing is written before "Import". -->
+<div class="modal" id="pagexModal" hidden>
+  <div class="modal-card clone-modal-card">
+    <header class="modal-head">
+      <h2 data-i18n="pagex.preview.title">Import this page?</h2>
+      <button class="modal-close" data-close aria-label="Close">&times;</button>
+    </header>
+    <div class="clone-body" id="pagexBody"></div>
+    <div class="form-actions" id="pagexActions">
+      <button type="button" class="btn" data-close data-i18n="common.cancel">Cancel</button>
+      <button type="button" class="btn danger" id="pagexApplyBtn" data-i18n="pagex.apply">Import</button>
     </div>
   </div>
 </div>

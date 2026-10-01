@@ -5957,6 +5957,325 @@
     document.addEventListener("click", (e) => {
       if (e.target && e.target.id === "cloneReloadBtn") location.reload();
     });
+
+    wirePageTransfer();
+  }
+
+  /* ---------- Export / import d'UNE page / one page's transfer ----------
+     Meme forme que le clone complet juste au-dessus -- memes cases, meme
+     apercu avant ecriture, meme selecteur de dossier -- parce que c'est
+     le meme geste a une autre echelle. Deux interfaces differentes pour
+     deux portees du meme travail auraient oblige a reapprendre.
+     The same shape as the full clone above, because it is the same
+     gesture at another scale. */
+
+  let pagexFile = null;      // fichier en attente d'import / file awaiting import
+  let pagexInfo = null;      // ce que l'apercu a appris / what the preview learned
+  const pagexPathChoices = {};
+
+  function pagexOptions() {
+    return {
+      pageId: $("pagexPage") ? $("pagexPage").value : "",
+      includeImages: $("pagexImages").checked,
+      includeServiceKeys: $("pagexServiceKeys").checked,
+      includePersonalSecrets: $("pagexPersonal").checked,
+      passphrase: $("pagexPersonal").checked ? $("pagexPassphrase").value : ""
+    };
+  }
+
+  function showPagexMsg(text, isError) {
+    const el = $("pagexMsg");
+    if (!el) return;
+    el.hidden = !text;
+    el.textContent = text || "";
+    el.classList.toggle("backups-msg-error", !!isError);
+  }
+
+  /* La liste des pages vient du SERVEUR et non de l'etat du navigateur :
+     c'est lui qui detient la disposition enregistree, et une page creee
+     depuis un autre ecran doit figurer dans la liste.
+     The page list comes from the SERVER, which holds the saved layout: a
+     page created from another screen must appear in the list. */
+  async function loadPagexPages(selectId) {
+    const sel = $("pagexPage");
+    if (!sel) return;
+    try {
+      const r = await fetch("/api/page/list");
+      const d = await r.json();
+      const pages = Array.isArray(d.pages) ? d.pages : [];
+      sel.innerHTML = pages.map((p, i) => {
+        const name = p.name || (p.id === "main"
+          ? i18n.t("pagex.mainPage")
+          : i18n.t("pagex.pageN").replace("{n}", i + 1));
+        return `<option value="${escapeHtmlAttr(p.id)}">${escapeHtml(name)} · `
+          + escapeHtml(i18n.t("pagex.tileCount").replace("{n}", p.tiles)) + `</option>`;
+      }).join("");
+      if (selectId) sel.value = selectId;
+    } catch (e) {
+      sel.innerHTML = "";
+    }
+  }
+
+  async function exportPage() {
+    const btn = $("pagexExportBtn");
+    if (!btn) return;
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const res = await fetch("/api/page/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pagexOptions())
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      const name = (res.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+      downloadBlob(blob, name ? name[1] : "piboard-page.zip");
+      showPagexMsg(i18n.t("pagex.exported").replace("{size}", formatSize(blob.size)));
+    } catch (e) {
+      showPagexMsg(i18n.t("pagex.exportFailed") + " " + (e.message || e), true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = was;
+    }
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  function pagexSummaryHtml(info) {
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`;
+    const m = info.manifest || {};
+    let html = "";
+
+    if (!info.intact) {
+      html += `<p class="clone-warn">${escapeHtml(i18n.t("pagex.damaged"))}</p>`;
+    }
+    if (info.newer) {
+      html += `<p class="clone-warn">${escapeHtml(i18n.t("clone.newer"))}</p>`;
+    }
+
+    html += line(i18n.t("pagex.info.page"), info.page && info.page.name ? info.page.name : i18n.t("pagex.unnamed"));
+    html += line(i18n.t("pagex.info.from"), (m.platform || "?") + (m.appVersion ? " · v" + m.appVersion : ""));
+    html += line(i18n.t("pagex.info.tiles"), String((info.counts && info.counts.tiles) || 0));
+    if (info.widgets && info.widgets.length) html += line(i18n.t("pagex.info.widgets"), info.widgets.join(", "));
+    html += line(i18n.t("pagex.info.images"),
+      ((info.counts && info.counts.media) || 0) + " · " + formatSize((info.counts && info.counts.mediaBytes) || 0));
+    html += line(i18n.t("pagex.info.theme"), i18n.t(info.hasTheme ? "common.yes" : "common.no"));
+
+    /* La DESTINATION, qui est le vrai choix de cette fenetre. Elle est
+       posee avant les details : c'est elle qui decide si quelque chose
+       sera ecrase, et c'est donc elle qu'on doit lire en premier.
+       The DESTINATION is this window's real choice, and the one that
+       decides whether anything gets overwritten -- so it comes first. */
+    const pages = Array.isArray(info.existingPages) ? info.existingPages : [];
+    const opts = pages.map((p, i) => {
+      const name = p.name || (p.id === "main" ? i18n.t("pagex.mainPage") : i18n.t("pagex.pageN").replace("{n}", i + 1));
+      return `<option value="${escapeHtmlAttr(p.id)}">${escapeHtml(name)} · `
+        + escapeHtml(i18n.t("pagex.tileCount").replace("{n}", p.tiles)) + `</option>`;
+    }).join("");
+    html += `<div class="clone-section"><h4>${escapeHtml(i18n.t("pagex.dest.title"))}</h4>
+      <label class="field checkbox"><input type="radio" name="pagexMode" value="new" checked>
+        <span>${escapeHtml(i18n.t("pagex.dest.new"))}</span></label>
+      <label class="field checkbox"><input type="radio" name="pagexMode" value="replace">
+        <span>${escapeHtml(i18n.t("pagex.dest.replace"))}</span></label>
+      <label class="field checkbox"><input type="radio" name="pagexMode" value="merge">
+        <span>${escapeHtml(i18n.t("pagex.dest.merge"))}</span></label>
+      <label class="field" id="pagexTargetField" hidden>
+        <span>${escapeHtml(i18n.t("pagex.dest.which"))}</span>
+        <select id="pagexTarget">${opts}</select>
+      </label>
+      <small class="field-hint">${escapeHtml(i18n.t("pagex.dest.hint"))}</small></div>`;
+
+    if (info.needsPassphrase) {
+      html += `<div class="clone-section"><h4>${escapeHtml(i18n.t("pagex.passphraseNeeded"))}</h4>
+        <input type="password" id="pagexImportPassphrase" autocomplete="off" spellcheck="false"></div>`;
+    }
+
+    const paths = Array.isArray(info.paths) ? info.paths : [];
+    if (paths.length) {
+      html += `<div class="clone-section"><h4>${escapeHtml(i18n.t("pagex.paths"))}</h4>`;
+      for (const p of paths) {
+        const chosen = pagexPathChoices[p.tile + "." + p.key];
+        const to = chosen || p.to;
+        html += `<div class="clone-path"><div class="clone-path-from">${escapeHtml(p.widget || "")} · ${escapeHtml(p.from || "")}</div>`
+          + (to
+            ? `<div class="clone-path-to">→ ${escapeHtml(to)}</div>`
+            : `<div class="clone-path-to clone-path-missing">${escapeHtml(i18n.t("pagex.pathChoose"))}</div>`)
+          + `<button type="button" class="btn small pagex-path-pick" data-path="${escapeHtmlAttr(p.tile + "." + p.key)}">${escapeHtml(i18n.t("pagex.pathPick"))}</button></div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `<p class="field-hint">${escapeHtml(i18n.t("pagex.safety"))}</p>`;
+    return html;
+  }
+
+  function openPagexPreview(file, info) {
+    pagexFile = file;
+    pagexInfo = info;
+    for (const k of Object.keys(pagexPathChoices)) delete pagexPathChoices[k];
+    $("pagexBody").innerHTML = pagexSummaryHtml(info);
+    syncPagexTarget();
+    $("pagexApplyBtn").disabled = !info.intact;
+    $("pagexModal").hidden = false;
+  }
+
+  /* Le choix de la page de destination ne concerne QUE « remplacer » et
+     « fusionner » : le laisser visible pour « nouvelle page » ferait
+     croire qu'on va ecrire dans la page affichee.
+     The destination page only concerns "replace" and "merge": leaving it
+     visible for "new page" would suggest writing into the shown page. */
+  function syncPagexTarget() {
+    const mode = pagexMode();
+    const field = $("pagexTargetField");
+    if (field) field.hidden = mode === "new";
+    const apply = $("pagexApplyBtn");
+    if (apply) apply.textContent = i18n.t(mode === "new" ? "pagex.applyNew" : "pagex.apply");
+  }
+
+  function pagexMode() {
+    const checked = document.querySelector('input[name="pagexMode"]:checked');
+    return checked ? checked.value : "new";
+  }
+
+  async function applyPageNow() {
+    if (!pagexFile) return;
+    const btn = $("pagexApplyBtn");
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const form = new FormData();
+      form.append("file", pagexFile);
+      form.append("mode", pagexMode());
+      const target = $("pagexTarget");
+      if (target) form.append("targetPageId", target.value);
+      form.append("paths", JSON.stringify(pagexPathChoices));
+      const pass = $("pagexImportPassphrase");
+      if (pass) form.append("passphrase", pass.value);
+      const res = await fetch("/api/page/import", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      $("pagexBody").innerHTML = pagexReportHtml(data);
+      $("pagexActions").innerHTML =
+        `<button type="button" class="btn primary" id="pagexReloadBtn">${escapeHtml(i18n.t("pagex.reload"))}</button>`;
+    } catch (e) {
+      showPagexMsg(i18n.t("pagex.importFailed") + " " + (e.message || e), true);
+      $("pagexModal").hidden = true;
+    } finally {
+      btn.textContent = was;
+    }
+  }
+
+  function pagexReportHtml(data) {
+    const r = data.report || {};
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`;
+    let html = `<p>${escapeHtml(i18n.t("pagex.done"))}</p>`;
+    html += line(i18n.t("pagex.info.tiles"), String(r.tiles || 0));
+    html += line(i18n.t("pagex.info.images"), String(r.media || 0));
+    if (r.secrets) html += line(i18n.t("clone.report.secrets"), String(r.secrets));
+    if (r.themeAdded) html += line(i18n.t("pagex.info.theme"), r.themeAdded);
+    for (const w of (r.warnings || [])) {
+      const key = w.code === "theme-exists" ? "pagex.warn.themeExists"
+        : w.code === "passphrase-missing" ? "clone.report.passphraseMissing"
+          : w.code === "passphrase-wrong" ? "clone.report.passphraseWrong" : null;
+      if (key) html += `<p class="clone-warn">${escapeHtml(i18n.t(key))}</p>`;
+    }
+    /* La sauvegarde prise avant ecriture est RAPPELEE ici, et
+       telechargeable : savoir qu'un retour arriere existe au moment ou
+       l'on vient d'ecraser une page vaut mieux que de le decouvrir en
+       cherchant.
+       The backup taken before writing is recalled here, and
+       downloadable: knowing a way back exists at the moment one has just
+       overwritten a page beats discovering it while searching. */
+    if (data.safety) {
+      html += `<p class="field-hint">${escapeHtml(i18n.t("pagex.safetyDone"))}</p>`;
+      html += `<div class="backups-actions"><button type="button" class="btn small" id="pagexSafetyDl" data-id="${escapeHtmlAttr(data.safety)}">`
+        + escapeHtml(i18n.t("pagex.safetyDownload")) + `</button></div>`;
+    }
+    return html;
+  }
+
+  function wirePageTransfer() {
+    if (!$("pageTransferBox")) return;
+    loadPagexPages();
+
+    const personal = $("pagexPersonal");
+    if (personal) {
+      const sync = () => {
+        $("pagexPassphraseField").hidden = !personal.checked;
+        $("pagexPersonalWarn").hidden = !personal.checked;
+      };
+      personal.addEventListener("change", sync);
+      sync();
+    }
+
+    const exportBtn = $("pagexExportBtn");
+    if (exportBtn) onActivate(exportBtn, exportPage);
+
+    const importBtn = $("pagexImportBtn");
+    const input = $("pagexImportInput");
+    if (importBtn && input) {
+      onActivate(importBtn, () => input.click());
+      input.addEventListener("change", async () => {
+        const file = input.files && input.files[0];
+        input.value = "";
+        if (!file) return;
+        showPagexMsg(i18n.t("clone.reading"));
+        try {
+          const info = await inspectPageFile(file);
+          showPagexMsg("");
+          openPagexPreview(file, info);
+        } catch (e) {
+          showPagexMsg(i18n.t("pagex.importFailed") + " " + (e.message || e), true);
+        }
+      });
+    }
+
+    const apply = $("pagexApplyBtn");
+    if (apply) onActivate(apply, applyPageNow);
+
+    document.addEventListener("change", (e) => {
+      if (e.target && e.target.name === "pagexMode") syncPagexTarget();
+    });
+    document.addEventListener("click", (e) => {
+      const pick = e.target.closest && e.target.closest(".pagex-path-pick");
+      if (pick) {
+        const id = pick.dataset.path;
+        openFolderPicker("", (picked) => {
+          pagexPathChoices[id] = picked;
+          if (pagexInfo) { $("pagexBody").innerHTML = pagexSummaryHtml(pagexInfo); syncPagexTarget(); }
+        });
+        return;
+      }
+      if (e.target && e.target.id === "pagexReloadBtn") location.reload();
+      if (e.target && e.target.id === "pagexSafetyDl") {
+        /* Meme route que la liste des sauvegardes : une seule facon de
+           recuperer un fichier de sauvegarde, pas deux.
+           The same route as the backups list: one way to fetch a
+           backup file, not two. */
+        window.open("/api/backups/" + encodeURIComponent(e.target.dataset.id) + "/download", "_blank");
+      }
+    });
+  }
+
+  async function inspectPageFile(file) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/page/inspect", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
   }
 
   function wireContribute() {

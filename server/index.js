@@ -2749,6 +2749,147 @@ app.post("/api/clone/import", cloneUpload.single("file"), (req, res) => {
   }
 });
 
+/* ---------- Export / import d'UNE page / one page's export-import ----------
+   Voir server/pageTransfer.js. Entre la sauvegarde d'une tuile et le
+   clone de toute l'installation, il manquait l'echelon de la page :
+   composer une page sur une machine et la reproduire sur une autre
+   obligeait a tout refaire a la main, ou a ecraser l'installation
+   d'arrivee avec un clone complet.
+   See server/pageTransfer.js: between saving one tile and cloning the
+   whole installation, the page level was missing. */
+const pageTransfer = require("./pageTransfer");
+
+/* Les themes personnalises vivent dans `settings.userThemes` -- pas
+   dans un fichier a eux. Le verifier plutot que le supposer evite un
+   theme ecrit au mauvais endroit : il n'aurait leve aucune erreur, la
+   page serait simplement arrivee sans ses couleurs, et la cause aurait
+   ete introuvable.
+   Custom themes live in `settings.userThemes`, not in a file of their
+   own. Checking rather than assuming avoids a theme written to the
+   wrong place: no error would be raised, the page would merely arrive
+   without its colours. */
+function userThemesList() {
+  const s = store.read("settings", {}) || {};
+  return Array.isArray(s.userThemes) ? s.userThemes : [];
+}
+
+function saveUserThemes(list) {
+  const s = store.read("settings", {}) || {};
+  s.userThemes = list;
+  store.write("settings", s);
+}
+
+function pageFileName(name, version) {
+  const stamp = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+  /* Le nom de la page figure dans le nom du fichier : avec une demi-
+     douzaine d'archives dans un dossier de telechargements, les
+     distinguer a l'horodatage seul est impossible. On le reduit a des
+     caracteres surs pour tous les systemes de fichiers.
+     The page's name goes into the file name: telling half a dozen
+     archives apart by timestamp alone is impossible. */
+  const slug = String(name || "page").normalize("NFD").replace(/[̀-ͯ]/g, "")
+    .replace(/[^A-Za-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "page";
+  return "piboard-page-" + slug + "-" + stamp + (version ? "-v" + version : "") + ".zip";
+}
+
+app.get("/api/page/list", (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    res.json({ pages: pageTransfer.listPages(store.read("layout", {})) });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/page/export", (req, res) => {
+  const b = req.body || {};
+  try {
+    const made = pageTransfer.buildPage({
+      layout: store.read("layout", {}),
+      pageId: b.pageId,
+      userThemes: userThemesList(),
+      includeServiceKeys: !!b.includeServiceKeys,
+      includePersonalSecrets: !!b.includePersonalSecrets,
+      includeImages: b.includeImages !== false,
+      passphrase: b.passphrase || "",
+      appVersion: APP_VERSION
+    });
+    res.set("Content-Type", "application/zip");
+    res.set("Content-Disposition", 'attachment; filename="'
+      + pageFileName(made.manifest.page && made.manifest.page.name, APP_VERSION) + '"');
+    res.set("Cache-Control", "no-store");
+    res.send(made.buffer);
+  } catch (e) {
+    console.error("[piboard] export de page:", e);
+    res.status(e.code === "no-such-page" ? 400 : 500).json({ error: String(e.message || e), code: e.code || null });
+  }
+});
+
+app.post("/api/page/inspect", cloneUpload.single("file"), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    const info = pageTransfer.inspectPage(req.file.buffer, { appVersion: APP_VERSION });
+    /* L'apercu rend AUSSI les pages existantes : l'interface doit
+       proposer la destination dans la foulee, sans un second
+       aller-retour.
+       The preview ALSO returns the existing pages, so the interface can
+       offer the destination without a second round trip. */
+    info.existingPages = pageTransfer.listPages(store.read("layout", {}));
+    res.json(info);
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e), code: e.code || null });
+  }
+});
+
+app.post("/api/page/import", cloneUpload.single("file"), (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "no file" });
+    let paths = {};
+    try { paths = JSON.parse(req.body.paths || "{}"); } catch (e) { paths = {}; }
+
+    /* SAUVEGARDE AVANT ECRITURE, systematique. Elle couvre la
+       configuration entiere et non la seule page : la restauration
+       existante travaille a cette maille, et inventer une restauration
+       « page seule » aurait ajoute un second chemin de retour arriere a
+       cote de celui qui marche deja. L'important est qu'un clic suffise
+       a revenir, ce qui est le cas.
+       SYSTEMATIC BACKUP BEFORE WRITING. It covers the whole
+       configuration rather than the single page: the existing restore
+       works at that granularity, and inventing a "page only" restore
+       would have added a second way back next to the one that already
+       works. */
+    let safety = null;
+    try {
+      safety = backups.create(APP_VERSION, "Avant import d'une page / before page import");
+    } catch (e) {
+      console.warn("[piboard] page: sauvegarde de securite impossible", e.message || e);
+    }
+
+    const themes = userThemesList();
+    const out = pageTransfer.applyPage(req.file.buffer, {
+      layout: store.read("layout", {}),
+      mode: req.body.mode || "new",
+      targetPageId: req.body.targetPageId || null,
+      pathDecisions: paths,
+      passphrase: req.body.passphrase || "",
+      userThemes: themes,
+      appVersion: APP_VERSION
+    });
+    store.write("layout", out.layout);
+    if (out.report.themeAdded) saveUserThemes(themes);
+
+    res.json({
+      ok: true,
+      safety: safety && safety.id ? safety.id : null,
+      targetPageId: out.targetPageId,
+      report: out.report
+    });
+  } catch (e) {
+    console.error("[piboard] import de page:", e);
+    res.status(400).json({ error: String(e.message || e), code: e.code || null });
+  }
+});
+
 /* ---------- IPTV : playlist de chaines / channel playlist ----------
    Voir server/iptv.js. Seule la LISTE transite par le serveur (question
    de CORS) ; les flux video sont lus directement par le navigateur.

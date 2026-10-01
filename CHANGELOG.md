@@ -1,5 +1,132 @@
 # Changelog
 
+## 1.127.0
+
+- **Sauvegarde et import d'UNE page du mode tableau de bord.** PiBoard
+  savait enregistrer la configuration d'une tuile, et cloner
+  l'installation ENTIERE. Entre les deux, rien : composer une page sur
+  une machine et la reproduire sur une autre obligeait soit a tout
+  refaire a la main, soit a ecraser toute l'installation d'arrivee avec
+  un clone complet. C'est l'echelon qui manquait.
+
+- **La mecanique du clone est REUTILISEE, pas recopiee** : meme archive
+  ZIP, meme empreinte de controle, meme traitement des secrets par
+  famille, meme traduction des chemins de dossiers entre systemes. Un
+  second jeu de regles aurait diverge du premier a la premiere
+  correction -- et c'est precisement sur un sujet ou l'on perd des
+  donnees qu'une divergence coute cher. L'interface suit la meme forme
+  pour la meme raison : c'est le meme geste a une autre echelle.
+
+- **LES IDENTIFIANTS SONT REGENERES A L'IMPORT**, et c'est le point
+  critique de cette version. L'identifiant d'une tuile (`t-xxxx`) nomme
+  AUSSI son dossier d'images (`media/t-xxxx`) et sert de cle dans le
+  coffre a secrets. Reimporter une page en gardant ses identifiants
+  d'origine aurait ecrase les images et les mots de passe d'une tuile
+  SANS AUCUN RAPPORT portant le meme identifiant sur la machine
+  d'arrivee -- sans erreur, sans message, le genre de defaut qui se
+  constate des semaines plus tard. Les dossiers d'images et les entrees
+  du coffre sont renommes en consequence. Consequence voulue : la meme
+  page peut etre importee PLUSIEURS FOIS, chaque copie vivant sa vie.
+
+- **Trois destinations** : nouvelle page ajoutee a la suite (ne touche a
+  rien d'existant), remplacement du contenu d'une page choisie (le
+  plateau principal compris), ou fusion dans une page existante. En
+  fusion, les tuiles importees sont posees SOUS celles deja presentes :
+  les empiler aux memes coordonnees les aurait fait se recouvrir, puis
+  repousser par Gridstack dans un ordre que personne n'a choisi -- une
+  page melangee est bien pire qu'une page longue.
+
+- **Sauvegarde systematique AVANT ecriture**, restaurable en un clic
+  depuis la liste existante, et le rapport d'import propose de la
+  TELECHARGER. Elle couvre la configuration entiere plutot que la seule
+  page : inventer une restauration « page seule » aurait ajoute un second
+  chemin de retour arriere a cote de celui qui marche deja.
+
+- **Apercu detaille avant d'ecrire quoi que ce soit** : d'ou vient la
+  page, sous quelle version, combien de tuiles et de quels types, quel
+  poids d'images, si elle porte un theme, et quels dossiers restent a
+  choisir. Une archive incomplete est refusee A CE STADE plutot
+  qu'appliquee a moitie.
+
+- **Un clone complet presente par erreur est reconnu COMME TEL** : le
+  message dit « ceci est un clone complet, pas une page » et non
+  « fichier abime ». Se tromper de section est une erreur ordinaire ;
+  y repondre par une panne enverrait chercher un probleme inexistant.
+
+- **Le theme propre a la page voyage avec elle** quand il est
+  personnalise -- sans lui, une page soignee arrive aux couleurs par
+  defaut. Il n'est ajoute a l'arrivee que s'il MANQUE : un theme du meme
+  identifiant deja present est conserve et l'utilisateur est averti,
+  puisqu'il a pu etre retouche sur cette machine. Les themes livres avec
+  PiBoard ne voyagent pas, etant deja des deux cotes.
+
+- **Les secrets sont filtres sur les seules tuiles de la page** :
+  exporter une page ne doit jamais emporter le mot de passe d'une tuile
+  d'une autre page. Memes deux familles optionnelles et meme chiffrement
+  par phrase de passe que le clone complet.
+
+- `test/pageTransfer.test.js` : 20 tests sur un dossier de donnees
+  temporaire, avec de vraies images et un vrai coffre. Ils visent les
+  cas ou l'on PERD des donnees, tous silencieux -- identifiants non
+  regeneres, double import qui detruit la premiere copie, fusion qui
+  empile, theme ecrase a l'arrivee -- plutot que l'aller-retour nominal,
+  qui marchera toujours.
+
+- **Defaut trouve pendant l'ecriture** : les themes personnalises vivent
+  dans `settings.userThemes` et non dans un fichier a eux. L'avoir
+  verifie plutot que suppose a evite un theme ecrit au mauvais endroit --
+  aucune erreur n'aurait ete levee, la page serait simplement arrivee
+  sans ses couleurs, et la cause aurait ete introuvable.
+
+- Aide bilingue mise a jour (fiche Sauvegarde, import et export).
+
+---
+
+- **Saving and importing ONE dashboard page.** PiBoard could save a
+  tile's configuration and clone the WHOLE installation; between the
+  two, nothing. This is the level that was missing.
+
+- **The clone's machinery is REUSED, not copied**: same ZIP archive,
+  same checksum, same per-family handling of secrets, same folder-path
+  translation between systems. A second set of rules would have diverged
+  on the first fix -- costly on a subject where data is lost.
+
+- **IDENTIFIERS ARE REGENERATED ON IMPORT**, this version's critical
+  point. A tile's id also names its media folder and keys its vault
+  entry, so keeping it would have overwritten the images and passwords
+  of an ENTIRELY UNRELATED tile on the destination -- with no error and
+  no message. Hence: the same page can be imported SEVERAL TIMES.
+
+- **Three destinations**: a new page appended (touching nothing), the
+  replacement of a chosen page's contents (main board included), or a
+  merge, where imported tiles are placed BELOW the existing ones --
+  stacking them would have Gridstack reshuffle everything.
+
+- **Systematic backup BEFORE writing**, restorable in one click and
+  DOWNLOADABLE from the import report.
+
+- **Detailed preview before writing anything**, and an incomplete
+  archive is refused at that stage rather than applied halfway.
+
+- **A full clone offered by mistake is recognised AS SUCH**: "this is a
+  full clone, not a page", not "damaged file".
+
+- **The page's own theme travels with it** when custom, and is added on
+  arrival only if MISSING -- an existing one of the same id is kept and
+  the user told, since it may have been reworked here.
+
+- **Secrets are filtered to this page's tiles only.**
+
+- `test/pageTransfer.test.js`: 20 tests on a temporary data folder,
+  aimed at the cases where data is LOST, all of them silent.
+
+- **Fault found while writing**: custom themes live in
+  `settings.userThemes`, not in a file of their own. Checking rather
+  than assuming avoided a theme written to the wrong place -- no error
+  raised, the page simply arriving without its colours.
+
+- Bilingual help updated.
+
 ## 1.126.0
 
 - **Nouvelle tuile « Statut de service »** (famille Systeme & Reseau, a

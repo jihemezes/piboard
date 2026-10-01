@@ -33,6 +33,18 @@
 # Nouveautes / What's new
 
 
+## 1.127.0
+
+**Emporter une page du tableau de bord**
+
+On pouvait deja sauvegarder une tuile, ou cloner toute l'installation. Il manquait l'entre-deux : une page. Elle s'exporte maintenant seule -- ses tuiles, leurs reglages, son fond, ses images et son theme -- dans un fichier qu'on emporte sur une autre machine. A l'import, au choix : une nouvelle page ajoutee, le remplacement d'une page existante, ou une fusion sous les tuiles deja en place. La configuration est sauvegardee avant toute ecriture, et un apercu dit ce que contient l'archive avant qu'on decide. La meme page peut etre importee plusieurs fois sans qu'une copie en detruise une autre.
+
+---
+
+**Carrying one dashboard page away**
+
+You could already save a tile, or clone the whole installation. The in-between was missing: a page. It now exports on its own -- its tiles, their settings, its background, its images and its theme -- into a file you carry to another machine. On import, your choice: a new page appended, the replacement of an existing one, or a merge below the tiles already in place. The configuration is backed up before anything is written, and a preview says what the archive holds before you decide. The same page can be imported several times without one copy destroying another.
+
 ## 1.126.0
 
 **Savoir si la panne vient de chez vous ou de chez eux**
