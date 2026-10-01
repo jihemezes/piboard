@@ -1,0 +1,138 @@
+/* PiBoard widget: servicestatus / statut des services en ligne.
+
+   MISE EN PAGE A HAUTEUR STABLE. Une tuile de supervision passe l'essentiel
+   de son temps a dire « tout va bien » : si elle se contentait alors d'une
+   ligne verte, elle changerait de taille a chaque incident, bousculerait
+   les tuiles voisines et attirerait l'oeil par son mouvement plutot que par
+   son contenu. Les emplacements du detail sont donc TOUJOURS poses, remplis
+   d'une mention neutre quand il n'y a rien a signaler. La tuile a la meme
+   silhouette en permanence, et seule la couleur change -- ce qui se repere
+   justement a l'autre bout d'une piece.
+
+   STABLE HEIGHT. A monitoring tile spends most of its life saying "all is
+   well": a single green line would make it resize at every incident,
+   shoving its neighbours about and drawing the eye by movement rather than
+   content. The detail slots are therefore ALWAYS laid out, filled with a
+   neutral mention when there is nothing to report. */
+
+.pw-svcstatus {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
+  font-size: 0.92em;
+}
+
+.pwss-list {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.pwss-svc {
+  border-left: 3px solid var(--pwss-tone, var(--muted));
+  padding-left: 8px;
+}
+
+.pwss-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.pwss-name { font-weight: 650; }
+
+.pwss-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--pwss-tone, var(--muted));
+  font-size: 0.88em;
+  text-align: right;
+}
+
+/* La pastille porte l'information a distance ; le texte la precise de
+   pres. L'un sans l'autre ne suffit pas : la couleur seule exclut qui la
+   distingue mal, le texte seul ne se lit pas d'un ecran mural.
+   The dot carries the information from afar, the text refines it up
+   close. Colour alone excludes anyone who tells it apart poorly; text
+   alone cannot be read from a wall screen. */
+.pwss-dot {
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  background: var(--pwss-tone, var(--muted));
+  flex: 0 0 auto;
+}
+
+.pwss-detail {
+  margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.84em;
+  color: var(--muted);
+}
+
+/* Un composant touche est la raison d'etre de la tuile : il garde la
+   couleur de son etat, la ou le reste du detail reste discret.
+   An affected component is the tile's whole point: it keeps its state's
+   colour, where the rest of the detail stays muted. */
+.pwss-comp { color: var(--pwss-tone, var(--muted)); }
+.pwss-comp-state { opacity: 0.75; }
+
+.pwss-incident { color: var(--text); }
+.pwss-stage { opacity: 0.8; }
+
+/* Le dernier message publie est souvent la seule information vraiment
+   utile. On lui laisse deux lignes pleines plutot qu'une ellipse des le
+   premier mot, mais jamais davantage : un message de dix lignes
+   chasserait les autres services hors de la tuile.
+   The latest published message is often the only truly useful piece of
+   information: two full lines rather than an ellipsis from the first
+   word, but never more. */
+.pwss-msg {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-style: italic;
+  opacity: 0.92;
+}
+
+.pwss-link { color: var(--accent); text-decoration: none; }
+.pwss-link:hover { text-decoration: underline; }
+
+.pwss-maint { opacity: 0.85; }
+.pwss-none { opacity: 0.6; }
+
+.pwss-foot {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.78em;
+  color: var(--faint);
+}
+
+/* Cadence rapide : signalee discretement, pour que le rythme inhabituel
+   des rafraichissements s'explique de lui-meme.
+   Fast cadence, discreetly flagged so the unusual refresh rhythm
+   explains itself. */
+.pwss-fast { color: var(--warn); }
+
+.pwss-empty {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+  padding: 8px;
+}

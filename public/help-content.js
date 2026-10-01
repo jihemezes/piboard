@@ -1881,6 +1881,77 @@
       }
     },
 
+    /* ================= STATUT DE SERVICE / SERVICE STATUS ================= */
+    {
+      id: "servicestatus",
+      group: "tiles",
+      title: { fr: "Statut de service", en: "Service status" },
+      sub: {
+        fr: "GitHub est-il en panne, ou est-ce moi ?",
+        en: "Is GitHub down, or is it me?"
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 4×4 par défaut, de 3×3 à 12×16</span>
+          <h4>Objectif</h4>
+          <p>Répondre à la question qu'on se pose quand quelque chose ne marche plus : <b>est-ce chez moi, ou chez eux ?</b> La tuile lit les pages de statut publiques des services dont vous dépendez et dit, le cas échéant, <b>où</b> se situe le problème.</p>
+
+          <h4>Pourquoi elle marche avec bien plus que GitHub</h4>
+          <p><code>githubstatus.com</code> n'est pas une page maison : c'est une <b>Statuspage</b> d'Atlassian, le service qu'emploient des centaines d'éditeurs, et toutes exposent la même API publique au même endroit, sans clé ni compte. Il suffit donc de coller l'adresse de la page que vous consultez d'habitude. Quelques-unes : GitHub, Cloudflare, npm, Docker Hub, Slack, Discord, Atlassian. Jusqu'à 10 services, une ligne chacun, au format <code>Nom = adresse</code> — la même grammaire que la tuile Veille réseau, <code>#</code> compris pour désactiver une ligne.</p>
+
+          <h4>Ce qui s'affiche</h4>
+          <p>En temps normal, une ligne par service avec son état global. <b>En cas de problème</b>, s'y ajoutent : les <b>composants concernés uniquement</b> (lister les dix qui vont bien noierait le seul qui compte), le <b>titre de l'incident</b>, son <b>stade</b> (analyse en cours, cause identifiée, correctif sous surveillance…), <b>depuis quand</b> il dure, le <b>dernier message publié</b> par le service — souvent la seule information vraiment utile — et un <b>lien</b> vers l'incident.</p>
+          <p>Les emplacements du détail sont <b>toujours posés</b>, avec une mention neutre quand il n'y a rien à signaler. La tuile garde ainsi la même silhouette en permanence : elle ne change pas de taille à chaque incident et ne bouscule pas ses voisines. Seule la couleur change, ce qui se repère justement de loin.</p>
+
+          <h4>Deux rythmes de vérification</h4>
+          <p>Une page de statut ne bouge pas pendant des semaines ; mais une fois l'incident déclaré, dix minutes entre deux relévés sont une éternité. D'où deux intervalles réglables : un <b>normal</b> (10 min par défaut) et un <b>d'incident</b> (1 min).</p>
+          <p>L'accélération est <b>immédiate</b> et se déclenche dès que l'état global quitte « tout opérationnel », <b>dégradations mineures comprises</b> : attendre la panne majeure reviendrait à regarder de près une fois qu'il est trop tard. Le retour au rythme normal, lui, demande <b>deux relévés sains d'affilée</b> — presque tous les incidents sont en dents de scie, et un seul relévé vert ferait ralentir la tuile pendant l'accalmie qui précède la rechute. Le rythme en cours est indiqué en bas de la tuile.</p>
+
+          <h4>Maintenances programmées</h4>
+          <p>Optionnelles et actives par défaut : savoir qu'une interruption est prévue demain matin évite de chercher une panne qui n'existe pas.</p>
+
+          <h4>Alerte à l'apparition d'un incident</h4>
+          <p>Optionnelle, décochée par défaut. Reprend le mécanisme de la tuile Compte à rebours : flash d'écran, son au choix, et webhook (SMS, Alexa, push mobile…). Chaque incident n'est annoncé <b>qu'une fois</b> — sans quoi la tuile sonnerait toutes les minutes pendant des heures. Les incidents <b>déjà en cours</b> au démarrage du tableau sont enregistrés sans alerter : un incident vieux de trois heures n'a pas à faire flasher l'écran parce que PiBoard vient de redémarrer.</p>
+
+          <h4>Ce que la tuile ne confond pas</h4>
+          <p>Une page de statut <b>injoignable</b> ne veut pas dire « le service va bien ». Si PiBoard n'arrive pas à la lire — coupure Internet, page déplacée — la tuile le dit explicitement au lieu d'afficher du vert. De même, un état qu'elle ne comprend pas n'est jamais pris pour un état sain.</p>
+          <p>Seules les adresses <b>HTTPS publiques</b> sont acceptées : une adresse interne (<code>192.168.…</code>, <code>.local</code>, <code>localhost</code>) est refusée, le serveur PiBoard voyant des machines que votre navigateur ne voit pas.</p>
+          <div class="help-opt"><span class="help-opt-name">Services à surveiller</span><span class="help-opt-desc">Une ligne par service, <code>Nom = adresse</code>. 10 au maximum.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Intervalles</span><span class="help-opt-desc">En temps normal, et pendant un incident. En minutes.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Maintenances programmées</span><span class="help-opt-desc">Affichage des interruptions annoncées.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Alerte</span><span class="help-opt-desc">Flash, son, durée et webhook à l'apparition d'un incident.</span></div>`,
+        en: `
+          <span class="help-size">Size: 4×4 by default, from 3×3 to 12×16</span>
+          <h4>Purpose</h4>
+          <p>To answer the question one asks when something stops working: <b>is it me, or is it them?</b> The tile reads the public status pages of the services you depend on and says, when relevant, <b>where</b> the problem is.</p>
+
+          <h4>Why it works with far more than GitHub</h4>
+          <p><code>githubstatus.com</code> is not a bespoke page but an Atlassian <b>Statuspage</b>, used by hundreds of vendors, all exposing the same public API in the same place, with no key or account. So paste the address of the page you normally visit. A few: GitHub, Cloudflare, npm, Docker Hub, Slack, Discord, Atlassian. Up to 10 services, one line each, as <code>Name = address</code> — the same grammar as the Network watch tile, <code>#</code> included to disable a line.</p>
+
+          <h4>What is shown</h4>
+          <p>Normally, one line per service with its overall state. <b>When something is wrong</b>, it adds: the <b>affected components only</b> (listing the ten that work would drown the one that matters), the <b>incident's title</b>, its <b>stage</b> (investigating, cause identified, fix being monitored…), <b>how long</b> it has lasted, the <b>latest message published</b> by the service — often the only truly useful piece of information — and a <b>link</b> to the incident.</p>
+          <p>The detail slots are <b>always laid out</b>, with a neutral mention when there is nothing to report, so the tile keeps the same silhouette permanently: it does not resize at every incident, nor shove its neighbours about. Only the colour changes, which is what carries from across a room.</p>
+
+          <h4>Two check rhythms</h4>
+          <p>A status page is quiet for weeks; but once an incident is declared, ten minutes between readings is an age. Hence two configurable intervals: a <b>normal</b> one (10 min by default) and an <b>incident</b> one (1 min).</p>
+          <p>Speeding up is <b>immediate</b> and triggers as soon as the overall state leaves "all operational", <b>minor degradations included</b>: waiting for a major outage would mean looking closely once it is too late. Returning to the normal rhythm takes <b>two healthy readings in a row</b> — almost every incident is jagged, and a single green reading would slow the tile down during the lull before the relapse. The current rhythm is shown at the bottom of the tile.</p>
+
+          <h4>Scheduled maintenances</h4>
+          <p>Optional, on by default: knowing an interruption is planned for tomorrow morning saves looking for a fault that does not exist.</p>
+
+          <h4>Alert when an incident appears</h4>
+          <p>Optional, unticked by default. Reuses the Countdown tile's mechanism: screen flash, chosen sound, and a webhook (SMS, Alexa, phone push…). Each incident is announced <b>once only</b> — otherwise the tile would ring every minute for hours. Incidents <b>already under way</b> when the board starts are recorded without alerting: a three-hour-old incident must not flash the screen merely because PiBoard was restarted.</p>
+
+          <h4>What the tile does not confuse</h4>
+          <p>An <b>unreachable</b> status page does not mean "the service is fine". If PiBoard cannot read it — internet outage, page moved — the tile says so explicitly instead of showing green. Likewise, a state it does not understand is never taken for a healthy one.</p>
+          <p>Only <b>public HTTPS</b> addresses are accepted: an internal one (<code>192.168.…</code>, <code>.local</code>, <code>localhost</code>) is refused, the PiBoard server seeing machines your browser cannot.</p>
+          <div class="help-opt"><span class="help-opt-name">Services to watch</span><span class="help-opt-desc">One line per service, <code>Name = address</code>. 10 at most.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Intervals</span><span class="help-opt-desc">Normally, and during an incident. In minutes.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Scheduled maintenances</span><span class="help-opt-desc">Display of announced interruptions.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Alert</span><span class="help-opt-desc">Flash, sound, duration and webhook when an incident appears.</span></div>`
+      }
+    },
+
     {
       id: "hostwatch",
       group: "tiles",

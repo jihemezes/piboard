@@ -3730,7 +3730,17 @@
        The AI usage tile joins "System & Network": like System status, it
        watches a consumption against a limit, even though the resource
        watched is not the machine's own. */
-    { key: "system", ids: ["system", "speedtest", "networkscan", "hostwatch", "aiusage"] },
+    /* « Statut de service » rejoint « Systeme & Reseau », a cote de
+       « Veille reseau » : les deux repondent a la meme question -- ce
+       dont je depends repond-il ? -- l'une pour les machines du reseau
+       local, l'autre pour les services en ligne. On les cherche au meme
+       endroit le jour ou quelque chose ne marche plus.
+       "Service status" joins "System & Network", next to "Network
+       watch": both answer the same question -- is what I depend on
+       responding? -- one for local machines, the other for online
+       services. One looks for them in the same place on the day
+       something stops working. */
+    { key: "system", ids: ["system", "speedtest", "networkscan", "hostwatch", "servicestatus", "aiusage"] },
     /* Mise en page : les deux tuiles de STYLE, qui n'affichent aucune
        donnee et servent a composer une page (titre, logo). Les ranger
        dans "Divers" les aurait noyees parmi des tuiles d'information,

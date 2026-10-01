@@ -33,6 +33,18 @@
 # Nouveautes / What's new
 
 
+## 1.126.0
+
+**Savoir si la panne vient de chez vous ou de chez eux**
+
+Une nouvelle tuile surveille les pages de statut publiques des services dont vous dependez -- GitHub, Cloudflare, npm, Docker Hub et des centaines d'autres, sans cle ni compte. Tant que tout va bien, une ligne par service. Des qu'un incident est declare, elle montre les seuls composants touches, le stade de l'incident, depuis quand il dure, le dernier message publie et un lien vers lui -- et elle se met toute seule a verifier plus souvent, jusqu'au retour a la normale. Les maintenances programmees sont signalees, et une alerte optionnelle previent a l'apparition d'un incident.
+
+---
+
+**Knowing whether the outage is yours or theirs**
+
+A new tile watches the public status pages of the services you depend on -- GitHub, Cloudflare, npm, Docker Hub and hundreds more, with no key or account. While all is well, one line per service. As soon as an incident is declared it shows the affected components only, the incident's stage, how long it has lasted, the latest message published and a link to it -- and it starts checking more often by itself until things return to normal. Scheduled maintenances are reported, and an optional alert warns when an incident appears.
+
 ## 1.125.0
 
 **Les tuiles Texte et Horloge s'accordent au theme**

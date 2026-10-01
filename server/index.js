@@ -2454,6 +2454,40 @@ app.get("/api/tempo", async (req, res) => {
   }
 });
 
+/* ---------- Statut des services en ligne / online service status ----------
+   Voir server/serviceStatus.js (relais, analyse et cache partage). La
+   route accepte PLUSIEURS services en une requete : une tuile qui en
+   surveille cinq ne doit pas ouvrir cinq requetes a chaque
+   rafraichissement, surtout en cadence rapide pendant un incident.
+   Les appels partent en parallele -- cinq pages de statut sans rapport
+   les unes avec les autres n'ont aucune raison de s'attendre -- et un
+   service injoignable ne fait jamais echouer la reponse entiere : il
+   rend son erreur a sa place, dans sa propre entree.
+   See server/serviceStatus.js. The route accepts SEVERAL services in one
+   request: a tile watching five must not open five requests on every
+   refresh, least of all at the fast cadence during an incident. Calls go
+   out in parallel, and one unreachable service never fails the whole
+   response -- it returns its error in its own entry. */
+const serviceStatus = require("./serviceStatus");
+const SERVICE_STATUS_MAX = 10;
+
+app.get("/api/service-status", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    const raw = req.query.url;
+    const urls = (Array.isArray(raw) ? raw : [raw])
+      .filter((u) => typeof u === "string" && u.trim())
+      .slice(0, SERVICE_STATUS_MAX);
+    if (!urls.length) return res.status(400).json({ error: "no url" });
+    const force = req.query.force === "1";
+    const services = await Promise.all(urls.map((u) => serviceStatus.getStatus(u, { force })));
+    res.json({ services });
+  } catch (e) {
+    console.warn("[piboard] statut de service echec ->", e.message || e);
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
 /* ---------- Quotas des comptes IA / AI account usage ----------
    Voir server/aiUsage.js. Les routes ne renvoient JAMAIS de jeton :
    uniquement des pourcentages et des heures de reinitialisation.

@@ -1,5 +1,166 @@
 # Changelog
 
+## 1.126.0
+
+- **Nouvelle tuile « Statut de service »** (famille Systeme & Reseau, a
+  cote de Veille reseau). Elle repond a la question qu'on se pose quand
+  quelque chose ne marche plus : est-ce chez moi, ou chez eux ?
+
+- **Generique des le depart, pour le meme travail.** La demande ne
+  visait que GitHub, mais githubstatus.com n'est pas une page maison :
+  c'est une « Statuspage » d'Atlassian, le service qu'emploient des
+  centaines d'editeurs, et toutes exposent la MEME API publique au MEME
+  chemin (/api/v2/summary.json), sans cle ni compte. Une tuile
+  specifique a GitHub aurait coute autant en ne servant qu'une fois. On
+  lit donc n'importe quelle Statuspage -- GitHub, Cloudflare, npm,
+  Docker Hub, Slack, Discord, Atlassian... -- jusqu'a 10 services, au
+  format `Nom = adresse`, la meme grammaire que Veille reseau (# compris
+  pour desactiver une ligne) : un reglage qui se ressemble d'une tuile a
+  l'autre s'apprend une fois.
+
+- **Ce qui s'affiche en cas de probleme** : les composants CONCERNES
+  uniquement -- lister les dix qui vont bien noierait le seul qui compte
+  --, le titre de l'incident, son stade, depuis quand il dure, le
+  dernier message publie par le service et un lien vers l'incident.
+
+- **La tuile garde la meme silhouette en permanence.** Les emplacements
+  du detail sont TOUJOURS poses, avec une mention neutre quand il n'y a
+  rien a signaler. Une tuile qui se reduirait a une ligne verte
+  changerait de taille a chaque incident, bousculerait ses voisines et
+  attirerait l'oeil par son mouvement plutot que par son contenu. Seule
+  la couleur change -- ce qui se repere justement de loin.
+
+- **Cadence double, le coeur de la tuile.** Interroger une page de
+  statut toutes les minutes en permanence n'a aucun sens : il ne s'y
+  passe rien pendant des semaines. Mais une fois l'incident declare, dix
+  minutes entre deux relevés sont une eternite. Deux intervalles
+  reglables donc : normal (10 min) et incident (1 min).
+    - L'acceleration est IMMEDIATE et se declenche des que l'indicateur
+      global quitte « none », degradations MINEURES comprises : attendre
+      la panne majeure reviendrait a n'accelerer qu'une fois qu'il est
+      trop tard pour que ce soit utile.
+    - Le retour au calme demande DEUX relevés sains d'affilee. Presque
+      tous les incidents sont en dents de scie, les composants repassant
+      au vert puis au rouge pendant la remediation : un seul relevé vert
+      ferait ralentir la tuile pendant l'accalmie qui precede la
+      rechute.
+
+- **Maintenances programmees** signalees (option active) : savoir qu'une
+  interruption est prevue demain matin evite de chercher une panne qui
+  n'existe pas.
+
+- **Alerte a l'apparition d'un incident** (option decochee), reprenant
+  le mecanisme de la tuile Compte a rebours : flash, son, webhook.
+  Chaque incident n'est annonce QU'UNE FOIS -- sinon la tuile sonnerait
+  a chaque relevé, soit toutes les minutes pendant des heures en cadence
+  rapide, la meilleure facon de faire couper les notifications pour de
+  bon. Les incidents DEJA EN COURS au demarrage sont enregistres sans
+  alerter : un incident vieux de trois heures n'a pas a faire flasher
+  l'ecran parce que PiBoard vient de redemarrer.
+
+- **Ce que la tuile refuse de confondre.** Une page de statut
+  injoignable ne veut PAS dire « le service va bien » : afficher du vert
+  pendant une coupure d'Internet serait le contraire de ce qu'on attend
+  d'une tuile de supervision. L'etat est donc explicitement « page
+  injoignable », et le dernier etat connu reste rappele a cote. De meme,
+  un indicateur qu'on ne comprend pas n'est jamais pris pour un etat
+  sain.
+
+- **Garde-fou sur les adresses.** Le serveur PiBoard tourne sur le
+  reseau local et voit des machines que le navigateur ne voit pas :
+  laisser coller une adresse interne ferait du relais un moyen de sonder
+  ce reseau. Seules les adresses HTTPS publiques sont acceptees
+  (localhost, .local, .internal, IP privees et IP litterales refusees),
+  et le chemin colle par l'utilisateur est JETE -- on construit
+  nous-memes celui de l'API, donc une seule forme a tester et aucun
+  chemin arbitraire sur le reseau.
+
+- **Une seule requete pour tous les services**, partant en parallele :
+  une tuile qui en surveille cinq ne doit pas ouvrir cinq requetes a
+  chaque rafraichissement, surtout en cadence rapide. Un service
+  injoignable ne fait jamais echouer la reponse entiere. Cache partage
+  cote serveur, pour qu'un tableau a plusieurs ecrans n'interroge pas
+  trois fois la meme page.
+
+- `test/serviceStatus.test.js` : 15 tests, entierement HORS LIGNE sur des
+  relevés figes. Dependre du vrai reseau les rendrait inutilisables sans
+  Internet et, pire, FAUX le jour ou GitHub va bien -- on ne peut pas
+  tester l'affichage d'un incident en attendant qu'il s'en produise un.
+  Sont couverts en priorite les cas que personne ne verra avant le jour
+  ou ils comptent, dont les deux pieges identifies a l'ecriture :
+    - Statuspage melange, dans le MEME tableau, les composants et les
+      entetes de GROUPE qui les coiffent ; compter un entete comme un
+      composant ferait apparaitre chaque probleme DEUX fois, sous le
+      moins precis des deux noms ;
+    - les mises a jour d'un incident arrivent de la plus recente a la
+      plus ancienne, mais s'y fier sans verifier, c'est risquer
+      d'afficher le message d'OUVERTURE comme derniere nouvelle -- la
+      plus perimee, presentee comme la plus fraiche. On trie par date.
+  Un troisieme defaut a ete trouve PAR le test et corrige a la source :
+  `typeof [] === "object"`, et un tableau JSON ressortait en etat
+  « inconnu » parfaitement forme alors que ce n'est pas une reponse de
+  Statuspage.
+
+- Aide bilingue, README (36 widgets) et catalogue mis a jour.
+
+- RESERVE : le proxy de l'environnement de developpement interdit
+  l'acces a githubstatus.com, l'appel REEL n'a donc pas pu etre essaye
+  avant livraison. L'analyse est verifiee sur relevés figes, y compris
+  un incident complet ; le premier vrai appel se fera sur le tableau.
+
+---
+
+- **New "Service status" tile** (System & Network family, next to
+  Network watch), answering the question one asks when something stops
+  working: is it me, or is it them?
+
+- **Generic from the start, for the same work.** githubstatus.com is an
+  Atlassian "Statuspage", used by hundreds of vendors, all exposing the
+  SAME public API at the SAME path, with no key or account. A
+  GitHub-specific tile would have cost as much and served once. Up to 10
+  services, as `Name = address`, the same grammar as Network watch.
+
+- **What is shown when something is wrong**: the AFFECTED components
+  only, the incident's title, stage and age, the latest message
+  published, and a link to it.
+
+- **The tile keeps one silhouette.** Detail slots are ALWAYS laid out,
+  so it does not resize at every incident nor shove its neighbours
+  about. Only the colour changes.
+
+- **Dual cadence**: normal (10 min) and incident (1 min). Speeding up is
+  IMMEDIATE, minor degradations included; calming down takes TWO healthy
+  readings, because almost every incident is jagged and a single green
+  reading would slow the tile down during the lull before the relapse.
+
+- **Scheduled maintenances** reported; **incident alert** optional,
+  announced ONCE per incident, and incidents already under way at
+  startup are recorded without alerting.
+
+- **No confusion**: an unreachable status page does not mean the service
+  is fine, and an indicator we do not understand is never taken for a
+  healthy state.
+
+- **Address guard**: public HTTPS only, the user's pasted path discarded
+  and the API path built by us -- the PiBoard server sees machines the
+  browser cannot.
+
+- **One request for all services**, in parallel, with a shared
+  server-side cache.
+
+- `test/serviceStatus.test.js`: 15 tests, entirely OFFLINE on frozen
+  readings -- depending on the real network would make them wrong on a
+  day GitHub is fine. Covers the two traps found while writing (group
+  headers counted as components; the latest incident message picked by
+  position rather than date) plus a third found BY the test and fixed at
+  source (`typeof [] === "object"`).
+
+- Bilingual help, README (36 widgets) and catalog updated.
+
+- CAVEAT: the development environment's proxy blocks githubstatus.com,
+  so the REAL call could not be tried before delivery. Parsing is
+  verified against frozen readings, a full incident included.
+
 ## 1.125.1
 
 - **La pastille de version manquait dans la fenetre de lancement.** La

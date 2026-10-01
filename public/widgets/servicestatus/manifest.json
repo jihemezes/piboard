@@ -1,0 +1,212 @@
+{
+  "id": "servicestatus",
+  "version": "1.0.0",
+  "name": {
+    "en": "Service status",
+    "fr": "Statut de service"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Watches the public status pages of online services (GitHub, Cloudflare, npm, Docker Hub and any other Atlassian Statuspage, with no key or account). Shows the overall state and, when something is wrong, the affected components only, the incident with its stage and age, the latest message published by the service, and a link to it. Scheduled maintenances are reported too. The check interval is configurable and switches on its own to a faster rhythm as soon as an incident is declared.",
+    "fr": "Surveille les pages de statut publiques des services en ligne (GitHub, Cloudflare, npm, Docker Hub et toute autre Statuspage d'Atlassian, sans clé ni compte). Affiche l'état global et, en cas de problème, les seuls composants concernés, l'incident avec son stade et son ancienneté, le dernier message publié par le service, et un lien vers celui-ci. Les maintenances programmées sont également signalées. L'intervalle de vérification est réglable et passe tout seul à un rythme plus rapide dès qu'un incident est déclaré."
+  },
+  "tagline": {
+    "en": "Is GitHub down, or is it me?",
+    "fr": "GitHub est-il en panne, ou est-ce moi ?"
+  },
+  "size": {
+    "w": 4,
+    "h": 4,
+    "minW": 3,
+    "minH": 3,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "services",
+      "type": "textarea",
+      "default": "GitHub = https://www.githubstatus.com\nCloudflare = https://www.cloudflarestatus.com\nnpm = https://status.npmjs.org",
+      "label": {
+        "en": "Services to watch (one per line)",
+        "fr": "Services à surveiller (un par ligne)"
+      },
+      "hint": {
+        "en": "Format: Name = status page address, or just the address. Any Atlassian Statuspage works, which covers most large services — paste the address of the page you normally visit, the rest is worked out. A few known ones: GitHub https://www.githubstatus.com · Cloudflare https://www.cloudflarestatus.com · npm https://status.npmjs.org · Docker Hub https://status.docker.com · Slack https://status.slack.com · Discord https://discordstatus.com · Atlassian https://status.atlassian.com. Lines starting with # are ignored, handy to disable one temporarily. Up to 10 lines. Only public HTTPS addresses are accepted.",
+        "fr": "Format : Nom = adresse de la page de statut, ou l'adresse seule. Toute Statuspage d'Atlassian fonctionne, ce qui couvre la plupart des grands services — collez l'adresse de la page que vous consultez d'habitude, le reste est deviné. Quelques adresses connues : GitHub https://www.githubstatus.com · Cloudflare https://www.cloudflarestatus.com · npm https://status.npmjs.org · Docker Hub https://status.docker.com · Slack https://status.slack.com · Discord https://discordstatus.com · Atlassian https://status.atlassian.com. Les lignes commençant par # sont ignorées, pratique pour en désactiver une temporairement. 10 lignes au maximum. Seules les adresses HTTPS publiques sont acceptées."
+      }
+    },
+    {
+      "key": "refreshMinutes",
+      "type": "number",
+      "default": 10,
+      "min": 1,
+      "max": 240,
+      "label": {
+        "en": "Check every (minutes), normally",
+        "fr": "Vérifier toutes les (minutes), en temps normal"
+      },
+      "hint": {
+        "en": "A status page is quiet for weeks on end; there is nothing to gain from asking more often than this.",
+        "fr": "Une page de statut ne bouge pas pendant des semaines : interroger plus souvent n'apporte rien."
+      }
+    },
+    {
+      "key": "incidentRefreshMinutes",
+      "type": "number",
+      "default": 1,
+      "min": 1,
+      "max": 60,
+      "label": {
+        "en": "Check every (minutes), during an incident",
+        "fr": "Vérifier toutes les (minutes), pendant un incident"
+      },
+      "hint": {
+        "en": "The tile switches to this faster rhythm by itself as soon as the overall state leaves \"all operational\" — minor degradations included, since waiting for a major outage means speeding up once it is too late to help. It returns to the normal rhythm only after two healthy readings in a row: almost every incident is jagged, and a single green reading would slow the tile down during the lull before the relapse.",
+        "fr": "La tuile passe d'elle-même à ce rythme plus rapide dès que l'état global quitte « tout opérationnel » — dégradations mineures comprises, car attendre la panne majeure reviendrait à accélérer une fois qu'il est trop tard. Elle ne revient au rythme normal qu'après deux relevés sains d'affilée : presque tous les incidents sont en dents de scie, et un seul relevé vert ferait ralentir la tuile pendant l'accalmie qui précède la rechute."
+      }
+    },
+    {
+      "key": "showMaintenances",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show scheduled maintenances",
+        "fr": "Afficher les maintenances programmées"
+      },
+      "hint": {
+        "en": "Knowing an interruption is planned for tomorrow morning saves looking for a fault that does not exist.",
+        "fr": "Savoir qu'une interruption est prévue demain matin évite de chercher une panne qui n'existe pas."
+      }
+    },
+    {
+      "key": "notifyOnIncident",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alert when an incident appears",
+        "fr": "Alerter à l'apparition d'un incident"
+      },
+      "hint": {
+        "en": "Each incident is announced ONCE, not at every reading — otherwise the tile would ring every minute for hours during an outage. Incidents already under way when the board starts are recorded without alerting: a three-hour-old incident must not flash the screen merely because PiBoard was restarted.",
+        "fr": "Chaque incident est annoncé UNE fois, et non à chaque relevé — sans quoi la tuile sonnerait toutes les minutes pendant des heures durant une panne. Les incidents déjà en cours au démarrage du tableau sont enregistrés sans alerter : un incident vieux de trois heures n'a pas à faire flasher l'écran parce que PiBoard vient de redémarrer."
+      }
+    },
+    {
+      "key": "notifyFlash",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Flash the screen",
+        "fr": "Flash d'écran"
+      }
+    },
+    {
+      "key": "notifySound",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Play a sound",
+        "fr": "Jouer un son"
+      }
+    },
+    {
+      "key": "notifySoundChoice",
+      "type": "select",
+      "default": "beep-double",
+      "label": {
+        "en": "Alert sound",
+        "fr": "Son de l'alerte"
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ]
+    },
+    {
+      "key": "notifyDurationSeconds",
+      "type": "number",
+      "default": 15,
+      "min": 1,
+      "max": 120,
+      "label": {
+        "en": "Alert duration (seconds)",
+        "fr": "Durée de l'alerte (secondes)"
+      }
+    },
+    {
+      "key": "notifyUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Notification webhook URL (optional, {message} = service and incident)",
+        "fr": "URL du webhook de notification (optionnel, {message} = service et incident)"
+      },
+      "hint": {
+        "en": "Called once per new incident. Same principle as the Countdown tile's webhook: SMS, Alexa, phone push...",
+        "fr": "Appelé une fois par nouvel incident. Même principe que le webhook de la tuile Compte à rebours : SMS, Alexa, push mobile…"
+      }
+    }
+  ]
+}
