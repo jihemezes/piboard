@@ -5079,7 +5079,71 @@
       `<option value="${k}" ${d.style.font === k ? "selected" : ""} style="font-family:${escapeHtmlAttr(TH.FONTS[k])}">${escapeHtml(i18n.t("theme.font." + k))}</option>`).join("");
     $("thEdDelete").hidden = e.isNew || e.isPiboard;
     $("thEdReset").hidden = !e.isPiboard;
+    renderThemeSample();
     renderReadability();
+  }
+
+  /* Echantillon des deux tuiles de mise en page dans l'editeur.
+
+     POURQUOI IL EXISTE. L'apercu en direct du theme, c'est le tableau
+     lui-meme -- ce qui est excellent, sauf pour les tuiles Texte et
+     Horloge : on ne les voit que si la page ouverte en porte, et leurs
+     nouvelles options d'accord au theme ne se jugent qu'une fois
+     cochees sur une vraie tuile. Deviner l'effet d'une couleur d'accent
+     sur un grand titre avant de l'appliquer n'etait pas raisonnable.
+
+     Il ne REJOUE PAS les widgets : ce sont deux blocs de demonstration,
+     a qui l'on pose les variables du brouillon en cours d'edition. Faire
+     vivre deux vrais widgets dans une fenetre de reglages aurait
+     demande de les instancier, de les faire tiquer et de les detruire a
+     la fermeture -- beaucoup de machinerie, et un risque de fuite, pour
+     montrer une couleur.
+
+     Sample of the two layout tiles inside the editor. The theme's live
+     preview is the board itself, which is excellent except for the Text
+     and Clock tiles: they only show if the open page carries them, and
+     their new theme-matching options can only be judged once ticked.
+     It does NOT re-run the widgets: two demonstration blocks, handed
+     the draft's variables. Running two real widgets inside a settings
+     window would have meant instantiating, ticking and destroying them
+     -- much machinery, and a leak risk, to show a colour. */
+  function renderThemeSample() {
+    const host = $("thEdSample");
+    if (!host) return;
+    const e = themeUi.editor;
+    const variant = TH.variant(draftTheme(), e.variant);
+    if (!variant) { host.hidden = true; return; }
+    host.hidden = false;
+
+    const vars = TH.toCssVars(variant, draftTheme().style);
+    host.style.cssText = "";
+    for (const [name, value] of Object.entries(vars)) host.style.setProperty(name, value);
+
+    /* Le fond de l'horloge reprend EXACTEMENT le calcul du widget (voir
+       bgColorFor dans widgets/clock/widget.js) : la couleur de tuile du
+       theme, eclaircie le jour et assombrie la nuit de la meme fraction.
+       Un echantillon qui ne montrerait pas la vraie teinte ne servirait
+       a rien -- ou pire, induirait en erreur.
+       The clock's background reuses EXACTLY the widget's calculation. */
+    const clock = $("thEdSampleClock");
+    if (clock) {
+      const isDay = e.variant === "light";
+      const rgb = hexToRgbTriplet(variant.tile);
+      if (rgb) {
+        const target = isDay ? 255 : 0;
+        const shaded = rgb.map((c) => Math.round(c + (target - c) * 0.12));
+        clock.style.backgroundColor = `rgb(${shaded.join(", ")})`;
+        const lum = (0.2126 * shaded[0] + 0.7152 * shaded[1] + 0.0722 * shaded[2]) / 255;
+        clock.style.color = lum < 0.5 ? "#F3F5FA" : "#1B1F2A";
+      }
+    }
+  }
+
+  function hexToRgbTriplet(hex) {
+    const c = String(hex || "").replace("#", "");
+    if (c.length !== 6) return null;
+    const out = [0, 2, 4].map((i) => parseInt(c.substr(i, 2), 16));
+    return out.every((n) => Number.isFinite(n)) ? out : null;
   }
 
   function renderReadability() {
@@ -7676,7 +7740,26 @@
     // drift on the first edit.
     if (id === "quickstart") {
       const qs = (window.PIBOARD_QUICKSTART || {})[settings.lang === "fr" ? "fr" : "en"];
-      if (qs) content.innerHTML = `<h3>${i18n.fromManifest(sec.title)}</h3>` + qs + kofiBlockHtml();
+      /* Version affichee des l'ouverture de l'aide, a cote du titre.
+         Elle figurait deja dans « A propos » et dans les reglages
+         generaux, mais les deux demandent d'aller la chercher : la
+         premiere question qu'on se pose en ouvrant l'aide -- « sur quelle
+         version suis-je ? » -- merite une reponse sans un clic de plus,
+         notamment pour signaler un bug ou verifier qu'une mise a jour
+         est bien passee.
+         On reutilise `assetVersion`, deja chargee au demarrage pour
+         l'URL des fichiers de widgets : aucun appel reseau de plus. Si
+         elle manque (chargement echoue), la pastille est simplement
+         absente -- jamais un « v » orphelin ou un « inconnu » inquietant.
+         The version shown as soon as the help opens, next to the title.
+         It already appeared under "About" and in the general settings,
+         but both require going to look for it. Reuses `assetVersion`,
+         already loaded at startup, so no extra network call; if it is
+         missing the badge is simply absent. */
+      const badge = assetVersion
+        ? ` <span class="help-version">v${escapeHtml(assetVersion)}</span>`
+        : "";
+      if (qs) content.innerHTML = `<h3>${i18n.fromManifest(sec.title)}${badge}</h3>` + qs + kofiBlockHtml();
     }
 
     if (id === "about") {

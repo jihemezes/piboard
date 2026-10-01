@@ -129,7 +129,28 @@
       this.inner.style.fontWeight = String(s.weight || "600");
       this.inner.style.fontStyle = s.italic ? "italic" : "normal";
       this.inner.style.letterSpacing = (Number(s.letterSpacing) || 0) + "px";
-      this.inner.style.color = s.useCustomColor && s.color ? s.color : "";
+      /* Trois couleurs possibles, dans cet ordre de priorite :
+            1. couleur personnalisee -- un choix explicite et chiffre, il
+               doit l'emporter sur tout le reste ;
+            2. accent du theme -- var(--accent), donc recalculee par le
+               navigateur a chaque changement de theme et a la bascule
+               jour/nuit, sans que ce widget ait rien a refaire (c'est
+               pourquoi onThemeChanged() n'a toujours rien a recalculer) ;
+            3. rien -- heritage de var(--text), le comportement
+               historique et le defaut.
+         L'accent passe par la VARIABLE et non par sa valeur resolue :
+         figer la couleur ici la laisserait en arriere au premier
+         changement de theme, et c'est exactement le defaut qu'on vient
+         corriger.
+         Three possible colors, in priority order: an explicit custom
+         color wins; otherwise the theme's accent, referenced through the
+         CSS VARIABLE so the browser recomputes it on every theme change
+         and day/night switch -- freezing its resolved value here would
+         leave it behind on the first theme change, the very fault being
+         fixed; otherwise nothing, inheriting var(--text) as before. */
+      this.inner.style.color = s.useCustomColor && s.color
+        ? s.color
+        : (s.useAccentColor ? "var(--accent)" : "");
       this.fit();
     }
 

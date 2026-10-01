@@ -1,5 +1,117 @@
 # Changelog
 
+## 1.125.0
+
+- **La version s'affiche des l'ouverture de l'aide**, en pastille a cote
+  du titre « Demarrage rapide ». Elle figurait deja dans « A propos » et
+  dans les reglages generaux, mais les deux demandent d'aller la
+  chercher : la premiere question qu'on se pose en ouvrant l'aide --
+  « sur quelle version suis-je ? » -- merite une reponse sans un clic de
+  plus, pour signaler un bug ou verifier qu'une mise a jour est passee.
+  Aucun appel reseau ajoute : on reutilise la version deja chargee au
+  demarrage pour l'URL des fichiers de widgets.
+
+- **Tuile Texte : option « Utiliser la couleur d'accent du theme ».**
+  Le constat de depart etait a corriger : la tuile suivait DEJA le theme
+  -- un titre blanc sur un theme sombre, c'est sa couleur de texte. Ce
+  qui manquait, c'etait de pouvoir prendre sa couleur d'ACCENT, celle
+  des titres de tuiles, pour qu'un grand titre appartienne visiblement
+  au meme tableau au lieu de trancher. L'accent passe par la variable
+  CSS et non par sa valeur resolue : figee, elle serait restee en
+  arriere au premier changement de theme -- exactement le defaut
+  corrige. Une couleur personnalisee, choix explicite, continue de
+  l'emporter.
+
+- **Tuile Horloge : le fond jour/nuit peut prendre les couleurs du
+  theme.** C'est ce reglage, actif par defaut avec deux couleurs fixes
+  (#DCE9F7 / #0B1220), qui isolait l'horloge en pave bleu nuit au milieu
+  d'un tableau vert. La case a cocher devient une liste a trois choix :
+  couleurs personnalisees (defaut, inchange), couleurs du theme, ou
+  aucun fond. En mode « theme », les deux nuances sont derivees de la
+  couleur de tuile du theme APPLIQUE, eclaircie le jour et assombrie la
+  nuit : l'horloge garde son repere jour/nuit -- tout l'interet de ce
+  fond -- sans sortir de la palette.
+
+- **MIGRATION DES TUILES EXISTANTES.** Le reglage passant de booleen a
+  liste, les tuiles deja posees portent `true` ou `false` dans leur
+  configuration, et aucun moment du cycle de vie ne reecrit ces fichiers
+  en masse : la conversion se fait donc A LA LECTURE, a chaque affichage.
+  Sans elle, toutes les horloges existantes auraient perdu leur fond du
+  jour au lendemain -- une regression invisible pour qui developpe, et
+  tres visible sur un ecran mural. Quatre assertions la verrouillent, y
+  compris le cas d'un reglage absent ou abime, qui retombe sur le defaut
+  plutot que sur une absence de fond.
+
+- **Option « Chiffres et aiguilles a la couleur d'accent »** sur
+  l'horloge. `--muted` n'est volontairement PAS touche : les graduations
+  et le texte secondaire gardent leur contraste calcule sur le fond, un
+  cadran entierement a l'accent serait monochrome et illisible. L'accent
+  est pose APRES le fond, jamais avant -- le fond ecrit lui aussi
+  `--text`, et l'ordre inverse l'aurait efface sans rien dire.
+
+- **Les deux options sont DECOCHEES par defaut** et le fond jour/nuit
+  garde son comportement d'origine : aucun tableau existant ne change
+  d'apparence en installant cette version.
+
+- **Echantillon dans l'editeur de themes.** L'apercu en direct du theme,
+  c'est le tableau lui-meme -- excellent, sauf pour ces deux tuiles : on
+  ne les voit que si la page ouverte en porte, et les nouvelles options
+  ne se jugent qu'une fois cochees. L'editeur montre donc un echantillon
+  Texte + Horloge aux couleurs du brouillon en cours, le fond de
+  l'horloge reprenant EXACTEMENT le calcul du widget -- un echantillon
+  qui montrerait une autre teinte induirait en erreur. Ce sont deux blocs
+  de demonstration, pas deux widgets rejoues : les instancier, les faire
+  tiquer et les detruire dans une fenetre de reglages aurait ete
+  beaucoup de machinerie, et un risque de fuite, pour montrer une
+  couleur.
+
+- **Aide mise a jour** (fiches Texte et Horloge, les deux langues) :
+  l'option d'accent et son interaction avec la couleur personnalisee,
+  les trois choix du fond jour/nuit, et l'echantillon de l'editeur.
+
+---
+
+- **The version shows as soon as the help opens**, as a badge next to
+  the "Quick start" title. It already appeared under "About" and in the
+  general settings, but both require going to look for it. No extra
+  network call: the version already loaded at startup is reused.
+
+- **Text tile: "Use the theme's accent colour" option.** The starting
+  diagnosis needed correcting: the tile ALREADY followed the theme -- a
+  white title on a dark theme is its text colour. What was missing was
+  taking its ACCENT colour, the tile titles' one. The accent goes
+  through the CSS variable, not its resolved value: frozen, it would
+  have lagged behind on the first theme change -- the very fault being
+  fixed. A custom colour still wins.
+
+- **Clock tile: the day/night background can take the theme's colours.**
+  That setting, on by default with two fixed colours, was what isolated
+  the clock as a navy slab in a green board. The checkbox becomes a
+  three-way list: custom colours (default, unchanged), theme colours, or
+  no background. In "theme" mode both shades derive from the APPLIED
+  theme's tile colour, lighter by day and darker by night, so the clock
+  keeps its day/night cue without leaving the palette.
+
+- **MIGRATION OF EXISTING TILES.** The setting going from boolean to
+  list, tiles already placed hold `true` or `false`, and nothing
+  rewrites those files, so the conversion happens ON READ. Without it
+  every existing clock would have silently lost its background. Four
+  assertions lock it down, including a missing or damaged value falling
+  back to the default.
+
+- **"Digits and hands in the accent colour"** option. `--muted` is
+  deliberately untouched, and the accent is applied AFTER the
+  background, never before -- the background also writes `--text`.
+
+- **Both options are UNTICKED by default**: no existing board changes
+  appearance on installing this version.
+
+- **Sample in the theme editor**, showing the Text and Clock tiles in
+  the draft's colours, the clock's background reusing EXACTLY the
+  widget's calculation.
+
+- **Help updated** (Text and Clock sections, both languages).
+
 ## 1.124.0
 
 - **macOS etait la seule plateforme a ne RIEN proposer pour ffmpeg.**

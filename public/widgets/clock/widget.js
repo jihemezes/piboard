@@ -418,12 +418,54 @@
     /* Luminance perceptuelle approximative (0 = noir, 1 = blanc)
        Approximate perceptual luminance (0 = black, 1 = white) */
     relLuminance(hex) {
-      const c = (hex || "").replace("#", "");
-      if (c.length !== 6) return 0.5;
-      const r = parseInt(c.substr(0, 2), 16) / 255;
-      const g = parseInt(c.substr(2, 2), 16) / 255;
-      const b = parseInt(c.substr(4, 2), 16) / 255;
-      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      const rgb = this.toRgb(hex);
+      if (!rgb) return 0.5;
+      return (0.2126 * rgb[0] + 0.7152 * rgb[1] + 0.0722 * rgb[2]) / 255;
+    }
+
+    /* Accepte les trois ecritures qu'on rencontre ici : le #rrggbb des
+       selecteurs de couleur, le #rgb court, et le "rgb(r, g, b)" que
+       rend getComputedStyle -- indispensable depuis que les couleurs
+       peuvent venir des variables du theme et non plus seulement d'un
+       reglage saisi a la main.
+       Accepts the three spellings met here: the color pickers' #rrggbb,
+       the short #rgb, and the "rgb(r, g, b)" getComputedStyle returns --
+       required now that colors may come from the theme's variables. */
+    toRgb(value) {
+      const v = String(value || "").trim();
+      if (!v) return null;
+      if (v[0] === "#") {
+        const c = v.slice(1);
+        if (c.length === 3) {
+          return [0, 1, 2].map((i) => parseInt(c[i] + c[i], 16));
+        }
+        if (c.length === 6) {
+          return [0, 2, 4].map((i) => parseInt(c.substr(i, 2), 16));
+        }
+        return null;
+      }
+      const m = v.match(/^rgba?\(\s*([\d.]+)[\s,]+([\d.]+)[\s,]+([\d.]+)/i);
+      if (!m) return null;
+      return [Number(m[1]), Number(m[2]), Number(m[3])];
+    }
+
+    rgbToCss(rgb) {
+      return "rgb(" + rgb.map((n) => Math.max(0, Math.min(255, Math.round(n)))).join(", ") + ")";
+    }
+
+    /* Melange vers le blanc ou le noir, d'une fraction donnee. Sert a
+       tirer du fond de tuile du theme une nuance JOUR legerement plus
+       claire et une nuance NUIT legerement plus sombre : l'horloge garde
+       ainsi son repere jour/nuit -- tout l'interet de ce fond -- sans
+       sortir de la palette du theme, ce qui etait le reproche fait aux
+       deux couleurs fixes.
+       Mixes toward white or black by a given fraction, to derive a
+       slightly lighter DAY shade and a slightly darker NIGHT shade from
+       the theme's tile color: the clock keeps its day/night cue without
+       leaving the theme's palette. */
+    shade(rgb, towardWhite, amount) {
+      const target = towardWhite ? 255 : 0;
+      return rgb.map((c) => c + (target - c) * amount);
     }
 
     /* Fond jour/nuit : suit le theme resolu du tableau (calcul solaire,
@@ -434,25 +476,72 @@
        calculation, or a manual day/night choice) rather than recomputing
        its own sunrise/sunset. Text switches light/dark automatically
        based on the chosen color's luminance. */
+    /* Le reglage est passe de case a cocher a liste a trois choix
+       (1.125.0). Les tuiles deja posees ont donc `true` ou `false`
+       enregistre, et il n'y a AUCUN moment ou l'on pourrait reecrire ces
+       fichiers en masse : la conversion se fait donc ici, a chaque
+       lecture. Sans elle, toutes les horloges existantes perdraient leur
+       fond du jour au lendemain -- une regression silencieuse sur des
+       tableaux muraux que personne ne regarde de pres.
+       The setting went from checkbox to a three-way list (1.125.0).
+       Tiles already placed therefore hold `true` or `false`, and there
+       is no moment at which those files could be rewritten en masse, so
+       the conversion happens here, on every read. Without it every
+       existing clock would silently lose its background. */
+    bgMode() {
+      const v = (this.ctx.settings || {}).dayNightBg;
+      if (v === true || v === undefined || v === null) return "custom";
+      if (v === false) return "off";
+      return ["off", "custom", "theme"].includes(v) ? v : "custom";
+    }
+
+    /* Couleurs du fond selon le mode, ou null quand il n'y a pas de fond
+       a poser. Separee de applyBg pour rester lisible : trois modes et
+       deux tons, cela fait six cas qui n'ont pas a se melanger au code
+       qui touche au DOM.
+       The background's colors for the current mode, or null when there
+       is none to apply. */
+    bgColorFor(mode, isDay) {
+      const s = this.ctx.settings;
+      if (mode === "custom") {
+        return (isDay ? s.dayColor : s.nightColor) || (isDay ? "#DCE9F7" : "#0B1220");
+      }
+      if (mode === "theme") {
+        /* La couleur de tuile du theme APPLIQUE, lue sur l'element :
+           elle tient compte du theme de la page et d'une eventuelle
+           couleur de tuile personnalisee, ce qu'une valeur codee en dur
+           ne pourrait pas faire.
+           The APPLIED theme's tile color, read from the element. */
+        const tile = getComputedStyle(this.ctx.el).getPropertyValue("--tile");
+        const rgb = this.toRgb(tile);
+        if (!rgb) return null; // theme illisible : on ne pose rien / unreadable: apply nothing
+        return this.rgbToCss(this.shade(rgb, isDay, 0.12));
+      }
+      return null;
+    }
+
     applyBg() {
       const box = this.ctx.el.querySelector(".pw-clock-wrap");
       if (!box) return;
       const s = this.ctx.settings;
+      const mode = this.bgMode();
+      const accent = !!s.accentForeground;
+      const isDay = window.PiBoard.toneOf(this.ctx.el) === "light";
+      const color = this.bgColorFor(mode, isDay);
 
-      if (!s.dayNightBg) {
-        if (this.appliedBgKey !== "off") {
-          box.style.backgroundColor = "";
-          box.style.color = "";
-          box.style.removeProperty("--text");
-          box.style.removeProperty("--muted");
-          this.appliedBgKey = "off";
-        }
+      if (!color) {
+        const key = "off:" + accent;
+        if (this.appliedBgKey === key) return;
+        this.appliedBgKey = key;
+        box.style.backgroundColor = "";
+        box.style.color = "";
+        box.style.removeProperty("--text");
+        box.style.removeProperty("--muted");
+        this.applyAccent(box, accent);
         return;
       }
 
-      const isDay = window.PiBoard.toneOf(this.ctx.el) === "light";
-      const color = (isDay ? s.dayColor : s.nightColor) || (isDay ? "#DCE9F7" : "#0B1220");
-      const key = isDay + ":" + color;
+      const key = mode + ":" + isDay + ":" + color + ":" + accent;
       if (this.appliedBgKey === key) return;
       this.appliedBgKey = key;
 
@@ -469,6 +558,31 @@
       // themselves must also be overridden.
       box.style.setProperty("--text", textColor);
       box.style.setProperty("--muted", mutedColor);
+      this.applyAccent(box, accent);
+    }
+
+    /* Chiffres et aiguilles a la couleur d'accent du theme. Pose APRES
+       le fond, et jamais avant : le fond ecrit lui aussi --text, et
+       l'ordre inverse effacerait l'accent sans rien dire.
+       On passe la VARIABLE, pas sa valeur resolue, pour que le
+       changement de theme et la bascule jour/nuit soient suivis par le
+       navigateur sans que ce widget ait a se reveiller.
+       `--muted` n'est volontairement PAS touche : les graduations et le
+       texte secondaire gardent leur contraste calcule sur le fond. Tout
+       passer a l'accent donnerait un cadran monochrome ou plus rien ne
+       se distingue -- l'accent ne vaut que s'il tranche.
+       Digits and hands in the theme's accent color. Applied AFTER the
+       background, never before: the background also writes --text, and
+       the reverse order would wipe the accent out silently. The
+       VARIABLE is passed, not its resolved value, so theme changes and
+       the day/night switch are followed by the browser. `--muted` is
+       deliberately untouched: an all-accent face would be monochrome,
+       and an accent is only worth it where it stands out. */
+    applyAccent(box, on) {
+      if (on) {
+        box.style.color = "var(--accent)";
+        box.style.setProperty("--text", "var(--accent)");
+      }
     }
 
     renderNextEvent() {

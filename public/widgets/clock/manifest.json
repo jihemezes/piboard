@@ -1,6 +1,6 @@
 {
   "id": "clock",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "name": {
     "en": "Clock",
     "fr": "Horloge"
@@ -181,16 +181,39 @@
     },
     {
       "key": "dayNightBg",
-      "type": "checkbox",
-      "default": true,
+      "type": "select",
+      "default": "custom",
       "label": {
         "en": "Day/night background",
         "fr": "Fond jour/nuit"
       },
       "hint": {
-        "en": "Switches automatically with the board's theme (sunrise/sunset, or your manual day/night choice). Overrides the tile's custom color from the Appearance section below while enabled.",
-        "fr": "Bascule automatiquement avec le thème du tableau (lever/coucher du soleil, ou votre choix manuel jour/nuit). Prend le pas sur la couleur personnalisée de la tuile (section Apparence ci-dessous) tant que c'est activé."
-      }
+        "en": "Gives the clock its own background, lighter by day and darker by night, following the board's theme (solar calculation or your manual day/night choice). “Theme colors” derives both shades from the applied theme's tile color, so the clock keeps that cue without standing apart from the rest of the board. While a background is active it overrides the tile's custom color from the Appearance section below.",
+        "fr": "Donne à l'horloge son propre fond, plus clair le jour et plus sombre la nuit, en suivant le thème du tableau (calcul solaire ou votre choix manuel jour/nuit). « Couleurs du thème » dérive les deux nuances de la couleur de tuile du thème appliqué : l'horloge garde ce repère sans trancher avec le reste du tableau. Tant qu'un fond est actif, il prend le pas sur la couleur personnalisée de la tuile (section Apparence ci-dessous)."
+      },
+      "options": [
+        {
+          "value": "custom",
+          "label": {
+            "en": "Custom colors (below)",
+            "fr": "Couleurs personnalisées (ci-dessous)"
+          }
+        },
+        {
+          "value": "theme",
+          "label": {
+            "en": "Theme colors",
+            "fr": "Couleurs du thème"
+          }
+        },
+        {
+          "value": "off",
+          "label": {
+            "en": "No background (follow the tile)",
+            "fr": "Aucun fond (suivre la tuile)"
+          }
+        }
+      ]
     },
     {
       "key": "dayColor",
@@ -208,6 +231,19 @@
       "label": {
         "en": "Night color",
         "fr": "Couleur de nuit"
+      }
+    },
+    {
+      "key": "accentForeground",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Digits and hands in the accent color",
+        "fr": "Chiffres et aiguilles à la couleur d'accent"
+      },
+      "hint": {
+        "en": "Takes the applied theme's accent color — the one used by the tile titles. Tick marks and secondary text keep their own contrast, so the face stays readable rather than going monochrome. Check the result on a light background: a pale accent on a pale background is hard to read.",
+        "fr": "Prend la couleur d'accent du thème appliqué — celle des titres de tuiles. Les graduations et le texte secondaire gardent leur propre contraste, pour que le cadran reste lisible au lieu de virer au monochrome. Vérifiez le rendu sur un fond clair : un accent pâle sur un fond pâle se lit mal."
       }
     },
     {

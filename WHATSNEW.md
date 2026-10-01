@@ -33,6 +33,18 @@
 # Nouveautes / What's new
 
 
+## 1.125.0
+
+**Les tuiles Texte et Horloge s'accordent au theme**
+
+Un grand titre peut desormais prendre la couleur d'accent du theme -- celle des titres de tuiles -- au lieu du blanc de texte ordinaire, et le fond jour/nuit de l'horloge peut tirer ses deux nuances du theme applique plutot que de deux couleurs fixes : elle garde son repere jour/nuit sans trancher avec le reste du tableau. Les chiffres et aiguilles peuvent eux aussi passer a l'accent. Tout cela reste optionnel et decoche par defaut, et l'editeur de themes montre un echantillon des deux tuiles pour juger avant d'appliquer. Au passage, le numero de version s'affiche des l'ouverture de l'aide.
+
+---
+
+**The Text and Clock tiles match the theme**
+
+A large title can now take the theme's accent colour -- the tile titles' one -- instead of plain text white, and the clock's day/night background can derive both its shades from the applied theme rather than two fixed colours: it keeps its day/night cue without standing apart from the rest of the board. Digits and hands can take the accent too. All of it stays optional and unticked by default, and the theme editor shows a sample of both tiles to judge before applying. Along the way, the version number appears as soon as the help opens.
+
 ## 1.124.0
 
 **Installer ffmpeg sur un Mac, enfin possible depuis PiBoard**

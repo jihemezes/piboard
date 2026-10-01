@@ -350,6 +350,29 @@
           <select id="thEdFont"></select>
         </label>
       </div>
+      <!-- Echantillon des tuiles de mise en page. L'apercu en direct du
+           theme, c'est le tableau lui-meme ; mais il ne montre ces deux
+           tuiles-la que si la page courante en porte, et leurs options
+           d'accord au theme ne se jugent qu'une fois cochees. Cet
+           echantillon les montre toujours, avec les couleurs du brouillon
+           en cours d'edition.
+           Sample of the layout tiles. The theme's live preview is the
+           board itself, but it only shows these two tiles if the current
+           page carries them. This sample always shows them, in the
+           colours of the draft being edited. -->
+      <div class="field">
+        <span data-i18n="theme.sample">Text and Clock tiles</span>
+        <div class="th-sample" id="thEdSample">
+          <div class="th-sample-tile">
+            <div class="th-sample-title" id="thEdSampleTitle">Supervision</div>
+            <small class="th-sample-note" data-i18n="theme.sample.accent">accent colour</small>
+          </div>
+          <div class="th-sample-tile th-sample-clock" id="thEdSampleClock">
+            <div class="th-sample-time" id="thEdSampleTime">13:17</div>
+            <small class="th-sample-note" data-i18n="theme.sample.clock">day/night background, theme colours</small>
+          </div>
+        </div>
+      </div>
       <div class="field">
         <span data-i18n="theme.readability">Readability</span>
         <ul class="th-checks" id="thEdChecks"></ul>

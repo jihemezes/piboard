@@ -1967,6 +1967,23 @@ body.touch .pwt-boost-menu button { padding: 14px 16px; font-size: 17px; min-hei
   margin: 0 0 4px;
   font-size: 21px;
 }
+/* Pastille de version a cote du titre « Demarrage rapide ». Elle se lit
+   au premier coup d'oeil sans voler la vedette au titre : taille et
+   graisse reduites, couleur discrete, et un chiffre a chasse fixe pour
+   qu'un numero reste lisible et ne danse pas d'une version a l'autre.
+   Version badge next to the "Quick start" title: readable at a glance
+   without stealing the title's place -- smaller, lighter, muted, and
+   monospaced digits so a number stays legible and does not jitter from
+   one version to the next. */
+.help-content h3 .help-version {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  vertical-align: middle;
+  white-space: nowrap;
+}
 .help-content .help-sub {
   margin: 0 0 18px;
   color: var(--muted);
@@ -3160,6 +3177,63 @@ body.editing .grid-stack-item-content.tile-transparent {
 }
 .th-ed-style { margin-top: 10px; }
 .th-ed-style em { color: var(--muted); font-style: normal; font-size: 12px; }
+/* Echantillon des tuiles Texte et Horloge dans l'editeur de themes.
+   Il porte lui-meme les variables du brouillon (posees en ligne par
+   renderThemeSample), d'ou le var(--...) partout ci-dessous : chaque
+   couleur vient du theme en cours d'edition, jamais du theme applique a
+   la fenetre. Sans cela, l'echantillon montrerait le theme actuel --
+   c'est-a-dire exactement ce qu'on ne cherche pas a voir.
+   Sample of the Text and Clock tiles in the theme editor. It carries
+   the draft's variables itself, hence var(--...) throughout: every
+   colour comes from the theme being edited, never from the one applied
+   to the window. */
+.th-sample {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.th-sample-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 74px;
+  padding: 10px 8px;
+  border: var(--tile-border-w) solid var(--tile-edge);
+  border-radius: var(--radius);
+  background: var(--tile);
+  color: var(--text);
+  font-family: var(--font);
+  text-align: center;
+  overflow: hidden;
+}
+/* Le titre prend l'accent : c'est precisement l'option ajoutee a la
+   tuile Texte, et la montrer eteinte n'aurait rien appris.
+   The title takes the accent: the very option added to the Text tile. */
+.th-sample-title {
+  color: var(--accent);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.th-sample-time {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+/* La pastille de legende reste lisible sur les DEUX fonds : sur la
+   tuile elle suit --muted, sur l'horloge elle herite de la couleur
+   calculee pour ce fond, attenuee. On ne fige donc aucune couleur ici.
+   The caption stays readable on BOTH backgrounds, so no colour is
+   frozen here. */
+.th-sample-note { font-size: 10.5px; color: var(--muted); }
+.th-sample-clock .th-sample-note { color: inherit; opacity: 0.68; }
 .th-checks { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; }
 .th-issue {
   display: flex;

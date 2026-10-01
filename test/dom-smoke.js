@@ -3859,6 +3859,77 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("5 alarmes independantes proposees (comme convenu)",
       [1, 2, 3, 4, 5].every((i) => !!document.querySelector(`#tileForm [data-key="alarm${i}Enabled"]`)));
 
+    /* ===== Horloge et Texte : s'accorder au theme applique (1.125.0) =====
+       Le reglage « Fond jour/nuit » de l'horloge est passe de case a
+       cocher a liste a trois choix. Les tuiles DEJA POSEES ont donc
+       `true` ou `false` enregistre dans leur configuration, et rien ne
+       reecrit ces fichiers : la conversion se fait a la lecture. Si elle
+       se cassait, toutes les horloges existantes perdraient leur fond du
+       jour au lendemain -- une regression invisible pour qui developpe,
+       et bien visible sur un ecran mural.
+       The clock's "day/night background" went from checkbox to a
+       three-way list. Tiles already placed hold `true` or `false` and
+       nothing rewrites those files, so the conversion happens on read.
+       If it broke, every existing clock would silently lose its
+       background. */
+    console.log("== Horloge et Texte : accord avec le theme applique (1.125.0) ==");
+    {
+      const clockSrc = fs.readFileSync(path.join(PUB, "widgets/clock/widget.js"), "utf8");
+      const body = clockSrc.match(/bgMode\(\) \{([\s\S]*?)\n    \}/)[1];
+      const bgMode = new Function("settings", "const ctx = { settings };"
+        + body.replace(/this\.ctx/g, "ctx"));
+
+      assert("horloge : une tuile d'avant la 1.125.0 avec fond garde son fond",
+        bgMode({ dayNightBg: true }) === "custom");
+      assert("horloge : une tuile d'avant la 1.125.0 sans fond n'en recupere pas un",
+        bgMode({ dayNightBg: false }) === "off");
+      assert("horloge : les trois nouveaux choix sont rendus tels quels",
+        bgMode({ dayNightBg: "custom" }) === "custom"
+        && bgMode({ dayNightBg: "theme" }) === "theme"
+        && bgMode({ dayNightBg: "off" }) === "off");
+      /* Valeur absente ou abimee : on retombe sur le comportement par
+         defaut, jamais sur une absence de fond -- un reglage illisible
+         ne doit pas changer l'apparence du tableau.
+         Missing or damaged value: fall back to the default behaviour. */
+      assert("horloge : un reglage absent ou abime retombe sur le defaut",
+        bgMode({}) === "custom" && bgMode({ dayNightBg: null }) === "custom"
+        && bgMode({ dayNightBg: "nimporte quoi" }) === "custom");
+
+      const clockManifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/clock/manifest.json"), "utf8"));
+      const bgField = (clockManifest.settings || []).find((f) => f.key === "dayNightBg");
+      assert("horloge : le reglage est bien devenu une liste a trois choix",
+        bgField && bgField.type === "select" && bgField.options.length === 3);
+      assert("horloge : le defaut reste le comportement historique",
+        bgField.default === "custom");
+      assert("horloge : l'accent sur chiffres et aiguilles est une OPTION, decochee",
+        (clockManifest.settings || []).some((f) => f.key === "accentForeground"
+          && f.type === "checkbox" && f.default === false));
+
+      /* La couleur d'accent doit etre posee comme VARIABLE CSS et non
+         comme valeur resolue : figee, elle resterait en arriere au
+         premier changement de theme -- precisement le defaut qu'on
+         corrige ici.
+         The accent must be set as a CSS VARIABLE, not a resolved value:
+         frozen, it would lag behind on the first theme change. */
+      assert("horloge : l'accent passe par la variable du theme, pas par une valeur figee",
+        /var\(--accent\)/.test(clockSrc));
+
+      const textSrc = fs.readFileSync(path.join(PUB, "widgets/text/widget.js"), "utf8");
+      assert("texte : l'accent passe par la variable du theme, pas par une valeur figee",
+        /useAccentColor/.test(textSrc) && /var\(--accent\)/.test(textSrc));
+      /* Une couleur personnalisee est un choix explicite et chiffre :
+         elle doit l'emporter sur l'accent, sans quoi cocher l'accent
+         ecraserait sans prevenir une couleur voulue.
+         A custom color is an explicit choice and must win over the
+         accent. */
+      assert("texte : une couleur personnalisee l'emporte sur l'accent",
+        textSrc.indexOf("s.useCustomColor && s.color") < textSrc.indexOf("s.useAccentColor"));
+      const textManifest = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/text/manifest.json"), "utf8"));
+      assert("texte : l'accent est une OPTION, decochee par defaut",
+        (textManifest.settings || []).some((f) => f.key === "useAccentColor"
+          && f.type === "checkbox" && f.default === false));
+    }
+
     console.log("== Horloge : selecteur de fuseau horaire (liste complete, plus de saisie libre) ==");
     const tzSelect = document.querySelector('#tileForm [data-key="timezone"]');
     assert("champ fuseau horaire est bien une liste, pas un champ texte", tzSelect && tzSelect.tagName === "SELECT");

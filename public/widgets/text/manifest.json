@@ -1,7 +1,7 @@
 {
   "id": "text",
   "dir": "text",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Text",
     "fr": "Texte"
@@ -194,6 +194,19 @@
       "label": {
         "en": "Letter spacing (px)",
         "fr": "Espacement des lettres (px)"
+      }
+    },
+    {
+      "key": "useAccentColor",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Use the theme's accent color",
+        "fr": "Utiliser la couleur d'accent du thème"
+      },
+      "hint": {
+        "en": "Ticked, the text takes the accent color of the applied theme — the one used by the tile titles — so a page title sits with the rest of the board instead of standing apart in plain text color. It follows every theme change and the day/night switch. A custom color below, if ticked, wins over this.",
+        "fr": "Cochée, le texte prend la couleur d'accent du thème appliqué — celle des titres de tuiles — pour qu'un titre de page s'accorde au reste du tableau au lieu de trancher en couleur de texte ordinaire. Elle suit tous les changements de thème et la bascule jour/nuit. Une couleur personnalisée ci-dessous, si elle est cochée, l'emporte sur ce réglage."
       }
     },
     {
