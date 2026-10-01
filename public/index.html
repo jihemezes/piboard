@@ -1130,7 +1130,14 @@
 <div class="modal" id="quickStartModal" hidden>
   <div class="modal-card quickstart-card">
     <header class="modal-head">
-      <h2 data-i18n="quickstart.title">Getting started</h2>
+      <!-- La pastille de version est posee par le script (meme source que
+           la rubrique « Demarrage rapide » de l'aide, voir
+           renderQuickStartVersion) : elle reste vide tant que la version
+           n'est pas connue, plutot que d'afficher un « v » orphelin.
+           The version badge is filled by the script, same source as the
+           help's "Quick start" section; it stays empty until the version
+           is known rather than showing an orphan "v". -->
+      <h2><span data-i18n="quickstart.title">Getting started</span><span class="help-version" id="quickStartVersion"></span></h2>
       <!-- Bascule de langue en tete du guide. Elle a sa place ICI et pas
            seulement dans les reglages : au tout premier lancement, la
            langue par defaut est l'anglais et ce guide est la premiere

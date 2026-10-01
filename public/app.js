@@ -8083,7 +8083,30 @@
     // without reading the interface -- including when one does not
     // understand the displayed language in the first place.
     $("quickStartLang").textContent = settings.lang === "fr" ? "English" : "Français";
+    renderQuickStartVersion();
     $("quickStartModal").hidden = false;
+  }
+
+  /* Version a cote du titre du guide de lancement, comme dans la
+     rubrique « Demarrage rapide » de l'aide -- qui sert le MEME texte
+     (source unique, voir quickstart-content.js). Les deux fenetres
+     doivent donc se ressembler jusqu'au bout : la version visible dans
+     l'une et absente de l'autre serait une incoherence d'autant plus
+     genante que c'est la premiere fenetre que voit un nouvel
+     utilisateur.
+     `assetVersion` est deja chargee et ATTENDUE au demarrage, bien avant
+     l'ouverture du guide (voir boot()) : aucun appel reseau ici, et
+     aucune course. Si elle manquait malgre tout, la pastille reste vide
+     plutot que d'afficher un « v » orphelin.
+     The version next to the launch guide's title, as in the help's
+     "Quick start" section -- which serves the SAME text, so the two
+     windows must match to the end. `assetVersion` is already loaded and
+     AWAITED at boot, well before the guide opens: no network call and no
+     race. Should it be missing, the badge stays empty. */
+  function renderQuickStartVersion() {
+    const el = $("quickStartVersion");
+    if (!el) return;
+    el.textContent = assetVersion ? "v" + assetVersion : "";
   }
 
   /* Bascule la langue de toute l'application depuis le guide, et la

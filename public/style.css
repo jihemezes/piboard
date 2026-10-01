@@ -1967,15 +1967,23 @@ body.touch .pwt-boost-menu button { padding: 14px 16px; font-size: 17px; min-hei
   margin: 0 0 4px;
   font-size: 21px;
 }
-/* Pastille de version a cote du titre « Demarrage rapide ». Elle se lit
-   au premier coup d'oeil sans voler la vedette au titre : taille et
-   graisse reduites, couleur discrete, et un chiffre a chasse fixe pour
-   qu'un numero reste lisible et ne danse pas d'une version a l'autre.
-   Version badge next to the "Quick start" title: readable at a glance
-   without stealing the title's place -- smaller, lighter, muted, and
-   monospaced digits so a number stays legible and does not jitter from
-   one version to the next. */
-.help-content h3 .help-version {
+/* Pastille de version a cote d'un titre. Deux emplacements, une seule
+   regle : la rubrique « Demarrage rapide » de l'aide, et la fenetre de
+   lancement qui sert le MEME texte (source unique, voir
+   quickstart-content.js). Les deux doivent se ressembler jusqu'au bout,
+   d'ou un selecteur qui ne depend PAS du conteneur -- la version limitee
+   a `.help-content` laissait justement la fenetre de lancement sans
+   style.
+   Elle se lit au premier coup d'oeil sans voler la vedette au titre :
+   taille et graisse reduites, couleur discrete, et des chiffres a chasse
+   fixe pour qu'un numero reste lisible et ne danse pas d'une version a
+   l'autre.
+   Version badge next to a title. Two places, one rule: the help's
+   "Quick start" section and the launch window, which serves the SAME
+   text and must match it -- hence a selector that does NOT depend on the
+   container, the earlier `.help-content`-scoped version having left the
+   launch window unstyled. */
+.help-version {
   margin-left: 8px;
   font-family: var(--mono);
   font-size: 13px;

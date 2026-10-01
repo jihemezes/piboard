@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.125.1
+
+- **La pastille de version manquait dans la fenetre de lancement.** La
+  1.125.0 ne l'avait posee que dans la rubrique « Demarrage rapide » de
+  l'aide. Or les deux servent le MEME texte (source unique, voir
+  quickstart-content.js) : la version visible dans l'une et absente de
+  l'autre est une incoherence, d'autant plus genante que la fenetre de
+  lancement est la premiere que voit un nouvel utilisateur.
+
+- **Le style ne s'appliquait qu'a l'aide.** La regle etait ecrite
+  `.help-content h3 .help-version`, donc liee au conteneur : meme en
+  posant la pastille dans la fenetre de lancement, elle y serait restee
+  sans mise en forme. Le selecteur devient `.help-version`, valable
+  partout.
+
+- Aucun appel reseau ajoute : la version est deja chargee ET ATTENDUE au
+  demarrage, bien avant l'ouverture du guide. Si elle manquait malgre
+  tout, la pastille reste vide plutot que d'afficher un « v » orphelin.
+
+- Quatre assertions couvrent desormais les DEUX emplacements et
+  l'independance du style vis-a-vis du conteneur -- c'est precisement ce
+  qui avait permis a l'oubli de passer.
+
+---
+
+- **The version badge was missing from the launch window.** 1.125.0 only
+  placed it in the help's "Quick start" section, although both serve the
+  SAME text: a version visible in one and missing from the other is an
+  inconsistency, all the more awkward as the launch window is the first
+  a new user sees.
+
+- **The style only applied inside the help.** The rule was written
+  `.help-content h3 .help-version`, tied to its container, so the badge
+  would have appeared unstyled in the launch window. The selector
+  becomes `.help-version`, valid anywhere.
+
+- No network call added: the version is already loaded AND AWAITED at
+  boot, well before the guide opens. Should it be missing, the badge
+  stays empty rather than showing an orphan "v".
+
+- Four assertions now cover BOTH places and the style's independence
+  from its container -- precisely what let the omission through.
+
 ## 1.125.0
 
 - **La version s'affiche des l'ouverture de l'aide**, en pastille a cote

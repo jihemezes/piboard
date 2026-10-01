@@ -3928,6 +3928,30 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("texte : l'accent est une OPTION, decochee par defaut",
         (textManifest.settings || []).some((f) => f.key === "useAccentColor"
           && f.type === "checkbox" && f.default === false));
+
+      /* Pastille de version : DEUX emplacements (1.125.1). La rubrique
+         « Demarrage rapide » de l'aide et la fenetre de lancement
+         servent le MEME texte, source unique -- la version visible dans
+         l'une et absente de l'autre serait une incoherence, et c'est
+         exactement ce qui a ete livre en 1.125.0. Le style doit lui
+         aussi valoir pour les deux : une regle limitee a `.help-content`
+         laissait la fenetre de lancement sans mise en forme.
+         Version badge: TWO places. The help's "Quick start" section and
+         the launch window serve the SAME text, so a version visible in
+         one and missing from the other is an inconsistency -- exactly
+         what 1.125.0 shipped. The style must cover both: a rule scoped
+         to `.help-content` left the launch window unstyled. */
+      const appSrcV = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+      const htmlV = fs.readFileSync(path.join(PUB, "index.html"), "utf8");
+      const cssV = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+      assert("version : la rubrique d'aide « Demarrage rapide » porte la pastille",
+        /help-version[^]{0,120}assetVersion|assetVersion[^]{0,200}help-version/.test(appSrcV));
+      assert("version : la fenetre de lancement porte la pastille",
+        /id="quickStartVersion"/.test(htmlV) && /renderQuickStartVersion/.test(appSrcV));
+      assert("version : le style de la pastille ne depend pas du conteneur",
+        /^\.help-version \{/m.test(cssV));
+      assert("version : aucun « v » orphelin quand la version est inconnue",
+        /assetVersion \? "v" \+ assetVersion : ""/.test(appSrcV));
     }
 
     console.log("== Horloge : selecteur de fuseau horaire (liste complete, plus de saisie libre) ==");
