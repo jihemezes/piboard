@@ -1,5 +1,87 @@
 # Changelog
 
+## 1.127.1
+
+- **Publication en echec alors que tout avait reussi.** Sur la 1.127.0,
+  les quatre paquets Linux etaient bel et bien televerses -- la release
+  etait COMPLETE, fichiers de mise a jour compris -- mais le workflow
+  finissait en rouge. Le plantage tombait juste apres, dans la reprise :
+  `TypeError: fetch failed`, cause `write EPIPE`.
+
+- **La cause : une connexion recyclee.** Le `fetch` de Node (undici)
+  garde ses connexions ouvertes pour les reutiliser. Apres deux minutes
+  et demie de televersement, GitHub avait ferme celle d'api.github.com ;
+  la requete suivante a ecrit dans une socket morte. Rien a voir avec le
+  jeton, le depot ou la release.
+
+- **L'ironie qui designait la vraie faiblesse** : `repairRelease` existe
+  precisement pour rattraper les televersements qui echouent, et ses
+  ENVOIS ont bien des tentatives espacees. Mais les LECTURES qui le
+  pilotent n'en avaient aucune : la moindre coupure remontait jusqu'a
+  publish.js, qui s'arretait dessus. La couche de robustesse etait le
+  maillon fragile.
+
+- **Deux corrections, pas une.** On SUPPRIME la cause (`Connection:
+  close` sur les appels a l'API : ils sont rares et espaces, recycler la
+  connexion n'apportait rien et c'est exactement ce qui a casse), et on
+  RATTRAPE ce qui passerait quand meme (trois tentatives espacees sur
+  les coupures reseau et les 5xx). Une publication ratee ne se rejoue
+  pas a la demande : il faut repousser un tag.
+
+- **Les limitations de debit respectent le delai annonce par GitHub**
+  (`Retry-After`) plutot qu'un delai devine : insister avant l'heure ne
+  fait qu'aggraver la limitation. Une erreur 4xx ordinaire, elle, n'est
+  PAS rejouee -- elle ne s'arrangera pas en insistant, et la rejouer ne
+  ferait que retarder le message utile.
+
+- **Un garde-fou ne doit plus faire echouer ce qu'il garde.** La reprise
+  et la verification finale sont des filets, pas la publication
+  elle-meme. Deux situations que le script confondait sont desormais
+  distinguees : la release est INCOMPLETE (echec, il faut agir) ou bien
+  je n'ai PAS PU verifier (avertissement bien visible, avec le lien vers
+  la release, et la publication reste reussie). Les confondre apprend a
+  ignorer les echecs -- ce qui finit par faire passer un vrai probleme
+  pour du bruit.
+
+- `test/githubRelease.test.js` gagne six tests qui rejouent la panne
+  reelle sur le faux GitHub en memoire : coupure passagere rattrapee,
+  coupure persistante remontee AVEC sa cause (pour rester
+  diagnosticable), 4xx non rejouee, 5xx rejouee, delai de limitation
+  respecte, et connexion non gardee ouverte. Aucun de ces cas ne pouvait
+  etre verifie en production : on ne provoque pas une coupure reseau a
+  la demande, et on ne republie pas pour voir.
+
+---
+
+- **A publication failing although everything had succeeded.** On
+  1.127.0 the four Linux packages were uploaded and the release was
+  COMPLETE, update files included, yet the workflow ended red. The crash
+  came just afterwards, in the repair: `write EPIPE`.
+
+- **The cause: a pooled connection.** Node's `fetch` keeps connections
+  alive for reuse; after two and a half minutes of uploading, GitHub had
+  closed the one to api.github.com, and the next request wrote to a dead
+  socket.
+
+- **The irony pointing at the real weakness**: `repairRelease` exists to
+  retry failed uploads and its UPLOADS do retry, but the READS driving
+  it did not.
+
+- **Two fixes, not one**: the cause is REMOVED (`Connection: close` on
+  API calls, which are far too rare for pooling to gain anything) and
+  what would still slip through is CAUGHT (three spaced retries on
+  network blips and 5xx).
+
+- **Rate limits honour GitHub's own `Retry-After`** rather than a
+  guess; an ordinary 4xx is NOT retried.
+
+- **A safeguard must no longer fail what it guards.** INCOMPLETE release
+  (failure, act on it) and COULD NOT CHECK (a visible warning with the
+  release's link, the publication still a success) are now told apart.
+
+- `test/githubRelease.test.js` gains six tests replaying the real
+  failure -- none of which could be checked in production.
+
 ## 1.127.0
 
 - **Sauvegarde et import d'UNE page du mode tableau de bord.** PiBoard

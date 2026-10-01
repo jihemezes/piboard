@@ -104,20 +104,139 @@ function planDuplicates(list) {
   return { keep, remove, blocked };
 }
 
-function makeRequest(token, fetchImpl) {
+/* ---------- Appels a l'API GitHub, et leur fragilite ----------
+
+   LE DEFAUT CORRIGE (1.127.1), constate sur une publication reelle.
+   Les quatre paquets Linux etaient televerses, puis la reprise plantait
+   sur sa toute premiere lecture : « TypeError: fetch failed », cause
+   « write EPIPE ». Le `fetch` de Node RECYCLE ses connexions : apres
+   deux minutes et demie de televersement, la connexion gardee ouverte
+   vers api.github.com avait ete fermee par GitHub, et la requete
+   suivante a ecrit dans une socket morte. Rien a voir avec le jeton, le
+   depot ou la release -- un alea reseau ordinaire.
+
+   L'IRONIE QUI DESIGNE LA VRAIE CAUSE : `repairRelease` existe
+   precisement pour rattraper les televersements qui echouent, et ses
+   ENVOIS ont bien des tentatives espacees (uploadWithRetries). Mais les
+   LECTURES qui le pilotent n'en avaient aucune : la moindre coupure
+   remontait jusqu'a publish.js, qui s'arretait dessus. La couche de
+   robustesse etait le maillon fragile.
+
+   DEUX CORRECTIONS, ET NON UNE. On SUPPRIME la cause en demandant la
+   fermeture de la connexion apres chaque appel : ces requetes sont rares
+   et espacees, garder la connexion ouverte n'apportait rien et c'est
+   exactement ce qui a casse. Et on RATTRAPE ce qui passerait quand meme,
+   par des tentatives espacees. La ceinture et les bretelles, parce
+   qu'une publication rate ne se rejoue pas a la demande : il faut
+   repousser un tag.
+
+   THE FAULT FIXED (1.127.1), seen on a real publication: the four Linux
+   packages were uploaded, then the repair crashed on its very first
+   read with "write EPIPE". Node's `fetch` POOLS connections, and after
+   two and a half minutes of uploading, the kept-alive connection to
+   api.github.com had been closed by GitHub -- the next request wrote to
+   a dead socket. The irony points at the real cause: `repairRelease`
+   exists to retry failed uploads, and its UPLOADS do retry, but the
+   READS driving it did not. Two fixes, not one: we REMOVE the cause by
+   closing the connection after each call (these requests are rare and
+   spaced out, keeping it open gained nothing), and we CATCH what would
+   slip through anyway with spaced retries -- a failed publication
+   cannot be replayed on demand, it needs a tag pushed again. */
+
+const RETRY_CODES = new Set(["EPIPE", "ECONNRESET", "ETIMEDOUT", "ECONNREFUSED", "EAI_AGAIN", "ENOTFOUND"]);
+
+/* Une erreur passagere se reconnait au code de sa CAUSE : undici
+   enveloppe toute panne reseau dans un « TypeError: fetch failed »
+   indifferencie, dont le message ne dit rien. C'est `error.cause` qui
+   porte l'information utile.
+   A transient error is recognised by its CAUSE's code: undici wraps
+   every network failure in an undifferentiated "TypeError: fetch
+   failed" whose message says nothing. */
+function isTransient(err) {
+  const cause = err && err.cause;
+  const code = (cause && cause.code) || (err && err.code) || "";
+  if (RETRY_CODES.has(code)) return true;
+  // Codes propres a undici (connexion fermee, corps interrompu...).
+  return /^UND_ERR_/.test(String(code));
+}
+
+function retryDelayFrom(res, attempt) {
+  /* GitHub dit lui-meme combien de temps attendre quand il limite le
+     debit : le respecter vaut mieux que de deviner, et insister avant
+     l'heure ne fait qu'aggraver la limitation.
+     GitHub says how long to wait when rate-limiting; honouring it beats
+     guessing, and insisting early only worsens the limit. */
+  const after = res && res.headers && res.headers.get && res.headers.get("retry-after");
+  const secs = Number(after);
+  if (Number.isFinite(secs) && secs > 0) return Math.min(secs, 60) * 1000;
+  return 2000 * attempt;
+}
+
+const REQUEST_ATTEMPTS = 3;
+
+function makeRequest(token, fetchImpl, options) {
   const f = fetchImpl || fetch;
+  const o = options || {};
+  const attempts = Number.isFinite(o.attempts) ? o.attempts : REQUEST_ATTEMPTS;
+  const pause = o.sleep || ((ms) => new Promise((r) => setTimeout(r, ms)));
+  const say = o.log || (() => {});
+
   return async function request(method, url, body) {
     const headers = {
       "User-Agent": "PiBoard publish",
       Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28"
+      "X-GitHub-Api-Version": "2022-11-28",
+      /* Pas de connexion gardee ouverte : c'est elle qui a casse. Ces
+         appels sont trop rares et trop espaces pour que la recycler
+         apporte quoi que ce soit.
+         No kept-alive connection: it is what broke, and these calls are
+         far too rare and spaced out for pooling to gain anything. */
+      Connection: "close"
     };
     if (token) headers.Authorization = "Bearer " + token;
     if (body) headers["Content-Type"] = "application/json";
-    const res = await f("https://api.github.com" + url, { method, headers, body: body ? JSON.stringify(body) : undefined });
-    let data = null;
-    try { data = await res.json(); } catch (e) { data = null; }
-    return { status: res.status, ok: res.ok, data };
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt++) {
+      let res = null;
+      try {
+        res = await f("https://api.github.com" + url, {
+          method, headers, body: body ? JSON.stringify(body) : undefined
+        });
+      } catch (e) {
+        lastError = e;
+        if (!isTransient(e) || attempt === attempts) throw e;
+        const wait = 2000 * attempt;
+        say(`${method} ${url} : coupure reseau (${(e.cause && e.cause.code) || e.code || "?"}), nouvelle tentative dans ${wait / 1000} s`
+          + ` / network blip, retrying in ${wait / 1000}s`);
+        await pause(wait);
+        continue;
+      }
+
+      /* Une panne passagere du cote de GitHub (5xx) ou une limitation de
+         debit (403/429) se traitent comme une coupure : on repasse plus
+         tard. Une erreur 4xx ordinaire, elle, ne s'arrangera pas en
+         insistant -- la rejouer trois fois ne ferait que retarder le
+         message utile.
+         A transient GitHub failure (5xx) or a rate limit (403/429) is
+         handled like a blip; an ordinary 4xx will not improve by
+         insisting. */
+      const rateLimited = (res.status === 403 || res.status === 429)
+        && res.headers && res.headers.get
+        && (res.headers.get("retry-after") || res.headers.get("x-ratelimit-remaining") === "0");
+      if ((res.status >= 500 || rateLimited) && attempt < attempts) {
+        const wait = retryDelayFrom(res, attempt);
+        say(`${method} ${url} : HTTP ${res.status}, nouvelle tentative dans ${Math.round(wait / 1000)} s`
+          + ` / retrying in ${Math.round(wait / 1000)}s`);
+        await pause(wait);
+        continue;
+      }
+
+      let data = null;
+      try { data = await res.json(); } catch (e) { data = null; }
+      return { status: res.status, ok: res.ok, data };
+    }
+    throw lastError || new Error("requete abandonnee / request given up: " + method + " " + url);
   };
 }
 

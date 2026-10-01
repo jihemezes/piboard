@@ -274,6 +274,110 @@ const base = { tag: "v1.2.3", name: "1.2.3", prerelease: false, wait: async () =
     assert.ok(/latest\.yml.*dist/.test(out.problems.join(" ")), out.problems.join(" "));
   });
 
+
+  /* ===== Coupures reseau pendant la publication (1.127.1) =====
+     Rejoue la panne reelle de la 1.127.0 : les quatre paquets Linux
+     etaient televerses, puis la toute premiere LECTURE de la reprise
+     echouait sur « write EPIPE » -- le `fetch` de Node avait recycle une
+     connexion que GitHub venait de fermer apres deux minutes et demie
+     de televersement. Le script s'arretait dessus et peignait en rouge
+     une publication pourtant complete.
+
+     Ce qui est verifie ici ne pouvait PAS l'etre en production : on ne
+     provoque pas une coupure reseau a la demande, et on ne republie pas
+     pour voir -- il faudrait repousser un tag.
+
+     Replays 1.127.0's real failure. What is checked here could NOT be
+     checked in production: one does not cause a network blip on demand,
+     and one does not republish to find out. */
+  {
+    /* `fetch` ne rend pas une erreur, il la LEVE, et undici enveloppe
+       toute panne reseau dans un « TypeError: fetch failed » dont le
+       message ne dit rien : l'information vit dans `cause.code`. Un
+       faux qui se tromperait de forme testerait autre chose que la
+       realite.
+       `fetch` THROWS, and undici wraps every network failure in a
+       "TypeError: fetch failed" whose message says nothing. */
+    const epipe = () => {
+      const e = new TypeError("fetch failed");
+      e.cause = Object.assign(new Error("write EPIPE"), { code: "EPIPE", errno: -32, syscall: "write" });
+      return e;
+    };
+    const okResponse = (payload, status) => ({
+      status: status || 200,
+      ok: (status || 200) < 400,
+      json: async () => payload,
+      headers: { get: () => null }
+    });
+
+    await test("une coupure passagere est rejouee, pas remontee", async () => {
+      let calls = 0;
+      const fetchImpl = async () => { calls++; if (calls < 3) throw epipe(); return okResponse([{ id: 1 }]); };
+      const request = rel.makeRequest("jeton", fetchImpl, { sleep: async () => {} });
+      const r = await request("GET", "/repos/x/y/releases");
+      assert.strictEqual(r.ok, true);
+      assert.strictEqual(calls, 3, "deux echecs puis un succes");
+    });
+
+    await test("une coupure qui persiste finit par etre remontee, telle quelle", async () => {
+      let calls = 0;
+      const fetchImpl = async () => { calls++; throw epipe(); };
+      const request = rel.makeRequest("jeton", fetchImpl, { sleep: async () => {} });
+      let thrown = null;
+      try { await request("GET", "/repos/x/y/releases"); } catch (e) { thrown = e; }
+      assert.ok(thrown, "l'erreur doit finir par sortir");
+      assert.strictEqual(thrown.cause.code, "EPIPE", "et garder sa cause, pour rester diagnosticable");
+      assert.strictEqual(calls, 3, "trois tentatives, pas une boucle sans fin");
+    });
+
+    /* Une erreur 4xx ordinaire ne s'arrangera pas en insistant : la
+       rejouer ne ferait que retarder le message utile.
+       An ordinary 4xx will not improve by insisting. */
+    await test("une erreur 4xx n'est PAS rejouee", async () => {
+      let calls = 0;
+      const fetchImpl = async () => { calls++; return okResponse({ message: "Not Found" }, 404); };
+      const request = rel.makeRequest("jeton", fetchImpl, { sleep: async () => {} });
+      const r = await request("GET", "/repos/x/y/releases");
+      assert.strictEqual(r.status, 404);
+      assert.strictEqual(calls, 1, "une seule tentative");
+    });
+
+    await test("une panne 5xx de GitHub est rejouee", async () => {
+      let calls = 0;
+      const fetchImpl = async () => { calls++; return calls < 2 ? okResponse({}, 502) : okResponse([{ id: 1 }]); };
+      const request = rel.makeRequest("jeton", fetchImpl, { sleep: async () => {} });
+      assert.strictEqual((await request("GET", "/x")).ok, true);
+      assert.strictEqual(calls, 2);
+    });
+
+    /* GitHub dit lui-meme combien de temps attendre : insister avant
+       l'heure ne fait qu'aggraver la limitation.
+       GitHub says how long to wait; insisting early worsens it. */
+    await test("une limitation de debit respecte le delai annonce par GitHub", async () => {
+      let calls = 0;
+      const waits = [];
+      const fetchImpl = async () => {
+        calls++;
+        if (calls < 2) {
+          return { status: 403, ok: false, json: async () => ({}), headers: { get: (h) => (h === "retry-after" ? "7" : null) } };
+        }
+        return okResponse([{ id: 1 }]);
+      };
+      const request = rel.makeRequest("jeton", fetchImpl, { sleep: async (ms) => { waits.push(ms); } });
+      assert.strictEqual((await request("GET", "/x")).ok, true);
+      assert.deepStrictEqual(waits, [7000], "le delai vient de GitHub, pas d'une devinette");
+    });
+
+    /* La connexion gardee ouverte est CE QUI A CASSE : on la ferme.
+       The kept-alive connection is WHAT BROKE: we close it. */
+    await test("les appels ne gardent pas la connexion ouverte", async () => {
+      let seen = null;
+      const fetchImpl = async (url, init) => { seen = init.headers; return okResponse([]); };
+      await rel.makeRequest("jeton", fetchImpl, { sleep: async () => {} })("GET", "/x");
+      assert.strictEqual(String(seen.Connection || "").toLowerCase(), "close");
+    });
+  }
+
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS PASSENT");
   process.exit(failures ? 1 : 0);
 })();

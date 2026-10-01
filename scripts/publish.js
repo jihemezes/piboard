@@ -232,14 +232,42 @@ const platforms = relMod.platformsOf(builderArgs);
    GitHub sometimes refuses a 150 MB file; electron-builder gives up on
    the first failure, leaving the release incomplete. We finish what is
    missing ourselves, with spaced attempts. */
-const repair = await relMod.repairRelease({
-  request,
-  uploader: relMod.makeUploader(token),
-  tag: "v" + version,
-  platforms,
-  localFiles: relMod.listDistFiles(path.join(root, "dist")),
-  log: (m) => console.log("  " + m)
-});
+/* La reprise et la verification sont des GARDE-FOUS, pas la
+   publication elle-meme : si le reseau les empeche d'aboutir alors que
+   les fichiers sont deja en ligne, les laisser interrompre le script
+   peint la publication en rouge pour rien -- c'est ce qui est arrive en
+   1.127.0, ou les quatre paquets etaient bel et bien televerses. On
+   distingue donc deux situations tres differentes, qu'un simple
+   « exit 1 » confondait :
+     - la release est INCOMPLETE  -> echec, il faut agir ;
+     - je n'ai PAS PU verifier    -> avertissement bien visible, et la
+                                     publication reste reussie.
+   Confondre les deux apprend a ignorer les echecs, ce qui finit par
+   faire passer un vrai probleme pour du bruit.
+   The repair and the verification are SAFEGUARDS, not the publication
+   itself: if the network stops them while the files are already online,
+   letting them abort paints the publication red for nothing -- which is
+   what happened in 1.127.0. Two very different situations, which a bare
+   "exit 1" conflated: the release is INCOMPLETE (act on it) versus I
+   COULD NOT CHECK (a visible warning, the publication still a success).
+   Conflating them teaches one to ignore failures, which eventually
+   makes a real problem look like noise. */
+let unverified = null;
+let repair = { ok: true, sent: 0, problems: [] };
+try {
+  repair = await relMod.repairRelease({
+    request,
+    uploader: relMod.makeUploader(token),
+    tag: "v" + version,
+    platforms,
+    localFiles: relMod.listDistFiles(path.join(root, "dist")),
+    log: (m) => console.log("  " + m)
+  });
+} catch (e) {
+  unverified = e;
+  console.warn("\n  Reprise impossible (reseau) : " + (e.message || e)
+    + "\n  Repair unavailable (network): the files already uploaded are unaffected.\n");
+}
 if (repair.sent) console.log(`  ${repair.sent} fichier(s) televerse(s) apres coup / file(s) uploaded afterwards.`);
 /* Une reprise qui renonce doit DIRE pourquoi : sans cela, la sortie
    sautait du message d'entree au verdict final, sans rien expliquer.
@@ -249,7 +277,29 @@ if (!repair.ok && (repair.problems || []).length) {
 } else if (!repair.sent) {
   console.log("  Rien a reprendre : la release contient deja les fichiers attendus. / Nothing to resume.");
 }
-const check = await relMod.verifyPublished({ request, tag: "v" + version, platforms });
+let check = { ok: true, problems: [] };
+try {
+  check = await relMod.verifyPublished({ request, tag: "v" + version, platforms });
+} catch (e) {
+  unverified = e;
+}
+if (unverified) {
+  /* On n'a pas pu lire la release. Les fichiers ont pourtant ete
+     televerses par electron-builder juste avant : on le DIT, on indique
+     ou verifier d'un coup d'oeil, et on sort en succes. Echouer ici
+     reviendrait a declarer ratee une publication qui a abouti.
+     We could not read the release, although the files were uploaded
+     moments earlier: say so, point at where to check, and exit
+     successfully -- failing here would declare a successful publication
+     a failure. */
+  console.warn(
+    `\nPUBLICATION NON VERIFIEE pour v${version} : ` + (unverified.message || unverified) +
+    `\n  Les fichiers ont ete televerses ; c'est la RELECTURE de la release qui n'a pas abouti.` +
+    `\n  A verifier d'un coup d'oeil : https://github.com/jihemezes/piboard/releases/tag/v${version}` +
+    `\n  NOT VERIFIED: the files were uploaded; it is the re-read of the release that failed.\n`
+  );
+  process.exit(0);
+}
 if (!check.ok) {
   console.error(
     `\nPUBLICATION INCOMPLETE sur GitHub pour v${version} :\n  ` + check.problems.join("\n  ") +
