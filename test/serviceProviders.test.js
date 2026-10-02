@@ -442,6 +442,265 @@ test("chaque famille est bilingue", () => {
   }
 });
 
+
+/* ============================================================
+   Les cinq formats ajoutes en 1.129.0, et le defaut qui les a fait
+   ecrire : neuf services du catalogue affichaient « page de statut
+   injoignable » alors que leurs pages repondaient parfaitement. Trois
+   causes distinctes, verifiees ici separement.
+   ============================================================ */
+
+console.log("== PayPal ==");
+
+const PAYPAL_OK = {
+  result: [
+    { id: 3, name: "Online Checkout", displayName: "Online Checkout", parentName: "PRODUCT",
+      status: { production: "Operational", sandbox: "Operational" } },
+    { id: 4, name: "Payouts", displayName: "Payouts", parentName: "PRODUCT",
+      status: { production: "Operational", sandbox: "Major Outage" } }
+  ]
+};
+
+test("PayPal : l'etat global se deduit des composants", () => {
+  const out = P.parsePaypal(PAYPAL_OK);
+  assert.ok(out, "la reponse PayPal doit etre lue");
+  assert.strictEqual(out.indicator, "none");
+  assert.strictEqual(out.componentCount, 2);
+});
+
+/* LE CHOIX QUI COMPTE, et qu'un test doit figer : une sandbox en panne
+   ne doit PAS faire rougir la tuile. Les paiements reels passent ; une
+   alerte ici ferait couper les notifications, et on ne serait plus
+   averti le jour ou la production tombe. */
+test("PayPal : une sandbox en panne ne fait pas rougir la production", () => {
+  const out = P.parsePaypal(PAYPAL_OK);
+  assert.strictEqual(out.ok, true, "sandbox HS + production OK doit rester sain");
+  assert.strictEqual(out.affected.length, 0);
+});
+
+test("PayPal : une panne de production ressort, avec son composant", () => {
+  const out = P.parsePaypal({ result: [
+    { name: "Online Checkout", displayName: "Online Checkout",
+      status: { production: "Major Outage", sandbox: "Operational" } }
+  ] });
+  assert.strictEqual(out.indicator, "critical");
+  assert.strictEqual(out.affected[0].name, "Online Checkout");
+  assert.strictEqual(out.affected[0].status, "major_outage");
+});
+
+test("PayPal : une liste vide n'est pas une lecture valide", () => {
+  assert.strictEqual(P.parsePaypal({ result: [] }), null,
+    "sinon un service sans aucun composant s'afficherait comme sain");
+  assert.strictEqual(P.parsePaypal({ components: [] }), null);
+  assert.strictEqual(P.parsePaypal([]), null);
+});
+
+console.log("== Status.io (GitLab) ==");
+
+const STATUSIO = { result: {
+  status_overall: { updated: "2026-10-01T21:48:01.469Z", status: "Degraded Performance", status_code: 300 },
+  status: [
+    { id: "a", name: "Website", status: "Operational", status_code: 100 },
+    { id: "b", name: "CI/CD", status: "Degraded Performance", status_code: 300 }
+  ],
+  incidents: [
+    { _id: "i1", name: "Runners saturés", datetime: "2026-10-01T20:00:00.000Z", messages: [
+      { datetime: "2026-10-01T20:00:00.000Z", details: "<p>Premier message</p>" },
+      { datetime: "2026-10-01T21:30:00.000Z", details: "<p>Dernier message</p>" }
+    ] }
+  ]
+} };
+
+test("Status.io : les codes numeriques deviennent des etats de composant", () => {
+  const out = P.parseStatusio(STATUSIO);
+  assert.ok(out);
+  assert.strictEqual(out.indicator, "minor");
+  assert.strictEqual(out.affected.length, 1);
+  assert.strictEqual(out.affected[0].name, "CI/CD");
+});
+
+/* Meme piege que partout ailleurs : le dernier message est choisi par sa
+   DATE, jamais par sa position dans le tableau. */
+test("Status.io : le dernier message est choisi par sa date", () => {
+  const out = P.parseStatusio(STATUSIO);
+  assert.strictEqual(out.incidents.length, 1);
+  assert.strictEqual(out.incidents[0].lastMessage, "Dernier message");
+});
+
+test("Status.io : ce qui n'est pas du Status.io est refuse", () => {
+  assert.strictEqual(P.parseStatusio({ result: {} }), null);
+  assert.strictEqual(P.parseStatusio({ page: { status: "UP" } }), null);
+});
+
+console.log("== Fastly ==");
+
+const FASTLY = {
+  PageName: "Fastly | Service Status",
+  Domain: "fastly",
+  StatusInEffectSince: "2026-09-14T17:56:00",
+  StatusText: "Maintenance",
+  Status: "Maintenance",
+  UnresolvedIncidents: [
+    { Id: 378875, Title: "Controlled Support Access", Status: "InProgress",
+      IncidentType: "Informational", StartDate: "2026-09-22T15:02:00" }
+  ]
+};
+
+test("Fastly : une maintenance declaree n'est pas une panne", () => {
+  const out = P.parseFastly(FASTLY);
+  assert.ok(out);
+  assert.strictEqual(out.ok, true);
+  assert.strictEqual(out.incidents.length, 0, "une maintenance ne doit pas sortir en incident");
+  assert.strictEqual(out.maintenances.length, 1);
+});
+
+test("Fastly : une panne ressort bien en incident", () => {
+  const out = P.parseFastly(Object.assign({}, FASTLY, { Status: "Outage", StatusText: "Outage" }));
+  assert.strictEqual(out.indicator, "critical");
+  assert.strictEqual(out.incidents.length, 1);
+});
+
+/* LE PIEGE DU CHEMIN PARTAGE : Fastly sert son format maison a
+   /summary.json, exactement le chemin d'Instatus. Un JSON valide au bon
+   chemin n'est pas le bon format pour autant, et chaque lecteur doit
+   refuser ce qui n'est pas a lui -- sans quoi le sondage « auto »
+   s'arreterait sur le premier qui ne plante pas. */
+test("Fastly et Instatus partagent un chemin mais pas un schema", () => {
+  assert.strictEqual(P.parseInstatus(FASTLY), null, "Instatus ne doit pas avaler du Fastly");
+  assert.strictEqual(P.parseFastly({ page: { name: "X", status: "UP" } }), null,
+    "Fastly ne doit pas avaler de l'Instatus");
+});
+
+console.log("== Vultr ==");
+
+const VULTR = {
+  service_alerts: [],
+  regions: {
+    global: { location: "All Locations", alerts: [
+      { id: "g1", subject: "DNS", status: "resolved", start_date: "2026-10-02T10:40:00+00:00", entries: [] } ] },
+    cdg: { location: "Paris", alerts: [] },
+    atl: { location: "Atlanta", alerts: [
+      { id: "a1", subject: "Partial Outage", status: "ongoing", start_date: "2026-09-18T18:07:00+00:00",
+        entries: [
+          { updated_at: "2026-09-18T18:07:00+00:00", message: "Premier" },
+          { updated_at: "2026-09-19T09:00:00+00:00", message: "Dernier" }
+        ] } ] }
+  }
+};
+
+/* MEME PIEGE QUE GOOGLE : le fichier garde les alertes RESOLUES. Les
+   prendre pour des incidents en cours afficherait du rouge pour une
+   panne refermee il y a trois semaines. */
+test("Vultr : une alerte resolue n'est pas un incident en cours", () => {
+  const out = P.parseVultr(VULTR);
+  assert.ok(out);
+  assert.strictEqual(out.incidents.length, 1, "seule l'alerte « ongoing » compte");
+  assert.ok(/Atlanta/.test(out.incidents[0].name));
+});
+
+test("Vultr : la region en panne est nommee, les regions saines ne le sont pas", () => {
+  const out = P.parseVultr(VULTR);
+  assert.strictEqual(out.indicator, "major");
+  assert.deepStrictEqual(out.affected.map((c) => c.name), ["Atlanta"]);
+});
+
+test("Vultr : le dernier message d'une alerte est choisi par sa date", () => {
+  const out = P.parseVultr(VULTR);
+  assert.strictEqual(out.incidents[0].lastMessage, "Dernier");
+});
+
+test("Vultr : ce qui n'a pas de regions est refuse", () => {
+  assert.strictEqual(P.parseVultr({ service_alerts: [] }), null);
+});
+
+console.log("== Endpoint (services sans page de statut) ==");
+
+/* CE QUE CET ADAPTATEUR DOIT TOUJOURS DIRE : que son etat est DEDUIT.
+   Un vert deduit lu comme un vert declare serait pire que pas de tuile
+   du tout -- c'est la meme lecon que le RSS, et que « premier relevé a
+   venir » contre « le serveur ne mesure rien » sur la tuile Sante
+   Internet. */
+test("Endpoint : une reponse vaut « sain », et se declare DEDUIT", () => {
+  const out = P.parseEndpoint({ ok: true, url: "https://api.pcloud.com/getdigest", host: "api.pcloud.com" });
+  assert.ok(out);
+  assert.strictEqual(out.ok, true);
+  assert.strictEqual(out.approximate, true, "sans ce drapeau, le tilde disparait et l'etat passe pour declare");
+});
+
+/* Un echec ne depasse JAMAIS la degradation mineure : il peut venir de
+   votre connexion, de votre DNS, d'un cable sous-marin. On ne declare
+   pas une panne mondiale sur la foi d'un timeout. */
+test("Endpoint : un echec reste une degradation mineure, jamais une panne", () => {
+  const out = P.parseEndpoint({ ok: false, url: "https://api.pcloud.com/getdigest", host: "api.pcloud.com" });
+  assert.strictEqual(out.indicator, "minor");
+  assert.strictEqual(out.approximate, true);
+  assert.strictEqual(out.affected.length, 1);
+});
+
+test("Endpoint : il ne figure pas dans l'ordre de sondage automatique", () => {
+  assert.strictEqual(P.AUTO_ORDER.indexOf("endpoint"), -1,
+    "il reussirait sur n'importe quelle adresse joignable et gagnerait toujours : tout service deviendrait « sain, deduit »");
+});
+
+console.log("== Les neuf services qui affichaient « injoignable » ==");
+
+/* Ce test est la memoire du defaut. Chacune de ces entrees a ete
+   verifiee a la main sur sa page reelle ; si une future modification du
+   catalogue les remet en « auto » ou sur l'ancienne adresse, le probleme
+   reviendrait en silence, et c'est precisement ce qui est arrive la
+   premiere fois. */
+test("chacune des entrees fautives declare desormais le bon format", () => {
+  const expect = {
+    gitlab: "statusio",
+    fastly: "fastly",
+    vultr: "vultr",
+    oraclecloud: "statuspage",
+    alibabacloud: "endpoint",
+    hetzner: "endpoint",
+    sfr: "endpoint",
+    paypal: "paypal",
+    aws: "aws"
+  };
+  for (const id of Object.keys(expect)) {
+    const s = catalog.services.find((x) => x.id === id);
+    assert.ok(s, "entree disparue du catalogue : " + id);
+    assert.strictEqual(s.adapter, expect[id], id + " doit etre lu par l'adaptateur " + expect[id]);
+  }
+});
+
+/* OVHcloud : la racine status.ovhcloud.com n'est qu'un MENU, sans aucun
+   etat. Chaque produit a sa propre Statuspage sur son sous-domaine, et
+   c'est la seule facon d'obtenir un etat : une entree unique pointant
+   sur la racine ne pouvait rien rendre. */
+test("OVHcloud est eclate par produit, chacun sur sa propre Statuspage", () => {
+  const ovh = catalog.services.filter((s) => /^ovh-/.test(s.id));
+  assert.ok(ovh.length >= 4, "la racine OVH ne rend aucun etat : il faut les sous-domaines produits");
+  for (const s of ovh) {
+    assert.strictEqual(s.adapter, "statuspage");
+    assert.ok(/\.status-ovhcloud\.com$/.test(new URL(s.url).hostname), "mauvais domaine : " + s.url);
+  }
+  assert.ok(!catalog.services.some((s) => s.id === "ovhcloud"),
+    "l'ancienne entree pointant sur le menu doit avoir disparu, sinon elle reste muette");
+});
+
+/* Les formats maison ne se devinent pas depuis l'origine : ils doivent
+   porter leur adresse d'API, comme Google, AWS et RSS avant eux. */
+test("les formats maison declarent leur adresse d'API", () => {
+  for (const s of catalog.services) {
+    if (["statusio", "fastly", "vultr", "paypal", "endpoint"].indexOf(s.adapter) !== -1) {
+      assert.ok(s.api, s.id + " (" + s.adapter + ") doit declarer son adresse d'API");
+    }
+  }
+});
+
+test("la famille « partage de fichiers » existe et contient pCloud", () => {
+  assert.ok(catalog.families.some((f) => f.id === "files"));
+  const pcloud = catalog.services.find((s) => s.id === "pcloud");
+  assert.ok(pcloud, "pCloud doit figurer au catalogue");
+  assert.strictEqual(pcloud.adapter, "endpoint",
+    "pCloud ne publie AUCUNE page de statut : seule la joignabilite de son API est mesurable, et elle doit se declarer deduite");
+});
+
 setTimeout(() => {
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS SERVICEPROVIDERS PASSENT");
   process.exit(failures ? 1 : 0);

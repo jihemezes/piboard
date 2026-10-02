@@ -33,6 +33,53 @@
 # Nouveautes / What's new
 
 
+## 1.129.0
+
+**Neuf services qui semblaient en panne ne l'etaient pas**
+
+Neuf services du catalogue -- SFR, AWS, OVHcloud, Oracle Cloud, Alibaba
+Cloud, Vultr, Hetzner, Fastly et GitLab -- s'affichaient comme
+injoignables alors que leurs pages de statut repondaient parfaitement :
+certaines avaient demenage, d'autres ont quitte Statuspage pour une page
+maison. C'est repare, et la tuile distingue desormais trois situations
+qu'elle confondait : personne ne repond, la page refuse la requete, ou
+la page est lue mais dans un format inconnu -- trois causes, trois
+verifications differentes.
+
+Nouveaux services lisibles : PayPal, GitLab, Fastly, Vultr, les cinq
+pages produits d'OVHcloud et Oracle Cloud. Nouvelle famille
+**Stockage & partage de fichiers** : Dropbox, Box, Proton Drive,
+WeTransfer, Infomaniak, Backblaze, MEGA et pCloud.
+
+Certains services ne publient aucune page de statut -- pCloud, Alibaba
+Cloud, Hetzner, SFR. Pour ceux-la, PiBoard verifie simplement que leur
+API publique repond. Attention a ce que cela veut dire : « joignable
+depuis chez vous » n'est pas « le fournisseur declare aller bien ». Ces
+services portent donc un tilde, comme les flux RSS, et un echec n'est
+jamais signale comme une panne majeure.
+
+---
+
+**Nine services that looked down were not**
+
+Nine catalogue services -- SFR, AWS, OVHcloud, Oracle Cloud, Alibaba
+Cloud, Vultr, Hetzner, Fastly and GitLab -- read as unreachable although
+their status pages answered perfectly: some had moved, others left
+Statuspage for an in-house page. Fixed, and the tile now tells apart
+three situations it used to confuse: nobody answers, the page refuses
+the request, or the page is read in an unknown format -- three causes,
+three different checks.
+
+Newly readable: PayPal, GitLab, Fastly, Vultr, OVHcloud's five product
+pages and Oracle Cloud. New **File storage & sharing** family: Dropbox,
+Box, Proton Drive, WeTransfer, Infomaniak, Backblaze, MEGA and pCloud.
+
+Some services publish no status page at all -- pCloud, Alibaba Cloud,
+Hetzner, SFR. For those, PiBoard simply checks that their public API
+answers. Mind what that means: "reachable from your place" is not "the
+provider declares itself healthy". Those services carry a tilde, as RSS
+feeds do, and a failure is never reported as a major outage.
+
 ## 1.128.0
 
 **Choisir les services a surveiller en cochant des cases**

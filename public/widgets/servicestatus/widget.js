@@ -442,14 +442,26 @@
       const label = esc(svc.label || svc.name || "");
 
       if (svc.error) {
+        /* Trois causes, trois messages. « Injoignable » affiche pour une
+           page qui repond parfaitement mais dans un format inconnu
+           envoie chercher une panne de reseau pour un probleme
+           d'adaptateur -- c'est ce qui s'est passe avec PayPal.
+           Three causes, three messages: "unreachable" shown for a page
+           that answers perfectly in an unknown format sends one looking
+           for a network fault to solve an adapter problem -- which is
+           exactly what happened with PayPal. */
         const why = svc.error === "bad-url" ? "svcstatus.err.badUrl"
-          : svc.error === "bad-response" ? "svcstatus.err.badResponse"
-            : "svcstatus.err.unreachable";
+          : (svc.error === "bad-format" || svc.error === "bad-response") ? "svcstatus.err.badFormat"
+            : svc.error === "http" ? "svcstatus.err.http"
+              : "svcstatus.err.unreachable";
+        const detailText = svc.error === "http" && svc.httpStatus
+          ? i18n.t(why).replace("{code}", String(svc.httpStatus))
+          : i18n.t(why);
         return `
           <div class="pwss-svc" style="--pwss-tone:${TONE.unknown}">
             <div class="pwss-head"><span class="pwss-name">${label}</span>
               <span class="pwss-state"><span class="pwss-dot"></span>${esc(i18n.t("svcstatus.state.unknown"))}</span></div>
-            <div class="pwss-detail"><span>${esc(i18n.t(why))}</span></div>
+            <div class="pwss-detail"><span>${esc(detailText)}</span></div>
           </div>`;
       }
 

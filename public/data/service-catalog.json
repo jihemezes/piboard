@@ -1,90 +1,640 @@
 {
   "_comment_fr": "Catalogue des services proposés par la tuile « Statut de service ». Ce fichier est une simple LISTE : il ne contient aucun état, aucune donnée de santé, et l'état affiché vient toujours en direct de la page du fournisseur. Les entrées sont reprises des annuaires publics (dont le dépôt open-source awesome-statuspages) et vérifiées à la main. Pour en ajouter une : un identifiant stable, un nom, une famille (voir « families »), l'adresse publique, et l'adaptateur à employer -- « auto » si on ne sait pas, le serveur sonde alors les formats connus dans l'ordre.",
   "_comment_en": "Catalogue of the services offered by the Service status tile. This file is a plain LIST: it holds no state and no health data; the displayed state always comes live from the provider's own page. To add an entry: a stable id, a name, a family, the public address, and the adapter to use -- \"auto\" if unknown, the server then probes the known formats in order.",
-  "version": 1,
+  "version": 2,
   "families": [
-    { "id": "cloud", "icon": "☁️", "label": { "fr": "Cloud & hébergement", "en": "Cloud & hosting" } },
-    { "id": "devops", "icon": "🔧", "label": { "fr": "Développement & DevOps", "en": "Development & DevOps" } },
-    { "id": "saas", "icon": "💬", "label": { "fr": "SaaS & collaboration", "en": "SaaS & collaboration" } },
-    { "id": "pay", "icon": "💳", "label": { "fr": "Paiement & communication", "en": "Payment & messaging" } },
-    { "id": "observability", "icon": "📊", "label": { "fr": "Observabilité", "en": "Observability" } },
-    { "id": "ai", "icon": "🤖", "label": { "fr": "IA & modèles", "en": "AI & models" } },
-    { "id": "france", "icon": "🇫🇷", "label": { "fr": "France : opérateurs & services", "en": "France: carriers & services" } },
-    { "id": "custom", "icon": "➕", "label": { "fr": "Mes services", "en": "My services" } }
+    {
+      "id": "cloud",
+      "icon": "☁️",
+      "label": {
+        "fr": "Cloud & hébergement",
+        "en": "Cloud & hosting"
+      }
+    },
+    {
+      "id": "devops",
+      "icon": "🔧",
+      "label": {
+        "fr": "Développement & DevOps",
+        "en": "Development & DevOps"
+      }
+    },
+    {
+      "id": "saas",
+      "icon": "💬",
+      "label": {
+        "fr": "SaaS & collaboration",
+        "en": "SaaS & collaboration"
+      }
+    },
+    {
+      "id": "pay",
+      "icon": "💳",
+      "label": {
+        "fr": "Paiement & communication",
+        "en": "Payment & messaging"
+      }
+    },
+    {
+      "id": "observability",
+      "icon": "📊",
+      "label": {
+        "fr": "Observabilité",
+        "en": "Observability"
+      }
+    },
+    {
+      "id": "ai",
+      "icon": "🤖",
+      "label": {
+        "fr": "IA & modèles",
+        "en": "AI & models"
+      }
+    },
+    {
+      "id": "france",
+      "icon": "🇫🇷",
+      "label": {
+        "fr": "France : opérateurs & services",
+        "en": "France: carriers & services"
+      }
+    },
+    {
+      "id": "files",
+      "icon": "📁",
+      "label": {
+        "fr": "Stockage & partage de fichiers",
+        "en": "File storage & sharing"
+      }
+    },
+    {
+      "id": "custom",
+      "icon": "➕",
+      "label": {
+        "fr": "Mes services",
+        "en": "My services"
+      }
+    }
   ],
   "services": [
-    { "id": "aws", "name": "Amazon Web Services", "family": "cloud", "url": "https://health.aws.amazon.com/health/status", "adapter": "aws", "api": "https://health.aws.amazon.com/public/currentevents" },
-    { "id": "gcp", "name": "Google Cloud", "family": "cloud", "url": "https://status.cloud.google.com", "adapter": "google", "api": "https://status.cloud.google.com/incidents.json" },
-    { "id": "azure", "name": "Microsoft Azure", "family": "cloud", "url": "https://status.azure.com", "adapter": "rss", "api": "https://azurestatuscdn.azureedge.net/en-us/status/feed/" },
-    { "id": "ovhcloud", "name": "OVHcloud", "family": "cloud", "url": "https://status.ovhcloud.com", "adapter": "auto" },
-    { "id": "scaleway", "name": "Scaleway", "family": "cloud", "url": "https://status.scaleway.com", "adapter": "auto" },
-    { "id": "oraclecloud", "name": "Oracle Cloud", "family": "cloud", "url": "https://ocistatus.oraclecloud.com", "adapter": "auto" },
-    { "id": "alibabacloud", "name": "Alibaba Cloud", "family": "cloud", "url": "https://status.alibabacloud.com", "adapter": "auto" },
-    { "id": "digitalocean", "name": "DigitalOcean", "family": "cloud", "url": "https://status.digitalocean.com", "adapter": "statuspage" },
-    { "id": "linode", "name": "Linode / Akamai Cloud", "family": "cloud", "url": "https://status.linode.com", "adapter": "statuspage" },
-    { "id": "vultr", "name": "Vultr", "family": "cloud", "url": "https://status.vultr.com", "adapter": "statuspage" },
-    { "id": "hetzner", "name": "Hetzner", "family": "cloud", "url": "https://status.hetzner.com", "adapter": "auto" },
-    { "id": "cloudflare", "name": "Cloudflare", "family": "cloud", "url": "https://www.cloudflarestatus.com", "adapter": "statuspage" },
-    { "id": "akamai", "name": "Akamai", "family": "cloud", "url": "https://www.akamaistatus.com", "adapter": "auto" },
-    { "id": "fastly", "name": "Fastly", "family": "cloud", "url": "https://status.fastly.com", "adapter": "statuspage" },
-
-    { "id": "github", "name": "GitHub", "family": "devops", "url": "https://www.githubstatus.com", "adapter": "statuspage" },
-    { "id": "gitlab", "name": "GitLab", "family": "devops", "url": "https://status.gitlab.com", "adapter": "auto" },
-    { "id": "bitbucket", "name": "Bitbucket", "family": "devops", "url": "https://bitbucket.status.atlassian.com", "adapter": "statuspage" },
-    { "id": "npm", "name": "npm", "family": "devops", "url": "https://status.npmjs.org", "adapter": "statuspage" },
-    { "id": "dockerhub", "name": "Docker Hub", "family": "devops", "url": "https://www.dockerstatus.com", "adapter": "statuspage" },
-    { "id": "vercel", "name": "Vercel", "family": "devops", "url": "https://www.vercel-status.com", "adapter": "statuspage" },
-    { "id": "netlify", "name": "Netlify", "family": "devops", "url": "https://www.netlifystatus.com", "adapter": "statuspage" },
-    { "id": "heroku", "name": "Heroku", "family": "devops", "url": "https://status.heroku.com", "adapter": "auto" },
-    { "id": "render", "name": "Render", "family": "devops", "url": "https://status.render.com", "adapter": "statuspage" },
-    { "id": "flyio", "name": "Fly.io", "family": "devops", "url": "https://status.flyio.net", "adapter": "statuspage" },
-    { "id": "railway", "name": "Railway", "family": "devops", "url": "https://status.railway.com", "adapter": "auto" },
-    { "id": "supabase", "name": "Supabase", "family": "devops", "url": "https://status.supabase.com", "adapter": "statuspage" },
-    { "id": "mongodbatlas", "name": "MongoDB Atlas", "family": "devops", "url": "https://status.mongodb.com", "adapter": "statuspage" },
-    { "id": "pypi", "name": "PyPI", "family": "devops", "url": "https://status.python.org", "adapter": "statuspage" },
-
-    { "id": "atlassian", "name": "Atlassian (Jira, Confluence)", "family": "saas", "url": "https://status.atlassian.com", "adapter": "statuspage" },
-    { "id": "trello", "name": "Trello", "family": "saas", "url": "https://trello.status.atlassian.com", "adapter": "statuspage" },
-    { "id": "slack", "name": "Slack", "family": "saas", "url": "https://status.slack.com", "adapter": "auto" },
-    { "id": "discord", "name": "Discord", "family": "saas", "url": "https://discordstatus.com", "adapter": "statuspage" },
-    { "id": "zoom", "name": "Zoom", "family": "saas", "url": "https://status.zoom.us", "adapter": "statuspage" },
-    { "id": "googleworkspace", "name": "Google Workspace", "family": "saas", "url": "https://www.google.com/appsstatus/dashboard/", "adapter": "google", "api": "https://www.google.com/appsstatus/dashboard/incidents.json" },
-    { "id": "dropbox", "name": "Dropbox", "family": "saas", "url": "https://status.dropbox.com", "adapter": "auto" },
-    { "id": "notion", "name": "Notion", "family": "saas", "url": "https://status.notion.so", "adapter": "statuspage" },
-    { "id": "zendesk", "name": "Zendesk", "family": "saas", "url": "https://status.zendesk.com", "adapter": "statuspage" },
-    { "id": "salesforce", "name": "Salesforce", "family": "saas", "url": "https://status.salesforce.com", "adapter": "auto" },
-    { "id": "wordpress", "name": "WordPress.com", "family": "saas", "url": "https://wordpressstatus.com", "adapter": "auto" },
-
-    { "id": "stripe", "name": "Stripe", "family": "pay", "url": "https://status.stripe.com", "adapter": "statuspage" },
-    { "id": "paypal", "name": "PayPal", "family": "pay", "url": "https://www.paypal-status.com", "adapter": "auto" },
-    { "id": "twilio", "name": "Twilio", "family": "pay", "url": "https://status.twilio.com", "adapter": "statuspage" },
-    { "id": "sendgrid", "name": "SendGrid", "family": "pay", "url": "https://status.sendgrid.com", "adapter": "statuspage" },
-    { "id": "mailgun", "name": "Mailgun", "family": "pay", "url": "https://status.mailgun.com", "adapter": "statuspage" },
-    { "id": "brevo", "name": "Brevo (ex Sendinblue)", "family": "pay", "url": "https://status.brevo.com", "adapter": "auto" },
-
-    { "id": "datadog", "name": "Datadog", "family": "observability", "url": "https://status.datadoghq.com", "adapter": "statuspage" },
-    { "id": "sentry", "name": "Sentry", "family": "observability", "url": "https://status.sentry.io", "adapter": "statuspage" },
-    { "id": "grafanacloud", "name": "Grafana Cloud", "family": "observability", "url": "https://status.grafana.com", "adapter": "statuspage" },
-    { "id": "newrelic", "name": "New Relic", "family": "observability", "url": "https://status.newrelic.com", "adapter": "statuspage" },
-    { "id": "pagerduty", "name": "PagerDuty", "family": "observability", "url": "https://status.pagerduty.com", "adapter": "statuspage" },
-    { "id": "elastic", "name": "Elastic Cloud", "family": "observability", "url": "https://status.elastic.co", "adapter": "auto" },
-
-    { "id": "openai", "name": "OpenAI (ChatGPT, API)", "family": "ai", "url": "https://status.openai.com", "adapter": "auto" },
-    { "id": "anthropic", "name": "Anthropic (Claude)", "family": "ai", "url": "https://status.anthropic.com", "adapter": "statuspage" },
-    { "id": "mistral", "name": "Mistral AI", "family": "ai", "url": "https://status.mistral.ai", "adapter": "auto" },
-    { "id": "cohere", "name": "Cohere", "family": "ai", "url": "https://status.cohere.com", "adapter": "auto" },
-    { "id": "huggingface", "name": "Hugging Face", "family": "ai", "url": "https://status.huggingface.co", "adapter": "auto" },
-    { "id": "perplexity", "name": "Perplexity", "family": "ai", "url": "https://status.perplexity.com", "adapter": "auto" },
-    { "id": "githubcopilot", "name": "GitHub Copilot", "family": "ai", "url": "https://www.githubstatus.com", "adapter": "statuspage" },
-
-    { "id": "free", "name": "Free (Freebox, mobile)", "family": "france", "url": "https://status.free.fr", "adapter": "auto" },
-    { "id": "orange", "name": "Orange", "family": "france", "url": "https://reseaux.orange.fr", "adapter": "auto" },
-    { "id": "sfr", "name": "SFR", "family": "france", "url": "https://assistance.sfr.fr", "adapter": "auto" },
-    { "id": "bouygues", "name": "Bouygues Telecom", "family": "france", "url": "https://www.bouyguestelecom.fr", "adapter": "auto" },
-    { "id": "ovhtravaux", "name": "OVH — travaux & incidents", "family": "france", "url": "https://www.status-ovhcloud.com", "adapter": "rss", "api": "https://www.status-ovhcloud.com/history.rss" },
-    { "id": "gandi", "name": "Gandi", "family": "france", "url": "https://status.gandi.net", "adapter": "auto" },
-    { "id": "qonto", "name": "Qonto", "family": "france", "url": "https://status.qonto.com", "adapter": "auto" },
-    { "id": "doctolib", "name": "Doctolib", "family": "france", "url": "https://status.doctolib.com", "adapter": "auto" },
-    { "id": "clever", "name": "Clever Cloud", "family": "france", "url": "https://www.clevercloudstatus.com", "adapter": "auto" }
+    {
+      "id": "aws",
+      "name": "Amazon Web Services",
+      "family": "cloud",
+      "url": "https://health.aws.amazon.com/health/status",
+      "adapter": "aws",
+      "api": "https://health.aws.amazon.com/public/currentevents"
+    },
+    {
+      "id": "gcp",
+      "name": "Google Cloud",
+      "family": "cloud",
+      "url": "https://status.cloud.google.com",
+      "adapter": "google",
+      "api": "https://status.cloud.google.com/incidents.json"
+    },
+    {
+      "id": "azure",
+      "name": "Microsoft Azure",
+      "family": "cloud",
+      "url": "https://status.azure.com",
+      "adapter": "rss",
+      "api": "https://azurestatuscdn.azureedge.net/en-us/status/feed/"
+    },
+    {
+      "id": "ovh-network",
+      "name": "OVHcloud — Réseau",
+      "family": "cloud",
+      "url": "https://network.status-ovhcloud.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "ovh-public-cloud",
+      "name": "OVHcloud — Public Cloud",
+      "family": "cloud",
+      "url": "https://public-cloud.status-ovhcloud.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "ovh-bare-metal",
+      "name": "OVHcloud — Bare Metal",
+      "family": "cloud",
+      "url": "https://bare-metal-servers.status-ovhcloud.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "ovh-hosted-private",
+      "name": "OVHcloud — Hosted Private Cloud",
+      "family": "cloud",
+      "url": "https://hosted-private-cloud.status-ovhcloud.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "ovh-web-cloud",
+      "name": "OVHcloud — Web Cloud",
+      "family": "cloud",
+      "url": "https://web-cloud.status-ovhcloud.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "scaleway",
+      "name": "Scaleway",
+      "family": "cloud",
+      "url": "https://status.scaleway.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "oraclecloud",
+      "name": "Oracle Cloud",
+      "family": "cloud",
+      "url": "https://ocistatus.oraclecloud.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "alibabacloud",
+      "name": "Alibaba Cloud",
+      "family": "cloud",
+      "url": "https://status.alibabacloud.com",
+      "adapter": "endpoint",
+      "api": "https://status.alibabacloud.com/"
+    },
+    {
+      "id": "digitalocean",
+      "name": "DigitalOcean",
+      "family": "cloud",
+      "url": "https://status.digitalocean.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "linode",
+      "name": "Linode / Akamai Cloud",
+      "family": "cloud",
+      "url": "https://status.linode.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "vultr",
+      "name": "Vultr",
+      "family": "cloud",
+      "url": "https://status.vultr.com",
+      "adapter": "vultr",
+      "api": "https://status.vultr.com/status.json"
+    },
+    {
+      "id": "hetzner",
+      "name": "Hetzner",
+      "family": "cloud",
+      "url": "https://status.hetzner.com",
+      "adapter": "endpoint",
+      "api": "https://status.hetzner.com/"
+    },
+    {
+      "id": "cloudflare",
+      "name": "Cloudflare",
+      "family": "cloud",
+      "url": "https://www.cloudflarestatus.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "akamai",
+      "name": "Akamai",
+      "family": "cloud",
+      "url": "https://www.akamaistatus.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "fastly",
+      "name": "Fastly",
+      "family": "cloud",
+      "url": "https://www.fastlystatus.com",
+      "adapter": "fastly",
+      "api": "https://www.fastlystatus.com/summary.json"
+    },
+    {
+      "id": "github",
+      "name": "GitHub",
+      "family": "devops",
+      "url": "https://www.githubstatus.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "gitlab",
+      "name": "GitLab",
+      "family": "devops",
+      "url": "https://status.gitlab.com",
+      "adapter": "statusio",
+      "api": "https://api.status.io/1.0/status/5b36dc6502d06804c08349f7"
+    },
+    {
+      "id": "bitbucket",
+      "name": "Bitbucket",
+      "family": "devops",
+      "url": "https://bitbucket.status.atlassian.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "npm",
+      "name": "npm",
+      "family": "devops",
+      "url": "https://status.npmjs.org",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "dockerhub",
+      "name": "Docker Hub",
+      "family": "devops",
+      "url": "https://www.dockerstatus.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "vercel",
+      "name": "Vercel",
+      "family": "devops",
+      "url": "https://www.vercel-status.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "netlify",
+      "name": "Netlify",
+      "family": "devops",
+      "url": "https://www.netlifystatus.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "heroku",
+      "name": "Heroku",
+      "family": "devops",
+      "url": "https://status.heroku.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "render",
+      "name": "Render",
+      "family": "devops",
+      "url": "https://status.render.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "flyio",
+      "name": "Fly.io",
+      "family": "devops",
+      "url": "https://status.flyio.net",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "railway",
+      "name": "Railway",
+      "family": "devops",
+      "url": "https://status.railway.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "supabase",
+      "name": "Supabase",
+      "family": "devops",
+      "url": "https://status.supabase.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "mongodbatlas",
+      "name": "MongoDB Atlas",
+      "family": "devops",
+      "url": "https://status.mongodb.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "pypi",
+      "name": "PyPI",
+      "family": "devops",
+      "url": "https://status.python.org",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "atlassian",
+      "name": "Atlassian (Jira, Confluence)",
+      "family": "saas",
+      "url": "https://status.atlassian.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "trello",
+      "name": "Trello",
+      "family": "saas",
+      "url": "https://trello.status.atlassian.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "slack",
+      "name": "Slack",
+      "family": "saas",
+      "url": "https://status.slack.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "discord",
+      "name": "Discord",
+      "family": "saas",
+      "url": "https://discordstatus.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "zoom",
+      "name": "Zoom",
+      "family": "saas",
+      "url": "https://status.zoom.us",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "googleworkspace",
+      "name": "Google Workspace",
+      "family": "saas",
+      "url": "https://www.google.com/appsstatus/dashboard/",
+      "adapter": "google",
+      "api": "https://www.google.com/appsstatus/dashboard/incidents.json"
+    },
+    {
+      "id": "dropbox",
+      "name": "Dropbox",
+      "family": "files",
+      "url": "https://status.dropbox.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "notion",
+      "name": "Notion",
+      "family": "saas",
+      "url": "https://status.notion.so",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "zendesk",
+      "name": "Zendesk",
+      "family": "saas",
+      "url": "https://status.zendesk.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "salesforce",
+      "name": "Salesforce",
+      "family": "saas",
+      "url": "https://status.salesforce.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "wordpress",
+      "name": "WordPress.com",
+      "family": "saas",
+      "url": "https://wordpressstatus.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "stripe",
+      "name": "Stripe",
+      "family": "pay",
+      "url": "https://status.stripe.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "paypal",
+      "name": "PayPal",
+      "family": "pay",
+      "url": "https://www.paypal-status.com",
+      "adapter": "paypal",
+      "api": "https://www.paypal-status.com/api/v1/components"
+    },
+    {
+      "id": "twilio",
+      "name": "Twilio",
+      "family": "pay",
+      "url": "https://status.twilio.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "sendgrid",
+      "name": "SendGrid",
+      "family": "pay",
+      "url": "https://status.sendgrid.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "mailgun",
+      "name": "Mailgun",
+      "family": "pay",
+      "url": "https://status.mailgun.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "brevo",
+      "name": "Brevo (ex Sendinblue)",
+      "family": "pay",
+      "url": "https://status.brevo.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "datadog",
+      "name": "Datadog",
+      "family": "observability",
+      "url": "https://status.datadoghq.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry",
+      "family": "observability",
+      "url": "https://status.sentry.io",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "grafanacloud",
+      "name": "Grafana Cloud",
+      "family": "observability",
+      "url": "https://status.grafana.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "newrelic",
+      "name": "New Relic",
+      "family": "observability",
+      "url": "https://status.newrelic.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "pagerduty",
+      "name": "PagerDuty",
+      "family": "observability",
+      "url": "https://status.pagerduty.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "elastic",
+      "name": "Elastic Cloud",
+      "family": "observability",
+      "url": "https://status.elastic.co",
+      "adapter": "auto"
+    },
+    {
+      "id": "openai",
+      "name": "OpenAI (ChatGPT, API)",
+      "family": "ai",
+      "url": "https://status.openai.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "anthropic",
+      "name": "Anthropic (Claude)",
+      "family": "ai",
+      "url": "https://status.anthropic.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "mistral",
+      "name": "Mistral AI",
+      "family": "ai",
+      "url": "https://status.mistral.ai",
+      "adapter": "auto"
+    },
+    {
+      "id": "cohere",
+      "name": "Cohere",
+      "family": "ai",
+      "url": "https://status.cohere.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "huggingface",
+      "name": "Hugging Face",
+      "family": "ai",
+      "url": "https://status.huggingface.co",
+      "adapter": "auto"
+    },
+    {
+      "id": "perplexity",
+      "name": "Perplexity",
+      "family": "ai",
+      "url": "https://status.perplexity.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "githubcopilot",
+      "name": "GitHub Copilot",
+      "family": "ai",
+      "url": "https://www.githubstatus.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "free",
+      "name": "Free (Freebox, mobile)",
+      "family": "france",
+      "url": "https://status.free.fr",
+      "adapter": "auto"
+    },
+    {
+      "id": "orange",
+      "name": "Orange",
+      "family": "france",
+      "url": "https://reseaux.orange.fr",
+      "adapter": "auto"
+    },
+    {
+      "id": "sfr",
+      "name": "SFR",
+      "family": "france",
+      "url": "https://www.sfr.fr",
+      "adapter": "endpoint",
+      "api": "https://www.sfr.fr/"
+    },
+    {
+      "id": "bouygues",
+      "name": "Bouygues Telecom",
+      "family": "france",
+      "url": "https://www.bouyguestelecom.fr",
+      "adapter": "auto"
+    },
+    {
+      "id": "ovhtravaux",
+      "name": "OVH — travaux & incidents",
+      "family": "france",
+      "url": "https://www.status-ovhcloud.com",
+      "adapter": "rss",
+      "api": "https://www.status-ovhcloud.com/history.rss"
+    },
+    {
+      "id": "gandi",
+      "name": "Gandi",
+      "family": "france",
+      "url": "https://status.gandi.net",
+      "adapter": "auto"
+    },
+    {
+      "id": "qonto",
+      "name": "Qonto",
+      "family": "france",
+      "url": "https://status.qonto.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "doctolib",
+      "name": "Doctolib",
+      "family": "france",
+      "url": "https://status.doctolib.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "clever",
+      "name": "Clever Cloud",
+      "family": "france",
+      "url": "https://www.clevercloudstatus.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "box",
+      "name": "Box",
+      "family": "files",
+      "url": "https://status.box.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "protondrive",
+      "name": "Proton Drive",
+      "family": "files",
+      "url": "https://status.proton.me",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "wetransfer",
+      "name": "WeTransfer",
+      "family": "files",
+      "url": "https://status.wetransfer.com",
+      "adapter": "statuspage"
+    },
+    {
+      "id": "infomaniak",
+      "name": "Infomaniak (kDrive, SwissTransfer)",
+      "family": "files",
+      "url": "https://infomaniakstatus.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "backblaze",
+      "name": "Backblaze",
+      "family": "files",
+      "url": "https://status.backblaze.com",
+      "adapter": "auto"
+    },
+    {
+      "id": "mega",
+      "name": "MEGA",
+      "family": "files",
+      "url": "https://status.mega.nz",
+      "adapter": "auto"
+    },
+    {
+      "id": "pcloud",
+      "name": "pCloud",
+      "family": "files",
+      "url": "https://www.pcloud.com",
+      "adapter": "endpoint",
+      "api": "https://api.pcloud.com/getdigest"
+    }
   ]
 }

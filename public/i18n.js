@@ -186,6 +186,8 @@
       "svcstatus.err.badUrl": "Address refused: a public HTTPS status page is expected.",
       "svcstatus.err.unreachable": "Status page unreachable — which says nothing about the service itself.",
       "svcstatus.err.badResponse": "Unexpected answer: this address does not look like a status page.",
+      "svcstatus.err.badFormat": "Page read, but in an unknown format — the address answers, so this is not a network problem.",
+      "svcstatus.err.http": "The page refused the request (HTTP {code}) — the server is up, but will not serve this address.",
       "svcstatus.allGood": "{n} services, all operational",
       "svcstatus.approximate": "State inferred from the provider's RSS feed (no recent post), not declared by the provider itself.",
 
@@ -1400,6 +1402,8 @@
       "svcstatus.err.badUrl": "Adresse refusée : une page de statut publique en HTTPS est attendue.",
       "svcstatus.err.unreachable": "Page de statut injoignable — ce qui ne dit rien de l'état du service lui-même.",
       "svcstatus.err.badResponse": "Réponse inattendue : cette adresse ne ressemble pas à une page de statut.",
+      "svcstatus.err.badFormat": "Page lue, mais dans un format inconnu — l'adresse répond, ce n'est donc pas un problème de réseau.",
+      "svcstatus.err.http": "La page a refusé la requête (HTTP {code}) — le serveur répond, mais ne sert pas cette adresse.",
       "svcstatus.allGood": "{n} services, tout opérationnel",
       "svcstatus.approximate": "État déduit du flux RSS du fournisseur (aucun billet récent), et non déclaré par le fournisseur lui-même.",
 

@@ -1,5 +1,82 @@
 # Changelog
 
+## 1.129.0
+
+- **Neuf services du catalogue affichaient « page de statut
+  injoignable » alors que leurs pages repondaient parfaitement.** SFR,
+  AWS, OVHcloud, Oracle Cloud, Alibaba Cloud, Vultr, Hetzner, Fastly et
+  GitLab. Le diagnostic n'etait pas un bug unique mais QUATRE causes
+  distinctes, et le message unique les confondait toutes -- il envoyait
+  chercher une panne de reseau pour un probleme d'adaptateur.
+
+- **Cause 1 : des pages qui ont demenage.** `status.fastly.com` redirige
+  vers `fastlystatus.com`, `status.infomaniak.com` vers
+  `infomaniakstatus.com`, `status.ovhcloud.com` vers
+  `status-ovhcloud.com` -- et ces redirections pointent la RACINE du
+  nouveau site, pas le chemin demande. On partait chercher
+  `/api/v2/summary.json` et on recevait une page d'accueil en HTML. Le
+  chemin de l'adaptateur est desormais repose UNE fois sur la nouvelle
+  origine (une seule : deux domaines qui se redirigeraient l'un vers
+  l'autre tourneraient en rond).
+
+- **Cause 2 : des formats maison.** Quatre nouveaux adaptateurs, chacun
+  verifie sur son point d'entree public reel : **PayPal**
+  (`/api/v1/components`), **Status.io** (celui de GitLab), **Fastly** et
+  **Vultr**. Plus un repli `/api/v2/status.json` pour Statuspage, parce
+  qu'Oracle Cloud expose une Statuspage mais SANS `summary.json` : un
+  service lu a moitie vaut mieux qu'un service illisible.
+
+- **Cause 3 : une entree qui ne pouvait rien rendre.** La racine
+  `status.ovhcloud.com` n'est qu'un MENU, sans aucun etat : chaque
+  produit OVHcloud a sa propre Statuspage sur son sous-domaine. L'entree
+  unique est remplacee par cinq entrees produits (Reseau, Public Cloud,
+  Bare Metal, Hosted Private Cloud, Web Cloud).
+
+- **Cause 4 : un pare-feu applicatif.** Plusieurs pages rendent 403 a
+  tout client dont l'agent n'est pas celui d'un navigateur. L'en-tete
+  envoye est desormais celui d'un navigateur, PiBoard restant nomme dans
+  son commentaire.
+
+- **Trois messages d'erreur au lieu d'un**, et c'est le correctif qui
+  compte le plus : *injoignable* (personne ne repond -- verifiez votre
+  reseau), *la page a refuse la requete (HTTP 403/404)* (le serveur
+  repond mais pas a cette adresse -- verifiez l'adresse, le code est
+  affiche car 403 et 404 n'appellent pas la meme verification), et *page
+  lue mais format inconnu* (le reseau va bien, c'est PiBoard qui ne sait
+  pas lire). Meme lecon que « premier relevé a venir » contre « le
+  serveur ne mesure rien » sur la tuile Sante Internet.
+
+- **Nouvel adaptateur `endpoint`, pour les services qui ne publient
+  RIEN.** pCloud n'a aucune page de statut -- `status.pcloud.com`
+  n'existe meme pas au DNS, et tout ce qu'on trouve a son sujet vient de
+  sondes exterieures. Alibaba Cloud, Hetzner et SFR sont dans le meme
+  cas. On mesure donc ce qu'on PEUT mesurer : la joignabilite de leur API
+  publique. Ce que cet adaptateur ne dit PAS est l'essentiel -- il ne
+  rapporte pas la parole du fournisseur -- donc l'etat est marque DEDUIT
+  (tilde `~`, comme le RSS) et un echec ne depasse jamais la degradation
+  mineure : on ne declare pas une panne mondiale sur la foi d'un timeout.
+  Il est volontairement ABSENT du sondage automatique : il reussirait sur
+  n'importe quelle adresse joignable, gagnerait toujours, et tout service
+  deviendrait « sain, deduit » au lieu d'etre lu pour de bon.
+
+- **Nouvelle famille « Stockage & partage de fichiers »** : Dropbox, Box,
+  Proton Drive, WeTransfer, Infomaniak (kDrive, SwissTransfer),
+  Backblaze, MEGA et pCloud. Le catalogue passe de 67 a 78 entrees.
+
+- **Un choix a expliquer sur PayPal** : chaque composant porte deux
+  etats, production et sandbox. La tuile ne lit que la PRODUCTION. Une
+  sandbox en panne ferait rougir la tuile pendant que les paiements reels
+  passent -- la facon la plus sure de faire couper les notifications, et
+  de n'etre plus averti le jour ou la production tombe. Fige par un test.
+
+- **Tests** : chaque format ajoute a ses propres pieges couverts --
+  l'alerte RESOLUE que Vultr laisse dans son fichier (meme piege que
+  l'historique complet de Google), le dernier message choisi par sa DATE
+  et non par sa position chez Status.io, la maintenance Fastly qui n'est
+  pas une panne, et le chemin `/summary.json` que Fastly partage avec
+  Instatus sans partager son schema -- un JSON valide au bon chemin n'est
+  pas le bon format pour autant.
+
 ## 1.128.0
 
 - **La tuile Statut de service se regle maintenant en cochant des

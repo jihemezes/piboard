@@ -165,23 +165,118 @@ const parseSummary = providers.parseStatuspage;
 
 /* ---------- Appel reseau / network call ---------- */
 
-async function fetchBody(url, kind) {
-  const res = await fetch(url, {
-    headers: {
-      "Accept": kind === "text" ? "application/rss+xml, application/xml, text/xml, */*" : "application/json",
-      /* Certaines pages de statut (Azure, quelques CDN) rendent un 403 a
-         un client sans User-Agent. Ce n'est pas du contournement : c'est
-         la meme politesse qu'un navigateur, et sans elle la moitie des
-         flux RSS repondraient « injoignable » a tort.
-         Some status pages answer 403 to a client with no User-Agent. Not
-         a workaround: the same courtesy a browser extends, and without
-         it half the RSS feeds would wrongly read as unreachable. */
-      "User-Agent": "PiBoard/service-status (+https://github.com/jihemezes/piboard)"
-    },
+/* UNE ERREUR QUI DIT LAQUELLE. La premiere version ne connaissait qu'un
+   echec, « injoignable », et l'affichait pour trois causes qui n'ont
+   rien a voir : la page vraiment injoignable (DNS, coupure, timeout),
+   la page qui repond mais refuse (403, 404), et la page qui repond tres
+   bien mais dans un format qu'on ne sait pas lire. PayPal tombait dans
+   le troisieme cas et s'affichait comme « page de statut injoignable »,
+   ce qui envoie chercher une panne de reseau pour un probleme
+   d'adaptateur. Trois causes, trois messages.
+   ONE ERROR THAT SAYS WHICH. The first version knew a single failure,
+   "unreachable", and showed it for three unrelated causes: genuinely
+   unreachable (DNS, outage, timeout), answering but refusing (403, 404),
+   and answering perfectly in a format we cannot read. PayPal fell in the
+   third case and read as "status page unreachable", which sends one
+   looking for a network fault to solve an adapter problem. */
+class HttpError extends Error {
+  constructor(status, url) {
+    super("status " + status);
+    this.httpStatus = status;
+    this.url = url;
+  }
+}
+
+/* Un en-tete de navigateur, et pourquoi. Plusieurs pages de statut
+   passent par un pare-feu applicatif (Cloudflare, Fastly, Akamai) qui
+   rend 403 a tout client dont l'agent n'est pas celui d'un navigateur.
+   Ce n'est pas du contournement : on demande une page publique, en
+   annoncant ce qu'on est dans le commentaire de l'agent. Sans cela, une
+   partie des grands services -- exactement ceux qu'on veut surveiller --
+   repondent « interdit » et la tuile conclut, a tort, a une panne de
+   joignabilite.
+   A browser-shaped header, and why: several status pages sit behind a
+   WAF answering 403 to any client whose agent is not a browser's. Not a
+   workaround -- we ask for a public page and say what we are in the
+   agent's comment. Without it a number of large services answer
+   "forbidden" and the tile wrongly concludes it cannot reach them. */
+const UA = "Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36 PiBoard/service-status (+https://github.com/jihemezes/piboard)";
+
+function headersFor(kind) {
+  return {
+    "Accept": kind === "text"
+      ? "application/rss+xml, application/xml, text/xml, */*"
+      : (kind === "probe" ? "*/*" : "application/json, text/plain, */*"),
+    "Accept-Language": "fr, en;q=0.8, *;q=0.5",
+    "User-Agent": UA
+  };
+}
+
+async function httpGet(url, kind) {
+  return fetch(url, {
+    headers: headersFor(kind),
+    redirect: "follow",
     signal: AbortSignal.timeout(TIMEOUT_MS)
   });
-  if (!res.ok) throw new Error("status " + res.status);
+}
+
+/* LA REDIRECTION QUI PERDAIT LE CHEMIN, et qui explique a elle seule
+   plusieurs services muets. Des fournisseurs ont demenage leur page de
+   statut sur un autre domaine en laissant une redirection : status.
+   fastly.com -> fastlystatus.com, status.infomaniak.com ->
+   infomaniakstatus.com, status.ovhcloud.com -> status-ovhcloud.com. Ces
+   redirections renvoient vers la RACINE du nouveau site, pas vers le
+   chemin demande : on partait chercher /api/v2/summary.json et on
+   recevait la page d'accueil en HTML, donc un format non reconnu.
+   On recommence donc UNE fois, en reposant le chemin de l'adaptateur sur
+   la nouvelle origine. Une seule fois : deux domaines qui se
+   redirigeraient l'un vers l'autre tourneraient en rond, et une tuile de
+   supervision ne doit jamais etre ce qui tombe.
+   THE REDIRECT THAT LOST THE PATH, which alone explains several silent
+   services. Providers moved their status page to another domain leaving
+   a redirect, and those redirects land on the new site's ROOT, not on
+   the requested path: we asked for /api/v2/summary.json and received the
+   home page as HTML, hence an unrecognised format. We therefore retry
+   ONCE with the adapter's path rebuilt on the new origin. Once only: two
+   domains redirecting to each other would loop, and a monitoring tile
+   must never be the thing that falls over. */
+function redirectedAway(res, requested) {
+  if (!res || !res.redirected || !res.url) return null;
+  let asked, got;
+  try { asked = new URL(requested); got = new URL(res.url); } catch (e) { return null; }
+  if (got.origin === asked.origin) return null;
+  if (got.pathname === asked.pathname) return null;      // chemin conserve : rien a refaire
+  return got.origin;
+}
+
+async function readBody(res, kind) {
   return kind === "text" ? res.text() : res.json();
+}
+
+/* Recupere le corps en suivant, si besoin, la redirection de domaine
+   ci-dessus et le chemin de repli de l'adaptateur (Oracle Cloud).
+   Fetches the body, following the domain redirect above and the
+   adapter's fallback path (Oracle Cloud) when needed. */
+async function fetchBody(url, kind, adapter) {
+  let res = await httpGet(url, kind);
+
+  const moved = redirectedAway(res, url);
+  if (moved && adapter && adapter.path) {
+    const retried = await httpGet(moved + adapter.path, kind);
+    if (retried.ok) res = retried;
+  }
+
+  if (res.status === 404 && adapter && adapter.fallbackPath) {
+    let origin = null;
+    try { origin = new URL(res.url || url).origin; } catch (e) { origin = null; }
+    if (origin) {
+      const retried = await httpGet(origin + adapter.fallbackPath, kind);
+      if (retried.ok) res = retried;
+    }
+  }
+
+  if (!res.ok) throw new HttpError(res.status, res.url || url);
+  return readBody(res, kind);
 }
 
 /* Lecture d'un service avec un adaptateur CONNU. Rend l'etat analyse, ou
@@ -195,7 +290,29 @@ async function readWith(adapterName, spec) {
   if (!adapter) return null;
   const url = endpointFor({ adapter: adapterName, url: spec.url, api: spec.api });
   if (!url) return null;
-  const body = await fetchBody(url, adapter.kind);
+
+  /* L'adaptateur « endpoint » ne lit aucun document : il constate une
+     reponse. Un 403 ou un 404 y sont donc des resultats, pas des
+     erreurs -- le serveur repond, donc il est la -- la ou un echec
+     reseau en est bien un.
+     The "endpoint" adapter reads no document, it observes an answer: a
+     403 or a 404 are results there, not errors -- the server answered,
+     so it is up -- whereas a network failure is a real one. */
+  if (adapter.kind === "probe") {
+    let host = null;
+    try { host = new URL(url).hostname; } catch (e) { host = null; }
+    let ok = false;
+    try {
+      const res = await httpGet(url, "probe");
+      ok = res.status < 500;
+    } catch (e) {
+      ok = false;
+    }
+    const parsed = adapter.parse({ ok, url, host });
+    return parsed ? Object.assign({ adapter: adapterName, endpoint: url }, parsed) : null;
+  }
+
+  const body = await fetchBody(url, adapter.kind, adapter);
   const parsed = adapter.parse(body);
   return parsed ? Object.assign({ adapter: adapterName, endpoint: url }, parsed) : null;
 }
@@ -209,14 +326,30 @@ async function readWith(adapterName, spec) {
    entire point of probing. */
 async function readAuto(spec) {
   let lastError = null;
+  /* On retient si UNE page au moins a repondu correctement. C'est ce qui
+     separe « je n'ai joint personne » de « j'ai tout joint sans rien
+     comprendre » -- deux diagnostics opposes pour la personne devant la
+     tuile : verifier son reseau, ou verifier son adresse.
+     We remember whether at least one page answered properly: that is
+     what separates "I reached nobody" from "I reached everything and
+     understood none of it" -- opposite diagnoses for the person in front
+     of the tile: check your network, or check your address. */
+  let reached = false;
   for (const name of providers.AUTO_ORDER) {
     try {
       const out = await readWith(name, { url: spec.url });
       if (out) return out;
+      reached = true;
     } catch (e) {
+      /* Une page qui repond 404 a ETE jointe : le domaine existe, le
+         serveur parle, c'est seulement ce chemin-la qui n'est pas le
+         bon. Un 404 pendant un sondage n'est donc pas un echec de
+         joignabilite. A page answering 404 HAS been reached. */
+      if (e instanceof HttpError && e.httpStatus >= 400 && e.httpStatus < 500) reached = true;
       lastError = e;
     }
   }
+  if (reached) return null;              // joint, mais aucun format reconnu
   if (lastError) throw lastError;
   return null;
 }
@@ -255,13 +388,19 @@ async function getStatusFor(spec, opts) {
         : await readWith(adapterName, { url: base, api });
       const value = parsed
         ? Object.assign({ base: base || api, fetchedAt: new Date().toISOString() }, parsed)
-        : { base: base || api, error: "bad-response" };
+        : { base: base || api, error: "bad-format", fetchedAt: new Date().toISOString() };
       cache.set(key, { at: Date.now(), value });
       return value;
     } catch (e) {
       const value = {
         base: base || api,
-        error: "unreachable",
+        /* Trois causes, trois messages : voir HttpError plus haut. Un
+           code HTTP est conserve tel quel, parce que « 403 » et « 404 »
+           n'appellent pas la meme verification.
+           Three causes, three messages; the HTTP code is kept as is,
+           because 403 and 404 do not call for the same check. */
+        error: e instanceof HttpError ? "http" : "unreachable",
+        httpStatus: e instanceof HttpError ? e.httpStatus : null,
         detail: String((e && e.message) || e).slice(0, 200),
         fetchedAt: new Date().toISOString()
       };

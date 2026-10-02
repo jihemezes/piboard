@@ -574,17 +574,371 @@ function parseRss(xml, opts) {
   });
 }
 
+
+/* ============================================================
+   6. PayPal -- /api/v1/components
+   Pourquoi un adaptateur rien que pour eux : paypal-status.com n'est
+   aucun des cinq formats precedents, et c'est precisement le genre de
+   service qu'on surveille. Leur API maison est publique, sans cle, et
+   donne l'etat de CHAQUE produit -- donc aussi riche que Statuspage de
+   ce point de vue.
+
+   UN CHOIX A EXPLIQUER : chaque composant porte DEUX etats, production
+   et sandbox. La tuile ne lit que la PRODUCTION. Afficher les deux
+   doublerait trente composants pour une information qui n'interesse que
+   pendant un developpement, et surtout : une sandbox en panne ferait
+   passer la tuile au rouge alors que les paiements reels passent. On
+   surveille ce qui encaisse.
+   Why an adapter of their own: paypal-status.com is none of the five
+   formats above, and it is exactly the kind of service one watches.
+   Their in-house API is public, key-less, and gives EACH product's
+   state. One choice to explain: every component carries TWO states,
+   production and sandbox; the tile reads PRODUCTION only. Showing both
+   would double thirty components for information that matters only
+   while developing -- and a broken sandbox would turn the tile red
+   while real payments go through. We watch what takes the money.
+   ============================================================ */
+const PAYPAL_STATE = {
+  OPERATIONAL: "operational",
+  DEGRADED: "degraded_performance",
+  DEGRADEDPERFORMANCE: "degraded_performance",
+  PARTIALOUTAGE: "partial_outage",
+  PARTIALSERVICEDISRUPTION: "partial_outage",
+  MAJOROUTAGE: "major_outage",
+  OUTAGE: "major_outage",
+  SERVICEDISRUPTION: "major_outage",
+  MAINTENANCE: "under_maintenance",
+  UNDERMAINTENANCE: "under_maintenance"
+};
+
+function parsePaypal(json) {
+  if (!json || typeof json !== "object" || !Array.isArray(json.result)) return null;
+
+  const components = json.result
+    .filter((c) => c && c.name && c.status && typeof c.status === "object")
+    .map((c) => {
+      const raw = String(c.status.production || "").toUpperCase().replace(/[^A-Z]/g, "");
+      return {
+        name: text(c.displayName || c.name, 120),
+        status: Object.prototype.hasOwnProperty.call(PAYPAL_STATE, raw) ? PAYPAL_STATE[raw] : "unknown",
+        group: c.parentName ? text(c.parentName, 80) : null
+      };
+    });
+  /* Une reponse bien formee mais VIDE n'est pas une lecture : si la
+     liste est vide, on rend null pour que « auto » continue a sonder
+     plutot que d'afficher un service sans aucun composant comme sain.
+     A well-formed but EMPTY answer is not a reading. */
+  if (!components.length) return null;
+
+  return fromComponents({ name: "PayPal", url: "https://www.paypal-status.com", components });
+}
+
+/* ============================================================
+   7. Status.io -- https://api.status.io/1.0/status/<id>
+   Le troisieme editeur de pages de statut, derriere Atlassian et
+   Instatus, et celui de GitLab. L'identifiant de page se lit dans la
+   page elle-meme ; le catalogue le porte en adresse d'API explicite,
+   ce qui evite d'avoir a le deviner.
+   The third status-page vendor, behind Atlassian and Instatus, and
+   GitLab's. The page id is carried by the catalogue as an explicit API
+   address rather than guessed.
+   ============================================================ */
+const STATUSIO_CODE = {
+  100: "operational",
+  200: "under_maintenance",
+  300: "degraded_performance",
+  400: "partial_outage",
+  500: "major_outage",
+  600: "major_outage"
+};
+
+function parseStatusio(json) {
+  const result = json && typeof json === "object" ? json.result : null;
+  if (!result || typeof result !== "object" || !Array.isArray(result.status)) return null;
+
+  const components = result.status
+    .filter((s) => s && s.name)
+    .map((s) => ({
+      name: text(s.name, 120),
+      status: Object.prototype.hasOwnProperty.call(STATUSIO_CODE, Number(s.status_code))
+        ? STATUSIO_CODE[Number(s.status_code)]
+        : "unknown",
+      group: null
+    }));
+  if (!components.length) return null;
+
+  const incidents = (Array.isArray(result.incidents) ? result.incidents : [])
+    .filter((i) => i && i.name)
+    .map((i) => {
+      const updates = Array.isArray(i.messages) ? i.messages.slice() : [];
+      updates.sort((a, b) => dateMs(b && b.datetime) - dateMs(a && a.datetime));
+      const last = updates[0] || null;
+      return {
+        id: i._id || null,
+        name: text(i.name, 200),
+        status: null,
+        impact: null,
+        url: null,
+        startedAt: i.datetime || null,
+        updatedAt: last && last.datetime ? last.datetime : i.datetime || null,
+        lastMessage: last && last.details ? stripHtml(last.details).slice(0, 600) : null,
+        components: []
+      };
+    });
+
+  const state = fromComponents({
+    name: result.status_overall && result.status_overall.name ? text(result.status_overall.name, 120) : null,
+    url: null,
+    components
+  });
+  state.incidents = incidents;
+  state.updatedAt = (result.status_overall && result.status_overall.updated) || null;
+  return state;
+}
+
+/* ============================================================
+   8. Fastly -- fastlystatus.com/summary.json
+   Fastly a quitte Statuspage pour une page maison, au passage sur un
+   AUTRE domaine : status.fastly.com redirige vers fastlystatus.com.
+   Le chemin ressemble a celui d'Instatus (/summary.json) mais le schema
+   n'a rien a voir -- piege a repetition : un JSON valide au bon chemin
+   n'est pas le bon format pour autant, et c'est le lecteur qui doit le
+   dire en rendant null.
+   Fastly left Statuspage for an in-house page, on ANOTHER domain. The
+   path looks like Instatus's but the schema is unrelated: a valid JSON
+   at the right path is not the right format, and it is the reader's job
+   to say so by returning null.
+   ============================================================ */
+const FASTLY_STATE = {
+  OPERATIONAL: "none",
+  MAINTENANCE: "none",
+  INFORMATIONAL: "none",
+  DEGRADED: "minor",
+  DEGRADEDPERFORMANCE: "minor",
+  PARTIALOUTAGE: "major",
+  OUTAGE: "critical",
+  MAJOROUTAGE: "critical"
+};
+
+function parseFastly(json) {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return null;
+  if (typeof json.Status !== "string" || !Object.prototype.hasOwnProperty.call(json, "PageName")) return null;
+
+  const raw = json.Status.toUpperCase().replace(/[^A-Z]/g, "");
+  const indicator = Object.prototype.hasOwnProperty.call(FASTLY_STATE, raw) ? FASTLY_STATE[raw] : "unknown";
+
+  /* Une maintenance declaree n'est pas une panne : elle ressort en
+     maintenance programmee, pas en incident, exactement comme chez
+     Instatus. A declared maintenance is not an outage. */
+  const isMaintenance = raw === "MAINTENANCE";
+  const open = (Array.isArray(json.UnresolvedIncidents) ? json.UnresolvedIncidents : [])
+    .filter((i) => i && i.Title);
+
+  return emptyState({
+    name: json.PageName ? text(json.PageName, 120) : "Fastly",
+    url: "https://www.fastlystatus.com",
+    updatedAt: json.StatusInEffectSince || null,
+    indicator,
+    description: json.StatusText ? text(json.StatusText, 120) : null,
+    ok: indicator === "none",
+    incidents: isMaintenance ? [] : open.map((i) => ({
+      id: i.Id != null ? String(i.Id) : null,
+      name: text(i.Title, 200),
+      status: i.Status || null,
+      impact: i.IncidentType || null,
+      url: i.ShortUrl || null,
+      startedAt: i.StartDate || i.DateCreated || null,
+      updatedAt: i.DateCreated || null,
+      lastMessage: null,
+      components: []
+    })),
+    maintenances: isMaintenance ? open.map((i) => ({
+      name: text(i.Title, 200),
+      status: i.Status || null,
+      scheduledFor: i.StartDate || null,
+      scheduledUntil: i.EndDate || null,
+      url: i.ShortUrl || null
+    })) : []
+  });
+}
+
+/* ============================================================
+   9. Vultr -- status.vultr.com/status.json
+   Format maison, documente par Vultr. Sa particularite : l'etat est
+   range par REGION, et une alerte porte son propre `status`
+   (« ongoing » / « resolved »). Les alertes RESOLUES restent dans le
+   fichier -- les prendre pour des incidents en cours afficherait du
+   rouge pour une panne refermee il y a trois semaines. Meme piege que
+   l'historique complet de Google : un fichier de statut n'est pas une
+   liste de ce qui va mal maintenant.
+   In-house format documented by Vultr, arranged by REGION. RESOLVED
+   alerts stay in the file; taking them for live incidents would show
+   red for an outage closed three weeks ago -- the same trap as Google's
+   full history.
+   ============================================================ */
+function parseVultr(json) {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return null;
+  if (!json.regions || typeof json.regions !== "object") return null;
+
+  const live = [];
+  const components = [];
+
+  const push = (where, alerts) => {
+    const open = (Array.isArray(alerts) ? alerts : [])
+      .filter((a) => a && a.subject && String(a.status || "").toLowerCase() !== "resolved");
+    components.push({
+      name: text(where, 120),
+      status: open.length ? "partial_outage" : "operational",
+      group: null
+    });
+    for (const a of open) {
+      const entries = Array.isArray(a.entries) ? a.entries.slice() : [];
+      entries.sort((x, y) => dateMs(y && y.updated_at) - dateMs(x && x.updated_at));
+      const last = entries[0] || null;
+      live.push({
+        id: a.id || null,
+        name: text(a.subject, 200) + " — " + text(where, 60),
+        status: a.status || null,
+        impact: "major",
+        url: "https://status.vultr.com",
+        startedAt: a.start_date || null,
+        updatedAt: (last && last.updated_at) || a.updated_at || a.start_date || null,
+        lastMessage: last && last.message ? stripHtml(last.message).slice(0, 600) : null,
+        components: [text(where, 60)]
+      });
+    }
+  };
+
+  for (const key of Object.keys(json.regions)) {
+    const r = json.regions[key];
+    if (!r || typeof r !== "object") continue;
+    push(r.location || key, r.alerts);
+  }
+  if (!components.length) return null;
+  if (Array.isArray(json.service_alerts) && json.service_alerts.length) push("Services", json.service_alerts);
+
+  const state = fromComponents({ name: "Vultr", url: "https://status.vultr.com", components });
+  state.incidents = live.slice(0, 5);
+  return state;
+}
+
+/* ============================================================
+   10. Endpoint -- une simple requete HTTPS sur une API publique
+   POUR LES SERVICES QUI NE PUBLIENT RIEN. pCloud, Alibaba Cloud,
+   Hetzner : pas de page de statut lisible par une machine, pas de flux,
+   rien. Le choix est alors entre ne rien dire du tout et mesurer ce
+   qu'on PEUT mesurer -- la joignabilite de leur API publique depuis le
+   Pi.
+
+   CE QUE CET ADAPTATEUR NE DIT PAS, et c'est le plus important : il ne
+   rapporte PAS la parole du fournisseur. « Joignable depuis chez vous »
+   n'est pas « le fournisseur declare aller bien », et l'inverse non
+   plus : un echec peut venir de votre connexion, de votre DNS, d'un
+   cable sous-marin. L'etat est donc marque DEDUIT (`approximate`), comme
+   pour le RSS, et un echec ne depasse jamais la degradation mineure --
+   on ne declare pas une panne mondiale sur la foi d'un timeout.
+   What this adapter does NOT say, and it matters most: it does not
+   report the PROVIDER's word. "Reachable from your place" is not "the
+   provider declares itself healthy", and a failure may be your own
+   connection. The state is therefore marked INFERRED, as for RSS, and a
+   failure never exceeds a minor degradation.
+   ============================================================ */
+function parseEndpoint(probe) {
+  if (!probe || typeof probe !== "object" || typeof probe.ok !== "boolean") return null;
+  const indicator = probe.ok ? "none" : "minor";
+  return emptyState({
+    name: null,
+    url: probe.url || null,
+    updatedAt: new Date().toISOString(),
+    indicator,
+    description: null,
+    ok: probe.ok,
+    approximate: true,
+    componentCount: 1,
+    affected: probe.ok ? [] : [{
+      name: probe.host || "API",
+      status: "degraded_performance",
+      group: null
+    }],
+    incidents: [],
+    maintenances: []
+  });
+}
+
+/* Etat global deduit d'une liste de composants, pour les formats qui
+   donnent les composants mais pas d'indicateur global (PayPal, Vultr,
+   Status.io). Le global vaut le PIRE des composants : un seul composant
+   en panne majeure ne doit pas se noyer dans trente composants verts.
+   Overall state inferred from a component list, for the formats giving
+   components but no overall indicator. The overall state is the WORST
+   component: one major outage must not drown in thirty green ones. */
+const COMPONENT_TO_INDICATOR = {
+  operational: "none",
+  under_maintenance: "none",
+  degraded_performance: "minor",
+  partial_outage: "major",
+  major_outage: "critical",
+  unknown: "unknown"
+};
+
+function fromComponents(opts) {
+  const components = opts.components || [];
+  const affected = components
+    .filter((c) => c.status !== "operational")
+    .sort((a, b) => (COMPONENT_RANK[b.status] || 0) - (COMPONENT_RANK[a.status] || 0));
+
+  let indicator = "none";
+  for (const c of affected) {
+    const cand = COMPONENT_TO_INDICATOR[c.status] || "unknown";
+    if ((INDICATOR_RANK[cand] || 0) > (INDICATOR_RANK[indicator] || 0)) indicator = cand;
+  }
+
+  return emptyState({
+    name: opts.name || null,
+    url: opts.url || null,
+    indicator,
+    ok: indicator === "none",
+    componentCount: components.length,
+    affected,
+    incidents: [],
+    maintenances: []
+  });
+}
+
 /* ---------- Table des adaptateurs / adapter table ----------
    `path` : ce qu'on ajoute a l'origine quand le catalogue ne fournit pas
    d'adresse d'API explicite. `kind` : comment lire la reponse.
    `path`: appended to the origin when the catalogue gives no explicit
    API address. `kind`: how to read the answer. */
 const ADAPTERS = {
-  statuspage: { path: "/api/v2/summary.json", kind: "json", parse: parseStatuspage },
+  statuspage: {
+    path: "/api/v2/summary.json",
+    kind: "json",
+    parse: parseStatuspage,
+    /* Repli quand summary.json n'existe pas. Oracle Cloud expose une
+       Statuspage, mais SEULEMENT /api/v2/status.json : l'indicateur
+       global, sans les composants. Un service lu a moitie vaut mieux
+       qu'un service affiche comme illisible, et c'est la difference
+       entre « OCI : tout operationnel » et une ligne grise.
+       Fallback when summary.json does not exist: Oracle Cloud exposes a
+       Statuspage, but ONLY /api/v2/status.json -- the overall indicator
+       without the components. Half a reading beats an unreadable
+       service. */
+    fallbackPath: "/api/v2/status.json"
+  },
   instatus: { path: "/summary.json", kind: "json", parse: parseInstatus },
   google: { path: "/incidents.json", kind: "json", parse: parseGoogle },
   aws: { path: "/public/currentevents", kind: "json", parse: parseAws },
-  rss: { path: "/history.rss", kind: "text", parse: parseRss }
+  rss: { path: "/history.rss", kind: "text", parse: parseRss },
+  paypal: { path: "/api/v1/components", kind: "json", parse: parsePaypal },
+  statusio: { path: "/1.0/status", kind: "json", parse: parseStatusio },
+  fastly: { path: "/summary.json", kind: "json", parse: parseFastly },
+  vultr: { path: "/status.json", kind: "json", parse: parseVultr },
+  /* `kind: "probe"` : le seul adaptateur qui ne lit pas un document mais
+     constate une reponse. Voir parseEndpoint ci-dessus pour ce qu'il ne
+     dit pas. The only adapter reading no document but observing an
+     answer. */
+  endpoint: { path: "/", kind: "probe", parse: parseEndpoint }
 };
 
 /* Ordre de SONDAGE pour « auto ». Statuspage d'abord parce qu'il couvre
@@ -594,7 +948,20 @@ const ADAPTERS = {
    PROBE order for "auto": Statuspage first because it covers most
    services and should be hit on the first try; RSS last because it only
    yields an inferred state -- any explicit format must win over it. */
-const AUTO_ORDER = ["statuspage", "instatus", "google", "rss"];
+/* Ordre de SONDAGE pour « auto ». Les formats maison (PayPal, Fastly,
+   Vultr) y figurent APRES les trois generiques : ils sont rares, et
+   chacun coute une requete a tous les autres services. L'« endpoint »
+   n'y figure PAS DU TOUT -- il reussirait sur n'importe quelle adresse
+   joignable, donc il gagnerait toujours, et tout service deviendrait
+   « sain, deduit » au lieu d'etre lu pour de bon. Il ne s'emploie que
+   declare explicitement par le catalogue.
+   The in-house formats come AFTER the generic three: they are rare and
+   each costs one request to every other service. "endpoint" is NOT in
+   the list at all -- it would succeed on any reachable address, hence
+   always win, and every service would become "healthy, inferred"
+   instead of being properly read. It is used only when the catalogue
+   declares it. */
+const AUTO_ORDER = ["statuspage", "instatus", "google", "fastly", "vultr", "paypal", "rss"];
 
 module.exports = {
   ADAPTERS,
@@ -607,6 +974,12 @@ module.exports = {
   parseGoogle,
   parseAws,
   parseRss,
+  parsePaypal,
+  parseStatusio,
+  parseFastly,
+  parseVultr,
+  parseEndpoint,
+  fromComponents,
   stripHtml,
   msFromAws,
   isoFromAws
