@@ -701,6 +701,38 @@ test("la famille « partage de fichiers » existe et contient pCloud", () => {
     "pCloud ne publie AUCUNE page de statut : seule la joignabilite de son API est mesurable, et elle doit se declarer deduite");
 });
 
+
+console.log("== AWS servait de l'UTF-16, et Node lisait de l'UTF-8 (1.130.0) ==");
+
+/* LE DEFAUT, invisible a la relecture. AWS sert /public/currentevents
+   avec `content-type: application/json;charset=utf-16`, ce que plus
+   personne ne fait depuis quinze ans. `res.json()` de Node decode
+   TOUJOURS en UTF-8 sans regarder le charset : le corps ressortait en
+   caracteres parasites, JSON.parse levait une SyntaxError, et comme ce
+   n'est pas une erreur HTTP la tuile concluait « injoignable » -- alors
+   qu'AWS repondait en 44 ms avec 226 Ko de JSON parfaitement valide.
+   Trois mois de « AWS injoignable » pour un en-tete. */
+test("un JSON annonce en UTF-16 est decode correctement", () => {
+  const payload = JSON.stringify([{ service: "EC2", status: 1 }]);
+  const buf = Buffer.from("\uFEFF" + payload, "utf16le");
+  const out = S.decodeText(buf, "application/json;charset=utf-16");
+  assert.deepStrictEqual(JSON.parse(out), [{ service: "EC2", status: 1 }]);
+});
+
+test("la marque d'ordre des octets ne survit pas au decodage", () => {
+  const out = S.decodeText(Buffer.from("\uFEFF{\"a\":1}", "utf8"), "application/json");
+  assert.strictEqual(out[0], "{", "une BOM laissee en tete fait echouer JSON.parse, et c'est tout le defaut");
+  assert.deepStrictEqual(JSON.parse(out), { a: 1 });
+});
+
+test("un charset inconnu retombe sur UTF-8 plutot que de perdre la reponse", () => {
+  assert.strictEqual(S.decodeText(Buffer.from('{"a":1}', "utf8"), "application/json;charset=bidon-42"), '{"a":1}');
+});
+
+test("sans charset annonce, on lit de l'UTF-8 -- le cas de la quasi-totalite des pages", () => {
+  assert.strictEqual(S.decodeText(Buffer.from('{"\u00e9":1}', "utf8"), "application/json"), '{"\u00e9":1}');
+});
+
 setTimeout(() => {
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS SERVICEPROVIDERS PASSENT");
   process.exit(failures ? 1 : 0);

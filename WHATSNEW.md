@@ -33,6 +33,36 @@
 # Nouveautes / What's new
 
 
+## 1.130.0
+
+**Les corrections du catalogue atteignent enfin les tableaux deja regles**
+
+Les services corriges en 1.129.0 restaient en panne a l'ecran sur un
+tableau deja configure : la liste cochee avait fige l'adresse et le
+format au moment du clic, et il aurait fallu decocher puis recocher
+chaque service. C'est repare -- les corrections de catalogue arrivent
+desormais toutes seules, sans rien retoucher.
+
+AWS s'affichait comme injoignable : sa page de statut est servie dans un
+encodage que plus personne n'emploie, et PiBoard la lisait de travers.
+Elle est maintenant lue correctement. Enfin, une page illisible n'est
+plus annoncee comme injoignable : les deux n'appellent pas la meme
+verification.
+
+---
+
+**Catalogue fixes now reach boards already configured**
+
+Services fixed in 1.129.0 stayed broken on screen for an already
+configured board: the ticked list had frozen the address and format at
+ticking time, and every service would have had to be unticked and
+ticked again. Fixed -- catalogue corrections now arrive on their own.
+
+AWS read as unreachable: its status page is served in an encoding nobody
+uses any more, and PiBoard read it wrongly. It is read correctly now.
+Finally, an unreadable page is no longer announced as unreachable: the
+two do not call for the same check.
+
 ## 1.129.0
 
 **Neuf services qui semblaient en panne ne l'etaient pas**

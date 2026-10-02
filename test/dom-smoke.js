@@ -718,7 +718,12 @@ const dom = new JSDOM(html, {
             { id: "github", name: "GitHub", family: "devops", url: "https://www.githubstatus.com", adapter: "statuspage" },
             { id: "npm", name: "npm", family: "devops", url: "https://status.npmjs.org", adapter: "statuspage" },
             { id: "aws", name: "AWS", family: "cloud", url: "https://health.aws.amazon.com/health/status", adapter: "aws", api: "https://health.aws.amazon.com/public/currentevents" },
-            { id: "azure", name: "Azure", family: "cloud", url: "https://status.azure.com", adapter: "rss", api: "https://azurestatuscdn.azureedge.net/en-us/status/feed/" }
+            { id: "azure", name: "Azure", family: "cloud", url: "https://status.azure.com", adapter: "rss", api: "https://azurestatuscdn.azureedge.net/en-us/status/feed/" },
+            /* Entree CORRIGEE par rapport a ce qu'un reglage ancien a pu
+               enregistrer : c'est tout l'objet du test de re-resolution
+               plus bas. A CORRECTED entry compared with what an old
+               setting may hold -- the point of the re-resolution test. */
+            { id: "sfr", name: "SFR", family: "france", url: "https://www.sfr.fr", adapter: "endpoint", api: "https://www.sfr.fr/" }
           ]
         });
       }
@@ -8595,6 +8600,58 @@ function catalogItemFor(catalog, document, widgetId) {
     host.remove();
     SVC_INCIDENT.seq = 1;
     SVC_INCIDENT.impact = "major";
+  }
+
+  console.log("== Statut de service : une correction du catalogue atteint les tableaux DEJA regles (1.130.0) ==");
+  {
+    /* LE DEFAUT RAPPORTE : apres avoir corrige le catalogue (SFR passe
+       en « endpoint », OVHcloud eclate par produit, Fastly et Vultr
+       dotes de leur format), RIEN ne changeait a l'ecran. La liste
+       cochee recopiait l'adresse et l'adaptateur au moment du clic :
+       un service coche avec l'ancien catalogue gardait ses anciennes
+       valeurs pour toujours, et il aurait fallu decocher puis recocher
+       chaque service -- ce que personne ne peut deviner.
+
+       Le test est FONCTIONNEL : on regarde la requete reellement
+       envoyee au serveur, pas la presence d'une ligne dans le code.
+       THE REPORTED DEFECT: after fixing the catalogue, nothing changed
+       on screen, because the ticked list had copied address and adapter
+       at ticking time. The test is FUNCTIONAL: it looks at the request
+       actually sent, not at a line of source. */
+    let Klass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "servicestatus") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    SVC_STATUS_QUERIES.length = 0;
+
+    const w = new Klass({
+      el: host,
+      settings: {
+        /* Exactement ce qu'un tableau regle avec l'ANCIEN catalogue
+           porte encore : l'ancienne adresse, et « auto » comme format.
+           Exactly what a board configured with the OLD catalogue still
+           holds: the old address, and "auto" as the format. */
+        picked: JSON.stringify([{ id: "sfr", name: "SFR", url: "https://assistance.sfr.fr", adapter: "auto", api: null, alert: true }]),
+        display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1
+      },
+      i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
+      api: { startAlert: () => {} }
+    });
+    w.init();
+    await sleep(80);
+
+    const sent = SVC_STATUS_QUERIES.join(" ");
+    assert("l'adaptateur envoye vient du catalogue, pas du reglage enregistre",
+      /endpoint~/.test(decodeURIComponent(sent)));
+    assert("l'adresse envoyee vient du catalogue, pas du reglage enregistre",
+      /www\.sfr\.fr/.test(decodeURIComponent(sent)) && !/assistance\.sfr\.fr/.test(decodeURIComponent(sent)));
+
+    w.destroy();
+    host.remove();
   }
 
   console.log("== Sortie du mode edition ==");

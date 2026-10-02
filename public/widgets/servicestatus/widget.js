@@ -118,18 +118,72 @@
     try { list = typeof value === "string" ? JSON.parse(value || "[]") : (Array.isArray(value) ? value : []); }
     catch (e) { return []; }
     if (!Array.isArray(list)) return [];
-    return list.filter((p) => p && p.url).map((p) => ({
-      label: p.name || "",
-      url: String(p.url),
-      adapter: p.adapter || "auto",
-      api: p.api || null,
+    return list.filter((p) => p && (p.url || p.id)).map((p) => {
+      /* LE DEFAUT QUI FAISAIT CROIRE QUE RIEN N'AVAIT CHANGE. La liste
+         cochee recopiait l'adresse ET l'adaptateur du catalogue au
+         moment du clic. Un service coche avec l'ancien catalogue gardait
+         donc ses anciennes valeurs pour toujours : corriger le catalogue
+         (SFR passe en « endpoint », OVHcloud eclate par produit, Fastly
+         et Vultr dotes de leur format) ne changeait RIEN sur un tableau
+         deja regle -- il fallait decocher puis recocher chaque service,
+         ce que personne ne peut deviner.
+
+         On ne garde donc du reglage que l'IDENTIFIANT, et l'adresse
+         comme l'adaptateur sont relus dans le catalogue a chaque
+         demarrage. Une correction de catalogue profite ainsi aux
+         tableaux existants, ce qui est le seul comportement defendable :
+         le catalogue est la verite, le reglage ne dit que « celui-la ».
+         Les valeurs enregistrees restent le repli, pour les services
+         ajoutes a la main (qui n'ont pas d'entree au catalogue) et pour
+         le cas ou le catalogue ne se chargerait pas.
+
+         THE DEFECT THAT MADE IT LOOK AS IF NOTHING HAD CHANGED: the
+         ticked list copied the catalogue's address AND adapter at
+         ticking time, so a service ticked under the old catalogue kept
+         its old values forever and catalogue fixes reached no existing
+         board. Only the ID is kept from the setting now; address and
+         adapter are re-read from the catalogue at every start. The
+         stored values remain the fallback, for hand-added services and
+         for a catalogue that fails to load. */
+      const src = (!p.custom && p.id && CATALOG.byId[p.id]) ? CATALOG.byId[p.id] : null;
+      return {
+      label: p.name || (src && src.name) || "",
+      url: String((src && src.url) || p.url),
+      adapter: (src && src.adapter) || p.adapter || "auto",
+      api: (src && src.api) || p.api || null,
       /* `alert` absent veut dire « coche avant que la cloche existe » :
          on alerte, comme la version precedente le faisait pour tous.
          A missing `alert` means "ticked before the bell existed": we
          alert, as the previous version did for every service. */
       alert: p.alert !== false,
       manual: false
-    }));
+      };
+    });
+  }
+
+  /* Le catalogue, charge une fois et partage par toutes les tuiles de la
+     page. Tant qu'il n'est pas la, `byId` est vide et parsePicked()
+     retombe sur les valeurs enregistrees : la tuile affiche donc
+     quelque chose des le premier relevé, au lieu d'attendre un fichier
+     pour ne rien montrer.
+     The catalogue, loaded once and shared by every tile on the page.
+     Until it arrives, byId is empty and parsePicked falls back to the
+     stored values, so the tile shows something on the first reading
+     instead of waiting on a file to show nothing. */
+  const CATALOG = { byId: {}, loaded: false };
+  let catalogPromise = null;
+
+  function loadCatalog() {
+    if (catalogPromise) return catalogPromise;
+    catalogPromise = fetch("data/service-catalog.json")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((json) => {
+        const list = json && Array.isArray(json.services) ? json.services : [];
+        for (const svc of list) if (svc && svc.id) CATALOG.byId[svc.id] = svc;
+        CATALOG.loaded = true;
+      })
+      .catch(() => { CATALOG.loaded = true; });   // repli : valeurs enregistrees
+    return catalogPromise;
   }
 
   /* Les deux sources sont fusionnees ICI, en un seul endroit, et les
@@ -235,6 +289,15 @@
     }
 
     async refresh() {
+      /* On attend le catalogue AVANT de construire les cibles : sans
+         cela le premier relevé partirait avec les adresses enregistrees,
+         donc avec les anciennes, et l'ecran montrerait l'erreur que l'on
+         vient justement de corriger -- le temps d'un relevé, ce qui
+         suffit a faire croire que la correction n'a pas pris.
+         The catalogue is awaited BEFORE building the targets: otherwise
+         the first reading would go out with the stored (old) addresses
+         and the screen would show the very error just fixed. */
+      await loadCatalog();
       const targets = mergeTargets(this.ctx.settings);
       if (!targets.length) {
         this.services = [];

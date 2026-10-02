@@ -249,8 +249,60 @@ function redirectedAway(res, requested) {
   return got.origin;
 }
 
+/* LE DEFAUT AWS, et il ne se voyait pas a la relecture. AWS sert
+   `/public/currentevents` en **UTF-16** (`content-type:
+   application/json;charset=utf-16`), ce que plus personne ne fait depuis
+   quinze ans. Or `res.json()` de Node decode TOUJOURS en UTF-8, sans
+   regarder le charset annonce : le corps ressortait en caracteres
+   parasites, `JSON.parse` levait une SyntaxError, et comme ce n'etait
+   pas une erreur HTTP la tuile concluait « page de statut injoignable ».
+   AWS repondait pourtant en 44 ms avec 226 Ko de JSON parfaitement
+   valide. On decode donc nous-memes, selon le charset annonce.
+
+   THE AWS DEFECT, invisible on re-reading: AWS serves
+   /public/currentevents in UTF-16, and Node's res.json() always decodes
+   as UTF-8 regardless of the declared charset. The body came out as
+   garbage, JSON.parse threw a SyntaxError, and since that is not an HTTP
+   error the tile concluded "status page unreachable" -- while AWS was
+   answering in 44 ms with 226 KB of perfectly valid JSON. */
+const CHARSET_RE = /charset\s*=\s*["']?([\w-]+)/i;
+
+function decodeText(buffer, contentType) {
+  const m = CHARSET_RE.exec(String(contentType || ""));
+  let label = m ? m[1].toLowerCase() : "utf-8";
+  /* « utf-16 » tout court designe, en pratique, du petit-boutien precede
+     d'une marque d'ordre -- et TextDecoder refuse l'etiquette nue.
+     Bare "utf-16" means little-endian with a BOM in practice, and
+     TextDecoder rejects the bare label. */
+  if (label === "utf-16" || label === "utf16") label = "utf-16le";
+  let out;
+  try {
+    out = new TextDecoder(label).decode(buffer);
+  } catch (e) {
+    /* Un charset exotique ou mal orthographie ne doit pas faire perdre
+       la reponse : on retombe sur UTF-8, qui est juste dans l'immense
+       majorite des cas. An exotic or misspelt charset must not lose the
+       answer: we fall back to UTF-8. */
+    out = new TextDecoder("utf-8").decode(buffer);
+  }
+  return out.replace(/^\uFEFF/, "");
+}
+
+/* Une reponse illisible n'est PAS une panne de reseau. Distinguer les
+   deux est tout l'objet des trois messages : du JSON casse envoie
+   verifier l'adresse, pas la box.
+   An unreadable answer is NOT a network failure; telling the two apart
+   is the whole point of the three messages. */
+class BadFormatError extends Error {}
+
 async function readBody(res, kind) {
-  return kind === "text" ? res.text() : res.json();
+  const text = decodeText(await res.arrayBuffer(), res.headers.get("content-type"));
+  if (kind === "text") return text;
+  try {
+    return JSON.parse(text);
+  } catch (e) {
+    throw new BadFormatError("reponse illisible / unreadable answer");
+  }
 }
 
 /* Recupere le corps en suivant, si besoin, la redirection de domaine
@@ -345,6 +397,7 @@ async function readAuto(spec) {
          serveur parle, c'est seulement ce chemin-la qui n'est pas le
          bon. Un 404 pendant un sondage n'est donc pas un echec de
          joignabilite. A page answering 404 HAS been reached. */
+      if (e instanceof BadFormatError) reached = true;
       if (e instanceof HttpError && e.httpStatus >= 400 && e.httpStatus < 500) reached = true;
       lastError = e;
     }
@@ -399,7 +452,7 @@ async function getStatusFor(spec, opts) {
            n'appellent pas la meme verification.
            Three causes, three messages; the HTTP code is kept as is,
            because 403 and 404 do not call for the same check. */
-        error: e instanceof HttpError ? "http" : "unreachable",
+        error: e instanceof HttpError ? "http" : (e instanceof BadFormatError ? "bad-format" : "unreachable"),
         httpStatus: e instanceof HttpError ? e.httpStatus : null,
         detail: String((e && e.message) || e).slice(0, 200),
         fetchedAt: new Date().toISOString()
@@ -469,6 +522,7 @@ async function detect(rawUrl) {
 }
 
 module.exports = {
+  decodeText,
   getStatus,
   getStatusFor,
   detect,

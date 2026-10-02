@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.130.0
+
+- **Corriger le catalogue ne changeait RIEN sur un tableau deja regle**,
+  et c'est le defaut qui masquait tous les autres. La liste cochee
+  recopiait l'adresse ET l'adaptateur du catalogue au moment du clic :
+  un service coche avec l'ancien catalogue gardait ses anciennes valeurs
+  pour toujours. Les corrections de la 1.129.0 (SFR en « endpoint »,
+  OVHcloud eclate par produit, Fastly et Vultr dotes de leur format)
+  n'atteignaient donc aucun tableau existant -- il aurait fallu decocher
+  puis recocher chaque service, ce que personne ne peut deviner. Le
+  reglage ne conserve plus que l'IDENTIFIANT ; adresse et adaptateur sont
+  relus dans le catalogue a chaque demarrage. Le catalogue est la verite,
+  le reglage ne dit que « celui-la ». Test fonctionnel : on verifie la
+  requete reellement envoyee au serveur.
+
+- **AWS : « injoignable » pour une histoire d'en-tete.** AWS sert
+  `/public/currentevents` en **UTF-16**
+  (`content-type: application/json;charset=utf-16`), ce que plus personne
+  ne fait depuis quinze ans. Or `res.json()` de Node decode TOUJOURS en
+  UTF-8 sans regarder le charset annonce : le corps ressortait en
+  caracteres parasites, `JSON.parse` levait une SyntaxError, et comme ce
+  n'est pas une erreur HTTP la tuile concluait « page de statut
+  injoignable ». AWS repondait pourtant en 44 ms avec 226 Ko de JSON
+  parfaitement valide. Le corps est desormais decode selon le charset
+  annonce, avec repli sur UTF-8 et retrait de la marque d'ordre des
+  octets.
+
+- **Une reponse illisible n'est plus prise pour une panne de reseau.**
+  Un JSON casse rend maintenant « page lue, mais format inconnu » et non
+  « injoignable » : la premiere reponse envoie verifier l'adresse, la
+  seconde envoie verifier la box. C'etait deja le principe des trois
+  messages de la 1.129.0 ; l'erreur d'analyse y echappait encore.
+
 ## 1.129.0
 
 - **Neuf services du catalogue affichaient « page de statut
