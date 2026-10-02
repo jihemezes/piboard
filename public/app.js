@@ -2966,6 +2966,64 @@
           ${hint}
         </div>`;
       }
+      /* Type "multipick" : choix MULTIPLE dans un catalogue range par
+         familles, avec recherche, plus la possibilite d'ajouter une
+         entree absente du catalogue.
+
+         POURQUOI IL A FALLU UN NOUVEAU TYPE. La tuile Statut de service
+         se reglait par un textarea « Nom = adresse », une ligne par
+         service. C'est parfait pour trois services qu'on connait par
+         coeur, et intenable des qu'on en propose soixante : il faut
+         alors connaitre l'adresse exacte de la page de statut de chaque
+         fournisseur, la taper sans faute, et savoir laquelle existe. Un
+         catalogue coche repond aux trois a la fois.
+
+         MEME ASTUCE QUE LE TYPE "rows", ET POUR LA MEME RAISON : la
+         liste choisie est ecrite en JSON dans un
+         <input type="hidden" data-key="...">. collectTileFormValues(),
+         qui parcourt simplement [data-key], continue donc de
+         fonctionner sans UNE SEULE modification, et le type reste
+         reutilisable par d'autres tuiles (IPTV, RSS, Programme TV ont
+         le meme probleme).
+
+         Type "multipick": MULTIPLE choice from a catalogue arranged by
+         families, with search, plus the option of adding an entry the
+         catalogue does not hold. WHY A NEW TYPE WAS NEEDED: a textarea
+         is perfect for three services known by heart and untenable once
+         sixty are offered -- one must then know each provider's exact
+         status-page address, type it without error, and know which
+         exists. A ticked catalogue answers all three at once. SAME TRICK
+         AS "rows", for the same reason: the chosen list is written as
+         JSON into a hidden input, so collectTileFormValues() keeps
+         working unchanged and the type stays reusable. */
+      case "multipick": {
+        let initial = [];
+        try { initial = typeof v === "string" ? JSON.parse(v || "[]") : (Array.isArray(v) ? v : []); }
+        catch (e) { initial = []; }
+        let def = [];
+        try { def = typeof f.default === "string" ? JSON.parse(f.default || "[]") : (Array.isArray(f.default) ? f.default : []); }
+        catch (e) { def = []; }
+        multipickData.set(f.key, { initial, def, max: Number(f.max) || 25, alerts: !!f.alerts });
+        return `<div class="field field-wide field-multipick" data-multipick-field="${f.key}" data-multipick-src="${escapeHtmlAttr(f.source || "")}">
+          <span>${label}</span>
+          <div class="mp-bar">
+            <input type="search" class="mp-search" placeholder="${escapeHtmlAttr(i18n.t("mp.searchPlaceholder"))}" autocomplete="off" spellcheck="false">
+            <span class="mp-count"></span>
+          </div>
+          <div class="mp-fams"></div>
+          <div class="mp-add">
+            <button type="button" class="btn small mp-add-toggle">+ ${escapeHtmlAttr(i18n.t("mp.addOther"))}</button>
+            <div class="mp-add-form" hidden>
+              <input type="text" class="mp-add-name" placeholder="${escapeHtmlAttr(i18n.t("mp.addName"))}" autocomplete="off">
+              <input type="text" class="mp-add-url" placeholder="${escapeHtmlAttr(i18n.t("mp.addUrl"))}" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn small mp-add-test">${escapeHtmlAttr(i18n.t("mp.addTest"))}</button>
+              <div class="mp-add-msg" hidden></div>
+            </div>
+          </div>
+          <input type="hidden" data-key="${f.key}">
+          ${hint}
+        </div>`;
+      }
       case "checkbox":
         return `<label class="field checkbox"><input type="checkbox" data-key="${f.key}" ${v ? "checked" : ""}><span>${label}</span></label>${hint}`;
       case "number":
@@ -3278,6 +3336,12 @@
     // from the server.
     form.querySelectorAll("[data-rows-field]").forEach((el) => initRowsEditor(el));
 
+    // Selecteurs multiples (type "multipick") : catalogue range par
+    // familles, charge depuis un fichier statique.
+    // Multiple pickers (type "multipick"): catalogue arranged by
+    // families, loaded from a static file.
+    form.querySelectorAll("[data-multipick-field]").forEach((el) => initMultipick(el));
+
     // Etat de chaque secret ("enregistre" / "non defini") : demande au
     // serveur, jamais devine depuis les reglages -- ils ne le contiennent
     // pas. Each secret's state ("stored" / "not set"): asked of the
@@ -3305,6 +3369,272 @@
      "rows" field values awaiting initialisation, handed from
      fieldMarkup() to initRowsEditor() without going through the DOM. */
   const rowsFieldData = new Map();
+
+  /* Valeurs et options des champs "multipick", transmises de
+     fieldMarkup() a initMultipick() sans passer par le DOM -- meme
+     principe que pour les champs "rows" juste au-dessus.
+     "multipick" field values and options, handed from fieldMarkup() to
+     initMultipick() without going through the DOM. */
+  const multipickData = new Map();
+
+  /* Catalogues deja charges, par adresse. Le catalogue des services est
+     un fichier statique de quelques dizaines de kilo-octets : le relire
+     a chaque ouverture des reglages n'apporterait rien.
+     Catalogues already loaded, by address. */
+  const multipickCatalogs = new Map();
+
+  async function loadMultipickCatalog(src) {
+    if (!src) return { families: [], services: [] };
+    if (multipickCatalogs.has(src)) return multipickCatalogs.get(src);
+    try {
+      const r = await fetch(src);
+      const data = await r.json();
+      const out = {
+        families: Array.isArray(data.families) ? data.families : [],
+        services: Array.isArray(data.services) ? data.services : []
+      };
+      multipickCatalogs.set(src, out);
+      return out;
+    } catch (e) {
+      console.warn("[piboard] catalogue multipick indisponible", e);
+      return { families: [], services: [] };
+    }
+  }
+
+  /* ---------- Selecteur multiple a cases a cocher / checkbox picker ----------
+     TROIS DECISIONS D'INTERFACE, chacune contre une version plus simple
+     qui a ete essayee puis ecartee :
+
+     1. LES FAMILLES SONT PLIEES PAR DEFAUT, sauf celles qui contiennent
+        deja un service coche. Tout deplier donnait une liste de soixante
+        lignes dans laquelle il fallait faire defiler pour retrouver ses
+        propres choix -- exactement ce que le selecteur devait supprimer.
+
+     2. LA RECHERCHE DEPLIE TOUT, le temps de la recherche. Filtrer sans
+        deplier laissait des familles fermees affichant « 2 resultats »
+        qu'il fallait encore ouvrir : deux gestes pour une frappe.
+
+     3. LA CLOCHE N'EXISTE QUE SUR LES SERVICES COCHES. Surveiller vingt
+        services et vouloir etre reveille pour les vingt n'arrive jamais ;
+        sans ce reglage par service, l'option d'alerte devenait
+        inutilisable des qu'on cochait beaucoup, et la personne la coupait
+        entierement -- donc ne serait plus alertee pour les deux services
+        qui comptent vraiment.
+
+     THREE UI DECISIONS, each against a simpler version that was tried
+     and dropped: families are COLLAPSED by default except those already
+     holding a ticked service (expanding all gave a sixty-line list in
+     which one had to scroll to find one's own choices); SEARCH EXPANDS
+     everything for its duration (filtering without expanding left closed
+     families announcing "2 results" that still had to be opened: two
+     gestures per keystroke); and the BELL exists only on ticked services
+     (wanting to be woken for all twenty never happens, and without a
+     per-service setting the alert option became unusable as soon as many
+     were ticked, so people switched it off entirely -- and were then not
+     alerted for the two services that did matter). */
+  async function initMultipick(el) {
+    const hidden = el.querySelector("input[type=hidden]");
+    const famsBox = el.querySelector(".mp-fams");
+    const countBox = el.querySelector(".mp-count");
+    const search = el.querySelector(".mp-search");
+
+    const opts = multipickData.get(el.dataset.multipickField) || { initial: [], def: [], max: 25, alerts: false };
+    let picked = Array.isArray(opts.initial) ? opts.initial.map((x) => Object.assign({}, x)) : [];
+    const max = opts.max;
+
+    /* Le champ cache est renseigne IMMEDIATEMENT, avant d'attendre le
+       catalogue : enregistrer pendant ce chargement (ou alors qu'il a
+       echoue) enverrait sinon une chaine vide, donc effacerait la liste
+       des services surveilles. Meme piege que pour les champs "rows",
+       meme parade.
+       The hidden field is filled IMMEDIATELY, before awaiting the
+       catalogue: saving during that load (or after it failed) would
+       otherwise send an empty string and so wipe the watched services.
+       Same trap as the "rows" fields, same guard. */
+    hidden.value = JSON.stringify(picked);
+
+    const cat = await loadMultipickCatalog(el.dataset.multipickSrc);
+    const byId = new Map(cat.services.map((s) => [s.id, s]));
+
+    function famLabel(fam) {
+      return (fam.icon ? fam.icon + " " : "") + i18n.fromManifest(fam.label);
+    }
+
+    function isPicked(id) { return picked.some((p) => p.id === id); }
+    function pickedOf(id) { return picked.find((p) => p.id === id) || null; }
+
+    function sync() {
+      hidden.value = JSON.stringify(picked);
+      countBox.textContent = i18n.t("mp.count").replace("{n}", picked.length).replace("{max}", max);
+      countBox.classList.toggle("mp-count-full", picked.length >= max);
+    }
+
+    /* Les services ajoutes a la main ne sont PAS perdus dans la famille
+       « Mes services » du catalogue : ils y sont rajoutes a la volee,
+       sinon un service coche hier mais absent du catalogue
+       disparaitrait de l'ecran tout en restant surveille -- un reglage
+       invisible qu'on ne peut plus decocher.
+       Hand-added services are injected into the "My services" family, or
+       a service ticked yesterday but absent from the catalogue would
+       vanish from the screen while still being watched: an invisible
+       setting that can no longer be unticked. */
+    function allItems() {
+      const extra = picked.filter((p) => !byId.has(p.id))
+        .map((p) => ({ id: p.id, name: p.name, url: p.url, adapter: p.adapter || "auto", api: p.api || null, family: "custom", custom: true }));
+      return cat.services.concat(extra);
+    }
+
+    function render() {
+      const q = (search.value || "").trim().toLowerCase();
+      const items = allItems();
+      const families = cat.families.length
+        ? cat.families.slice()
+        : [{ id: "custom", icon: "➕", label: { fr: "Mes services", en: "My services" } }];
+      /* Une famille citee par un service mais absente de la liste des
+         familles ne doit pas faire disparaitre ce service. */
+      for (const it of items) {
+        if (!families.some((f) => f.id === it.family)) families.push({ id: it.family, label: { fr: it.family, en: it.family } });
+      }
+
+      famsBox.innerHTML = families.map((fam) => {
+        const list = items.filter((it) => it.family === fam.id).filter((it) => {
+          if (!q) return true;
+          return (it.name + " " + (it.url || "") + " " + i18n.fromManifest(fam.label)).toLowerCase().indexOf(q) !== -1;
+        });
+        if (!list.length) return "";
+        const chosen = list.filter((it) => isPicked(it.id)).length;
+        const open = !!q || chosen > 0;
+        const rows = list.map((it) => {
+          const on = isPicked(it.id);
+          const p = pickedOf(it.id);
+          const full = !on && picked.length >= max;
+          const bell = (opts.alerts && on)
+            ? `<button type="button" class="mp-bell ${p && p.alert ? "mp-bell-on" : ""}" data-bell="${escapeHtmlAttr(it.id)}" title="${escapeHtmlAttr(i18n.t(p && p.alert ? "mp.bellOn" : "mp.bellOff"))}">${p && p.alert ? "🔔" : "🔕"}</button>`
+            : "";
+          return `<label class="mp-item ${full ? "mp-item-full" : ""}">
+            <input type="checkbox" data-pick="${escapeHtmlAttr(it.id)}" ${on ? "checked" : ""} ${full ? "disabled" : ""}>
+            <span class="mp-item-name">${escapeHtml(it.name)}</span>
+            <span class="mp-item-host">${escapeHtml(hostOf(it.url))}</span>
+            ${bell}
+          </label>`;
+        }).join("");
+        return `<details class="mp-fam" ${open ? "open" : ""}>
+          <summary>${escapeHtml(famLabel(fam))}<span class="mp-fam-n">${chosen ? chosen + "/" + list.length : list.length}</span></summary>
+          <div class="mp-fam-body">${rows}</div>
+        </details>`;
+      }).join("") || `<div class="field-hint">${escapeHtml(i18n.t("mp.noCatalog"))}</div>`;
+
+      sync();
+    }
+
+    function hostOf(url) {
+      try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; }
+    }
+
+    famsBox.addEventListener("change", (e) => {
+      const box = e.target.closest("[data-pick]");
+      if (!box) return;
+      const id = box.dataset.pick;
+      if (box.checked) {
+        if (picked.length >= max) { box.checked = false; return; }
+        const src = byId.get(id);
+        if (src) {
+          picked.push({ id: src.id, name: src.name, url: src.url, adapter: src.adapter || "auto", api: src.api || null, family: src.family, alert: true });
+        }
+      } else {
+        picked = picked.filter((p) => p.id !== id);
+      }
+      render();
+    });
+
+    famsBox.addEventListener("click", (e) => {
+      const bell = e.target.closest("[data-bell]");
+      if (!bell) return;
+      /* Le bouton vit DANS un <label> : sans ces deux lignes, le clic
+         serait aussi recu par la case a cocher du label et decocherait
+         le service qu'on voulait simplement rendre silencieux.
+         The button lives INSIDE a <label>: without these two lines the
+         click would also reach the label's checkbox and untick the very
+         service one merely wanted to silence. */
+      e.preventDefault();
+      e.stopPropagation();
+      const p = pickedOf(bell.dataset.bell);
+      if (p) p.alert = !p.alert;
+      render();
+    });
+
+    search.addEventListener("input", render);
+
+    /* ---------- Ajout d'un service hors catalogue ----------
+       On SONDE l'adresse avant d'accepter. Enregistrer d'abord et
+       decouvrir plus tard que le format n'est pas lisible donnerait une
+       ligne grise sans explication sur la tuile ; ici la reponse arrive
+       pendant qu'on est encore devant le champ, et elle nomme le format
+       trouve -- ce qui dit aussi que l'adresse est la bonne.
+       The address is PROBED before being accepted: saving first and
+       finding out later would give an unexplained grey line on the tile,
+       whereas here the answer arrives while one is still looking at the
+       field, and it names the format found -- which also says the
+       address is right. */
+    const addToggle = el.querySelector(".mp-add-toggle");
+    const addForm = el.querySelector(".mp-add-form");
+    const addName = el.querySelector(".mp-add-name");
+    const addUrl = el.querySelector(".mp-add-url");
+    const addTest = el.querySelector(".mp-add-test");
+    const addMsg = el.querySelector(".mp-add-msg");
+
+    addToggle.addEventListener("click", () => {
+      addForm.hidden = !addForm.hidden;
+      if (!addForm.hidden) addUrl.focus();
+    });
+
+    addTest.addEventListener("click", async () => {
+      const url = (addUrl.value || "").trim();
+      if (!url) return;
+      if (picked.length >= max) {
+        addMsg.hidden = false;
+        addMsg.className = "mp-add-msg mp-add-err";
+        addMsg.textContent = i18n.t("mp.full").replace("{max}", max);
+        return;
+      }
+      addMsg.hidden = false;
+      addMsg.className = "mp-add-msg";
+      addMsg.textContent = i18n.t("mp.testing");
+      addTest.disabled = true;
+      try {
+        const r = await fetch("api/service-status/detect?url=" + encodeURIComponent(url));
+        const d = await r.json();
+        if (!d || !d.ok) {
+          addMsg.className = "mp-add-msg mp-add-err";
+          addMsg.textContent = i18n.t(d && d.error === "bad-url" ? "mp.badUrl" : "mp.notDetected");
+          return;
+        }
+        const name = (addName.value || "").trim() || d.name || hostOf(d.url);
+        picked.push({
+          id: "custom:" + d.url,
+          name,
+          url: d.url,
+          adapter: d.adapter,
+          api: null,
+          family: "custom",
+          alert: true
+        });
+        addName.value = "";
+        addUrl.value = "";
+        addMsg.className = "mp-add-msg mp-add-ok";
+        addMsg.textContent = i18n.t("mp.detected").replace("{format}", d.adapter)
+          + (d.approximate ? " · " + i18n.t("mp.approximate") : "");
+        render();
+      } catch (e) {
+        addMsg.className = "mp-add-msg mp-add-err";
+        addMsg.textContent = i18n.t("mp.notDetected");
+      } finally {
+        addTest.disabled = false;
+      }
+    });
+
+    render();
+  }
 
   /* La source d'un champ "rows" peut etre DYNAMIQUE. Deux substitutions :
        {tileId}      -> identifiant de la tuile en cours d'edition

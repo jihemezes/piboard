@@ -2469,22 +2469,78 @@ app.get("/api/tempo", async (req, res) => {
    out in parallel, and one unreachable service never fails the whole
    response -- it returns its error in its own entry. */
 const serviceStatus = require("./serviceStatus");
-const SERVICE_STATUS_MAX = 10;
+/* Plafond porte de 10 a 25 avec le selecteur a cases a cocher (1.128.0) :
+   cocher des services est devenu si rapide qu'un plafond de 10 se heurte
+   des la premiere utilisation. Le plafond n'a jamais protege le reseau --
+   c'est MIN_FETCH_MS et le cache partage qui le font -- il protege la
+   LISIBILITE de la tuile, d'ou le mode compact livre en meme temps.
+   Raised from 10 to 25 alongside the checkbox picker (1.128.0): ticking
+   services became so quick that a ceiling of 10 is hit on first use. The
+   ceiling never protected the network -- MIN_FETCH_MS and the shared
+   cache do -- it protects the tile's LEGIBILITY, hence the compact mode
+   shipped with it. */
+const SERVICE_STATUS_MAX = 25;
+
+/* Deux grammaires acceptees, et c'est voulu :
+     url=https://...                   -> format devine (sondage)
+     s=<adaptateur>~<page>~<api>       -> format impose par le catalogue
+   La premiere est celle de la version precedente et des reglages
+   avances ; la seconde evite de sonder quatre formats pour un service
+   dont le catalogue sait deja lequel employer -- soit trois requetes
+   inutiles par service et par relevé.
+   Two accepted grammars, deliberately: the first is the previous
+   version's and the advanced setting's; the second avoids probing four
+   formats for a service whose format the catalogue already knows --
+   three needless requests per service per reading. */
+function parseServiceSpecs(query) {
+  const specs = [];
+  const sRaw = query.s;
+  for (const entry of (Array.isArray(sRaw) ? sRaw : [sRaw])) {
+    if (typeof entry !== "string" || !entry.trim()) continue;
+    const [adapter, url, api] = entry.split("~");
+    if (!url) continue;
+    specs.push({ adapter: adapter || "auto", url, api: api || null });
+  }
+  const uRaw = query.url;
+  for (const u of (Array.isArray(uRaw) ? uRaw : [uRaw])) {
+    if (typeof u !== "string" || !u.trim()) continue;
+    specs.push({ adapter: "auto", url: u, api: null });
+  }
+  return specs.slice(0, SERVICE_STATUS_MAX);
+}
 
 app.get("/api/service-status", async (req, res) => {
   try {
     res.set("Cache-Control", "no-store");
-    const raw = req.query.url;
-    const urls = (Array.isArray(raw) ? raw : [raw])
-      .filter((u) => typeof u === "string" && u.trim())
-      .slice(0, SERVICE_STATUS_MAX);
-    if (!urls.length) return res.status(400).json({ error: "no url" });
+    const specs = parseServiceSpecs(req.query);
+    if (!specs.length) return res.status(400).json({ error: "no url" });
     const force = req.query.force === "1";
-    const services = await Promise.all(urls.map((u) => serviceStatus.getStatus(u, { force })));
+    const services = await Promise.all(specs.map((s) => serviceStatus.getStatusFor(s, { force })));
     res.json({ services });
   } catch (e) {
     console.warn("[piboard] statut de service echec ->", e.message || e);
     res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+/* Detection du format a l'AJOUT d'un service, appelee depuis la fenetre
+   de reglages. Elle repond « reconnu / non reconnu » pendant que la
+   personne est devant le formulaire, et non trois heures plus tard
+   devant une tuile grise dont elle ne saura pas si c'est l'adresse, le
+   reseau ou le service qui est en cause.
+   Format detection when ADDING a service, called from the settings
+   window: it answers "recognised / not recognised" while the person is
+   still looking at the form, rather than three hours later in front of a
+   grey tile. */
+app.get("/api/service-status/detect", async (req, res) => {
+  try {
+    res.set("Cache-Control", "no-store");
+    const url = typeof req.query.url === "string" ? req.query.url : "";
+    if (!url.trim()) return res.status(400).json({ ok: false, error: "no url" });
+    res.json(await serviceStatus.detect(url));
+  } catch (e) {
+    console.warn("[piboard] detection de page de statut echec ->", e.message || e);
+    res.json({ ok: false, error: "unreachable" });
   }
 });
 

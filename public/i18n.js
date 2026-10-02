@@ -39,6 +39,25 @@
       "rows.custom": "Other…",
       "rows.choose": "— choose —",
       "rows.duplicate": "That entry is already in the list; the row has been left empty.",
+
+      /* Selecteur multiple a cases a cocher / multiple checkbox picker
+         (type de reglage "multipick", introduit par la tuile Statut de
+         service en 1.128.0 et reutilisable par d'autres). */
+      "mp.searchPlaceholder": "Search a service…",
+      "mp.count": "{n} / {max} watched",
+      "mp.addOther": "Add another service",
+      "mp.addName": "Name (optional)",
+      "mp.addUrl": "Status page address",
+      "mp.addTest": "Test and add",
+      "mp.testing": "Reading the page…",
+      "mp.detected": "Recognised: {format} format. Added.",
+      "mp.approximate": "state inferred from the feed, not declared",
+      "mp.notDetected": "No known status-page format at this address. Statuspage, Instatus, Google and RSS were all tried.",
+      "mp.badUrl": "Address refused: a public HTTPS status page is expected.",
+      "mp.full": "Ceiling of {max} services reached — untick one first.",
+      "mp.noCatalog": "The service catalogue could not be loaded. The field below takes addresses by hand in the meantime.",
+      "mp.bellOn": "This service may raise the alert — click to silence it",
+      "mp.bellOff": "This service is watched but stays silent — click to let it alert",
       "stocks.closed": "closed",
       "stocks.closedTitle": "Market closed — this price will not move until it reopens.",
       "stocks.noLines": "No line configured yet.",
@@ -167,6 +186,8 @@
       "svcstatus.err.badUrl": "Address refused: a public HTTPS status page is expected.",
       "svcstatus.err.unreachable": "Status page unreachable — which says nothing about the service itself.",
       "svcstatus.err.badResponse": "Unexpected answer: this address does not look like a status page.",
+      "svcstatus.allGood": "{n} services, all operational",
+      "svcstatus.approximate": "State inferred from the provider's RSS feed (no recent post), not declared by the provider itself.",
 
 
       /* Diagnostic des fuseaux horaires / time zone diagnostic (tzfix.js) */
@@ -1234,6 +1255,23 @@
       "rows.custom": "Autre…",
       "rows.choose": "— choisir —",
       "rows.duplicate": "Cette entrée est déjà dans la liste ; la ligne a été laissée vide.",
+
+      /* Selecteur multiple a cases a cocher / multiple checkbox picker */
+      "mp.searchPlaceholder": "Rechercher un service…",
+      "mp.count": "{n} / {max} surveillés",
+      "mp.addOther": "Ajouter un autre service",
+      "mp.addName": "Nom (facultatif)",
+      "mp.addUrl": "Adresse de la page de statut",
+      "mp.addTest": "Tester et ajouter",
+      "mp.testing": "Lecture de la page…",
+      "mp.detected": "Reconnu : format {format}. Ajouté.",
+      "mp.approximate": "état déduit du flux, non déclaré",
+      "mp.notDetected": "Aucun format de page de statut connu à cette adresse. Statuspage, Instatus, Google et RSS ont tous été essayés.",
+      "mp.badUrl": "Adresse refusée : une page de statut publique en HTTPS est attendue.",
+      "mp.full": "Plafond de {max} services atteint — décochez-en un d'abord.",
+      "mp.noCatalog": "Le catalogue des services n'a pas pu être chargé. Le champ ci-dessous accepte des adresses à la main en attendant.",
+      "mp.bellOn": "Ce service peut déclencher l'alerte — cliquez pour le rendre silencieux",
+      "mp.bellOff": "Ce service est surveillé mais reste silencieux — cliquez pour l'autoriser à alerter",
       "stocks.closed": "clôture",
       "stocks.closedTitle": "Marché fermé — ce cours ne bougera pas avant la réouverture.",
       "stocks.noLines": "Aucune ligne configurée.",
@@ -1362,6 +1400,8 @@
       "svcstatus.err.badUrl": "Adresse refusée : une page de statut publique en HTTPS est attendue.",
       "svcstatus.err.unreachable": "Page de statut injoignable — ce qui ne dit rien de l'état du service lui-même.",
       "svcstatus.err.badResponse": "Réponse inattendue : cette adresse ne ressemble pas à une page de statut.",
+      "svcstatus.allGood": "{n} services, tout opérationnel",
+      "svcstatus.approximate": "État déduit du flux RSS du fournisseur (aucun billet récent), et non déclaré par le fournisseur lui-même.",
 
 
       /* Diagnostic des fuseaux horaires / time zone diagnostic (tzfix.js) */

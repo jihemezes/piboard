@@ -518,7 +518,24 @@ const layout = {
     { id: "t-v", widget: "countdown", x: 0, y: 23, w: 3, h: 2, settings: {
       mode: "date", targetDateTime: "2020-01-01T00:00", flashScreen: true, playSound: false, alertDurationSeconds: 30
     } },
-    { id: "t-w", widget: "crypto", x: 3, y: 23, w: 3, h: 2, settings: { coins: "bitcoin", currency: "eur", refresh: 5 } }
+    { id: "t-w", widget: "crypto", x: 3, y: 23, w: 3, h: 2, settings: { coins: "bitcoin", currency: "eur", refresh: 5 } },
+    /* Statut de service : trois services COCHES dans le selecteur
+       (1.128.0), dont un en panne et un lu par deduction (flux RSS).
+       Les trois cas qui comptent sont ainsi presents des le premier
+       rendu, sans avoir a manipuler le formulaire.
+       Service status: three services TICKED in the picker, one of them
+       down and one read by inference (RSS feed), so the three cases
+       that matter are present from the first render. */
+    { id: "t-x", widget: "servicestatus", x: 6, y: 23, w: 4, h: 4, settings: {
+      picked: JSON.stringify([
+        { id: "github", name: "GitHub", url: "https://www.githubstatus.com", adapter: "statuspage", family: "devops", alert: true },
+        { id: "aws", name: "AWS", url: "https://health.aws.amazon.com/health/status", adapter: "aws", api: "https://health.aws.amazon.com/public/currentevents", family: "cloud", alert: false },
+        { id: "azure", name: "Azure", url: "https://status.azure.com", adapter: "rss", api: "https://azurestatuscdn.azureedge.net/en-us/status/feed/", family: "cloud", alert: true }
+      ]),
+      display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1,
+      showMaintenances: true, notifyOnIncident: true, alertMinSeverity: "minor",
+      notifyFlash: true, notifySound: false, notifyDurationSeconds: 5
+    } }
   ]
 };
 
@@ -605,6 +622,15 @@ const UPDATE_STATE = {
   job: { phase: "idle", version: null, startedAt: null, finishedAt: null, progress: null, error: null, rolledBack: false, log: [] }
 };
 const UPDATE_CALLS = { check: 0, apply: 0, checkDesktop: 0 };
+const SVC_STATUS_QUERIES = [];
+/* Un incident AWS dont l'identifiant et l'impact sont pilotes par le
+   test : c'est ce qui permet de faire APPARAITRE un nouvel incident
+   entre deux relevés, seul cas ou la tuile doit alerter.
+   An AWS incident whose id and impact the test drives, which is what
+   lets a NEW incident APPEAR between two readings -- the only case in
+   which the tile must alert. */
+const SVC_INCIDENT = { seq: 1, impact: "major" };
+const SVC_DETECT_CALLS = [];
 let UPDATE_VERSION_SERVED = "9.9.9-test";
 
 const dom = new JSDOM(html, {
@@ -674,6 +700,71 @@ const dom = new JSDOM(html, {
          Image library: two items, one whose name holds markup -- it is
          precisely rendering an item that crashed in 1.110.1 (missing
          escapeHtml). */
+      /* Statut de service (1.128.0) : catalogue, detection et relevés.
+         Les reponses sont figees et couvrent les trois cas de la tuile :
+         un service sain, un service en panne, et un etat DEDUIT d'un
+         flux RSS (drapeau `approximate`).
+         Service status: catalogue, detection and readings, frozen and
+         covering the tile's three cases. */
+      if (u.includes("data/service-catalog.json")) {
+        return json({
+          version: 1,
+          families: [
+            { id: "cloud", icon: "C", label: { fr: "Cloud & hébergement", en: "Cloud & hosting" } },
+            { id: "devops", icon: "D", label: { fr: "Développement & DevOps", en: "Development & DevOps" } },
+            { id: "custom", icon: "+", label: { fr: "Mes services", en: "My services" } }
+          ],
+          services: [
+            { id: "github", name: "GitHub", family: "devops", url: "https://www.githubstatus.com", adapter: "statuspage" },
+            { id: "npm", name: "npm", family: "devops", url: "https://status.npmjs.org", adapter: "statuspage" },
+            { id: "aws", name: "AWS", family: "cloud", url: "https://health.aws.amazon.com/health/status", adapter: "aws", api: "https://health.aws.amazon.com/public/currentevents" },
+            { id: "azure", name: "Azure", family: "cloud", url: "https://status.azure.com", adapter: "rss", api: "https://azurestatuscdn.azureedge.net/en-us/status/feed/" }
+          ]
+        });
+      }
+      if (u.includes("api/service-status/detect")) {
+        SVC_DETECT_CALLS.push(decodeURIComponent((u.match(/url=([^&]*)/) || [])[1] || ""));
+        if (/mauvaise/.test(u)) return json({ ok: false, error: "unknown-format" });
+        return json({ ok: true, adapter: "instatus", url: "https://status.exemple.fr", name: "Exemple", indicator: "none", approximate: false });
+      }
+      if (u.includes("api/service-status")) {
+        SVC_STATUS_QUERIES.push(u);
+        /* La reponse suit la REQUETE, service par service et dans
+           l'ordre demande. Un mock qui rendrait toujours les trois
+           memes services ferait croire que la tuile associe
+           correctement chaque reponse a son service, alors qu'elle
+           pourrait les melanger sans que rien ne le signale -- et
+           c'est precisement cet appariement qui porte la cloche.
+           The answer follows the REQUEST, service by service and in the
+           order asked. A mock always returning the same three services
+           would hide a mismatch between answers and services -- and
+           that very pairing is what carries the bell. */
+        const asked = (decodeURIComponent(u).match(/[?&]s=([^&]*)/g) || [])
+          .map((x) => decodeURIComponent(x.replace(/^[?&]s=/, "")));
+        const canned = (spec) => {
+          if (/githubstatus/.test(spec)) {
+            return { base: "https://www.githubstatus.com", name: "GitHub", indicator: "none", ok: true,
+              componentCount: 3, affected: [], incidents: [], maintenances: [], approximate: false,
+              fetchedAt: "2026-10-02T12:00:00Z" };
+          }
+          if (/aws/.test(spec)) {
+            return { base: "https://health.aws.amazon.com", name: "Amazon Web Services", indicator: "major", ok: false,
+              componentCount: 0, approximate: false, fetchedAt: "2026-10-02T12:00:00Z",
+              affected: [{ name: "Amazon EC2 (eu-west-1)", status: "partial_outage", group: "eu-west-1" }],
+              incidents: [{ id: "aws-" + SVC_INCIDENT.seq, name: "Amazon EC2 — eu-west-1", impact: SVC_INCIDENT.impact, status: null,
+                url: "https://health.aws.amazon.com/health/status", startedAt: "2026-10-02T11:00:00Z",
+                lastMessage: "Increased API error rates.", components: ["Amazon EC2"] }],
+              maintenances: [] };
+          }
+          if (/azure/.test(spec)) {
+            return { base: "https://status.azure.com", name: "Azure Status", indicator: "none", ok: true,
+              componentCount: 0, affected: [], incidents: [], maintenances: [], approximate: true,
+              fetchedAt: "2026-10-02T12:00:00Z" };
+          }
+          return { base: null, error: "bad-response" };
+        };
+        return json({ services: asked.map(canned) });
+      }
       if (u.includes("/api/fs/roots")) {
         return json({ separator: "/", roots: [{ name: "jm", path: "/home/jm" }, { name: "/", path: "/" }] });
       }
@@ -1122,7 +1213,7 @@ function catalogItemFor(catalog, document, widgetId) {
   while (document.querySelectorAll(".grid-stack-item").length < 21 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("21 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 21);
+  assert("22 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 22);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -2668,7 +2759,7 @@ function catalogItemFor(catalog, document, widgetId) {
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (22 au total)", document.querySelectorAll(".grid-stack-item").length === 22);
+  assert("tuile ajoutee (23 au total)", document.querySelectorAll(".grid-stack-item").length === 23);
 
   console.log("== Tiroirs (gauche existant, haut, droite) : presence, ouverture, un seul a la fois ==");
   {
@@ -8231,6 +8322,279 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("programmation : les marges se reglent dans les options de la tuile",
         iptvSettings.some((f) => f.key === "recordPadBefore") && iptvSettings.some((f) => f.key === "recordPadAfter"));
     }
+  }
+
+  console.log("== Statut de service : selecteur a cases a cocher et modes d'affichage (1.128.0) ==");
+  {
+    const svcTile = document.querySelector('[data-tile-id="t-x"]');
+    assert("tuile statut de service localisee dans la grille", !!svcTile);
+
+    /* --- Ce que la tuile affiche, mode detaille --- */
+    await sleep(60);
+    const svcText = () => svcTile.querySelector(".pw-svcstatus")?.textContent || "";
+    assert("les trois services coches sont demandes en UNE requete",
+      SVC_STATUS_QUERIES.length >= 1 && (SVC_STATUS_QUERIES[0].match(/[?&]s=/g) || []).length === 3);
+    /* L'adaptateur connu est transmis : sans cela le serveur sonderait
+       quatre formats par service a chaque relevé. The known adapter is
+       passed, or the server would probe four formats per service. */
+    assert("l'adaptateur du catalogue est transmis au serveur",
+      /s=aws~/.test(decodeURIComponent(SVC_STATUS_QUERIES[0])));
+    assert("le service en panne est ecrit en entier (composant et region)",
+      /eu-west-1/.test(svcText()) && /Increased API error rates/.test(svcText()));
+    /* Un etat deduit d'un flux RSS ne doit pas ressembler a un etat
+       declare : deux etats identiques a l'ecran sont un piege.
+       An inferred state must not look like a declared one. */
+    assert("l'etat deduit d'un flux RSS porte sa marque",
+      !!svcTile.querySelector(".pwss-approx"));
+
+    /* --- Mode compact : les services sains deviennent des pastilles --- */
+    svcTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    assert("modale de reglages du statut de service ouverte", document.getElementById("tileModal").hidden === false);
+
+    const displaySel = document.querySelector('#tileForm [data-key="display"]');
+    assert("le mode d'affichage est reglable", !!displaySel);
+    displaySel.value = "compact";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    const chipCount = svcTile.querySelectorAll(".pwss-grid .pwss-chip").length;
+    assert("en compact, les services sains sont des pastilles (obtenu " + chipCount + ")",
+      chipCount === 2);
+    assert("mais le service en panne garde sa fiche complete",
+      /Increased API error rates/.test(svcText()));
+
+    /* --- Mode problemes seulement : une ligne quand tout va bien --- */
+    svcTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    document.querySelector('#tileForm [data-key="display"]').value = "problems";
+    document.getElementById("tileSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    assert("en « problemes seulement », les services sains disparaissent",
+      svcTile.querySelectorAll(".pwss-chip").length === 0 && /Increased API error rates/.test(svcText()));
+
+    /* --- Le selecteur lui-meme --- */
+    svcTile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(120);
+    const picker = document.querySelector("#tileForm [data-multipick-field='picked']");
+    assert("le selecteur de services est rendu", !!picker);
+    const hidden = picker.querySelector("input[type=hidden]");
+    const fams = () => Array.from(picker.querySelectorAll(".mp-fam"));
+    assert("les services sont ranges par familles", fams().length >= 2);
+    assert("les familles contenant un service coche sont depliees",
+      fams().filter((f) => f.open).length >= 1);
+    assert("le compteur annonce les services surveilles et le plafond",
+      /3\s*\/\s*25/.test(picker.querySelector(".mp-count").textContent));
+
+    const pickedNow = () => JSON.parse(hidden.value);
+    assert("le champ cache porte deja les services coches, avant toute action",
+      pickedNow().length === 3);
+
+    /* Cocher un service : il doit rejoindre le champ cache -- c'est lui
+       qui est enregistre, les cases ne sont que l'interface.
+       Ticking a service must add it to the hidden field: that is what
+       gets saved, the boxes are only the interface. */
+    const npmBox = picker.querySelector("[data-pick='npm']");
+    assert("le service npm est propose et decoche", !!npmBox && npmBox.checked === false);
+    npmBox.click();
+    await sleep(20);
+    assert("cocher un service l'ajoute a la liste enregistree",
+      pickedNow().some((p) => p.id === "npm" && p.adapter === "statuspage"));
+    assert("et le compteur suit", /4\s*\/\s*25/.test(picker.querySelector(".mp-count").textContent));
+
+    /* La recherche filtre, et deplie : filtrer sans deplier obligerait a
+       ouvrir la famille apres chaque frappe.
+       Search filters AND expands: filtering without expanding would
+       force opening the family after every keystroke. */
+    const search = picker.querySelector(".mp-search");
+    search.value = "azure";
+    search.dispatchEvent(new window.Event("input", { bubbles: true }));
+    await sleep(20);
+    assert("la recherche ne laisse que les services correspondants",
+      picker.querySelectorAll("[data-pick]").length === 1 && !!picker.querySelector("[data-pick='azure']"));
+    assert("et deplie ce qui reste", fams().every((f) => f.open));
+    search.value = "";
+    search.dispatchEvent(new window.Event("input", { bubbles: true }));
+    await sleep(20);
+
+    /* La cloche : surveiller beaucoup, etre reveille par peu. Elle vit
+       dans un <label>, donc un clic mal gere decocherait le service
+       qu'on voulait seulement rendre silencieux -- c'est precisement ce
+       qui est verifie ici.
+       The bell lives inside a <label>, so a mishandled click would
+       untick the very service one merely wanted to silence. */
+    const bell = picker.querySelector("[data-bell='github']");
+    assert("un service coche porte une cloche", !!bell);
+    const before = pickedNow().find((p) => p.id === "github").alert;
+    bell.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+    await sleep(20);
+    const after = pickedNow().find((p) => p.id === "github");
+    assert("cliquer la cloche change le droit d'alerter", !!after && after.alert === !before);
+    assert("et ne decoche PAS le service", picker.querySelector("[data-pick='github']").checked === true);
+
+    /* Ajout hors catalogue : l'adresse est sondee AVANT d'etre acceptee,
+       et le refus est dit sur le champ plutot que decouvert plus tard
+       devant une ligne grise.
+       Out-of-catalogue addition: the address is probed BEFORE being
+       accepted, and a refusal is said on the spot. */
+    picker.querySelector(".mp-add-toggle").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const addUrl = picker.querySelector(".mp-add-url");
+    const addMsg = picker.querySelector(".mp-add-msg");
+    addUrl.value = "https://status.mauvaise-page.test";
+    picker.querySelector(".mp-add-test").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    assert("une adresse illisible est refusee, et dite", addMsg.classList.contains("mp-add-err"));
+    assert("et rien n'est ajoute a la liste", !pickedNow().some((p) => /mauvaise/.test(p.url || "")));
+
+    addUrl.value = "https://status.exemple.fr";
+    picker.querySelector(".mp-add-name").value = "Mon service";
+    picker.querySelector(".mp-add-test").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    assert("une page reconnue est ajoutee avec le format trouve",
+      pickedNow().some((p) => p.name === "Mon service" && p.adapter === "instatus"));
+    assert("le format reconnu est annonce a l'ecran", addMsg.classList.contains("mp-add-ok"));
+    assert("l'adresse a bien ete sondee cote serveur",
+      SVC_DETECT_CALLS.some((c) => /status\.exemple\.fr/.test(c)));
+    assert("le service ajoute a la main apparait dans sa propre famille",
+      !!picker.querySelector("[data-pick^='custom:']"));
+
+    document.getElementById("tileModal").querySelector(".modal-close")
+      .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+  }
+
+  console.log("== Statut de service : la cloche et le seuil filtrent REELLEMENT l'alerte ==");
+  {
+    /* On rejoue la decision d'alerte sur les fonctions de la tuile
+       plutot que sur une minuterie : le filtre doit ecarter un incident
+       d'un service silencieux, et un incident trop benin pour le seuil.
+       The alert decision is replayed on the tile's own logic rather than
+       on a timer. */
+    const H = window.PiBoardServiceStatusHelpers;
+    assert("les aides de la tuile sont exposees", !!H && !!H.mergeTargets);
+    assert("le plafond est passe a 25", H.MAX_SERVICES === 25);
+
+    /* Les deux sources se fusionnent, et un service present des deux
+       cotes ne compte qu'une fois : sinon la ligne s'afficherait en
+       double et les requetes aussi.
+       The two sources merge, and a service present on both sides counts
+       once. */
+    const merged = H.mergeTargets({
+      picked: JSON.stringify([{ id: "github", name: "GitHub", url: "https://www.githubstatus.com", adapter: "statuspage", alert: true }]),
+      services: "GitHub bis = https://www.githubstatus.com\n# desactive = https://status.npmjs.org\nInterne = https://status.exemple.fr"
+    });
+    assert("les services coches et saisis a la main sont fusionnes", merged.length === 2);
+    assert("le doublon d'adresse est ecarte", merged.filter((t) => /githubstatus/.test(t.url)).length === 1);
+    assert("une ligne commentee reste ignoree", !merged.some((t) => /npmjs/.test(t.url)));
+    assert("un service saisi a la main laisse le format etre devine",
+      merged.find((t) => /exemple/.test(t.url)).adapter === "auto");
+
+    /* Une valeur abimee ne doit pas faire tomber la tuile : le champ
+       libre reste alors la seule source, ce qui vaut mieux qu'un ecran
+       vide. A damaged value must not bring the tile down. */
+    assert("un reglage abime rend une liste vide plutot qu'une exception",
+      H.parsePicked("{ pas du json").length === 0 && H.parsePicked(undefined).length === 0);
+    /* `alert` absent = coche avant que la cloche existe : on alerte,
+       comme le faisait la version precedente pour tous les services.
+       A missing `alert` means ticked before the bell existed. */
+    assert("un service coche avant l'arrivee de la cloche garde le droit d'alerter",
+      H.parsePicked(JSON.stringify([{ id: "x", url: "https://status.exemple.fr" }]))[0].alert === true);
+  }
+
+  console.log("== Statut de service : la cloche et le seuil ECARTENT reellement l'alerte (1.128.0) ==");
+  {
+    /* On remonte une instance de la tuile a part, avec sa propre API
+       d'alerte, pour observer ce qui sonne et ce qui ne sonne pas. Un
+       test structurel (« le filtre est bien ecrit dans le code »)
+       n'aurait rien prouve : c'est l'effet qui compte, et l'effet est
+       un son qui part ou ne part pas.
+       A separate instance of the tile is mounted with its own alert
+       API, to observe what rings and what does not. A structural test
+       ("the filter is present in the source") would have proved
+       nothing: the effect is what matters, and the effect is a sound
+       going off or not. */
+    const alerts = [];
+    let Klass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "servicestatus") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+    assert("la tuile statut de service est remontable a part", typeof Klass === "function");
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const settings = {
+      picked: JSON.stringify([
+        { id: "aws", name: "AWS", url: "https://health.aws.amazon.com/health/status", adapter: "aws", api: "https://health.aws.amazon.com/public/currentevents", alert: false }
+      ]),
+      display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1,
+      notifyOnIncident: true, alertMinSeverity: "minor", notifyFlash: true, notifySound: false,
+      notifyDurationSeconds: 5
+    };
+    const w = new Klass({
+      el: host, settings,
+      i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
+      api: { startAlert: (o) => alerts.push(o) }
+    });
+    w.init();
+    await sleep(60);
+
+    /* Premier relevé : l'incident est deja en cours, il est enregistre
+       SANS alerter -- un incident vieux de trois heures n'a pas a faire
+       flasher l'ecran parce que le tableau vient de demarrer.
+       First reading: an incident already under way is recorded WITHOUT
+       alerting. */
+    assert("un incident deja en cours au demarrage n'alerte pas", alerts.length === 0);
+
+    /* Service silencieux (cloche eteinte) : un NOUVEL incident apparait,
+       et ne doit toujours rien declencher. Sans ce filtre, surveiller
+       vingt services obligerait a couper l'alerte pour tous.
+       Silenced service: a NEW incident appears and must still trigger
+       nothing. */
+    SVC_INCIDENT.seq = 2;
+    await w.refresh();
+    await sleep(30);
+    assert("cloche eteinte : un nouvel incident n'alerte pas", alerts.length === 0);
+
+    /* Cloche rallumee, mais incident trop benin pour le seuil choisi.
+       Bell back on, but the incident is too mild for the chosen
+       threshold. */
+    settings.picked = settings.picked.replace('"alert":false', '"alert":true');
+    settings.alertMinSeverity = "critical";
+    w.onSettingsChanged(settings);
+    await sleep(40);
+    SVC_INCIDENT.seq = 3;
+    SVC_INCIDENT.impact = "major";
+    await w.refresh();
+    await sleep(30);
+    assert("seuil « panne majeure seulement » : une panne partielle n'alerte pas", alerts.length === 0);
+
+    /* Meme service, meme seuil : un incident critique, lui, sonne. Sans
+       cette verification, un filtre trop zele passerait inapercu --
+       c'est le pire defaut possible pour une tuile de supervision.
+       Same service, same threshold: a critical incident does ring.
+       Without this check an over-zealous filter would go unnoticed, the
+       worst possible defect for a monitoring tile. */
+    SVC_INCIDENT.seq = 4;
+    SVC_INCIDENT.impact = "critical";
+    await w.refresh();
+    await sleep(30);
+    assert("mais une panne majeure sonne bien", alerts.length === 1);
+    assert("et l'alerte respecte les reglages (flash, pas de son)",
+      alerts[0].flash === true && alerts[0].soundName === null);
+
+    /* Le meme incident ne sonne qu'UNE fois : sans cela, la tuile
+       sonnerait a chaque relevé pendant toute la panne -- toutes les
+       minutes pendant des heures en cadence incident.
+       The same incident rings ONCE: otherwise the tile would ring at
+       every reading for the whole outage. */
+    await w.refresh();
+    await sleep(30);
+    assert("le meme incident ne sonne pas une seconde fois", alerts.length === 1);
+
+    w.destroy();
+    host.remove();
+    SVC_INCIDENT.seq = 1;
+    SVC_INCIDENT.impact = "major";
   }
 
   console.log("== Sortie du mode edition ==");

@@ -1,5 +1,104 @@
 # Changelog
 
+## 1.128.0
+
+- **La tuile Statut de service se regle maintenant en cochant des
+  cases.** Un catalogue de 67 services, range par familles (cloud,
+  DevOps, SaaS, paiement, observabilite, IA, France), avec une recherche
+  qui filtre sur le nom comme sur le domaine. Le champ texte
+  « Nom = adresse » est conserve, dans une section *Avance*, pour tout
+  ce qui n'est pas au catalogue.
+
+- **Nouveau type de reglage generique `multipick`** (`public/app.js`,
+  champ rendu par `fieldMarkup()` et pilote par `initMultipick()`). Meme
+  mecanique que le type `rows` de la tuile Bourse : la liste choisie est
+  ecrite en JSON dans un `<input type="hidden" data-key>`, donc
+  `collectTileFormValues()` n'a pas change d'une ligne et le type reste
+  reutilisable (IPTV, RSS et Programme TV ont le meme probleme de saisie).
+
+- **Cinq formats de pages de statut au lieu d'un**, dans un nouveau
+  fichier `server/serviceProviders.js` ou chaque format est une fonction
+  PURE testable hors ligne : Statuspage (Atlassian), Instatus, Google
+  (`incidents.json`, Cloud et Workspace), AWS Health
+  (`public/currentevents`) et RSS. Le pari initial sur Statuspage etait
+  bon -- il couvre la majorite des services -- mais AWS, Google Cloud et
+  Azure, soit exactement ceux qu'on veut surveiller en premier, ne
+  l'emploient pas.
+
+- **Trois pieges propres a ces formats, chacun couvert par un test** :
+  `incidents.json` de Google contient TOUT l'historique, donc un
+  incident referme il y a un an s'affichait comme en cours si l'on
+  prenait le premier element ; le journal `event_log` d'AWS est trie a
+  l'envers de Statuspage ; et ses horodatages sont des NOMBRES, que
+  `Date.parse()` rend `NaN` -- le tri ne faisait alors rien et c'etait le
+  message d'OUVERTURE de l'incident qui s'affichait comme derniere
+  nouvelle. Defaut trouve par le test, pas a la relecture.
+
+- **L'etat lu sur un flux RSS est marque comme DEDUIT** (un tilde a cote
+  de l'etat, explique par une infobulle). Un flux ne dit jamais « je vais
+  bien » : il publie des billets datés. Aucun billet depuis 24 h vaut
+  « sain », un billet recent vaut « degradation mineure » et jamais plus,
+  le flux ne contenant pas l'information qui justifierait un rouge. Deux
+  etats identiques a l'ecran doivent produire deux messages distincts --
+  meme lecon que « premier relevé a venir » contre « le serveur ne mesure
+  rien » sur la tuile Sante Internet.
+
+- **Detection du format a l'ajout** (`GET /api/service-status/detect`) :
+  l'adresse collee est sondee pendant que la personne est devant le
+  formulaire, et le format trouve lui est annonce. Sans cela, une adresse
+  illisible ne se decouvrait que plus tard, devant une ligne grise dont
+  rien ne disait si l'adresse, le reseau ou le service etait en cause.
+
+- **Plafond porte de 10 a 25 services**, et **trois modes
+  d'affichage** : detaille (comme avant), compact (une pastille par
+  service sain, une fiche complete pour chaque service en difficulte) et
+  « problemes seulement » (une ligne tant que tout va bien). Le plafond
+  n'a jamais protege le reseau -- `MIN_FETCH_MS` et le cache partage le
+  font -- il protege la lisibilite, d'ou ces modes livres en meme temps.
+
+- **Une cloche par service, et un seuil de gravite pour l'alerte.**
+  Surveiller vingt services en n'etant reveille que par deux est le cas
+  normal ; sans reglage par service, l'option d'alerte devenait
+  inutilisable des qu'on cochait beaucoup, et on la coupait entierement --
+  donc on n'etait plus averti pour les deux qui comptaient. Le seuil est
+  volontairement DISTINCT du rythme de verification : la tuile continue
+  d'accelerer a la moindre degradation, la sirene reste reservee a ce qui
+  merite d'interrompre.
+
+- **L'adaptateur connu est transmis au serveur** (`?s=<adaptateur>~<page>`,
+  l'ancienne forme `?url=` restant acceptee pour les adresses saisies a la
+  main). Sans cela, le serveur sondait quatre formats par service a chaque
+  relevé : trois requetes inutiles par service, et vingt-cinq services en
+  cadence incident, cela devient impoli.
+
+- **Correctif : la tuile ignorait ses nouveaux reglages.**
+  `onSettingsChanged()` ne reprenait pas l'objet de reglages que
+  l'application reconstruit a chaque enregistrement, donc `ctx.settings`
+  continuait de designer l'ancien. Tout changement restait sans effet
+  jusqu'au rechargement complet du tableau. Present depuis la premiere
+  version de la tuile, invisible tant que les seuls reglages etaient des
+  intervalles qu'on ne touche qu'une fois, et mis au jour par le test
+  fonctionnel des modes d'affichage.
+
+- **Garde-fou etendu aux adresses d'API du catalogue** (`normalizeApi()`) :
+  les formats non-Statuspage vivent a un chemin qu'on ne peut pas deviner
+  depuis l'origine, le catalogue le fournit donc, et cette adresse-la
+  garde son chemin -- mais le meme refus des adresses privees, locales et
+  en clair s'y applique, sans quoi le catalogue deviendrait une porte vers
+  le reseau local le jour ou quelqu'un l'edite. Un test verifie que les 67
+  entrees livrees passent ce garde-fou.
+
+- **Tests** : nouveau `test/serviceProviders.test.js` (adaptateurs,
+  pieges de chaque format, integrite du catalogue -- identifiants
+  uniques, familles connues, adresses d'API obligatoires la ou le chemin
+  n'est pas devinable) et deux sections fonctionnelles dans
+  `test/dom-smoke.js` : le selecteur (cocher, rechercher, cliquer la
+  cloche sans decocher le service, ajouter une page refusee puis une page
+  reconnue) et le filtrage REEL de l'alerte, observe sur l'alerte qui
+  part ou ne part pas, non sur la presence du filtre dans le code.
+
+- **Aide mise a jour** dans les deux langues avant livraison.
+
 ## 1.127.2
 
 - **Avertissement Node 20 a chaque execution du workflow.** GitHub a

@@ -33,6 +33,19 @@
 # Nouveautes / What's new
 
 
+## 1.128.0
+
+**Choisir les services a surveiller en cochant des cases**
+
+La tuile Statut de service se reglait en tapant une adresse par ligne. Elle propose maintenant un catalogue de 67 services, range par familles -- cloud et hebergement, developpement et DevOps, SaaS et collaboration, paiement et messagerie, observabilite, IA et modeles, France -- avec une recherche. AWS, Google Cloud, Azure, OVHcloud, OpenAI, Anthropic, Stripe, Free, Orange et bien d'autres sont lus en direct, sans cle ni compte : quatre formats de pages de statut s'ajoutent a celui d'origine. Une page absente du catalogue s'ajoute toujours a la main, et son adresse est verifiee sur le champ : le format trouve vous est annonce avant d'enregistrer. Le plafond passe a 25 services, avec deux nouveaux affichages pour que cela reste lisible : compact, ou chaque service sain devient une pastille, et « problemes seulement », ou la tuile ne dit rien tant qu'il n'y a rien a dire. Enfin, chaque service porte une cloche : on peut surveiller vingt services et n'etre reveille que par deux, avec un seuil de gravite reglable pour la sirene.
+
+---
+
+**Choosing the services to watch by ticking boxes**
+
+The Service status tile was configured by typing one address per line. It now offers a catalogue of 67 services arranged by family -- cloud and hosting, development and DevOps, SaaS and collaboration, payment and messaging, observability, AI and models, France -- with a search. AWS, Google Cloud, Azure, OVHcloud, OpenAI, Anthropic, Stripe, Free, Orange and many more are read live, with no key or account: four status-page formats join the original one. A page the catalogue does not hold can still be added by hand, and its address is checked on the spot: the format found is named back to you before you save. The ceiling rises to 25 services, with two new displays to keep that legible: compact, where each healthy service becomes a chip, and "problems only", where the tile says nothing while there is nothing to say. Finally, each service carries a bell: you can watch twenty services and be woken by two, with an adjustable severity threshold for the siren.
+
+
 ## 1.127.0
 
 **Emporter une page du tableau de bord**

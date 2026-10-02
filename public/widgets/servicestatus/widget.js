@@ -44,7 +44,16 @@
       .replace(/"/g, "&quot;");
   }
 
-  const MAX_SERVICES = 10;
+  /* Plafond porte de 10 a 25 avec le selecteur a cases a cocher
+     (1.128.0). Il ne protege pas le reseau -- le relais serveur impose
+     deja un plancher entre deux appels reels et partage le resultat --
+     mais la LISIBILITE : au-dela, meme en mode compact, la tuile cesse
+     d'etre lisible d'un coup d'oeil, ce qui est tout ce qu'on lui
+     demande. Raised from 10 to 25 with the checkbox picker: it protects
+     legibility, not the network. */
+  const MAX_SERVICES = 25;
+
+  const SEVERITY_RANK = { none: 0, unknown: 1, minor: 2, major: 3, critical: 4 };
 
   /* Teintes par severite. On reutilise les variables du theme plutot que
      des couleurs fixes : la tuile suit ainsi le theme applique, y compris
@@ -84,7 +93,61 @@
       const label = eq === -1 ? "" : line.slice(0, eq).trim();
       const url = (eq === -1 ? line : line.slice(eq + 1)).trim();
       if (!url) continue;
-      out.push({ label, url });
+      /* Un service saisi a la main n'a pas d'adaptateur declare : le
+         serveur sondera les formats. Et `alert: true` par defaut, car
+         quelqu'un qui prend la peine de taper une adresse a la main
+         veut tres probablement etre averti pour celle-la.
+         A hand-typed service declares no adapter -- the server probes --
+         and alerts by default: someone who bothers to type an address
+         almost certainly wants to hear about that one. */
+      out.push({ label, url, adapter: "auto", api: null, alert: true, manual: true });
+      if (out.length >= MAX_SERVICES) break;
+    }
+    return out;
+  }
+
+  /* Les services COCHES dans le selecteur, lus depuis le JSON ecrit par
+     le champ "multipick". Une valeur abimee (fichier de reglages edite a
+     la main, migration ratee) ne doit jamais faire tomber la tuile : on
+     rend une liste vide, et le champ libre ci-dessous reste disponible.
+     The TICKED services, read from the JSON the "multipick" field
+     writes. A damaged value must never bring the tile down: an empty
+     list is returned and the free-text field below stays available. */
+  function parsePicked(value) {
+    let list = [];
+    try { list = typeof value === "string" ? JSON.parse(value || "[]") : (Array.isArray(value) ? value : []); }
+    catch (e) { return []; }
+    if (!Array.isArray(list)) return [];
+    return list.filter((p) => p && p.url).map((p) => ({
+      label: p.name || "",
+      url: String(p.url),
+      adapter: p.adapter || "auto",
+      api: p.api || null,
+      /* `alert` absent veut dire « coche avant que la cloche existe » :
+         on alerte, comme la version precedente le faisait pour tous.
+         A missing `alert` means "ticked before the bell existed": we
+         alert, as the previous version did for every service. */
+      alert: p.alert !== false,
+      manual: false
+    }));
+  }
+
+  /* Les deux sources sont fusionnees ICI, en un seul endroit, et les
+     doublons sont ecartes par adresse : cocher GitHub dans le selecteur
+     alors qu'il figure aussi dans le champ avance ne doit pas faire
+     apparaitre la ligne deux fois ni doubler les requetes.
+     The two sources are merged HERE, in one place, duplicates dropped by
+     address: GitHub ticked in the picker and also present in the
+     advanced field must not appear twice nor double the requests. */
+  function mergeTargets(settings) {
+    const all = parsePicked(settings && settings.picked).concat(parseTargets(settings && settings.services));
+    const seen = new Set();
+    const out = [];
+    for (const t of all) {
+      const key = String(t.url).replace(/\/+$/, "").toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(t);
       if (out.length >= MAX_SERVICES) break;
     }
     return out;
@@ -135,7 +198,23 @@
       this.refresh();
     }
 
-    onSettingsChanged() {
+    /* Le nouvel objet de reglages doit etre REPRIS : l'application en
+       construit un neuf a chaque enregistrement, et `this.ctx.settings`
+       continuerait sinon de designer l'ancien. La tuile semblait alors
+       ignorer tout changement jusqu'au rechargement complet du
+       tableau -- defaut present depuis la premiere version, invisible
+       tant que les seuls reglages etaient des intervalles qu'on ne
+       touche qu'une fois, et mis au jour par le test fonctionnel des
+       modes d'affichage.
+       The new settings object must be TAKEN UP: the application builds
+       a fresh one on each save, and `this.ctx.settings` would otherwise
+       still point at the old one, so the tile appeared to ignore every
+       change until a full board reload -- a defect present since the
+       first version, invisible while the only settings were intervals
+       one sets once, and brought out by the functional test of the
+       display modes. */
+    onSettingsChanged(settings) {
+      if (settings) this.ctx.settings = settings;
       this.announced.clear();
       this.healthyStreak = 0;
       this.refresh();
@@ -156,7 +235,7 @@
     }
 
     async refresh() {
-      const targets = parseTargets(this.ctx.settings.services);
+      const targets = mergeTargets(this.ctx.settings);
       if (!targets.length) {
         this.services = [];
         this.render();
@@ -164,13 +243,30 @@
         return;
       }
       try {
-        const qs = targets.map((t) => "url=" + encodeURIComponent(t.url)).join("&");
+        /* On transmet l'adaptateur quand on le connait (il vient du
+           catalogue) : sans cela le serveur sonderait quatre formats
+           pour chaque service a chaque relevé, soit trois requetes
+           inutiles par service -- et vingt-cinq services en cadence
+           incident, cela devient impoli.
+           The adapter is passed when known (it comes from the
+           catalogue): otherwise the server would probe four formats per
+           service per reading, three needless requests each -- and at
+           twenty-five services on the incident rhythm that becomes
+           rude. */
+        const qs = targets.map((t) => "s=" + encodeURIComponent(
+          (t.adapter || "auto") + "~" + t.url + (t.api ? "~" + t.api : "")
+        )).join("&");
         const r = await fetch("api/service-status?" + qs);
         if (!r.ok) throw new Error("http " + r.status);
         const data = await r.json();
         const list = Array.isArray(data.services) ? data.services : [];
         this.services = list.map((svc, i) => Object.assign({}, svc, {
-          label: targets[i] ? (targets[i].label || svc.name || targets[i].url) : (svc.name || "")
+          label: targets[i] ? (targets[i].label || svc.name || targets[i].url) : (svc.name || ""),
+          /* La cloche suit le service, pas la reponse : c'est un reglage
+             local, et le serveur n'en sait rien.
+             The bell travels with the service, not the answer: it is a
+             local setting the server knows nothing about. */
+          alert: targets[i] ? targets[i].alert !== false : true
         }));
         this.fetchedAt = Date.now();
         this.updateCadence();
@@ -219,12 +315,29 @@
     notifyNewIncidents() {
       const s = this.ctx.settings;
       if (!s.notifyOnIncident) return;
+      const minRank = SEVERITY_RANK[s.alertMinSeverity] || SEVERITY_RANK.minor;
       const fresh = [];
       for (const svc of this.services) {
         for (const inc of (svc.incidents || [])) {
           const key = (svc.base || svc.label) + "#" + (inc.id || inc.name);
           if (this.announced.has(key)) continue;
+          /* Enregistre AVANT les deux filtres, et c'est deliberé : un
+             incident ecarte parce que le service est silencieux ou
+             l'incident trop benin ne doit pas sonner plus tard, au
+             relevé suivant, si son impact est reevalué ou si la cloche
+             est rallumée. Il a eu lieu pendant qu'on ne voulait pas en
+             etre averti ; seul ce qui APPARAIT alerte.
+             Recorded BEFORE the two filters, deliberately: an incident
+             skipped because the service is silent or the incident too
+             mild must not ring later, at the next reading, if its impact
+             is re-rated or the bell is switched back on. Only what
+             APPEARS alerts. */
           this.announced.add(key);
+          if (svc.alert === false) continue;
+          const rank = SEVERITY_RANK[inc.impact] != null
+            ? SEVERITY_RANK[inc.impact]
+            : (SEVERITY_RANK[svc.indicator] || 0);
+          if (rank < minRank) continue;
           fresh.push({ svc, inc });
         }
       }
@@ -258,7 +371,7 @@
       const i18n = this.ctx.i18n;
       const s = this.ctx.settings;
       const el = this.ctx.el;
-      const targets = parseTargets(s.services);
+      const targets = mergeTargets(s);
 
       if (!targets.length) {
         el.innerHTML = `<div class="pw-svcstatus"><div class="pwss-empty">${esc(i18n.t("svcstatus.noService"))}</div></div>`;
@@ -270,7 +383,7 @@
       }
 
       const now = Date.now();
-      const body = this.services.map((svc) => this.renderService(svc, i18n, s, now)).join("");
+      const body = this.renderBody(i18n, s, now);
       const checked = this.fetchedAt
         ? i18n.t("svcstatus.checked") + " " + since(new Date(this.fetchedAt).toISOString(), i18n, now)
         : "";
@@ -283,6 +396,46 @@
           <div class="pwss-list">${body}</div>
           <div class="pwss-foot"><span>${esc(checked)}</span>${cadence}</div>
         </div>`;
+    }
+
+    /* TROIS MODES, UNE SEULE REGLE : ce qui va mal est toujours ecrit en
+       entier, ce qui va bien se tasse. C'est ce qui permet de passer de
+       trois a vingt-cinq services sans changer de tuile -- et ce qui
+       evite le piege inverse, un mode compact si compact qu'il faudrait
+       cliquer pour apprendre ce qui ne va pas.
+         - detaille : comme avant, une fiche par service ;
+         - compact  : une pastille par service sain, une fiche pour
+                      chaque service en difficulte ;
+         - problemes: les fiches des services en difficulte, et une
+                      seule ligne quand il n'y en a aucun.
+       THREE MODES, ONE RULE: what is wrong is always written out in
+       full, what is fine is condensed. This is what lets three services
+       become twenty-five without changing tiles -- and what avoids the
+       opposite trap, a compact mode so compact that one would have to
+       click to learn what is broken. */
+    renderBody(i18n, s, now) {
+      const mode = s.display || "detailed";
+      if (mode === "detailed") return this.services.map((svc) => this.renderService(svc, i18n, s, now)).join("");
+
+      const bad = this.services.filter((svc) => svc.error || (svc.indicator && svc.indicator !== "none"));
+      const good = this.services.filter((svc) => bad.indexOf(svc) === -1);
+
+      const cards = bad.map((svc) => this.renderService(svc, i18n, s, now)).join("");
+
+      if (mode === "problems") {
+        if (bad.length) return cards;
+        return `<div class="pwss-allgood">${esc(i18n.t("svcstatus.allGood").replace("{n}", this.services.length))}</div>`;
+      }
+
+      const chips = good.map((svc) => {
+        const tone = svc.error ? TONE.unknown : (TONE[svc.indicator] || TONE.unknown);
+        return `<span class="pwss-chip" style="--pwss-tone:${tone}" title="${esc(svc.label || "")}">`
+          + `<span class="pwss-dot"></span><span class="pwss-chip-name">${esc(svc.label || "")}</span>`
+          + (svc.approximate ? `<span class="pwss-approx" title="${esc(i18n.t("svcstatus.approximate"))}">~</span>` : "")
+          + `</span>`;
+      }).join("");
+
+      return (chips ? `<div class="pwss-grid">${chips}</div>` : "") + cards;
     }
 
     renderService(svc, i18n, s, now) {
@@ -338,10 +491,24 @@
           : `<span class="pwss-none">${esc(i18n.t("svcstatus.noMaintenance"))}</span>`);
       }
 
+      /* Le tilde marque un etat DEDUIT d'un flux RSS et non declare par
+         le fournisseur. Deux etats qui se ressemblent a l'ecran doivent
+         produire deux messages distincts : « operationnel » et « aucun
+         billet recent sur le flux » ne sont pas la meme information, et
+         confondre les deux ferait prendre un silence pour une bonne
+         nouvelle.
+         The tilde marks a state INFERRED from an RSS feed rather than
+         declared by the provider: "operational" and "no recent post on
+         the feed" are not the same information, and conflating them
+         would turn a silence into good news. */
+      const approx = svc.approximate
+        ? `<span class="pwss-approx" title="${esc(i18n.t("svcstatus.approximate"))}">~</span>`
+        : "";
+
       return `
         <div class="pwss-svc" style="--pwss-tone:${tone}">
           <div class="pwss-head"><span class="pwss-name">${label}</span>
-            <span class="pwss-state"><span class="pwss-dot"></span>${esc(stateLabel)}</span></div>
+            <span class="pwss-state"><span class="pwss-dot"></span>${esc(stateLabel)}${approx}</span></div>
           <div class="pwss-detail">${detail.join("")}</div>
         </div>`;
     }
@@ -363,5 +530,7 @@
   /* Expose pour les tests : les fonctions pures de mise en forme, qui
      n'ont besoin ni du DOM ni du reseau.
      Exposed for tests: the pure formatting helpers. */
-  window.PiBoardServiceStatusHelpers = { parseTargets, since, MAX_SERVICES };
+  window.PiBoardServiceStatusHelpers = {
+    parseTargets, parsePicked, mergeTargets, since, MAX_SERVICES, SEVERITY_RANK
+  };
 })();

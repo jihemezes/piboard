@@ -1,14 +1,14 @@
 {
   "id": "servicestatus",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": {
     "en": "Service status",
     "fr": "Statut de service"
   },
   "titleBar": true,
   "description": {
-    "en": "Watches the public status pages of online services (GitHub, Cloudflare, npm, Docker Hub and any other Atlassian Statuspage, with no key or account). Shows the overall state and, when something is wrong, the affected components only, the incident with its stage and age, the latest message published by the service, and a link to it. Scheduled maintenances are reported too. The check interval is configurable and switches on its own to a faster rhythm as soon as an incident is declared.",
-    "fr": "Surveille les pages de statut publiques des services en ligne (GitHub, Cloudflare, npm, Docker Hub et toute autre Statuspage d'Atlassian, sans clé ni compte). Affiche l'état global et, en cas de problème, les seuls composants concernés, l'incident avec son stade et son ancienneté, le dernier message publié par le service, et un lien vers celui-ci. Les maintenances programmées sont également signalées. L'intervalle de vérification est réglable et passe tout seul à un rythme plus rapide dès qu'un incident est déclaré."
+    "en": "Watches the public status pages of online services, picked by family from a catalogue of some sixty entries (AWS, Google Cloud, Azure, OVHcloud, GitHub, Cloudflare, OpenAI, Anthropic, Stripe, Slack, French carriers…), plus any other page you add yourself — no key and no account. Five status-page formats are read: Atlassian Statuspage, Instatus, Google, AWS Health and plain RSS. Shows the overall state and, when something is wrong, the affected components only, the incident with its stage and age, the latest message published by the service, and a link to it. Scheduled maintenances are reported too. The check interval is configurable and switches on its own to a faster rhythm as soon as an incident is declared.",
+    "fr": "Surveille les pages de statut publiques des services en ligne, choisis par famille dans un catalogue d'une soixantaine d'entrées (AWS, Google Cloud, Azure, OVHcloud, GitHub, Cloudflare, OpenAI, Anthropic, Stripe, Slack, opérateurs français…), plus toute autre page ajoutée à la main — sans clé ni compte. Cinq formats de pages de statut sont lus : Statuspage d'Atlassian, Instatus, Google, AWS Health et simple RSS. Affiche l'état global et, en cas de problème, les seuls composants concernés, l'incident avec son stade et son ancienneté, le dernier message publié par le service, et un lien vers celui-ci. Les maintenances programmées sont également signalées. L'intervalle de vérification est réglable et passe tout seul à un rythme plus rapide dès qu'un incident est déclaré."
   },
   "tagline": {
     "en": "Is GitHub down, or is it me?",
@@ -24,16 +24,51 @@
   },
   "settings": [
     {
-      "key": "services",
-      "type": "textarea",
-      "default": "GitHub = https://www.githubstatus.com\nCloudflare = https://www.cloudflarestatus.com\nnpm = https://status.npmjs.org",
+      "key": "picked",
+      "type": "multipick",
+      "source": "data/service-catalog.json",
+      "max": 25,
+      "alerts": true,
+      "default": "[{\"id\":\"github\",\"name\":\"GitHub\",\"url\":\"https://www.githubstatus.com\",\"adapter\":\"statuspage\",\"family\":\"devops\",\"alert\":true},{\"id\":\"cloudflare\",\"name\":\"Cloudflare\",\"url\":\"https://www.cloudflarestatus.com\",\"adapter\":\"statuspage\",\"family\":\"cloud\",\"alert\":true},{\"id\":\"npm\",\"name\":\"npm\",\"url\":\"https://status.npmjs.org\",\"adapter\":\"statuspage\",\"family\":\"devops\",\"alert\":true}]",
       "label": {
-        "en": "Services to watch (one per line)",
-        "fr": "Services à surveiller (un par ligne)"
+        "en": "Services to watch",
+        "fr": "Services à surveiller"
       },
       "hint": {
-        "en": "Format: Name = status page address, or just the address. Any Atlassian Statuspage works, which covers most large services — paste the address of the page you normally visit, the rest is worked out. A few known ones: GitHub https://www.githubstatus.com · Cloudflare https://www.cloudflarestatus.com · npm https://status.npmjs.org · Docker Hub https://status.docker.com · Slack https://status.slack.com · Discord https://discordstatus.com · Atlassian https://status.atlassian.com. Lines starting with # are ignored, handy to disable one temporarily. Up to 10 lines. Only public HTTPS addresses are accepted.",
-        "fr": "Format : Nom = adresse de la page de statut, ou l'adresse seule. Toute Statuspage d'Atlassian fonctionne, ce qui couvre la plupart des grands services — collez l'adresse de la page que vous consultez d'habitude, le reste est deviné. Quelques adresses connues : GitHub https://www.githubstatus.com · Cloudflare https://www.cloudflarestatus.com · npm https://status.npmjs.org · Docker Hub https://status.docker.com · Slack https://status.slack.com · Discord https://discordstatus.com · Atlassian https://status.atlassian.com. Les lignes commençant par # sont ignorées, pratique pour en désactiver une temporairement. 10 lignes au maximum. Seules les adresses HTTPS publiques sont acceptées."
+        "en": "Tick what you want to watch, by family, or type in the search box. The bell beside a ticked service decides whether IT may raise the alert — watching twenty services while being woken by two is the normal case. Up to 25. \"+ Add another service\" takes any public status page: the address is probed on the spot and the format it uses is named back to you, so you know before saving whether it can be read.",
+        "fr": "Cochez ce que vous voulez surveiller, par famille, ou tapez dans la recherche. La cloche en face d'un service coché décide si LUI peut déclencher l'alerte — surveiller vingt services en n'étant réveillé que par deux est le cas normal. 25 au maximum. « + Ajouter un autre service » accepte n'importe quelle page de statut publique : l'adresse est sondée sur le champ et le format employé vous est annoncé, donc vous savez avant d'enregistrer si elle est lisible."
+      }
+    },
+    {
+      "key": "display",
+      "type": "select",
+      "default": "detailed",
+      "label": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "options": [
+        { "value": "detailed", "label": { "en": "Detailed — one card per service", "fr": "Détaillé — une fiche par service" } },
+        { "value": "compact", "label": { "en": "Compact — chips, cards only for problems", "fr": "Compact — pastilles, fiches pour les problèmes seulement" } },
+        { "value": "problems", "label": { "en": "Problems only — silent while all is well", "fr": "Problèmes seulement — muette tant que tout va bien" } }
+      ],
+      "hint": {
+        "en": "Twenty-five detailed cards fit on no screen. In compact mode a service is a chip (name and coloured dot) and only what is wrong is written out in full; \"problems only\" goes further and shows a single line while everything is operational — the right choice for a wall board, where a tile that says nothing is a tile with nothing to say.",
+        "fr": "Vingt-cinq fiches détaillées ne tiennent sur aucun écran. En compact, un service est une pastille (nom et point coloré) et seul ce qui va mal est écrit en entier ; « problèmes seulement » va plus loin et n'affiche qu'une ligne tant que tout est opérationnel — le bon choix pour un tableau mural, où une tuile qui ne dit rien est une tuile qui n'a rien à dire."
+      }
+    },
+    {
+      "key": "services",
+      "type": "textarea",
+      "group": { "en": "Advanced", "fr": "Avancé" },
+      "default": "",
+      "label": {
+        "en": "Extra services, by hand (one per line)",
+        "fr": "Services supplémentaires, à la main (un par ligne)"
+      },
+      "hint": {
+        "en": "Kept from the previous version, and still useful: the picker above covers the catalogue, this field covers everything else — an internal provider, a page too new to be listed, a client's own status page. Format: Name = status page address, or just the address. The format is worked out by probing (Statuspage, Instatus, Google, RSS), so there is nothing to declare. Lines starting with # are ignored, handy to disable one temporarily. These lines count towards the same ceiling of 25 as the ticked services. Only public HTTPS addresses are accepted.",
+        "fr": "Conservé de la version précédente, et toujours utile : le sélecteur ci-dessus couvre le catalogue, ce champ couvre tout le reste — un fournisseur interne, une page trop récente pour être listée, la page de statut d'un client. Format : Nom = adresse de la page de statut, ou l'adresse seule. Le format est deviné par sondage (Statuspage, Instatus, Google, RSS) : il n'y a rien à déclarer. Les lignes commençant par # sont ignorées, pratique pour en désactiver une temporairement. Ces lignes comptent dans le même plafond de 25 que les services cochés. Seules les adresses HTTPS publiques sont acceptées."
       }
     },
     {
@@ -90,6 +125,24 @@
       "hint": {
         "en": "Each incident is announced ONCE, not at every reading — otherwise the tile would ring every minute for hours during an outage. Incidents already under way when the board starts are recorded without alerting: a three-hour-old incident must not flash the screen merely because PiBoard was restarted.",
         "fr": "Chaque incident est annoncé UNE fois, et non à chaque relevé — sans quoi la tuile sonnerait toutes les minutes pendant des heures durant une panne. Les incidents déjà en cours au démarrage du tableau sont enregistrés sans alerter : un incident vieux de trois heures n'a pas à faire flasher l'écran parce que PiBoard vient de redémarrer."
+      }
+    },
+    {
+      "key": "alertMinSeverity",
+      "type": "select",
+      "default": "minor",
+      "label": {
+        "en": "Alert from severity",
+        "fr": "Alerter à partir de la gravité"
+      },
+      "options": [
+        { "value": "minor", "label": { "en": "Minor degradation and above", "fr": "Dégradation mineure et au-delà" } },
+        { "value": "major", "label": { "en": "Partial outage and above", "fr": "Panne partielle et au-delà" } },
+        { "value": "critical", "label": { "en": "Major outage only", "fr": "Panne majeure seulement" } }
+      ],
+      "hint": {
+        "en": "Separate from the check rhythm, on purpose: the tile still speeds up on the slightest degradation — watching closely costs nothing — while the siren stays reserved for what deserves to interrupt you. A state inferred from an RSS feed is reported as minor at most, so it never rings under the two stricter settings.",
+        "fr": "Distinct du rythme de vérification, volontairement : la tuile continue d'accélérer à la moindre dégradation — regarder de près ne coûte rien — tandis que la sirène reste réservée à ce qui mérite de vous interrompre. Un état déduit d'un flux RSS est au plus « mineur » : il ne sonne donc jamais sous les deux réglages plus stricts."
       }
     },
     {

@@ -1896,8 +1896,32 @@
           <h4>Objectif</h4>
           <p>Répondre à la question qu'on se pose quand quelque chose ne marche plus : <b>est-ce chez moi, ou chez eux ?</b> La tuile lit les pages de statut publiques des services dont vous dépendez et dit, le cas échéant, <b>où</b> se situe le problème.</p>
 
-          <h4>Pourquoi elle marche avec bien plus que GitHub</h4>
-          <p><code>githubstatus.com</code> n'est pas une page maison : c'est une <b>Statuspage</b> d'Atlassian, le service qu'emploient des centaines d'éditeurs, et toutes exposent la même API publique au même endroit, sans clé ni compte. Il suffit donc de coller l'adresse de la page que vous consultez d'habitude. Quelques-unes : GitHub, Cloudflare, npm, Docker Hub, Slack, Discord, Atlassian. Jusqu'à 10 services, une ligne chacun, au format <code>Nom = adresse</code> — la même grammaire que la tuile Veille réseau, <code>#</code> compris pour désactiver une ligne.</p>
+          <h4>Choisir les services : un catalogue a cocher</h4>
+          <p>Les services se choisissent dans une <b>liste déroulante à cases à cocher</b>, rangée par familles — cloud et hébergement, développement et DevOps, SaaS et collaboration, paiement et messagerie, observabilité, IA et modèles, France (opérateurs et services) — avec une <b>recherche</b> qui filtre sur le nom comme sur le domaine. Le catalogue livré compte une soixantaine d'entrées : AWS, Google Cloud, Azure, OVHcloud, Scaleway, Cloudflare, GitHub, GitLab, npm, Docker Hub, Slack, Zoom, Google Workspace, Stripe, Twilio, Datadog, Sentry, OpenAI, Anthropic, Mistral, Free, Orange, Gandi, Qonto…</p>
+          <p>Les familles sont <b>pliées</b> au départ, sauf celles qui contiennent déjà un service coché : c'est ce qui permet de retrouver ses propres choix sans faire défiler soixante lignes. Une recherche déplie tout, le temps de la recherche. <b>25 services au maximum</b> — un plafond de lisibilité, pas de réseau.</p>
+
+          <h4>Ajouter un service absent du catalogue</h4>
+          <p>Le bouton <b>« + Ajouter un autre service »</b> accepte n'importe quelle page de statut publique : un fournisseur interne, une page trop récente pour être listée, celle d'un client. L'adresse est <b>sondée sur le champ</b> et le format trouvé vous est annoncé (<code>Reconnu : format statuspage</code>) — donc vous savez <b>avant d'enregistrer</b> si la page est lisible, au lieu de le découvrir trois heures plus tard devant une ligne grise. Le champ texte <b>« Services supplémentaires, à la main »</b>, dans la section <i>Avancé</i>, reste disponible et garde l'ancienne grammaire <code>Nom = adresse</code>, <code>#</code> compris pour désactiver une ligne.</p>
+
+          <h4>Cinq formats de pages de statut, et un honnête</h4>
+          <p><code>githubstatus.com</code> n'est pas une page maison : c'est une <b>Statuspage</b> d'Atlassian, employée par des centaines d'éditeurs, toutes exposant la même API publique au même endroit, sans clé ni compte. C'est le format le plus riche — le seul qui donne l'état de <b>chaque composant</b>. Mais AWS, Google Cloud et Azure, soit exactement les services qu'on veut surveiller en premier, ne l'emploient pas. PiBoard lit donc cinq formats :</p>
+          <div class="help-opt"><span class="help-opt-name">Statuspage (Atlassian)</span><span class="help-opt-desc">État global, état par composant, incidents et maintenances. Le plus complet.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Instatus</span><span class="help-opt-desc">Concurrent direct, employé par une partie des jeunes éditeurs.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Google</span><span class="help-opt-desc">Google Cloud et Google Workspace. Les produits touchés tiennent le rôle des composants.</span></div>
+          <div class="help-opt"><span class="help-opt-name">AWS Health</span><span class="help-opt-desc">Avec la <b>région</b> concernée : une panne sur <code>ap-southeast-2</code> ne vous concerne pas si vous travaillez sur <code>eu-west-1</code>.</span></div>
+          <div class="help-opt"><span class="help-opt-name">RSS</span><span class="help-opt-desc">Azure, OVH et tous les « travaux.* ». État <b>déduit</b>, voir ci-dessous.</span></div>
+          <p>Un flux RSS ne dit jamais « je vais bien » : il publie des billets datés. L'état est donc <b>déduit</b> — aucun billet depuis 24 h vaut « sain », un billet récent vaut « dégradation mineure », jamais plus, car le flux ne contient pas l'information qui justifierait un rouge. Ces services portent un <b>tilde</b> <code>~</code> à côté de leur état : il dit que l'état est déduit et non déclaré par le fournisseur. Un silence n'est pas une bonne nouvelle, et les deux ne doivent pas se ressembler à l'écran.</p>
+          <p>Les services du catalogue déclarent leur format, ce qui évite de sonder quatre adresses par service à chaque relevé. Pour une adresse saisie à la main, le format est deviné par sondage, dans l'ordre : Statuspage, Instatus, Google, RSS.</p>
+
+          <h4>Trois modes d'affichage</h4>
+          <p>Vingt-cinq fiches détaillées ne tiennent sur aucun écran. Une règle commune aux trois modes : <b>ce qui va mal est toujours écrit en entier</b>, ce qui va bien se tasse.</p>
+          <div class="help-opt"><span class="help-opt-name">Détaillé</span><span class="help-opt-desc">Comme avant : une fiche par service. Parfait jusqu'à cinq ou six.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">Une <b>pastille</b> (nom + point coloré) par service sain, une fiche complète pour chaque service en difficulté.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Problèmes seulement</span><span class="help-opt-desc">Une seule ligne — « 25 services, tout opérationnel » — tant qu'il n'y a rien à dire. Le bon choix pour un tableau mural.</span></div>
+
+          <h4>La cloche : surveiller beaucoup, être réveillé par peu</h4>
+          <p>Chaque service coché porte une <b>cloche</b> dans le sélecteur. Elle décide si <b>lui</b> peut déclencher l'alerte. Surveiller vingt services et ne vouloir être réveillé que par deux est le cas normal ; sans ce réglage par service, l'option d'alerte devenait inutilisable dès qu'on cochait beaucoup, et on la coupait entièrement — donc on n'était plus averti pour les deux qui comptaient vraiment.</p>
+          <p>Un second réglage, <b>« Alerter à partir de la gravité »</b>, fixe le seuil : dégradation mineure, panne partielle, ou panne majeure seulement. Il est volontairement <b>distinct du rythme de vérification</b> : la tuile continue d'accélérer à la moindre dégradation — regarder de près ne coûte rien — tandis que la sirène reste réservée à ce qui mérite de vous interrompre.</p>
 
           <h4>Ce qui s'affiche</h4>
           <p>En temps normal, une ligne par service avec son état global. <b>En cas de problème</b>, s'y ajoutent : les <b>composants concernés uniquement</b> (lister les dix qui vont bien noierait le seul qui compte), le <b>titre de l'incident</b>, son <b>stade</b> (analyse en cours, cause identifiée, correctif sous surveillance…), <b>depuis quand</b> il dure, le <b>dernier message publié</b> par le service — souvent la seule information vraiment utile — et un <b>lien</b> vers l'incident.</p>
@@ -1916,7 +1940,10 @@
           <h4>Ce que la tuile ne confond pas</h4>
           <p>Une page de statut <b>injoignable</b> ne veut pas dire « le service va bien ». Si PiBoard n'arrive pas à la lire — coupure Internet, page déplacée — la tuile le dit explicitement au lieu d'afficher du vert. De même, un état qu'elle ne comprend pas n'est jamais pris pour un état sain.</p>
           <p>Seules les adresses <b>HTTPS publiques</b> sont acceptées : une adresse interne (<code>192.168.…</code>, <code>.local</code>, <code>localhost</code>) est refusée, le serveur PiBoard voyant des machines que votre navigateur ne voit pas.</p>
-          <div class="help-opt"><span class="help-opt-name">Services à surveiller</span><span class="help-opt-desc">Une ligne par service, <code>Nom = adresse</code>. 10 au maximum.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Services à surveiller</span><span class="help-opt-desc">Catalogue à cocher, rangé par familles, avec recherche et ajout libre. 25 au maximum. La cloche de chaque service décide s'il peut alerter.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Affichage</span><span class="help-opt-desc">Détaillé, compact, ou problèmes seulement.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Services supplémentaires (Avancé)</span><span class="help-opt-desc">Une ligne par service, <code>Nom = adresse</code>, pour ce qui n'est pas au catalogue.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Alerter à partir de la gravité</span><span class="help-opt-desc">Seuil de la sirène, indépendant du rythme de vérification.</span></div>
           <div class="help-opt"><span class="help-opt-name">Intervalles</span><span class="help-opt-desc">En temps normal, et pendant un incident. En minutes.</span></div>
           <div class="help-opt"><span class="help-opt-name">Maintenances programmées</span><span class="help-opt-desc">Affichage des interruptions annoncées.</span></div>
           <div class="help-opt"><span class="help-opt-name">Alerte</span><span class="help-opt-desc">Flash, son, durée et webhook à l'apparition d'un incident.</span></div>`,
@@ -1925,8 +1952,32 @@
           <h4>Purpose</h4>
           <p>To answer the question one asks when something stops working: <b>is it me, or is it them?</b> The tile reads the public status pages of the services you depend on and says, when relevant, <b>where</b> the problem is.</p>
 
-          <h4>Why it works with far more than GitHub</h4>
-          <p><code>githubstatus.com</code> is not a bespoke page but an Atlassian <b>Statuspage</b>, used by hundreds of vendors, all exposing the same public API in the same place, with no key or account. So paste the address of the page you normally visit. A few: GitHub, Cloudflare, npm, Docker Hub, Slack, Discord, Atlassian. Up to 10 services, one line each, as <code>Name = address</code> — the same grammar as the Network watch tile, <code>#</code> included to disable a line.</p>
+          <h4>Choosing the services: a catalogue to tick</h4>
+          <p>Services are chosen from a <b>drop-down list of checkboxes</b>, arranged by family — cloud and hosting, development and DevOps, SaaS and collaboration, payment and messaging, observability, AI and models, France (carriers and services) — with a <b>search</b> filtering on name as well as domain. The shipped catalogue holds some sixty entries: AWS, Google Cloud, Azure, OVHcloud, Scaleway, Cloudflare, GitHub, GitLab, npm, Docker Hub, Slack, Zoom, Google Workspace, Stripe, Twilio, Datadog, Sentry, OpenAI, Anthropic, Mistral, Free, Orange, Gandi, Qonto…</p>
+          <p>Families start <b>collapsed</b>, except those already holding a ticked service: that is what lets you find your own choices without scrolling sixty lines. A search expands everything for its duration. <b>25 services at most</b> — a legibility ceiling, not a network one.</p>
+
+          <h4>Adding a service the catalogue does not hold</h4>
+          <p>The <b>"+ Add another service"</b> button takes any public status page: an internal provider, a page too new to be listed, a client's own. The address is <b>probed on the spot</b> and the format found is named back to you (<code>Recognised: statuspage format</code>) — so you know <b>before saving</b> whether the page can be read, instead of finding out three hours later in front of a grey line. The text field <b>"Extra services, by hand"</b>, in the <i>Advanced</i> section, remains available and keeps the old <code>Name = address</code> grammar, <code>#</code> included to disable a line.</p>
+
+          <h4>Five status-page formats, one of them honest</h4>
+          <p><code>githubstatus.com</code> is not a bespoke page but an Atlassian <b>Statuspage</b>, used by hundreds of vendors, all exposing the same public API in the same place, with no key or account. It is the richest format — the only one giving the state of <b>each component</b>. But AWS, Google Cloud and Azure, precisely the services one wants to watch first, do not use it. So PiBoard reads five formats:</p>
+          <div class="help-opt"><span class="help-opt-name">Statuspage (Atlassian)</span><span class="help-opt-desc">Overall state, per-component state, incidents and maintenances. The most complete.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Instatus</span><span class="help-opt-desc">A direct competitor, used by a number of younger vendors.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Google</span><span class="help-opt-desc">Google Cloud and Google Workspace. The affected products stand in for components.</span></div>
+          <div class="help-opt"><span class="help-opt-name">AWS Health</span><span class="help-opt-desc">With the <b>region</b> concerned: an <code>ap-southeast-2</code> outage does not concern you if you work on <code>eu-west-1</code>.</span></div>
+          <div class="help-opt"><span class="help-opt-name">RSS</span><span class="help-opt-desc">Azure, OVH and every "travaux.*". State <b>inferred</b>, see below.</span></div>
+          <p>An RSS feed never says "I am fine": it publishes dated posts. The state is therefore <b>inferred</b> — no post in 24 h counts as healthy, a recent post counts as a minor degradation and never worse, because the feed does not carry the information that would justify a red. These services carry a <b>tilde</b> <code>~</code> beside their state, saying the state is inferred rather than declared by the provider. A silence is not good news, and the two must not look alike on screen.</p>
+          <p>Catalogue services declare their format, which avoids probing four addresses per service at every reading. For a hand-typed address the format is worked out by probing, in order: Statuspage, Instatus, Google, RSS.</p>
+
+          <h4>Three display modes</h4>
+          <p>Twenty-five detailed cards fit on no screen. One rule shared by all three modes: <b>what is wrong is always written out in full</b>, what is fine is condensed.</p>
+          <div class="help-opt"><span class="help-opt-name">Detailed</span><span class="help-opt-desc">As before: one card per service. Perfect up to five or six.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">A <b>chip</b> (name + coloured dot) per healthy service, a full card for each service in trouble.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Problems only</span><span class="help-opt-desc">A single line — "25 services, all operational" — while there is nothing to say. The right choice for a wall board.</span></div>
+
+          <h4>The bell: watch many, be woken by few</h4>
+          <p>Each ticked service carries a <b>bell</b> in the picker, deciding whether <b>it</b> may raise the alert. Watching twenty services while wanting to be woken by two is the normal case; without this per-service setting the alert option became unusable as soon as many were ticked, so people switched it off entirely — and were then not told about the two that did matter.</p>
+          <p>A second setting, <b>"Alert from severity"</b>, sets the threshold: minor degradation, partial outage, or major outage only. It is deliberately <b>separate from the check rhythm</b>: the tile still speeds up on the slightest degradation — watching closely costs nothing — while the siren stays reserved for what deserves to interrupt you.</p>
 
           <h4>What is shown</h4>
           <p>Normally, one line per service with its overall state. <b>When something is wrong</b>, it adds: the <b>affected components only</b> (listing the ten that work would drown the one that matters), the <b>incident's title</b>, its <b>stage</b> (investigating, cause identified, fix being monitored…), <b>how long</b> it has lasted, the <b>latest message published</b> by the service — often the only truly useful piece of information — and a <b>link</b> to the incident.</p>
@@ -1945,7 +1996,10 @@
           <h4>What the tile does not confuse</h4>
           <p>An <b>unreachable</b> status page does not mean "the service is fine". If PiBoard cannot read it — internet outage, page moved — the tile says so explicitly instead of showing green. Likewise, a state it does not understand is never taken for a healthy one.</p>
           <p>Only <b>public HTTPS</b> addresses are accepted: an internal one (<code>192.168.…</code>, <code>.local</code>, <code>localhost</code>) is refused, the PiBoard server seeing machines your browser cannot.</p>
-          <div class="help-opt"><span class="help-opt-name">Services to watch</span><span class="help-opt-desc">One line per service, <code>Name = address</code>. 10 at most.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Services to watch</span><span class="help-opt-desc">A catalogue to tick, arranged by family, with search and free addition. 25 at most. Each service's bell decides whether it may alert.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Display</span><span class="help-opt-desc">Detailed, compact, or problems only.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Extra services (Advanced)</span><span class="help-opt-desc">One line per service, <code>Name = address</code>, for whatever is not in the catalogue.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Alert from severity</span><span class="help-opt-desc">The siren's threshold, independent of the check rhythm.</span></div>
           <div class="help-opt"><span class="help-opt-name">Intervals</span><span class="help-opt-desc">Normally, and during an incident. In minutes.</span></div>
           <div class="help-opt"><span class="help-opt-name">Scheduled maintenances</span><span class="help-opt-desc">Display of announced interruptions.</span></div>
           <div class="help-opt"><span class="help-opt-name">Alert</span><span class="help-opt-desc">Flash, sound, duration and webhook when an incident appears.</span></div>`

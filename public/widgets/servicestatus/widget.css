@@ -136,3 +136,141 @@
   color: var(--muted);
   padding: 8px;
 }
+
+/* ============================================================
+   Selecteur de services (type de reglage "multipick", 1.128.0)
+   Ces regles habillent la FENETRE DE REGLAGES, pas la tuile. Elles
+   vivent ici plutot que dans style.css pour la meme raison que
+   l'editeur de lignes de la tuile Bourse habille ses propres champs
+   dans widgets/stocks/widget.css : le type de reglage est generique,
+   mais c'est cette tuile qui l'introduit, et la feuille d'une tuile
+   n'est chargee que si la tuile existe sur le tableau -- donc les
+   regles n'alourdissent personne d'autre.
+   These rules dress the SETTINGS WINDOW, not the tile, and live here
+   for the same reason the Stocks tile's row editor dresses its own
+   fields in widgets/stocks/widget.css: the setting type is generic, but
+   this tile introduces it, and a tile's stylesheet is only loaded when
+   the tile is on the board.
+   ============================================================ */
+.field-multipick { margin-bottom: 14px; }
+.field-multipick .mp-bar { display: flex; align-items: center; gap: 8px; margin: 2px 0 8px; }
+.field-multipick .mp-search {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--faint);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: inherit;
+  font: inherit;
+}
+.field-multipick .mp-count { color: var(--muted); font-size: 13px; white-space: nowrap; }
+/* Le compteur devient un AVERTISSEMENT au plafond : sans ce changement
+   de couleur, les cases restantes se desactivaient sans explication
+   visible. The counter becomes a WARNING at the ceiling: without it the
+   remaining boxes greyed out with no visible explanation. */
+.field-multipick .mp-count-full { color: var(--warn); font-weight: 600; }
+
+.field-multipick .mp-fams {
+  max-height: 260px;
+  overflow: auto;
+  border: 1px solid var(--faint);
+  border-radius: 8px;
+  background: var(--field-bg);
+}
+.field-multipick .mp-fam { border-bottom: 1px solid var(--faint); }
+.field-multipick .mp-fam:last-child { border-bottom: none; }
+.field-multipick .mp-fam > summary {
+  padding: 8px 10px;
+  cursor: pointer;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field-multipick .mp-fam-n { margin-left: auto; color: var(--muted); font-weight: 400; font-size: 12.5px; }
+.field-multipick .mp-fam-body { padding: 2px 10px 8px; display: flex; flex-direction: column; gap: 2px; }
+
+.field-multipick .mp-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 4px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.field-multipick .mp-item:hover { background: var(--tile); }
+.field-multipick .mp-item-name { flex: 0 1 auto; }
+/* Le domaine est l'information qui permet de reconnaitre la bonne page
+   quand deux services portent un nom proche ; il s'efface mais ne
+   disparait pas. The domain is what tells two similarly named services
+   apart; it fades but never disappears. */
+.field-multipick .mp-item-host {
+  color: var(--muted);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.field-multipick .mp-item-full { opacity: 0.45; cursor: default; }
+.field-multipick .mp-bell {
+  margin-left: auto;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  line-height: 1;
+  padding: 2px 4px;
+  opacity: 0.5;
+}
+.field-multipick .mp-bell-on { opacity: 1; }
+
+.field-multipick .mp-add { margin-top: 8px; }
+.field-multipick .mp-add-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; align-items: center; }
+.field-multipick .mp-add-name { flex: 0 0 9em; }
+.field-multipick .mp-add-url { flex: 1 1 14em; min-width: 0; }
+.field-multipick .mp-add-name,
+.field-multipick .mp-add-url {
+  padding: 7px 10px;
+  border: 1px solid var(--faint);
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: inherit;
+  font: inherit;
+}
+.field-multipick .mp-add-msg { flex: 1 1 100%; font-size: 13px; color: var(--muted); }
+.field-multipick .mp-add-ok { color: var(--ok); }
+.field-multipick .mp-add-err { color: var(--danger); }
+
+/* ---- Mode compact de la tuile (1.128.0) ----
+   Vingt-cinq services en fiches detaillees ne tiennent sur aucun ecran.
+   En compact, chaque service devient une pastille : nom + point colore,
+   et la fiche complete ne reapparait que pour ce qui va mal.
+   Twenty-five services as detailed cards fit on no screen. In compact
+   mode each becomes a chip, the full card returning only for what is
+   wrong. */
+.pw-svcstatus .pwss-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+.pw-svcstatus .pwss-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--tile);
+  border: 1px solid var(--faint);
+  font-size: 12.5px;
+  max-width: 100%;
+}
+.pw-svcstatus .pwss-chip .pwss-dot { background: var(--pwss-tone); }
+.pw-svcstatus .pwss-chip-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-svcstatus .pwss-allgood { color: var(--ok); font-size: 13px; }
+/* Un etat DEDUIT d'un flux RSS n'est pas un etat declare par le
+   fournisseur : le tilde le dit, et l'infobulle l'explique.
+   A state INFERRED from an RSS feed is not one the provider declared:
+   the tilde says so and the tooltip explains it. */
+.pw-svcstatus .pwss-approx { color: var(--muted); font-size: 11px; margin-left: 2px; cursor: help; }
