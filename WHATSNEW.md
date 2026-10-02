@@ -33,6 +33,31 @@
 # Nouveautes / What's new
 
 
+## 1.131.0
+
+**Les derniers services muets de la tuile Statut de service**
+
+Hugging Face et Clever Cloud sont maintenant lus pour de bon : le
+premier publie sa page chez un editeur que PiBoard ne connaissait pas,
+le second un flux que le catalogue n'indiquait pas. Mistral AI, Free,
+Orange, Bouygues Telecom et Qonto ne publient, eux, aucune page de
+statut lisible par une machine : PiBoard verifie donc simplement que
+leur service repond, avec le tilde qui rappelle que l'etat est deduit.
+L'entree « OVH travaux » disparait, son flux n'existant plus et les cinq
+pages produits d'OVHcloud couvrant deja le sujet.
+
+---
+
+**The last silent services in the Service status tile**
+
+Hugging Face and Clever Cloud are now properly read: the first publishes
+its page with a vendor PiBoard did not know, the second a feed the
+catalogue did not point at. Mistral AI, Free, Orange, Bouygues Telecom
+and Qonto publish no machine-readable status page at all, so PiBoard
+simply checks that their service answers, with the tilde recalling that
+the state is inferred. The "OVH travaux" entry is gone: its feed no
+longer exists and OVHcloud's five product pages already cover it.
+
 ## 1.130.0
 
 **Les corrections du catalogue atteignent enfin les tableaux deja regles**

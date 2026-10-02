@@ -1,7 +1,7 @@
 {
   "_comment_fr": "Catalogue des services proposés par la tuile « Statut de service ». Ce fichier est une simple LISTE : il ne contient aucun état, aucune donnée de santé, et l'état affiché vient toujours en direct de la page du fournisseur. Les entrées sont reprises des annuaires publics (dont le dépôt open-source awesome-statuspages) et vérifiées à la main. Pour en ajouter une : un identifiant stable, un nom, une famille (voir « families »), l'adresse publique, et l'adaptateur à employer -- « auto » si on ne sait pas, le serveur sonde alors les formats connus dans l'ordre.",
   "_comment_en": "Catalogue of the services offered by the Service status tile. This file is a plain LIST: it holds no state and no health data; the displayed state always comes live from the provider's own page. To add an entry: a stable id, a name, a family, the public address, and the adapter to use -- \"auto\" if unknown, the server then probes the known formats in order.",
-  "version": 2,
+  "version": 3,
   "families": [
     {
       "id": "cloud",
@@ -491,7 +491,8 @@
       "name": "Mistral AI",
       "family": "ai",
       "url": "https://status.mistral.ai",
-      "adapter": "auto"
+      "adapter": "endpoint",
+      "api": "https://api.mistral.ai/v1/models"
     },
     {
       "id": "cohere",
@@ -505,7 +506,8 @@
       "name": "Hugging Face",
       "family": "ai",
       "url": "https://status.huggingface.co",
-      "adapter": "auto"
+      "adapter": "betterstack",
+      "api": "https://status.huggingface.co/index.json"
     },
     {
       "id": "perplexity",
@@ -525,15 +527,17 @@
       "id": "free",
       "name": "Free (Freebox, mobile)",
       "family": "france",
-      "url": "https://status.free.fr",
-      "adapter": "auto"
+      "url": "https://www.free.fr",
+      "adapter": "endpoint",
+      "api": "https://www.free.fr/"
     },
     {
       "id": "orange",
       "name": "Orange",
       "family": "france",
-      "url": "https://reseaux.orange.fr",
-      "adapter": "auto"
+      "url": "https://www.orange.fr",
+      "adapter": "endpoint",
+      "api": "https://www.orange.fr/"
     },
     {
       "id": "sfr",
@@ -548,15 +552,8 @@
       "name": "Bouygues Telecom",
       "family": "france",
       "url": "https://www.bouyguestelecom.fr",
-      "adapter": "auto"
-    },
-    {
-      "id": "ovhtravaux",
-      "name": "OVH — travaux & incidents",
-      "family": "france",
-      "url": "https://www.status-ovhcloud.com",
-      "adapter": "rss",
-      "api": "https://www.status-ovhcloud.com/history.rss"
+      "adapter": "endpoint",
+      "api": "https://www.bouyguestelecom.fr/"
     },
     {
       "id": "gandi",
@@ -570,7 +567,8 @@
       "name": "Qonto",
       "family": "france",
       "url": "https://status.qonto.com",
-      "adapter": "auto"
+      "adapter": "endpoint",
+      "api": "https://qonto.com/"
     },
     {
       "id": "doctolib",
@@ -584,7 +582,8 @@
       "name": "Clever Cloud",
       "family": "france",
       "url": "https://www.clevercloudstatus.com",
-      "adapter": "auto"
+      "adapter": "rss",
+      "api": "https://www.clevercloudstatus.com/rss"
     },
     {
       "id": "box",

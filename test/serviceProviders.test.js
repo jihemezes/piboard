@@ -733,6 +733,105 @@ test("sans charset annonce, on lit de l'UTF-8 -- le cas de la quasi-totalite des
   assert.strictEqual(S.decodeText(Buffer.from('{"\u00e9":1}', "utf8"), "application/json"), '{"\u00e9":1}');
 });
 
+
+console.log("== Better Stack (Hugging Face) ==");
+
+const BETTERSTACK = {
+  data: { id: "124692", type: "status_page", attributes: {
+    company_name: "Hugging Face", company_url: "https://huggingface.co",
+    aggregate_state: "operational", updated_at: "2026-10-02T20:00:00.000Z" } },
+  included: [
+    { type: "status_page_section", attributes: { name: "Current status by service", position: 0 } },
+    { type: "status_page_resource", attributes: { public_name: "Huggingface Hub", status: "operational", position: 0 } },
+    { type: "status_page_resource", attributes: { public_name: "Inference API", status: "degraded", position: 1 } },
+    { type: "status_report", id: "r1", attributes: { title: "Slower downloads in Asia-Pacific",
+      report_type: "incident", aggregate_state: "resolved", starts_at: "2026-09-22T18:48:00.000Z" } },
+    { type: "status_report", id: "r2", attributes: { title: "GPU jobs failing to start",
+      report_type: "incident", aggregate_state: "investigating", starts_at: "2026-10-02T18:00:00.000Z" } }
+  ]
+};
+
+test("Better Stack : les ressources deviennent des composants", () => {
+  const out = P.parseBetterstack(BETTERSTACK);
+  assert.ok(out);
+  assert.strictEqual(out.componentCount, 2, "les sections ne sont pas des composants");
+  assert.strictEqual(out.affected.length, 1);
+  assert.strictEqual(out.affected[0].name, "Inference API");
+});
+
+/* MEME PIEGE QUE GOOGLE ET VULTR : les rapports RESOLUS restent dans le
+   fichier. Les afficher montrerait un incident referme comme en cours. */
+test("Better Stack : un rapport resolu n'est pas un incident en cours", () => {
+  const out = P.parseBetterstack(BETTERSTACK);
+  assert.strictEqual(out.incidents.length, 1);
+  assert.strictEqual(out.incidents[0].name, "GPU jobs failing to start");
+});
+
+/* L'etat DECLARE prime sur celui deduit des composants : l'editeur peut
+   annoncer une panne avant que ses sondes ne la voient, et c'est sa
+   parole qu'on affiche. */
+test("Better Stack : l'etat global declare prime sur les composants", () => {
+  const sick = JSON.parse(JSON.stringify(BETTERSTACK));
+  sick.data.attributes.aggregate_state = "downtime";
+  sick.included[1].attributes.status = "operational";
+  sick.included[2].attributes.status = "operational";
+  const out = P.parseBetterstack(sick);
+  assert.strictEqual(out.indicator, "critical");
+  assert.strictEqual(out.ok, false);
+});
+
+/* Une page Better Stack rend 200 avec du HTML pour n'importe quel chemin
+   inconnu : le lecteur doit refuser tout ce qui n'est pas une page de
+   statut, sans quoi le sondage s'arreterait sur elle. */
+test("Better Stack : ce qui n'est pas une page Better Stack est refuse", () => {
+  assert.strictEqual(P.parseBetterstack({ data: { type: "autre_chose" } }), null);
+  assert.strictEqual(P.parseBetterstack({ page: { status: "UP" } }), null);
+  assert.strictEqual(P.parseBetterstack({ data: { type: "status_page", attributes: {} }, included: [] }), null);
+});
+
+console.log("== Les huit entrees corrigees en 1.131.0 ==");
+
+test("chacune des huit entrees declare desormais le bon format", () => {
+  const expect = {
+    huggingface: "betterstack",
+    clever: "rss",
+    mistral: "endpoint",
+    free: "endpoint",
+    orange: "endpoint",
+    bouygues: "endpoint",
+    qonto: "endpoint"
+  };
+  for (const id of Object.keys(expect)) {
+    const s = catalog.services.find((x) => x.id === id);
+    assert.ok(s, "entree disparue : " + id);
+    assert.strictEqual(s.adapter, expect[id], id + " doit etre lu par " + expect[id]);
+  }
+});
+
+/* L'entree « OVH travaux » pointait un flux qui n'existe plus (404) et
+   faisait double emploi avec les cinq pages produits d'OVHcloud, elles
+   bien lisibles. Une entree muette au catalogue coute plus qu'elle ne
+   rapporte : on la retire plutot que de la laisser grise. */
+test("l'entree OVH travaux, muette et redondante, a ete retiree", () => {
+  assert.ok(!catalog.services.some((s) => s.id === "ovhtravaux"));
+  assert.ok(catalog.services.filter((s) => /^ovh-/.test(s.id)).length >= 4,
+    "les pages produits OVHcloud, elles, doivent rester");
+});
+
+/* CE QUE MESURE « ENDPOINT » POUR CES SERVICES-LA. Leur page de statut
+   n'expose rien de lisible, mais sonder la PAGE n'aurait aucun sens :
+   une page de statut joignable ne dit rien du service. On interroge donc
+   le service lui-meme. */
+test("les services sondes visent le SERVICE, pas sa page de statut", () => {
+  for (const id of ["mistral", "free", "orange", "bouygues", "qonto", "sfr"]) {
+    const s = catalog.services.find((x) => x.id === id);
+    assert.strictEqual(s.adapter, "endpoint");
+    assert.ok(s.api, id + " doit declarer l'adresse sondee");
+    assert.ok(!/^https:\/\/status\./.test(s.api),
+      id + " sonde sa page de statut au lieu du service : une page de statut joignable ne dit rien -> " + s.api);
+  }
+});
+
 setTimeout(() => {
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS SERVICEPROVIDERS PASSENT");
   process.exit(failures ? 1 : 0);

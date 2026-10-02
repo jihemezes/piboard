@@ -905,6 +905,87 @@ function fromComponents(opts) {
   });
 }
 
+/* ============================================================
+   11. Better Stack -- <page>/index.json
+   Le quatrieme editeur de pages de statut, et celui de Hugging Face.
+   Format JSON:API : l'etat global est dans `data.attributes`, les
+   composants et les incidents sont melanges dans un seul tableau
+   `included`, distingues par leur `type`.
+
+   PARTICULARITE QUI PIEGE : une page Better Stack rend 200 avec du HTML
+   pour N'IMPORTE QUEL chemin inconnu -- y compris /api/v2/summary.json
+   et /summary.json. Le sondage « auto » recevait donc 200 partout et
+   concluait « format inconnu » ; c'est le message qu'a vu Jean-Michel.
+   Chaque lecteur refusant ce qui n'est pas a lui, le sondage finit par
+   tomber sur le bon, mais il fallait encore que celui-ci existe.
+   The fourth status-page vendor, and Hugging Face's. A Better Stack page
+   answers 200 with HTML for ANY unknown path, so probing received 200
+   everywhere and concluded "unknown format".
+   ============================================================ */
+const BETTERSTACK_STATE = {
+  operational: "operational",
+  degraded: "degraded_performance",
+  downtime: "major_outage",
+  maintenance: "under_maintenance",
+  resolved: "operational"
+};
+
+function parseBetterstack(json) {
+  const data = json && typeof json === "object" ? json.data : null;
+  if (!data || typeof data !== "object" || data.type !== "status_page") return null;
+  const attrs = data.attributes || {};
+  const included = Array.isArray(json.included) ? json.included : [];
+
+  const components = included
+    .filter((x) => x && x.type === "status_page_resource" && x.attributes && x.attributes.public_name)
+    .map((x) => ({
+      name: text(x.attributes.public_name, 120),
+      status: Object.prototype.hasOwnProperty.call(BETTERSTACK_STATE, String(x.attributes.status))
+        ? BETTERSTACK_STATE[String(x.attributes.status)]
+        : "unknown",
+      group: null
+    }));
+  if (!components.length) return null;
+
+  /* Les rapports RESOLUS restent dans le fichier -- meme piege que
+     Google et Vultr. On ne garde que ce qui est encore ouvert.
+     RESOLVED reports stay in the file -- the same trap as Google and
+     Vultr; only what is still open is kept. */
+  const open = included
+    .filter((x) => x && x.type === "status_report" && x.attributes && x.attributes.title)
+    .filter((x) => String(x.attributes.aggregate_state || "").toLowerCase() !== "resolved");
+
+  const state = fromComponents({
+    name: attrs.company_name ? text(attrs.company_name, 120) : null,
+    url: attrs.company_url ? String(attrs.company_url) : null,
+    components
+  });
+
+  /* L'etat global DECLARE prime sur celui qu'on deduirait des
+     composants : l'editeur peut annoncer une degradation avant que ses
+     sondes ne la voient, et c'est sa parole qu'on affiche.
+     The DECLARED overall state wins over the one inferred from the
+     components: the vendor may announce a degradation before its probes
+     see it, and it is their word we display. */
+  const declared = String(attrs.aggregate_state || "").toLowerCase();
+  if (declared === "downtime") { state.indicator = "critical"; state.ok = false; }
+  else if (declared === "degraded") { state.indicator = state.indicator === "none" ? "minor" : state.indicator; state.ok = false; }
+
+  state.updatedAt = attrs.updated_at || null;
+  state.incidents = open.map((x) => ({
+    id: x.id || null,
+    name: text(x.attributes.title, 200),
+    status: x.attributes.aggregate_state || null,
+    impact: x.attributes.report_type || null,
+    url: attrs.custom_domain ? "https://" + String(attrs.custom_domain) : null,
+    startedAt: x.attributes.starts_at || null,
+    updatedAt: x.attributes.ends_at || x.attributes.starts_at || null,
+    lastMessage: null,
+    components: []
+  }));
+  return state;
+}
+
 /* ---------- Table des adaptateurs / adapter table ----------
    `path` : ce qu'on ajoute a l'origine quand le catalogue ne fournit pas
    d'adresse d'API explicite. `kind` : comment lire la reponse.
@@ -938,6 +1019,7 @@ const ADAPTERS = {
      constate une reponse. Voir parseEndpoint ci-dessus pour ce qu'il ne
      dit pas. The only adapter reading no document but observing an
      answer. */
+  betterstack: { path: "/index.json", kind: "json", parse: parseBetterstack },
   endpoint: { path: "/", kind: "probe", parse: parseEndpoint }
 };
 
@@ -961,7 +1043,7 @@ const ADAPTERS = {
    always win, and every service would become "healthy, inferred"
    instead of being properly read. It is used only when the catalogue
    declares it. */
-const AUTO_ORDER = ["statuspage", "instatus", "google", "fastly", "vultr", "paypal", "rss"];
+const AUTO_ORDER = ["statuspage", "instatus", "betterstack", "google", "fastly", "vultr", "paypal", "rss"];
 
 module.exports = {
   ADAPTERS,
@@ -979,6 +1061,7 @@ module.exports = {
   parseFastly,
   parseVultr,
   parseEndpoint,
+  parseBetterstack,
   fromComponents,
   stripHtml,
   msFromAws,

@@ -1,5 +1,35 @@
 # Changelog
 
+## 1.131.0
+
+- **Les huit derniers services muets, chacun pour sa raison.** Diagnostic
+  fait en sondant les pages reelles, pas en supposant :
+  - **Hugging Face** : page **Better Stack**, un quatrieme editeur que
+    PiBoard ne connaissait pas. Nouvel adaptateur (`/index.json`, format
+    JSON:API). Particularite qui met le sondage en defaut : une page
+    Better Stack rend 200 avec du HTML pour N'IMPORTE QUEL chemin
+    inconnu, d'ou le « format inconnu » affiche.
+  - **Clever Cloud** : flux RSS parfaitement valide a `/rss`, que
+    l'entree du catalogue n'indiquait pas.
+  - **Mistral AI** : page **Rootly**, entierement rendue cote serveur --
+    aucun appel de donnees, aucun JSON, aucun flux. Rien a lire, verifie
+    en inspectant les requetes reelles de la page.
+  - **Free, Orange, Bouygues Telecom, Qonto** : aucune page de statut
+    exploitable par une machine. Pour ceux-la (SFR compris), on bascule
+    sur l'adaptateur `endpoint`.
+  - **OVH travaux** : flux disparu (404) et doublon des cinq pages
+    produits d'OVHcloud, elles bien lisibles. Entree **retiree** : une
+    entree muette au catalogue coute plus qu'elle ne rapporte.
+
+- **« Endpoint » interroge desormais le SERVICE, jamais sa page de
+  statut.** Sonder `status.qonto.com` pour savoir si Qonto fonctionne
+  n'aurait rien voulu dire : une page de statut qui repond ne dit rien du
+  service qu'elle decrit. Les entrees sondees visent donc `qonto.com`,
+  `www.orange.fr`, `api.mistral.ai`... Fige par un test qui refuse toute
+  adresse sondee commencant par `status.`.
+
+- **Catalogue** : 78 -> 77 entrees, dix formats lus.
+
 ## 1.130.0
 
 - **Corriger le catalogue ne changeait RIEN sur un tableau deja regle**,
