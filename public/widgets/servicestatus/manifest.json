@@ -1,6 +1,6 @@
 {
   "id": "servicestatus",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "name": {
     "en": "Service status",
     "fr": "Statut de service"
@@ -63,6 +63,13 @@
           }
         },
         {
+          "value": "compactplus",
+          "label": {
+            "fr": "Compact + — tout en pastilles, détail au clic",
+            "en": "Compact + — all as chips, detail on click"
+          }
+        },
+        {
           "value": "problems",
           "label": {
             "en": "Problems only — silent while all is well",
@@ -73,6 +80,32 @@
       "hint": {
         "en": "Twenty-five detailed cards fit on no screen. In compact mode a service is a chip (name and coloured dot) and only what is wrong is written out in full; \"problems only\" goes further and shows a single line while everything is operational — the right choice for a wall board, where a tile that says nothing is a tile with nothing to say.",
         "fr": "Vingt-cinq fiches détaillées ne tiennent sur aucun écran. En compact, un service est une pastille (nom et point coloré) et seul ce qui va mal est écrit en entier ; « problèmes seulement » va plus loin et n'affiche qu'une ligne tant que tout est opérationnel — le bon choix pour un tableau mural, où une tuile qui ne dit rien est une tuile qui n'a rien à dire."
+      }
+    },
+    {
+      "key": "geoFilter",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "fr": "Masquer les problèmes hors de mes zones",
+        "en": "Hide problems outside my zones"
+      },
+      "hint": {
+        "fr": "Une dégradation de Cloudflare au Chili ou une panne AWS à Sydney n'ont aucun effet sur un service utilisé depuis la France, mais font passer la tuile au rouge — et à force, on cesse de la regarder. Cochée, cette option ne garde que les composants et les incidents situés dans les zones listées ci-dessous. Un libellé où aucun lieu connu n'apparaît reste TOUJOURS affiché : on ne masque que ce qu'on a su situer. Ce qui est annoncé comme mondial reste affiché aussi. Le nombre de problèmes masqués est indiqué sur la ligne du service, pour qu'un service calme ne soit jamais confondu avec un service dont on vous cache quelque chose.",
+        "en": "A Cloudflare degradation in Chile or an AWS outage in Sydney have no effect on a service used from France, yet turn the tile red — and in time one stops looking at it. Ticked, this keeps only the components and incidents located in the zones listed below. A label in which no known place appears is ALWAYS shown: only what we managed to locate is ever hidden. Anything announced as worldwide stays shown too. The number of hidden problems is displayed on the service's line, so a quiet service is never confused with one that is hiding something from you."
+      }
+    },
+    {
+      "key": "geoZones",
+      "type": "text",
+      "default": "Europe, France, EU, eu-west, eu-central, westeurope, francecentral",
+      "label": {
+        "fr": "Mes zones (séparées par des virgules)",
+        "en": "My zones (comma separated)"
+      },
+      "hint": {
+        "fr": "Comparées aux noms de composants, aux régions et aux titres d'incidents, sans tenir compte des accents ni de la casse. Ajoutez ce qui vous concerne : un pays, une ville, un code de région de votre fournisseur (eu-west-3, francecentral, gra, rbx…). Vide, le filtre ne masque rien.",
+        "en": "Compared with component names, regions and incident titles, ignoring case and accents. Add what concerns you: a country, a city, your provider's region code (eu-west-3, francecentral, gra, rbx…). Left empty, the filter hides nothing."
       }
     },
     {

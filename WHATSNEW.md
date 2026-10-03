@@ -33,6 +33,47 @@
 # Nouveautes / What's new
 
 
+## 1.135.0
+
+**La tuile Statut de service se lit d'un coup d'oeil**
+
+L'etat de chaque service s'affiche maintenant avec une icone -- tout
+operationnel, problemes partiels, probleme general, pas d'information --
+au lieu d'un point colore et d'un texte a lire. Un service qui va bien
+n'affiche plus que son nom : les lignes « aucun incident en cours » et
+« aucune maintenance programmee » ont disparu, elles noyaient les
+services qui avaient vraiment quelque chose a dire.
+
+Nouveau mode d'affichage **Compact +** : tous les services en pastilles,
+y compris ceux en panne, et le detail complet au clic dans une fenetre.
+Vingt-cinq services tiennent ainsi dans un coup d'oeil, ce qui en fait
+le mode a choisir pour un mur d'ecran.
+
+Enfin, une option permet de masquer les problemes qui ne vous concernent
+pas : une panne Cloudflare au Chili ne fait plus passer votre tuile au
+rouge si vous travaillez depuis l'Europe. Rien n'est ecarte sans etre
+compte -- le nombre de problemes masques reste visible.
+
+---
+
+**The Service status tile reads at a glance**
+
+Each service's state now shows as an icon -- all operational, partial
+problems, general problem, no information -- instead of a coloured dot
+and text to read. A healthy service shows only its name: the "no ongoing
+incident" and "no scheduled maintenance" lines are gone, they drowned
+the services that really had something to say.
+
+New **Compact +** display: every service as a chip, failing ones
+included, with full detail on click in a window. Twenty-five services
+fit in a single glance, which makes it the mode to pick for a wall
+display.
+
+Finally, an option hides problems that do not concern you: a Cloudflare
+outage in Chile no longer turns your tile red when you work from Europe.
+Nothing is discarded without being counted -- the number of hidden
+problems stays visible.
+
 ## 1.134.0
 
 **La liste des services se met a jour toute seule**

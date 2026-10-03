@@ -1942,11 +1942,24 @@
           <div class="help-opt"><span class="help-opt-name">Page lue, mais dans un format inconnu</span><span class="help-opt-desc">Tout va bien côté réseau : c'est PiBoard qui ne sait pas lire cette page. Signalez-la, un adaptateur peut être ajouté.</span></div>
           <p>PiBoard suit aussi les <b>déménagements</b> : plusieurs fournisseurs ont déplacé leur page de statut sur un autre domaine en laissant une redirection vers la racine du nouveau site — <code>status.fastly.com</code> vers <code>fastlystatus.com</code>, <code>status.infomaniak.com</code> vers <code>infomaniakstatus.com</code>. La redirection perdant le chemin demandé, PiBoard le repose lui-même sur la nouvelle adresse.</p>
 
-          <h4>Trois modes d'affichage</h4>
-          <p>Vingt-cinq fiches détaillées ne tiennent sur aucun écran. Une règle commune aux trois modes : <b>ce qui va mal est toujours écrit en entier</b>, ce qui va bien se tasse.</p>
-          <div class="help-opt"><span class="help-opt-name">Détaillé</span><span class="help-opt-desc">Comme avant : une fiche par service. Parfait jusqu'à cinq ou six.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">Une <b>pastille</b> (nom + point coloré) par service sain, une fiche complète pour chaque service en difficulté.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Problèmes seulement</span><span class="help-opt-desc">Une seule ligne — « 25 services, tout opérationnel » — tant qu'il n'y a rien à dire. Le bon choix pour un tableau mural.</span></div>
+          <h4>Quatre icônes, et rien d'autre à lire</h4>
+          <p>L'état d'un service se lit à son <b>icône</b>, pas à un texte. Sur un écran regardé de trois mètres, personne ne lit : une forme, elle, se reconnaît de loin. Les cinq états internes se rangent en quatre icônes.</p>
+          <div class="help-opt"><span class="help-opt-name">✓ Tout opérationnel</span><span class="help-opt-desc">Le fournisseur ne signale rien.</span></div>
+          <div class="help-opt"><span class="help-opt-name">⚠ Problèmes partiels</span><span class="help-opt-desc">Une dégradation, ou une partie du service hors service.</span></div>
+          <div class="help-opt"><span class="help-opt-name">✕ Problème général</span><span class="help-opt-desc">Le fournisseur déclare son service globalement hors service. Cette icône <b>pulse doucement</b>, et c'est la seule : elle reste rare, donc elle garde son sens d'alarme. Si elle sortait dès qu'un composant tombe, on s'y habituerait en une semaine.</span></div>
+          <div class="help-opt"><span class="help-opt-name">? Pas d'information</span><span class="help-opt-desc">Page injoignable, format inconnu, état incompris. Ce n'est <b>pas</b> « tout va bien ».</span></div>
+          <p>Un service qui va bien n'affiche plus que <b>son nom et son icône</b>. Les lignes « aucun incident en cours » et « aucune maintenance programmée » ont disparu : répétées sous vingt-cinq services, trois lignes grises chacune pour n'apprendre <i>rien</i>, elles noyaient les deux services qui avaient quelque chose à dire. Le détail n'apparaît désormais que lorsqu'il existe.</p>
+
+          <h4>Quatre modes d'affichage</h4>
+          <div class="help-opt"><span class="help-opt-name">Détaillé</span><span class="help-opt-desc">Une fiche par service. Parfait jusqu'à cinq ou six.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">Une pastille par service sain, une fiche complète pour chaque service en difficulté.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact +</span><span class="help-opt-desc"><b>Tout le monde en pastille</b>, les services en panne comme les autres — vingt-cinq services tiennent dans un coup d'œil. Le détail se demande d'un <b>clic</b> sur la pastille : une fenêtre s'ouvre avec tous les composants concernés, tous les incidents, les maintenances, la provenance de l'information et l'heure du dernier relevé. C'est le mode d'un mur d'écran.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Problèmes seulement</span><span class="help-opt-desc">Une seule ligne tant qu'il n'y a rien à dire.</span></div>
+
+          <h4>Masquer ce qui ne vous concerne pas</h4>
+          <p>Cloudflare annonce une dégradation au Chili, AWS une panne à Sydney, et votre tuile passe au rouge alors que vous travaillez à Toulouse. À force, on cesse de la regarder — la façon la plus sûre de rendre une tuile de supervision inutile. L'option <b>« Masquer les problèmes hors de mes zones »</b> ne garde que ce qui est situé dans les zones que vous listez (Europe, France, codes de région de votre fournisseur…).</p>
+          <p><b>La règle, et c'est elle qui compte : on ne masque QUE ce qu'on a su situer.</b> Un libellé où aucun lieu connu n'apparaît — « Elevated API error rates » — reste toujours affiché. Masquer ce qu'on n'a pas compris ferait disparaître en silence un incident mondial mal nommé, et une tuile qui cache ce qu'elle n'a pas compris est pire que pas de tuile du tout. Ce qui est annoncé comme <b>mondial</b> reste affiché aussi, et un libellé qui cite vos zones <i>et</i> d'autres continents vous concerne.</p>
+          <p>Enfin, un service dont tous les ennuis ont été masqués <b>le dit</b> : le nombre de problèmes écartés reste visible sur sa ligne. Un service calme ne doit jamais se confondre avec un service dont on vous cache quelque chose. L'option est <b>décochée par défaut</b> — une tuile de supervision ne cache rien sans qu'on le lui ait demandé.</p>
 
           <h4>La cloche : surveiller beaucoup, être réveillé par peu</h4>
           <p>Chaque service coché porte une <b>cloche</b> dans le sélecteur. Elle décide si <b>lui</b> peut déclencher l'alerte. Surveiller vingt services et ne vouloir être réveillé que par deux est le cas normal ; sans ce réglage par service, l'option d'alerte devenait inutilisable dès qu'on cochait beaucoup, et on la coupait entièrement — donc on n'était plus averti pour les deux qui comptaient vraiment.</p>
@@ -2027,11 +2040,24 @@
           <div class="help-opt"><span class="help-opt-name">Page read, but in an unknown format</span><span class="help-opt-desc">Nothing wrong with the network: PiBoard cannot read this page. Report it, an adapter can be added.</span></div>
           <p>PiBoard also follows <b>moves</b>: several providers relocated their status page to another domain, leaving a redirect to the new site's root — <code>status.fastly.com</code> to <code>fastlystatus.com</code>, <code>status.infomaniak.com</code> to <code>infomaniakstatus.com</code>. Since the redirect loses the requested path, PiBoard rebuilds it on the new address itself.</p>
 
-          <h4>Three display modes</h4>
-          <p>Twenty-five detailed cards fit on no screen. One rule shared by all three modes: <b>what is wrong is always written out in full</b>, what is fine is condensed.</p>
-          <div class="help-opt"><span class="help-opt-name">Detailed</span><span class="help-opt-desc">As before: one card per service. Perfect up to five or six.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">A <b>chip</b> (name + coloured dot) per healthy service, a full card for each service in trouble.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Problems only</span><span class="help-opt-desc">A single line — "25 services, all operational" — while there is nothing to say. The right choice for a wall board.</span></div>
+          <h4>Four icons, and nothing to read</h4>
+          <p>A service's state is read from its <b>icon</b>, not from text. On a screen looked at from three metres nobody reads; a shape is recognised from afar. The five internal states map to four icons.</p>
+          <div class="help-opt"><span class="help-opt-name">✓ All operational</span><span class="help-opt-desc">The provider reports nothing.</span></div>
+          <div class="help-opt"><span class="help-opt-name">⚠ Partial problems</span><span class="help-opt-desc">A degradation, or part of the service down.</span></div>
+          <div class="help-opt"><span class="help-opt-name">✕ General problem</span><span class="help-opt-desc">The provider declares its service globally down. This icon <b>pulses gently</b>, and it is the only one: it stays rare, so it keeps its alarm value.</span></div>
+          <div class="help-opt"><span class="help-opt-name">? No information</span><span class="help-opt-desc">Unreachable page, unknown format, state not understood. This is <b>not</b> "all fine".</span></div>
+          <p>A healthy service now shows only <b>its name and its icon</b>. The "no ongoing incident" and "no scheduled maintenance" lines are gone: repeated under twenty-five services, three grey lines each to teach <i>nothing</i>, they drowned the two services that had something to say.</p>
+
+          <h4>Four display modes</h4>
+          <div class="help-opt"><span class="help-opt-name">Detailed</span><span class="help-opt-desc">One card per service. Perfect up to five or six.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">A chip per healthy service, a full card for each service in trouble.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact +</span><span class="help-opt-desc"><b>Everyone as a chip</b>, failing services included — twenty-five services at a glance. Detail is asked for with a <b>click</b>: a window opens with every affected component, every incident, maintenances, where the information came from and when it was last read. The wall-display mode.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Problems only</span><span class="help-opt-desc">A single line while there is nothing to say.</span></div>
+
+          <h4>Hiding what does not concern you</h4>
+          <p>Cloudflare reports a degradation in Chile, AWS an outage in Sydney, and your tile turns red while you work in Toulouse. In time one stops looking at it — the surest way to make a monitoring tile useless. The option <b>"Hide problems outside my zones"</b> keeps only what is located in the zones you list.</p>
+          <p><b>The rule that matters: only what we managed to LOCATE is ever hidden.</b> A label in which no known place appears — "Elevated API error rates" — is always shown. Hiding what was not understood would silently drop a badly-named worldwide incident, and a tile that hides what it did not understand is worse than no tile at all. Anything announced as <b>worldwide</b> stays shown too.</p>
+          <p>A service whose troubles were all hidden <b>says so</b>: the number of discarded problems stays visible on its line. A quiet service must never be confused with one that is hiding something from you. The option is <b>unticked by default</b> — a monitoring tile hides nothing unless asked.</p>
 
           <h4>The bell: watch many, be woken by few</h4>
           <p>Each ticked service carries a <b>bell</b> in the picker, deciding whether <b>it</b> may raise the alert. Watching twenty services while wanting to be woken by two is the normal case; without this per-service setting the alert option became unusable as soon as many were ticked, so people switched it off entirely — and were then not told about the two that did matter.</p>

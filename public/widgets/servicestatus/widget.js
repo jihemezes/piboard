@@ -78,6 +78,204 @@
     unknown: "var(--muted)"
   };
 
+  /* ---------- Les quatre icones d'etat ----------
+     POURQUOI QUATRE, alors que la tuile connait cinq indicateurs. Un
+     point colore accompagne d'un texte variable obligeait a LIRE pour
+     savoir ou on en etait : sur un kiosque regarde de trois metres,
+     c'est precisement ce qu'on ne fait pas. Une forme se reconnait de
+     loin, et quatre formes sont ce qu'un coup d'oeil distingue sans
+     effort. Les cinq indicateurs se rangent donc en quatre :
+
+       tout operationnel  <- none
+       problemes partiels <- minor et major (degradation, panne d'une
+                             partie du service)
+       probleme general   <- critical (le fournisseur declare son
+                             service globalement hors service)
+       pas d'information  <- unknown, et toutes les erreurs de lecture
+
+     Le rouge « general » reste ainsi RARE, donc il garde son sens
+     d'alarme. S'il sortait des qu'un composant tombe, on s'y habituerait
+     en une semaine et il ne voudrait plus rien dire.
+
+     WHY FOUR when the tile knows five indicators: a coloured dot with
+     variable text had to be READ to know where one stood -- on a kiosk
+     looked at from three metres, precisely what nobody does. A shape is
+     recognised from afar, and four shapes are what a glance tells apart.
+     The "general" red therefore stays RARE and keeps its alarm value: if
+     it came out whenever one component fell, one would get used to it in
+     a week and it would mean nothing. */
+  const STATE_OF = {
+    none: "ok",
+    minor: "partial",
+    major: "partial",
+    critical: "general",
+    unknown: "unknown"
+  };
+
+  function stateOf(svc) {
+    if (!svc) return "unknown";
+    if (svc.error) return "unknown";
+    return STATE_OF[svc.indicator] || "unknown";
+  }
+
+  /* Dessins en SVG plutot qu'en emojis : un emoji change d'aspect d'un
+     systeme a l'autre, ignore le theme, et sur un Pi sans police emoji
+     complete il devient un carre vide. Ces quatre-la sont traces avec
+     `currentColor`, donc ils suivent le theme applique, themes
+     personnalises compris.
+     SVG rather than emoji: an emoji changes shape from one system to the
+     next, ignores the theme, and becomes an empty box on a Pi without a
+     complete emoji font. These follow the applied theme through
+     `currentColor`. */
+  const ICON = {
+    ok: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M7.5 12.3l3 3 6-6.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    partial: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6l9 15.6H3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 9.6v4.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/><circle cx="12" cy="16.6" r="1.25" fill="currentColor"/></svg>',
+    general: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.4 3.2h7.2L20.8 8.4v7.2l-5.2 5.2H8.4L3.2 15.6V8.4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.6 8.6l6.8 6.8M15.4 8.6l-6.8 6.8" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg>',
+    unknown: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2" stroke-dasharray="3 2.6"/><path d="M9.6 9.4a2.5 2.5 0 114.1 2.3c-.9.7-1.6 1.2-1.6 2.3" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/><circle cx="12" cy="17" r="1.2" fill="currentColor"/></svg>'
+  };
+
+  const STATE_TONE = {
+    ok: "var(--ok)",
+    partial: "var(--warn)",
+    general: "var(--danger)",
+    unknown: "var(--muted)"
+  };
+
+  function iconHtml(state, i18n) {
+    const label = i18n.t("svcstatus.icon." + state);
+    return `<span class="pwss-ico pwss-ico-${state}" style="--pwss-tone:${STATE_TONE[state]}" `
+      + `role="img" aria-label="${esc(label)}" title="${esc(label)}">${ICON[state] || ICON.unknown}</span>`;
+  }
+
+  /* ---------- Le filtre geographique ----------
+     LE PROBLEME REEL : Cloudflare annonce une degradation au Chili,
+     AWS une panne a Sydney, et la tuile passe au rouge pour quelqu'un
+     qui travaille a Toulouse. A force, on cesse de la regarder -- c'est
+     la facon la plus sure de rendre une tuile de supervision inutile.
+
+     LA REGLE, et c'est celle qui compte : on ne masque QUE ce qu'on a
+     su situer. Un libelle ou aucun lieu connu n'apparait est TOUJOURS
+     affiche. Le contraire -- masquer par defaut ce qu'on n'a pas
+     compris -- ferait disparaitre en silence des incidents mondiaux
+     mal nommes, et une tuile qui cache ce qu'elle n'a pas compris est
+     pire que pas de tuile du tout.
+
+     THE REAL PROBLEM: Cloudflare reports a degradation in Chile, AWS an
+     outage in Sydney, and the tile turns red for someone working in
+     Toulouse. In time one stops looking at it -- the surest way to make
+     a monitoring tile useless. THE RULE: only what we managed to LOCATE
+     is ever hidden. A label in which no known place appears is ALWAYS
+     shown; hiding what we did not understand would silently drop
+     badly-named worldwide incidents. */
+
+  /* Lieux reconnus. La liste n'a pas a etre exhaustive : elle sert
+     uniquement a repondre « ce libelle parle-t-il d'un endroit ? ».
+     Recognised places: the list need not be exhaustive, it only answers
+     "does this label speak of a place?". */
+  const PLACES = [
+    "europe", "european", "emea", "eu", "france", "french", "paris", "marseille", "roubaix", "gravelines", "strasbourg", "lyon",
+    "germany", "deutschland", "frankfurt", "berlin", "munich", "hamburg",
+    "ireland", "dublin", "london", "england", "britain", "uk", "manchester",
+    "netherlands", "amsterdam", "belgium", "brussels", "spain", "madrid", "barcelona",
+    "italy", "milan", "rome", "portugal", "lisbon", "switzerland", "zurich", "geneva",
+    "sweden", "stockholm", "norway", "oslo", "finland", "helsinki", "denmark", "copenhagen",
+    "poland", "warsaw", "austria", "vienna", "czech", "prague",
+    "north america", "america", "united states", "usa", "us-east", "us-west", "canada", "montreal", "toronto",
+    "virginia", "ohio", "oregon", "california", "silicon valley", "san francisco", "san jose", "seattle", "dallas",
+    "chicago", "atlanta", "miami", "new york", "new jersey", "los angeles", "phoenix", "denver", "honolulu",
+    "south america", "latam", "brazil", "sao paulo", "são paulo", "chile", "santiago", "argentina", "buenos aires",
+    "mexico", "colombia", "bogota", "peru", "lima",
+    "asia", "apac", "asia pacific", "japan", "tokyo", "osaka", "korea", "seoul", "china", "beijing", "shanghai",
+    "hong kong", "taiwan", "singapore", "india", "mumbai", "delhi", "bangalore", "chennai", "hyderabad",
+    "indonesia", "jakarta", "thailand", "bangkok", "vietnam", "malaysia", "kuala lumpur", "philippines", "manila",
+    "australia", "sydney", "melbourne", "new zealand", "auckland",
+    "africa", "south africa", "johannesburg", "cape town", "nigeria", "lagos", "kenya", "nairobi",
+    "algeria", "algiers", "morocco", "casablanca", "tunisia", "egypt", "cairo",
+    "middle east", "uae", "dubai", "bahrain", "israel", "tel aviv", "saudi", "qatar", "turkey", "istanbul",
+    "russia", "moscow", "ukraine", "kyiv"
+  ];
+
+  /* Les codes de region des grands clouds : `eu-west-1`, `ap-southeast-2`,
+     `us-east-1`, `westeurope`, `francecentral`... Un code se reconnait a
+     sa forme, pas a une liste.
+     Cloud region codes recognised by shape, not by a list. */
+  const REGION_CODE = /\b(af|ap|ca|cn|eu|il|me|sa|us)-(north|south|east|west|central|northeast|northwest|southeast|southwest)(-\d)?\b/i;
+  const AZURE_CODE = /\b(west|east|north|south|central)?(europe|us|asia|india|japan|france|germany|uk|canada|brazil|australia|korea|africa|norway|sweden|switzerland|poland|italy|spain|qatar|uae)\b/i;
+
+  /* « Mondial », « toutes regions » : ce n'est pas un lieu a filtrer,
+     c'est le contraire -- cela concerne tout le monde, donc vous.
+     "Global", "all regions": not a place to filter but the opposite. */
+  const GLOBAL_WORDS = /\b(global|globale|globally|worldwide|mondial|mondiale|all regions|toutes regions|all locations|multi-region|multiregion)\b/i;
+
+  function normalize(text) {
+    return String(text || "")
+      .toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  function parseZones(value) {
+    return String(value == null ? "" : value)
+      .split(/[,;\n]/)
+      .map((z) => normalize(z).trim())
+      .filter(Boolean);
+  }
+
+  /* Rend `true` si le libelle doit etre AFFICHE. Trois cas, dans cet
+     ordre : il parle du monde entier (on affiche), il parle d'un endroit
+     qui est dans vos zones (on affiche), il parle d'un endroit qui n'y
+     est pas (on masque). Et s'il ne parle d'aucun endroit connu, on
+     affiche -- voir la regle plus haut.
+     Returns true when the label must be SHOWN. */
+  function concernsMe(label, zones) {
+    const text = normalize(label);
+    if (!text) return true;
+    if (!zones.length) return true;
+    if (GLOBAL_WORDS.test(text)) return true;
+
+    /* Vos zones d'abord : si l'une d'elles est nommee, la question est
+       reglee, meme si le libelle cite aussi trois autres continents --
+       « Europe & Asia » vous concerne. Your zones first: if one is
+       named, the question is settled even when three other continents
+       are cited too. */
+    for (const z of zones) {
+      if (z && text.indexOf(z) !== -1) return true;
+    }
+
+    const located = PLACES.some((p) => text.indexOf(p) !== -1)
+      || REGION_CODE.test(text)
+      || AZURE_CODE.test(text);
+    return !located;
+  }
+
+  /* Applique le filtre a un service et rend une COPIE : la reponse du
+     serveur n'est jamais modifiee, pour que decocher l'option reaffiche
+     tout sans avoir a redemander le reseau.
+     Applies the filter and returns a COPY: the server's answer is never
+     modified, so unticking the option restores everything without
+     another network call. */
+  function filterByZones(svc, zones) {
+    if (!svc || svc.error || !zones.length) return svc;
+    const affected = (svc.affected || []).filter((c) => concernsMe(c.name + " " + (c.group || ""), zones));
+    const incidents = (svc.incidents || []).filter((i) => concernsMe(i.name + " " + (i.components || []).join(" "), zones));
+    const hidden = ((svc.affected || []).length - affected.length) + ((svc.incidents || []).length - incidents.length);
+    if (!hidden) return svc;
+
+    /* Tout ce qui restait a ete masque : le service redevient
+       « operationnel pour vous », et la tuile le DIT (compteur en bas de
+       la fiche) plutot que de laisser croire qu'il n'y avait rien.
+       Everything left was hidden: the service becomes "operational for
+       you", and the tile SAYS so rather than implying there was
+       nothing. */
+    const quiet = !affected.length && !incidents.length;
+    return Object.assign({}, svc, {
+      affected,
+      incidents,
+      hiddenCount: hidden,
+      indicator: quiet ? "none" : svc.indicator,
+      ok: quiet ? true : svc.ok
+    });
+  }
+
   /* « Nom = adresse », une par ligne, et « # » pour desactiver : la
      meme grammaire que la tuile Veille reseau. Un reglage qui se
      ressemble d'une tuile a l'autre s'apprend une fois.
@@ -507,6 +705,23 @@
           <div class="pwss-list">${body}</div>
           <div class="pwss-foot"><span>${esc(checked)}</span>${cadence}</div>
         </div>`;
+
+      /* Un SEUL ecouteur, pose sur la liste, plutot qu'un par pastille :
+         la liste est reconstruite a chaque relevé, et des ecouteurs
+         poses sur les pastilles disparaitraient avec elles -- la
+         deuxieme minute, plus rien ne repondrait au clic. Defaut
+         classique, evite ici par delegation.
+         ONE listener on the list rather than one per chip: the list is
+         rebuilt at every reading, and per-chip listeners would vanish
+         with it -- after the first minute nothing would answer a click. */
+      const list = el.querySelector(".pwss-list");
+      if (list) {
+        list.addEventListener("click", (ev) => {
+          const chip = ev.target.closest ? ev.target.closest(".pwss-chip[data-svc]") : null;
+          if (!chip) return;
+          this.openDetail(Number(chip.dataset.svc));
+        });
+      }
     }
 
     /* TROIS MODES, UNE SEULE REGLE : ce qui va mal est toujours ecrit en
@@ -526,27 +741,70 @@
        click to learn what is broken. */
     renderBody(i18n, s, now) {
       const mode = s.display || "detailed";
-      if (mode === "detailed") return this.services.map((svc) => this.renderService(svc, i18n, s, now)).join("");
+      const list = this.visibleServices();
 
-      const bad = this.services.filter((svc) => svc.error || (svc.indicator && svc.indicator !== "none"));
-      const good = this.services.filter((svc) => bad.indexOf(svc) === -1);
+      /* COMPACT + : tout le monde en pastille, les services en panne
+         comme les autres. C'est le mode d'un mur d'ecran -- vingt-cinq
+         services tiennent dans un coup d'oeil -- et le detail se demande
+         d'un clic plutot que de s'imposer en permanence. Les autres
+         modes gardent la regle inverse (ce qui va mal est ecrit en
+         entier), parce qu'ils s'adressent a quelqu'un qui est devant
+         l'ecran et non a trois metres.
+         COMPACT +: everyone as a chip, failing services included. The
+         wall-display mode -- twenty-five services at a glance -- where
+         detail is asked for with a click instead of imposing itself. */
+      if (mode === "compactplus") {
+        return `<div class="pwss-grid pwss-grid-plus">`
+          + list.map((svc, i) => this.renderChip(svc, i18n, i)).join("")
+          + `</div>`;
+      }
 
+      if (mode === "detailed") return list.map((svc) => this.renderService(svc, i18n, s, now)).join("");
+
+      const bad = list.filter((svc) => svc.error || (svc.indicator && svc.indicator !== "none"));
+      const good = list.filter((svc) => bad.indexOf(svc) === -1);
       const cards = bad.map((svc) => this.renderService(svc, i18n, s, now)).join("");
 
       if (mode === "problems") {
         if (bad.length) return cards;
-        return `<div class="pwss-allgood">${esc(i18n.t("svcstatus.allGood").replace("{n}", this.services.length))}</div>`;
+        return `<div class="pwss-allgood">${esc(i18n.t("svcstatus.allGood").replace("{n}", list.length))}</div>`;
       }
 
-      const chips = good.map((svc) => {
-        const tone = svc.error ? TONE.unknown : (TONE[svc.indicator] || TONE.unknown);
-        return `<span class="pwss-chip" style="--pwss-tone:${tone}" title="${esc(svc.label || "")}">`
-          + `<span class="pwss-dot"></span><span class="pwss-chip-name">${esc(svc.label || "")}</span>`
-          + (svc.approximate ? `<span class="pwss-approx" title="${esc(i18n.t("svcstatus.approximate"))}">~</span>` : "")
-          + `</span>`;
-      }).join("");
-
+      const chips = good.map((svc) => this.renderChip(svc, i18n, list.indexOf(svc))).join("");
       return (chips ? `<div class="pwss-grid">${chips}</div>` : "") + cards;
+    }
+
+    /* Les services tels qu'ils doivent etre AFFICHES : filtre
+       geographique applique s'il est actif. La liste d'origine
+       (`this.services`) n'est jamais touchee -- decocher l'option
+       reaffiche tout sans redemander le reseau.
+       The services as they must be SHOWN; the original list is never
+       touched, so unticking the option restores everything without
+       another network call. */
+    visibleServices() {
+      const s = this.ctx.settings;
+      if (!s.geoFilter) return this.services;
+      const zones = parseZones(s.geoZones);
+      if (!zones.length) return this.services;
+      return this.services.map((svc) => filterByZones(svc, zones));
+    }
+
+    /* La pastille : une icone, un nom, et rien d'autre. En Compact +
+       c'est un BOUTON -- le detail s'ouvre au clic. Ailleurs c'est un
+       simple reperage et le bouton ne gene pas : on garde la meme balise
+       partout plutot que deux rendus a maintenir.
+       The chip: an icon, a name, nothing else. In Compact + it is a
+       BUTTON; elsewhere the same markup serves as a marker. */
+    renderChip(svc, i18n, index) {
+      const state = stateOf(svc);
+      const approx = svc.approximate
+        ? `<span class="pwss-approx" title="${esc(i18n.t("svcstatus.approximate"))}">~</span>` : "";
+      const hidden = svc.hiddenCount
+        ? `<span class="pwss-hidden-mark" title="${esc(i18n.t("svcstatus.hiddenTip"))}">·${svc.hiddenCount}</span>` : "";
+      return `<button type="button" class="pwss-chip" data-svc="${index}" `
+        + `style="--pwss-tone:${STATE_TONE[state]}" title="${esc(svc.label || "")}">`
+        + iconHtml(state, i18n)
+        + `<span class="pwss-chip-name">${esc(svc.label || "")}</span>${approx}${hidden}</button>`;
     }
 
     renderService(svc, i18n, s, now) {
@@ -570,15 +828,15 @@
           ? i18n.t(why).replace("{code}", String(svc.httpStatus))
           : i18n.t(why);
         return `
-          <div class="pwss-svc" style="--pwss-tone:${TONE.unknown}">
-            <div class="pwss-head"><span class="pwss-name">${label}</span>
-              <span class="pwss-state"><span class="pwss-dot"></span>${esc(i18n.t("svcstatus.state.unknown"))}</span></div>
+          <div class="pwss-svc" style="--pwss-tone:${STATE_TONE.unknown}">
+            <div class="pwss-head">
+              ${iconHtml("unknown", i18n)}
+              <span class="pwss-name">${label}</span>
+            </div>
             <div class="pwss-detail"><span>${esc(detailText)}</span></div>
           </div>`;
       }
 
-      const tone = TONE[svc.indicator] || TONE.unknown;
-      const stateLabel = i18n.t("svcstatus.state." + (svc.indicator || "unknown"));
       const detail = [];
 
       /* Les composants touches UNIQUEMENT : lister ce qui va bien noierait
@@ -604,15 +862,17 @@
           detail.push(`<a class="pwss-link" href="${esc(inc.url)}" target="_blank" rel="noopener">`
             + esc(i18n.t("svcstatus.openIncident")) + `</a>`);
         }
-      } else {
-        detail.push(`<span class="pwss-none">${esc(i18n.t("svcstatus.noIncident"))}</span>`);
       }
 
       if (s.showMaintenances !== false) {
         const m = (svc.maintenances || [])[0];
-        detail.push(m
-          ? `<span class="pwss-maint">${esc(i18n.t("svcstatus.maintenance"))} ${esc(m.name)}${m.scheduledFor ? " · " + esc(this.whenLabel(m.scheduledFor, i18n)) : ""}</span>`
-          : `<span class="pwss-none">${esc(i18n.t("svcstatus.noMaintenance"))}</span>`);
+        if (m) {
+          detail.push(`<span class="pwss-maint">${esc(i18n.t("svcstatus.maintenance"))} ${esc(m.name)}${m.scheduledFor ? " · " + esc(this.whenLabel(m.scheduledFor, i18n)) : ""}</span>`);
+        }
+      }
+
+      if (svc.hiddenCount) {
+        detail.push(`<span class="pwss-hidden">${esc(i18n.t("svcstatus.hidden").replace("{n}", svc.hiddenCount))}</span>`);
       }
 
       /* Le tilde marque un etat DEDUIT d'un flux RSS et non declare par
@@ -629,12 +889,123 @@
         ? `<span class="pwss-approx" title="${esc(i18n.t("svcstatus.approximate"))}">~</span>`
         : "";
 
+      /* PLUS DE LIGNE PARASITE QUAND TOUT VA BIEN. « Aucun incident en
+         cours », « aucune maintenance programmee » : trois lignes grises
+         repetees vingt-cinq fois pour ne RIEN apprendre, et qui
+         noyaient les deux services qui avaient quelque chose a dire.
+         Un service sain, c'est son nom et son icone -- le reste du
+         detail n'apparait que s'il existe. La tuile change donc de
+         hauteur selon ce qui se passe, et c'est voulu : une tuile qui
+         garde la meme silhouette quoi qu'il arrive est une tuile qu'on
+         arrete de regarder.
+         NO MORE FILLER LINES WHEN ALL IS WELL: "no ongoing incident",
+         "no scheduled maintenance" -- grey lines repeated twenty-five
+         times to teach NOTHING, drowning the two services that had
+         something to say. A healthy service is its name and its icon. */
+      const detailHtml = detail.length ? `<div class="pwss-detail">${detail.join("")}</div>` : "";
+
       return `
-        <div class="pwss-svc" style="--pwss-tone:${tone}">
-          <div class="pwss-head"><span class="pwss-name">${label}</span>
-            <span class="pwss-state"><span class="pwss-dot"></span>${esc(stateLabel)}${approx}</span></div>
-          <div class="pwss-detail">${detail.join("")}</div>
+        <div class="pwss-svc" style="--pwss-tone:${STATE_TONE[stateOf(svc)]}">
+          <div class="pwss-head">
+            ${iconHtml(stateOf(svc), i18n)}
+            <span class="pwss-name">${label}</span>${approx}
+          </div>
+          ${detailHtml}
         </div>`;
+    }
+
+    /* ---------- La fenetre de detail ----------
+       Elle reprend `.modal` / `.modal-card`, la meme fenetre que le
+       lecteur RSS et la boite mail : une seule facon de fermer a
+       apprendre (la croix, l'exterieur, Echap), et l'apparence suit le
+       theme sans une ligne de CSS de plus.
+       It reuses .modal / .modal-card, the same window as the RSS reader
+       and the mailbox: one way of closing to learn, and the appearance
+       follows the theme with no extra CSS. */
+    openDetail(index) {
+      const i18n = this.ctx.i18n;
+      const s = this.ctx.settings;
+      const svc = this.visibleServices()[index];
+      if (!svc) return;
+      this.closeDetail();
+
+      const now = Date.now();
+      const body = this.renderService(svc, i18n, s, now);
+      /* Ce que la fiche ne montre pas et que la fenetre, elle, peut se
+         permettre : TOUS les composants touches et TOUS les incidents,
+         puisqu'on a la place et qu'on vient de demander a voir.
+         What the card does not show but the window can afford: ALL
+         affected components and ALL incidents -- there is room, and one
+         has just asked to see. */
+      const extra = [];
+      if ((svc.affected || []).length > 4) {
+        extra.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.components"))}</h4>`
+          + (svc.affected || []).map((c) => `<div class="pwss-comp" style="--pwss-tone:${COMPONENT_TONE[c.status] || COMPONENT_TONE.unknown}">`
+              + esc(c.name) + ` <span class="pwss-comp-state">— ${esc(i18n.t("svcstatus.comp." + c.status))}</span></div>`).join("")
+          + `</div>`);
+      }
+      if ((svc.incidents || []).length > 1) {
+        extra.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.incidents"))}</h4>`
+          + (svc.incidents || []).slice(1).map((inc) => `<div class="pwss-incident">${esc(inc.name)}`
+              + (inc.startedAt ? ` <span class="pwss-stage">· ${esc(i18n.t("svcstatus.for"))} ${esc(since(inc.startedAt, i18n, now))}</span>` : "")
+              + (inc.lastMessage ? `<span class="pwss-msg">${esc(inc.lastMessage)}</span>` : "")
+              + `</div>`).join("")
+          + `</div>`);
+      }
+      if ((svc.maintenances || []).length) {
+        extra.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.maintenances"))}</h4>`
+          + (svc.maintenances || []).map((m) => `<div class="pwss-maint">${esc(m.name)}`
+              + (m.scheduledFor ? ` · ${esc(this.whenLabel(m.scheduledFor, i18n))}` : "") + `</div>`).join("")
+          + `</div>`);
+      }
+      /* D'ou vient l'information, et quand : sur une tuile qui affiche
+         un etat parfois DEDUIT, savoir quelle page a ete lue et a quelle
+         heure vaut mieux qu'un vert sans provenance.
+         Where the information comes from and when: on a tile that
+         sometimes shows an INFERRED state, knowing which page was read
+         beats an unsourced green. */
+      const src = [];
+      if (svc.base || svc.url) {
+        const href = svc.url || svc.base;
+        src.push(`<a class="pwss-link" href="${esc(href)}" target="_blank" rel="noopener">${esc(i18n.t("svcstatus.modal.page"))}</a>`);
+      }
+      if (this.fetchedAt) src.push(`<span>${esc(i18n.t("svcstatus.checked"))} ${esc(since(new Date(this.fetchedAt).toISOString(), i18n, now))}</span>`);
+      if (svc.approximate) src.push(`<span class="pwss-approx-note">~ ${esc(i18n.t("svcstatus.approximate"))}</span>`);
+
+      const wrap = document.createElement("div");
+      wrap.className = "modal pwss-modal";
+      wrap.innerHTML = `
+        <div class="modal-card">
+          <div class="modal-head">
+            <h2>${esc(svc.label || svc.name || "")}</h2>
+            <button type="button" class="modal-close" aria-label="${esc(i18n.t("svcstatus.modal.close"))}">✕</button>
+          </div>
+          <div class="modal-body pwss-modal-body">
+            ${body}
+            ${extra.join("")}
+            ${src.length ? `<div class="pwss-modal-src">${src.join("")}</div>` : ""}
+          </div>
+        </div>`;
+      document.body.appendChild(wrap);
+
+      const close = () => this.closeDetail();
+      wrap.addEventListener("click", (ev) => { if (ev.target === wrap) close(); });
+      const btn = wrap.querySelector(".modal-close");
+      if (btn) btn.addEventListener("click", close);
+      this.escHandler = (ev) => { if (ev.key === "Escape") close(); };
+      document.addEventListener("keydown", this.escHandler);
+      this.modal = wrap;
+    }
+
+    closeDetail() {
+      if (this.escHandler) {
+        document.removeEventListener("keydown", this.escHandler);
+        this.escHandler = null;
+      }
+      if (this.modal) {
+        this.modal.remove();
+        this.modal = null;
+      }
     }
 
     whenLabel(iso, i18n) {
@@ -646,7 +1017,15 @@
       });
     }
 
-    destroy() { clearTimeout(this.timer); }
+    destroy() {
+      clearTimeout(this.timer);
+      /* La fenetre vit dans <body>, pas dans la tuile : sans ce
+         nettoyage, supprimer la tuile laisserait sa fenetre ouverte au
+         milieu de l'ecran, sans rien pour la fermer.
+         The window lives in <body>, not in the tile: without this,
+         removing the tile would leave its window stranded on screen. */
+      this.closeDetail();
+    }
   }
 
   window.PiBoard.registerWidget("servicestatus", ServiceStatusWidget);
@@ -655,6 +1034,7 @@
      n'ont besoin ni du DOM ni du reseau.
      Exposed for tests: the pure formatting helpers. */
   window.PiBoardServiceStatusHelpers = {
-    parseTargets, parsePicked, mergeTargets, since, MAX_SERVICES, SEVERITY_RANK
+    parseTargets, parsePicked, mergeTargets, since, MAX_SERVICES, SEVERITY_RANK,
+    stateOf, concernsMe, parseZones, filterByZones
   };
 })();

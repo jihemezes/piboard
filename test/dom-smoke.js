@@ -8802,6 +8802,124 @@ function catalogItemFor(catalog, document, widgetId) {
     CATALOG_ROUTE.down = false;
   }
 
+  console.log("== Statut de service : icones d'etat, Compact + et filtre geographique (1.135.0) ==");
+  {
+    let Klass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "servicestatus") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+    const H = window.PiBoardServiceStatusHelpers;
+
+    /* --- Les quatre etats, et surtout la frontiere entre eux --- */
+    assert("une degradation et une panne partielle donnent la MEME icone « partiel »",
+      H.stateOf({ indicator: "minor" }) === "partial" && H.stateOf({ indicator: "major" }) === "partial");
+    /* Le rouge « general » doit rester RARE : s'il sortait des qu'un
+       composant tombe, on s'y habituerait en une semaine et il ne
+       voudrait plus rien dire. */
+    assert("seule une panne declaree globale donne l'icone « probleme general »",
+      H.stateOf({ indicator: "critical" }) === "general");
+    assert("tout operationnel, et toute erreur de lecture, ont leur icone propre",
+      H.stateOf({ indicator: "none" }) === "ok"
+      && H.stateOf({ error: "unreachable", indicator: "none" }) === "unknown"
+      && H.stateOf({ indicator: "unknown" }) === "unknown");
+
+    /* --- Le filtre geographique : ce qu'il masque, et ce qu'il ne doit
+       JAMAIS masquer --- */
+    const zones = H.parseZones("Europe, France, eu-west");
+    assert("un incident au Chili est masque quand on surveille depuis l'Europe",
+      H.concernsMe("Cloudflare Santiago, Chile", zones) === false);
+    assert("un incident en Europe est conserve",
+      H.concernsMe("Elevated errors in eu-west-3 (Paris)", zones) === true);
+    /* LA REGLE QUI COMPTE : on ne masque QUE ce qu'on a su situer. Un
+       libelle sans aucun lieu connu reste affiche -- masquer ce qu'on
+       n'a pas compris ferait disparaitre en silence un incident mondial
+       mal nomme, et une tuile qui cache ce qu'elle n'a pas compris est
+       pire que pas de tuile. */
+    assert("un libelle sans aucun lieu reconnaissable reste AFFICHE",
+      H.concernsMe("Elevated API error rates", zones) === true
+      && H.concernsMe("Webhooks delivery delays", zones) === true);
+    assert("ce qui est annonce comme mondial reste affiche",
+      H.concernsMe("Global outage affecting all regions", zones) === true);
+    /* Un libelle qui cite l'Europe ET l'Asie vous concerne : la zone
+       trouvee tranche, meme si d'autres continents sont cites. */
+    assert("un incident qui cite vos zones ET d'autres reste affiche",
+      H.concernsMe("Degraded performance in Europe and Asia", zones) === true);
+    assert("sans zone declaree, le filtre ne masque rien",
+      H.concernsMe("Sydney, Australia", H.parseZones("")) === true);
+    assert("les accents et la casse n'empechent pas la comparaison",
+      H.concernsMe("Incident à PARIS", H.parseZones("paris")) === true);
+
+    /* Le service filtre redevient calme, mais le DIT : un service dont
+       on masque les ennuis ne doit pas se confondre avec un service
+       qui n'en a pas. */
+    const filtered = H.filterByZones({
+      indicator: "major", ok: false,
+      affected: [{ name: "Santiago, Chile", status: "partial_outage" }],
+      incidents: [{ id: "1", name: "Network issue in Chile", components: [] }]
+    }, zones);
+    assert("un service dont tous les ennuis sont hors zone redevient operationnel",
+      filtered.indicator === "none" && filtered.ok === true);
+    assert("mais le nombre de problemes masques est conserve, et affiche",
+      filtered.hiddenCount === 2);
+
+    /* --- Rendu : plus de ligne parasite, et Compact + cliquable --- */
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const settings = {
+      picked: JSON.stringify([{ id: "github", name: "GitHub", url: "https://www.githubstatus.com", adapter: "statuspage", alert: true }]),
+      display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1, showMaintenances: true
+    };
+    const w = new Klass({
+      el: host, settings,
+      i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
+      api: { startAlert: () => {} }
+    });
+    w.init();
+    await sleep(80);
+
+    /* LE DEFAUT CORRIGE : « aucun incident en cours » et « aucune
+       maintenance programmee » repetes sous chaque service sain, trois
+       lignes grises pour ne RIEN apprendre, qui noyaient les services
+       ayant quelque chose a dire. */
+    const txt = host.textContent || "";
+    assert("un service sain n'affiche plus de ligne « aucun incident »",
+      !/noIncident/.test(txt) && !/noMaintenance/.test(txt));
+    assert("mais il affiche bien son nom et une icone d'etat",
+      /GitHub/.test(txt) && !!host.querySelector(".pwss-ico-ok"));
+
+    /* Compact + : TOUT le monde en pastille, y compris ce qui va mal. */
+    settings.display = "compactplus";
+    w.onSettingsChanged(settings);
+    await sleep(60);
+    const chips = host.querySelectorAll(".pwss-chip[data-svc]");
+    assert("Compact + rend chaque service sous forme de pastille cliquable", chips.length === 1);
+
+    /* Le clic ouvre la fenetre de detail. Test FONCTIONNEL : on clique
+       pour de bon et on regarde si la fenetre existe -- verifier la
+       presence d'un ecouteur n'aurait rien prouve. */
+    chips[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    const modal = document.querySelector(".pwss-modal");
+    assert("un clic sur une pastille ouvre la fenetre de detail", !!modal);
+    assert("la fenetre porte le nom du service", /GitHub/.test(modal ? modal.textContent : ""));
+
+    /* Fermeture par la croix, puis verification qu'il n'en reste rien. */
+    modal.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("la croix referme la fenetre", !document.querySelector(".pwss-modal"));
+
+    /* LA FENETRE VIT DANS <body>, PAS DANS LA TUILE : sans nettoyage a
+       la destruction, supprimer la tuile laisserait sa fenetre ouverte
+       au milieu de l'ecran, sans rien pour la fermer. */
+    host.querySelector(".pwss-chip").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("fenetre rouverte pour le test de destruction", !!document.querySelector(".pwss-modal"));
+    w.destroy();
+    assert("detruire la tuile referme sa fenetre", !document.querySelector(".pwss-modal"));
+    host.remove();
+  }
+
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));

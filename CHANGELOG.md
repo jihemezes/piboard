@@ -1,5 +1,60 @@
 # Changelog
 
+## 1.135.0
+
+- **Quatre icones d'etat a la place du point colore et du texte.** Sur
+  un ecran regarde de trois metres, personne ne LIT : une forme se
+  reconnait de loin, un libelle non. Les cinq indicateurs internes se
+  rangent en quatre icones -- tout operationnel, problemes partiels
+  (degradation ET panne d'une partie du service), probleme general (le
+  fournisseur declare son service globalement HS), pas d'information.
+  Dessinees en SVG avec `currentColor` plutot qu'en emojis : un emoji
+  change d'aspect d'un systeme a l'autre, ignore le theme, et devient un
+  carre vide sur un Pi sans police emoji complete. Seule l'icone
+  « probleme general » pulse, et doucement : elle reste rare, donc elle
+  garde son sens d'alarme -- si elle sortait des qu'un composant tombe,
+  on s'y habituerait en une semaine.
+
+- **Plus de ligne parasite sous un service sain.** « Aucun incident en
+  cours », « aucune maintenance programmee » : trois lignes grises par
+  service pour n'apprendre RIEN, repetees vingt-cinq fois, qui noyaient
+  les deux services ayant quelque chose a dire. Un service qui va bien,
+  c'est son nom et son icone ; le bloc de detail n'est plus pose du tout
+  quand il est vide.
+
+- **Nouveau mode « Compact + »** : tout le monde en pastille, les
+  services en panne comme les autres, et le detail au CLIC dans une
+  fenetre (`.modal-card`, la meme que le lecteur RSS et la boite mail).
+  La fenetre montre ce que la fiche ne peut pas : TOUS les composants
+  touches, TOUS les incidents, les maintenances, la provenance de
+  l'information et l'heure du dernier relevé. Un seul ecouteur, pose sur
+  la liste et non sur les pastilles : la liste etant reconstruite a
+  chaque relevé, des ecouteurs poses sur les pastilles disparaitraient
+  avec elles et plus rien ne repondrait au clic au bout d'une minute.
+
+- **Option « Masquer les problemes hors de mes zones »**, decochee par
+  defaut. Une degradation Cloudflare au Chili ou une panne AWS a Sydney
+  n'ont aucun effet depuis la France mais font passer la tuile au rouge ;
+  a force, on cesse de la regarder. LA REGLE : on ne masque QUE ce qu'on
+  a su situer -- un libelle ou aucun lieu connu n'apparait (« Elevated
+  API error rates ») reste TOUJOURS affiche, et ce qui est annonce comme
+  mondial aussi. Masquer ce qu'on n'a pas compris ferait disparaitre en
+  silence un incident mondial mal nomme. Un service dont tous les ennuis
+  ont ete masques le DIT : le compteur reste sur sa ligne, pour qu'un
+  service calme ne se confonde jamais avec un service dont on cache
+  quelque chose.
+
+- **La fenetre est fermee quand la tuile est detruite.** Elle vit dans
+  `<body>` et non dans la tuile : sans ce nettoyage, supprimer la tuile
+  laissait sa fenetre ouverte au milieu de l'ecran, sans rien pour la
+  fermer.
+
+- **Tests** : les quatre etats et le filtre geographique sont des
+  fonctions pures, testees hors ligne -- y compris sur ce que le filtre
+  ne doit JAMAIS masquer. Cote interface, les tests cliquent pour de bon
+  sur une pastille et verifient que la fenetre s'ouvre, se ferme, et ne
+  survit pas a la tuile.
+
 ## 1.134.1
 
 - **Stripe : la page a demenage, et le repli apres redirection visait le
