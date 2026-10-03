@@ -73,6 +73,19 @@
       }
     },
     {
+      "key": "showRunButton",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Bouton « Tester maintenant » sur la tuile",
+        "en": "\"Test now\" button on the tile"
+      },
+      "hint": {
+        "fr": "Lance un test complet sans passer par le panneau d'historique — pratique quand la ligne semble lente et qu'on veut une mesure tout de suite plutôt que d'attendre le prochain relevé automatique. À décocher sur un tableau mural tactile, où un effleurement suffirait à déclencher des tests à répétition : chacun occupe la ligne pendant quelques secondes et fausse la mesure suivante.",
+        "en": "Runs a full test without going through the history panel — handy when the line feels slow and you want a reading now rather than waiting for the next automatic one. Untick it on a touch wall display, where a brush of the hand would trigger repeated tests: each one occupies the line for a few seconds and skews the next reading."
+      }
+    },
+    {
       "key": "latencySeconds",
       "type": "number",
       "default": 60,

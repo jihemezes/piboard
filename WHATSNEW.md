@@ -33,6 +33,34 @@
 # Nouveautes / What's new
 
 
+## 1.137.0
+
+**Un test de ligne a la demande**
+
+La tuile Sante Internet porte desormais un bouton « Tester maintenant »
+sous l'age du dernier relevé. Il lance un test complet -- latence,
+gigue, pertes et debit -- sans attendre le prochain relevé automatique
+ni ouvrir la fenetre d'historique. C'est ce qu'on veut quand la ligne
+semble lente : savoir tout de suite.
+
+Le bouton se grise et tourne pendant la mesure, et un reglage permet de
+le retirer sur un tableau mural tactile, ou un effleurement suffirait a
+lancer des tests a repetition.
+
+---
+
+**An on-demand line test**
+
+The Internet health tile now carries a "Test now" button under the last
+reading's age. It runs a full test -- latency, jitter, loss and
+throughput -- without waiting for the next automatic reading or opening
+the history window. That is what one wants when the line feels slow:
+knowing right away.
+
+The button greys out and spins during the measurement, and a setting
+removes it on a touch wall display, where a brush of the hand would
+launch repeated tests.
+
 ## 1.136.0
 
 **Tuile Statut de service : mise au propre**

@@ -1695,6 +1695,11 @@
           <p>Le serveur lit ses réglages dans la tuile elle-même. <b>Tant qu'aucune tuile « Santé Internet » n'est posée sur le tableau, absolument rien n'est mesuré</b> et aucune requête n'est émise. Si plusieurs tuiles de ce type coexistent, la première fait foi : l'historique étant unique et partagé, il n'y a qu'un seul rythme de mesure possible.</p>
           <p>Notez que le réglage « Rafraîchissement de la tuile » ne change <b>que</b> la fréquence à laquelle la tuile relit les relevés. Le rythme de mesure se règle, lui, dans la section « Mesure de la latence ».</p>
 
+          <h4>Lancer un test tout de suite</h4>
+          <p>Sous l'âge du dernier relevé, le bouton <b>« Tester maintenant »</b> lance un test <b>complet</b> — latence, gigue, pertes et débit — sans attendre le prochain relevé automatique. C'est le geste qu'on veut quand la ligne semble lente : savoir <i>maintenant</i>, et non dans huit minutes.</p>
+          <p>Le bouton se désactive et tourne pendant la mesure, qui prend quelques secondes : sans cela, trois clics lanceraient trois tests qui se partageraient la ligne et annonceraient chacun un tiers du débit réel. Un clic dessus n'ouvre pas la fenêtre d'historique, bien que le reste de la tuile le fasse.</p>
+          <p>À <b>décocher dans les réglages</b> sur un tableau mural tactile, où un effleurement suffirait à déclencher des tests à répétition — chacun occupe la ligne et fausse la mesure suivante.</p>
+
           <h4>La fenêtre de détail</h4>
           <p><b>Un clic n'importe où sur la tuile</b> ouvre une fenêtre avec la courbe complète : choix de la profondeur (1 h, 6 h, 24 h, 72 h) et de la grandeur affichée (latence, gigue, perte, débit), la valeur courante, les minimum / moyenne / maximum, le nombre de relevés et le taux de <b>disponibilité</b> — c'est ce dernier chiffre que l'on montre à un fournisseur d'accès.</p>
           <p>Les <b>coupures</b> sont signalées par une bande rouge verticale, et le tracé est <b>rompu</b> à cet endroit plutôt que relié : une ligne qui traverse une coupure laisserait croire à une dégradation progressive, alors qu'il n'y avait rien du tout.</p>
@@ -1744,6 +1749,11 @@
           <h4>No tile, no traffic</h4>
           <p>The server reads its settings from the tile itself. <b>As long as no "Internet health" tile sits on the board, absolutely nothing is measured</b> and no request is issued. If several such tiles coexist, the first one wins: the history being single and shared, there can only be one measurement pace.</p>
           <p>Note that the "Tile refresh" setting only changes how often the tile re-reads the readings. The measurement pace is set in the "Latency measurement" section.</p>
+
+          <h4>Running a test right away</h4>
+          <p>Under the last reading's age, the <b>"Test now"</b> button runs a <b>full</b> test — latency, jitter, loss and throughput — without waiting for the next automatic reading. That is the gesture one wants when the line feels slow: knowing <i>now</i>, not in eight minutes.</p>
+          <p>The button disables itself and spins during the measurement, which takes a few seconds: without that, three clicks would launch three tests sharing the line, each reporting a third of the real throughput. Clicking it does not open the history window, although the rest of the tile does.</p>
+          <p><b>Untick it in the settings</b> on a touch wall display, where a brush of the hand would trigger repeated tests — each occupies the line and skews the next reading.</p>
 
           <h4>The detail window</h4>
           <p><b>Clicking anywhere on the tile</b> opens a window with the full curve: choice of depth (1 h, 6 h, 24 h, 72 h) and of the quantity shown (latency, jitter, loss, throughput), the current value, the minimum / average / maximum, the number of readings and the <b>availability</b> rate — that last figure is the one to show an ISP.</p>

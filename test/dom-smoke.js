@@ -659,6 +659,7 @@ const CATALOG_FIXTURE = {
             { id: "sfr", name: "SFR", family: "france", url: "https://www.sfr.fr", adapter: "endpoint", api: "https://www.sfr.fr/" }
           ]
         };
+const IH = { runs: [] };
 const CATALOG_ROUTE = { down: false, calls: [], fileCalls: [], body: () => CATALOG_FIXTURE };
 const SVC_DETECT_CALLS = [];
 let UPDATE_VERSION_SERVED = "9.9.9-test";
@@ -742,6 +743,25 @@ const dom = new JSDOM(html, {
          la route manque et ou l'on se replie sur le fichier).
          The route serves the catalogue wrapped in { catalog: ... }, the
          static file serves it bare: both shapes must be accepted. */
+      /* Sante Internet (1.137.0) : etat courant, historique et test
+         manuel. On compte les lancements pour verifier qu'UN clic ne
+         declenche qu'UN test.
+         Internet health: current state, history and manual run. Runs are
+         counted to check that ONE click triggers ONE test. */
+      if (u.includes("/api/internet-health/run")) {
+        IH.runs.push(u);
+        return json({ ok: true, point: { t: Date.now(), latencyMs: 12 } });
+      }
+      if (u.includes("/api/internet-health/history")) {
+        return json({ points: [], stats: { availability: 100 } });
+      }
+      if (u.includes("/api/internet-health")) {
+        return json({
+          enabled: true, status: "good",
+          sample: { t: Date.now() - 9 * 60000, latencyMs: 14, jitterMs: 2, lossPct: 0 },
+          lastThroughput: null
+        });
+      }
       if (u.includes("api/service-catalog")) {
         if (CATALOG_ROUTE.down) return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({ error: "down" }) });
         CATALOG_ROUTE.calls.push(u);
@@ -9050,6 +9070,66 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("fenetre rouverte pour le test de destruction", !!document.querySelector(".pwss-modal"));
     w.destroy();
     assert("detruire la tuile referme sa fenetre", !document.querySelector(".pwss-modal"));
+    host.remove();
+  }
+
+  console.log("== Sante Internet : le bouton « Tester maintenant » sur la tuile (1.137.0) ==");
+  {
+    let Klass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "speedtest") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/speedtest/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+    assert("la tuile Sante Internet est remontable a part", typeof Klass === "function");
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    IH.runs.length = 0;
+    let opened = 0;
+
+    const w = new Klass({
+      el: host,
+      settings: { refreshSeconds: 60, chartHours: 24, showThroughput: true, showSparkline: false, showRunButton: true },
+      i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
+      api: {}
+    });
+    w.openDetails = () => { opened++; };
+    w.init();
+    await sleep(80);
+
+    const btn = host.querySelector(".pwsp-run");
+    assert("le bouton est pose sous l'age du dernier relevé", !!btn
+      && !!host.querySelector(".pwsp-top .pwsp-age")
+      && !!host.querySelector(".pwsp-runrow"));
+
+    /* TOUTE LA TUILE OUVRE LE PANNEAU : si le bouton n'arretait pas
+       l'evenement, on cliquerait pour mesurer et on obtiendrait une
+       fenetre par-dessus. Test FONCTIONNEL : on clique vraiment et on
+       regarde si le panneau s'est ouvert. */
+    btn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    assert("le clic lance bien un test", IH.runs.length === 1);
+    assert("et n'ouvre PAS le panneau d'historique au passage", opened === 0);
+    assert("le test demande est un test COMPLET (debit compris)", /full=1/.test(IH.runs[0] || ""));
+
+    /* Un test occupe la ligne plusieurs secondes : deux tests
+       simultanes se la partageraient et annonceraient chacun la moitie
+       du debit reel. Le second clic doit donc etre sans effet. */
+    const btn2 = host.querySelector(".pwsp-run");
+    w.running = true;
+    btn2.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(40);
+    assert("un second test ne part pas pendant qu'un test tourne", IH.runs.length === 1);
+    w.running = false;
+
+    /* Le bouton se coupe depuis les reglages : sur un tableau mural
+       tactile, un effleurement suffirait a declencher des tests a
+       repetition. */
+    w.onSettingsChanged({ refreshSeconds: 60, chartHours: 24, showThroughput: true, showSparkline: false, showRunButton: false });
+    await sleep(60);
+    assert("le bouton disparait quand le reglage est decoche", !host.querySelector(".pwsp-run"));
+
+    w.destroy();
     host.remove();
   }
 

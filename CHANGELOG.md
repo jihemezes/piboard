@@ -1,5 +1,37 @@
 # Changelog
 
+## 1.137.0
+
+- **Bouton « Tester maintenant » sur la face de la tuile Sante
+  Internet**, sous l'age du dernier relevé -- c'est l'information a
+  laquelle il repond (« ce chiffre date de neuf minutes » -> « j'en veux
+  un maintenant »). Il lance un test COMPLET, debit compris. Le test
+  manuel existait deja, mais seulement dans le panneau d'historique :
+  il fallait ouvrir une fenetre pour mesurer sa ligne.
+
+- **Le lancement d'un test n'est ecrit qu'une fois** (`runNow`), partage
+  par les deux boutons. Deux copies auraient diverge a la premiere
+  correction, et c'est le genre de code ou une divergence ne se voit
+  pas : les deux boutons marcheraient, l'un seulement rafraichirait le
+  graphique.
+
+- **Le bouton arrete l'evenement.** Toute la tuile ouvre le panneau
+  d'historique au `pointerup` : sans cela, cliquer pour mesurer aurait
+  ouvert une fenetre par-dessus le test. `pointerup` est intercepte lui
+  aussi, et pas seulement `click`, parce que c'est lui que la tuile
+  ecoute.
+
+- **Un seul test a la fois**, et le bouton le montre -- grise, avec son
+  icone qui tourne. Un test occupe la ligne plusieurs secondes : deux
+  tests simultanes se la partageraient et annonceraient chacun la moitie
+  du debit reel. Le message d'avancement s'affiche sur la TUILE, pas
+  dans le panneau : qui lance un test depuis la tuile n'a aucune raison
+  d'ouvrir une fenetre pour savoir ou il en est.
+
+- **Reglage pour le masquer**, coche par defaut. Sur un tableau mural
+  tactile, un effleurement suffirait a declencher des tests a
+  repetition, et chacun fausse la mesure suivante.
+
 ## 1.136.3
 
 - **La fenetre de detail s'ouvre aussi depuis le mode Detaille.** Elle

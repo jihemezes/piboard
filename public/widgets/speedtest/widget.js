@@ -217,6 +217,12 @@
             <span class="pwsp-status">${esc(i18n.t("speed.status." + status))}</span>
             <span class="pwsp-age">${esc(fmtAge(sm.t, i18n))}</span>
           </div>
+          ${s.showRunButton === false ? "" : `<div class="pwsp-runrow">
+            <button type="button" class="pwsp-run" data-act="run-now" title="${esc(i18n.t("speed.runNowTip"))}">
+              <span class="pwsp-run-ico" aria-hidden="true">⟳</span>${esc(i18n.t("speed.runNow"))}
+            </button>
+            <span class="pwsp-run-note" data-role="tile-note"></span>
+          </div>`}
           <div class="pwsp-main">
             ${lat == null
               ? `<span class="pwsp-big pwsp-off">${esc(i18n.t("speed.noAnswer"))}</span>`
@@ -236,6 +242,41 @@
       const root = this.ctx.el.querySelector(".pw-speed");
       if (root) {
         root.addEventListener("pointerup", (e) => { e.preventDefault(); this.openDetails(); });
+      }
+
+      /* TOUTE LA TUILE OUVRE LE PANNEAU : le bouton doit donc arreter
+         l'evenement, sinon un test lance ouvrirait le panneau par-dessus
+         -- on cliquerait pour mesurer et on obtiendrait une fenetre.
+         `pointerup` est intercepte lui aussi, parce que c'est lui, et
+         non `click`, que la tuile ecoute.
+         THE WHOLE TILE OPENS THE PANEL, so the button must stop the
+         event: otherwise starting a test would also open the panel over
+         it -- one would click to measure and get a window. `pointerup`
+         is intercepted too, since that is what the tile listens to. */
+      const runBtn = this.ctx.el.querySelector(".pwsp-run");
+      if (runBtn) {
+        const stop = (e) => { e.stopPropagation(); };
+        runBtn.addEventListener("pointerup", stop);
+        runBtn.addEventListener("pointerdown", stop);
+        runBtn.addEventListener("click", async (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const note = this.ctx.el.querySelector("[data-role=tile-note]");
+          await this.runNow(runBtn, (text, kind) => {
+            /* Le message vit sur la TUILE ici, pas dans le panneau : la
+               personne qui lance un test depuis la tuile n'a aucune
+               raison d'ouvrir une fenetre pour savoir ou il en est.
+               The message lives on the TILE here, not in the panel. */
+            if (!note) return;
+            note.textContent = text || "";
+            note.className = "pwsp-run-note" + (kind ? " pwsp-run-note-" + kind : "");
+          });
+          /* Le rendu est refait par refresh() : le message disparait
+             avec lui, ce qui est le comportement voulu -- l'age affiche
+             « a l'instant » dit desormais la meme chose, en mieux.
+             The render is redone by refresh(): the message goes with it,
+             which is intended -- the age now says the same thing. */
+        });
       }
     }
 
@@ -525,6 +566,47 @@
 
     /* ---------- Actions ---------- */
 
+    /* LE LANCEMENT D'UN TEST, ECRIT UNE SEULE FOIS. Deux boutons le
+       declenchent -- celui du panneau d'historique et, depuis la
+       1.137.0, celui de la tuile elle-meme. Deux copies de ce code
+       auraient diverge a la premiere correction, et c'est precisement
+       le genre de code ou une divergence ne se voit pas : les deux
+       boutons marcheraient, l'un seulement rafraichirait le graphique.
+       RUNNING A TEST, WRITTEN ONCE. Two buttons trigger it -- the
+       history panel's and, since 1.137.0, the tile's own. Two copies
+       would have diverged at the first fix, and this is exactly the
+       kind of code where a divergence goes unnoticed: both buttons
+       would work, only one would refresh the chart. */
+    async runNow(button, say) {
+      const i18n = this.ctx.i18n;
+      /* Un test complet dure plusieurs secondes : sans desactiver le
+         bouton, on en lancerait trois qui se partageraient la ligne et
+         annonceraient chacun un tiers du debit reel.
+         A full test takes several seconds: without disabling the button,
+         three would be launched, sharing the line and each reporting a
+         third of the real throughput. */
+      if (this.running) return;
+      this.running = true;
+      if (button) button.disabled = true;
+      say(i18n.t("speed.running"));
+      try {
+        const r = await fetch("/api/internet-health/run?full=1", { method: "POST" });
+        const out = await r.json();
+        if (out && out.ok) {
+          say(i18n.t("speed.runDone"), "ok");
+          await this.refresh();
+          await this.loadChart();
+        } else {
+          say(i18n.t("speed.runBusy"));
+        }
+      } catch (e) {
+        say(i18n.t("speed.runFailed"), "err");
+      } finally {
+        this.running = false;
+        if (button) button.disabled = false;
+      }
+    }
+
     note(text, kind) {
       if (!this.modal) return;
       const el = this.modal.querySelector("[data-role=note]");
@@ -552,29 +634,7 @@
       }
 
       if (act === "run") {
-        // Un test complet dure plusieurs secondes : sans desactiver le
-        // bouton, on en lancerait trois qui se partageraient la ligne et
-        // annonceraient chacun un tiers du debit reel.
-        // A full test takes several seconds: without disabling the
-        // button, three would be launched, sharing the line and each
-        // reporting a third of the real throughput.
-        button.disabled = true;
-        this.note(i18n.t("speed.running"));
-        try {
-          const r = await fetch("/api/internet-health/run?full=1", { method: "POST" });
-          const out = await r.json();
-          if (out && out.ok) {
-            this.note(i18n.t("speed.runDone"), "ok");
-            await this.refresh();
-            await this.loadChart();
-          } else {
-            this.note(i18n.t("speed.runBusy"));
-          }
-        } catch (e) {
-          this.note(i18n.t("speed.runFailed"), "err");
-        } finally {
-          button.disabled = false;
-        }
+        await this.runNow(button, (text, kind) => this.note(text, kind));
         return;
       }
 
