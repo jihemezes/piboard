@@ -433,3 +433,31 @@
 .pw-svcstatus .pwss-chip { justify-content: flex-start; }
 .pw-svcstatus .pwss-chip .pwss-chip-name { flex: 0 1 auto; }
 .pw-svcstatus .pwss-chip .pwss-ico { margin-left: 2px; }
+
+/* ============================================================
+   1.136.1 — les rubriques se mettent en colonnes.
+
+   AUTANT DE COLONNES QUE LA LARGEUR EN PERMET, et non deux imposees :
+   la tuile se redimensionne librement sur la grille du tableau, et deux
+   colonnes forcees sur une tuile etroite couperaient les noms en deux.
+   190 px est la largeur en dessous de laquelle un nom de service et son
+   icone cessent de tenir sur une ligne.
+   AS MANY COLUMNS AS THE WIDTH ALLOWS rather than two imposed: the tile
+   is freely resizable, and two forced columns on a narrow tile would cut
+   names in half. 190px is the width below which a service name and its
+   icon stop fitting on one line.
+   ============================================================ */
+.pw-svcstatus .pwss-fam-body {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 2px 16px;
+  align-items: start;
+}
+
+/* Une fiche qui A quelque chose a dire reprend toute la largeur : son
+   detail (composants, incident, dernier message) ne se lit pas dans une
+   demi-colonne, et le couper en deux reviendrait a cacher ce que la
+   tuile existe pour montrer.
+   A card that HAS something to say takes the full width back: its
+   detail does not read in half a column. */
+.pw-svcstatus .pwss-svc-wide { grid-column: 1 / -1; }

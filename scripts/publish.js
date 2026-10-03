@@ -19,10 +19,10 @@
    ordre :
      1. La variable d'environnement PIBOARD_RELEASE, si elle vaut
         `prerelease` ou `latest` : une derogation ponctuelle.
-     2. Sinon, le numero de version de package.json : s'il porte un
-        suffixe semver (1.101.0-beta.1, -rc.2, -preview.3...), la
-        release est une PRE-RELEASE ; sinon elle est publiee en
-        "latest".
+     2. Sinon : PRE-RELEASE, toujours. Marquer une version « latest »
+        est une decision editoriale, qui se prend apres avoir vu la
+        release construite -- depuis GitHub (« Set as the latest
+        release »), ou avec PIBOARD_RELEASE=latest pour ce lancement.
 
    POURQUOI LE NUMERO DE VERSION ET PAS UN SIMPLE DRAPEAU. Parce que
    deux machines publient dans la MEME release : le PC de
@@ -84,7 +84,27 @@ if (override && override !== "prerelease" && override !== "latest") {
   process.exit(1);
 }
 
-const prerelease = override ? override === "prerelease" : !!suffix;
+/* TOUTE RELEASE EST UNE PRE-RELEASE, sauf derogation explicite. C'est
+   un choix de Jean-Michel, et il est juste : marquer « latest » est une
+   decision editoriale -- « cette version-la, je la recommande a tout le
+   monde » -- et elle se prend APRES avoir vu la release construite, pas
+   avant de lancer le build. Les deux machines qui publient dans la meme
+   release (ce PC pour Windows, GitHub Actions pour Linux et macOS)
+   decident toujours pareil, puisque la regle ne depend plus de rien de
+   local. Le suffixe semver garde son role ailleurs : c'est toujours lui
+   qui pilote le canal « Toutes les versions (apercu) » des reglages
+   (`allowPrerelease` dans electron/updater.js).
+   Pour promouvoir une version : PIBOARD_RELEASE=latest, ou -- plus sur
+   -- le bouton « Set as the latest release » sur GitHub, une fois la
+   release complete et verifiee.
+   EVERY RELEASE IS A PRE-RELEASE unless explicitly overridden. Marking
+   "latest" is an editorial decision -- "this one I recommend to
+   everyone" -- taken AFTER seeing the built release, not before
+   starting the build. Both publishing machines decide identically
+   since the rule no longer depends on anything local. To promote:
+   PIBOARD_RELEASE=latest, or GitHub's "Set as the latest release"
+   button once the release is complete and checked. */
+const prerelease = override ? override === "prerelease" : true;
 const releaseType = prerelease ? "prerelease" : "release";
 
 /* Les arguments recus (--win, --linux --x64 --arm64, --mac...) sont

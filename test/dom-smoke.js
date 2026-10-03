@@ -8864,6 +8864,22 @@ function catalogItemFor(catalog, document, widgetId) {
     for (const label of ["Paris, France - (CDG)", "Frankfurt, Germany - (FRA)", "Londres", "eu-west-3", "westeurope"]) {
       assert("en Europe, conserve : " + label, H.concernsMe(label, zones) === true);
     }
+    /* LE DEUXIEME DEFAUT DE GEOGRAPHIE (1.136.1), trouve sur
+       « Norfolk, VA, United States - (ORF) » affiche en surveillant
+       l'Europe. Les noms composes etaient stockes dans une chaine
+       decoupee par les espaces : « united kingdom » produisait un jeton
+       « united », et « United States » devenait EUROPEEN par ce seul
+       mot. Les noms sont desormais des entrees entieres. */
+    assert("« United States » n'est plus europeen a cause de « United Kingdom »",
+      H.concernsMe("Norfolk, VA, United States - (ORF)", zones) === false);
+    assert("mais le Royaume-Uni, lui, reste bien europeen",
+      H.concernsMe("London, United Kingdom - (LHR)", zones) === true
+      && H.concernsMe("Dublin, Ireland - (DUB)", zones) === true);
+    /* La ponctuation est retiree des DEUX cotes : sans cela « st. louis »
+       ne rencontrait jamais « St. Louis ». */
+    assert("un nom ponctue est reconnu malgre sa ponctuation",
+      H.concernsMe("Maintenance : STL (St. Louis)", zones) === false);
+
     /* Savoir ou est un pays ne suffit pas : il faut savoir sur QUEL
        continent. Demander « Europe » ne pouvait rien dire d'« Annaba,
        Algeria » tant que l'Algerie n'etait pas rattachee a l'Afrique. */
@@ -8927,6 +8943,16 @@ function catalogItemFor(catalog, document, widgetId) {
       const iName = kids.findIndex((k) => k.classList.contains("pwss-name"));
       const iIcon = kids.findIndex((k) => k.classList.contains("pwss-ico"));
       assert("dans une fiche, le nom precede l'icone", iName !== -1 && iIcon !== -1 && iName < iIcon);
+    }
+
+    /* Les colonnes : une fiche reduite a son nom se range avec les
+       autres, une fiche qui a du detail reprend toute la largeur. Son
+       detail ne se lit pas dans une demi-colonne. */
+    {
+      const simple = host.querySelector(".pwss-svc:not(.pwss-svc-wide)");
+      assert("un service sain tient dans une colonne", !!simple);
+      assert("les services d'une rubrique sont places dans une grille",
+        !!host.querySelector(".pwss-fam-body"));
     }
 
     /* Compact + : TOUT le monde en pastille, y compris ce qui va mal. */

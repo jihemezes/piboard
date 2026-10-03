@@ -1958,6 +1958,7 @@
 
           <h4>Rangés par famille</h4>
           <p>Vingt-cinq services rangés dans l'ordre où on les a cochés forment une liste qu'il faut lire en entier pour y trouver quelque chose. Ils sont donc regroupés par <b>rubrique</b> — cloud et hébergement, DevOps, SaaS, paiement, observabilité, IA, stockage, France, mes services — dans l'ordre du catalogue, choisi pour que les choses proches se suivent. On va droit à la rubrique voulue, et une famille entière au vert se survole d'un coup d'œil. Décochable dans les réglages.</p>
+          <p>À l'intérieur d'une rubrique, les services se rangent sur <b>autant de colonnes que la largeur en permet</b> — une sur une tuile étroite, deux ou trois sur une tuile large. Les colonnes ne sont pas figées : la tuile étant librement redimensionnable, deux colonnes imposées couperaient les noms en deux sur une tuile de trois cases. Un service qui a quelque chose à dire reprend toute la largeur : son détail ne se lit pas dans une demi-colonne.</p>
 
           <h4>Masquer ce qui ne vous concerne pas</h4>
           <p>Cloudflare annonce une dégradation au Chili, AWS une panne à Sydney, et votre tuile passe au rouge alors que vous travaillez à Toulouse. À force, on cesse de la regarder — la façon la plus sûre de rendre une tuile de supervision inutile. L'option <b>« Masquer les problèmes hors de mes zones »</b> ne garde que ce qui est situé dans les zones que vous listez (Europe, France, codes de région de votre fournisseur…).</p>

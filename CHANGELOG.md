@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.136.1
+
+- **« Norfolk, VA, United States » s'affichait en surveillant
+  l'Europe**, et la cause etait dans la forme des donnees, pas dans la
+  logique : les noms de lieux composes etaient stockes dans une longue
+  chaine decoupee par les ESPACES. « united kingdom » produisait donc un
+  jeton « united » range dans l'Europe -- et « United States » devenait
+  europeen par ce seul mot. Chaque nom est desormais une entree entiere,
+  jamais decoupee. Le Royaume-Uni reste europeen, les Etats-Unis
+  retournent en Amerique du Nord, et un test fige les deux.
+
+- **La ponctuation est retiree des DEUX cotes** avant comparaison. Sans
+  cela « st. louis » ne rencontrait jamais « St. Louis » : le point
+  etait retire du libelle lu mais pas de l'entree de la table, et la
+  ville passait au travers du filtre.
+
+- **Les rubriques se mettent en colonnes**, autant que la largeur en
+  permet (une sur une tuile etroite, deux ou trois sur une tuile large)
+  plutot que deux imposees : la tuile etant librement redimensionnable,
+  deux colonnes forcees couperaient les noms en deux sur une tuile de
+  trois cases. Une fiche qui a du detail reprend toute la largeur -- son
+  contenu ne se lit pas dans une demi-colonne.
+
+- **Toute release GitHub est desormais publiee en PRE-RELEASE.** Marquer
+  une version « latest » est une decision editoriale -- « celle-la, je la
+  recommande a tout le monde » -- qui se prend APRES avoir vu la release
+  construite, et elle appartient a Jean-Michel, pas au script de build.
+  Elle se prend depuis GitHub (« Set as the latest release ») ou, pour un
+  lancement, avec `PIBOARD_RELEASE=latest`. La regle ne depend plus de
+  rien de local, donc les deux machines qui publient dans la meme release
+  (ce PC pour Windows, GitHub Actions pour Linux et macOS) decident
+  toujours pareil. Le suffixe semver garde son role ailleurs : il pilote
+  toujours le canal « Toutes les versions (apercu) » des reglages.
+
 ## 1.136.0
 
 - **Le filtre geographique ne savait pas ou est Guam.** « Hagatna,

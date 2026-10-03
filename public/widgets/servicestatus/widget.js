@@ -177,7 +177,20 @@
      (« on ne masque que ce qu'on a su situer ») etait bonne ; c'est la
      connaissance geographique qui etait trop maigre.
 
-     Deux changements : la table couvre maintenant les pays ET les
+     DEUXIEME DEFAUT, trouve sur « Norfolk, VA, United States - (ORF) »
+     qui s'affichait en surveillant l'Europe : les noms composes etaient
+     stockes dans une longue chaine decoupee par les espaces, si bien
+     que « united kingdom » produisait un jeton « united » -- et que
+     « United States » devenait, par ce seul mot, EUROPEEN. Les noms
+     sont donc des entrees entieres, jamais decoupees : « united
+     states » se cherche en entier, et ne rencontre plus le Royaume-Uni.
+     SECOND DEFECT, found on "Norfolk, VA, United States - (ORF)" shown
+     while watching Europe: multi-word names were stored in one string
+     split on spaces, so "united kingdom" produced a "united" token --
+     and "United States" became EUROPEAN through that single word.
+     Names are now whole entries, never split.
+
+     Deux changements de fond : la table couvre les pays ET les
      territoires (Guam, Reunion, Nouvelle-Caledonie, Porto Rico...), et
      surtout chacun porte son CONTINENT. Sans cela, demander « Europe »
      ne pouvait rien dire d'« Annaba, Algeria » : il fallait savoir que
@@ -194,56 +207,74 @@
      for "Europe" could say nothing about "Annaba, Algeria". Names are
      given in English and French, status pages mixing both. */
   const CONTINENT = {
-    europe: ("albania albanie andorra andorre austria autriche belarus bielorussie belgium belgique bosnia bosnie bulgaria bulgarie "
-      + "croatia croatie cyprus chypre czechia czech republic republique tcheque tchequie denmark danemark estonia estonie "
-      + "faroe feroe finland finlande france germany allemagne gibraltar greece grece guernsey hungary hongrie iceland islande "
-      + "ireland irlande isle of man italy italie jersey kosovo latvia lettonie liechtenstein lithuania lituanie luxembourg "
-      + "malta malte moldova moldavie monaco montenegro netherlands pays-bas holland macedonia macedoine norway norvege "
-      + "poland pologne portugal romania roumanie russia russie san marino serbia serbie slovakia slovaquie slovenia slovenie "
-      + "spain espagne sweden suede switzerland suisse ukraine united kingdom royaume-uni england angleterre scotland ecosse "
-      + "wales pays de galles northern ireland vatican azores acores madeira madere canary canaries "
-      + "paris marseille lyon roubaix gravelines strasbourg bordeaux toulouse lille london londres manchester dublin "
-      + "frankfurt francfort berlin munich hamburg dusseldorf amsterdam rotterdam brussels bruxelles antwerp madrid barcelona "
-      + "lisbon lisbonne porto milan milano rome roma zurich geneva geneve vienna vienne warsaw varsovie krakow prague "
-      + "budapest bucharest bucarest sofia athens athenes stockholm oslo helsinki copenhagen copenhague riga vilnius tallinn "
-      + "kyiv kiev moscow moscou saint petersburg istanbul edinburgh").split(" "),
-    asia: ("afghanistan armenia armenie azerbaijan azerbaidjan bahrain bahrein bangladesh bhutan bhoutan brunei cambodia cambodge "
-      + "china chine georgia georgie hong kong india inde indonesia indonesie iran iraq irak israel japan japon jordan jordanie "
-      + "kazakhstan kuwait koweit kyrgyzstan laos lebanon liban macau macao malaysia malaisie maldives mongolia mongolie "
-      + "myanmar burma nepal north korea oman pakistan palestine philippines qatar saudi arabia arabie saoudite singapore "
-      + "singapour south korea korea coree sri lanka syria syrie taiwan taiwan tajikistan thailand thailande timor turkey "
-      + "turquie turkmenistan emirates emirats uae uzbekistan vietnam yemen "
-      + "tokyo osaka seoul beijing pekin shanghai shenzhen guangzhou chengdu taipei bangkok jakarta manila hanoi "
-      + "ho chi minh kuala lumpur mumbai bombay delhi bangalore bengaluru chennai hyderabad kolkata pune karachi lahore "
-      + "dhaka colombo kathmandu dubai abu dhabi doha riyadh jeddah kuwait city muscat amman beirut baghdad basra tehran "
-      + "tel aviv jerusalem ankara almaty tashkent baku tbilisi yerevan").split(" "),
-    africa: ("algeria algerie angola benin botswana burkina burundi cameroon cameroun cape verde cap-vert central african chad tchad "
-      + "comoros comores congo djibouti egypt egypte equatorial guinea eritrea erythree eswatini swaziland ethiopia ethiopie "
-      + "gabon gambia gambie ghana guinea guinee ivory coast cote d'ivoire kenya lesotho liberia libya libye madagascar malawi "
-      + "mali mauritania mauritanie mauritius maurice morocco maroc mozambique namibia namibie niger nigeria reunion rwanda "
-      + "senegal seychelles sierra leone somalia somalie south africa afrique du sud south sudan sudan soudan tanzania tanzanie "
-      + "togo tunisia tunisie uganda ouganda zambia zambie zimbabwe "
-      + "algiers alger annaba oran casablanca rabat marrakech tunis tripoli cairo le caire alexandria lagos abuja accra "
-      + "abidjan dakar nairobi mombasa addis ababa kampala dar es salaam luanda maputo johannesburg cape town le cap durban "
-      + "pretoria kinshasa saint denis port louis").split(" "),
-    "north america": ("canada united states etats-unis usa mexico mexique greenland groenland bermuda bermudes costa rica cuba "
-      + "dominican republic republique dominicaine el salvador guatemala haiti honduras jamaica jamaique nicaragua panama "
-      + "puerto rico porto rico bahamas barbados barbade trinidad trinite martinique guadeloupe curacao aruba cayman caimans "
-      + "belize saint martin "
-      + "montreal toronto vancouver calgary ottawa quebec winnipeg new york new jersey newark ashburn virginia washington "
-      + "boston philadelphia atlanta miami orlando tampa charlotte nashville chicago detroit minneapolis columbus ohio "
-      + "dallas houston austin san antonio denver phoenix salt lake city las vegas los angeles san francisco san jose "
-      + "silicon valley seattle portland oregon sacramento kansas city st. louis saint louis mexico city guadalajara "
-      + "monterrey queretaro san juan").split(" "),
-    "south america": ("argentina argentine bolivia bolivie brazil bresil chile chili colombia colombie ecuador equateur "
-      + "french guiana guyane guyana paraguay peru perou suriname uruguay venezuela "
-      + "sao paulo são paulo rio de janeiro brasilia fortaleza porto alegre curitiba buenos aires cordoba santiago "
-      + "valparaiso arica bogota medellin cali lima quito guayaquil caracas montevideo asuncion la paz cayenne").split(" "),
-    oceania: ("australia australie fiji fidji french polynesia polynesie guam kiribati marshall micronesia micronesie nauru "
-      + "new caledonia nouvelle-caledonie new zealand nouvelle-zelande palau papua papouasie samoa solomon salomon tonga "
-      + "tuvalu vanuatu hawaii hawai "
-      + "sydney melbourne brisbane perth adelaide canberra hobart auckland wellington christchurch noumea papeete "
-      + "honolulu hagatna suva port moresby").split(" ")
+    europe: ["albania", "albanie", "andorra", "andorre", "austria", "autriche", "belarus", "bielorussie", "belgium", "belgique",
+      "bosnia", "bosnie", "bulgaria", "bulgarie", "croatia", "croatie", "cyprus", "chypre", "czechia", "czech republic",
+      "republique tcheque", "tchequie", "denmark", "danemark", "estonia", "estonie", "faroe", "feroe", "finland", "finlande",
+      "france", "germany", "allemagne", "gibraltar", "greece", "grece", "guernsey", "hungary", "hongrie", "iceland", "islande",
+      "ireland", "irlande", "isle of man", "italy", "italie", "jersey", "kosovo", "latvia", "lettonie", "liechtenstein",
+      "lithuania", "lituanie", "luxembourg", "malta", "malte", "moldova", "moldavie", "monaco", "montenegro", "netherlands",
+      "pays-bas", "holland", "hollande", "north macedonia", "macedonia", "macedoine", "norway", "norvege", "poland", "pologne",
+      "portugal", "romania", "roumanie", "russia", "russie", "san marino", "saint-marin", "serbia", "serbie", "slovakia",
+      "slovaquie", "slovenia", "slovenie", "spain", "espagne", "sweden", "suede", "switzerland", "suisse", "ukraine",
+      "united kingdom", "royaume-uni", "england", "angleterre", "scotland", "ecosse", "wales", "pays de galles",
+      "northern ireland", "irlande du nord", "vatican", "azores", "acores", "madeira", "madere", "canary islands", "canaries",
+      "paris", "marseille", "lyon", "roubaix", "gravelines", "strasbourg", "bordeaux", "toulouse", "lille", "nantes",
+      "london", "londres", "manchester", "dublin", "edinburgh", "frankfurt", "francfort", "berlin", "munich", "hamburg",
+      "dusseldorf", "amsterdam", "rotterdam", "brussels", "bruxelles", "antwerp", "madrid", "barcelona", "barcelone",
+      "lisbon", "lisbonne", "porto", "milan", "milano", "rome", "roma", "zurich", "geneva", "geneve", "vienna", "vienne",
+      "warsaw", "varsovie", "krakow", "prague", "budapest", "bucharest", "bucarest", "sofia", "athens", "athenes",
+      "stockholm", "oslo", "helsinki", "copenhagen", "copenhague", "riga", "vilnius", "tallinn", "kyiv", "kiev",
+      "moscow", "moscou", "saint petersburg", "istanbul"],
+    asia: ["afghanistan", "armenia", "armenie", "azerbaijan", "azerbaidjan", "bahrain", "bahrein", "bangladesh", "bhutan",
+      "bhoutan", "brunei", "cambodia", "cambodge", "china", "chine", "georgia", "georgie", "hong kong", "india", "inde",
+      "indonesia", "indonesie", "iran", "iraq", "irak", "israel", "japan", "japon", "jordan", "jordanie", "kazakhstan",
+      "kuwait", "koweit", "kyrgyzstan", "laos", "lebanon", "liban", "macau", "macao", "malaysia", "malaisie", "maldives",
+      "mongolia", "mongolie", "myanmar", "burma", "nepal", "north korea", "coree du nord", "oman", "pakistan", "palestine",
+      "philippines", "qatar", "saudi arabia", "arabie saoudite", "singapore", "singapour", "south korea", "coree du sud",
+      "korea", "coree", "sri lanka", "syria", "syrie", "taiwan", "tajikistan", "thailand", "thailande", "timor",
+      "turkey", "turquie", "turkmenistan", "united arab emirates", "emirats arabes unis", "uae", "uzbekistan", "vietnam", "yemen",
+      "tokyo", "osaka", "seoul", "beijing", "pekin", "shanghai", "shenzhen", "guangzhou", "chengdu", "taipei", "bangkok",
+      "jakarta", "manila", "hanoi", "ho chi minh", "kuala lumpur", "mumbai", "bombay", "delhi", "bangalore", "bengaluru",
+      "chennai", "hyderabad", "kolkata", "pune", "karachi", "lahore", "dhaka", "colombo", "kathmandu", "dubai", "abu dhabi",
+      "doha", "riyadh", "jeddah", "muscat", "amman", "beirut", "beyrouth", "baghdad", "basra", "tehran", "teheran",
+      "tel aviv", "jerusalem", "ankara", "almaty", "tashkent", "baku", "tbilisi", "yerevan"],
+    africa: ["algeria", "algerie", "angola", "benin", "botswana", "burkina faso", "burundi", "cameroon", "cameroun",
+      "cape verde", "cap-vert", "central african republic", "chad", "tchad", "comoros", "comores", "congo", "djibouti",
+      "egypt", "egypte", "equatorial guinea", "guinee equatoriale", "eritrea", "erythree", "eswatini", "swaziland",
+      "ethiopia", "ethiopie", "gabon", "gambia", "gambie", "ghana", "guinea", "guinee", "ivory coast", "cote d'ivoire",
+      "kenya", "lesotho", "liberia", "libya", "libye", "madagascar", "malawi", "mali", "mauritania", "mauritanie",
+      "mauritius", "maurice", "morocco", "maroc", "mozambique", "namibia", "namibie", "niger", "nigeria", "reunion",
+      "rwanda", "senegal", "seychelles", "sierra leone", "somalia", "somalie", "south africa", "afrique du sud",
+      "south sudan", "sudan", "soudan", "tanzania", "tanzanie", "togo", "tunisia", "tunisie", "uganda", "ouganda",
+      "zambia", "zambie", "zimbabwe",
+      "algiers", "alger", "annaba", "oran", "casablanca", "rabat", "marrakech", "tunis", "tripoli", "cairo", "le caire",
+      "alexandria", "lagos", "abuja", "accra", "abidjan", "dakar", "nairobi", "mombasa", "addis ababa", "kampala",
+      "dar es salaam", "luanda", "maputo", "johannesburg", "cape town", "le cap", "durban", "pretoria", "kinshasa",
+      "port louis"],
+    "north america": ["canada", "united states", "etats-unis", "usa", "u.s.", "mexico", "mexique", "greenland", "groenland",
+      "bermuda", "bermudes", "costa rica", "cuba", "dominican republic", "republique dominicaine", "el salvador",
+      "guatemala", "haiti", "honduras", "jamaica", "jamaique", "nicaragua", "panama", "puerto rico", "porto rico",
+      "bahamas", "barbados", "barbade", "trinidad", "trinite", "martinique", "guadeloupe", "curacao", "aruba",
+      "cayman islands", "caimans", "belize", "saint martin",
+      "montreal", "toronto", "vancouver", "calgary", "ottawa", "quebec", "winnipeg", "new york", "new jersey", "newark",
+      "ashburn", "virginia", "norfolk", "washington", "boston", "philadelphia", "atlanta", "miami", "orlando", "tampa",
+      "charlotte", "nashville", "chicago", "detroit", "minneapolis", "columbus", "ohio", "dallas", "houston", "austin",
+      "san antonio", "denver", "phoenix", "salt lake city", "las vegas", "los angeles", "san francisco", "san jose",
+      "silicon valley", "seattle", "portland", "oregon", "sacramento", "kansas city", "st. louis", "saint louis",
+      "mexico city", "guadalajara", "monterrey", "queretaro", "san juan", "montgomery", "richmond", "raleigh", "buffalo",
+      "indianapolis", "milwaukee", "memphis", "jacksonville", "omaha", "tulsa", "albuquerque", "boise", "anchorage"],
+    "south america": ["argentina", "argentine", "bolivia", "bolivie", "brazil", "bresil", "chile", "chili", "colombia",
+      "colombie", "ecuador", "equateur", "french guiana", "guyane", "guyana", "paraguay", "peru", "perou", "suriname",
+      "uruguay", "venezuela",
+      "sao paulo", "rio de janeiro", "brasilia", "fortaleza", "porto alegre", "curitiba", "buenos aires", "cordoba",
+      "santiago", "valparaiso", "arica", "bogota", "medellin", "cali", "lima", "quito", "guayaquil", "caracas",
+      "montevideo", "asuncion", "la paz", "cayenne"],
+    oceania: ["australia", "australie", "fiji", "fidji", "french polynesia", "polynesie", "guam", "kiribati",
+      "marshall islands", "micronesia", "micronesie", "nauru", "new caledonia", "nouvelle-caledonie", "new zealand",
+      "nouvelle-zelande", "palau", "papua new guinea", "papouasie", "samoa", "solomon islands", "salomon", "tonga",
+      "tuvalu", "vanuatu", "hawaii", "hawai",
+      "sydney", "melbourne", "brisbane", "perth", "adelaide", "canberra", "hobart", "auckland", "wellington",
+      "christchurch", "noumea", "papeete", "honolulu", "hagatna", "suva", "port moresby"]
   };
 
   /* Les ensembles employes par les fournisseurs : EMEA, APAC, LATAM...
@@ -317,16 +348,36 @@
      difference qui decide ensuite d'afficher ou de masquer.
      Where is this label? Returns the recognised continents, or an empty
      array when nothing could be located. */
+  /* Les entrees sont nettoyees EXACTEMENT comme le libelle a comparer.
+     Sans cela, « st. louis » ne rencontrait jamais « St. Louis » : le
+     point etait retire du texte mais pas de l'entree, et la ville
+     passait au travers du filtre. Un nettoyage fait des deux cotes, une
+     seule fois au chargement.
+     Entries are cleaned EXACTLY like the label they are compared with.
+     Otherwise "st. louis" never met "St. Louis": the dot was stripped
+     from the text but not from the entry. */
+  function clean(text) {
+    return normalize(text).replace(/[^a-z0-9'\- ]+/g, " ").replace(/\s+/g, " ").trim();
+  }
+
+  const PLACES_BY_CONTINENT = (() => {
+    const out = {};
+    for (const continent of Object.keys(CONTINENT)) {
+      out[continent] = CONTINENT[continent].map(clean).filter(Boolean);
+    }
+    return out;
+  })();
+
   function locate(label) {
-    const text = " " + normalize(label).replace(/[^a-z0-9'\- ]+/g, " ").replace(/\s+/g, " ") + " ";
+    const text = " " + clean(label) + " ";
     const found = {};
 
     for (const key of Object.keys(GROUPINGS)) {
       if (text.indexOf(" " + key + " ") !== -1) for (const c of GROUPINGS[key]) found[c] = true;
     }
-    for (const continent of Object.keys(CONTINENT)) {
+    for (const continent of Object.keys(PLACES_BY_CONTINENT)) {
       if (text.indexOf(" " + continent + " ") !== -1) found[continent] = true;
-      for (const place of CONTINENT[continent]) {
+      for (const place of PLACES_BY_CONTINENT[continent]) {
         if (place && text.indexOf(" " + place + " ") !== -1) { found[continent] = true; break; }
       }
     }
@@ -946,8 +997,20 @@
       }
 
       if (mode === "detailed") {
+        /* LES COLONNES SONT AUTOMATIQUES, pas figees a deux : la tuile
+           se redimensionne librement sur la grille, et deux colonnes
+           imposees a une tuile de trois cases de large couperaient les
+           noms en deux. La feuille de style demande « autant de colonnes
+           d'au moins 190 px que la largeur en permet » -- une colonne
+           sur une tuile etroite, deux sur la tuile de la capture, trois
+           sur un mur d'ecran.
+           COLUMNS ARE AUTOMATIC, not fixed at two: the tile is freely
+           resizable, and two forced columns on a three-cell-wide tile
+           would cut names in half. */
         return this.groupServices(list).map((g) => this.famHead(g)
-          + g.items.map((svc) => this.renderService(svc, i18n, s, now)).join("")).join("");
+          + `<div class="pwss-fam-body">`
+          + g.items.map((svc) => this.renderService(svc, i18n, s, now)).join("")
+          + `</div>`).join("");
       }
 
       const bad = list.filter((svc) => svc.error || (svc.indicator && svc.indicator !== "none"));
@@ -955,7 +1018,7 @@
       const cards = bad.map((svc) => this.renderService(svc, i18n, s, now)).join("");
 
       if (mode === "problems") {
-        if (bad.length) return cards;
+        if (bad.length) return `<div class="pwss-fam-body">${cards}</div>`;
         return `<div class="pwss-allgood">${esc(i18n.t("svcstatus.allGood").replace("{n}", list.length))}</div>`;
       }
 
@@ -968,7 +1031,7 @@
         .map((g) => this.famHead(g)
           + `<div class="pwss-grid">` + g.items.map((svc) => this.renderChip(svc, i18n, list.indexOf(svc))).join("") + `</div>`)
         .join("");
-      return chips + cards;
+      return chips + (cards ? `<div class="pwss-fam-body">${cards}</div>` : "");
     }
 
     /* Les services tels qu'ils doivent etre AFFICHES : filtre
@@ -1031,7 +1094,7 @@
           ? i18n.t(why).replace("{code}", String(svc.httpStatus))
           : i18n.t(why);
         return `
-          <div class="pwss-svc" style="--pwss-tone:${STATE_TONE.unknown}">
+          <div class="pwss-svc pwss-svc-wide" style="--pwss-tone:${STATE_TONE.unknown}">
             <div class="pwss-head">
               <span class="pwss-name">${label}</span>
               ${iconHtml("unknown", i18n)}
@@ -1107,8 +1170,16 @@
          something to say. A healthy service is its name and its icon. */
       const detailHtml = detail.length ? `<div class="pwss-detail">${detail.join("")}</div>` : "";
 
+      /* Une fiche QUI A DU DETAIL prend toute la largeur ; une fiche
+         reduite a son nom se range en colonne avec les autres. C'est ce
+         qui permet de serrer vingt services sains sur quelques lignes
+         sans jamais couper en deux le seul qui a quelque chose a dire.
+         A card WITH DETAIL spans the full width; a card reduced to its
+         name sits in a column with the others. */
+      const wide = detail.length ? " pwss-svc-wide" : "";
+
       return `
-        <div class="pwss-svc" style="--pwss-tone:${STATE_TONE[stateOf(svc)]}">
+        <div class="pwss-svc${wide}" style="--pwss-tone:${STATE_TONE[stateOf(svc)]}">
           <div class="pwss-head">
             <span class="pwss-name">${label}</span>${approx}
             ${iconHtml(stateOf(svc), i18n)}
