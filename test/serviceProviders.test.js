@@ -1028,13 +1028,59 @@ test("l'entree Zendesk du catalogue porte bien {today}, et non une date figee", 
 });
 
 test("les neuf entrees de la 1.133.0 declarent le bon format", () => {
+  /* Stripe a change deux fois en une journee : lu par son flux Atom en
+     1.133.0 (son API JSON etant figee depuis 2024), puis de nouveau par
+     Statuspage en 1.134.1 -- `status.stripe.com` redirige desormais
+     vers `www.stripestatus.com`, qui est une Statuspage en bonne et due
+     forme. Le cas est garde ici pour memoire : ces pages bougent, et
+     c'est exactement ce qui a motive la sortie du catalogue hors du
+     code. */
   const expect = { heroku: "heroku", slack: "slack", pagerduty: "pagerduty", zendesk: "zendesk",
-                   stripe: "rss", salesforce: "endpoint", railway: "endpoint", wordpress: "endpoint" };
+                   stripe: "statuspage", salesforce: "endpoint", railway: "endpoint", wordpress: "endpoint" };
   for (const id of Object.keys(expect)) {
     const x = catalog.services.find((y) => y.id === id);
     assert.ok(x, "entree disparue : " + id);
     assert.strictEqual(x.adapter, expect[id], id);
   }
+});
+
+
+console.log("== Apres une redirection de domaine, quel chemin rejouer (1.134.1) ==");
+
+/* LE DEFAUT. Quatre pages de statut ont demenage en changeant de
+   domaine, en laissant une redirection vers la RACINE du nouveau site :
+   Fastly, Infomaniak, OVHcloud, et maintenant Stripe. PiBoard reposait
+   bien le chemin sur la nouvelle origine -- mais celui de
+   l'ADAPTATEUR, jamais celui qui avait ete demande. Tant que le
+   catalogue ne declarait pas d'adresse d'API, les deux se confondaient
+   et personne ne voyait rien. Stripe declarait `/current/atom.xml` : on
+   partait donc chercher `/history.rss` sur `stripestatus.com`, qui n'y
+   est pas. */
+test("le chemin demande est rejoue AVANT celui de l'adaptateur", () => {
+  const paths = S.retryPaths("https://status.stripe.com/current/atom.xml", P.ADAPTERS.rss);
+  assert.deepStrictEqual(paths, ["/current/atom.xml", "/history.rss"]);
+});
+
+test("sans adresse d'API, il n'y a qu'un seul chemin a rejouer", () => {
+  assert.deepStrictEqual(S.retryPaths("https://status.fastly.com/api/v2/summary.json", P.ADAPTERS.statuspage),
+    ["/api/v2/summary.json"], "inutile de redemander deux fois la meme chose");
+});
+
+test("la chaine de requete est conservee dans le chemin rejoue", () => {
+  const paths = S.retryPaths("https://status.zendesk.com/api/ssp/incidents.json?as_of_date=2026-10-03", P.ADAPTERS.zendesk);
+  assert.ok(/\?as_of_date=2026-10-03$/.test(paths[0]),
+    "sans la chaine de requete, l'API de Zendesk rendrait autre chose que ce qu'on lui demandait");
+});
+
+test("une adresse racine ne fait rejouer que le chemin de l'adaptateur", () => {
+  assert.deepStrictEqual(S.retryPaths("https://exemple.fr/", P.ADAPTERS.statuspage), ["/api/v2/summary.json"]);
+});
+
+test("Stripe est de nouveau une Statuspage, a sa nouvelle adresse", () => {
+  const stripe = catalog.services.find((x) => x.id === "stripe");
+  assert.strictEqual(stripe.adapter, "statuspage");
+  assert.ok(/stripestatus\.com/.test(stripe.url), "status.stripe.com redirige desormais vers stripestatus.com");
+  assert.ok(!stripe.api, "l'ancienne adresse de flux, qui n'existe plus, doit avoir disparu");
 });
 
 setTimeout(() => {

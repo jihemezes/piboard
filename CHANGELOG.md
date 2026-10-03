@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.134.1
+
+- **Stripe : la page a demenage, et le repli apres redirection visait le
+  mauvais chemin.** `status.stripe.com` redirige desormais vers
+  `www.stripestatus.com` -- qui est, de nouveau, une Statuspage en bonne
+  et due forme (l'entree lisait un flux Atom depuis la 1.133.0, l'API
+  JSON de Stripe etant figee sur une reponse de 2024). L'entree du
+  catalogue est corrigee.
+
+- **Le defaut latent derriere ce symptome.** Depuis la 1.129.0, PiBoard
+  rejoue bien le chemin sur la nouvelle origine apres une redirection de
+  domaine -- mais celui de l'ADAPTATEUR, jamais celui qui avait ete
+  REELLEMENT demande. Tant que le catalogue ne declarait pas d'adresse
+  d'API les deux se confondaient, et le defaut restait invisible. Stripe
+  declarait `/current/atom.xml` : apres la redirection, on cherchait
+  `/history.rss` sur le nouveau domaine, qui n'y est pas. Le chemin
+  demande est desormais rejoue EN PREMIER, celui de l'adaptateur en
+  second, et l'ordre est fige par un test -- sorti en fonction pure
+  (`retryPaths`), parce qu'un ordre se teste hors ligne en trois lignes
+  la ou une redirection demanderait un serveur.
+
+- **Catalogue en version 6.** Quatrieme page de statut a changer de
+  domaine en quelques semaines, apres Fastly, Infomaniak et OVHcloud :
+  c'est precisement ce que la sortie du catalogue hors du code (1.134.0)
+  est faite pour absorber. A partir de la 1.134.0 installee, une
+  correction de ce genre est une ligne poussee sur le depot, sans
+  livraison.
+
 ## 1.134.0
 
 - **Le catalogue de services sort du code** (`server/serviceCatalog.js`,

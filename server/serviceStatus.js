@@ -338,13 +338,44 @@ async function readBody(res, kind) {
    ci-dessus et le chemin de repli de l'adaptateur (Oracle Cloud).
    Fetches the body, following the domain redirect above and the
    adapter's fallback path (Oracle Cloud) when needed. */
+/* Les chemins a rejouer sur la nouvelle origine, dans l'ordre. Sorti en
+   fonction PURE parce que c'est ICI qu'etait le defaut, et qu'un ordre
+   se teste hors ligne en trois lignes alors qu'une redirection
+   demanderait un serveur.
+   The paths to replay on the new origin, in order. Pulled out as a PURE
+   function because the defect was HERE, and an order is tested offline
+   in three lines where a redirect would need a server. */
+function retryPaths(requestedUrl, adapter) {
+  let asked = null;
+  try { const u = new URL(requestedUrl); asked = u.pathname + (u.search || ""); } catch (e) { asked = null; }
+  const out = [];
+  if (asked && asked !== "/") out.push(asked);
+  if (adapter && adapter.path && adapter.path !== asked) out.push(adapter.path);
+  return out;
+}
+
 async function fetchBody(url, kind, adapter) {
   let res = await httpGet(url, kind);
 
   const moved = redirectedAway(res, url);
-  if (moved && adapter && adapter.path) {
-    const retried = await httpGet(moved + adapter.path, kind);
-    if (retried.ok) res = retried;
+  if (moved) {
+    /* On rejoue D'ABORD le chemin REELLEMENT demande sur la nouvelle
+       origine, et seulement ensuite celui de l'adaptateur. La premiere
+       version ne reposait que le second, ce qui marche quand le
+       catalogue ne declare aucune adresse d'API -- mais pas quand il en
+       declare une : Stripe demandait `/current/atom.xml`, se faisait
+       rediriger vers `www.stripestatus.com`, et on y cherchait
+       `/history.rss` au lieu du chemin demande. Deux essais valent
+       mieux qu'un mauvais, et ils ne coutent que lorsqu'une page a
+       reellement demenage.
+       The REQUESTED path is replayed on the new origin FIRST, the
+       adapter's path only after. The first version replayed only the
+       latter, which works when the catalogue declares no API address --
+       but not when it does. */
+    for (const c of retryPaths(url, adapter)) {
+      const retried = await httpGet(moved + c, kind);
+      if (retried.ok) { res = retried; break; }
+    }
   }
 
   if (res.status === 404 && adapter && adapter.fallbackPath) {
@@ -552,6 +583,7 @@ async function detect(rawUrl) {
 
 module.exports = {
   decodeText,
+  retryPaths,
   withToday,
   getStatus,
   getStatusFor,
