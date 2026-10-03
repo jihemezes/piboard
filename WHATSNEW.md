@@ -33,6 +33,29 @@
 # Nouveautes / What's new
 
 
+## 1.133.0
+
+**Heroku, Slack, PagerDuty et Zendesk rejoignent la tuile**
+
+Ces quatre services ont quitte Statuspage pour une page maison, et
+PiBoard sait maintenant lire chacune d'elles. Stripe est lu par son
+flux d'actualites plutot que par son ancienne API, restee bloquee sur
+une reponse de 2024 -- un point d'entree perime qui repond « tout va
+bien » est pire que pas de point d'entree du tout. Salesforce, Railway
+et WordPress.com ne publient rien de lisible : PiBoard verifie
+simplement que leur service repond.
+
+---
+
+**Heroku, Slack, PagerDuty and Zendesk join the tile**
+
+All four left Statuspage for an in-house page, and PiBoard now reads
+each of them. Stripe is read from its news feed rather than its old
+API, which has been stuck on a 2024 answer -- a stale endpoint
+answering "all fine" is worse than no endpoint at all. Salesforce,
+Railway and WordPress.com publish nothing readable, so PiBoard simply
+checks that their service answers.
+
 ## 1.132.0
 
 **AWS, OVHcloud et Backblaze lus correctement**

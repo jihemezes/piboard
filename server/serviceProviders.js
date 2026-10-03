@@ -1061,6 +1061,175 @@ function parseBackblaze(json) {
   });
 }
 
+/* ============================================================
+   13 a 16. Quatre API maison de plus -- et ce que cette serie raconte
+   Heroku, Slack, PagerDuty et Zendesk ont tous QUITTE Statuspage pour
+   une page a eux. C'est un mouvement de fond, pas une serie de cas
+   particuliers : le pari d'origine (« une seule implementation suffit
+   pour tous ») etait juste en 2019 et ne l'est plus. Chacune de ces
+   quatre API est pourtant publique, sans cle, et plus simple que
+   Statuspage -- l'ecriture d'un lecteur coute une vingtaine de lignes.
+   Four more in-house APIs. All four LEFT Statuspage for a page of their
+   own: a trend, not a series of special cases. Each API is public,
+   key-less and simpler than Statuspage's.
+   ============================================================ */
+
+/* Heroku -- /api/v4/current-status
+   Trois systemes (Apps, Data, Tools), un feu tricolore chacun. */
+const HEROKU_STATE = { green: "operational", blue: "under_maintenance", yellow: "degraded_performance", orange: "partial_outage", red: "major_outage" };
+
+function parseHeroku(json) {
+  if (!json || typeof json !== "object" || !Array.isArray(json.status)) return null;
+  const components = json.status
+    .filter((x) => x && x.system)
+    .map((x) => ({
+      name: text(x.system, 120),
+      status: Object.prototype.hasOwnProperty.call(HEROKU_STATE, String(x.status)) ? HEROKU_STATE[String(x.status)] : "unknown",
+      group: null
+    }));
+  if (!components.length) return null;
+
+  const state = fromComponents({ name: "Heroku", url: "https://status.heroku.com", components });
+
+  /* `resolved: true` reste dans la liste -- meme piege que partout
+     ailleurs. A resolved incident stays in the list. */
+  state.incidents = (Array.isArray(json.incidents) ? json.incidents : [])
+    .filter((i) => i && i.title && !i.resolved)
+    .map((i) => ({
+      id: i.id != null ? String(i.id) : null,
+      name: text(i.title, 200),
+      status: i.state || null,
+      impact: null,
+      url: i.full_url || null,
+      startedAt: i.created_at || null,
+      updatedAt: i.updated_at || null,
+      lastMessage: null,
+      components: (Array.isArray(i.systems) ? i.systems : []).filter((x) => x && x.name).map((x) => text(x.name, 60))
+    }));
+
+  state.maintenances = (Array.isArray(json.scheduled) ? json.scheduled : [])
+    .filter((m) => m && m.title && !m.resolved)
+    .map((m) => ({
+      name: text(m.title, 200),
+      status: m.state || null,
+      scheduledFor: m.created_at || null,
+      scheduledUntil: m.resolved_at || null,
+      url: m.full_url || null
+    }));
+  return state;
+}
+
+/* Slack -- slack-status.com/api/v2.0.0/current
+   `status.slack.com` redirige vers `slack-status.com` : c'est la
+   seconde adresse que le catalogue declare, pour eviter une
+   redirection a chaque relevé. */
+function parseSlack(json) {
+  if (!json || typeof json !== "object" || typeof json.status !== "string") return null;
+  if (!Object.prototype.hasOwnProperty.call(json, "active_incidents")) return null;
+
+  const live = (Array.isArray(json.active_incidents) ? json.active_incidents : [])
+    .filter((i) => i && (i.title || i.type));
+
+  /* `status: "ok"` est le seul etat sain declare ; tout le reste
+     (« active », « maintenance »...) se lit sur les incidents ouverts,
+     dont le `type` porte la gravite. */
+  let indicator = String(json.status).toLowerCase() === "ok" ? "none" : "minor";
+  for (const i of live) {
+    const t = String(i.type || "").toLowerCase();
+    const sev = t.indexOf("outage") !== -1 ? "major" : (t.indexOf("incident") !== -1 ? "minor" : "minor");
+    if ((INDICATOR_RANK[sev] || 0) > (INDICATOR_RANK[indicator] || 0)) indicator = sev;
+  }
+
+  return emptyState({
+    name: "Slack",
+    url: "https://status.slack.com",
+    updatedAt: json.date_updated || json.date_created || null,
+    indicator,
+    ok: indicator === "none",
+    incidents: live.map((i) => ({
+      id: i.id != null ? String(i.id) : null,
+      name: text(i.title || i.type, 200),
+      status: i.status || null,
+      impact: i.type || null,
+      url: i.url || "https://status.slack.com",
+      startedAt: i.date_created || null,
+      updatedAt: i.date_updated || null,
+      lastMessage: i.notes && i.notes.length ? stripHtml(i.notes[i.notes.length - 1].body).slice(0, 600) : null,
+      components: Array.isArray(i.services) ? i.services.map((x) => text(x, 60)) : []
+    })),
+    maintenances: []
+  });
+}
+
+/* PagerDuty -- /api/impacted_services
+   Leur propre produit de pages de statut. L'API ne rend que ce qui va
+   MAL : une liste vide vaut « tout operationnel ». C'est le seul
+   format de la serie construit ainsi, et c'est le plus honnete des
+   quatre : il n'y a aucun etat a mal interpreter.
+   Their own status-page product: the API returns only what is WRONG, so
+   an empty list means all operational. */
+function parsePagerduty(json) {
+  if (!json || typeof json !== "object" || !Array.isArray(json.impacted_services)) return null;
+
+  const hit = json.impacted_services
+    .map((x) => (x && typeof x === "object" ? x : null))
+    .filter(Boolean);
+
+  const affected = hit.map((x) => ({
+    name: text(x.name || x.service_name || x.id || "Service", 120),
+    status: "partial_outage",
+    group: null
+  }));
+
+  const indicator = affected.length ? "major" : "none";
+  return emptyState({
+    name: "PagerDuty",
+    url: "https://status.pagerduty.com",
+    indicator,
+    ok: !affected.length,
+    componentCount: affected.length,
+    affected,
+    incidents: [],
+    maintenances: []
+  });
+}
+
+/* Zendesk -- /api/ssp/incidents.json?as_of_date={today}&days_back=1
+   Format JSON:API. Leur liste de services ne porte AUCUN etat : tout
+   se lit sur les incidents du jour, d'ou la date dans l'adresse --
+   substituee a chaque appel, voir {today} dans serviceStatus.js. Une
+   date figee dans le catalogue aurait vieilli en silence, ce qui est
+   exactement le genre de defaut qu'on ne voit jamais venir.
+   Zendesk's service list carries NO state; everything is read from the
+   day's incidents, hence the date in the address, substituted at call
+   time: a date frozen in the catalogue would have gone stale silently. */
+function parseZendesk(json) {
+  if (!json || typeof json !== "object" || !Array.isArray(json.data)) return null;
+  const live = json.data
+    .filter((x) => x && x.attributes && (x.attributes.title || x.attributes.description))
+    .filter((x) => String(x.attributes.status || "").toLowerCase() !== "resolved");
+
+  const indicator = live.length ? "minor" : "none";
+  return emptyState({
+    name: "Zendesk",
+    url: "https://status.zendesk.com",
+    indicator,
+    ok: !live.length,
+    incidents: live.map((x) => ({
+      id: x.id || null,
+      name: text(x.attributes.title || x.attributes.description, 200),
+      status: x.attributes.status || null,
+      impact: x.attributes.severity || null,
+      url: "https://status.zendesk.com",
+      startedAt: x.attributes.startedAt || x.attributes.started_at || null,
+      updatedAt: x.attributes.updatedAt || x.attributes.updated_at || null,
+      lastMessage: x.attributes.description ? stripHtml(x.attributes.description).slice(0, 600) : null,
+      components: []
+    })),
+    maintenances: []
+  });
+}
+
 /* ---------- Table des adaptateurs / adapter table ----------
    `path` : ce qu'on ajoute a l'origine quand le catalogue ne fournit pas
    d'adresse d'API explicite. `kind` : comment lire la reponse.
@@ -1096,6 +1265,10 @@ const ADAPTERS = {
      answer. */
   betterstack: { path: "/index.json", kind: "json", parse: parseBetterstack },
   backblaze: { path: "/data/payload.json", kind: "json", parse: parseBackblaze },
+  heroku: { path: "/api/v4/current-status", kind: "json", parse: parseHeroku },
+  slack: { path: "/api/v2.0.0/current", kind: "json", parse: parseSlack },
+  pagerduty: { path: "/api/impacted_services", kind: "json", parse: parsePagerduty },
+  zendesk: { path: "/api/ssp/incidents.json?days_back=1", kind: "json", parse: parseZendesk },
   endpoint: { path: "/", kind: "probe", parse: parseEndpoint }
 };
 
@@ -1139,6 +1312,10 @@ module.exports = {
   parseEndpoint,
   parseBetterstack,
   parseBackblaze,
+  parseHeroku,
+  parseSlack,
+  parsePagerduty,
+  parseZendesk,
   fromComponents,
   stripHtml,
   msFromAws,

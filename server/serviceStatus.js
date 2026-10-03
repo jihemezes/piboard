@@ -147,10 +147,27 @@ function apiUrl(base) {
    plus le chemin de l'adaptateur.
    The address actually queried: the catalogue's explicit API address
    first, otherwise the origin plus the adapter's path. */
+/* UNE DATE DANS L'ADRESSE, ET POURQUOI ELLE EST SUBSTITUEE ICI.
+   L'API de Zendesk veut le jour courant en parametre. Ecrire cette date
+   dans le catalogue l'aurait figee a la date de la livraison : la tuile
+   aurait interroge indefiniment le 3 octobre 2026 et affiche « tout va
+   bien » pour l'eternite -- un defaut muet, qui ne se signale par
+   aucune erreur et que personne ne voit venir. Le catalogue porte donc
+   `{today}`, remplace a CHAQUE appel.
+   A DATE IN THE ADDRESS: Zendesk's API wants the current day. Writing it
+   into the catalogue would have frozen it at delivery time -- the tile
+   querying 3 October 2026 for ever and showing "all fine" for ever, a
+   silent defect no error reports. The catalogue carries {today}, which
+   is replaced at EVERY call. */
+function withToday(url) {
+  if (!url || url.indexOf("{today}") === -1) return url;
+  return url.replace(/\{today\}/g, new Date().toISOString().slice(0, 10));
+}
+
 function endpointFor(spec) {
   const adapter = providers.ADAPTERS[spec.adapter];
   if (!adapter) return null;
-  if (spec.api) return normalizeApi(spec.api);
+  if (spec.api) return normalizeApi(withToday(spec.api));
   const base = normalizeBase(spec.url);
   return base ? base + adapter.path : null;
 }
@@ -535,6 +552,7 @@ async function detect(rawUrl) {
 
 module.exports = {
   decodeText,
+  withToday,
   getStatus,
   getStatusFor,
   detect,

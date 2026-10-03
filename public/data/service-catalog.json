@@ -1,7 +1,7 @@
 {
   "_comment_fr": "Catalogue des services proposés par la tuile « Statut de service ». Ce fichier est une simple LISTE : il ne contient aucun état, aucune donnée de santé, et l'état affiché vient toujours en direct de la page du fournisseur. Les entrées sont reprises des annuaires publics (dont le dépôt open-source awesome-statuspages) et vérifiées à la main. Pour en ajouter une : un identifiant stable, un nom, une famille (voir « families »), l'adresse publique, et l'adaptateur à employer -- « auto » si on ne sait pas, le serveur sonde alors les formats connus dans l'ordre.",
   "_comment_en": "Catalogue of the services offered by the Service status tile. This file is a plain LIST: it holds no state and no health data; the displayed state always comes live from the provider's own page. To add an entry: a stable id, a name, a family, the public address, and the adapter to use -- \"auto\" if unknown, the server then probes the known formats in order.",
-  "version": 4,
+  "version": 5,
   "families": [
     {
       "id": "cloud",
@@ -265,7 +265,8 @@
       "name": "Heroku",
       "family": "devops",
       "url": "https://status.heroku.com",
-      "adapter": "auto"
+      "adapter": "heroku",
+      "api": "https://status.heroku.com/api/v4/current-status"
     },
     {
       "id": "render",
@@ -286,7 +287,8 @@
       "name": "Railway",
       "family": "devops",
       "url": "https://status.railway.com",
-      "adapter": "auto"
+      "adapter": "endpoint",
+      "api": "https://railway.com/"
     },
     {
       "id": "supabase",
@@ -328,7 +330,8 @@
       "name": "Slack",
       "family": "saas",
       "url": "https://status.slack.com",
-      "adapter": "auto"
+      "adapter": "slack",
+      "api": "https://slack-status.com/api/v2.0.0/current"
     },
     {
       "id": "discord",
@@ -371,28 +374,32 @@
       "name": "Zendesk",
       "family": "saas",
       "url": "https://status.zendesk.com",
-      "adapter": "statuspage"
+      "adapter": "zendesk",
+      "api": "https://status.zendesk.com/api/ssp/incidents.json?as_of_date={today}&days_back=1"
     },
     {
       "id": "salesforce",
       "name": "Salesforce",
       "family": "saas",
       "url": "https://status.salesforce.com",
-      "adapter": "auto"
+      "adapter": "endpoint",
+      "api": "https://www.salesforce.com/"
     },
     {
       "id": "wordpress",
       "name": "WordPress.com",
       "family": "saas",
-      "url": "https://wordpressstatus.com",
-      "adapter": "auto"
+      "url": "https://automatticstatus.com",
+      "adapter": "endpoint",
+      "api": "https://wordpress.com/"
     },
     {
       "id": "stripe",
       "name": "Stripe",
       "family": "pay",
       "url": "https://status.stripe.com",
-      "adapter": "statuspage"
+      "adapter": "rss",
+      "api": "https://status.stripe.com/current/atom.xml"
     },
     {
       "id": "paypal",
@@ -463,7 +470,8 @@
       "name": "PagerDuty",
       "family": "observability",
       "url": "https://status.pagerduty.com",
-      "adapter": "statuspage"
+      "adapter": "pagerduty",
+      "api": "https://status.pagerduty.com/api/impacted_services"
     },
     {
       "id": "elastic",

@@ -1,5 +1,42 @@
 # Changelog
 
+## 1.133.0
+
+- **Quatre API maison de plus : Heroku, Slack, PagerDuty, Zendesk.**
+  Toutes les quatre ont QUITTE Statuspage pour une page a elles -- c'est
+  un mouvement de fond, pas une serie de cas particuliers. Le pari
+  d'origine (« une seule implementation suffit pour tous ») etait juste
+  en 2019 et ne l'est plus. Chacune de ces API est pourtant publique,
+  sans cle, et plus simple que Statuspage.
+  - Heroku : trois systemes a feu tricolore, incidents et maintenances.
+  - Slack : `status.slack.com` redirige vers `slack-status.com`, que le
+    catalogue declare directement pour eviter une redirection par
+    relevé.
+  - PagerDuty : leur propre produit de pages de statut, dont l'API ne
+    rend QUE ce qui va mal -- une liste vide vaut « tout operationnel »,
+    et c'est le plus honnete des quatre : il n'y a aucun etat a mal
+    interpreter.
+  - Zendesk : l'etat se lit sur les incidents du JOUR.
+
+- **Une date substituee a chaque appel (`{today}`).** L'API de Zendesk
+  veut le jour courant en parametre. Ecrite en dur dans le catalogue,
+  elle aurait vieilli en silence : la tuile aurait interrogé
+  indefiniment le jour de la livraison et affiche « tout va bien » pour
+  l'eternite, sans qu'aucune erreur ne le signale. Un test refuse toute
+  date figee dans cette entree.
+
+- **Stripe passe par son flux Atom.** Son `/current` en JSON existe
+  toujours mais n'est plus mis a jour -- il annonce encore fevrier 2024.
+  Un point d'entree perime qui repond « tout va bien » est pire que pas
+  de point d'entree du tout : on lit donc le flux Atom, avec l'etat
+  deduit et le tilde qui va avec.
+
+- **Salesforce, Railway et WordPress.com passent en `endpoint`.** Les
+  pages de Railway et d'Automattic sont rendues cote serveur, sans
+  aucune donnee lisible ; celle de Salesforce expose bien une API, mais
+  instance par instance (plusieurs centaines de lignes), ce qui ne se
+  resume pas en un etat sans inventer une regle d'agregation.
+
 ## 1.132.0
 
 - **AWS : l'UTF-16 etait GROS-boutien.** La 1.130.0 traduisait

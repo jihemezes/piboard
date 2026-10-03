@@ -942,6 +942,101 @@ test("Backblaze, Infomaniak et MEGA declarent desormais le bon format", () => {
   }
 });
 
+
+console.log("== Quatre API maison de plus (1.133.0) ==");
+
+test("Heroku : les trois systemes deviennent des composants", () => {
+  const out = P.parseHeroku({
+    status: [{ system: "Apps", status: "green" }, { system: "Data", status: "red" }, { system: "Tools", status: "green" }],
+    incidents: [{ id: 1, title: "Panne refermee", resolved: true, full_url: "https://status.heroku.com/incidents/1" },
+                { id: 2, title: "Erreurs sur les dynos", resolved: false, state: "investigating", systems: [{ name: "Apps" }] }],
+    scheduled: [{ id: 3, title: "Maintenance plateforme", resolved: false, state: "upcoming" }]
+  });
+  assert.ok(out);
+  assert.strictEqual(out.indicator, "critical", "un systeme rouge vaut une panne majeure");
+  assert.deepStrictEqual(out.affected.map((c) => c.name), ["Data"]);
+  assert.strictEqual(out.incidents.length, 1, "l'incident deja resolu ne doit pas ressortir");
+  assert.strictEqual(out.maintenances.length, 1);
+});
+
+test("Heroku : ce qui n'est pas du Heroku est refuse", () => {
+  assert.strictEqual(P.parseHeroku({ status: { indicator: "none" } }), null);
+  assert.strictEqual(P.parseHeroku({ statuses: {} }), null);
+});
+
+test("Slack : « ok » sans incident vaut tout operationnel", () => {
+  const out = P.parseSlack({ status: "ok", date_updated: "2026-10-01T11:59:35-07:00", active_incidents: [] });
+  assert.ok(out);
+  assert.strictEqual(out.ok, true);
+});
+
+test("Slack : un incident actif fait sortir l'etat du vert", () => {
+  const out = P.parseSlack({ status: "active", active_incidents: [
+    { id: 7, title: "Messages retardes", type: "outage", services: ["Messaging"], date_created: "2026-10-03T06:00:00Z" } ] });
+  assert.strictEqual(out.indicator, "major");
+  assert.strictEqual(out.incidents[0].name, "Messages retardes");
+  assert.deepStrictEqual(out.incidents[0].components, ["Messaging"]);
+});
+
+/* L'API de PagerDuty ne rend QUE ce qui va mal. Une liste vide vaut
+   donc « tout operationnel » -- et il faut s'en assurer, parce que le
+   reflexe inverse (« rien recu, donc je ne sais pas ») afficherait un
+   etat inconnu permanent sur un service qui va parfaitement bien. */
+test("PagerDuty : aucune liste d'impacts vaut tout operationnel", () => {
+  const out = P.parsePagerduty({ status_page_id: "P67C5DQ", impacted_services: [] });
+  assert.ok(out);
+  assert.strictEqual(out.ok, true);
+  assert.strictEqual(out.affected.length, 0);
+});
+
+test("PagerDuty : un service impacte est nomme", () => {
+  const out = P.parsePagerduty({ impacted_services: [{ id: "P1", name: "Notifications" }] });
+  assert.strictEqual(out.ok, false);
+  assert.strictEqual(out.affected[0].name, "Notifications");
+});
+
+test("Zendesk : aucun incident du jour vaut tout operationnel", () => {
+  const out = P.parseZendesk({ data: [], included: [] });
+  assert.ok(out);
+  assert.strictEqual(out.ok, true);
+});
+
+test("Zendesk : un incident ouvert ressort, un incident resolu non", () => {
+  const out = P.parseZendesk({ data: [
+    { id: "1", attributes: { title: "Lenteurs sur Support", status: "investigating" } },
+    { id: "2", attributes: { title: "Refermé hier", status: "resolved" } } ] });
+  assert.strictEqual(out.incidents.length, 1);
+  assert.strictEqual(out.incidents[0].name, "Lenteurs sur Support");
+});
+
+/* LA DATE DANS L'ADRESSE. Figee dans le catalogue, elle aurait vieilli
+   en silence : la tuile aurait interroge indefiniment le jour de la
+   livraison et affiche « tout va bien » pour l'eternite, sans qu'aucune
+   erreur ne le signale. C'est le genre de defaut qu'on ne voit jamais
+   venir, d'ou ce test. */
+test("une adresse portant {today} est datee du jour, a chaque appel", () => {
+  const today = new Date().toISOString().slice(0, 10);
+  assert.strictEqual(S.withToday("https://x.fr/i.json?as_of_date={today}&days_back=1"),
+    "https://x.fr/i.json?as_of_date=" + today + "&days_back=1");
+  assert.strictEqual(S.withToday("https://x.fr/sans-date.json"), "https://x.fr/sans-date.json");
+});
+
+test("l'entree Zendesk du catalogue porte bien {today}, et non une date figee", () => {
+  const z = catalog.services.find((x) => x.id === "zendesk");
+  assert.ok(/\{today\}/.test(z.api), "une date en dur aurait vieilli sans que rien ne le dise");
+  assert.ok(!/20\d\d-\d\d-\d\d/.test(z.api));
+});
+
+test("les neuf entrees de la 1.133.0 declarent le bon format", () => {
+  const expect = { heroku: "heroku", slack: "slack", pagerduty: "pagerduty", zendesk: "zendesk",
+                   stripe: "rss", salesforce: "endpoint", railway: "endpoint", wordpress: "endpoint" };
+  for (const id of Object.keys(expect)) {
+    const x = catalog.services.find((y) => y.id === id);
+    assert.ok(x, "entree disparue : " + id);
+    assert.strictEqual(x.adapter, expect[id], id);
+  }
+});
+
 setTimeout(() => {
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS SERVICEPROVIDERS PASSENT");
   process.exit(failures ? 1 : 0);
