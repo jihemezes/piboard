@@ -1,14 +1,14 @@
 {
   "id": "servicestatus",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "name": {
     "en": "Service status",
     "fr": "Statut de service"
   },
   "titleBar": true,
   "description": {
-    "en": "Watches the public status pages of online services, picked by family from a catalogue of close to eighty entries (AWS, Google Cloud, Azure, OVHcloud, GitHub, Cloudflare, OpenAI, Anthropic, Stripe, Slack, French carriers…), plus any other page you add yourself — no key and no account. Fifteen status-page formats are read: Atlassian Statuspage, Instatus, Better Stack, Google, AWS Health, Status.io, PayPal, Fastly, Vultr and plain RSS — plus a tenth mode, \"endpoint\", for services publishing no machine-readable page at all (pCloud, Alibaba Cloud, Hetzner), whose state is then inferred and flagged as such. Shows the overall state and, when something is wrong, the affected components only, the incident with its stage and age, the latest message published by the service, and a link to it. Scheduled maintenances are reported too. The check interval is configurable and switches on its own to a faster rhythm as soon as an incident is declared.",
-    "fr": "Surveille les pages de statut publiques des services en ligne, choisis par famille dans un catalogue de près de quatre-vingts entrées (AWS, Google Cloud, Azure, OVHcloud, GitHub, Cloudflare, OpenAI, Anthropic, Stripe, Slack, opérateurs français…), plus toute autre page ajoutée à la main — sans clé ni compte. Quinze formats de pages de statut sont lus : Statuspage d'Atlassian, Instatus, Better Stack, Google, AWS Health, Status.io, PayPal, Fastly, Vultr et simple RSS — plus un dixième mode, « endpoint », pour les services qui ne publient aucune page lisible (pCloud, Alibaba Cloud, Hetzner), dont l'état est alors déduit et signalé comme tel. Affiche l'état global et, en cas de problème, les seuls composants concernés, l'incident avec son stade et son ancienneté, le dernier message publié par le service, et un lien vers celui-ci. Les maintenances programmées sont également signalées. L'intervalle de vérification est réglable et passe tout seul à un rythme plus rapide dès qu'un incident est déclaré."
+    "en": "Watches the public status pages of online services, picked by family from a catalogue of close to eighty entries (AWS, Google Cloud, Azure, OVHcloud, GitHub, Cloudflare, OpenAI, Anthropic, Stripe, Slack, French carriers…), plus any other page you add yourself — no key and no account. The catalogue keeps itself up to date from the public repository, so a status page that moves is fixed without waiting for a new release, and that update can be switched off with a checkbox. Fifteen status-page formats are read: Atlassian Statuspage, Instatus, Better Stack, Google, AWS Health, Status.io, PayPal, Fastly, Vultr and plain RSS — plus a tenth mode, \"endpoint\", for services publishing no machine-readable page at all (pCloud, Alibaba Cloud, Hetzner), whose state is then inferred and flagged as such. Shows the overall state and, when something is wrong, the affected components only, the incident with its stage and age, the latest message published by the service, and a link to it. Scheduled maintenances are reported too. The check interval is configurable and switches on its own to a faster rhythm as soon as an incident is declared.",
+    "fr": "Surveille les pages de statut publiques des services en ligne, choisis par famille dans un catalogue de près de quatre-vingts entrées (AWS, Google Cloud, Azure, OVHcloud, GitHub, Cloudflare, OpenAI, Anthropic, Stripe, Slack, opérateurs français…), plus toute autre page ajoutée à la main — sans clé ni compte. Le catalogue se tient à jour depuis le dépôt public : une page de statut qui déménage est corrigée sans attendre une nouvelle version, et cette mise à jour se coupe d'une case à cocher. Quinze formats de pages de statut sont lus : Statuspage d'Atlassian, Instatus, Better Stack, Google, AWS Health, Status.io, PayPal, Fastly, Vultr et simple RSS — plus un dixième mode, « endpoint », pour les services qui ne publient aucune page lisible (pCloud, Alibaba Cloud, Hetzner), dont l'état est alors déduit et signalé comme tel. Affiche l'état global et, en cas de problème, les seuls composants concernés, l'incident avec son stade et son ancienneté, le dernier message publié par le service, et un lien vers celui-ci. Les maintenances programmées sont également signalées. L'intervalle de vérification est réglable et passe tout seul à un rythme plus rapide dès qu'un incident est déclaré."
   },
   "tagline": {
     "en": "Is GitHub down, or is it me?",
@@ -26,7 +26,7 @@
     {
       "key": "picked",
       "type": "multipick",
-      "source": "data/service-catalog.json",
+      "source": "api/service-catalog",
       "max": 25,
       "alerts": true,
       "default": "[{\"id\":\"github\",\"name\":\"GitHub\",\"url\":\"https://www.githubstatus.com\",\"adapter\":\"statuspage\",\"family\":\"devops\",\"alert\":true},{\"id\":\"cloudflare\",\"name\":\"Cloudflare\",\"url\":\"https://www.cloudflarestatus.com\",\"adapter\":\"statuspage\",\"family\":\"cloud\",\"alert\":true},{\"id\":\"npm\",\"name\":\"npm\",\"url\":\"https://status.npmjs.org\",\"adapter\":\"statuspage\",\"family\":\"devops\",\"alert\":true}]",
@@ -90,6 +90,19 @@
       "hint": {
         "en": "Kept from the previous version, and still useful: the picker above covers the catalogue, this field covers everything else — an internal provider, a page too new to be listed, a client's own status page. Format: Name = status page address, or just the address. The format is worked out by probing (Statuspage, Instatus, Google, Fastly, Vultr, PayPal, RSS), so there is nothing to declare. Lines starting with # are ignored, handy to disable one temporarily. These lines count towards the same ceiling of 25 as the ticked services. Only public HTTPS addresses are accepted.",
         "fr": "Conservé de la version précédente, et toujours utile : le sélecteur ci-dessus couvre le catalogue, ce champ couvre tout le reste — un fournisseur interne, une page trop récente pour être listée, la page de statut d'un client. Format : Nom = adresse de la page de statut, ou l'adresse seule. Le format est deviné par sondage (Statuspage, Instatus, Google, Fastly, Vultr, PayPal, RSS) : il n'y a rien à déclarer. Les lignes commençant par # sont ignorées, pratique pour en désactiver une temporairement. Ces lignes comptent dans le même plafond de 25 que les services cochés. Seules les adresses HTTPS publiques sont acceptées."
+      }
+    },
+    {
+      "key": "catalogAuto",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Tenir la liste des services à jour depuis le dépôt",
+        "en": "Keep the service list up to date from the repository"
+      },
+      "hint": {
+        "fr": "Les fournisseurs déménagent leur page de statut ou changent de format plusieurs fois par an. Avec cette case, PiBoard récupère les corrections du catalogue sur le dépôt public (toutes les 12 h) au lieu d'attendre la prochaine version : une page qui déménage est corrigée pour tout le monde en une ligne. Rien n'est envoyé, seul le fichier du catalogue est lu, et il est entièrement vérifié avant d'être retenu — adresses publiques en HTTPS uniquement, comme pour une adresse saisie à la main. Décochée, PiBoard s'en tient au catalogue livré avec la version installée : c'est le bon choix pour un kiosque sans Internet ou sur réseau fermé.",
+        "en": "Providers move their status page or change format several times a year. With this ticked, PiBoard fetches catalogue fixes from the public repository (every 12 h) instead of waiting for the next release: a page that moves is fixed for everyone in one line. Nothing is sent, only the catalogue file is read, and it is fully checked before being accepted — public HTTPS addresses only, as for a hand-typed address. Unticked, PiBoard stays with the catalogue shipped in the installed version: the right choice for a kiosk with no internet or on a closed network."
       }
     },
     {

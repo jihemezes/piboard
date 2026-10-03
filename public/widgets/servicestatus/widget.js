@@ -191,16 +191,28 @@
   const CATALOG = { byId: {}, loaded: false };
   let catalogPromise = null;
 
-  function loadCatalog() {
+  function loadCatalog(remoteAllowed) {
     if (catalogPromise) return catalogPromise;
-    catalogPromise = fetch("data/service-catalog.json")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((json) => {
-        const list = json && Array.isArray(json.services) ? json.services : [];
-        for (const svc of list) if (svc && svc.id) CATALOG.byId[svc.id] = svc;
-        CATALOG.loaded = true;
-      })
-      .catch(() => { CATALOG.loaded = true; });   // repli : valeurs enregistrees
+    const fill = (json) => {
+      const cat = (json && json.catalog && typeof json.catalog === "object") ? json.catalog : json;
+      const list = cat && Array.isArray(cat.services) ? cat.services : [];
+      for (const svc of list) if (svc && svc.id) CATALOG.byId[svc.id] = svc;
+      return list.length;
+    };
+    /* La route sert le catalogue le plus recent dont le serveur dispose
+       (celui du depot, le cache, ou celui livre avec la version -- voir
+       server/serviceCatalog.js). Si elle manque, on retombe sur le
+       fichier livre : une tuile ne doit jamais dependre d'une route
+       pour afficher quelque chose.
+       The route serves the most recent catalogue the server has; if it
+       is absent we fall back to the shipped file -- a tile must never
+       depend on a route to show anything. */
+    const url = "api/service-catalog" + (remoteAllowed ? "" : "?remote=0");
+    catalogPromise = fetch(url)
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("http " + r.status))))
+      .then((json) => { if (!fill(json)) throw new Error("catalogue vide"); })
+      .catch(() => fetch("data/service-catalog.json").then((r) => r.json()).then(fill).catch(() => 0))
+      .then(() => { CATALOG.loaded = true; });
     return catalogPromise;
   }
 
@@ -315,7 +327,7 @@
          The catalogue is awaited BEFORE building the targets: otherwise
          the first reading would go out with the stored (old) addresses
          and the screen would show the very error just fixed. */
-      await loadCatalog();
+      await loadCatalog(this.ctx.settings.catalogAuto !== false);
       const targets = mergeTargets(this.ctx.settings);
       if (!targets.length) {
         this.services = [];

@@ -3388,14 +3388,35 @@
     if (multipickCatalogs.has(src)) return multipickCatalogs.get(src);
     try {
       const r = await fetch(src);
-      const data = await r.json();
+      const body = await r.json();
+      /* Deux formes acceptees : la reponse de `api/service-catalog`,
+         qui enveloppe le catalogue dans `{ catalog: ... }`, et le
+         fichier statique `data/service-catalog.json`, qui est le
+         catalogue lui-meme. Accepter les deux permet de se replier sur
+         le fichier quand la route n'existe pas -- pendant une mise a
+         jour partielle, par exemple.
+         Two shapes accepted: the api/service-catalog answer, which
+         wraps the catalogue in { catalog: ... }, and the static file,
+         which is the catalogue itself. Accepting both allows falling
+         back to the file when the route is absent. */
+      const data = (body && body.catalog && typeof body.catalog === "object") ? body.catalog : body;
       const out = {
         families: Array.isArray(data.families) ? data.families : [],
         services: Array.isArray(data.services) ? data.services : []
       };
+      if (!out.services.length) throw new Error("catalogue vide / empty catalogue");
       multipickCatalogs.set(src, out);
       return out;
     } catch (e) {
+      /* Repli sur le fichier livre avec la version : mieux vaut un
+         catalogue un peu ancien qu'une fenetre de reglages sans aucune
+         case a cocher. Fallback to the file shipped with the version:
+         a slightly old catalogue beats a settings window with no
+         checkboxes at all. */
+      if (src !== "data/service-catalog.json") {
+        console.warn("[piboard] catalogue par la route indisponible, repli sur le fichier livre", e);
+        return loadMultipickCatalog("data/service-catalog.json");
+      }
       console.warn("[piboard] catalogue multipick indisponible", e);
       return { families: [], services: [] };
     }

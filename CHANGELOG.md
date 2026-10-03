@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.134.0
+
+- **Le catalogue de services sort du code** (`server/serviceCatalog.js`,
+  route `GET /api/service-catalog`). En quatre versions, neuf
+  adaptateurs ont du etre ecrits parce que les grands editeurs quittent
+  Statuspage les uns apres les autres. Mais neuf fois sur dix, ce qui
+  change n'est pas le CODE : c'est une DONNEE -- une adresse qui
+  demenage, un adaptateur a changer, une entree a retirer. Tant que
+  cette donnee vivait dans le code, la moindre correction exigeait une
+  version, un build, une publication et une mise a jour sur chaque Pi :
+  des jours pour une ligne de JSON. PiBoard lit desormais AUSSI le
+  catalogue du depot public (`main`, toutes les 12 h) et garde le plus
+  recent.
+
+- **Trois garde-fous, chacun pour une raison precise :**
+  - *Jamais de dependance au reseau.* Le catalogue livre avec la version
+    est toujours la et sert de repli definitif ; le dernier bon
+    catalogue recu est conserve sur disque. Une tuile de supervision ne
+    doit jamais dependre d'une route, d'un reseau ou d'un depot pour
+    afficher quelque chose, et le test fonctionnel fait tomber la route
+    pour le verifier.
+  - *Jamais cru sur parole.* Un catalogue distant dicte des adresses que
+    le serveur ira interroger : il passe donc le MEME controle qu'une
+    adresse tapee a la main -- HTTPS public uniquement, jamais
+    localhost ni une adresse privee -- plus la verification des
+    familles, des identifiants et des adaptateurs connus de CETTE
+    version. Il est rejete EN BLOC a la premiere anomalie : un fichier
+    a moitie bon serait pire qu'un fichier refuse, parce qu'on ne
+    saurait pas quelle moitie.
+  - *Jamais de recul.* Un catalogue distant dont le numero de version
+    n'est pas superieur a celui en place est ignore. Sans cette regle,
+    un depot revenu en arriere par accident effacerait des corrections
+    deja appliquees partout.
+
+- **Nouveau reglage « Tenir la liste des services a jour depuis le
+  depot »**, coche par defaut. Decoche, PiBoard s'en tient au catalogue
+  de la version installee -- le bon choix pour un kiosque sans Internet
+  ou sur reseau ferme. Rien n'est jamais envoye : seul le fichier du
+  catalogue est lu.
+
+- **Le premier affichage n'attend pas le reseau.** La route sert
+  immediatement ce que le serveur a deja, et la version distante prend
+  effet au relevé suivant : une fenetre de reglages qui attendrait
+  GitHub pour dessiner ses cases a cocher serait insupportable sur un Pi
+  derriere une connexion lente.
+
+- **Tests** : la validation est une fonction PURE, testee hors ligne sur
+  ce qu'elle doit REFUSER (adresse interne, adaptateur inconnu d'une
+  version plus ancienne, famille manquante, identifiant en double, HTML
+  d'un portail captif...) plutot que sur le cas nominal. Cote interface,
+  trois cas fonctionnels : la route est bien employee, sa chute fait
+  basculer sur le fichier livre sans rien casser, et la case decochee
+  demande explicitement le mode sans reseau.
+
 ## 1.133.0
 
 - **Quatre API maison de plus : Heroku, Slack, PagerDuty, Zendesk.**

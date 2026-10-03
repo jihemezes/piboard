@@ -2469,6 +2469,7 @@ app.get("/api/tempo", async (req, res) => {
    out in parallel, and one unreachable service never fails the whole
    response -- it returns its error in its own entry. */
 const serviceStatus = require("./serviceStatus");
+const serviceCatalog = require("./serviceCatalog");
 /* Plafond porte de 10 a 25 avec le selecteur a cases a cocher (1.128.0) :
    cocher des services est devenu si rapide qu'un plafond de 10 se heurte
    des la premiere utilisation. Le plafond n'a jamais protege le reseau --
@@ -2532,6 +2533,29 @@ app.get("/api/service-status", async (req, res) => {
    window: it answers "recognised / not recognised" while the person is
    still looking at the form, rather than three hours later in front of a
    grey tile. */
+/* Le catalogue de services, servi par le serveur plutot que lu comme un
+   fichier statique : c'est ce qui permet de recuperer les corrections
+   publiees sur le depot sans attendre une version de PiBoard. Voir
+   server/serviceCatalog.js pour la validation et les replis.
+   The service catalogue, served by the server rather than read as a
+   static file, which is what allows fixes published on the repository
+   to arrive without waiting for a PiBoard release. */
+app.get("/api/service-catalog", async (req, res) => {
+  try {
+    const out = await serviceCatalog.get({ remote: req.query.remote !== "0" });
+    /* Un quart d'heure de cache cote navigateur : plusieurs tuiles et la
+       fenetre de reglages demandent le meme fichier au demarrage.
+       Fifteen minutes of browser cache: several tiles and the settings
+       window ask for the same file at start-up. */
+    res.set("Cache-Control", "max-age=900");
+    if (!out.catalog) return res.status(503).json({ error: "no catalog" });
+    res.json({ catalog: out.catalog, source: out.source });
+  } catch (e) {
+    console.warn("[piboard] catalogue de services echec ->", e.message || e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
 app.get("/api/service-status/detect", async (req, res) => {
   try {
     res.set("Cache-Control", "no-store");

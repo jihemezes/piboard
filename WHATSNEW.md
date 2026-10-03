@@ -33,6 +33,39 @@
 # Nouveautes / What's new
 
 
+## 1.134.0
+
+**La liste des services se met a jour toute seule**
+
+Les fournisseurs demenagent leur page de statut ou changent de format
+plusieurs fois par an -- dix d'entre eux viennent de le faire. Jusqu'ici,
+chaque correction demandait une nouvelle version de PiBoard. Desormais
+la liste des services se met a jour depuis le depot public : une page
+qui demenage est corrigee pour tout le monde dans la demi-journee, sans
+rien reinstaller et sans rien recocher.
+
+PiBoard ne depend jamais de cette liste distante pour fonctionner : la
+liste livree avec votre version reste le repli, et si le depot est
+injoignable rien ne change a l'ecran. Une case a cocher, dans les
+reglages de la tuile, permet de s'en tenir a la liste installee -- le
+bon choix pour un kiosque sans Internet.
+
+---
+
+**The service list updates itself**
+
+Providers move their status page or change format several times a year
+-- ten of them just did. Until now each fix required a new PiBoard
+release. The service list now updates itself from the public
+repository: a page that moves is fixed for everyone within half a day,
+with nothing to reinstall and nothing to tick again.
+
+PiBoard never depends on that remote list to work: the list shipped
+with your version remains the fallback, and if the repository cannot be
+reached nothing changes on screen. A checkbox in the tile's settings
+keeps you on the installed list -- the right choice for a kiosk with no
+internet.
+
 ## 1.133.0
 
 **Heroku, Slack, PagerDuty et Zendesk rejoignent la tuile**

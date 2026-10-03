@@ -630,6 +630,36 @@ const SVC_STATUS_QUERIES = [];
    lets a NEW incident APPEAR between two readings -- the only case in
    which the tile must alert. */
 const SVC_INCIDENT = { seq: 1, impact: "major" };
+/* Etat du mock de la route de catalogue (1.134.0) : on peut la faire
+   tomber pour verifier le repli sur le fichier livre.
+   Catalogue-route mock state: it can be taken down to check the
+   fallback to the shipped file. */
+/* Le catalogue de test, partage par la route et par le fichier statique
+   (1.134.0) : les deux doivent servir exactement la meme chose, sans
+   quoi le test du repli ne prouverait rien.
+   The test catalogue, shared by the route and the static file: both
+   must serve exactly the same thing, otherwise the fallback test would
+   prove nothing. */
+const CATALOG_FIXTURE = {
+          version: 1,
+          families: [
+            { id: "cloud", icon: "C", label: { fr: "Cloud & hébergement", en: "Cloud & hosting" } },
+            { id: "devops", icon: "D", label: { fr: "Développement & DevOps", en: "Development & DevOps" } },
+            { id: "custom", icon: "+", label: { fr: "Mes services", en: "My services" } }
+          ],
+          services: [
+            { id: "github", name: "GitHub", family: "devops", url: "https://www.githubstatus.com", adapter: "statuspage" },
+            { id: "npm", name: "npm", family: "devops", url: "https://status.npmjs.org", adapter: "statuspage" },
+            { id: "aws", name: "AWS", family: "cloud", url: "https://health.aws.amazon.com/health/status", adapter: "aws", api: "https://health.aws.amazon.com/public/currentevents" },
+            { id: "azure", name: "Azure", family: "cloud", url: "https://status.azure.com", adapter: "rss", api: "https://azurestatuscdn.azureedge.net/en-us/status/feed/" },
+            /* Entree CORRIGEE par rapport a ce qu'un reglage ancien a pu
+               enregistrer : c'est tout l'objet du test de re-resolution
+               plus bas. A CORRECTED entry compared with what an old
+               setting may hold -- the point of the re-resolution test. */
+            { id: "sfr", name: "SFR", family: "france", url: "https://www.sfr.fr", adapter: "endpoint", api: "https://www.sfr.fr/" }
+          ]
+        };
+const CATALOG_ROUTE = { down: false, calls: [], fileCalls: [], body: () => CATALOG_FIXTURE };
 const SVC_DETECT_CALLS = [];
 let UPDATE_VERSION_SERVED = "9.9.9-test";
 
@@ -706,26 +736,20 @@ const dom = new JSDOM(html, {
          flux RSS (drapeau `approximate`).
          Service status: catalogue, detection and readings, frozen and
          covering the tile's three cases. */
+      /* La route sert le catalogue enveloppe dans `{ catalog: ... }`,
+         le fichier statique le sert nu : les deux formes doivent etre
+         acceptees, et le test couvre les deux (voir plus bas le cas ou
+         la route manque et ou l'on se replie sur le fichier).
+         The route serves the catalogue wrapped in { catalog: ... }, the
+         static file serves it bare: both shapes must be accepted. */
+      if (u.includes("api/service-catalog")) {
+        if (CATALOG_ROUTE.down) return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({ error: "down" }) });
+        CATALOG_ROUTE.calls.push(u);
+        return json({ source: "remote", catalog: CATALOG_ROUTE.body() });
+      }
       if (u.includes("data/service-catalog.json")) {
-        return json({
-          version: 1,
-          families: [
-            { id: "cloud", icon: "C", label: { fr: "Cloud & hébergement", en: "Cloud & hosting" } },
-            { id: "devops", icon: "D", label: { fr: "Développement & DevOps", en: "Development & DevOps" } },
-            { id: "custom", icon: "+", label: { fr: "Mes services", en: "My services" } }
-          ],
-          services: [
-            { id: "github", name: "GitHub", family: "devops", url: "https://www.githubstatus.com", adapter: "statuspage" },
-            { id: "npm", name: "npm", family: "devops", url: "https://status.npmjs.org", adapter: "statuspage" },
-            { id: "aws", name: "AWS", family: "cloud", url: "https://health.aws.amazon.com/health/status", adapter: "aws", api: "https://health.aws.amazon.com/public/currentevents" },
-            { id: "azure", name: "Azure", family: "cloud", url: "https://status.azure.com", adapter: "rss", api: "https://azurestatuscdn.azureedge.net/en-us/status/feed/" },
-            /* Entree CORRIGEE par rapport a ce qu'un reglage ancien a pu
-               enregistrer : c'est tout l'objet du test de re-resolution
-               plus bas. A CORRECTED entry compared with what an old
-               setting may hold -- the point of the re-resolution test. */
-            { id: "sfr", name: "SFR", family: "france", url: "https://www.sfr.fr", adapter: "endpoint", api: "https://www.sfr.fr/" }
-          ]
-        });
+        CATALOG_ROUTE.fileCalls.push(u);
+        return json(CATALOG_FIXTURE);
       }
       if (u.includes("api/service-status/detect")) {
         SVC_DETECT_CALLS.push(decodeURIComponent((u.match(/url=([^&]*)/) || [])[1] || ""));
@@ -8699,6 +8723,83 @@ function catalogItemFor(catalog, document, widgetId) {
 
     w.destroy();
     host.remove();
+  }
+
+  console.log("== Statut de service : le catalogue vient du serveur, et se replie sur le fichier (1.134.0) ==");
+  {
+    /* CE QUE CE TEST PROTEGE. Le catalogue a ete sorti du code pour
+       qu'une page de statut qui demenage soit corrigee en une ligne, sans
+       attendre une version de PiBoard. Mais la contrepartie serait
+       inacceptable si elle n'etait pas verifiee : une tuile de
+       supervision ne doit JAMAIS dependre d'une route, d'un reseau ou
+       d'un depot pour afficher quelque chose. On verifie donc les deux
+       bouts -- la route est bien utilisee, et sa chute ne casse rien. */
+    let Klass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "servicestatus") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+
+    const mount = (settings) => {
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const w = new Klass({
+        el: host, settings,
+        i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
+        api: { startAlert: () => {} }
+      });
+      w.init();
+      return { w, host };
+    };
+
+    const picked = JSON.stringify([{ id: "sfr", name: "SFR", url: "https://assistance.sfr.fr", adapter: "auto", api: null, alert: true }]);
+
+    CATALOG_ROUTE.down = false;
+    CATALOG_ROUTE.calls.length = 0;
+    CATALOG_ROUTE.fileCalls.length = 0;
+    SVC_STATUS_QUERIES.length = 0;
+
+    const a = mount({ picked, display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1 });
+    await sleep(80);
+    assert("la tuile lit le catalogue par la route du serveur", CATALOG_ROUTE.calls.length >= 1);
+    assert("et l'entree cochee y est bien re-resolue",
+      /endpoint~/.test(decodeURIComponent(SVC_STATUS_QUERIES.join(" "))));
+    a.w.destroy(); a.host.remove();
+
+    /* La route tombe (serveur plus ancien que la tuile, mise a jour
+       partielle, route desactivee) : le fichier livre avec la version
+       prend le relais. Sans ce repli, une tuile parfaitement
+       configuree afficherait des lignes grises. */
+    CATALOG_ROUTE.down = true;
+    CATALOG_ROUTE.fileCalls.length = 0;
+    SVC_STATUS_QUERIES.length = 0;
+    /* Le catalogue est memorise par tuile montee : on recharge le
+       widget pour repartir d'une page blanche. */
+    window.PiBoard.registerWidget = (id, k) => { if (id === "servicestatus") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+
+    const b = mount({ picked, display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1 });
+    await sleep(80);
+    assert("route indisponible : on se replie sur le fichier livre", CATALOG_ROUTE.fileCalls.length >= 1);
+    assert("et la tuile continue de resoudre ses services",
+      /endpoint~/.test(decodeURIComponent(SVC_STATUS_QUERIES.join(" "))));
+    b.w.destroy(); b.host.remove();
+
+    /* Case decochee : on demande explicitement au serveur de s'en tenir
+       au catalogue installe. */
+    CATALOG_ROUTE.down = false;
+    CATALOG_ROUTE.calls.length = 0;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "servicestatus") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+
+    const c = mount({ picked, catalogAuto: false, display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1 });
+    await sleep(80);
+    assert("case decochee : la route est appelee en mode « sans reseau »",
+      CATALOG_ROUTE.calls.some((u) => /remote=0/.test(u)));
+    c.w.destroy(); c.host.remove();
+    CATALOG_ROUTE.down = false;
   }
 
   console.log("== Sortie du mode edition ==");
