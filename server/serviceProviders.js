@@ -629,8 +629,32 @@ function parsePaypal(json) {
 
   const components = json.result
     .filter((c) => c && c.name && c.status && typeof c.status === "object")
+    /* LES COMPOSANTS QUI N'EXISTENT PAS EN PRODUCTION SONT ECARTES, et
+       non affiches en « etat inconnu ». PayPal rend `production: null`
+       pour les briques qui ne vivent qu'en sandbox -- « Braintree
+       Sandbox », « Paydiant Platform - Sandbox », « Paydiant Platform -
+       Certification » : leur page publique ne montre d'ailleurs qu'un
+       etat de sandbox. Les lire comme un etat de production donnait
+       trois lignes « etat inconnu » sous un service parfaitement vert,
+       ce qui inquiete pour rien et fait douter du reste de la tuile.
+       `null` ne veut pas dire « je ne sais pas » : il veut dire « cette
+       brique n'a pas de production », ce qui n'est pas une information
+       a afficher ici puisqu'on ne surveille que la production.
+
+       Un etat qu'on ne COMPREND pas, lui, reste « inconnu » et bien
+       visible : c'est une tout autre situation, et la confondre avec
+       celle-ci ferait passer un vrai trou d'information pour un detail
+       technique.
+       COMPONENTS THAT DO NOT EXIST IN PRODUCTION ARE DROPPED rather
+       than shown as "unknown". PayPal returns `production: null` for
+       sandbox-only pieces; `null` does not mean "I don't know", it
+       means "this piece has no production", which is not information to
+       show here since only production is watched. A state we do not
+       UNDERSTAND still shows as unknown -- a different situation
+       entirely. */
+    .filter((c) => c.status.production != null && String(c.status.production).trim() !== "")
     .map((c) => {
-      const raw = String(c.status.production || "").toUpperCase().replace(/[^A-Z]/g, "");
+      const raw = String(c.status.production).toUpperCase().replace(/[^A-Z]/g, "");
       return {
         name: text(c.displayName || c.name, 120),
         status: Object.prototype.hasOwnProperty.call(PAYPAL_STATE, raw) ? PAYPAL_STATE[raw] : "unknown",

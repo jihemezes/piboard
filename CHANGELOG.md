@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.136.2
+
+- **PayPal affichait trois composants en « etat inconnu » sous un
+  service parfaitement vert** : Braintree Sandbox, Paydiant Platform -
+  Sandbox et Paydiant Platform - Certification. Leur API rend
+  `production: null` pour ces briques, qui ne vivent qu'en sandbox --
+  leur page publique ne montre d'ailleurs qu'un etat de sandbox. On les
+  lisait comme un etat de production, d'ou trois lignes grises
+  inquietantes pour rien. `null` ne veut pas dire « je ne sais pas », il
+  veut dire « cette brique n'a pas de production » : ces composants sont
+  desormais ECARTES, et non affiches en inconnu.
+
+- **La distinction est faite, et figee par un test** : un etat de
+  production qu'on ne COMPREND pas reste « inconnu » et bien visible.
+  Masquer les deux cas ensemble -- la solution facile -- aurait fait
+  passer un vrai trou d'information pour un detail technique, sur une
+  tuile dont le travail est precisement de dire quand elle ne sait pas.
+
 ## 1.136.1
 
 - **« Norfolk, VA, United States » s'affichait en surveillant

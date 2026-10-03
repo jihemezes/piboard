@@ -1083,6 +1083,44 @@ test("Stripe est de nouveau une Statuspage, a sa nouvelle adresse", () => {
   assert.ok(!stripe.api, "l'ancienne adresse de flux, qui n'existe plus, doit avoir disparu");
 });
 
+
+console.log("== PayPal : les briques sans production (1.136.2) ==");
+
+/* LE DEFAUT RAPPORTE, capture a l'appui : trois lignes « etat inconnu »
+   -- Braintree Sandbox, Paydiant Platform - Sandbox, Paydiant Platform -
+   Certification -- sous un PayPal parfaitement vert. L'API rend
+   `production: null` pour ces briques : elles ne vivent qu'en sandbox.
+   `null` ne veut pas dire « je ne sais pas », il veut dire « pas de
+   production » -- et la tuile ne surveille que la production. */
+test("une brique sans production n'est pas affichee en « etat inconnu »", () => {
+  const out = P.parsePaypal({ result: [
+    { name: "Online Checkout", displayName: "Online Checkout", status: { production: "Operational", sandbox: "Operational" } },
+    { name: "Braintree Sandbox", displayName: "Braintree Sandbox", status: { production: null, sandbox: "Operational" } },
+    { name: "Paydiant Platform - Sandbox", displayName: "Paydiant Platform - Sandbox", status: { production: null, sandbox: "Operational" } }
+  ] });
+  assert.ok(out);
+  assert.strictEqual(out.componentCount, 1, "seules les briques qui existent en production comptent");
+  assert.strictEqual(out.affected.length, 0);
+  assert.strictEqual(out.ok, true);
+});
+
+/* La distinction qui compte : un etat qu'on ne COMPREND pas reste
+   inconnu et bien visible. Le confondre avec « pas de production »
+   ferait passer un vrai trou d'information pour un detail technique. */
+test("un etat de production incomprehensible reste « inconnu », lui", () => {
+  const out = P.parsePaypal({ result: [
+    { name: "Online Checkout", displayName: "Online Checkout", status: { production: "Quelque chose de nouveau", sandbox: "Operational" } }
+  ] });
+  assert.strictEqual(out.affected.length, 1);
+  assert.strictEqual(out.affected[0].status, "unknown");
+});
+
+test("un PayPal reduit a des briques de sandbox n'est pas une lecture valide", () => {
+  assert.strictEqual(P.parsePaypal({ result: [
+    { name: "Braintree Sandbox", status: { production: null, sandbox: "Operational" } }
+  ] }), null, "sinon un service sans aucun composant s'afficherait comme sain");
+});
+
 setTimeout(() => {
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS SERVICEPROVIDERS PASSENT");
   process.exit(failures ? 1 : 0);
