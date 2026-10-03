@@ -1953,12 +1953,16 @@
           <h4>Quatre modes d'affichage</h4>
           <div class="help-opt"><span class="help-opt-name">Détaillé</span><span class="help-opt-desc">Une fiche par service. Parfait jusqu'à cinq ou six.</span></div>
           <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">Une pastille par service sain, une fiche complète pour chaque service en difficulté.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Compact +</span><span class="help-opt-desc"><b>Tout le monde en pastille</b>, les services en panne comme les autres — vingt-cinq services tiennent dans un coup d'œil. Le détail se demande d'un <b>clic</b> sur la pastille : une fenêtre s'ouvre avec tous les composants concernés, tous les incidents, les maintenances, la provenance de l'information et l'heure du dernier relevé. C'est le mode d'un mur d'écran.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact +</span><span class="help-opt-desc"><b>Tout le monde en pastille</b>, les services en panne comme les autres — vingt-cinq services tiennent dans un coup d'œil. Le détail se demande d'un <b>clic</b> sur la pastille. C'est le mode d'un mur d'écran.</span></div>
           <div class="help-opt"><span class="help-opt-name">Problèmes seulement</span><span class="help-opt-desc">Une seule ligne tant qu'il n'y a rien à dire.</span></div>
 
           <h4>Rangés par famille</h4>
           <p>Vingt-cinq services rangés dans l'ordre où on les a cochés forment une liste qu'il faut lire en entier pour y trouver quelque chose. Ils sont donc regroupés par <b>rubrique</b> — cloud et hébergement, DevOps, SaaS, paiement, observabilité, IA, stockage, France, mes services — dans l'ordre du catalogue, choisi pour que les choses proches se suivent. On va droit à la rubrique voulue, et une famille entière au vert se survole d'un coup d'œil. Décochable dans les réglages.</p>
           <p>À l'intérieur d'une rubrique, les services se rangent sur <b>autant de colonnes que la largeur en permet</b> — une sur une tuile étroite, deux ou trois sur une tuile large. Les colonnes ne sont pas figées : la tuile étant librement redimensionnable, deux colonnes imposées couperaient les noms en deux sur une tuile de trois cases. Un service qui a quelque chose à dire reprend toute la largeur : son détail ne se lit pas dans une demi-colonne.</p>
+
+          <h4>La fenêtre de détail</h4>
+          <p>Un <b>clic</b> sur n'importe quel service — une pastille en Compact et Compact +, une fiche en mode Détaillé — ouvre une fenêtre qui montre <b>tout</b> ce que la tuile sait : la totalité des composants concernés et non les quatre premiers, la totalité des incidents et non le plus récent, les maintenances programmées, la provenance de l'information et l'heure du dernier relevé. La fenêtre ne répète pas la fiche : elle la remplace par la version complète, c'est son seul intérêt.</p>
+          <p>Elle <b>défile</b> quand son contenu dépasse — une page comme celle de Cloudflare annonce facilement une douzaine de maintenances. On la ferme par la croix, par Échap, ou en cliquant à côté. Un clic sur le lien « ouvrir l'incident » ouvre bien l'incident, pas la fenêtre.</p>
 
           <h4>Masquer ce qui ne vous concerne pas</h4>
           <p>Cloudflare annonce une dégradation au Chili, AWS une panne à Sydney, et votre tuile passe au rouge alors que vous travaillez à Toulouse. À force, on cesse de la regarder — la façon la plus sûre de rendre une tuile de supervision inutile. L'option <b>« Masquer les problèmes hors de mes zones »</b> ne garde que ce qui est situé dans les zones que vous listez (Europe, France, codes de région de votre fournisseur…).</p>
@@ -2056,11 +2060,15 @@
           <h4>Four display modes</h4>
           <div class="help-opt"><span class="help-opt-name">Detailed</span><span class="help-opt-desc">One card per service. Perfect up to five or six.</span></div>
           <div class="help-opt"><span class="help-opt-name">Compact</span><span class="help-opt-desc">A chip per healthy service, a full card for each service in trouble.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Compact +</span><span class="help-opt-desc"><b>Everyone as a chip</b>, failing services included — twenty-five services at a glance. Detail is asked for with a <b>click</b>: a window opens with every affected component, every incident, maintenances, where the information came from and when it was last read. The wall-display mode.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Compact +</span><span class="help-opt-desc"><b>Everyone as a chip</b>, failing services included — twenty-five services at a glance. Detail is asked for with a <b>click</b>. The wall-display mode.</span></div>
           <div class="help-opt"><span class="help-opt-name">Problems only</span><span class="help-opt-desc">A single line while there is nothing to say.</span></div>
 
           <h4>Grouped by family</h4>
           <p>Twenty-five services in ticking order form a list one must read entirely to find anything. They are therefore grouped under <b>headings</b> — cloud and hosting, DevOps, SaaS, payment, observability, AI, storage, France, my services — in the catalogue's order, chosen so that related things follow one another. Can be switched off in the settings.</p>
+
+          <h4>The detail window</h4>
+          <p>A <b>click</b> on any service — a chip in Compact and Compact +, a card in Detailed — opens a window showing <b>everything</b> the tile knows: every affected component rather than the first four, every incident rather than the latest one, scheduled maintenances, where the information came from and when it was last read. The window does not repeat the card: it replaces it with the complete version, which is its only point.</p>
+          <p>It <b>scrolls</b> when its content overflows — a page like Cloudflare's easily announces a dozen maintenances. Close it with the cross, with Escape, or by clicking outside. A click on the "open incident" link opens the incident, not the window.</p>
 
           <h4>Hiding what does not concern you</h4>
           <p>Cloudflare reports a degradation in Chile, AWS an outage in Sydney, and your tile turns red while you work in Toulouse. In time one stops looking at it — the surest way to make a monitoring tile useless. The option <b>"Hide problems outside my zones"</b> keeps only what is located in the zones you list.</p>

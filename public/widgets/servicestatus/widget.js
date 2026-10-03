@@ -908,10 +908,23 @@
          with it -- after the first minute nothing would answer a click. */
       const list = el.querySelector(".pwss-list");
       if (list) {
+        const hit = (ev) => (ev.target.closest ? ev.target.closest("[data-svc]") : null);
         list.addEventListener("click", (ev) => {
-          const chip = ev.target.closest ? ev.target.closest(".pwss-chip[data-svc]") : null;
-          if (!chip) return;
-          this.openDetail(Number(chip.dataset.svc));
+          /* Un clic sur le lien « ouvrir l'incident » doit ouvrir
+             l'incident, pas la fenetre : le lien gagne toujours.
+             A click on the "open incident" link must open the incident,
+             not the window: the link always wins. */
+          if (ev.target.closest && ev.target.closest("a")) return;
+          const el2 = hit(ev);
+          if (!el2) return;
+          this.openDetail(Number(el2.dataset.svc));
+        });
+        list.addEventListener("keydown", (ev) => {
+          if (ev.key !== "Enter" && ev.key !== " ") return;
+          const el2 = hit(ev);
+          if (!el2) return;
+          ev.preventDefault();
+          this.openDetail(Number(el2.dataset.svc));
         });
       }
     }
@@ -1009,13 +1022,13 @@
            would cut names in half. */
         return this.groupServices(list).map((g) => this.famHead(g)
           + `<div class="pwss-fam-body">`
-          + g.items.map((svc) => this.renderService(svc, i18n, s, now)).join("")
+          + g.items.map((svc) => this.renderService(svc, i18n, s, now, list.indexOf(svc))).join("")
           + `</div>`).join("");
       }
 
       const bad = list.filter((svc) => svc.error || (svc.indicator && svc.indicator !== "none"));
       const good = list.filter((svc) => bad.indexOf(svc) === -1);
-      const cards = bad.map((svc) => this.renderService(svc, i18n, s, now)).join("");
+      const cards = bad.map((svc) => this.renderService(svc, i18n, s, now, list.indexOf(svc))).join("");
 
       if (mode === "problems") {
         if (bad.length) return `<div class="pwss-fam-body">${cards}</div>`;
@@ -1073,8 +1086,25 @@
         + iconHtml(state, i18n) + `</button>`;
     }
 
-    renderService(svc, i18n, s, now) {
+    renderService(svc, i18n, s, now, index) {
       const label = esc(svc.label || svc.name || "");
+      /* LA FICHE S'OUVRE AU CLIC, COMME LA PASTILLE. Le detail complet
+         n'etait accessible qu'en Compact et Compact + ; en mode
+         detaille, la fiche montre au plus quatre composants et un seul
+         incident, et il n'existait aucun moyen de voir le reste. Meme
+         geste partout, donc rien de nouveau a apprendre.
+         `role` et `tabindex` plutot qu'un <button> : une fiche contient
+         deja un lien (« ouvrir l'incident »), et un bouton qui contient
+         un lien est un document invalide que les navigateurs reparent
+         chacun a leur facon.
+         THE CARD OPENS ON CLICK, LIKE THE CHIP: the full detail was
+         reachable only in Compact modes, while the card shows at most
+         four components and one incident. `role`/`tabindex` rather than
+         a <button>, because a card already contains a link and a button
+         containing a link is invalid markup browsers each repair
+         differently. */
+      const clickable = index == null ? "" :
+        ` data-svc="${index}" role="button" tabindex="0" title="${esc(i18n.t("svcstatus.openDetail"))}"`;
 
       if (svc.error) {
         /* Trois causes, trois messages. « Injoignable » affiche pour une
@@ -1094,7 +1124,7 @@
           ? i18n.t(why).replace("{code}", String(svc.httpStatus))
           : i18n.t(why);
         return `
-          <div class="pwss-svc pwss-svc-wide" style="--pwss-tone:${STATE_TONE.unknown}">
+          <div class="pwss-svc pwss-svc-wide"${clickable} style="--pwss-tone:${STATE_TONE.unknown}">
             <div class="pwss-head">
               <span class="pwss-name">${label}</span>
               ${iconHtml("unknown", i18n)}
@@ -1179,7 +1209,7 @@
       const wide = detail.length ? " pwss-svc-wide" : "";
 
       return `
-        <div class="pwss-svc${wide}" style="--pwss-tone:${STATE_TONE[stateOf(svc)]}">
+        <div class="pwss-svc${wide}"${clickable} style="--pwss-tone:${STATE_TONE[stateOf(svc)]}">
           <div class="pwss-head">
             <span class="pwss-name">${label}</span>${approx}
             ${iconHtml(stateOf(svc), i18n)}
@@ -1204,40 +1234,81 @@
       this.closeDetail();
 
       const now = Date.now();
-      const body = this.renderService(svc, i18n, s, now);
-      /* Ce que la fiche ne montre pas et que la fenetre, elle, peut se
-         permettre : TOUS les composants touches et TOUS les incidents,
-         puisqu'on a la place et qu'on vient de demander a voir.
-         What the card does not show but the window can afford: ALL
-         affected components and ALL incidents -- there is room, and one
-         has just asked to see. */
-      const extra = [];
-      if ((svc.affected || []).length > 4) {
-        extra.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.components"))}</h4>`
+
+      /* LA FENETRE NE REPETE PLUS LA FICHE. Elle affichait la fiche --
+         donc quatre composants au plus, un incident, et « et 2 autre(s)
+         composant(s) » -- PUIS les memes informations en entier juste
+         en dessous. On lisait deux fois la meme chose, et la mention
+         « et 2 autres » n'avait plus aucun sens a trois centimetres de
+         la liste complete. La fenetre montre desormais UNE fois chaque
+         chose, en entier : c'est son seul interet par rapport a la
+         fiche.
+         THE WINDOW NO LONGER REPEATS THE CARD: it showed the card --
+         four components at most, one incident, and "and 2 more" -- then
+         the same information in full right below. Each thing is now
+         shown ONCE, in full: that is the window's only point. */
+      const sections = [];
+
+      const state = stateOf(svc);
+      const approxNote = svc.approximate
+        ? ` <span class="pwss-approx" title="${esc(i18n.t("svcstatus.approximate"))}">~</span>` : "";
+      sections.push(`<div class="pwss-modal-state">${iconHtml(state, i18n)}`
+        + `<span>${esc(i18n.t("svcstatus.icon." + state))}</span>${approxNote}</div>`);
+
+      if (svc.error) {
+        const why = svc.error === "retired" ? "svcstatus.err.retired"
+          : svc.error === "bad-url" ? "svcstatus.err.badUrl"
+          : (svc.error === "bad-format" || svc.error === "bad-response") ? "svcstatus.err.badFormat"
+            : svc.error === "http" ? "svcstatus.err.http"
+              : "svcstatus.err.unreachable";
+        const txt = svc.error === "http" && svc.httpStatus
+          ? i18n.t(why).replace("{code}", String(svc.httpStatus)) : i18n.t(why);
+        sections.push(`<div class="pwss-modal-sec"><span>${esc(txt)}</span></div>`);
+      }
+
+      if ((svc.affected || []).length) {
+        sections.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.components"))}</h4>`
           + (svc.affected || []).map((c) => `<div class="pwss-comp" style="--pwss-tone:${COMPONENT_TONE[c.status] || COMPONENT_TONE.unknown}">`
               + esc(c.name) + ` <span class="pwss-comp-state">— ${esc(i18n.t("svcstatus.comp." + c.status))}</span></div>`).join("")
           + `</div>`);
       }
-      if ((svc.incidents || []).length > 1) {
-        extra.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.incidents"))}</h4>`
-          + (svc.incidents || []).slice(1).map((inc) => `<div class="pwss-incident">${esc(inc.name)}`
-              + (inc.startedAt ? ` <span class="pwss-stage">· ${esc(i18n.t("svcstatus.for"))} ${esc(since(inc.startedAt, i18n, now))}</span>` : "")
-              + (inc.lastMessage ? `<span class="pwss-msg">${esc(inc.lastMessage)}</span>` : "")
-              + `</div>`).join("")
+
+      if ((svc.incidents || []).length) {
+        sections.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.incidents"))}</h4>`
+          + (svc.incidents || []).map((inc) => {
+              const ago = since(inc.startedAt, i18n, now);
+              const stage = inc.status ? i18n.t("svcstatus.stage." + String(inc.status).toLowerCase()) : "";
+              return `<div class="pwss-incident">${esc(inc.name)}`
+                + (stage || ago ? ` <span class="pwss-stage">· ${esc(stage)}${ago ? " · " + esc(i18n.t("svcstatus.for")) + " " + esc(ago) : ""}</span>` : "")
+                + (inc.lastMessage ? `<span class="pwss-msg">${esc(inc.lastMessage)}</span>` : "")
+                + (inc.url ? `<a class="pwss-link" href="${esc(inc.url)}" target="_blank" rel="noopener">${esc(i18n.t("svcstatus.openIncident"))}</a>` : "")
+                + `</div>`;
+            }).join("")
           + `</div>`);
       }
+
       if ((svc.maintenances || []).length) {
-        extra.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.maintenances"))}</h4>`
+        sections.push(`<div class="pwss-modal-sec"><h4>${esc(i18n.t("svcstatus.modal.maintenances"))}</h4>`
           + (svc.maintenances || []).map((m) => `<div class="pwss-maint">${esc(m.name)}`
               + (m.scheduledFor ? ` · ${esc(this.whenLabel(m.scheduledFor, i18n))}` : "") + `</div>`).join("")
           + `</div>`);
       }
+
+      if (svc.hiddenCount) {
+        sections.push(`<div class="pwss-hidden">${esc(i18n.t("svcstatus.hidden").replace("{n}", svc.hiddenCount))}</div>`);
+      }
+
+      /* Quand il n'y a rien a dire, le dire : une fenetre vide laisserait
+         croire a un affichage rate. When there is nothing to say, say
+         so: an empty window would look like a failed display. */
+      if (!svc.error && !(svc.affected || []).length && !(svc.incidents || []).length && !(svc.maintenances || []).length) {
+        sections.push(`<div class="pwss-modal-sec"><span class="pwss-none">${esc(i18n.t("svcstatus.noIncident"))}</span></div>`);
+      }
+
       /* D'ou vient l'information, et quand : sur une tuile qui affiche
          un etat parfois DEDUIT, savoir quelle page a ete lue et a quelle
          heure vaut mieux qu'un vert sans provenance.
-         Where the information comes from and when: on a tile that
-         sometimes shows an INFERRED state, knowing which page was read
-         beats an unsourced green. */
+         Where the information comes from and when. */
       const src = [];
       if (svc.base || svc.url) {
         const href = svc.url || svc.base;
@@ -1255,8 +1326,7 @@
             <button type="button" class="modal-close" aria-label="${esc(i18n.t("svcstatus.modal.close"))}">✕</button>
           </div>
           <div class="modal-body pwss-modal-body">
-            ${body}
-            ${extra.join("")}
+            ${sections.join("")}
             ${src.length ? `<div class="pwss-modal-src">${src.join("")}</div>` : ""}
           </div>
         </div>`;

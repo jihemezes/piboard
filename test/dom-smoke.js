@@ -8955,6 +8955,54 @@ function catalogItemFor(catalog, document, widgetId) {
         !!host.querySelector(".pwss-fam-body"));
     }
 
+    /* LA FICHE S'OUVRE AU CLIC, EN MODE DETAILLE AUSSI (1.136.3). Le
+       detail complet n'etait atteignable qu'en Compact et Compact + ;
+       en mode detaille, la fiche montre quatre composants au plus et un
+       seul incident, et rien ne permettait de voir le reste. */
+    {
+      const card = host.querySelector(".pwss-svc[data-svc]");
+      assert("en mode detaille, la fiche porte de quoi etre cliquee", !!card);
+      card.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      const m = document.querySelector(".pwss-modal");
+      assert("et un clic sur la fiche ouvre la fenetre de detail", !!m);
+
+      /* LA FENETRE DOIT POUVOIR DEFILER : `.modal-card` est borne a 90vh
+         et coupe ce qui depasse ; sans defilement sur le corps, la
+         moitie d'une longue liste de maintenances disparaissait sans
+         que rien ne l'indique. */
+      const body = m.querySelector(".pwss-modal-body");
+      const css = fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.css"), "utf8");
+      assert("le corps de la fenetre est declare defilant", !!body
+        && /\.pwss-modal-body\s*\{[^}]*overflow-y:\s*auto/.test(css)
+        && /\.pwss-modal-body\s*\{[^}]*min-height:\s*0/.test(css));
+
+      /* La fenetre ne doit plus repeter la fiche avant de la detailler :
+         on lisait deux fois la meme chose, et « et 2 autre(s)
+         composant(s) » n'avait aucun sens juste au-dessus de la liste
+         complete. */
+      assert("la fenetre ne rejoue pas la fiche tronquee",
+        !m.querySelector(".pwss-svc") && !/svcstatus\.more/.test(m.textContent || ""));
+
+      m.querySelector(".modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(20);
+      assert("fenetre refermee avant la suite", !document.querySelector(".pwss-modal"));
+    }
+
+    /* Un clic sur le lien d'un incident ne doit PAS ouvrir la fenetre :
+       le lien gagne, sinon on ne pourrait plus jamais atteindre la page
+       de l'incident depuis la fiche. */
+    {
+      const card = host.querySelector(".pwss-svc[data-svc]");
+      const link = document.createElement("a");
+      link.href = "https://exemple.fr";
+      card.appendChild(link);
+      link.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(20);
+      assert("un clic sur un lien de la fiche n'ouvre pas la fenetre", !document.querySelector(".pwss-modal"));
+      link.remove();
+    }
+
     /* Compact + : TOUT le monde en pastille, y compris ce qui va mal. */
     settings.display = "compactplus";
     w.onSettingsChanged(settings);

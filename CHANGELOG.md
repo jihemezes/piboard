@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.136.3
+
+- **La fenetre de detail s'ouvre aussi depuis le mode Detaille.** Elle
+  n'etait atteignable qu'en Compact et Compact +, alors que la fiche ne
+  montre que quatre composants au plus et un seul incident : le reste
+  etait inaccessible. Meme geste partout, donc rien de nouveau a
+  apprendre. La fiche prend `role="button"` et `tabindex` plutot que
+  d'etre un vrai <button> : elle contient deja un lien, et un bouton
+  contenant un lien est un document invalide que les navigateurs
+  reparent chacun a leur facon. Un clic sur le lien « ouvrir
+  l'incident » ouvre l'incident et NON la fenetre -- sans cela, la page
+  de l'incident devenait inatteignable depuis la fiche. Accessible au
+  clavier (Entree, Espace).
+
+- **La fenetre ne defilait pas, et coupait sa fin en silence.**
+  `.modal-card` est borne a 90vh et en `overflow: hidden` : c'est au
+  CORPS de la fenetre de defiler, ce qui demande
+  `flex: 1; min-height: 0; overflow-y: auto` -- la meme mecanique que la
+  fenetre de lecture de la boite mail. Sur une page comme celle de
+  Cloudflare, qui annonce une douzaine de maintenances, la moitie de la
+  liste disparaissait sans que rien ne l'indique. Un contenu coupe en
+  silence est pire qu'un contenu absent : on ne sait pas qu'il manque
+  quelque chose.
+
+- **La fenetre ne repete plus la fiche avant de la detailler.** Elle
+  affichait la fiche -- donc quatre composants, un incident, et « et 2
+  autre(s) composant(s) » -- PUIS les memes informations en entier juste
+  en dessous : on lisait deux fois la meme chose, et la mention « et 2
+  autres » n'avait plus aucun sens a trois centimetres de la liste
+  complete. Chaque chose est montree UNE fois, en entier.
+
 ## 1.136.2
 
 - **PayPal affichait trois composants en « etat inconnu » sous un
