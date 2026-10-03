@@ -1,5 +1,39 @@
 # Changelog
 
+## 1.136.0
+
+- **Le filtre geographique ne savait pas ou est Guam.** « Hagatna,
+  Guam - (GUM) » restait affiche en surveillant l'Europe, avec le Chili,
+  l'Algerie, l'Australie et l'Irak. La regle etait bonne -- on ne masque
+  que ce qu'on a su situer -- mais la table des lieux se contentait de
+  repondre « ce libelle parle-t-il d'un endroit ? » a partir d'une liste
+  de noms connus : un lieu ABSENT de la liste etait traite comme un
+  libelle sans lieu, donc affiche. Elle est remplacee par une table des
+  pays ET territoires du monde, chacun portant son CONTINENT -- sans
+  quoi demander « Europe » ne pouvait rien dire d'« Annaba, Algeria ».
+  Les ensembles des fournisseurs (EMEA, APAC, LATAM) et les codes de
+  region (`eu-west-3`, `southeastasia`) sont rattaches de la meme facon.
+  Les cinq libelles de la capture sont figes par un test, un par un.
+
+- **L'alignement sautait d'une ligne a l'autre.** La regle d'origine de
+  l'en-tete posait `justify-content: space-between`, qui colle le
+  dernier element au bord droit : le nom etant tantot premier (pastille)
+  tantot dernier (fiche), il se retrouvait tantot a gauche, tantot plaque
+  a droite. Tout part desormais de la gauche, partout.
+
+- **Le nom d'abord, l'icone ensuite.** On lit de gauche a droite : on
+  cherche un service par son NOM et l'etat est la reponse. L'icone en
+  tete obligeait a parcourir une colonne d'icones pour retrouver la
+  ligne voulue. L'ordre reel dans le document est verifie par un test,
+  seule chose qui prouve quelque chose ici.
+
+- **Services regroupes par famille**, dans l'ordre du catalogue (cloud,
+  DevOps, SaaS, paiement, observabilite, IA, stockage, France, mes
+  services) plutot que dans l'ordre ou ils ont ete coches. Une famille
+  inconnue du catalogue -- reglage ancien, catalogue non charge -- passe
+  en fin de liste au lieu d'emporter ses services avec elle. Reglage
+  « Regrouper les services par famille », coche par defaut.
+
 ## 1.135.0
 
 - **Quatre icones d'etat a la place du point colore et du texte.** Sur

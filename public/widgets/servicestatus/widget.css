@@ -386,3 +386,50 @@
   color: var(--muted);
 }
 .pwss-modal .pwss-svc { border: 0; padding: 0; }
+
+/* ============================================================
+   1.136.0 — alignement, ordre, et rubriques de famille.
+
+   L'ALIGNEMENT QUI SAUTAIT D'UNE LIGNE A L'AUTRE venait d'ici : la
+   regle d'origine `.pwss-head` posait `justify-content: space-between`,
+   qui collait le dernier element au bord droit. Le nom etant tantot
+   premier (pastilles), tantot dernier (fiches), il se retrouvait tantot
+   a gauche, tantot plaque a droite. On force donc le depart a gauche,
+   partout, et l'icone suit le nom.
+   THE ALIGNMENT THAT JUMPED came from the original `.pwss-head` rule's
+   `justify-content: space-between`, which pinned the last child to the
+   right edge: the name being first in chips and last in cards, it ended
+   up left in one place and right in the other. Everything now starts at
+   the left, and the icon follows the name.
+   ============================================================ */
+.pw-svcstatus .pwss-head {
+  justify-content: flex-start;
+  text-align: left;
+}
+.pw-svcstatus .pwss-svc { text-align: left; }
+.pw-svcstatus .pwss-name { flex: 0 1 auto; min-width: 0; }
+
+/* Rubrique de famille : un reperage, pas un titre. Discret et en
+   majuscules, il separe sans prendre la place des services eux-memes.
+   A family heading is a landmark, not a title: discreet, it separates
+   without taking the space of the services themselves. */
+.pw-svcstatus .pwss-fam {
+  margin: 10px 0 4px;
+  font-size: .78em;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--border, rgba(127, 127, 127, .25));
+  padding-bottom: 2px;
+}
+.pw-svcstatus .pwss-list > .pwss-fam:first-child { margin-top: 0; }
+
+/* La pastille : le nom prend la place disponible, l'icone reste collee
+   a sa droite et ne se comprime jamais -- une icone ecrasee a mi-chemin
+   ne veut plus rien dire.
+   The chip: the name takes the room, the icon stays at its right and
+   never shrinks -- a squashed icon means nothing. */
+.pw-svcstatus .pwss-chip { justify-content: flex-start; }
+.pw-svcstatus .pwss-chip .pwss-chip-name { flex: 0 1 auto; }
+.pw-svcstatus .pwss-chip .pwss-ico { margin-left: 2px; }

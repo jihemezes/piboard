@@ -1,6 +1,6 @@
 {
   "id": "servicestatus",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "name": {
     "en": "Service status",
     "fr": "Statut de service"
@@ -80,6 +80,19 @@
       "hint": {
         "en": "Twenty-five detailed cards fit on no screen. In compact mode a service is a chip (name and coloured dot) and only what is wrong is written out in full; \"problems only\" goes further and shows a single line while everything is operational — the right choice for a wall board, where a tile that says nothing is a tile with nothing to say.",
         "fr": "Vingt-cinq fiches détaillées ne tiennent sur aucun écran. En compact, un service est une pastille (nom et point coloré) et seul ce qui va mal est écrit en entier ; « problèmes seulement » va plus loin et n'affiche qu'une ligne tant que tout est opérationnel — le bon choix pour un tableau mural, où une tuile qui ne dit rien est une tuile qui n'a rien à dire."
+      }
+    },
+    {
+      "key": "groupByFamily",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "fr": "Regrouper les services par famille",
+        "en": "Group services by family"
+      },
+      "hint": {
+        "fr": "Vingt-cinq services rangés dans l'ordre où on les a cochés forment une liste qu'il faut lire en entier pour y trouver quelque chose. Rangés par thème — cloud, DevOps, SaaS, IA, France… — on va droit à la rubrique voulue, et une famille entière au vert se survole d'un coup d'œil. L'ordre des rubriques est celui du catalogue, choisi pour que les choses proches se suivent.",
+        "en": "Twenty-five services in ticking order form a list one must read entirely to find anything. Arranged by theme — cloud, DevOps, SaaS, AI, France… — you go straight to the right heading, and a whole family in green is taken in at a glance. The heading order is the catalogue's, chosen so that related things follow one another."
       }
     },
     {

@@ -8850,6 +8850,33 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("les accents et la casse n'empechent pas la comparaison",
       H.concernsMe("Incident à PARIS", H.parseZones("paris")) === true);
 
+    /* LES LIEUX QUI AVAIENT ECHAPPE AU FILTRE (1.136.0). La premiere
+       table ne savait repondre qu'a « ce libelle parle-t-il d'un
+       endroit ? », a partir d'une liste de noms connus. « Hagatna,
+       Guam - (GUM) » est donc passe en surveillant l'Europe : Guam n'y
+       figurait pas, et un lieu absent de la liste etait traite comme un
+       libelle sans lieu, donc affiche. Ces cinq libelles sont ceux de
+       la capture : ils sont la pour qu'aucun ne revienne. */
+    for (const label of ["Hagatna, Guam - (GUM)", "Arica, Chile - (ARI)", "Annaba, Algeria - (AAE)",
+                         "Canberra, ACT, Australia - (CBR)", "Basra, Iraq - (BSR)"]) {
+      assert("hors Europe, masque : " + label, H.concernsMe(label, zones) === false);
+    }
+    for (const label of ["Paris, France - (CDG)", "Frankfurt, Germany - (FRA)", "Londres", "eu-west-3", "westeurope"]) {
+      assert("en Europe, conserve : " + label, H.concernsMe(label, zones) === true);
+    }
+    /* Savoir ou est un pays ne suffit pas : il faut savoir sur QUEL
+       continent. Demander « Europe » ne pouvait rien dire d'« Annaba,
+       Algeria » tant que l'Algerie n'etait pas rattachee a l'Afrique. */
+    assert("un continent se deduit du pays nomme",
+      H.concernsMe("Annaba, Algeria", H.parseZones("afrique")) === true
+      && H.concernsMe("Osaka, Japan", H.parseZones("asie")) === true
+      && H.concernsMe("Hagatna, Guam", H.parseZones("oceanie")) === true);
+    /* Les ensembles des fournisseurs : qui surveille l'Europe est
+       concerne par ce qui est annonce pour « EMEA ». */
+    assert("un ensemble de fournisseur (EMEA, APAC) est rattache a ses continents",
+      H.concernsMe("EMEA degraded performance", zones) === true
+      && H.concernsMe("APAC latency", zones) === false);
+
     /* Le service filtre redevient calme, mais le DIT : un service dont
        on masque les ennuis ne doit pas se confondre avec un service
        qui n'en a pas. */
@@ -8888,12 +8915,44 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("mais il affiche bien son nom et une icone d'etat",
       /GitHub/.test(txt) && !!host.querySelector(".pwss-ico-ok"));
 
+    /* --- L'ordre a l'ecran : le nom d'abord, l'icone ensuite --- */
+    /* On lit de gauche a droite : on cherche un service par son NOM, et
+       l'etat est la reponse. L'icone en tete obligeait a parcourir une
+       colonne d'icones pour retrouver la ligne voulue. Le test regarde
+       l'ORDRE REEL dans le document, seule chose qui prouve quelque
+       chose ici. */
+    {
+      const head = host.querySelector(".pwss-head");
+      const kids = head ? Array.from(head.children) : [];
+      const iName = kids.findIndex((k) => k.classList.contains("pwss-name"));
+      const iIcon = kids.findIndex((k) => k.classList.contains("pwss-ico"));
+      assert("dans une fiche, le nom precede l'icone", iName !== -1 && iIcon !== -1 && iName < iIcon);
+    }
+
     /* Compact + : TOUT le monde en pastille, y compris ce qui va mal. */
     settings.display = "compactplus";
     w.onSettingsChanged(settings);
     await sleep(60);
     const chips = host.querySelectorAll(".pwss-chip[data-svc]");
     assert("Compact + rend chaque service sous forme de pastille cliquable", chips.length === 1);
+    {
+      const kids = Array.from(chips[0].children);
+      const iName = kids.findIndex((k) => k.classList.contains("pwss-chip-name"));
+      const iIcon = kids.findIndex((k) => k.classList.contains("pwss-ico"));
+      assert("dans une pastille aussi, le nom precede l'icone", iName < iIcon);
+    }
+    /* Les rubriques de famille : sans elles, vingt-cinq services forment
+       une liste qu'il faut lire en entier. */
+    assert("les services sont ranges sous une rubrique de famille",
+      host.querySelectorAll(".pwss-fam").length >= 1);
+    settings.groupByFamily = false;
+    w.onSettingsChanged(settings);
+    await sleep(60);
+    assert("et le regroupement se coupe depuis les reglages",
+      host.querySelectorAll(".pwss-fam").length === 0);
+    settings.groupByFamily = true;
+    w.onSettingsChanged(settings);
+    await sleep(60);
 
     /* Le clic ouvre la fenetre de detail. Test FONCTIONNEL : on clique
        pour de bon et on regarde si la fenetre existe -- verifier la

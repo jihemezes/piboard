@@ -168,47 +168,139 @@
      shown; hiding what we did not understand would silently drop
      badly-named worldwide incidents. */
 
-  /* Lieux reconnus. La liste n'a pas a etre exhaustive : elle sert
-     uniquement a repondre « ce libelle parle-t-il d'un endroit ? ».
-     Recognised places: the list need not be exhaustive, it only answers
-     "does this label speak of a place?". */
-  const PLACES = [
-    "europe", "european", "emea", "eu", "france", "french", "paris", "marseille", "roubaix", "gravelines", "strasbourg", "lyon",
-    "germany", "deutschland", "frankfurt", "berlin", "munich", "hamburg",
-    "ireland", "dublin", "london", "england", "britain", "uk", "manchester",
-    "netherlands", "amsterdam", "belgium", "brussels", "spain", "madrid", "barcelona",
-    "italy", "milan", "rome", "portugal", "lisbon", "switzerland", "zurich", "geneva",
-    "sweden", "stockholm", "norway", "oslo", "finland", "helsinki", "denmark", "copenhagen",
-    "poland", "warsaw", "austria", "vienna", "czech", "prague",
-    "north america", "america", "united states", "usa", "us-east", "us-west", "canada", "montreal", "toronto",
-    "virginia", "ohio", "oregon", "california", "silicon valley", "san francisco", "san jose", "seattle", "dallas",
-    "chicago", "atlanta", "miami", "new york", "new jersey", "los angeles", "phoenix", "denver", "honolulu",
-    "south america", "latam", "brazil", "sao paulo", "são paulo", "chile", "santiago", "argentina", "buenos aires",
-    "mexico", "colombia", "bogota", "peru", "lima",
-    "asia", "apac", "asia pacific", "japan", "tokyo", "osaka", "korea", "seoul", "china", "beijing", "shanghai",
-    "hong kong", "taiwan", "singapore", "india", "mumbai", "delhi", "bangalore", "chennai", "hyderabad",
-    "indonesia", "jakarta", "thailand", "bangkok", "vietnam", "malaysia", "kuala lumpur", "philippines", "manila",
-    "australia", "sydney", "melbourne", "new zealand", "auckland",
-    "africa", "south africa", "johannesburg", "cape town", "nigeria", "lagos", "kenya", "nairobi",
-    "algeria", "algiers", "morocco", "casablanca", "tunisia", "egypt", "cairo",
-    "middle east", "uae", "dubai", "bahrain", "israel", "tel aviv", "saudi", "qatar", "turkey", "istanbul",
-    "russia", "moscow", "ukraine", "kyiv"
-  ];
+  /* LA TABLE DES LIEUX, ET POURQUOI ELLE A ETE REECRITE. La premiere
+     version se contentait d'une liste de noms connus et repondait
+     « ce libelle parle-t-il d'un endroit ? ». Elle a laisse passer
+     « Hagatna, Guam - (GUM) » en surveillant l'Europe, tout simplement
+     parce que Guam n'y figurait pas -- et un lieu absent de la liste
+     etait traite comme un libelle sans lieu, donc affiche. La regle
+     (« on ne masque que ce qu'on a su situer ») etait bonne ; c'est la
+     connaissance geographique qui etait trop maigre.
 
-  /* Les codes de region des grands clouds : `eu-west-1`, `ap-southeast-2`,
-     `us-east-1`, `westeurope`, `francecentral`... Un code se reconnait a
-     sa forme, pas a une liste.
-     Cloud region codes recognised by shape, not by a list. */
-  const REGION_CODE = /\b(af|ap|ca|cn|eu|il|me|sa|us)-(north|south|east|west|central|northeast|northwest|southeast|southwest)(-\d)?\b/i;
-  const AZURE_CODE = /\b(west|east|north|south|central)?(europe|us|asia|india|japan|france|germany|uk|canada|brazil|australia|korea|africa|norway|sweden|switzerland|poland|italy|spain|qatar|uae)\b/i;
+     Deux changements : la table couvre maintenant les pays ET les
+     territoires (Guam, Reunion, Nouvelle-Caledonie, Porto Rico...), et
+     surtout chacun porte son CONTINENT. Sans cela, demander « Europe »
+     ne pouvait rien dire d'« Annaba, Algeria » : il fallait savoir que
+     l'Algerie est en Afrique. Les noms sont donnes en anglais et en
+     francais, les pages de statut melangeant les deux.
+
+     THE PLACE TABLE, AND WHY IT WAS REWRITTEN. The first version only
+     answered "does this label name a place?" from a list of known
+     names, and let "Hagatna, Guam - (GUM)" through while watching
+     Europe, simply because Guam was not in it -- an absent place was
+     treated as no place at all, hence shown. The rule was right; the
+     geography was too thin. Now the table covers countries AND
+     territories, and each carries its CONTINENT: without that, asking
+     for "Europe" could say nothing about "Annaba, Algeria". Names are
+     given in English and French, status pages mixing both. */
+  const CONTINENT = {
+    europe: ("albania albanie andorra andorre austria autriche belarus bielorussie belgium belgique bosnia bosnie bulgaria bulgarie "
+      + "croatia croatie cyprus chypre czechia czech republic republique tcheque tchequie denmark danemark estonia estonie "
+      + "faroe feroe finland finlande france germany allemagne gibraltar greece grece guernsey hungary hongrie iceland islande "
+      + "ireland irlande isle of man italy italie jersey kosovo latvia lettonie liechtenstein lithuania lituanie luxembourg "
+      + "malta malte moldova moldavie monaco montenegro netherlands pays-bas holland macedonia macedoine norway norvege "
+      + "poland pologne portugal romania roumanie russia russie san marino serbia serbie slovakia slovaquie slovenia slovenie "
+      + "spain espagne sweden suede switzerland suisse ukraine united kingdom royaume-uni england angleterre scotland ecosse "
+      + "wales pays de galles northern ireland vatican azores acores madeira madere canary canaries "
+      + "paris marseille lyon roubaix gravelines strasbourg bordeaux toulouse lille london londres manchester dublin "
+      + "frankfurt francfort berlin munich hamburg dusseldorf amsterdam rotterdam brussels bruxelles antwerp madrid barcelona "
+      + "lisbon lisbonne porto milan milano rome roma zurich geneva geneve vienna vienne warsaw varsovie krakow prague "
+      + "budapest bucharest bucarest sofia athens athenes stockholm oslo helsinki copenhagen copenhague riga vilnius tallinn "
+      + "kyiv kiev moscow moscou saint petersburg istanbul edinburgh").split(" "),
+    asia: ("afghanistan armenia armenie azerbaijan azerbaidjan bahrain bahrein bangladesh bhutan bhoutan brunei cambodia cambodge "
+      + "china chine georgia georgie hong kong india inde indonesia indonesie iran iraq irak israel japan japon jordan jordanie "
+      + "kazakhstan kuwait koweit kyrgyzstan laos lebanon liban macau macao malaysia malaisie maldives mongolia mongolie "
+      + "myanmar burma nepal north korea oman pakistan palestine philippines qatar saudi arabia arabie saoudite singapore "
+      + "singapour south korea korea coree sri lanka syria syrie taiwan taiwan tajikistan thailand thailande timor turkey "
+      + "turquie turkmenistan emirates emirats uae uzbekistan vietnam yemen "
+      + "tokyo osaka seoul beijing pekin shanghai shenzhen guangzhou chengdu taipei bangkok jakarta manila hanoi "
+      + "ho chi minh kuala lumpur mumbai bombay delhi bangalore bengaluru chennai hyderabad kolkata pune karachi lahore "
+      + "dhaka colombo kathmandu dubai abu dhabi doha riyadh jeddah kuwait city muscat amman beirut baghdad basra tehran "
+      + "tel aviv jerusalem ankara almaty tashkent baku tbilisi yerevan").split(" "),
+    africa: ("algeria algerie angola benin botswana burkina burundi cameroon cameroun cape verde cap-vert central african chad tchad "
+      + "comoros comores congo djibouti egypt egypte equatorial guinea eritrea erythree eswatini swaziland ethiopia ethiopie "
+      + "gabon gambia gambie ghana guinea guinee ivory coast cote d'ivoire kenya lesotho liberia libya libye madagascar malawi "
+      + "mali mauritania mauritanie mauritius maurice morocco maroc mozambique namibia namibie niger nigeria reunion rwanda "
+      + "senegal seychelles sierra leone somalia somalie south africa afrique du sud south sudan sudan soudan tanzania tanzanie "
+      + "togo tunisia tunisie uganda ouganda zambia zambie zimbabwe "
+      + "algiers alger annaba oran casablanca rabat marrakech tunis tripoli cairo le caire alexandria lagos abuja accra "
+      + "abidjan dakar nairobi mombasa addis ababa kampala dar es salaam luanda maputo johannesburg cape town le cap durban "
+      + "pretoria kinshasa saint denis port louis").split(" "),
+    "north america": ("canada united states etats-unis usa mexico mexique greenland groenland bermuda bermudes costa rica cuba "
+      + "dominican republic republique dominicaine el salvador guatemala haiti honduras jamaica jamaique nicaragua panama "
+      + "puerto rico porto rico bahamas barbados barbade trinidad trinite martinique guadeloupe curacao aruba cayman caimans "
+      + "belize saint martin "
+      + "montreal toronto vancouver calgary ottawa quebec winnipeg new york new jersey newark ashburn virginia washington "
+      + "boston philadelphia atlanta miami orlando tampa charlotte nashville chicago detroit minneapolis columbus ohio "
+      + "dallas houston austin san antonio denver phoenix salt lake city las vegas los angeles san francisco san jose "
+      + "silicon valley seattle portland oregon sacramento kansas city st. louis saint louis mexico city guadalajara "
+      + "monterrey queretaro san juan").split(" "),
+    "south america": ("argentina argentine bolivia bolivie brazil bresil chile chili colombia colombie ecuador equateur "
+      + "french guiana guyane guyana paraguay peru perou suriname uruguay venezuela "
+      + "sao paulo são paulo rio de janeiro brasilia fortaleza porto alegre curitiba buenos aires cordoba santiago "
+      + "valparaiso arica bogota medellin cali lima quito guayaquil caracas montevideo asuncion la paz cayenne").split(" "),
+    oceania: ("australia australie fiji fidji french polynesia polynesie guam kiribati marshall micronesia micronesie nauru "
+      + "new caledonia nouvelle-caledonie new zealand nouvelle-zelande palau papua papouasie samoa solomon salomon tonga "
+      + "tuvalu vanuatu hawaii hawai "
+      + "sydney melbourne brisbane perth adelaide canberra hobart auckland wellington christchurch noumea papeete "
+      + "honolulu hagatna suva port moresby").split(" ")
+  };
+
+  /* Les ensembles employes par les fournisseurs : EMEA, APAC, LATAM...
+     Ce ne sont pas des continents mais ils en designent plusieurs, et
+     une personne qui ecrit « Europe » doit retrouver ce qui est annonce
+     pour « EMEA ».
+     Provider groupings: not continents, but they designate several, and
+     someone who writes "Europe" must find what is announced for
+     "EMEA". */
+  const GROUPINGS = {
+    emea: ["europe", "africa", "asia"],
+    apac: ["asia", "oceania"],
+    "asia pacific": ["asia", "oceania"],
+    "asia-pacific": ["asia", "oceania"],
+    latam: ["south america"],
+    "latin america": ["south america"],
+    americas: ["north america", "south america"],
+    amerique: ["north america", "south america"],
+    "middle east": ["asia"],
+    "moyen-orient": ["asia"],
+    oceanie: ["oceania"],
+    asie: ["asia"],
+    afrique: ["africa"],
+    "amerique du nord": ["north america"],
+    "amerique du sud": ["south america"]
+  };
+
+  /* Les codes de region des grands clouds portent leur continent dans
+     leur prefixe : `eu-west-3`, `ap-southeast-2`, `sa-east-1`. Un code
+     se reconnait a sa forme, pas a une liste -- et il dit a lui seul ou
+     se trouve la panne.
+     Cloud region codes carry their continent in their prefix, and a code
+     is recognised by shape, not by a list. */
+  const REGION_PREFIX = {
+    af: "africa", ap: "asia", ca: "north america", cn: "asia", eu: "europe",
+    il: "asia", me: "asia", sa: "south america", us: "north america"
+  };
+  const REGION_CODE = /\b(af|ap|ca|cn|eu|il|me|sa|us)-(north|south|east|west|central|northeast|northwest|southeast|southwest)(-?\d)?\b/gi;
+  /* Les noms a la mode Azure : `westeurope`, `francecentral`,
+     `southeastasia`. Azure-style names. */
+  const AZURE_CODE = /\b(?:west|east|north|south|central|southeast|northeast)?(europe|us|usgov|asia|india|japan|france|germany|uk|canada|brazil|australia|korea|africa|norway|sweden|switzerland|poland|italy|spain|qatar|uae|mexico|chile|israel|newzealand)(?:west|east|north|south|central|\d)*\b/gi;
+  const AZURE_CONTINENT = {
+    europe: "europe", france: "europe", germany: "europe", uk: "europe", norway: "europe", sweden: "europe",
+    switzerland: "europe", poland: "europe", italy: "europe", spain: "europe",
+    us: "north america", usgov: "north america", canada: "north america", mexico: "north america",
+    asia: "asia", india: "asia", japan: "asia", korea: "asia", qatar: "asia", uae: "asia", israel: "asia",
+    brazil: "south america", chile: "south america",
+    australia: "oceania", newzealand: "oceania", africa: "africa"
+  };
 
   /* « Mondial », « toutes regions » : ce n'est pas un lieu a filtrer,
      c'est le contraire -- cela concerne tout le monde, donc vous.
      "Global", "all regions": not a place to filter but the opposite. */
-  const GLOBAL_WORDS = /\b(global|globale|globally|worldwide|mondial|mondiale|all regions|toutes regions|all locations|multi-region|multiregion)\b/i;
+  const GLOBAL_WORDS = /\b(global|globale|globally|worldwide|mondial|mondiale|all regions|toutes regions|all locations|multi-region|multiregion|everywhere)\b/i;
 
   function normalize(text) {
-    return String(text || "")
+    return String(text == null ? "" : text)
       .toLowerCase()
       .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   }
@@ -220,31 +312,72 @@
       .filter(Boolean);
   }
 
-  /* Rend `true` si le libelle doit etre AFFICHE. Trois cas, dans cet
-     ordre : il parle du monde entier (on affiche), il parle d'un endroit
-     qui est dans vos zones (on affiche), il parle d'un endroit qui n'y
-     est pas (on masque). Et s'il ne parle d'aucun endroit connu, on
-     affiche -- voir la regle plus haut.
-     Returns true when the label must be SHOWN. */
+  /* Ou se trouve ce libelle ? Rend la liste des continents reconnus, ou
+     un tableau vide si on n'a rien su situer -- et c'est cette
+     difference qui decide ensuite d'afficher ou de masquer.
+     Where is this label? Returns the recognised continents, or an empty
+     array when nothing could be located. */
+  function locate(label) {
+    const text = " " + normalize(label).replace(/[^a-z0-9'\- ]+/g, " ").replace(/\s+/g, " ") + " ";
+    const found = {};
+
+    for (const key of Object.keys(GROUPINGS)) {
+      if (text.indexOf(" " + key + " ") !== -1) for (const c of GROUPINGS[key]) found[c] = true;
+    }
+    for (const continent of Object.keys(CONTINENT)) {
+      if (text.indexOf(" " + continent + " ") !== -1) found[continent] = true;
+      for (const place of CONTINENT[continent]) {
+        if (place && text.indexOf(" " + place + " ") !== -1) { found[continent] = true; break; }
+      }
+    }
+    let m;
+    REGION_CODE.lastIndex = 0;
+    while ((m = REGION_CODE.exec(text))) {
+      const c = REGION_PREFIX[String(m[1]).toLowerCase()];
+      if (c) found[c] = true;
+    }
+    AZURE_CODE.lastIndex = 0;
+    while ((m = AZURE_CODE.exec(text))) {
+      const c = AZURE_CONTINENT[String(m[1]).toLowerCase()];
+      if (c) found[c] = true;
+    }
+    return Object.keys(found);
+  }
+
+  /* Rend `true` si le libelle doit etre AFFICHE.
+     LA REGLE N'A PAS CHANGE, et c'est la seule qui compte : on ne masque
+     QUE ce qu'on a su situer. Ce qui concerne le monde entier, ce qui
+     tombe dans vos zones, et ce dont on n'a pas su dire ou ca se passe
+     restent affiches. Seul un lieu identifie ET hors de vos zones
+     disparait.
+     THE RULE IS UNCHANGED: only what we managed to locate is ever
+     hidden. */
   function concernsMe(label, zones) {
     const text = normalize(label);
-    if (!text) return true;
-    if (!zones.length) return true;
+    if (!text || !zones.length) return true;
     if (GLOBAL_WORDS.test(text)) return true;
 
-    /* Vos zones d'abord : si l'une d'elles est nommee, la question est
-       reglee, meme si le libelle cite aussi trois autres continents --
-       « Europe & Asia » vous concerne. Your zones first: if one is
-       named, the question is settled even when three other continents
-       are cited too. */
+    /* Vos zones, mot pour mot, d'abord : vous avez pu ecrire « gra »,
+       « rbx » ou le nom d'un client, que PiBoard n'a aucune raison de
+       connaitre. Your zones verbatim first: you may have written a code
+       or a client's name PiBoard has no reason to know. */
     for (const z of zones) {
       if (z && text.indexOf(z) !== -1) return true;
     }
 
-    const located = PLACES.some((p) => text.indexOf(p) !== -1)
-      || REGION_CODE.test(text)
-      || AZURE_CODE.test(text);
-    return !located;
+    const here = locate(label);
+    if (!here.length) return true;
+
+    /* Vos zones designent-elles l'un des continents trouves ? Une zone
+       peut etre un continent (« europe »), un ensemble (« emea ») ou un
+       pays (« france ») : on la situe de la meme facon que le libelle.
+       Do your zones name one of the continents found? A zone is located
+       exactly like the label is. */
+    for (const z of zones) {
+      const zoneHere = locate(z);
+      for (const c of zoneHere) if (here.indexOf(c) !== -1) return true;
+    }
+    return false;
   }
 
   /* Applique le filtre a un service et rend une COPIE : la reponse du
@@ -298,7 +431,7 @@
          A hand-typed service declares no adapter -- the server probes --
          and alerts by default: someone who bothers to type an address
          almost certainly wants to hear about that one. */
-      out.push({ label, url, adapter: "auto", api: null, alert: true, manual: true });
+      out.push({ label, url, adapter: "auto", api: null, alert: true, manual: true, family: "custom" });
       if (out.length >= MAX_SERVICES) break;
     }
     return out;
@@ -360,10 +493,16 @@
          So we say it, and stop querying the network for nothing. */
       if (!src && !p.custom && p.id && CATALOG.loaded) {
         return { label: p.name || p.id, url: String(p.url || ""), adapter: "auto", api: null,
-                 alert: p.alert !== false, manual: false, retired: true };
+                 alert: p.alert !== false, manual: false, retired: true, family: p.family || "custom" };
       }
       return {
       label: p.name || (src && src.name) || "",
+      /* La famille vient du catalogue, comme l'adresse et le format :
+         c'est elle qui regroupe les services a l'ecran. Un service
+         ajoute a la main n'en a pas, il rejoint « Mes services ».
+         The family comes from the catalogue, like the address and the
+         format: it is what groups services on screen. */
+      family: (src && src.family) || p.family || "custom",
       url: String((src && src.url) || p.url),
       adapter: (src && src.adapter) || p.adapter || "auto",
       api: (src && src.api) || p.api || null,
@@ -386,7 +525,7 @@
      Until it arrives, byId is empty and parsePicked falls back to the
      stored values, so the tile shows something on the first reading
      instead of waiting on a file to show nothing. */
-  const CATALOG = { byId: {}, loaded: false };
+  const CATALOG = { byId: {}, families: [], loaded: false };
   let catalogPromise = null;
 
   function loadCatalog(remoteAllowed) {
@@ -395,6 +534,7 @@
       const cat = (json && json.catalog && typeof json.catalog === "object") ? json.catalog : json;
       const list = cat && Array.isArray(cat.services) ? cat.services : [];
       for (const svc of list) if (svc && svc.id) CATALOG.byId[svc.id] = svc;
+      if (cat && Array.isArray(cat.families)) CATALOG.families = cat.families;
       return list.length;
     };
     /* La route sert le catalogue le plus recent dont le serveur dispose
@@ -546,7 +686,7 @@
            rude. */
         const live = targets.filter((t) => !t.retired);
         if (!live.length) {
-          this.services = targets.map((t) => ({ label: t.label, error: "retired", retired: true }));
+          this.services = targets.map((t) => ({ label: t.label, error: "retired", retired: true, family: t.family }));
           this.render(); this.arm(); this.firstLoadDone = true;
           return;
         }
@@ -571,11 +711,12 @@
              local, et le serveur n'en sait rien.
              The bell travels with the service, not the answer: it is a
              local setting the server knows nothing about. */
-          alert: live[i] ? live[i].alert !== false : true
+          alert: live[i] ? live[i].alert !== false : true,
+          family: live[i] ? live[i].family : "custom"
         }));
         let next = 0;
         this.services = targets.map((t) => (t.retired
-          ? { label: t.label, error: "retired", retired: true, alert: false }
+          ? { label: t.label, error: "retired", retired: true, alert: false, family: t.family }
           : answered[next++]));
         this.fetchedAt = Date.now();
         this.updateCadence();
@@ -739,6 +880,50 @@
        become twenty-five without changing tiles -- and what avoids the
        opposite trap, a compact mode so compact that one would have to
        click to learn what is broken. */
+    /* REGROUPER PAR FAMILLE. Vingt-cinq services ranges au hasard de
+       l'ordre ou on les a coches forment une liste qu'il faut LIRE en
+       entier pour y trouver quelque chose. Ranges par theme -- cloud,
+       DevOps, IA, France... -- on va droit a la rubrique voulue, et une
+       famille entiere au vert se survole d'un coup d'oeil.
+       L'ordre des familles est celui du catalogue, pas l'ordre
+       alphabetique : il a ete choisi pour que les choses proches se
+       suivent, et un tri alphabetique le casserait pour rien.
+       GROUPING BY FAMILY: twenty-five services in ticking order form a
+       list one must READ entirely. The family order is the catalogue's,
+       not alphabetical: it was chosen so that related things follow one
+       another. */
+    groupServices(list) {
+      if (this.ctx.settings.groupByFamily === false) return [{ id: null, label: null, items: list }];
+      const order = CATALOG.families.length
+        ? CATALOG.families.map((f) => f.id)
+        : [];
+      const byFam = new Map();
+      for (const svc of list) {
+        const fam = svc.family || "custom";
+        if (!byFam.has(fam)) byFam.set(fam, []);
+        byFam.get(fam).push(svc);
+      }
+      /* Les familles inconnues du catalogue (un reglage ancien, un
+         catalogue qui ne s'est pas charge) ne disparaissent pas : elles
+         passent a la fin plutot que d'emporter leurs services avec
+         elles. Families unknown to the catalogue do not vanish: they go
+         last rather than taking their services with them. */
+      const ids = order.filter((id) => byFam.has(id))
+        .concat([...byFam.keys()].filter((id) => order.indexOf(id) === -1));
+      return ids.map((id) => {
+        const fam = CATALOG.families.find((f) => f.id === id);
+        const label = fam
+          ? ((fam.icon ? fam.icon + " " : "") + this.ctx.i18n.fromManifest(fam.label))
+          : null;
+        return { id, label, items: byFam.get(id) };
+      });
+    }
+
+    famHead(group) {
+      if (!group.label || !group.id) return "";
+      return `<div class="pwss-fam">${esc(group.label)}</div>`;
+    }
+
     renderBody(i18n, s, now) {
       const mode = s.display || "detailed";
       const list = this.visibleServices();
@@ -754,12 +939,16 @@
          wall-display mode -- twenty-five services at a glance -- where
          detail is asked for with a click instead of imposing itself. */
       if (mode === "compactplus") {
-        return `<div class="pwss-grid pwss-grid-plus">`
-          + list.map((svc, i) => this.renderChip(svc, i18n, i)).join("")
-          + `</div>`;
+        return this.groupServices(list).map((g) => this.famHead(g)
+          + `<div class="pwss-grid pwss-grid-plus">`
+          + g.items.map((svc) => this.renderChip(svc, i18n, list.indexOf(svc))).join("")
+          + `</div>`).join("");
       }
 
-      if (mode === "detailed") return list.map((svc) => this.renderService(svc, i18n, s, now)).join("");
+      if (mode === "detailed") {
+        return this.groupServices(list).map((g) => this.famHead(g)
+          + g.items.map((svc) => this.renderService(svc, i18n, s, now)).join("")).join("");
+      }
 
       const bad = list.filter((svc) => svc.error || (svc.indicator && svc.indicator !== "none"));
       const good = list.filter((svc) => bad.indexOf(svc) === -1);
@@ -770,8 +959,16 @@
         return `<div class="pwss-allgood">${esc(i18n.t("svcstatus.allGood").replace("{n}", list.length))}</div>`;
       }
 
-      const chips = good.map((svc) => this.renderChip(svc, i18n, list.indexOf(svc))).join("");
-      return (chips ? `<div class="pwss-grid">${chips}</div>` : "") + cards;
+      /* En mode « compact », seuls les services sains sont groupes : les
+         fiches des services en difficulte restent ensemble, en bas, ou
+         on les cherche. Grouping applies to the healthy chips only; the
+         cards of failing services stay together at the bottom. */
+      const chips = this.groupServices(good)
+        .filter((g) => g.items.length)
+        .map((g) => this.famHead(g)
+          + `<div class="pwss-grid">` + g.items.map((svc) => this.renderChip(svc, i18n, list.indexOf(svc))).join("") + `</div>`)
+        .join("");
+      return chips + cards;
     }
 
     /* Les services tels qu'ils doivent etre AFFICHES : filtre
@@ -801,10 +998,16 @@
         ? `<span class="pwss-approx" title="${esc(i18n.t("svcstatus.approximate"))}">~</span>` : "";
       const hidden = svc.hiddenCount
         ? `<span class="pwss-hidden-mark" title="${esc(i18n.t("svcstatus.hiddenTip"))}">·${svc.hiddenCount}</span>` : "";
+      /* LE NOM D'ABORD, L'ICONE ENSUITE. On lit de gauche a droite : on
+         cherche un service par son NOM, et l'etat est la reponse. Mettre
+         l'icone en tete obligeait a parcourir une colonne d'icones pour
+         retrouver la ligne qu'on voulait.
+         THE NAME FIRST, THE ICON AFTER: one reads left to right, looks
+         for a service by its NAME, and the state is the answer. */
       return `<button type="button" class="pwss-chip" data-svc="${index}" `
         + `style="--pwss-tone:${STATE_TONE[state]}" title="${esc(svc.label || "")}">`
-        + iconHtml(state, i18n)
-        + `<span class="pwss-chip-name">${esc(svc.label || "")}</span>${approx}${hidden}</button>`;
+        + `<span class="pwss-chip-name">${esc(svc.label || "")}</span>${approx}${hidden}`
+        + iconHtml(state, i18n) + `</button>`;
     }
 
     renderService(svc, i18n, s, now) {
@@ -830,8 +1033,8 @@
         return `
           <div class="pwss-svc" style="--pwss-tone:${STATE_TONE.unknown}">
             <div class="pwss-head">
-              ${iconHtml("unknown", i18n)}
               <span class="pwss-name">${label}</span>
+              ${iconHtml("unknown", i18n)}
             </div>
             <div class="pwss-detail"><span>${esc(detailText)}</span></div>
           </div>`;
@@ -907,8 +1110,8 @@
       return `
         <div class="pwss-svc" style="--pwss-tone:${STATE_TONE[stateOf(svc)]}">
           <div class="pwss-head">
-            ${iconHtml(stateOf(svc), i18n)}
             <span class="pwss-name">${label}</span>${approx}
+            ${iconHtml(stateOf(svc), i18n)}
           </div>
           ${detailHtml}
         </div>`;

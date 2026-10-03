@@ -33,6 +33,33 @@
 # Nouveautes / What's new
 
 
+## 1.136.0
+
+**Tuile Statut de service : mise au propre**
+
+Les noms de services sont desormais alignes a gauche, l'icone d'etat
+juste a leur droite, et les services sont ranges par rubrique -- cloud,
+DevOps, SaaS, IA, France... -- au lieu de suivre l'ordre dans lequel ils
+ont ete coches.
+
+Le masquage des problemes hors zone connait maintenant les pays et
+territoires du monde avec leur continent : demander l'Europe ecarte bien
+le Chili, l'Algerie, l'Australie, l'Irak et Guam, et comprend aussi les
+ensembles des fournisseurs (EMEA, APAC, LATAM) et leurs codes de region.
+
+---
+
+**Service status tile: tidied up**
+
+Service names are now left-aligned with the state icon just to their
+right, and services are grouped under headings -- cloud, DevOps, SaaS,
+AI, France... -- instead of following the order they were ticked in.
+
+Hiding out-of-zone problems now knows the world's countries and
+territories with their continent: asking for Europe properly discards
+Chile, Algeria, Australia, Iraq and Guam, and it understands provider
+groupings (EMEA, APAC, LATAM) and region codes too.
+
 ## 1.135.0
 
 **La tuile Statut de service se lit d'un coup d'oeil**
