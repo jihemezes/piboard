@@ -8654,6 +8654,53 @@ function catalogItemFor(catalog, document, widgetId) {
     host.remove();
   }
 
+  console.log("== Statut de service : un service retire du catalogue le DIT (1.132.0) ==");
+  {
+    /* LE DEFAUT RAPPORTE : « OVH travaux » a ete retire du catalogue en
+       1.131.0 parce que son flux n'existait plus. Mais l'entree restait
+       cochee dans le reglage, retombait sur l'adresse enregistree --
+       celle-la meme qui ne marchait plus -- et affichait eternellement
+       une erreur HTTP que decocher etait le seul moyen de faire taire,
+       sans que rien ne le dise.
+
+       On verifie DEUX choses, et la seconde est la plus facile a casser :
+       que le message est explicite, et que les reponses des autres
+       services ne glissent pas d'un cran -- l'entree retiree n'etant
+       pas demandee au serveur, un appariement naif donnerait a GitHub la
+       reponse d'AWS, et la cloche avec. */
+    let Klass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "servicestatus") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/servicestatus/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const w = new Klass({
+      el: host,
+      settings: {
+        picked: JSON.stringify([
+          { id: "ovhtravaux", name: "OVH — travaux", url: "https://www.status-ovhcloud.com", adapter: "rss", api: "https://www.status-ovhcloud.com/history.rss", alert: true },
+          { id: "aws", name: "AWS", url: "https://health.aws.amazon.com/health/status", adapter: "aws", api: "https://health.aws.amazon.com/public/currentevents", alert: true }
+        ]),
+        display: "detailed", services: "", refreshMinutes: 10, incidentRefreshMinutes: 1
+      },
+      i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
+      api: { startAlert: () => {} }
+    });
+    w.init();
+    await sleep(80);
+
+    assert("un service absent du catalogue est annonce comme retire",
+      w.services.length === 2 && w.services[0].error === "retired");
+    /* L'appariement : AWS doit recevoir SA reponse, pas celle du voisin. */
+    assert("les reponses des autres services ne glissent pas d'un cran",
+      w.services[1] && w.services[1].label === "AWS" && w.services[1].indicator === "major");
+
+    w.destroy();
+    host.remove();
+  }
+
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));

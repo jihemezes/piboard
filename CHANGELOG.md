@@ -1,5 +1,51 @@
 # Changelog
 
+## 1.132.0
+
+- **AWS : l'UTF-16 etait GROS-boutien.** La 1.130.0 traduisait
+  l'etiquette `charset=utf-16` par du petit-boutien, parce que c'est le
+  cas courant. AWS sert du gros-boutien : sa reponse commence par
+  `FE FF`. Decodee a l'envers, elle ressortait en ideogrammes, d'ou le
+  « format inconnu » -- un progres sur « injoignable », mais toujours
+  faux. La marque d'ordre des octets fait desormais foi AVANT
+  l'etiquette : deux octets lus au bon endroit valent mieux qu'une
+  convention.
+
+- **OVHcloud — Reseau s'affichait « Inconnu » tout en montrant ses
+  maintenances.** Les pages d'OVHcloud rendent
+  `indicator: "maintenance"`, absent des quatre valeurs documentees par
+  Atlassian (none / minor / major / critical). Une maintenance declaree
+  n'est ni une panne ni une ignorance : elle vaut « operationnel »,
+  l'information etant portee par la ligne de maintenance -- meme regle
+  que chez Instatus et Fastly. Un indicateur reellement inconnu, lui,
+  reste inconnu : un etat qu'on ne comprend pas ne doit jamais passer
+  pour sain.
+
+- **« OVH travaux » revenait d'entre les morts.** L'entree retiree en
+  1.131.0 restait cochee dans les reglages, retombait sur l'adresse
+  enregistree -- celle-la meme qui ne marchait plus, raison de son
+  retrait -- et affichait eternellement une erreur HTTP que decocher
+  etait le seul moyen de faire taire, sans que rien ne le dise. Effet de
+  bord de la re-resolution par identifiant introduite en 1.130.0. La
+  tuile l'annonce desormais : « service retire du catalogue, decochez-le
+  pour faire disparaitre cette ligne », et cesse d'interroger le reseau
+  pour rien. Le test couvre aussi l'appariement : une entree retiree
+  n'etant pas demandee au serveur, un appariement naif donnait a chaque
+  service la reponse du suivant -- et sa cloche avec.
+
+- **Backblaze** : nouvel adaptateur (`/data/payload.json`). Deux
+  particularites : ses composants ne portent AUCUN etat, et ses
+  incidents ne declarent jamais « resolu » -- c'est l'ABSENCE d'un
+  horodatage de cloture qui marque un incident encore ouvert. L'etat
+  global se deduit donc des seuls incidents ouverts. Faute d'etat par
+  composant, aucun composant n'est declare touche : mieux vaut ne rien
+  affirmer que deviner.
+
+- **Infomaniak et MEGA** passent en `endpoint`. La page d'Infomaniak est
+  entierement rendue cote serveur (verifie en inspectant ses requetes
+  reelles : elle n'en fait aucune), et celle de MEGA n'a pu etre
+  atteinte depuis ici.
+
 ## 1.131.0
 
 - **Les huit derniers services muets, chacun pour sa raison.** Diagnostic

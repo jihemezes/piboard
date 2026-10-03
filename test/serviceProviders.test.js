@@ -832,6 +832,116 @@ test("les services sondes visent le SERVICE, pas sa page de statut", () => {
   }
 });
 
+
+console.log("== AWS : UTF-16 GROS-boutien (1.132.0) ==");
+
+/* LE DEFAUT SUIVANT, et il n'etait visible qu'en lisant les octets. La
+   1.130.0 traduisait l'etiquette « utf-16 » par du petit-boutien, parce
+   que c'est le cas courant. AWS sert du GROS-boutien : sa reponse
+   commence par FE FF. Decodee a l'envers, elle ressortait en
+   ideogrammes -- JSON valide a la source, illisible a l'arrivee, et la
+   tuile affichait « format inconnu ». La marque d'ordre fait desormais
+   foi avant l'etiquette : deux octets lus au bon endroit valent mieux
+   qu'une convention. */
+test("un JSON UTF-16 GROS-boutien (celui d'AWS) est decode correctement", () => {
+  const payload = JSON.stringify([{ service: "EC2", status: 1 }]);
+  const be = Buffer.from("\uFEFF" + payload, "utf16le").swap16();   // FE FF ...
+  assert.strictEqual(be[0], 0xFE, "le relevé doit bien commencer par FE FF, comme AWS");
+  const out = S.decodeText(be, "application/json;charset=utf-16");
+  assert.deepStrictEqual(JSON.parse(out), [{ service: "EC2", status: 1 }]);
+});
+
+test("le petit-boutien reste lu correctement, marque ou non", () => {
+  const le = Buffer.from("\uFEFF" + '{"a":1}', "utf16le");
+  assert.deepStrictEqual(JSON.parse(S.decodeText(le, "application/json;charset=utf-16")), { a: 1 });
+});
+
+test("la marque d'ordre prime sur une etiquette qui la contredit", () => {
+  const be = Buffer.from("\uFEFF" + '{"a":1}', "utf16le").swap16();
+  assert.deepStrictEqual(JSON.parse(S.decodeText(be, "application/json;charset=utf-16le")), { a: 1 },
+    "l'etiquette disait petit-boutien, les octets disent le contraire : les octets gagnent");
+});
+
+console.log("== Statuspage : « maintenance » n'est pas un etat inconnu (1.132.0) ==");
+
+/* LE DEFAUT RAPPORTE : les pages d'OVHcloud rendent
+   `indicator: "maintenance"`, absent des quatre valeurs documentees par
+   Atlassian. La tuile affichait donc « Inconnu » tout en montrant juste
+   en dessous les composants en maintenance et « aucun incident en
+   cours » -- deux affirmations contradictoires sur la meme ligne. */
+test("une Statuspage en maintenance est operationnelle, pas inconnue", () => {
+  const out = P.parseStatuspage({
+    page: { name: "Network & Infrastructure" },
+    status: { indicator: "maintenance", description: "Service Under Maintenance" },
+    components: [{ name: "RBX4", status: "under_maintenance" }, { name: "LIM1", status: "operational" }]
+  });
+  assert.strictEqual(out.indicator, "none");
+  assert.strictEqual(out.ok, true, "une maintenance declaree n'est ni une panne ni une ignorance");
+  assert.strictEqual(out.description, "Service Under Maintenance");
+});
+
+test("un indicateur reellement inconnu reste inconnu", () => {
+  assert.strictEqual(P.parseStatuspage({ status: { indicator: "bidon" }, components: [] }).indicator, "unknown",
+    "sinon un etat qu'on ne comprend pas passerait pour sain -- le pire defaut possible ici");
+});
+
+console.log("== Backblaze ==");
+
+const BACKBLAZE = {
+  config: { companyName: "Backblaze", operationalMessage: "All systems operational." },
+  components: [{ id: "a", name: "US West Region" }, { id: "b", name: "US East Region" }],
+  conditions: { Operational: "OPERATIONAL" },
+  incidents: [
+    { id: "i1", title: "Increased latency in US-East", severitySlug: "SEV2",
+      customerImpactSummary: "Uploads are slower than usual.",
+      timestamps: { started: "2026-10-02T19:25:15Z", detected: "2026-10-02T19:25:15Z", investigating: "2026-10-02T19:29:08Z" } },
+    { id: "i2", title: "Panne refermee la semaine derniere", severitySlug: "SEV1",
+      timestamps: { started: "2026-09-20T10:00:00Z", resolved: "2026-09-20T12:00:00Z" } }
+  ]
+};
+
+/* LA PARTICULARITE DE BACKBLAZE : ses incidents ne declarent jamais
+   « resolu ». C'est l'ABSENCE d'horodatage de cloture qui dit qu'un
+   incident est encore ouvert -- lire l'inverse afficherait en
+   permanence les pannes de l'annee ecoulee. */
+test("Backblaze : un incident clos est reconnu par son horodatage de cloture", () => {
+  const out = P.parseBackblaze(BACKBLAZE);
+  assert.ok(out);
+  assert.strictEqual(out.incidents.length, 1);
+  assert.strictEqual(out.incidents[0].name, "Increased latency in US-East");
+  assert.strictEqual(out.indicator, "major", "SEV2 vaut une panne majeure, pas le SEV1 deja referme");
+});
+
+/* Ses composants ne portent AUCUN etat : on ne peut donc pas dire
+   lesquels sont touches, et il vaut mieux ne rien affirmer que deviner. */
+test("Backblaze : aucun composant n'est declare touche, faute d'etat par composant", () => {
+  const out = P.parseBackblaze(BACKBLAZE);
+  assert.strictEqual(out.affected.length, 0);
+  assert.strictEqual(out.componentCount, 2);
+});
+
+test("Backblaze : sans incident ouvert, tout est operationnel", () => {
+  const calm = Object.assign({}, BACKBLAZE, { incidents: [BACKBLAZE.incidents[1]] });
+  const out = P.parseBackblaze(calm);
+  assert.strictEqual(out.ok, true);
+});
+
+test("Backblaze : ce qui n'est pas sa charge utile est refuse", () => {
+  assert.strictEqual(P.parseBackblaze({ components: [] }), null);
+  assert.strictEqual(P.parseBackblaze({ page: { status: "UP" } }), null);
+});
+
+console.log("== Les six entrees corrigees en 1.132.0 ==");
+
+test("Backblaze, Infomaniak et MEGA declarent desormais le bon format", () => {
+  const expect = { backblaze: "backblaze", infomaniak: "endpoint", mega: "endpoint" };
+  for (const id of Object.keys(expect)) {
+    const s = catalog.services.find((x) => x.id === id);
+    assert.ok(s, "entree disparue : " + id);
+    assert.strictEqual(s.adapter, expect[id]);
+  }
+});
+
 setTimeout(() => {
   console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS SERVICEPROVIDERS PASSENT");
   process.exit(failures ? 1 : 0);

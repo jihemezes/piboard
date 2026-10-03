@@ -33,6 +33,37 @@
 # Nouveautes / What's new
 
 
+## 1.132.0
+
+**AWS, OVHcloud et Backblaze lus correctement**
+
+AWS publie son etat dans un encodage inhabituel, et dans le sens
+inverse de celui qu'on avait suppose : c'est corrige, pour de bon cette
+fois. Les pages d'OVHcloud s'affichaient « Inconnu » pendant une
+maintenance, alors qu'une maintenance annoncee n'est pas une panne.
+Backblaze est desormais lu par un adaptateur dedie. Infomaniak et MEGA
+ne publiant rien de lisible, PiBoard verifie simplement que leur
+service repond.
+
+Enfin, un service retire du catalogue d'une version a l'autre le dit
+maintenant clairement, au lieu d'afficher indefiniment une erreur dont
+rien n'expliquait l'origine.
+
+---
+
+**AWS, OVHcloud and Backblaze read correctly**
+
+AWS publishes its state in an unusual encoding, and in the opposite
+byte order to the one assumed: fixed, for good this time. OVHcloud's
+pages read as "Unknown" during a maintenance, although an announced
+maintenance is not an outage. Backblaze now has its own adapter.
+Infomaniak and MEGA publish nothing readable, so PiBoard simply checks
+that their service answers.
+
+Finally, a service withdrawn from the catalogue between versions now
+says so, instead of showing an error for ever with nothing explaining
+where it came from.
+
 ## 1.131.0
 
 **Les derniers services muets de la tuile Statut de service**

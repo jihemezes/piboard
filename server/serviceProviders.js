@@ -137,8 +137,21 @@ function parseStatuspage(json) {
   if (!hasSection) return null;
 
   const status = json.status || {};
-  const indicator = Object.prototype.hasOwnProperty.call(INDICATOR_RANK, status.indicator)
-    ? status.indicator
+  /* « maintenance » ne figure pas dans les quatre indicateurs documentes
+     par Atlassian (none / minor / major / critical), mais les pages
+     d'OVHcloud le rendent -- et il ressortait donc en etat INCONNU,
+     alors meme que la tuile affichait en dessous les composants en
+     maintenance et « aucun incident en cours ». Une maintenance
+     declaree n'est pas une panne, et surtout pas une ignorance : elle
+     vaut « operationnel », l'information etant portee par la ligne de
+     maintenance. Meme regle que chez Instatus et Fastly.
+     "maintenance" is not among Atlassian's four documented indicators,
+     but OVHcloud's pages return it -- so it came out as UNKNOWN while
+     the tile showed the components under maintenance right below. A
+     declared maintenance is not an outage, and certainly not ignorance. */
+  const raw = status.indicator === "maintenance" ? "none" : status.indicator;
+  const indicator = Object.prototype.hasOwnProperty.call(INDICATOR_RANK, raw)
+    ? raw
     : "unknown";
 
   /* Les entetes de GROUPE (« group: true ») ne sont pas des composants :
@@ -986,6 +999,68 @@ function parseBetterstack(json) {
   return state;
 }
 
+/* ============================================================
+   12. Backblaze -- /data/payload.json
+   Page maison. Deux particularites qui obligent a la traiter a part :
+   ses composants ne portent AUCUN etat (juste un nom et un
+   identifiant), et ses incidents ne declarent pas « resolu » -- c'est
+   l'ABSENCE d'un horodatage de cloture qui dit qu'un incident est
+   encore ouvert. L'etat global se deduit donc des seuls incidents
+   ouverts, et non des composants comme partout ailleurs.
+   In-house page. Its components carry NO state at all, and its
+   incidents never declare "resolved": it is the ABSENCE of a closing
+   timestamp that marks one as still open. The overall state is
+   therefore inferred from open incidents alone. */
+const BACKBLAZE_SEV = { SEV1: "critical", SEV2: "major", SEV3: "minor", SEV4: "minor" };
+const BACKBLAZE_CLOSED = ["resolved", "closed", "completed", "ended"];
+
+function parseBackblaze(json) {
+  if (!json || typeof json !== "object" || Array.isArray(json)) return null;
+  if (!json.config || !Array.isArray(json.components)) return null;
+
+  const open = (Array.isArray(json.incidents) ? json.incidents : [])
+    .filter((i) => i && i.title)
+    .filter((i) => {
+      const ts = (i.timestamps && typeof i.timestamps === "object") ? i.timestamps : {};
+      return !BACKBLAZE_CLOSED.some((k) => ts[k]);
+    });
+
+  let indicator = "none";
+  for (const i of open) {
+    const sev = BACKBLAZE_SEV[String(i.severitySlug || "").toUpperCase()] || "minor";
+    if ((INDICATOR_RANK[sev] || 0) > (INDICATOR_RANK[indicator] || 0)) indicator = sev;
+  }
+
+  return emptyState({
+    name: (json.config && json.config.companyName) ? text(json.config.companyName, 120) : "Backblaze",
+    url: "https://status.backblaze.com",
+    indicator,
+    description: (json.config && json.config.operationalMessage && indicator === "none")
+      ? text(json.config.operationalMessage, 120) : null,
+    ok: indicator === "none",
+    componentCount: json.components.length,
+    /* Les composants n'ayant pas d'etat, on ne peut pas dire LESQUELS
+       sont touches : l'incident le dit dans son titre, et c'est tout ce
+       dont on dispose. Mieux vaut ne rien affirmer que de deviner.
+       The components have no state, so we cannot say WHICH are
+       affected; the incident says so in its title, and that is all we
+       have. Better to assert nothing than to guess. */
+    affected: [],
+    incidents: open.map((i) => ({
+      id: i.id || null,
+      name: text(i.title, 200),
+      status: i.severitySlug || null,
+      impact: BACKBLAZE_SEV[String(i.severitySlug || "").toUpperCase()] || "minor",
+      url: "https://status.backblaze.com",
+      startedAt: (i.timestamps && (i.timestamps.started || i.timestamps.detected)) || null,
+      updatedAt: (i.timestamps && (i.timestamps.investigating || i.timestamps.reported)) || null,
+      lastMessage: i.customerImpactSummary ? stripHtml(i.customerImpactSummary).slice(0, 600) : null,
+      components: []
+    })),
+    maintenances: []
+  });
+}
+
 /* ---------- Table des adaptateurs / adapter table ----------
    `path` : ce qu'on ajoute a l'origine quand le catalogue ne fournit pas
    d'adresse d'API explicite. `kind` : comment lire la reponse.
@@ -1020,6 +1095,7 @@ const ADAPTERS = {
      dit pas. The only adapter reading no document but observing an
      answer. */
   betterstack: { path: "/index.json", kind: "json", parse: parseBetterstack },
+  backblaze: { path: "/data/payload.json", kind: "json", parse: parseBackblaze },
   endpoint: { path: "/", kind: "probe", parse: parseEndpoint }
 };
 
@@ -1062,6 +1138,7 @@ module.exports = {
   parseVultr,
   parseEndpoint,
   parseBetterstack,
+  parseBackblaze,
   fromComponents,
   stripHtml,
   msFromAws,

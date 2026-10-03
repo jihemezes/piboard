@@ -146,6 +146,24 @@
          stored values remain the fallback, for hand-added services and
          for a catalogue that fails to load. */
       const src = (!p.custom && p.id && CATALOG.byId[p.id]) ? CATALOG.byId[p.id] : null;
+      /* SERVICE RETIRE DU CATALOGUE. Depuis que l'adresse est relue dans
+         le catalogue, une entree qu'on en retire laisse un fantome :
+         elle reste cochee, retombe sur l'adresse enregistree -- celle-la
+         meme qui ne marchait plus, raison pour laquelle on l'a retiree --
+         et affiche eternellement une erreur que decocher est le seul
+         moyen de faire taire, sans que rien ne le dise. C'est arrive a
+         « OVH travaux » des sa suppression. On le DIT donc, et on
+         n'interroge plus le reseau pour rien.
+         A SERVICE DROPPED FROM THE CATALOGUE leaves a ghost: still
+         ticked, falling back to the stored address -- the very one that
+         stopped working, which is why it was dropped -- and showing an
+         error for ever that only unticking can silence, with nothing
+         saying so. It happened to "OVH travaux" the day it was removed.
+         So we say it, and stop querying the network for nothing. */
+      if (!src && !p.custom && p.id && CATALOG.loaded) {
+        return { label: p.name || p.id, url: String(p.url || ""), adapter: "auto", api: null,
+                 alert: p.alert !== false, manual: false, retired: true };
+      }
       return {
       label: p.name || (src && src.name) || "",
       url: String((src && src.url) || p.url),
@@ -316,21 +334,39 @@
            service per reading, three needless requests each -- and at
            twenty-five services on the incident rhythm that becomes
            rude. */
-        const qs = targets.map((t) => "s=" + encodeURIComponent(
+        const live = targets.filter((t) => !t.retired);
+        if (!live.length) {
+          this.services = targets.map((t) => ({ label: t.label, error: "retired", retired: true }));
+          this.render(); this.arm(); this.firstLoadDone = true;
+          return;
+        }
+        const qs = live.map((t) => "s=" + encodeURIComponent(
           (t.adapter || "auto") + "~" + t.url + (t.api ? "~" + t.api : "")
         )).join("&");
         const r = await fetch("api/service-status?" + qs);
         if (!r.ok) throw new Error("http " + r.status);
         const data = await r.json();
         const list = Array.isArray(data.services) ? data.services : [];
-        this.services = list.map((svc, i) => Object.assign({}, svc, {
-          label: targets[i] ? (targets[i].label || svc.name || targets[i].url) : (svc.name || ""),
+        /* Les reponses suivent `live`, pas `targets` : les entrees
+           retirees n'ont pas ete demandees et doivent etre reinserees a
+           leur place, sans quoi chaque reponse glisserait d'un cran et
+           porterait le nom du service suivant -- et la cloche avec.
+           The answers follow `live`, not `targets`: retired entries
+           were not asked for and must be put back in place, otherwise
+           every answer would shift by one and carry the next service's
+           name -- and its bell with it. */
+        const answered = list.map((svc, i) => Object.assign({}, svc, {
+          label: live[i] ? (live[i].label || svc.name || live[i].url) : (svc.name || ""),
           /* La cloche suit le service, pas la reponse : c'est un reglage
              local, et le serveur n'en sait rien.
              The bell travels with the service, not the answer: it is a
              local setting the server knows nothing about. */
-          alert: targets[i] ? targets[i].alert !== false : true
+          alert: live[i] ? live[i].alert !== false : true
         }));
+        let next = 0;
+        this.services = targets.map((t) => (t.retired
+          ? { label: t.label, error: "retired", retired: true, alert: false }
+          : answered[next++]));
         this.fetchedAt = Date.now();
         this.updateCadence();
         this.notifyNewIncidents();
@@ -513,7 +549,8 @@
            that answers perfectly in an unknown format sends one looking
            for a network fault to solve an adapter problem -- which is
            exactly what happened with PayPal. */
-        const why = svc.error === "bad-url" ? "svcstatus.err.badUrl"
+        const why = svc.error === "retired" ? "svcstatus.err.retired"
+          : svc.error === "bad-url" ? "svcstatus.err.badUrl"
           : (svc.error === "bad-format" || svc.error === "bad-response") ? "svcstatus.err.badFormat"
             : svc.error === "http" ? "svcstatus.err.http"
               : "svcstatus.err.unreachable";

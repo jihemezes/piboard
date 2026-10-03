@@ -270,11 +270,23 @@ const CHARSET_RE = /charset\s*=\s*["']?([\w-]+)/i;
 function decodeText(buffer, contentType) {
   const m = CHARSET_RE.exec(String(contentType || ""));
   let label = m ? m[1].toLowerCase() : "utf-8";
-  /* « utf-16 » tout court designe, en pratique, du petit-boutien precede
-     d'une marque d'ordre -- et TextDecoder refuse l'etiquette nue.
-     Bare "utf-16" means little-endian with a BOM in practice, and
-     TextDecoder rejects the bare label. */
-  if (label === "utf-16" || label === "utf16") label = "utf-16le";
+
+  /* LA MARQUE D'ORDRE DES OCTETS FAIT FOI, avant l'etiquette. La version
+     precedente traduisait « utf-16 » par du petit-boutien, parce que
+     c'est le cas courant. AWS, lui, sert du GROS-boutien : sa reponse
+     commence par FE FF. Decodee a l'envers, elle ressortait en
+     ideogrammes, JSON.parse echouait, et la tuile affichait « format
+     inconnu » -- un progres sur « injoignable », mais toujours faux.
+     Deux octets lus au bon endroit valent mieux qu'une convention.
+     THE BYTE ORDER MARK WINS over the label. The previous version read
+     bare "utf-16" as little-endian, the common case; AWS serves BIG-
+     endian (FE FF). Decoded backwards it came out as ideograms,
+     JSON.parse failed and the tile said "unknown format" -- progress
+     over "unreachable", but still wrong. */
+  const head = buffer && buffer.byteLength >= 2 ? new Uint8Array(buffer.slice(0, 2)) : null;
+  if (head && head[0] === 0xFE && head[1] === 0xFF) label = "utf-16be";
+  else if (head && head[0] === 0xFF && head[1] === 0xFE) label = "utf-16le";
+  else if (label === "utf-16" || label === "utf16") label = "utf-16le";
   let out;
   try {
     out = new TextDecoder(label).decode(buffer);
