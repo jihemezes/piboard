@@ -660,6 +660,11 @@ const CATALOG_FIXTURE = {
           ]
         };
 const IH = { runs: [] };
+/* Journal des appels a l'API Formule 1 : il sert a verifier qu'une
+   carte decochee n'envoie plus sa requete.
+   Log of Formula 1 API calls: used to check that an unticked card no
+   longer sends its request. */
+const FETCHES = [];
 const CATALOG_ROUTE = { down: false, calls: [], fileCalls: [], body: () => CATALOG_FIXTURE };
 const SVC_DETECT_CALLS = [];
 let UPDATE_VERSION_SERVED = "9.9.9-test";
@@ -748,6 +753,57 @@ const dom = new JSDOM(html, {
          declenche qu'UN test.
          Internet health: current state, history and manual run. Runs are
          counted to check that ONE click triggers ONE test. */
+      /* Formule 1 (1.138.0) : saison, classements et resultats, lus sur
+         l'API Jolpica (successeur d'Ergast). Les relevés reproduisent la
+         forme REELLE de l'API, y compris ce qui pietine : un abandon
+         porte un statut et aucun temps.
+         Formula 1: season, standings and results from the Jolpica API.
+         The fixtures reproduce the API's REAL shape, including what
+         trips readers up: a retirement carries a status and no time. */
+      /* La tuile Sports mecaniques lit la MEME adresse Jolpica, mais a
+         travers le relais (/api/proxy) et avec son propre relevé plus
+         bas. On ne prend donc ici que les appels directs, ceux des
+         tests de la tuile Formule 1 -- sans quoi on repondrait a sa
+         place et ses tests tomberaient.
+         The Motorsport tile reads the SAME Jolpica address through the
+         relay and has its own fixture below; only direct calls are
+         answered here. */
+      const F1_DIRECT = u.includes("jolpi.ca") && !u.includes("/api/proxy");
+      if (F1_DIRECT) FETCHES.push(u);
+      if (F1_DIRECT && u.includes("driverStandings")) {
+        return json({ MRData: { StandingsTable: { StandingsLists: [{ DriverStandings: [
+          { position: "1", points: "302", wins: "8", Driver: { code: "ANT", givenName: "Andrea Kimi", familyName: "Antonelli", nationality: "Italian", permanentNumber: "12" }, Constructors: [{ constructorId: "mercedes", name: "Mercedes" }] },
+          { position: "2", points: "236", wins: "3", Driver: { code: "RUS", givenName: "George", familyName: "Russell", nationality: "British", permanentNumber: "63" }, Constructors: [{ constructorId: "mercedes", name: "Mercedes" }] }
+        ] }] } } });
+      }
+      if (F1_DIRECT && u.includes("constructorStandings")) {
+        return json({ MRData: { StandingsTable: { StandingsLists: [{ ConstructorStandings: [
+          { position: "1", points: "538", wins: "11", Constructor: { constructorId: "mercedes", name: "Mercedes" } },
+          { position: "2", points: "378", wins: "2", Constructor: { constructorId: "ferrari", name: "Ferrari" } }
+        ] }] } } });
+      }
+      if (F1_DIRECT && u.includes("/last/results")) {
+        return json({ MRData: { RaceTable: { Races: [{ season: "2026", round: "15", raceName: "Grand Prix d'essai", Results: [
+          { position: "1", points: "25", status: "Finished", Time: { time: "1:32:45.123" }, FastestLap: { rank: "1" },
+            Driver: { code: "ANT", givenName: "Andrea Kimi", familyName: "Antonelli", nationality: "Italian" }, Constructor: { constructorId: "mercedes", name: "Mercedes" } },
+          { position: "2", points: "18", status: "+5.432", Time: { time: "+5.432" },
+            Driver: { code: "RUS", givenName: "George", familyName: "Russell", nationality: "British" }, Constructor: { constructorId: "mercedes", name: "Mercedes" } },
+          { position: "18", points: "0", status: "Accident",
+            Driver: { code: "VER", givenName: "Max", familyName: "Verstappen", nationality: "Dutch" }, Constructor: { constructorId: "red_bull", name: "Red Bull" } }
+        ] }] } } });
+      }
+      if (F1_DIRECT) {
+        return json({ MRData: { RaceTable: { Races: [{
+          season: "2026", round: "16", raceName: "Bahrain Grand Prix in Malaysia",
+          date: "2026-10-04", time: "07:00:00Z",
+          Circuit: { circuitId: "sepang", circuitName: "Sepang International Circuit",
+            Location: { locality: "Kuala Lumpur", country: "Malaysia", lat: "2.76083", long: "101.738" } },
+          FirstPractice: { date: "2026-10-02", time: "04:30:00Z" },
+          SecondPractice: { date: "2026-10-02", time: "08:00:00Z" },
+          ThirdPractice: { date: "2026-10-03", time: "04:30:00Z" },
+          Qualifying: { date: "2026-10-03", time: "08:00:00Z" }
+        }] } } });
+      }
       if (u.includes("/api/internet-health/run")) {
         IH.runs.push(u);
         return json({ ok: true, point: { t: Date.now(), latencyMs: 12 } });
@@ -4634,7 +4690,15 @@ function catalogItemFor(catalog, document, widgetId) {
     const decl = block.slice(0, block.indexOf("];"));
 
     const families = [...decl.matchAll(/key:\s*"([a-z]+)"/g)].map((m) => m[1]);
-    const classified = new Set([...decl.matchAll(/"([a-z]+)"/g)].map((m) => m[1]));
+    /* Les identifiants peuvent contenir des chiffres (« f1 ») : le
+       filtre ne gardait que les lettres et declarait donc la tuile
+       Formule 1 « non classee » alors qu'elle figure bien dans la
+       famille Sport. Le controle porte sur le CLASSEMENT, pas sur
+       l'orthographe des identifiants.
+       Ids may contain digits ("f1"): the filter kept letters only and
+       therefore declared the Formula 1 tile "unclassified" although it
+       is listed under Sport. */
+    const classified = new Set([...decl.matchAll(/"([a-z][a-z0-9]*)"/g)].map((m) => m[1]));
 
     // Chaque famille doit avoir ses libelles dans les DEUX langues,
     // sinon la nouvelle rubrique s'afficherait avec sa cle brute.
@@ -9128,6 +9192,133 @@ function catalogItemFor(catalog, document, widgetId) {
     w.onSettingsChanged({ refreshSeconds: 60, chartHours: 24, showThroughput: true, showSparkline: false, showRunButton: false });
     await sleep(60);
     assert("le bouton disparait quand le reglage est decoche", !host.querySelector(".pwsp-run"));
+
+    w.destroy();
+    host.remove();
+  }
+
+  console.log("== Formule 1 : cartes, compte a rebours et abandons (1.138.0) ==");
+  {
+    let Klass = null;
+    const keep = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "f1") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/f1/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keep;
+    const H = window.PiBoardF1Helpers;
+    assert("la tuile Formule 1 est remontable a part", typeof Klass === "function");
+
+    /* --- Les fonctions pures, sur la forme REELLE de l'API --- */
+    const races = H.parseRaces({ MRData: { RaceTable: { Races: [
+      { season: "2026", round: "16", raceName: "GP de Malaisie", date: "2026-10-04", time: "07:00:00Z",
+        Circuit: { circuitName: "Sepang", Location: { country: "Malaysia", locality: "Kuala Lumpur" } },
+        FirstPractice: { date: "2026-10-02", time: "04:30:00Z" },
+        Qualifying: { date: "2026-10-03", time: "08:00:00Z" } },
+      { season: "2026", round: "17", raceName: "GP suivant", date: "2026-10-18", time: "13:00:00Z", Circuit: { Location: {} } }
+    ] } } });
+    assert("les seances sont lues et rangees dans l'ordre",
+      races[0].sessions.length === 3 && races[0].sessions[0].kind === "fp1"
+      && races[0].sessions[2].kind === "race");
+
+    /* L'HEURE EST EN UTC DANS L'API. Oublier le « Z » decalerait toutes
+       les seances de deux heures en ete : invisible sur une seance a
+       14 h, fatal pour une qualification a minuit. */
+    assert("l'heure de l'API est bien lue comme de l'UTC",
+      races[0].at === Date.parse("2026-10-04T07:00:00Z"));
+
+    /* LA COURSE EN COURS RESTE « LA PROCHAINE ». Pendant les deux heures
+       d'un Grand Prix, la course a commence mais n'est pas finie : la
+       compter comme passee afficherait le week-end suivant au moment ou
+       l'on regarde le plus la tuile. */
+    assert("une course commencee reste la prochaine course",
+      H.nextRace(races, Date.parse("2026-10-04T08:00:00Z")).round === 16);
+    assert("et c'est la suivante une fois la course terminee",
+      H.nextRace(races, Date.parse("2026-10-04T11:00:00Z")).round === 17);
+
+    /* LE COMPTE A REBOURS VISE LA PROCHAINE SEANCE, pas la course :
+       le samedi matin, savoir que les qualifications commencent dans
+       vingt minutes vaut mieux qu'un compte a rebours de deux jours. */
+    assert("le compte a rebours vise la prochaine seance a venir",
+      H.nextSession(races[0], Date.parse("2026-10-03T06:00:00Z")).kind === "quali");
+
+    const i18n = { t: (k) => ({ "f1.unit.d": "j", "f1.unit.h": "h", "f1.unit.m": "m", "f1.unit.s": "s",
+                                "clock.date.format": "fr-FR" }[k] || k),
+                   fromManifest: (o) => (o && (o.fr || o.en)) || "" };
+    /* Les jours restent affiches meme a zero : « 0j 09h » et « 09h » se
+       lisent pareil, mais la colonne ne change pas de largeur a chaque
+       seconde -- un chrono qui tressaute est illisible. */
+    assert("le compte a rebours garde une largeur constante",
+      H.countdown(9 * 3600000 + 19 * 60000 + 53000, i18n) === "0j 09h 19m 53s");
+
+    /* UN ABANDON N'EST PAS UNE VINGTIEME PLACE. L'API rend bien une
+       position finale, mais le statut dit « Accident » : afficher
+       « 18e » pour une voiture partie au mur raconte une autre course
+       que celle qui a eu lieu. */
+    const res = H.parseResults({ MRData: { RaceTable: { Races: [{ raceName: "X", round: "15", Results: [
+      { position: "1", points: "25", status: "Finished", Time: { time: "1:32:45" }, FastestLap: { rank: "1" }, Driver: { code: "ANT", nationality: "Italian" }, Constructor: { constructorId: "mercedes" } },
+      { position: "18", points: "0", status: "Accident", Driver: { code: "VER", nationality: "Dutch" }, Constructor: { constructorId: "red_bull" } }
+    ] }] } } });
+    assert("un abandon est marque comme tel, et non comme un classement",
+      res.rows[0].finished === true && res.rows[1].finished === false && res.rows[1].status === "Accident");
+    assert("le meilleur tour en course est repere", res.rows[0].fastest === true);
+
+    /* Les couleurs d'ecurie remplacent les logos, qui sont des marques
+       deposees : une teinte ne s'emprunte a personne. */
+    assert("chaque ecurie connue a sa couleur, et l'inconnue retombe sur une teinte neutre",
+      H.colorFor("ferrari") === "#E8002D" && /var\(/.test(H.colorFor("ecurie-inconnue")));
+
+    /* UNE ETIQUETTE DE LANGUE MANQUANTE NE DOIT PAS EFFACER LA TUILE.
+       `toLocaleDateString` ne rend pas une date approximative quand le
+       format est invalide : il LEVE une exception, et toute la tuile
+       disparait -- pour une etiquette qui ne sert qu'a choisir entre
+       « 04/10 » et « 10/04 ». Defaut trouve par ce test. */
+    {
+      const hostB = document.createElement("div");
+      document.body.appendChild(hostB);
+      const wB = new Klass({
+        el: hostB, settings: { showNext: true, showSchedule: false, showDrivers: false, showConstructors: false, showResults: false },
+        i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
+        api: { proxyUrl: (u) => u }
+      });
+      wB.init();
+      await sleep(100);
+      assert("sans format de date traduit, la tuile s'affiche quand meme",
+        !!hostB.querySelector(".pwf1-card"));
+      wB.destroy();
+      hostB.remove();
+    }
+
+    /* --- Le rendu, et le choix des cartes --- */
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const settings = { season: "", showNext: true, showSchedule: true, showDrivers: true,
+                       showConstructors: true, showResults: true, driverRows: 10,
+                       constructorRows: 10, resultRows: 10, showTeamColors: true, refreshMinutes: 30 };
+    const w = new Klass({
+      el: host, settings, i18n,
+      api: { proxyUrl: (u) => u }
+    });
+    w.init();
+    await sleep(120);
+
+    assert("les cinq cartes demandees sont affichees", host.querySelectorAll(".pwf1-card").length === 5);
+    assert("le compte a rebours bat dans la carte « prochaine course »",
+      !!host.querySelector(".pwf1-cd[data-cd]") && /\dj \d\d h?/.test((host.querySelector(".pwf1-cd").textContent || "").replace("h", " h")));
+    assert("le classement pilotes porte les points et les victoires",
+      /302/.test(host.textContent) && /Antonelli/.test(host.textContent));
+    assert("le classement constructeurs est distinct du classement pilotes",
+      /538/.test(host.textContent));
+    assert("un abandon s'affiche sans position dans les resultats",
+      !!host.querySelector(".pwf1-dnf") && /Accident/.test(host.textContent));
+
+    /* DECOCHER UNE CARTE DOIT AUSSI EVITER SA REQUETE : une API
+       communautaire gratuite se partage, et demander quatre fichiers
+       pour n'en afficher qu'un serait impoli. */
+    const before = FETCHES.filter((u) => /jolpi/.test(u)).length;
+    w.onSettingsChanged(Object.assign({}, settings, { showDrivers: false, showConstructors: false, showResults: false }));
+    await sleep(120);
+    assert("une carte decochee disparait", host.querySelectorAll(".pwf1-card").length === 2);
+    const added = FETCHES.filter((u) => /jolpi/.test(u)).length - before;
+    assert("et sa requete n'est plus envoyee", added <= 1);
 
     w.destroy();
     host.remove();

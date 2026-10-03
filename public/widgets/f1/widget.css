@@ -1,0 +1,165 @@
+/* Tuile Formule 1. Toutes les classes sont prefixees `pwf1-` sous
+   `.pw-f1` : c'est la regle du projet, et un scanner de test la fait
+   respecter.
+   Every class is namespaced `pwf1-` under `.pw-f1`. */
+
+.pw-f1 {
+  height: 100%;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+}
+
+/* LES CARTES SE RANGENT EN COLONNES SELON LA LARGEUR, comme les
+   rubriques de la tuile Statut de service. Une tuile large montre la
+   prochaine course a cote du classement ; une tuile etroite les empile.
+   Figer deux colonnes rendrait la tuile inutilisable des qu'on la
+   retrecit, et c'est precisement une tuile qu'on redimensionne beaucoup
+   puisqu'elle contient de quoi remplir un ecran.
+   CARDS FLOW INTO COLUMNS ACCORDING TO WIDTH. Fixing two columns would
+   make the tile unusable as soon as it is narrowed -- and this is
+   exactly a tile one resizes a lot, since it holds enough to fill a
+   screen. */
+.pw-f1 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-content: start; }
+
+.pw-f1 .pwf1-card {
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius, 10px);
+  padding: 8px 10px 10px;
+  min-width: 0;
+}
+
+.pw-f1 .pwf1-card-title {
+  margin: 0 0 6px;
+  font-size: .78em;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.pw-f1 .pwf1-msg,
+.pw-f1 .pwf1-stale {
+  color: var(--muted);
+  font-size: .9em;
+}
+.pw-f1 .pwf1-stale { grid-column: 1 / -1; }
+
+/* ---------- Prochaine course ---------- */
+.pw-f1 .pwf1-next-head {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.pw-f1 .pwf1-round {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+}
+.pw-f1 .pwf1-round::after { content: " :"; }
+.pw-f1 .pwf1-race { font-weight: 650; }
+.pw-f1 .pwf1-next-sub { color: var(--muted); font-size: .88em; margin-top: 2px; }
+
+.pw-f1 .pwf1-cd-wrap {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--card-bg, rgba(127, 127, 127, .10));
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.pw-f1 .pwf1-cd-label { font-size: .78em; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); }
+
+/* Chiffres a CHASSE FIXE : sans cela, le compte a rebours change de
+   largeur a chaque seconde et la carte entiere tressaute.
+   TABULAR figures: otherwise the countdown changes width every second
+   and the whole card jitters. */
+.pw-f1 .pwf1-cd {
+  font-variant-numeric: tabular-nums;
+  font-size: 1.55em;
+  font-weight: 600;
+  letter-spacing: .02em;
+}
+.pw-f1 .pwf1-cd-now { color: var(--ok); }
+.pw-f1 .pwf1-next-when { margin-top: 4px; color: var(--muted); font-size: .85em; }
+
+/* ---------- Programme du week-end ---------- */
+.pw-f1 .pwf1-sched-head { font-weight: 600; margin-bottom: 4px; }
+.pw-f1 .pwf1-sess {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pw-f1 .pwf1-sess:last-child { border-bottom: 0; }
+.pw-f1 .pwf1-sess-when { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* La seance EN COURS est mise en avant, les seances passees estompees :
+   sur un programme de sept lignes, c'est la seule qu'on cherche.
+   The LIVE session is highlighted, past ones dimmed. */
+.pw-f1 .pwf1-sess-live { color: var(--accent); font-weight: 650; }
+.pw-f1 .pwf1-sess-past { opacity: .45; }
+
+/* ---------- Tableaux ---------- */
+.pw-f1 .pwf1-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.pw-f1 .pwf1-table th {
+  text-align: left;
+  font-size: .72em;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+  font-weight: 600;
+  padding-bottom: 2px;
+}
+.pw-f1 .pwf1-table th:nth-child(3),
+.pw-f1 .pwf1-table th:nth-child(4) { text-align: right; }
+.pw-f1 .pwf1-table td { padding: 2px 0; border-top: 1px solid var(--tile-edge); }
+
+.pw-f1 .pwf1-pos { width: 2ch; color: var(--muted); text-align: right; padding-right: 6px; }
+.pw-f1 .pwf1-pts, .pw-f1 .pwf1-wins, .pw-f1 .pwf1-gap { text-align: right; padding-left: 8px; white-space: nowrap; }
+.pw-f1 .pwf1-pts { font-weight: 650; }
+.pw-f1 .pwf1-wins, .pw-f1 .pwf1-gap { color: var(--muted); }
+
+.pw-f1 .pwf1-who {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+/* Le nom cede la place avant tout le reste : un nom tronque reste
+   identifiable grace au code a trois lettres juste a cote, alors qu'un
+   nombre de points tronque ne veut plus rien dire.
+   The name yields before anything else: a truncated name stays
+   identifiable thanks to the three-letter code beside it, while a
+   truncated points figure means nothing. */
+.pw-f1 .pwf1-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-f1 .pwf1-code { font-weight: 650; letter-spacing: .03em; flex: 0 0 auto; }
+.pw-f1 .pwf1-num { color: var(--muted); font-size: .85em; flex: 0 0 auto; }
+.pw-f1 .pwf1-flag { flex: 0 0 auto; }
+
+/* La couleur d'ecurie, en remplacement des logos : une marque ne
+   s'embarque pas dans un depot libre, une teinte si.
+   The team colour, standing in for logos. */
+.pw-f1 .pwf1-team {
+  flex: 0 0 auto;
+  width: 4px;
+  height: 1.1em;
+  border-radius: 2px;
+  background: var(--pwf1-team, var(--muted));
+}
+
+/* Un abandon est estompe ET prive de sa position : « 18e » pour une
+   voiture partie au mur au deuxieme tour raconte une autre course que
+   celle qui a eu lieu.
+   A retirement is dimmed AND stripped of its position. */
+.pw-f1 .pwf1-dnf { opacity: .55; }
+.pw-f1 .pwf1-dnf .pwf1-gap { font-style: italic; }
+.pw-f1 .pwf1-fast { color: var(--accent); flex: 0 0 auto; }

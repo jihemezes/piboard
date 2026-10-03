@@ -1455,6 +1455,69 @@
       }
     },
 
+    /* ================= FORMULE 1 ================= */
+    {
+      id: "f1",
+      group: "tiles",
+      title: { fr: "Formule 1", en: "Formula 1" },
+      sub: {
+        fr: "Le week-end de F1, carte par carte.",
+        en: "The F1 weekend, card by card."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 6×8 par défaut, de 3×3 à 12×16</span>
+          <h4>Objectif</h4>
+          <p>Rassembler sur une seule tuile ce qu'un amateur de Formule 1 regarde pendant un week-end de Grand Prix : <b>quand ça commence</b>, <b>qui mène</b>, et <b>ce qui s'est passé la dernière fois</b>. La tuile est faite de <b>cartes</b> que l'on affiche ou que l'on cache une à une.</p>
+
+          <h4>Les cinq cartes</h4>
+          <div class="help-opt"><span class="help-opt-name">Prochaine course</span><span class="help-opt-desc">Le Grand Prix à venir, son circuit, son pays et un <b>compte à rebours à la seconde</b>. Pendant le week-end, il vise la prochaine <b>séance</b> et non la course : le samedi matin, savoir que les qualifications commencent dans vingt minutes vaut mieux qu'un compte à rebours de deux jours.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Programme du week-end</span><span class="help-opt-desc">Toutes les séances avec leur jour et leur heure <b>dans votre fuseau</b>. L'API donne l'heure en UTC : un Grand Prix à 7 h UTC se court à 9 h chez vous, et c'est cette heure-là qui vous concerne. La séance en cours est mise en avant, les séances passées estompées.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Classement pilotes</span><span class="help-opt-desc">Position, drapeau, code à trois lettres, numéro, points et victoires.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Classement constructeurs</span><span class="help-opt-desc">Le championnat des écuries, dans la même forme.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Dernière course</span><span class="help-opt-desc">L'ordre d'arrivée, l'écart au vainqueur, les points, et le meilleur tour marqué d'un chronomètre.</span></div>
+
+          <h4>Un abandon n'est pas une vingtième place</h4>
+          <p>L'API rend bien un classement final pour toutes les voitures, y compris celles parties au mur au deuxième tour. Afficher « 18<sup>e</sup> » pour une voiture qui n'a pas terminé raconte une autre course que celle qui a eu lieu : la tuile affiche donc <b>la cause de l'abandon</b> (Accident, Moteur, Boîte de vitesses…) à la place de la position, et la ligne est estompée.</p>
+
+          <h4>Pas de logos, et c'est voulu</h4>
+          <p>Les logos d'écuries, les photos de pilotes et les plans de circuits officiels sont des <b>marques déposées et des visuels sous droits</b>. PiBoard est publié sous licence libre sur un dépôt public : il ne les embarque pas. À la place, chaque ligne porte la <b>couleur de l'écurie</b> et le <b>code à trois lettres</b> du pilote (ANT, HAM, VER) — on reconnaît une ligne aussi vite, et sans rien devoir à personne. Le drapeau est un émoji : sur une machine sans police émoji complète, le code reste lisible et l'information n'est pas perdue.</p>
+
+          <h4>Une tuile, ou plusieurs ?</h4>
+          <p>Les cinq cartes vivent du <b>même relevé</b> : les afficher toutes ne coûte pas cinq fois plus de requêtes, et les classements ne peuvent pas se retrouver une course en avance sur les résultats. Si vous préférez répartir les cartes sur le tableau, posez <b>plusieurs tuiles Formule 1</b> avec des cartes différentes : elles partagent le cache du relais, donc cela ne coûte pas davantage. Une carte décochée n'est <b>pas demandée du tout</b> à l'API — elle est gratuite et partagée par tous, autant être poli.</p>
+
+          <h4>Source</h4>
+          <p>L'API <b>Jolpica</b>, successeur communautaire d'Ergast (fermé fin 2024), sans clé ni compte. C'est la même source que les intégrations Formule 1 de Home Assistant, et celle que lit déjà la tuile <i>Sports mécaniques</i>. L'historique couvre le championnat depuis 1950 : le réglage <b>Saison</b> accepte n'importe quelle année.</p>
+          <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide pour la saison en cours, ou une année.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Cartes</span><span class="help-opt-desc">Cinq cases à cocher, une par carte.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Lignes affichées</span><span class="help-opt-desc">Par tableau : vingt-deux lignes sont illisibles sur une tuile moyenne, dix couvrent ce qui se joue.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchir</span><span class="help-opt-desc">30 min par défaut. Un classement ne bouge qu'après une course ; le compte à rebours, lui, s'égrène sans rien demander au réseau.</span></div>`,
+        en: `
+          <span class="help-size">Size: 6×8 by default, from 3×3 to 12×16</span>
+          <h4>Purpose</h4>
+          <p>To gather on a single tile what a Formula 1 follower looks at during a Grand Prix weekend: <b>when it starts</b>, <b>who leads</b>, and <b>what happened last time</b>. The tile is made of <b>cards</b> shown or hidden one by one.</p>
+
+          <h4>The five cards</h4>
+          <div class="help-opt"><span class="help-opt-name">Next race</span><span class="help-opt-desc">The upcoming Grand Prix, its circuit, its country and a <b>countdown to the second</b>. During the weekend it targets the next <b>session</b> rather than the race: on Saturday morning, knowing qualifying starts in twenty minutes beats a two-day countdown.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Weekend timetable</span><span class="help-opt-desc">Every session with its day and time <b>in your own time zone</b>. The API gives UTC; that is not the hour that concerns you. The live session is highlighted, past ones dimmed.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Driver standings</span><span class="help-opt-desc">Position, flag, three-letter code, number, points and wins.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Constructor standings</span><span class="help-opt-desc">The teams' championship, in the same shape.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Last race</span><span class="help-opt-desc">The finishing order, the gap to the winner, the points, and the fastest lap marked with a stopwatch.</span></div>
+
+          <h4>A retirement is not a twentieth place</h4>
+          <p>The API returns a final classification for every car, including those that hit the wall on lap two. Showing "18th" for a car that did not finish tells a different story from the race that took place: the tile shows <b>the cause of the retirement</b> (Accident, Engine, Gearbox…) instead of the position, and dims the row.</p>
+
+          <h4>No logos, deliberately</h4>
+          <p>Team logos, driver photos and official circuit maps are <b>registered trademarks and copyrighted visuals</b>. PiBoard is published under a free licence on a public repository and does not embed them. Instead each row carries the <b>team colour</b> and the driver's <b>three-letter code</b> (ANT, HAM, VER) — just as quick to recognise, and owing nothing to anyone. The flag is an emoji: on a machine without a complete emoji font the code stays readable and nothing is lost.</p>
+
+          <h4>One tile, or several?</h4>
+          <p>The five cards live off the <b>same reading</b>: showing them all does not cost five times the requests, and the standings cannot end up one race ahead of the results. If you prefer spreading the cards across the board, place <b>several Formula 1 tiles</b> with different cards: they share the relay's cache, so it costs no more. An unticked card is <b>not requested at all</b> — the API is free and shared by everyone, so it is only polite.</p>
+
+          <h4>Source</h4>
+          <p>The <b>Jolpica</b> API, the community successor to Ergast (closed at the end of 2024), with no key and no account. It is the same source as Home Assistant's Formula 1 integrations, and the one the <i>Motorsport schedule</i> tile already reads. History covers the championship since 1950: the <b>Season</b> setting accepts any year.</p>`
+      }
+    },
+
     {
       id: "motorsport",
       group: "tiles",

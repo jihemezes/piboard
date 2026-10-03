@@ -4074,7 +4074,7 @@
        unclassified and therefore landed in "Miscellaneous", far from
        the tile it is used with. */
     { key: "entertainment", ids: ["teleprog", "iptv", "iptvrec", "youtube", "slideshow"] },
-    { key: "sport", ids: ["motorsport", "sportscore", "standings"] },
+    { key: "sport", ids: ["f1", "motorsport", "sportscore", "standings"] },
     /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
        systeme, elle surveille une consommation et un seuil, meme si la
        ressource surveillee n'est pas celle de la machine.

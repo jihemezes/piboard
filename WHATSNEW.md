@@ -33,6 +33,37 @@
 # Nouveautes / What's new
 
 
+## 1.138.0
+
+**Une tuile Formule 1**
+
+Prochaine course avec son compte a rebours, programme complet du
+week-end a votre heure, classement pilotes, classement constructeurs et
+resultats de la derniere course : chaque information est une carte que
+l'on affiche ou que l'on cache. Pendant un week-end de Grand Prix, le
+compte a rebours vise la prochaine seance plutot que la course -- savoir
+que les qualifications commencent dans vingt minutes est plus utile
+qu'un compte a rebours de deux jours.
+
+Les donnees viennent de l'API gratuite Jolpica, sans clé ni compte, qui
+couvre le championnat depuis 1950 : le reglage Saison accepte n'importe
+quelle annee.
+
+---
+
+**A Formula 1 tile**
+
+The next race with its countdown, the full weekend timetable in your own
+time, driver standings, constructor standings and the last race's
+results: each piece of information is a card you show or hide. During a
+Grand Prix weekend the countdown targets the next session rather than
+the race -- knowing qualifying starts in twenty minutes beats a two-day
+countdown.
+
+Data comes from the free Jolpica API, with no key and no account,
+covering the championship since 1950: the Season setting accepts any
+year.
+
 ## 1.137.0
 
 **Un test de ligne a la demande**

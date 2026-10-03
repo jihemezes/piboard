@@ -1,0 +1,164 @@
+{
+  "_comment_fr": "Chaque carte s'affiche ou se cache indépendamment, et toutes sont alimentées par le MÊME relevé : en afficher cinq ne coûte pas cinq fois plus de requêtes. Posez plusieurs tuiles Formule 1 si vous préférez répartir les cartes sur le tableau — elles partagent le même cache côté serveur.",
+  "_comment_en": "Each card is shown or hidden independently, and all of them are fed by the SAME reading: showing five does not cost five times the requests. Place several Formula 1 tiles if you prefer spreading the cards across the board — they share the same server-side cache.",
+  "id": "f1",
+  "version": "1.0.0",
+  "name": {
+    "en": "Formula 1",
+    "fr": "Formule 1"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "A Formula 1 dashboard as cards you show or hide: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings and the last race's results. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every card.",
+    "fr": "Tableau de bord Formule 1 en cartes que l'on affiche ou non : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs et résultats de la dernière course. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente toutes les cartes."
+  },
+  "tagline": {
+    "en": "The F1 weekend, card by card.",
+    "fr": "Le week-end de F1, carte par carte."
+  },
+  "size": {
+    "w": 6,
+    "h": 8,
+    "minW": 3,
+    "minH": 3,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "season",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Season",
+        "fr": "Saison"
+      },
+      "hint": {
+        "en": "Empty = current season. A year (2024, 2025…) to look at a past season: the API covers the championship since 1950.",
+        "fr": "Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée : l'API couvre tout le championnat depuis 1950."
+      }
+    },
+    {
+      "key": "showNext",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Next race\" card",
+        "fr": "Carte « Prochaine course »"
+      },
+      "hint": {
+        "en": "The upcoming Grand Prix, its circuit, its country, and a countdown to the second until lights out. During the weekend the countdown targets the next SESSION rather than the race: knowing qualifying starts in twenty minutes beats a two-day countdown.",
+        "fr": "Le Grand Prix à venir, son circuit, son pays, et un compte à rebours à la seconde jusqu'au départ. Pendant le week-end, le compte à rebours vise la prochaine SÉANCE et non la course : savoir que les qualifications commencent dans vingt minutes est plus utile qu'un compte à rebours de deux jours."
+      }
+    },
+    {
+      "key": "showSchedule",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Weekend timetable\" card",
+        "fr": "Carte « Programme du week-end »"
+      },
+      "hint": {
+        "en": "Every session — practice, sprint, qualifying, race — with its day and time IN YOUR OWN TIME ZONE. The live session is highlighted, past ones dimmed.",
+        "fr": "Toutes les séances — essais libres, sprint, qualifications, course — avec leur jour et leur heure DANS VOTRE FUSEAU. Un Grand Prix en Malaisie se court à 7 h UTC, soit 9 h chez vous : l'heure brute de l'API n'est pas celle qui vous concerne. La séance en cours est mise en avant, les séances passées estompées."
+      }
+    },
+    {
+      "key": "showDrivers",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Driver standings\" card",
+        "fr": "Carte « Classement pilotes »"
+      }
+    },
+    {
+      "key": "showConstructors",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Constructor standings\" card",
+        "fr": "Carte « Classement constructeurs »"
+      }
+    },
+    {
+      "key": "showResults",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Last race results\" card",
+        "fr": "Carte « Résultats de la dernière course »"
+      },
+      "hint": {
+        "en": "The finishing order of the last race run, with the gap to the winner and the points scored. Retirements are shown as such rather than as a last place: finishing twentieth and not finishing are not the same story.",
+        "fr": "Le classement d'arrivée de la dernière course disputée, avec l'écart au vainqueur et les points marqués. Les abandons sont indiqués comme tels, et non comme une dernière place : terminer vingtième et ne pas terminer ne sont pas la même histoire."
+      }
+    },
+    {
+      "key": "driverRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 24,
+      "label": {
+        "en": "Drivers shown",
+        "fr": "Pilotes affichés"
+      },
+      "hint": {
+        "en": "Twenty-two rows make the table unreadable on a medium tile. Ten covers everything actually at stake.",
+        "fr": "Vingt-deux lignes rendent le classement illisible sur une tuile moyenne. Dix couvre tout ce qui se joue vraiment."
+      }
+    },
+    {
+      "key": "constructorRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 12,
+      "label": {
+        "en": "Teams shown",
+        "fr": "Écuries affichées"
+      }
+    },
+    {
+      "key": "resultRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 24,
+      "label": {
+        "en": "Results shown",
+        "fr": "Résultats affichés"
+      }
+    },
+    {
+      "key": "showTeamColors",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Team colours",
+        "fr": "Couleurs d'écurie"
+      },
+      "hint": {
+        "en": "A chip in the team's colour before each driver. Official logos and photos are registered trademarks, so PiBoard does not embed them; the colour does the same job of instant recognition.",
+        "fr": "Une pastille de la couleur de l'écurie devant chaque pilote. Les logos et les photos officiels sont des marques déposées : PiBoard ne les embarque pas, et la couleur fait le même travail de reconnaissance immédiate."
+      }
+    },
+    {
+      "key": "refreshMinutes",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 360,
+      "label": {
+        "en": "Refresh every (minutes)",
+        "fr": "Rafraîchir toutes les (minutes)"
+      },
+      "hint": {
+        "en": "Standings only move after a race. The countdown ticks every second without asking the network for anything.",
+        "fr": "Un classement ne bouge qu'après une course. Le compte à rebours, lui, s'égrène à la seconde sans rien demander au réseau."
+      }
+    }
+  ]
+}

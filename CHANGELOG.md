@@ -1,5 +1,55 @@
 # Changelog
 
+## 1.138.0
+
+- **Nouvelle tuile « Formule 1 »**, en cartes que l'on affiche ou que
+  l'on cache : prochaine course avec compte a rebours, programme du
+  week-end dans le fuseau local, classement pilotes, classement
+  constructeurs et resultats de la derniere course. Partie d'un tableau
+  de bord Home Assistant a reproduire ; meme source, memes chiffres.
+
+- **Une tuile a cartes plutot que cinq tuiles**, et c'est un choix. Les
+  cinq cartes vivent du MEME relevé : en tuiles separees, cinq tuiles
+  interrogeraient cinq fois la meme API pour afficher cinq morceaux du
+  meme objet, et le classement pourrait afficher une course d'avance sur
+  les resultats pendant quelques minutes. Qui veut repartir ses cartes
+  sur le tableau pose plusieurs tuiles Formule 1 : elles partagent le
+  cache du relais. Une carte DECOCHEE n'est pas demandee du tout --
+  l'API est gratuite et partagee, autant etre poli.
+
+- **Le compte a rebours vise la prochaine SEANCE, pas la course.** Le
+  samedi matin, savoir que les qualifications commencent dans vingt
+  minutes vaut mieux qu'un compte a rebours de deux jours. Et une course
+  COMMENCEE reste « la prochaine » pendant trois heures : la compter
+  comme passee afficherait le week-end suivant au moment ou l'on regarde
+  le plus la tuile.
+
+- **Un abandon n'est pas une vingtieme place.** L'API rend un classement
+  final pour toutes les voitures, y compris celles parties au mur au
+  deuxieme tour. La tuile affiche la CAUSE (Accident, Moteur...) a la
+  place de la position, et estompe la ligne : afficher « 18e » raconte
+  une autre course que celle qui a eu lieu.
+
+- **Ni logos d'ecuries, ni photos de pilotes, ni plans officiels** : ce
+  sont des marques deposees et des visuels sous droits, et PiBoard est
+  publie sous licence libre sur un depot public. La couleur d'ecurie et
+  le code a trois lettres (ANT, HAM, VER) font le meme travail de
+  reconnaissance immediate. Le drapeau est un emoji, et le code reste
+  lisible sur une machine sans police emoji complete : une icone
+  manquante ne doit pas emporter l'information.
+
+- **Deux defauts trouves par les tests, pas a la relecture** : l'heure
+  de l'API est en UTC et un « Z » oublie decalait toutes les seances de
+  deux heures en ete (invisible sur une seance a 14 h, fatal pour une
+  qualification a minuit) ; et une etiquette de langue manquante faisait
+  LEVER une exception a `toLocaleDateString`, donc disparaitre la tuile
+  entiere -- pour une etiquette qui ne sert qu'a choisir entre
+  « 04/10 » et « 10/04 ».
+
+- **Correctif au controle du catalogue** : il ne reconnaissait que les
+  identifiants en lettres, et declarait donc « f1 » non classee alors
+  qu'elle figure bien dans la famille Sport.
+
 ## 1.137.0
 
 - **Bouton « Tester maintenant » sur la face de la tuile Sante
