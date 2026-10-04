@@ -381,16 +381,45 @@
       }
 
       const now = Date.now();
-      const cards = [];
-      if (s.showNext !== false) cards.push(this.cardNext(now));
-      if (s.showSchedule !== false) cards.push(this.cardSchedule(now));
-      if (s.showDrivers !== false) cards.push(this.cardDrivers());
-      if (s.showConstructors !== false) cards.push(this.cardConstructors());
-      if (s.showResults !== false) cards.push(this.cardResults());
+      const wanted = [
+        s.showNext !== false ? () => this.cardNext(now) : null,
+        s.showSchedule !== false ? () => this.cardSchedule(now) : null,
+        s.showDrivers !== false ? () => this.cardDrivers() : null,
+        s.showConstructors !== false ? () => this.cardConstructors() : null,
+        s.showResults !== false ? () => this.cardResults() : null
+      ].filter(Boolean);
+
+      /* UNE SEULE CARTE COCHEE : LA TUILE DEVIENT CETTE CARTE. Plus de
+         cadre interne, plus de titre interne -- la barre de titre de la
+         tuile en tient lieu, et elle se renomme dans les reglages
+         universels.
+
+         C'EST LA REPONSE AU VRAI BESOIN : on ne peut pas deplacer ni
+         redimensionner des cartes a l'interieur d'une tuile, et il
+         serait absurde de rebatir une grille dans la grille. PiBoard en
+         a deja une, excellente. Pour disposer les cartes librement, on
+         pose donc PLUSIEURS tuiles Formule 1 en ne cochant qu'une carte
+         dans chacune : chaque carte devient alors une vraie tuile, qui
+         se deplace et se redimensionne comme n'importe quelle autre. Le
+         relais serveur partage le cache, donc cinq tuiles ne coutent
+         pas cinq fois plus de requetes -- l'argument qui m'avait fait
+         preferer une tuile unique ne tenait pas.
+
+         ONE CARD TICKED: THE TILE BECOMES THAT CARD -- no inner frame,
+         no inner title, the tile's own title bar does the job. This is
+         the answer to the real need: cards cannot be moved or resized
+         inside a tile, and rebuilding a grid inside the grid would be
+         absurd when PiBoard already has an excellent one. To arrange the
+         cards freely, place SEVERAL Formula 1 tiles with a single card
+         ticked in each. The relay shares its cache, so five tiles do not
+         cost five times the requests -- the argument that made me prefer
+         a single tile did not hold. */
+      this.solo = wanted.length === 1;
+      const cards = wanted.map((fn) => fn());
 
       const body = cards.filter(Boolean).join("");
       el.innerHTML = `
-        <div class="pw-f1">
+        <div class="pw-f1${this.solo ? " pwf1-solo" : ""}">
           ${body || `<div class="pwf1-msg">${esc(i18n.t("f1.noCard"))}</div>`}
           ${this.error ? `<div class="pwf1-stale">${esc(i18n.t("f1.stale"))}</div>` : ""}
         </div>`;
@@ -413,10 +442,13 @@
     }
 
     card(title, inner, extraClass) {
-      return `<section class="pwf1-card${extraClass ? " " + extraClass : ""}">
-        <h3 class="pwf1-card-title">${esc(title)}</h3>
-        ${inner}
-      </section>`;
+      /* En solo, le titre interne ferait doublon avec la barre de titre
+         de la tuile, qui porte deja le nom -- et que l'on peut renommer
+         (« Pilotes 2026 ») dans les reglages universels.
+         In solo mode the inner title would duplicate the tile's own
+         title bar, which can be renamed in the universal settings. */
+      const head = this.solo ? "" : `<h3 class="pwf1-card-title">${esc(title)}</h3>`;
+      return `<section class="pwf1-card${extraClass ? " " + extraClass : ""}">${head}${inner}</section>`;
     }
 
     cardNext(now) {

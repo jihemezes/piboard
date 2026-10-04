@@ -1483,8 +1483,10 @@
           <h4>Pas de logos, et c'est voulu</h4>
           <p>Les logos d'écuries, les photos de pilotes et les plans de circuits officiels sont des <b>marques déposées et des visuels sous droits</b>. PiBoard est publié sous licence libre sur un dépôt public : il ne les embarque pas. À la place, chaque ligne porte la <b>couleur de l'écurie</b> et le <b>code à trois lettres</b> du pilote (ANT, HAM, VER) — on reconnaît une ligne aussi vite, et sans rien devoir à personne. Le drapeau est un émoji : sur une machine sans police émoji complète, le code reste lisible et l'information n'est pas perdue.</p>
 
-          <h4>Une tuile, ou plusieurs ?</h4>
-          <p>Les cinq cartes vivent du <b>même relevé</b> : les afficher toutes ne coûte pas cinq fois plus de requêtes, et les classements ne peuvent pas se retrouver une course en avance sur les résultats. Si vous préférez répartir les cartes sur le tableau, posez <b>plusieurs tuiles Formule 1</b> avec des cartes différentes : elles partagent le cache du relais, donc cela ne coûte pas davantage. Une carte décochée n'est <b>pas demandée du tout</b> à l'API — elle est gratuite et partagée par tous, autant être poli.</p>
+          <h4>Disposer les cartes comme vous voulez</h4>
+          <p><b>Ne cochez qu'une seule carte, et posez autant de tuiles Formule 1 que de cartes voulues.</b> Une tuile à carte unique n'affiche ni cadre ni titre interne : elle <i>devient</i> cette carte, et se déplace, se redimensionne et se renomme comme n'importe quelle tuile, avec la grille de PiBoard.</p>
+          <p>C'est la bonne façon de procéder, parce que les cartes <b>ne sont pas déplaçables à l'intérieur d'une tuile</b> : rebâtir une grille dans la grille n'aurait aucun sens quand PiBoard en a déjà une. Et cela ne coûte rien : le relais partage son cache, donc cinq tuiles n'envoient pas cinq fois les mêmes requêtes.</p>
+          <p>Si au contraire vous voulez tout au même endroit, cochez plusieurs cartes : elles se rangent alors sur autant de colonnes que la largeur en permet, chacune à la taille de son contenu. Une carte décochée n'est <b>pas demandée du tout</b> à l'API — elle est gratuite et partagée par tous, autant être poli.</p>
 
           <h4>Source</h4>
           <p>L'API <b>Jolpica</b>, successeur communautaire d'Ergast (fermé fin 2024), sans clé ni compte. C'est la même source que les intégrations Formule 1 de Home Assistant, et celle que lit déjà la tuile <i>Sports mécaniques</i>. L'historique couvre le championnat depuis 1950 : le réglage <b>Saison</b> accepte n'importe quelle année.</p>
@@ -1510,8 +1512,10 @@
           <h4>No logos, deliberately</h4>
           <p>Team logos, driver photos and official circuit maps are <b>registered trademarks and copyrighted visuals</b>. PiBoard is published under a free licence on a public repository and does not embed them. Instead each row carries the <b>team colour</b> and the driver's <b>three-letter code</b> (ANT, HAM, VER) — just as quick to recognise, and owing nothing to anyone. The flag is an emoji: on a machine without a complete emoji font the code stays readable and nothing is lost.</p>
 
-          <h4>One tile, or several?</h4>
-          <p>The five cards live off the <b>same reading</b>: showing them all does not cost five times the requests, and the standings cannot end up one race ahead of the results. If you prefer spreading the cards across the board, place <b>several Formula 1 tiles</b> with different cards: they share the relay's cache, so it costs no more. An unticked card is <b>not requested at all</b> — the API is free and shared by everyone, so it is only polite.</p>
+          <h4>Arranging the cards as you wish</h4>
+          <p><b>Tick a single card, and place as many Formula 1 tiles as you want cards.</b> A single-card tile shows neither frame nor inner title: it <i>becomes</i> that card, and moves, resizes and gets renamed like any tile, using PiBoard's own grid.</p>
+          <p>That is the right way round, because cards <b>are not draggable inside a tile</b>: rebuilding a grid inside the grid would make no sense when PiBoard already has one. And it costs nothing: the relay shares its cache, so five tiles do not send the same requests five times.</p>
+          <p>If instead you want everything in one place, tick several cards: they flow into as many columns as the width allows, each at the size of its own content. An unticked card is <b>not requested at all</b>.</p>
 
           <h4>Source</h4>
           <p>The <b>Jolpica</b> API, the community successor to Ergast (closed at the end of 2024), with no key and no account. It is the same source as Home Assistant's Formula 1 integrations, and the one the <i>Motorsport schedule</i> tile already reads. History covers the championship since 1950: the <b>Season</b> setting accepts any year.</p>`

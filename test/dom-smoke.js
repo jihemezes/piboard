@@ -9310,6 +9310,36 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("un abandon s'affiche sans position dans les resultats",
       !!host.querySelector(".pwf1-dnf") && /Accident/.test(host.textContent));
 
+    /* UNE SEULE CARTE : LA TUILE DEVIENT CETTE CARTE (1.138.1). On ne
+       peut pas deplacer des cartes a l'interieur d'une tuile, et
+       rebatir une grille dans la grille serait absurde : pour disposer
+       les cartes librement, on pose plusieurs tuiles a carte unique.
+       Encore faut-il qu'une telle tuile n'ait ni cadre ni titre interne,
+       sinon on empile deux cadres et deux titres pour une seule
+       information. */
+    w.onSettingsChanged(Object.assign({}, settings, { showSchedule: false, showDrivers: false,
+                                                      showConstructors: false, showResults: false }));
+    await sleep(120);
+    assert("une tuile a carte unique n'affiche pas de titre interne",
+      host.querySelectorAll(".pwf1-card").length === 1 && !host.querySelector(".pwf1-card-title"));
+    assert("et elle se declare en mode solo pour occuper toute la tuile",
+      !!host.querySelector(".pw-f1.pwf1-solo"));
+    w.onSettingsChanged(settings);
+    await sleep(120);
+    assert("a plusieurs cartes, le titre interne revient",
+      host.querySelectorAll(".pwf1-card").length === 5 && !!host.querySelector(".pwf1-card-title"));
+
+    /* LES CARTES NE DOIVENT PAS S'ETIRER A LA HAUTEUR DE LEUR VOISINE.
+       Une grille etire par defaut toutes les cellules d'une rangee : la
+       carte « Prochaine course », qui tient en cinq lignes, se
+       retrouvait encadree sur toute la hauteur d'un classement de
+       vingt-trois pilotes. */
+    {
+      const css = fs.readFileSync(path.join(PUB, "widgets/f1/widget.css"), "utf8");
+      assert("une carte fait la taille de son contenu, pas celle de sa voisine",
+        /\.pw-f1\s*\{[^}]*align-items:\s*start/.test(css));
+    }
+
     /* DECOCHER UNE CARTE DOIT AUSSI EVITER SA REQUETE : une API
        communautaire gratuite se partage, et demander quatre fichiers
        pour n'en afficher qu'un serait impoli. */

@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.138.1
+
+- **Une tuile Formule 1 a carte unique DEVIENT cette carte** : ni cadre
+  ni titre interne, la barre de titre de la tuile en tient lieu (et se
+  renomme dans les reglages universels). C'est la reponse au vrai
+  besoin : les cartes ne sont pas deplacables a l'interieur d'une tuile,
+  et rebatir une grille dans la grille n'aurait aucun sens quand PiBoard
+  en a deja une. On pose donc autant de tuiles que de cartes voulues,
+  chacune deplacable et redimensionnable.
+
+  L'argument qui m'avait fait preferer une tuile unique -- « cinq tuiles
+  coutraient cinq fois plus de requetes » -- ne tenait pas : le relais
+  serveur partage son cache, et cinq tuiles lisant la meme adresse dans
+  la meme fenetre ne font qu'un seul appel sortant.
+
+- **Les cartes ne s'etirent plus a la hauteur de leur voisine.** Une
+  grille CSS etire par defaut toutes les cellules d'une rangee a la
+  hauteur de la plus haute : la carte « Prochaine course », qui tient en
+  cinq lignes, se retrouvait encadree sur toute la hauteur d'un
+  classement de vingt-trois pilotes, avec un grand vide dessous. Une
+  carte fait desormais la taille de son contenu (`align-items: start`,
+  `grid-auto-rows: min-content`), et les colonnes se resserrent de 260 a
+  240 px pour mieux remplir une tuile large.
+
 ## 1.138.0
 
 - **Nouvelle tuile « Formule 1 »**, en cartes que l'on affiche ou que

@@ -22,7 +22,43 @@
    make the tile unusable as soon as it is narrowed -- and this is
    exactly a tile one resizes a lot, since it holds enough to fill a
    screen. */
-.pw-f1 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); align-content: start; }
+.pw-f1 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  align-content: start;
+  /* LE DEFAUT CORRIGE EN 1.138.1 : sans `align-items: start`, une grille
+     etire toutes les cellules d'une rangee a la hauteur de la plus
+     haute. La carte « Prochaine course », qui tient en cinq lignes, se
+     retrouvait encadree sur toute la hauteur d'un classement de vingt-
+     trois pilotes, avec un grand vide dessous. Une carte doit faire la
+     taille de son contenu, pas celle de sa voisine.
+     THE DEFECT FIXED IN 1.138.1: without `align-items: start` a grid
+     stretches every cell of a row to the tallest one's height. The
+     five-line "Next race" card ended up framed over the full height of
+     a twenty-three-driver table, with a large void underneath. */
+  align-items: start;
+  grid-auto-rows: min-content;
+}
+
+/* UNE SEULE CARTE : la tuile EST cette carte. Ni cadre, ni titre
+   interne -- la barre de titre de la tuile les remplace -- et la carte
+   occupe toute la place, ce qui permet au tableau de defiler jusqu'en
+   bas sans boite dans la boite. C'est ainsi qu'on dispose les cartes
+   librement : une tuile par carte, deplacees et redimensionnees avec la
+   grille de PiBoard.
+   ONE CARD: the tile IS that card -- no frame, no inner title, and it
+   takes all the room. That is how cards are arranged freely: one tile
+   per card, moved and resized with PiBoard's own grid. */
+.pw-f1.pwf1-solo {
+  display: block;
+  overflow: auto;
+}
+.pw-f1.pwf1-solo .pwf1-card {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  height: 100%;
+}
 
 .pw-f1 .pwf1-card {
   border: 1px solid var(--tile-edge);
