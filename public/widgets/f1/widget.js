@@ -260,11 +260,248 @@
     };
   }
 
+  /* ---------- La carte du circuit ----------
+     D'OU VIENT LE TRACE. Les plans officiels de la Formule 1 sont des
+     visuels sous droits : on ne les embarque pas. Le tracé est donc
+     dessine a partir d'OpenStreetMap (donnees ODbL, attribution faite
+     dans la carte), interroge par Overpass autour des coordonnees que
+     l'API Ergast donne pour chaque circuit. Resultat : un trace
+     vectoriel, net a toute taille, qui suit le theme et ne doit rien a
+     personne.
+
+     CE QU'ON Y TROUVE, ET CE QU'ON N'Y TROUVE PAS. OSM porte le tracé,
+     le SENS de la course (`oneway`), la voie des stands, et le NOM de
+     certains virages -- verifie a Sepang : « Berjaya Tioman Corner »,
+     « Kenyir Lake Corner ». En revanche, ni les NUMEROS de virages, ni
+     les SECTEURS : les points de chronometrage S1/S2/S3 ne sont publies
+     nulle part en donnees ouvertes. On pourrait colorer trois tiers de
+     tour egaux, mais ce serait faux -- et une carte qui invente ses
+     secteurs est pire qu'une carte sans secteurs.
+
+     WHERE THE OUTLINE COMES FROM: official Formula 1 circuit maps are
+     copyrighted, so they are not embedded. The outline is drawn from
+     OpenStreetMap (ODbL, attributed in the card) through Overpass,
+     around the coordinates Ergast gives for each circuit. OSM carries
+     the outline, the racing DIRECTION, the pit lane and SOME corner
+     names -- but neither corner NUMBERS nor SECTORS: the S1/S2/S3
+     timing points are published nowhere as open data. Colouring three
+     equal thirds would be a lie, and a map that invents its sectors is
+     worse than one without. */
+  const OVERPASS = "https://overpass-api.de/api/interpreter";
+  const CORNER_RE = /(corner|turn|curve|curva|kurve|virage|chicane|bend|hairpin|esses)/i;
+  const PIT_RE = /(pit ?lane|voie des stands|boxes)/i;
+  /* UN NOM PUREMENT NUMERIQUE EST UN NUMERO DE VIRAGE. Verifie dans la
+     donnee reelle de Sepang : a cote de « Genting Curve » et « Kenyir
+     Lake Corner », OSM porte des tronçons nommes « 3 », « 10 », « 12 »,
+     « 13 », « 15 ». Les numeros de virages existent donc en donnees
+     ouvertes -- partiellement, circuit par circuit, selon ce que les
+     contributeurs ont saisi. On les affiche la ou ils sont, et on n'en
+     invente aucun ailleurs. Ce sont bien les SECTEURS, et eux seuls, qui
+     n'existent nulle part.
+     A PURELY NUMERIC NAME IS A CORNER NUMBER, verified in Sepang's real
+     data. Corner numbers DO exist in open data -- partially, circuit by
+     circuit, according to what contributors entered. They are shown
+     where they exist and invented nowhere. It is the SECTORS, and they
+     alone, that exist nowhere. */
+  const CORNER_NUM_RE = /^\s*\d{1,2}[a-z]?\s*$/i;
+
+  /* CE QUI PORTE `highway=raceway` SANS ETRE LE GRAND PRIX. Releve dans
+     la vraie reponse d'Overpass autour de Sepang : deux tronçons de
+     karting, et un circuit de motocross/quadcross sur terre. Les
+     inclure collerait d'autres pistes au milieu du tracé.
+     WHAT CARRIES `highway=raceway` WITHOUT BEING THE GRAND PRIX,
+     observed in Overpass's real answer around Sepang: two karting
+     segments and a dirt motocross/quadcross track. */
+  const OTHER_SPORT_RE = /(karting|motocross|quadcross|rallycross|autocross|cyclo|bmx|speedway)/i;
+  const LOOSE_SURFACE_RE = /(unpaved|dirt|ground|gravel|sand|grass|earth|compacted)/i;
+
+  function overpassUrl(lat, lon) {
+    const q = `[out:json][timeout:25];way[highway=raceway](around:2200,${lat},${lon});out geom;`;
+    return OVERPASS + "?data=" + encodeURIComponent(q);
+  }
+
+  /* Fonction PURE. On ne cherche PAS a rechainer les tronçons en une
+     boucle unique : un circuit est decoupe en dizaines de « ways » dont
+     les extremites ne se rejoignent pas toujours proprement, et un
+     mauvais rechainage dessinerait un trait a travers le paddock. Les
+     tronçons sont donc traces tels quels, les uns a cote des autres --
+     a l'ecran, ils forment le circuit.
+     PURE function. Segments are NOT re-chained into a single loop: a
+     circuit is cut into dozens of ways whose ends do not always meet
+     cleanly, and a bad re-chaining would draw a line across the
+     paddock. */
+  function parseCircuit(json) {
+    const els = (json && Array.isArray(json.elements)) ? json.elements : [];
+    const ways = [];
+    for (const e of els) {
+      if (!e || e.type !== "way" || !Array.isArray(e.geometry) || e.geometry.length < 2) continue;
+      const tags = e.tags || {};
+      /* Le karting voisin porte le meme `highway=raceway` : l'inclure
+         collerait une seconde piste au milieu du Grand Prix.
+         The neighbouring karting track carries the same tag. */
+      if (OTHER_SPORT_RE.test(tags.sport || "")) continue;
+      /* Un Grand Prix ne se court pas sur de la terre : la surface suffit
+         a ecarter ce que le `sport` n'a pas dit.
+         A Grand Prix is not run on dirt. */
+      if (LOOSE_SURFACE_RE.test(tags.surface || "")) continue;
+      const name = tags.name || tags["name:en"] || "";
+      ways.push({
+        name,
+        pit: PIT_RE.test(name),
+        corner: CORNER_RE.test(name) || CORNER_NUM_RE.test(name),
+        oneway: tags.oneway === "yes",
+        pts: e.geometry.map((g) => [Number(g.lat), Number(g.lon)]).filter((c) => Number.isFinite(c[0]) && Number.isFinite(c[1]))
+      });
+    }
+    return mainLoop(ways.filter((w) => w.pts.length >= 2));
+  }
+
+  /* ON NE GARDE QUE LE CIRCUIT PRINCIPAL, et c'est indispensable. Un
+     complexe de circuit contient d'autres pistes bitumees qui ne sont
+     pas le Grand Prix : la vraie reponse d'Overpass autour de Sepang
+     renvoie un « Handling Circuit » -- une piste d'essais, bitume,
+     `sport=motor`, donc impossible a ecarter par ses etiquettes -- situe
+     a plusieurs centaines de metres au nord. La dessiner ne ferait pas
+     seulement une tache en trop : elle agrandit le cadre commun, et le
+     Grand Prix lui-meme se retrouve ecrase dans un coin. Aucun reglage
+     n'y changerait rien, puisque la mise a l'echelle part des extremes.
+
+     La regle est geometrique et non nominale : on groupe les tronçons
+     qui se TOUCHENT (ils partagent leurs noeuds d'extremite, au metre),
+     et on garde le groupe le plus long. Les variantes de tracé -- « North
+     Circuit », « South Circuit » -- partagent leurs noeuds avec la piste
+     principale et sont donc conservees : c'est bien le meme bitume.
+
+     ONLY THE MAIN CIRCUIT IS KEPT, and this is essential. Sepang's real
+     Overpass answer includes a "Handling Circuit" -- a test track,
+     asphalt, `sport=motor`, impossible to rule out by its tags -- several
+     hundred metres north. Drawing it would not merely add a blob: it
+     enlarges the shared bounding box, and the Grand Prix itself ends up
+     squashed in a corner. The rule is geometric, not nominal: segments
+     that TOUCH are grouped and the longest group is kept. Layout
+     variants share their nodes with the main track and are kept -- it is
+     the same tarmac. */
+  function mainLoop(ways) {
+    if (ways.length < 2) return ways;
+    const key = (p) => p[0].toFixed(5) + "," + p[1].toFixed(5);
+    const parent = ways.map((_, i) => i);
+    const find = (i) => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    const join = (a, b) => { a = find(a); b = find(b); if (a !== b) parent[b] = a; };
+
+    const at = new Map();
+    ways.forEach((w, i) => {
+      /* TOUS les noeuds, et non les seules extremites. J'avais commence
+         par les extremites, en croyant eviter de relier deux pistes qui
+         se croisent par-dessus. C'etait inutile et couteux : dans OSM,
+         deux voies qui se croisent SANS jonction ne partagent aucun
+         noeud -- c'est la convention, et c'est ce qui distingue un pont
+         d'un carrefour. En revanche une voie des stands se raccorde
+         souvent au MILIEU d'un tronçon de piste, et la regle des
+         extremites la jetait : sur la donnee reelle de Sepang, deux des
+         trois tronçons de la voie des stands disparaissaient.
+         ALL nodes, not just the ends. I started with the ends, thinking
+         it would avoid joining two tracks that cross over one another.
+         That was both useless and costly: in OSM, two ways that cross
+         WITHOUT a junction share no node -- that is the convention, and
+         it is what tells a bridge from a crossroads. A pit lane, on the
+         other hand, often joins the MIDDLE of a track segment, and the
+         end-points rule threw it away: on Sepang's real data, two of the
+         three pit-lane segments vanished. */
+      for (const p of w.pts) {
+        const k = key(p);
+        if (at.has(k)) join(at.get(k), i); else at.set(k, i);
+      }
+    });
+
+    const span = (w) => {
+      let d = 0;
+      for (let i = 1; i < w.pts.length; i++) {
+        d += Math.abs(w.pts[i][0] - w.pts[i - 1][0]) + Math.abs(w.pts[i][1] - w.pts[i - 1][1]);
+      }
+      return d;
+    };
+    const total = new Map();
+    ways.forEach((w, i) => {
+      const r = find(i);
+      total.set(r, (total.get(r) || 0) + span(w));
+    });
+    let best = null;
+    for (const [r, d] of total) if (!best || d > best.d) best = { r, d };
+    return ways.filter((_, i) => find(i) === best.r);
+  }
+
+  /* Projection equirectangulaire avec correction en cosinus : sans
+     elle, un circuit proche de l'equateur passe encore, mais Silverstone
+     (52° N) serait etire du double en largeur. On n'a pas besoin de plus
+     savant -- un circuit tient dans quelques kilometres.
+     Equirectangular projection with cosine correction: without it
+     Silverstone (52°N) would come out twice too wide. */
+  function projectCircuit(ways, width, height, pad, padY) {
+    const all = [];
+    for (const w of ways) for (const p of w.pts) all.push(p);
+    if (!all.length) return null;
+    const lats = all.map((p) => p[0]);
+    const lons = all.map((p) => p[1]);
+    const minLat = Math.min(...lats), maxLat = Math.max(...lats);
+    const minLon = Math.min(...lons), maxLon = Math.max(...lons);
+    const midLat = (minLat + maxLat) / 2;
+    const kx = Math.cos(midLat * Math.PI / 180);
+
+    const w0 = (maxLon - minLon) * kx;
+    const h0 = (maxLat - minLat);
+    if (!(w0 > 0) && !(h0 > 0)) return null;
+    const py = Number.isFinite(padY) ? padY : pad;
+    const inner = { w: width - pad * 2, h: height - py * 2 };
+    const scale = Math.min(inner.w / (w0 || 1e-9), inner.h / (h0 || 1e-9));
+    const offX = pad + (inner.w - w0 * scale) / 2;
+    const offY = py + (inner.h - h0 * scale) / 2;
+
+    const project = ([lat, lon]) => [
+      offX + (lon - minLon) * kx * scale,
+      /* La latitude croit vers le NORD, l'axe Y d'un SVG vers le BAS :
+         sans cette inversion, le circuit serait dessine en miroir --
+         juste assez ressemblant pour qu'on ne s'en apercoive pas tout
+         de suite, et completement faux.
+         Latitude grows NORTH, an SVG's Y axis grows DOWN: without this
+         flip the circuit would be mirrored -- just similar enough not to
+         be noticed at once, and completely wrong. */
+      offY + (maxLat - lat) * scale
+    ];
+    return ways.map((w) => Object.assign({}, w, { xy: w.pts.map(project) }));
+  }
+
+  function toPath(xy) {
+    return xy.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+  }
+
+  /* La fleche du sens de la course, posee au milieu du plus long
+     tronçon a sens unique : c'est la ou le trait est le plus droit,
+     donc la ou une fleche se lit.
+     The direction arrow sits at the midpoint of the longest one-way
+     segment: where the line is straightest, hence where an arrow
+     reads. */
+  function directionArrow(ways) {
+    let best = null;
+    for (const w of ways) {
+      if (!w.oneway || w.pit || !w.xy || w.xy.length < 2) continue;
+      const a = w.xy[0], b = w.xy[w.xy.length - 1];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (!best || len > best.len) best = { len, w };
+    }
+    if (!best) return null;
+    const xy = best.w.xy;
+    const i = Math.max(1, Math.floor(xy.length / 2));
+    const from = xy[i - 1], to = xy[i];
+    const angle = Math.atan2(to[1] - from[1], to[0] - from[0]) * 180 / Math.PI;
+    return { x: to[0], y: to[1], angle };
+  }
+
   class F1Widget {
     constructor(ctx) {
       this.ctx = ctx;
       this.data = null;
       this.error = null;
+      this.circuit = null;
       this.timer = null;
       this.tick = null;
     }
@@ -343,7 +580,19 @@
     async refresh() {
       const s = this.ctx.settings;
       const y = this.season();
-      const needRaces = s.showNext !== false || s.showSchedule !== false;
+      /* LA CARTE DU CIRCUIT COMPTE PARMI CELLES QUI ONT BESOIN DU
+         CALENDRIER : c'est lui qui donne le circuit du week-end et ses
+         coordonnees. L'oublier laissait une tuile montrant le SEUL plan
+         du circuit eternellement en chargement -- sans erreur, sans
+         message, puisque rien n'avait echoue : la question n'avait
+         simplement jamais ete posee. Defaut trouve par le test de bout
+         en bout, pas a la relecture.
+         THE CIRCUIT CARD IS ONE OF THOSE NEEDING THE CALENDAR: it is
+         what gives the weekend's circuit and its coordinates. Omitting
+         it left a tile showing ONLY the circuit map loading forever --
+         no error, no message, since nothing had failed: the question
+         had simply never been asked. Found by the end-to-end test. */
+      const needRaces = s.showNext !== false || s.showSchedule !== false || s.showCircuit !== false;
       const jobs = [
         needRaces ? this.fetchJson(`${API}/${y}.json?limit=100`) : Promise.resolve(null),
         s.showDrivers !== false ? this.fetchJson(`${API}/${y}/driverStandings.json?limit=100`) : Promise.resolve(null),
@@ -368,6 +617,50 @@
         this.error = String((e && e.message) || e);
       }
       this.render();
+      if (this.ctx.settings.showCircuit !== false) this.refreshCircuit();
+    }
+
+    /* LE TRACE EST CHARGE A PART, ET NON AVEC LE RESTE. Overpass met
+       plusieurs secondes a repondre et renvoie bien plus d'octets que
+       tout le reste de la tuile reuni. L'attendre retarderait le compte
+       a rebours et les classements, qui n'en ont pas besoin ; et une
+       panne d'Overpass -- il arrive qu'il soit sature -- ne doit pas
+       priver la tuile de son classement.
+       LOADED SEPARATELY: Overpass takes seconds and returns more bytes
+       than all the rest put together. Waiting for it would delay the
+       countdown and the standings, and an Overpass outage must not cost
+       the tile its standings. */
+    async refreshCircuit() {
+      const race = nextRace(this.data && this.data.races || [], Date.now())
+        || lastRace(this.data && this.data.races || [], Date.now());
+      if (!race || !race.circuitId || !Number.isFinite(race.lat) || !Number.isFinite(race.lon)) return;
+      if (this.circuit && this.circuit.id === race.circuitId) return;
+
+      /* Un trace ne change pas d'une semaine a l'autre : on le garde
+         cote serveur, par circuit. Changer de Grand Prix ne doit pas
+         rappeler Overpass pour un circuit deja vu.
+         An outline does not change from one week to the next: it is
+         kept server-side, per circuit. */
+      const key = "f1.circuit." + race.circuitId;
+      try {
+        const cached = await this.ctx.api.state.get(key);
+        if (cached && Array.isArray(cached.ways) && cached.ways.length) {
+          this.circuit = { id: race.circuitId, ways: cached.ways, name: race.circuitName };
+          this.render();
+          return;
+        }
+      } catch (e) { /* pas de cache, on demande / no cache, we ask */ }
+
+      try {
+        const json = await this.fetchJson(overpassUrl(race.lat, race.lon));
+        const ways = parseCircuit(json);
+        if (!ways.length) { this.circuit = { id: race.circuitId, ways: [], name: race.circuitName }; this.render(); return; }
+        this.circuit = { id: race.circuitId, ways, name: race.circuitName };
+        this.ctx.api.state.put(key, { ways, at: Date.now() }).catch(() => { });
+      } catch (e) {
+        this.circuit = { id: race.circuitId, ways: [], name: race.circuitName, error: String((e && e.message) || e) };
+      }
+      this.render();
     }
 
     render() {
@@ -386,7 +679,8 @@
         s.showSchedule !== false ? () => this.cardSchedule(now) : null,
         s.showDrivers !== false ? () => this.cardDrivers() : null,
         s.showConstructors !== false ? () => this.cardConstructors() : null,
-        s.showResults !== false ? () => this.cardResults() : null
+        s.showResults !== false ? () => this.cardResults() : null,
+        s.showCircuit !== false ? () => this.cardCircuit() : null
       ].filter(Boolean);
 
       /* UNE SEULE CARTE COCHEE : LA TUILE DEVIENT CETTE CARTE. Plus de
@@ -419,7 +713,7 @@
 
       const body = cards.filter(Boolean).join("");
       el.innerHTML = `
-        <div class="pw-f1${this.solo ? " pwf1-solo" : ""}">
+        <div class="pw-f1${this.solo ? " pwf1-solo" : ""}${this.skinClass()}" ${this.skinStyle()}>
           ${body || `<div class="pwf1-msg">${esc(i18n.t("f1.noCard"))}</div>`}
           ${this.error ? `<div class="pwf1-stale">${esc(i18n.t("f1.stale"))}</div>` : ""}
         </div>`;
@@ -439,6 +733,37 @@
       const left = target - Date.now();
       el.textContent = countdown(left, this.ctx.i18n);
       el.classList.toggle("pwf1-cd-now", left <= 0);
+    }
+
+    /* LE STYLE « PISTE ». Deux classes seulement, et aucune couleur en
+       dur dans le HTML : la carte lit des variables CSS, ce qui laisse
+       le theme de la page decider en mode « theme » et l'utilisateur
+       decider en mode « couleur choisie ». Les couleurs du texte ne sont
+       PAS reprises du theme en mode sombre, sinon un theme clair
+       ecrirait du gris anthracite sur du noir.
+       THE "TRACK" SKIN. Two classes and no hard-coded colour in the
+       HTML: the card reads CSS variables, so the page theme decides in
+       theme mode and the user decides in custom mode. */
+    skinClass() {
+      const v = String(this.ctx.settings.cardStyle || "theme");
+      if (v === "dark") return " pwf1-skin-dark";
+      if (v === "custom") return " pwf1-skin-dark pwf1-skin-custom";
+      return "";
+    }
+
+    skinStyle() {
+      if (String(this.ctx.settings.cardStyle || "theme") !== "custom") return "";
+      /* La couleur vient d'un selecteur de couleur, donc deja au format
+         `#rrggbb` -- mais elle finit dans un attribut `style`, et une
+         valeur inattendue y injecterait du CSS. On ne fait pas
+         confiance, on verifie.
+         The colour comes from a colour picker, so it is already
+         `#rrggbb` -- but it ends up in a `style` attribute, where an
+         unexpected value would inject CSS. We verify rather than
+         trust. */
+      const raw = String(this.ctx.settings.cardColor || "").trim();
+      if (!/^#[0-9a-fA-F]{6}$/.test(raw)) return "";
+      return `style="--pwf1-skin-bg: ${raw}"`;
     }
 
     card(title, inner, extraClass) {
@@ -560,6 +885,103 @@
         </table>`);
     }
 
+    /* ---------- La carte du circuit ---------- */
+    cardCircuit() {
+      const i18n = this.ctx.i18n;
+      const c = this.circuit;
+      const title = i18n.t("f1.card.circuit");
+      if (!c) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.loading"))}</div>`);
+      if (!c.ways.length) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.circuit.none"))}</div>`);
+
+      /* Le dessin se fait dans un repere fixe de 1000 x 620, et c'est le
+         `viewBox` qui le met a l'echelle de la tuile. Un SVG recalcule a
+         chaque redimensionnement couterait un reflow par pixel tire a la
+         souris ; la, le navigateur ne fait qu'un changement d'echelle,
+         et le trait reste net a toute taille -- c'est l'interet du
+         vectoriel.
+         Drawing happens in a fixed 1000 x 620 space and the `viewBox`
+         scales it to the tile. Recomputing the SVG on every resize would
+         cost a reflow per pixel dragged; here the browser merely
+         rescales, and the line stays crisp at any size -- which is the
+         whole point of vector. */
+      const W = 1000, H = 620;
+
+      /* LES ETIQUETTES SE DECIDENT AVANT LA PROJECTION, parce qu'elles
+         changent la marge : un nom de virage est ecrit DE PART ET
+         D'AUTRE de son point, et « Pangkor Laut Chicane » pose sur un
+         virage du bord gauche depasse largement du cadre. Sans marge
+         laterale elargie, la moitie des noms sortait du dessin -- vu a
+         l'ecran, pas devine.
+         LABELS ARE DECIDED BEFORE PROJECTING, because they change the
+         margin: a corner name is written on BOTH SIDES of its point, so
+         one placed on a left-edge corner runs well outside the frame.
+         Seen on screen, not guessed. */
+      const named = c.ways.filter((w) => w.corner && !w.pit && w.name).length;
+      const withLabels = named > 0 && named <= 16;
+      const ways = projectCircuit(c.ways, W, H, withLabels ? 96 : 26, withLabels ? 34 : 26);
+      if (!ways) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.circuit.none"))}</div>`);
+
+      const track = ways.filter((w) => !w.pit);
+      const pit = ways.filter((w) => w.pit);
+      const arrow = directionArrow(ways);
+
+      /* Les virages NOMMES seulement, et seulement s'ils tiennent : une
+         carte de huit centimetres couverte d'etiquettes ne se lit plus.
+         Au-dela de douze, on n'en met aucune plutot que d'en choisir
+         douze au hasard.
+         NAMED corners only, and only if they fit. */
+      const corners = [];
+      const seen = new Set();
+      for (const w of ways) {
+        if (!withLabels || !w.corner || w.pit || !w.name || seen.has(w.name)) continue;
+        seen.add(w.name);
+        const mid = w.xy[Math.floor(w.xy.length / 2)];
+        /* Pres d'un bord, le nom n'est plus centre sur son virage mais
+           pousse vers l'interieur : mieux vaut un nom legerement decale
+           qu'un nom coupe en deux par le bord du dessin.
+           Near an edge the name is pushed inwards: a slightly offset
+           name beats one cut in half by the edge. */
+        const anchor = mid[0] < 150 ? "start" : (mid[0] > W - 150 ? "end" : "middle");
+        corners.push({
+          name: w.name.replace(/\s*(corner|turn)\s*$/i, ""),
+          x: Math.min(W - 6, Math.max(6, mid[0])),
+          y: Math.min(H - 8, Math.max(16, mid[1])),
+          anchor
+        });
+      }
+
+      const paths = track.map((w) =>
+        `<path class="pwf1-circ-track" d="${toPath(w.xy)}"/>`).join("");
+      /* La voie des stands en pointilles : c'est du bitume, mais ce
+         n'est pas la piste, et les confondre fausse la lecture du
+         trace.
+         The pit lane dashed: it is tarmac, but it is not the track. */
+      const pits = pit.map((w) =>
+        `<path class="pwf1-circ-pit" d="${toPath(w.xy)}"/>`).join("");
+
+      const dir = arrow
+        ? `<g class="pwf1-circ-dir" transform="translate(${arrow.x.toFixed(1)} ${arrow.y.toFixed(1)}) rotate(${arrow.angle.toFixed(1)})">
+             <path d="M -13 -11 L 15 0 L -13 11 Z"/>
+           </g>`
+        : "";
+
+      const labels = corners.length
+        ? corners.map((k) => `<text class="pwf1-circ-label" text-anchor="${k.anchor}" x="${k.x.toFixed(1)}" y="${k.y.toFixed(1)}">${esc(k.name)}</text>`).join("")
+        : "";
+
+      return this.card(title, `
+        <div class="pwf1-circ">
+          <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img"
+               aria-label="${esc(c.name || title)}">
+            ${pits}${paths}${dir}${labels}
+          </svg>
+          <div class="pwf1-circ-foot">
+            <span class="pwf1-circ-name">${esc(c.name || "")}</span>
+            <span class="pwf1-circ-src">${esc(i18n.t("f1.circuit.credit"))}</span>
+          </div>
+        </div>`);
+    }
+
     cardResults() {
       const i18n = this.ctx.i18n;
       const res = this.data.results;
@@ -606,6 +1028,7 @@
      DOM ni du reseau. Exposed for tests: the pure helpers. */
   window.PiBoardF1Helpers = {
     parseRaces, parseStandings, parseResults, nextRace, lastRace, nextSession,
+    parseCircuit, projectCircuit, directionArrow, overpassUrl,
     countdown, whenOf, colorFor, flagFor, FLAG, COUNTRY_FLAG, TEAM_COLOR, RACE_LENGTH_MS
   };
 })();

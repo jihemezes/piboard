@@ -244,7 +244,16 @@ const F1_SEASON_FIXTURE = {
         },
         {
           season: "2026", round: "2", raceName: "Grand Prix de Test",
-          Circuit: { circuitName: "Circuit de Test", Location: { locality: "Testville" } },
+          /* `circuitId` et les coordonnees viennent bien de l'API reelle :
+             c'est d'eux que part le plan du circuit (cache par
+             `circuitId`, requete Overpass autour du point). Les autres
+             manches les omettent exprès -- une manche sans coordonnees
+             ne doit pas declencher de requete.
+             `circuitId` and the coordinates do come from the real API:
+             the circuit map starts from them. The other rounds omit them
+             on purpose. */
+          Circuit: { circuitId: "test_circuit", circuitName: "Circuit de Test",
+                     Location: { locality: "Testville", lat: "24.4672", long: "54.6031" } },
           FirstPractice: ergastParts(MS_NOW + MS_OFFSETS.fp1),
           SecondPractice: ergastParts(MS_NOW + MS_OFFSETS.fp2),
           ThirdPractice: ergastParts(MS_NOW + MS_OFFSETS.fp3),
@@ -1129,6 +1138,29 @@ const dom = new JSDOM(html, {
       }
       if (u.includes("/api/proxy") && u.includes("jolpi.ca")) {
         return json(F1_SEASON_FIXTURE);
+      }
+      /* Overpass, pour le plan du circuit. L'echantillon reproduit ce
+         que renvoie le vrai service autour d'un circuit : des tronçons
+         de piste, une voie des stands, et du karting voisin qui porte
+         le meme `highway=raceway`.
+         Overpass, for the circuit map. */
+      if (u.includes("/api/proxy") && u.includes("overpass-api.de")) {
+        FETCHES.push(u);
+        return json({
+          elements: [
+            { type: "way", tags: { highway: "raceway", name: "Main Straight", oneway: "yes" },
+              geometry: [{ lat: 24.467, lon: 54.603 }, { lat: 24.467, lon: 54.610 }] },
+            { type: "way", tags: { highway: "raceway", name: "North Corner", oneway: "yes" },
+              geometry: [{ lat: 24.467, lon: 54.610 }, { lat: 24.472, lon: 54.612 }, { lat: 24.475, lon: 54.608 }] },
+            /* La voie des stands part d'un noeud de la piste, comme dans
+               la vraie donnee : les tronçons qui ne touchent rien sont
+               ecartes avec les pistes voisines (karting, essais). */
+            { type: "way", tags: { highway: "raceway", name: "Pit Lane" },
+              geometry: [{ lat: 24.467, lon: 54.603 }, { lat: 24.468, lon: 54.606 }, { lat: 24.467, lon: 54.610 }] },
+            { type: "way", tags: { highway: "raceway", name: "Kart Track", sport: "karting" },
+              geometry: [{ lat: 24.500, lon: 54.700 }, { lat: 24.500, lon: 54.710 }] }
+          ]
+        });
       }
       if (u.includes("/api/proxy") && u.includes("motogp.pulselive.com")) {
         return json(MOTOGP_SEASON_FIXTURE);
@@ -9275,7 +9307,7 @@ function catalogItemFor(catalog, document, widgetId) {
       const hostB = document.createElement("div");
       document.body.appendChild(hostB);
       const wB = new Klass({
-        el: hostB, settings: { showNext: true, showSchedule: false, showDrivers: false, showConstructors: false, showResults: false },
+        el: hostB, settings: { showNext: true, showSchedule: false, showDrivers: false, showConstructors: false, showResults: false, showCircuit: false },
         i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
         api: { proxyUrl: (u) => u }
       });
@@ -9291,7 +9323,7 @@ function catalogItemFor(catalog, document, widgetId) {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const settings = { season: "", showNext: true, showSchedule: true, showDrivers: true,
-                       showConstructors: true, showResults: true, driverRows: 10,
+                       showConstructors: true, showResults: true, showCircuit: false, driverRows: 10,
                        constructorRows: 10, resultRows: 10, showTeamColors: true, refreshMinutes: 30 };
     const w = new Klass({
       el: host, settings, i18n,
@@ -9368,6 +9400,91 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("une carte decochee disparait", host.querySelectorAll(".pwf1-card").length === 2);
     const added = FETCHES.filter((u) => /jolpi/.test(u)).length - before;
     assert("et sa requete n'est plus envoyee", added <= 1);
+
+    /* ---------- LE PLAN DU CIRCUIT (1.138.3) ----------
+       Ce qui se joue ici est le CHEMIN, et non la geometrie (figee par
+       test/f1Circuit.test.js) : le trace part d'Overpass, passe par le
+       relais du serveur -- jamais en direct, sinon le navigateur se
+       heurte a CORS -- et se garde en cache par circuit pour qu'un
+       changement de Grand Prix ne coute qu'un releve. Une panne
+       d'Overpass doit couter la carte, et rien d'autre. */
+    {
+      const hostC = document.createElement("div");
+      document.body.appendChild(hostC);
+      const kept = {};
+      const wC = new Klass({
+        el: hostC,
+        settings: { showNext: false, showSchedule: false, showDrivers: false,
+                    showConstructors: false, showResults: false, showCircuit: true },
+        i18n,
+        api: {
+          proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u),
+          state: {
+            get: (k) => Promise.resolve(kept[k]),
+            put: (k, v) => { kept[k] = v; return Promise.resolve(); }
+          }
+        }
+      });
+      wC.init();
+      await sleep(200);
+
+      const overpassCalls = FETCHES.filter((u) => /overpass/.test(u));
+      assert("le trace passe par le relais du serveur, jamais en direct",
+        overpassCalls.length >= 1 && overpassCalls.every((u) => u.startsWith("/api/proxy?url=")));
+      assert("le trace est dessine en SVG, et non en image matricielle",
+        !!hostC.querySelector(".pwf1-circ svg path.pwf1-circ-track"));
+      assert("la voie des stands est distinguee de la piste",
+        !!hostC.querySelector("path.pwf1-circ-pit"));
+      assert("le sens de la course est indique",
+        !!hostC.querySelector(".pwf1-circ-dir"));
+      /* L'ATTRIBUTION N'EST PAS UNE POLITESSE : OpenStreetMap est sous
+         ODbL, et afficher le trace sans citer la source serait une
+         violation de licence. */
+      /* La carte porte bien son emplacement d'attribution, et les deux
+         traductions y mettent bien OpenStreetMap -- le test du DOM lit
+         des cles et non des libelles, c'est donc le fichier de langues
+         qu'il faut verifier. */
+      assert("la carte reserve sa place a l'attribution",
+        !!hostC.querySelector(".pwf1-circ-src"));
+      {
+        const i18nSrc = fs.readFileSync(path.join(PUB, "i18n.js"), "utf8");
+        const credits = [...i18nSrc.matchAll(/"f1\.circuit\.credit":\s*"([^"]+)"/g)].map((m) => m[1]);
+        assert("les deux langues citent OpenStreetMap",
+          credits.length === 2 && credits.every((c) => /OpenStreetMap/.test(c)));
+      }
+      assert("le trace est garde en cache par circuit",
+        Object.keys(kept).some((k) => /^f1\.circuit\./.test(k)));
+
+      /* Un second relevé ne doit PAS rappeler Overpass : le cache sert
+         a cela, et une API publique partagee par tous ne se sollicite
+         pas deux fois pour le meme trace. */
+      const n = FETCHES.filter((u) => /overpass/.test(u)).length;
+      wC.circuit = null;
+      await wC.refreshCircuit();
+      await sleep(80);
+      assert("un trace deja releve ne redemande rien a Overpass",
+        FETCHES.filter((u) => /overpass/.test(u)).length === n);
+
+      wC.destroy();
+      hostC.remove();
+    }
+
+    /* LE STYLE « PISTE » ne doit toucher que CETTE tuile, et doit aller
+       jusqu'au bord en mode carte unique : sans cela la carte noire
+       flotte au milieu du fond de tuile du theme. */
+    {
+      const css = fs.readFileSync(path.join(PUB, "widgets/f1/widget.css"), "utf8");
+      assert("le style piste repeint les cartes, pas la page",
+        /\.pw-f1\.pwf1-skin-dark/.test(css) && !/^\s*body\s*\{/m.test(css));
+      assert("en carte unique, le fond sombre va jusqu'au bord",
+        /\.pw-f1\.pwf1-skin-dark\.pwf1-solo/.test(css));
+      const man = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/f1/manifest.json"), "utf8"));
+      const style = man.settings.find((x) => x.key === "cardStyle");
+      assert("le style des cartes se choisit dans les reglages",
+        !!style && style.options.map((o) => o.value).join(",") === "theme,dark,custom");
+      assert("et le theme de la page reste le defaut",
+        style.default === "theme");
+    }
 
     w.destroy();
     host.remove();

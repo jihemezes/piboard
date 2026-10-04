@@ -33,6 +33,58 @@
 # Nouveautes / What's new
 
 
+## 1.138.3
+
+**Le plan du circuit, et des cartes aux couleurs de la course**
+
+La tuile Formule 1 gagne une sixieme carte : le PLAN DU CIRCUIT du
+week-end. Le trace est dessine en vectoriel, donc net quelle que soit la
+taille de la tuile, avec une fleche indiquant le sens de la course, la
+voie des stands en pointilles et le nom des virages la ou il est connu.
+
+Les plans officiels de la Formule 1 sont sous droits : PiBoard ne les
+embarque pas, il DESSINE le trace a partir d'OpenStreetMap. Les noms de
+virages s'affichent la ou OSM les connait, et parfois leurs numeros : a
+Sepang par exemple, on a « Genting Curve » comme les virages 3, 10, 12,
+13 et 15. Ailleurs il n'y a rien, et rien n'est invente.
+
+Ce qui n'existe nulle part, en revanche, ce sont les trois secteurs :
+les points de chronometrage S1/S2/S3 ne sont publies par personne, et
+colorer trois tiers de tour egaux serait faux.
+
+Nouveau reglage « Style des cartes » : gardez le thème de la page, ou
+passez les cartes en « piste sombre » -- le noir profond du paddock et un
+lisere rouge -- ou choisissez votre propre couleur de fond.
+
+Au passage, trois icones du catalogue (Formule 1, Image, Texte)
+s'affichaient en noir et disparaissaient en mode nuit. C'est corrige.
+
+---
+
+**The circuit map, and cards in racing colours**
+
+The Formula 1 tile gains a sixth card: the weekend's CIRCUIT MAP. The
+outline is drawn in vector form, so it stays crisp whatever the tile's
+size, with an arrow giving the racing direction, the pit lane dashed and
+corner names where they are known.
+
+Official Formula 1 maps are copyrighted: PiBoard does not embed them, it
+DRAWS the outline from OpenStreetMap. Corner names appear where OSM has
+them, and sometimes their numbers: at Sepang you get "Genting Curve" as
+well as corners 3, 10, 12, 13 and 15. Elsewhere there is nothing, and
+nothing is invented.
+
+What does exist nowhere is the three sectors: the S1/S2/S3 timing points
+are published by nobody, and colouring three equal thirds of a lap would
+be wrong.
+
+A new "Card style" setting: keep the page theme, switch the cards to
+"dark track" -- the paddock's deep black with a red edge -- or pick your
+own background colour.
+
+Along the way, three catalogue icons (Formula 1, Image, Text) rendered
+black and vanished in night mode. Fixed.
+
 ## 1.138.0
 
 **Une tuile Formule 1**

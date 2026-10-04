@@ -2,7 +2,7 @@
   "_comment_fr": "POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes.",
   "_comment_en": "TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests.",
   "id": "f1",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
@@ -96,6 +96,19 @@
       }
     },
     {
+      "key": "showCircuit",
+      "type": "checkbox",
+      "label": {
+        "en": "\"Circuit map\" card",
+        "fr": "Carte « Plan du circuit »"
+      },
+      "default": true,
+      "hint": {
+        "en": "A VECTOR outline of the circuit, drawn from OpenStreetMap: crisp at any size, following the theme, and owing nothing to anyone -- the official Formula 1 maps are copyrighted and are not embedded. The arrow gives the racing DIRECTION, the dashed line is the pit lane, and corner names -- sometimes their numbers too -- appear where OpenStreetMap has them, which varies a lot from circuit to circuit. Nothing missing is invented. The three SECTORS are not available anywhere: the S1/S2/S3 timing points are published nowhere as open data, and three equal thirds would be a lie. The outline is cached per circuit, so changing Grand Prix costs one reading.",
+        "fr": "Un tracé VECTORIEL du circuit, dessiné à partir d'OpenStreetMap : net à toute taille, il suit le thème et ne doit rien à personne — les plans officiels de la Formule 1 sont sous droits et ne sont pas embarqués. La flèche donne le SENS de la course, le pointillé est la voie des stands, et les noms de virages — parfois aussi leurs numéros — s'affichent là où OpenStreetMap les connaît, ce qui varie beaucoup d'un circuit à l'autre. Rien de ce qui manque n'est inventé. Les trois SECTEURS, eux, ne sont disponibles nulle part : les points de chronométrage S1/S2/S3 ne sont publiés nulle part en données ouvertes, et trois tiers de tour égaux seraient faux. Le tracé est gardé en cache par circuit : changer de Grand Prix ne coûte qu'un relevé."
+      }
+    },
+    {
       "key": "driverRows",
       "type": "number",
       "default": 10,
@@ -143,6 +156,55 @@
       "hint": {
         "en": "A chip in the team's colour before each driver. Official logos and photos are registered trademarks, so PiBoard does not embed them; the colour does the same job of instant recognition.",
         "fr": "Une pastille de la couleur de l'écurie devant chaque pilote. Les logos et les photos officiels sont des marques déposées : PiBoard ne les embarque pas, et la couleur fait le même travail de reconnaissance immédiate."
+      }
+    },
+    {
+      "key": "cardStyle",
+      "type": "select",
+      "label": {
+        "en": "Card style",
+        "fr": "Style des cartes"
+      },
+      "default": "theme",
+      "options": [
+        {
+          "value": "theme",
+          "label": {
+            "en": "Page theme",
+            "fr": "Thème de la page"
+          }
+        },
+        {
+          "value": "dark",
+          "label": {
+            "en": "Dark track",
+            "fr": "Piste sombre"
+          }
+        },
+        {
+          "value": "custom",
+          "label": {
+            "en": "Chosen colour",
+            "fr": "Couleur choisie"
+          }
+        }
+      ],
+      "hint": {
+        "en": "\"Page theme\" keeps the cards consistent with the rest of the board. \"Dark track\" gives them the paddock's deep black with a red edge -- a racing look that owes nothing to any logo, livery or licensed typeface. \"Chosen colour\" uses the colour below instead; the text colour is then left to the browser, which alone knows whether the colour entered is light or dark. The setting affects THIS tile only.",
+        "fr": "« Thème de la page » garde les cartes cohérentes avec le reste du tableau. « Piste sombre » leur donne le noir profond du paddock et un liseré rouge — un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « Couleur choisie » utilise la couleur ci-dessous ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur saisie est claire ou foncée. Le réglage ne concerne QUE cette tuile."
+      }
+    },
+    {
+      "key": "cardColor",
+      "type": "color",
+      "label": {
+        "en": "Card colour",
+        "fr": "Couleur des cartes"
+      },
+      "default": "#12151c",
+      "hint": {
+        "en": "Used only when the style above is \"Chosen colour\".",
+        "fr": "Utilisée seulement si le style ci-dessus est « Couleur choisie »."
       }
     },
     {

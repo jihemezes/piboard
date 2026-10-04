@@ -267,3 +267,164 @@
   .pw-f1 .pwf1-table th:nth-child(4) { display: none; }
   .pw-f1 .pwf1-next-sub { display: none; }
 }
+
+/* ============================================================
+   1.138.3 — LE STYLE « PISTE », ET LA CARTE DU CIRCUIT
+   ============================================================ */
+
+/* POURQUOI UN STYLE A PART, ET PAS UN THEME DE PLUS. Les cartes
+   reprennent par defaut le theme de la page, et c'est la bonne valeur
+   par defaut : une tuile qui jure avec les autres est une tuile ratee.
+   Mais une tuile de course n'est pas une tuile de meteo, et le noir
+   profond du paddock n'existe dans aucun theme clair. Le reglage
+   « Style des cartes » ne touche donc QUE cette tuile, et laisse les
+   autres tranquilles.
+   WHY A SKIN AND NOT ONE MORE THEME: the cards follow the page theme by
+   default, which is the right default -- a tile that clashes with the
+   others is a failed tile. But a racing tile is not a weather tile. The
+   "Card style" setting touches ONLY this tile. */
+.pw-f1.pwf1-skin-dark {
+  --pwf1-skin-bg: #12151c;
+  --pwf1-skin-fg: #eef1f6;
+  --pwf1-skin-muted: #9aa3b2;
+  --pwf1-skin-edge: rgba(255, 255, 255, .13);
+  --pwf1-skin-accent: #e8213b;
+}
+
+/* Les variables du THEME sont reecrites a l'interieur de la tuile,
+   plutot que chaque classe repeinte une a une : le jour ou l'on ajoute
+   une carte, elle est habillee sans rien de plus a ecrire -- et aucune
+   couleur de theme ne peut survivre sur un fond noir par oubli.
+   The THEME variables are overridden INSIDE the tile rather than
+   repainting each class: a card added later is skinned with nothing
+   more to write, and no theme colour can survive on a black background
+   by oversight. */
+.pw-f1.pwf1-skin-dark .pwf1-card {
+  background: var(--pwf1-skin-bg);
+  color: var(--pwf1-skin-fg);
+  --muted: var(--pwf1-skin-muted);
+  --tile-edge: var(--pwf1-skin-edge);
+  --accent: var(--pwf1-skin-accent);
+  border-color: var(--pwf1-skin-edge);
+  /* Le relief tient a une ligne, pas a une image : un degrade pese zero
+     octet, suit la couleur choisie quelle qu'elle soit, et ne peut pas
+     ne pas se charger.
+     The depth comes from one line, not an image: a gradient weighs zero
+     bytes and follows whichever colour was chosen. */
+  background-image: linear-gradient(160deg, rgba(255, 255, 255, .07), transparent 42%);
+}
+
+/* LE LISERE ROUGE, la seule signature « course » qui ne doive rien a
+   personne : ni logo, ni police sous licence, ni livree d'ecurie --
+   juste un filet de couleur sur le bord haut de la carte.
+   THE RED EDGE: the only racing signature that owes nothing to anyone
+   -- no logo, no licensed typeface, no team livery. */
+.pw-f1.pwf1-skin-dark .pwf1-card {
+  position: relative;
+  overflow: hidden;
+}
+.pw-f1.pwf1-skin-dark .pwf1-card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 3px;
+  background: linear-gradient(90deg, var(--pwf1-skin-accent), transparent 70%);
+}
+.pw-f1.pwf1-skin-dark.pwf1-solo .pwf1-card::before { display: none; }
+
+.pw-f1.pwf1-skin-dark .pwf1-cd-wrap {
+  background: rgba(255, 255, 255, .06);
+  border: 1px solid var(--pwf1-skin-edge);
+}
+.pw-f1.pwf1-skin-dark .pwf1-cd { color: var(--pwf1-skin-fg); }
+.pw-f1.pwf1-skin-dark .pwf1-cd-now { color: #4ade80; }
+
+/* EN SOLO, LE FOND DOIT ALLER JUSQU'AU BORD. Sans cela, la carte noire
+   flotte au milieu du fond de tuile du theme, avec un cadre clair
+   autour : l'effet exact de ce qu'on voulait eviter.
+   IN SOLO MODE THE BACKGROUND MUST REACH THE EDGE, otherwise the black
+   card floats inside the theme's tile background. */
+.pw-f1.pwf1-skin-dark.pwf1-solo,
+.pw-f1.pwf1-skin-dark.pwf1-solo .pwf1-card {
+  background: var(--pwf1-skin-bg);
+  color: var(--pwf1-skin-fg);
+}
+.pw-f1.pwf1-skin-dark.pwf1-solo { margin: -10px; padding: 10px; }
+
+/* La couleur choisie peut etre claire (gris clair, blanc casse) : le
+   texte clair deviendrait alors illisible. Le contraste est rendu au
+   navigateur, qui sait seul ce que vaut la couleur saisie.
+   The chosen colour may be light, which would make light text
+   unreadable. Contrast is handed to the browser, the only one that
+   knows what the entered colour is worth. */
+@supports (color: color-contrast(#fff vs #000, #fff)) {
+  .pw-f1.pwf1-skin-custom .pwf1-card {
+    color: color-contrast(var(--pwf1-skin-bg) vs #11141a, #f3f5f9);
+  }
+}
+
+/* ---------- Carte du circuit ---------- */
+.pw-f1 .pwf1-circ { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+
+/* Le SVG prend la largeur et garde ses proportions ; il ne porte PAS de
+   hauteur fixe, sinon un circuit tres allonge (Monza) laisserait deux
+   grandes bandes vides.
+   The SVG takes the width and keeps its ratio; no fixed height, or a
+   very elongated circuit would leave two large empty bands. */
+.pw-f1 .pwf1-circ svg { width: 100%; height: auto; display: block; }
+
+.pw-f1 .pwf1-circ-track {
+  fill: none;
+  stroke: var(--accent, #e8213b);
+  stroke-width: 9;
+  /* Les tronçons sont traces separement : des bouts ARRONDIS font que
+     deux tronçons voisins se raccordent sans laisser d'encoche a la
+     jonction.
+     Segments are drawn separately: ROUND caps make neighbouring
+     segments join without a notch. */
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pw-f1 .pwf1-circ-pit {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 4;
+  stroke-dasharray: 9 7;
+  stroke-linecap: round;
+}
+.pw-f1 .pwf1-circ-dir { fill: var(--fg, currentColor); opacity: .85; }
+
+/* Les etiquettes de virage portent un LISERE de la couleur du fond :
+   c'est ce qui les garde lisibles quand elles tombent sur le trace,
+   sans boite opaque qui masquerait la piste.
+   Corner labels carry a background-coloured OUTLINE, which keeps them
+   readable over the outline without an opaque box hiding the track. */
+.pw-f1 .pwf1-circ-label {
+  font-size: 22px;
+  fill: currentColor;
+  paint-order: stroke;
+  stroke: var(--pwf1-skin-bg, var(--tile-bg, #0e1117));
+  stroke-width: 5;
+  text-anchor: middle;
+  dominant-baseline: middle;
+}
+
+.pw-f1 .pwf1-circ-foot {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: .78em;
+  color: var(--muted);
+  min-width: 0;
+}
+.pw-f1 .pwf1-circ-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-f1 .pwf1-circ-src { flex: 0 0 auto; }
+
+/* Sur une tuile etroite, les noms de virages se chevauchent : ils sont
+   retires AVANT de devenir une bouillie, et le trace reste lisible.
+   On a narrow tile corner names overlap: they go BEFORE turning into
+   mush. */
+@container (max-width: 300px) {
+  .pw-f1 .pwf1-circ-label { display: none; }
+  .pw-f1 .pwf1-circ-src { display: none; }
+}

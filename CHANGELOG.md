@@ -1,5 +1,68 @@
 # Changelog
 
+## 1.138.3
+
+- **Le PLAN DU CIRCUIT, une sixieme carte de la tuile Formule 1.** Le
+  trace du circuit du week-end, dessine en vectoriel a partir
+  d'OpenStreetMap : net a toute taille, aux couleurs du theme, avec une
+  fleche donnant le sens de la course, la voie des stands en pointilles
+  et le nom des virages la ou OSM les connait. Les plans officiels de la
+  Formule 1 sont des visuels sous droits : ils ne sont pas embarques, le
+  trace est DESSINE, et la source est citee dans la carte comme l'exige
+  la licence ODbL.
+
+  Les NUMEROS de virages existent bel et bien dans OSM, contrairement a
+  ce que j'avais annonce : la donnee reelle de Sepang porte des virages
+  nommes « 3 », « 10 », « 12 », « 13 », « 15 » a cote de « Genting
+  Curve ». C'est tres inegal d'un circuit a l'autre ; la carte affiche
+  ce qui existe et n'invente jamais ce qui manque.
+
+  Ce qui n'existe nulle part, ce sont les trois SECTEURS : les points de
+  chronometrage S1/S2/S3 ne sont publies par personne. Colorer trois
+  tiers de tour egaux serait facile et serait FAUX -- une carte sans
+  secteurs vaut mieux qu'une carte qui invente les siens.
+
+  Deux pieges que seule la donnee reelle revelait, et qui sont traites :
+  un complexe de circuit contient d'AUTRES pistes bitumees (Sepang a un
+  « Handling Circuit » en `sport=motor`, impossible a ecarter par ses
+  etiquettes) dont la presence agrandissait le cadre et ecrasait le
+  Grand Prix dans un coin ; et la voie des stands se raccorde souvent au
+  MILIEU d'une portion de piste. Seul le groupe de tronçons qui se
+  touchent le plus long est garde, en reliant par TOUS les noeuds.
+
+  Le trace est charge A PART du reste de la tuile et garde en cache par
+  circuit : Overpass met plusieurs secondes a repondre, il est public et
+  partage par tous, et une panne de son cote ne doit pas priver la tuile
+  de son classement.
+
+- **Un style « piste » pour les cartes Formule 1** (reglage « Style des
+  cartes »). « Thème de la page » reste le defaut -- une tuile qui jure
+  avec ses voisines est une tuile ratee. « Piste sombre » donne le noir
+  profond du paddock et un lisere rouge : un air de course qui ne doit
+  rien a un logo, une livree ou une police sous licence. « Couleur
+  choisie » prend la couleur de votre choix, et laisse la couleur du
+  texte au navigateur -- seul a savoir si la couleur saisie est claire ou
+  foncee. Le reglage ne touche QUE cette tuile.
+
+- **CORRECTIF -- trois icones du catalogue etaient noires, donc
+  invisibles en mode nuit** : Formule 1, Image et Texte. Elles etaient
+  peintes en `currentColor` dans l'espoir de suivre le theme, mais
+  PiBoard affiche ces fichiers avec une balise `<img>`, et un SVG charge
+  ainsi est un DOCUMENT a part : il n'herite de rien de la page, ni
+  couleur ni variable CSS, et `currentColor` y retombe sur le noir quel
+  que soit le theme. Elles recoivent donc une couleur propre, comme les
+  trente-quatre autres : rouge course, ambre, bleu ardoise. Un test
+  (`test/widgetIcons.test.js`) interdit desormais `currentColor` dans
+  une icone du catalogue ET refuse toute teinte trop sombre pour se voir
+  de nuit, luminance perceptuelle a l'appui.
+
+- **CORRECTIF trouve par le test de bout en bout** : une tuile n'affichant
+  QUE le plan du circuit restait eternellement en chargement. Le releve
+  du calendrier -- qui donne le circuit du week-end et ses coordonnees --
+  n'etait demande que pour les cartes « Prochaine course » et
+  « Programme ». Aucune erreur, aucun message : la question n'avait
+  simplement jamais ete posee.
+
 ## 1.138.2
 
 - **La taille par defaut de la tuile Formule 1 passe de 6x8 a 4x4.** La
