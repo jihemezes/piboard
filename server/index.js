@@ -793,11 +793,38 @@ app.get("/api/image-proxy", async (req, res) => {
   }
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
+    /* QUINZE SECONDES ETAIENT TROP COURTES, et le defaut etait invisible.
+       Overpass -- le service public qui interroge OpenStreetMap -- met
+       couramment vingt a trente secondes quand il est charge : une
+       requete mesuree a mis 29 secondes avant de repondre, alors que la
+       MEME requete avait repondu en huit secondes le matin. Le relais
+       l'abandonnait donc a la quinzieme, et la tuile annoncait
+       tranquillement qu'aucun trace n'existait. Le delai passe a
+       quarante secondes POUR TOUT LE MONDE : aucune des sources lues par
+       PiBoard ne gagne a etre coupee a quinze secondes, et un flux lent
+       vaut mieux qu'un flux absent.
+       FIFTEEN SECONDS WAS TOO SHORT, and the defect was invisible.
+       Overpass commonly takes twenty to thirty seconds when busy: one
+       measured query took 29 seconds, where the SAME query had answered
+       in eight that morning. The relay gave up at fifteen and the tile
+       calmly announced that no outline existed. Raised to forty seconds
+       FOR EVERY SOURCE: none of the feeds PiBoard reads gains from being
+       cut at fifteen, and a slow feed beats an absent one. */
+    const timer = setTimeout(() => controller.abort(), 40000);
     const upstream = await fetch(parsed.href, {
       signal: controller.signal,
       redirect: "follow",
-      headers: { "User-Agent": "PiBoard/0.1 (+https://github.com/jihemezes/piboard)" }
+      headers: {
+        "User-Agent": "PiBoard/0.1 (+https://github.com/jihemezes/piboard)",
+        /* SANS CETTE ENTETE, OVERPASS REFUSE EN 406. Il regarde l'Accept
+           de la requete, et un relais qui n'en envoie aucun se fait
+           parfois servir une erreur plutot que la donnee demandee.
+           L'annoncer large ne coute rien et ferme la question.
+           WITHOUT THIS HEADER OVERPASS ANSWERS 406: it looks at the
+           request's Accept, and a relay sending none is sometimes served
+           an error rather than the data. */
+        "Accept": "*/*"
+      }
     });
     clearTimeout(timer);
     const type = upstream.headers.get("content-type") || "";
@@ -2470,6 +2497,7 @@ app.get("/api/tempo", async (req, res) => {
    response -- it returns its error in its own entry. */
 const serviceStatus = require("./serviceStatus");
 const serviceCatalog = require("./serviceCatalog");
+const circuitCatalog = require("./circuitCatalog");
 /* Plafond porte de 10 a 25 avec le selecteur a cases a cocher (1.128.0) :
    cocher des services est devenu si rapide qu'un plafond de 10 se heurte
    des la premiere utilisation. Le plafond n'a jamais protege le reseau --
@@ -2552,6 +2580,29 @@ app.get("/api/service-catalog", async (req, res) => {
     res.json({ catalog: out.catalog, source: out.source });
   } catch (e) {
     console.warn("[piboard] catalogue de services echec ->", e.message || e);
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+/* La base des circuits, servie par le serveur et non lue comme un
+   fichier statique, pour la meme raison que le catalogue des services :
+   un circuit ajoute sur le depot arrive sans attendre une version de
+   PiBoard. Voir server/circuitCatalog.js.
+   The circuit base, served by the server rather than read as a static
+   file, for the same reason as the service catalogue. */
+app.get("/api/circuit-catalog", async (req, res) => {
+  try {
+    const out = await circuitCatalog.get({ remote: req.query.remote !== "0" });
+    /* Une heure de cache navigateur, et non un quart d'heure : un trace
+       de circuit ne change jamais, et le fichier est bien plus lourd
+       qu'un catalogue de services.
+       One hour of browser cache rather than fifteen minutes: an outline
+       never changes, and the file is far heavier. */
+    res.set("Cache-Control", "max-age=3600");
+    if (!out.catalog) return res.status(503).json({ error: "no catalog" });
+    res.json({ catalog: out.catalog, source: out.source });
+  } catch (e) {
+    console.warn("[piboard] base de circuits echec ->", e.message || e);
     res.status(500).json({ error: String(e.message || e) });
   }
 });

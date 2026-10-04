@@ -2842,6 +2842,40 @@
         body += groupOrder.map((g) => `<optgroup label="${escapeHtmlAttr(g)}">${byGroup.get(g).map(optionHtml).join("")}</optgroup>`).join("");
         return `<label class="field"><span>${label}</span><select data-key="${f.key}">${body}</select>${hint}</label>`;
       }
+      /* Type "remoteselect" : un menu deroulant dont les options ne sont
+         PAS dans le manifeste mais chargees depuis le serveur.
+
+         POURQUOI IL A FALLU UN TYPE DE PLUS. La liste des circuits vit
+         dans une base distante, justement pour qu'un circuit ajoute
+         n'exige pas une version de PiBoard. La figer dans le manifeste
+         annulerait tout l'interet : on publierait une version pour
+         ajouter une ligne a un menu. Le champ va donc chercher ses
+         options a l'ouverture des reglages, et affiche la liste reelle
+         du moment -- y compris les circuits arrives depuis la derniere
+         mise a jour.
+
+         La valeur ENREGISTREE est conservee meme si la liste n'a pas pu
+         etre chargee : le menu affiche alors la seule valeur connue
+         plutot que de retomber sur « automatique » en silence. Perdre
+         un reglage parce qu'une liste n'a pas repondu serait le pire
+         des comportements.
+
+         Type "remoteselect": a dropdown whose options are NOT in the
+         manifest but loaded from the server. The circuit list lives in a
+         remote base precisely so that adding a circuit does not require
+         a PiBoard release; freezing it in the manifest would defeat the
+         whole point. The STORED value is kept even when the list could
+         not be loaded -- the menu then shows that one known value rather
+         than silently falling back to "automatic". */
+      case "remoteselect": {
+        const first = f.emptyLabel
+          ? `<option value="">${i18n.fromManifest(f.emptyLabel)}</option>`
+          : "";
+        return `<label class="field"><span>${label}</span>`
+          + `<select data-key="${f.key}" data-remote-src="${escapeHtmlAttr(f.source || "")}"`
+          + ` data-remote-path="${escapeHtmlAttr(f.path || "")}" data-remote-value="${escapeHtmlAttr(String(v == null ? "" : v))}">`
+          + `${first}</select>${hint}</label>`;
+      }
       /* Champ "fuseau horaire" : construit sa liste d'options a la volee
          via Intl.supportedValuesOf("timeZone") -- la meme API que celle
          qui alimente deja l'affichage reel du fuseau (voir nowInZone()
@@ -3342,6 +3376,11 @@
     // families, loaded from a static file.
     form.querySelectorAll("[data-multipick-field]").forEach((el) => initMultipick(el));
 
+    // Menus deroulants dont les options viennent du serveur (type
+    // "remoteselect").
+    // Dropdowns whose options come from the server ("remoteselect").
+    form.querySelectorAll("select[data-remote-src]").forEach((el) => initRemoteSelect(el));
+
     // Etat de chaque secret ("enregistre" / "non defini") : demande au
     // serveur, jamais devine depuis les reglages -- ils ne le contiennent
     // pas. Each secret's state ("stored" / "not set"): asked of the
@@ -3420,6 +3459,88 @@
       console.warn("[piboard] catalogue multipick indisponible", e);
       return { families: [], services: [] };
     }
+  }
+
+  /* ---------- Menu deroulant alimente par le serveur / server-fed dropdown ---------- */
+
+  const remoteSelectCache = new Map();
+
+  async function initRemoteSelect(el) {
+    const src = el.dataset.remoteSrc;
+    const want = el.dataset.remoteValue || "";
+    if (!src) return;
+
+    /* La valeur enregistree est posee AVANT tout appel reseau. Si le
+       chargement echoue ou tarde, le champ porte deja la bonne valeur,
+       et un enregistrement des reglages ne l'efface pas.
+       The stored value is set BEFORE any network call: if loading fails
+       or lags, the field already carries the right value and saving the
+       settings does not wipe it. */
+    if (want && !el.querySelector(`option[value="${CSS.escape(want)}"]`)) {
+      const keep = document.createElement("option");
+      keep.value = want;
+      keep.textContent = want;
+      el.appendChild(keep);
+    }
+    el.value = want;
+
+    let list;
+    try {
+      if (remoteSelectCache.has(src)) {
+        list = remoteSelectCache.get(src);
+      } else {
+        const body = await (await fetch(src)).json();
+        let node = body;
+        for (const step of String(el.dataset.remotePath || "").split(".").filter(Boolean)) {
+          node = node && node[step];
+        }
+        /* Deux formes acceptees : un tableau d'objets {id, name}, et un
+           dictionnaire { id: { name } } -- la base des circuits est un
+           dictionnaire, pour que la recherche par identifiant soit
+           immediate cote tuile.
+           Two shapes accepted: an array of {id, name}, and a dictionary
+           { id: { name } } -- the circuit base is a dictionary so that
+           lookup by id is immediate on the tile's side. */
+        if (Array.isArray(node)) {
+          list = node.map((o) => ({ value: String(o.id || o.value || ""), label: String(o.name || o.label || o.id || "") }));
+        } else if (node && typeof node === "object") {
+          list = Object.keys(node).map((k) => ({ value: k, label: String((node[k] && node[k].name) || k) }));
+        } else {
+          list = [];
+        }
+        list.sort((a, b) => a.label.localeCompare(b.label));
+        remoteSelectCache.set(src, list);
+      }
+    } catch (e) {
+      console.warn("[piboard] liste distante indisponible pour", src, e);
+      return;
+    }
+    if (!list.length) return;
+
+    const current = el.value;
+    const head = el.querySelector('option[value=""]');
+    el.innerHTML = "";
+    if (head) el.appendChild(head);
+    for (const o of list) {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label;
+      el.appendChild(opt);
+    }
+    /* Si la valeur enregistree ne figure plus dans la liste -- un
+       circuit retire de la base -- on la garde quand meme, affichee
+       telle quelle. La faire disparaitre changerait le reglage de la
+       personne sans le lui dire.
+       If the stored value is no longer in the list -- a circuit dropped
+       from the base -- it is kept and shown as is. Making it vanish
+       would change the person's setting without telling them. */
+    if (current && !list.some((o) => o.value === current)) {
+      const keep = document.createElement("option");
+      keep.value = current;
+      keep.textContent = current;
+      el.appendChild(keep);
+    }
+    el.value = current;
   }
 
   /* ---------- Selecteur multiple a cases a cocher / checkbox picker ----------
@@ -4074,7 +4195,7 @@
        unclassified and therefore landed in "Miscellaneous", far from
        the tile it is used with. */
     { key: "entertainment", ids: ["teleprog", "iptv", "iptvrec", "youtube", "slideshow"] },
-    { key: "sport", ids: ["f1", "motorsport", "sportscore", "standings"] },
+    { key: "sport", ids: ["f1", "circuit", "motorsport", "sportscore", "standings"] },
     /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
        systeme, elle surveille une consommation et un seuil, meme si la
        ressource surveillee n'est pas celle de la machine.

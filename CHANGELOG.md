@@ -1,5 +1,68 @@
 # Changelog
 
+## 1.139.0
+
+- **Le plan du circuit devient une TUILE a part entiere, adossee a une
+  BASE DE CIRCUITS.** C'est la reponse a un defaut reel : la carte
+  « Plan du circuit » de la tuile Formule 1 interrogeait Overpass au
+  moment de l'affichage. Mesure sur trois appels consecutifs pour le
+  meme circuit -- 886 ms, puis 17,4 s, puis une erreur 429 (quota
+  depasse). Le relais abandonne a 15 s : deux affichages sur trois
+  echouaient, et la tuile annoncait « aucun trace dans OpenStreetMap ».
+  C'etait FAUX. Le trace existait ; c'est le service public qui n'avait
+  pas repondu. Confondre une panne d'acces avec une absence de donnee
+  est la faute que ce projet s'interdit, et elle avait ete commise.
+
+  Un trace de circuit ne change pas : il est desormais releve UNE FOIS
+  (scripts/circuit-catalog.js) et publie dans une base que la tuile lit.
+  L'affichage est immediat, fonctionne hors connexion, et ne sollicite
+  plus un service gratuit partage par tous. La base vit sur le depot et
+  se rafraichit toutes les douze heures, comme le catalogue des
+  services : un circuit complete arrive SANS livrer de version.
+
+- **47 circuits** (Formule 1, MotoGP, endurance), dont **27 avec un
+  trace dessine**. Les vingt autres entrent avec leur fiche technique et
+  se declarent incomplets, pour que la tuile explique au lieu de se
+  taire.
+
+- **UN TRACE N'EST PUBLIE QUE S'IL A ETE MESURE.** Sa longueur dessinee
+  est confrontee a la longueur reelle du tour (85 % a 160 %), et le test
+  le verifie sur la base livree. Ce controle a rattrape une erreur de ma
+  part : j'avais compte les tronçons renvoyes par OSM pour declarer un
+  circuit couvert -- Monaco en avait onze, donc Monaco etait bon. Faux.
+  Ces onze tronçons totalisent CINQUANTE METRES sur un tour de 3 337 ;
+  le reste emprunte des rues ouvertes a la circulation. Compter des
+  tronçons ne prouve rien ; mesurer, si. J'avais annonce ici meme que
+  « les circuits en ville passent aussi, Monaco, Bakou, Las Vegas et
+  Singapour compris » : c'etait faux, et c'est corrige.
+
+- **La tuile affiche aussi une fiche technique** (longueur, lieu, annee
+  d'ouverture, championnats) et la meteo a l'heure de chaque seance. La
+  fiche ne montre QUE ce que la base porte : pas de ligne de tirets pour
+  une donnee jamais saisie.
+
+- **Un circuit se choisit, ou se suit automatiquement.** Vide, la tuile
+  suit le calendrier de Formule 1 ; un circuit epingle n'interroge plus
+  le calendrier du tout. La liste deroulante est remplie depuis la base
+  (nouveau type de reglage `remoteselect`) : un circuit ajoute apparait
+  sans mise a jour de l'application.
+
+- **La carte « Plan du circuit » quitte la tuile Formule 1**, qui repasse
+  a six cartes. Garder deux implementations, dont la mauvaise, n'aurait
+  servi personne.
+
+- **CORRECTIF -- l'attribution n'est plus masquee sur une tuile
+  etroite**, et la tuile ne cite plus Open-Meteo quand la meteo est
+  decochee : un credit pour une donnee absente n'est pas une politesse
+  de trop, c'est une information fausse.
+
+- **CORRECTIF dans les tests** : j'avais fige dans dom-smoke.js une
+  course datee du « 2026-10-04 07:00Z » pendant un diagnostic. Le test
+  passait le matin et echouait l'apres-midi, une fois l'heure depassee.
+  Les dates y sont de nouveau calculees depuis l'instant courant. Un
+  test qui depend de l'heure qu'il est ne prouve rien et, pire, finit
+  par etre cru sur parole.
+
 ## 1.138.4
 
 - **La METEO DU CIRCUIT, septieme carte de la tuile Formule 1.** Une

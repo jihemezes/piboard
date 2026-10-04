@@ -363,52 +363,12 @@
   }
 }
 
-/* ---------- Carte du circuit ---------- */
-.pw-f1 .pwf1-circ { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-
-/* Le SVG prend la largeur et garde ses proportions ; il ne porte PAS de
-   hauteur fixe, sinon un circuit tres allonge (Monza) laisserait deux
-   grandes bandes vides.
-   The SVG takes the width and keeps its ratio; no fixed height, or a
-   very elongated circuit would leave two large empty bands. */
-.pw-f1 .pwf1-circ svg { width: 100%; height: auto; display: block; }
-
-.pw-f1 .pwf1-circ-track {
-  fill: none;
-  stroke: var(--accent, #e8213b);
-  stroke-width: 9;
-  /* Les tronçons sont traces separement : des bouts ARRONDIS font que
-     deux tronçons voisins se raccordent sans laisser d'encoche a la
-     jonction.
-     Segments are drawn separately: ROUND caps make neighbouring
-     segments join without a notch. */
-  stroke-linecap: round;
-  stroke-linejoin: round;
-}
-.pw-f1 .pwf1-circ-pit {
-  fill: none;
-  stroke: var(--muted);
-  stroke-width: 4;
-  stroke-dasharray: 9 7;
-  stroke-linecap: round;
-}
-.pw-f1 .pwf1-circ-dir { fill: var(--fg, currentColor); opacity: .85; }
-
-/* Les etiquettes de virage portent un LISERE de la couleur du fond :
-   c'est ce qui les garde lisibles quand elles tombent sur le trace,
-   sans boite opaque qui masquerait la piste.
-   Corner labels carry a background-coloured OUTLINE, which keeps them
-   readable over the outline without an opaque box hiding the track. */
-.pw-f1 .pwf1-circ-label {
-  font-size: 22px;
-  fill: currentColor;
-  paint-order: stroke;
-  stroke: var(--pwf1-skin-bg, var(--tile-bg, #0e1117));
-  stroke-width: 5;
-  text-anchor: middle;
-  dominant-baseline: middle;
-}
-
+/* Le pied de la carte meteo : il porte l'attribution, et rien d'autre.
+   Les classes gardent leur nom `circ`, qui vient de la carte du circuit
+   partie dans sa propre tuile en 1.139.0 ; les renommer aurait casse
+   les reglages de personne, mais aurait fait un diff illisible pour
+   zero gain.
+   The weather card's foot carries the attribution and nothing else. */
 .pw-f1 .pwf1-circ-foot {
   display: flex;
   justify-content: space-between;
@@ -417,30 +377,7 @@
   color: var(--muted);
   min-width: 0;
 }
-.pw-f1 .pwf1-circ-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pw-f1 .pwf1-circ-src { flex: 0 0 auto; }
-
-/* Sur une tuile etroite, les noms de virages se chevauchent : ils sont
-   retires AVANT de devenir une bouillie, et le trace reste lisible.
-   On a narrow tile corner names overlap: they go BEFORE turning into
-   mush. */
-@container (max-width: 300px) {
-  .pw-f1 .pwf1-circ-label { display: none; }
-}
-
-/* L'ATTRIBUTION NE SE MASQUE JAMAIS, a aucune largeur. J'avais commence
-   par la retirer avec les etiquettes sur une tuile etroite ; c'est une
-   faute, et pas seulement d'esthetique : OpenStreetMap est sous ODbL et
-   Open-Meteo demande d'etre cite, et une licence ne s'applique pas
-   seulement aux grands ecrans. Elle retrecit, elle ne disparait pas.
-   ATTRIBUTION IS NEVER HIDDEN, at any width. I had started by dropping
-   it along with the labels on a narrow tile; that is a fault, and not
-   merely a cosmetic one: OpenStreetMap is ODbL and Open-Meteo asks to be
-   credited, and a licence does not apply to large screens only. It
-   shrinks, it does not vanish. */
-@container (max-width: 300px) {
-  .pw-f1 .pwf1-circ-src { font-size: .72em; }
-}
 
 /* ---------- Meteo du circuit (1.138.4) ---------- */
 

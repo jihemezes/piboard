@@ -1,0 +1,671 @@
+[
+ {
+  "id": "albert_park",
+  "name": "Albert Park",
+  "lat": -37.8497,
+  "lon": 144.968,
+  "specs": {
+   "lengthM": 5278,
+   "country": "Australia",
+   "locality": "Melbourne",
+   "openedYear": 1953,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "algarve",
+  "name": "Algarve International Circuit",
+  "lat": 37.2294,
+  "lon": -8.63053,
+  "specs": {
+   "lengthM": 4653,
+   "country": "Portugal",
+   "openedYear": 2008,
+   "series": [
+    "motogp",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "americas",
+  "name": "Circuit of the Americas",
+  "lat": 30.1328,
+  "lon": -97.6411,
+  "specs": {
+   "lengthM": 5513,
+   "country": "USA",
+   "locality": "Austin",
+   "openedYear": 2012,
+   "series": [
+    "f1",
+    "motogp",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "aragon",
+  "name": "MotorLand Aragón",
+  "lat": 41.07968,
+  "lon": -0.18724,
+  "specs": {
+   "lengthM": 5344,
+   "country": "Espagne",
+   "openedYear": 2009,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "assen",
+  "name": "TT Circuit Assen",
+  "lat": 52.96156,
+  "lon": 6.5233,
+  "specs": {
+   "country": "Pays-Bas",
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "bahrain",
+  "name": "Bahrain International Circuit",
+  "lat": 26.0325,
+  "lon": 50.51056,
+  "specs": {
+   "lengthM": 5412,
+   "country": "Bahreïn",
+   "series": [
+    "f1",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "baku",
+  "name": "Baku City Circuit",
+  "lat": 40.3725,
+  "lon": 49.8533,
+  "specs": {
+   "lengthM": 6003,
+   "country": "Azerbaijan",
+   "locality": "Baku",
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "balaton",
+  "name": "Balaton Park",
+  "lat": 47.00806,
+  "lon": 18.19889,
+  "specs": {
+   "country": "Hongrie",
+   "openedYear": 2023,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "brno",
+  "name": "Brno — Masaryk",
+  "lat": 49.20472,
+  "lon": 16.45056,
+  "specs": {
+   "lengthM": 5403,
+   "country": "Tchéquie",
+   "openedYear": 1930,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "bugatti",
+  "name": "Le Mans — Bugatti",
+  "lat": 47.95372,
+  "lon": 0.21078,
+  "specs": {
+   "country": "France",
+   "openedYear": 1966,
+   "series": [
+    "motogp"
+   ]
+  },
+  "radius": 9000
+ },
+ {
+  "id": "buriram",
+  "name": "Chang International Circuit",
+  "lat": 14.96284,
+  "lon": 103.085,
+  "specs": {
+   "lengthM": 4554,
+   "country": "Thaïlande",
+   "openedYear": 2014,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "catalunya",
+  "name": "Circuit de Barcelona-Catalunya",
+  "lat": 41.57,
+  "lon": 2.26111,
+  "specs": {
+   "lengthM": 4675,
+   "country": "Spain",
+   "locality": "Barcelona",
+   "openedYear": 1991,
+   "series": [
+    "f1",
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "daytona",
+  "name": "Daytona International Speedway",
+  "lat": 29.18556,
+  "lon": -81.06944,
+  "specs": {
+   "country": "États-Unis",
+   "openedYear": 1959,
+   "series": [
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "fuji",
+  "name": "Fuji Speedway",
+  "lat": 35.37167,
+  "lon": 138.92667,
+  "specs": {
+   "lengthM": 4359,
+   "country": "Japon",
+   "openedYear": 1966,
+   "series": [
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "goiania",
+  "name": "Autódromo Internacional Ayrton Senna",
+  "lat": -16.71839,
+  "lon": -49.19422,
+  "specs": {
+   "country": "Brésil",
+   "openedYear": 1974,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "hungaroring",
+  "name": "Hungaroring",
+  "lat": 47.5789,
+  "lon": 19.2486,
+  "specs": {
+   "lengthM": 4381,
+   "country": "Hungary",
+   "locality": "Budapest",
+   "openedYear": 1986,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "imola",
+  "name": "Autodromo Enzo e Dino Ferrari",
+  "lat": 44.34111,
+  "lon": 11.71333,
+  "specs": {
+   "lengthM": 4909,
+   "country": "Italie",
+   "openedYear": 1953,
+   "series": [
+    "f1",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "interlagos",
+  "name": "Interlagos",
+  "lat": -23.7036,
+  "lon": -46.6997,
+  "specs": {
+   "lengthM": 4309,
+   "country": "Brazil",
+   "locality": "São Paulo",
+   "openedYear": 1940,
+   "series": [
+    "f1",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "jeddah",
+  "name": "Jeddah Corniche Circuit",
+  "lat": 21.63194,
+  "lon": 39.10444,
+  "specs": {
+   "lengthM": 6175,
+   "country": "Arabie saoudite",
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "jerez",
+  "name": "Jerez — Ángel Nieto",
+  "lat": 36.70833,
+  "lon": -6.03417,
+  "specs": {
+   "country": "Espagne",
+   "openedYear": 1985,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "lemans",
+  "name": "Le Mans — Circuit de la Sarthe",
+  "lat": 47.94986,
+  "lon": 0.20753,
+  "specs": {
+   "country": "France",
+   "series": [
+    "wec"
+   ]
+  },
+  "radius": 9000
+ },
+ {
+  "id": "losail",
+  "name": "Lusail International Circuit",
+  "lat": 25.49,
+  "lon": 51.4542,
+  "specs": {
+   "country": "Qatar",
+   "locality": "Lusail",
+   "openedYear": 2004,
+   "series": [
+    "f1",
+    "motogp",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "madring",
+  "name": "Madring",
+  "lat": 40.46528,
+  "lon": -3.61528,
+  "specs": {
+   "country": "Spain",
+   "locality": "Madrid",
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "mandalika",
+  "name": "Mandalika",
+  "lat": -8.89542,
+  "lon": 116.30418,
+  "specs": {
+   "country": "Indonésie",
+   "openedYear": 2021,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "marina_bay",
+  "name": "Marina Bay",
+  "lat": 1.2914,
+  "lon": 103.864,
+  "specs": {
+   "country": "Singapore",
+   "locality": "Marina Bay",
+   "openedYear": 2008,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "miami",
+  "name": "Miami International Autodrome",
+  "lat": 25.9581,
+  "lon": -80.2389,
+  "specs": {
+   "lengthM": 5412,
+   "country": "USA",
+   "locality": "Miami",
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "misano",
+  "name": "Misano — Marco Simoncelli",
+  "lat": 43.96137,
+  "lon": 12.68596,
+  "specs": {
+   "lengthM": 4064,
+   "country": "Italie",
+   "openedYear": 1972,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "monaco",
+  "name": "Circuit de Monaco",
+  "lat": 43.7347,
+  "lon": 7.42056,
+  "specs": {
+   "lengthM": 3337,
+   "country": "Monaco",
+   "locality": "Monte Carlo",
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "monza",
+  "name": "Monza",
+  "lat": 45.6156,
+  "lon": 9.28111,
+  "specs": {
+   "lengthM": 5793,
+   "country": "Italy",
+   "locality": "Monza",
+   "openedYear": 1922,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "motegi",
+  "name": "Motegi",
+  "lat": 36.53361,
+  "lon": 140.2275,
+  "specs": {
+   "country": "Japon",
+   "openedYear": 1997,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "mugello",
+  "name": "Mugello",
+  "lat": 43.9975,
+  "lon": 11.37194,
+  "specs": {
+   "lengthM": 5245,
+   "country": "Italie",
+   "openedYear": 1974,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "nordschleife",
+  "name": "Nürburgring Nordschleife",
+  "lat": 50.3461,
+  "lon": 6.96611,
+  "specs": {
+   "country": "Allemagne",
+   "series": [
+    "wec"
+   ]
+  },
+  "radius": 9000
+ },
+ {
+  "id": "phillip_island",
+  "name": "Phillip Island",
+  "lat": -38.5031,
+  "lon": 145.236,
+  "specs": {
+   "country": "Australie",
+   "openedYear": 1952,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "red_bull_ring",
+  "name": "Red Bull Ring",
+  "lat": 47.2197,
+  "lon": 14.7647,
+  "specs": {
+   "lengthM": 4318,
+   "country": "Austria",
+   "locality": "Spielberg",
+   "openedYear": 1969,
+   "series": [
+    "f1",
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "ricardo_tormo",
+  "name": "Circuit Ricardo Tormo",
+  "lat": 39.48583,
+  "lon": -0.62806,
+  "specs": {
+   "lengthM": 4051,
+   "country": "Espagne",
+   "openedYear": 1999,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "rodriguez",
+  "name": "Autódromo Hermanos Rodríguez",
+  "lat": 19.4042,
+  "lon": -99.0907,
+  "specs": {
+   "lengthM": 4304,
+   "country": "Mexico",
+   "locality": "Mexico City",
+   "openedYear": 1959,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "sachsenring",
+  "name": "Sachsenring",
+  "lat": 50.7906,
+  "lon": 12.6878,
+  "specs": {
+   "country": "Allemagne",
+   "openedYear": 1927,
+   "series": [
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "sebring",
+  "name": "Sebring International Raceway",
+  "lat": 27.4547,
+  "lon": -81.3483,
+  "specs": {
+   "country": "États-Unis",
+   "series": [
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "sepang",
+  "name": "Sepang International Circuit",
+  "lat": 2.76083,
+  "lon": 101.738,
+  "specs": {
+   "lengthM": 5543,
+   "country": "Malaysia",
+   "locality": "Kuala Lumpur",
+   "openedYear": 1999,
+   "series": [
+    "f1",
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "shanghai",
+  "name": "Shanghai International Circuit",
+  "lat": 31.3389,
+  "lon": 121.22,
+  "specs": {
+   "lengthM": 5451,
+   "country": "China",
+   "locality": "Shanghai",
+   "openedYear": 2004,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "silverstone",
+  "name": "Silverstone",
+  "lat": 52.0786,
+  "lon": -1.01694,
+  "specs": {
+   "lengthM": 5891,
+   "country": "UK",
+   "locality": "Silverstone",
+   "openedYear": 1948,
+   "series": [
+    "f1",
+    "motogp",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "spa",
+  "name": "Spa-Francorchamps",
+  "lat": 50.4372,
+  "lon": 5.97139,
+  "specs": {
+   "lengthM": 7003,
+   "country": "Belgium",
+   "locality": "Spa",
+   "series": [
+    "f1",
+    "wec"
+   ]
+  }
+ },
+ {
+  "id": "suzuka",
+  "name": "Suzuka",
+  "lat": 34.8431,
+  "lon": 136.541,
+  "specs": {
+   "lengthM": 5807,
+   "country": "Japan",
+   "locality": "Suzuka",
+   "series": [
+    "f1",
+    "motogp"
+   ]
+  }
+ },
+ {
+  "id": "vegas",
+  "name": "Las Vegas Strip Circuit",
+  "lat": 36.1147,
+  "lon": -115.173,
+  "specs": {
+   "country": "USA",
+   "locality": "Las Vegas",
+   "openedYear": 2023,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "villeneuve",
+  "name": "Circuit Gilles-Villeneuve",
+  "lat": 45.5,
+  "lon": -73.5228,
+  "specs": {
+   "lengthM": 4361,
+   "country": "Canada",
+   "locality": "Montreal",
+   "openedYear": 1978,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "yas_marina",
+  "name": "Yas Marina",
+  "lat": 24.4672,
+  "lon": 54.6031,
+  "specs": {
+   "lengthM": 5554,
+   "country": "UAE",
+   "locality": "Abu Dhabi",
+   "openedYear": 2009,
+   "series": [
+    "f1"
+   ]
+  }
+ },
+ {
+  "id": "zandvoort",
+  "name": "Zandvoort",
+  "lat": 52.3888,
+  "lon": 4.54092,
+  "specs": {
+   "lengthM": 4259,
+   "country": "Netherlands",
+   "locality": "Zandvoort",
+   "series": [
+    "f1"
+   ]
+  }
+ }
+]

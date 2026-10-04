@@ -33,6 +33,48 @@
 # Nouveautes / What's new
 
 
+## 1.139.0
+
+**Une tuile « Plan du circuit », et une base de 47 circuits**
+
+Le trace d'un circuit devient une tuile a part : celle du Grand Prix du
+week-end, ou celle d'un circuit que vous epinglez. Dessin vectoriel, net
+a toute taille, avec le sens de la course, la voie des stands et le nom
+des virages la ou il est connu -- plus une fiche technique et la meteo
+de chaque seance.
+
+Surtout, la tuile ne va plus chercher le trace sur Internet a chaque
+affichage. Il est releve une fois et publie dans une base que PiBoard
+lit : l'affichage est immediat et fonctionne hors connexion. La base se
+met a jour toute seule, donc un circuit complete arrive sans nouvelle
+version de PiBoard.
+
+47 circuits de Formule 1, MotoGP et endurance, dont 27 avec un trace.
+Les autres -- Monaco, Bakou, Singapour, Las Vegas, Melbourne, Madrid,
+Goiania -- sont des circuits urbains traces sur des rues ordinaires, que
+les donnees ouvertes ne distinguent pas de la voirie : la tuile le dit
+et affiche quand meme leur fiche.
+
+---
+
+**A "Circuit map" tile, and a base of 47 circuits**
+
+A circuit's outline becomes a tile of its own: the weekend's Grand Prix,
+or a circuit you pin. Vector drawing, crisp at any size, with the racing
+direction, the pit lane and corner names where they are known -- plus a
+spec sheet and each session's weather.
+
+Above all, the tile no longer fetches the outline from the internet on
+every display. It is surveyed once and published in a base that PiBoard
+reads: display is instant and works offline. The base updates itself, so
+a completed circuit arrives without a new PiBoard release.
+
+47 Formula 1, MotoGP and endurance circuits, 27 of them with an outline.
+The others -- Monaco, Baku, Singapore, Las Vegas, Melbourne, Madrid,
+Goiania -- are street circuits drawn on ordinary roads, which open data
+does not tell apart from the rest of the street network: the tile says
+so and still shows their facts.
+
 ## 1.138.4
 
 **La meteo du circuit, seance par seance**

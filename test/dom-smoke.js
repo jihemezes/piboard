@@ -674,6 +674,7 @@ const IH = { runs: [] };
    Log of Formula 1 API calls: used to check that an unticked card no
    longer sends its request. */
 const FETCHES = [];
+const CIRCUIT_CATALOG_CALLS = [];
 const CATALOG_ROUTE = { down: false, calls: [], fileCalls: [], body: () => CATALOG_FIXTURE };
 const SVC_DETECT_CALLS = [];
 let UPDATE_VERSION_SERVED = "9.9.9-test";
@@ -801,16 +802,28 @@ const dom = new JSDOM(html, {
             Driver: { code: "VER", givenName: "Max", familyName: "Verstappen", nationality: "Dutch" }, Constructor: { constructorId: "red_bull", name: "Red Bull" } }
         ] }] } } });
       }
+      /* AUCUNE DATE EN DUR ICI. J'y avais fige une course au
+         « 2026-10-04 07:00Z » le jour ou je diagnostiquais le Grand Prix
+         de Sepang. Le test a passe ce matin-la et a echoue l'apres-midi,
+         quand l'heure a depasse celle de la course : la tuile affichait
+         « saison terminee » -- exact pour la donnee, faux pour
+         l'intention. Un test qui depend de l'heure qu'il est ne prouve
+         rien et, pire, finit par etre cru sur parole. Les dates sont
+         donc TOUJOURS calculees depuis MS_NOW, comme partout ailleurs
+         dans ce fichier.
+         NO HARD-CODED DATE HERE. I had frozen a race at
+         "2026-10-04 07:00Z" while diagnosing the Sepang Grand Prix: the
+         test passed that morning and failed that afternoon. */
       if (F1_DIRECT) {
         return json({ MRData: { RaceTable: { Races: [{
-          season: "2026", round: "16", raceName: "Bahrain Grand Prix in Malaysia",
-          date: "2026-10-04", time: "07:00:00Z",
+          season: "2026", round: "16", raceName: "Grand Prix de Malaisie",
+          ...ergastParts(MS_NOW + MS_OFFSETS.race),
           Circuit: { circuitId: "sepang", circuitName: "Sepang International Circuit",
             Location: { locality: "Kuala Lumpur", country: "Malaysia", lat: "2.76083", long: "101.738" } },
-          FirstPractice: { date: "2026-10-02", time: "04:30:00Z" },
-          SecondPractice: { date: "2026-10-02", time: "08:00:00Z" },
-          ThirdPractice: { date: "2026-10-03", time: "04:30:00Z" },
-          Qualifying: { date: "2026-10-03", time: "08:00:00Z" }
+          FirstPractice: ergastParts(MS_NOW + MS_OFFSETS.fp1),
+          SecondPractice: ergastParts(MS_NOW + MS_OFFSETS.fp2),
+          ThirdPractice: ergastParts(MS_NOW + MS_OFFSETS.fp3),
+          Qualifying: ergastParts(MS_NOW + MS_OFFSETS.quali)
         }] } } });
       }
       if (u.includes("/api/internet-health/run")) {
@@ -826,6 +839,16 @@ const dom = new JSDOM(html, {
           sample: { t: Date.now() - 9 * 60000, latencyMs: 14, jitterMs: 2, lossPct: 0 },
           lastThroughput: null
         });
+      }
+      /* La base des circuits : la VRAIE, lue sur le disque. Une fausse
+         base ne prouverait rien de ce qui compte ici -- que le fichier
+         livre se lit, se dessine, et porte bien les circuits du
+         calendrier.
+         The circuit base: the REAL one, read from disk. A fake one would
+         prove nothing of what matters here. */
+      if (u.includes("api/circuit-catalog")) {
+        CIRCUIT_CATALOG_CALLS.push(u);
+        return json({ catalog: JSON.parse(fs.readFileSync(path.join(PUB, "data/circuit-catalog.json"), "utf8")), source: "embedded" });
       }
       if (u.includes("api/service-catalog")) {
         if (CATALOG_ROUTE.down) return Promise.resolve({ ok: false, status: 503, json: () => Promise.resolve({ error: "down" }) });
@@ -9352,7 +9375,7 @@ function catalogItemFor(catalog, document, widgetId) {
 
     assert("les cinq cartes demandees sont affichees", host.querySelectorAll(".pwf1-card").length === 5);
     assert("le compte a rebours bat dans la carte « prochaine course »",
-      !!host.querySelector(".pwf1-cd[data-cd]") && /\dj \d\d h?/.test((host.querySelector(".pwf1-cd").textContent || "").replace("h", " h")));
+      !!host.querySelector(".pwf1-cd[data-cd]") && /\dj \d\d|\d\d h \d\d/.test((host.querySelector(".pwf1-cd").textContent || "").replace("h", " h")));
     assert("le classement pilotes porte les points et les victoires",
       /302/.test(host.textContent) && /Antonelli/.test(host.textContent));
     assert("le classement constructeurs est distinct du classement pilotes",
@@ -9419,123 +9442,6 @@ function catalogItemFor(catalog, document, widgetId) {
     const added = FETCHES.filter((u) => /jolpi/.test(u)).length - before;
     assert("et sa requete n'est plus envoyee", added <= 1);
 
-    /* ---------- LE PLAN DU CIRCUIT (1.138.3) ----------
-       Ce qui se joue ici est le CHEMIN, et non la geometrie (figee par
-       test/f1Circuit.test.js) : le trace part d'Overpass, passe par le
-       relais du serveur -- jamais en direct, sinon le navigateur se
-       heurte a CORS -- et se garde en cache par circuit pour qu'un
-       changement de Grand Prix ne coute qu'un releve. Une panne
-       d'Overpass doit couter la carte, et rien d'autre. */
-    {
-      const hostC = document.createElement("div");
-      document.body.appendChild(hostC);
-      const kept = {};
-      const wC = new Klass({
-        el: hostC,
-        settings: { showNext: false, showSchedule: false, showDrivers: false,
-                    showConstructors: false, showResults: false, showCircuit: true, showWeather: false },
-        i18n,
-        api: {
-          proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u),
-          state: {
-            get: (k) => Promise.resolve(kept[k]),
-            put: (k, v) => { kept[k] = v; return Promise.resolve(); }
-          }
-        }
-      });
-      wC.init();
-      await sleep(200);
-
-      const overpassCalls = FETCHES.filter((u) => /overpass/.test(u));
-      assert("le trace passe par le relais du serveur, jamais en direct",
-        overpassCalls.length >= 1 && overpassCalls.every((u) => u.startsWith("/api/proxy?url=")));
-      assert("le trace est dessine en SVG, et non en image matricielle",
-        !!hostC.querySelector(".pwf1-circ svg path.pwf1-circ-track"));
-      assert("la voie des stands est distinguee de la piste",
-        !!hostC.querySelector("path.pwf1-circ-pit"));
-      assert("le sens de la course est indique",
-        !!hostC.querySelector(".pwf1-circ-dir"));
-      /* L'ATTRIBUTION N'EST PAS UNE POLITESSE : OpenStreetMap est sous
-         ODbL, et afficher le trace sans citer la source serait une
-         violation de licence. */
-      /* La carte porte bien son emplacement d'attribution, et les deux
-         traductions y mettent bien OpenStreetMap -- le test du DOM lit
-         des cles et non des libelles, c'est donc le fichier de langues
-         qu'il faut verifier. */
-      assert("la carte reserve sa place a l'attribution",
-        !!hostC.querySelector(".pwf1-circ-src"));
-      {
-        const i18nSrc = fs.readFileSync(path.join(PUB, "i18n.js"), "utf8");
-        const credits = [...i18nSrc.matchAll(/"f1\.circuit\.credit":\s*"([^"]+)"/g)].map((m) => m[1]);
-        assert("les deux langues citent OpenStreetMap",
-          credits.length === 2 && credits.every((c) => /OpenStreetMap/.test(c)));
-      }
-      assert("le trace est garde en cache par circuit",
-        Object.keys(kept).some((k) => /^f1\.circuit\./.test(k)));
-
-      /* Un second relevé ne doit PAS rappeler Overpass : le cache sert
-         a cela, et une API publique partagee par tous ne se sollicite
-         pas deux fois pour le meme trace. */
-      const n = FETCHES.filter((u) => /overpass/.test(u)).length;
-      wC.circuit = null;
-      await wC.refreshCircuit();
-      await sleep(80);
-      assert("un trace deja releve ne redemande rien a Overpass",
-        FETCHES.filter((u) => /overpass/.test(u)).length === n);
-
-      wC.destroy();
-      hostC.remove();
-    }
-
-    /* ---------- LA METEO DU CIRCUIT (1.138.4) ----------
-       Ce qui se joue ici : la prevision est bien appariee A L'HEURE DE
-       CHAQUE SEANCE -- une ligne par seance, et non un bulletin unique
-       pour le lieu -- et l'attribution d'Open-Meteo est portee par la
-       carte. */
-    {
-      const hostW = document.createElement("div");
-      document.body.appendChild(hostW);
-      const wW = new Klass({
-        el: hostW,
-        settings: { showNext: false, showSchedule: false, showDrivers: false,
-                    showConstructors: false, showResults: false, showCircuit: false, showWeather: true },
-        i18n,
-        api: {
-          proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u),
-          state: { get: () => Promise.resolve(null), put: () => Promise.resolve() }
-        }
-      });
-      wW.init();
-      await sleep(200);
-
-      const wxCalls = FETCHES.filter((u) => /open-meteo/.test(u));
-      assert("la meteo passe par le relais du serveur, jamais en direct",
-        wxCalls.length >= 1 && wxCalls.every((u) => u.startsWith("/api/proxy?url=")));
-      assert("une ligne de meteo PAR SEANCE, et non un bulletin unique pour le lieu",
-        hostW.querySelectorAll(".pwf1-wx:not(.pwf1-wx-head)").length === 5);
-      assert("chaque ligne porte une temperature et une probabilite de pluie",
-        [...hostW.querySelectorAll(".pwf1-wx:not(.pwf1-wx-head)")].every((r) =>
-          /\d+°/.test(r.querySelector(".pwf1-wx-temp").textContent)
-          && /\d+%/.test(r.querySelector(".pwf1-wx-rain").textContent)));
-      /* La pluie est le seul chiffre colore : si rien ne ressort quand
-         la moitie des heures sont a 70 %, le seuil ne sert a rien. */
-      assert("une forte probabilite de pluie est mise en avant",
-        hostW.querySelectorAll(".pwf1-wx-wet").length >= 1);
-      assert("Open-Meteo est cite", !!hostW.querySelector(".pwf1-wx-list .pwf1-circ-src"));
-
-      /* L'ATTRIBUTION NE SE MASQUE A AUCUNE LARGEUR : c'est une
-         obligation de licence (ODbL pour OpenStreetMap, citation
-         demandee par Open-Meteo), pas un element de confort. */
-      {
-        const css = fs.readFileSync(path.join(PUB, "widgets/f1/widget.css"), "utf8");
-        const hidden = /@container[^{]*\{[^@]*?\.pwf1-circ-src\s*\{[^}]*display:\s*none/s.test(css);
-        assert("l'attribution n'est masquee a aucune largeur", !hidden);
-      }
-
-      wW.destroy();
-      hostW.remove();
-    }
-
     /* LE STYLE « PISTE » ne doit toucher que CETTE tuile, et doit aller
        jusqu'au bord en mode carte unique : sans cela la carte noire
        flotte au milieu du fond de tuile du theme. */
@@ -9545,6 +9451,8 @@ function catalogItemFor(catalog, document, widgetId) {
         /\.pw-f1\.pwf1-skin-dark/.test(css) && !/^\s*body\s*\{/m.test(css));
       assert("en carte unique, le fond sombre va jusqu'au bord",
         /\.pw-f1\.pwf1-skin-dark\.pwf1-solo/.test(css));
+      assert("le plan du circuit a quitte la tuile Formule 1",
+        !/pwf1-circ-track|pwf1-circ-label/.test(css));
       const man = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/f1/manifest.json"), "utf8"));
       const style = man.settings.find((x) => x.key === "cardStyle");
       assert("le style des cartes se choisit dans les reglages",
@@ -9555,6 +9463,101 @@ function catalogItemFor(catalog, document, widgetId) {
 
     w.destroy();
     host.remove();
+  }
+
+  /* ---------- LA TUILE PLAN DU CIRCUIT (1.139.0) ---------- */
+  console.log("== Tuile Plan du circuit ==");
+  {
+    let Klass = null;
+    const keepReg = window.PiBoard.registerWidget;
+    window.PiBoard.registerWidget = (id, k) => { if (id === "circuit") Klass = k; };
+    window.eval(fs.readFileSync(path.join(PUB, "widgets/circuit/widget.js"), "utf8"));
+    window.PiBoard.registerWidget = keepReg;
+    assert("la tuile est enregistree", typeof Klass === "function");
+
+    const i18n = { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" };
+    const api = {
+      proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u),
+      state: { get: () => Promise.resolve(null), put: () => Promise.resolve() }
+    };
+
+    /* UN CIRCUIT EPINGLE NE DOIT COUTER AUCUN APPEL A L'API DES COURSES.
+       C'est tout l'interet d'epingler : afficher Spa toute l'annee ne
+       regarde pas le calendrier.
+       A PINNED CIRCUIT MUST COST NO CALL TO THE RACING API. */
+    {
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const before = FETCHES.filter((u) => /jolpi/.test(u)).length;
+      const w = new Klass({ el: host, settings: { circuit: "sepang", showWeather: false }, i18n, api });
+      w.init();
+      await sleep(200);
+
+      assert("la base est demandee au serveur, pas au depot",
+        CIRCUIT_CATALOG_CALLS.length >= 1);
+      assert("le trace vient de la base, sans passer par Overpass",
+        !FETCHES.some((u) => /overpass/.test(u)) && !!host.querySelector(".pwcir-track"));
+      assert("un circuit epingle n'interroge pas le calendrier des courses",
+        FETCHES.filter((u) => /jolpi/.test(u)).length === before);
+      assert("la voie des stands est distinguee de la piste",
+        !!host.querySelector(".pwcir-pit"));
+      assert("le sens de la course est indique", !!host.querySelector(".pwcir-dir"));
+      /* LE RECORD DU TOUR N'EST PAS VERIFIE ICI, et ce n'est pas un
+         oubli : la base livree n'en porte aucun. La tuile sait
+         l'afficher (`specs.record`), mais je n'ai pas de source libre
+         et verifiable pour ces chronos, et un record approximatif est
+         pire qu'un record absent -- c'est precisement le genre de
+         chiffre qu'on recopie sans le verifier. Le champ attendra une
+         source ; la base etant distante, il arrivera sans livrer une
+         version.
+         THE LAP RECORD IS NOT CHECKED HERE, and that is not an
+         oversight: the shipped base carries none. The tile can display
+         one, but I have no free, verifiable source for those times, and
+         an approximate record is worse than no record. */
+      assert("la fiche technique accompagne le trace",
+        host.querySelectorAll(".pwcir-spec").length >= 3);
+      assert("la source est citee", !!host.querySelector(".pwcir-src"));
+      w.destroy();
+      host.remove();
+    }
+
+    /* UN CIRCUIT SANS TRACE GARDE SA FICHE, ET DIT POURQUOI. Monaco
+       emprunte des routes ouvertes a la circulation : OSM n'en porte
+       qu'une fraction. Afficher cette fraction donnerait un quart de
+       Monaco presente comme Monaco ; n'afficher rien du tout priverait
+       d'une fiche technique parfaitement juste. */
+    {
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const before = FETCHES.filter((u) => /overpass/.test(u)).length;
+      const w = new Klass({ el: host, settings: { circuit: "monaco", showWeather: false }, i18n, api });
+      w.init();
+      await sleep(200);
+      assert("aucun trace n'est dessine pour un circuit incomplet",
+        !host.querySelector(".pwcir-track"));
+      assert("et la tuile explique pourquoi",
+        (host.querySelector(".pwcir-msg") || {}).textContent === "circuit.absent");
+      assert("mais la fiche technique reste affichee",
+        host.querySelectorAll(".pwcir-spec").length >= 1);
+      /* On ne va PAS demander a Overpass ce que la base sait deja ne pas
+         exister : il renverrait exactement le morceau qu'on refuse. */
+      assert("et Overpass n'est pas interroge pour rien",
+        FETCHES.filter((u) => /overpass/.test(u)).length === before);
+      w.destroy();
+      host.remove();
+    }
+
+    /* LA BASE EST BIEN CELLE DU CALENDRIER. Un identifiant de circuit
+       vient de l'API des courses : si la base employait d'autres cles,
+       aucun circuit ne serait jamais trouve, et la tuile se replierait
+       en silence sur Overpass a chaque fois. */
+    {
+      const base = JSON.parse(fs.readFileSync(path.join(PUB, "data/circuit-catalog.json"), "utf8"));
+      for (const id of ["sepang", "silverstone", "monza", "spa", "suzuka"]) {
+        assert("la base connait « " + id + " », identifiant de l'API des courses", !!base.circuits[id]);
+      }
+      assert("la base nomme sa source", /OpenStreetMap/i.test(String(base.source || "")));
+    }
   }
 
   console.log("== Sortie du mode edition ==");

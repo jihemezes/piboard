@@ -1457,6 +1457,66 @@
 
     /* ================= FORMULE 1 ================= */
     {
+      id: "circuit",
+      group: "tiles",
+      title: { fr: "Plan du circuit", en: "Circuit map" },
+      sub: {
+        fr: "Le tracé d'un circuit, dessiné en vectoriel, avec sa fiche technique et la météo des séances.",
+        en: "A circuit's outline, drawn in vector form, with its spec sheet and the sessions' weather."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 4×4 par défaut, de 2×2 à 12×16</span>
+          <h4>Objectif</h4>
+          <p>Afficher le <b>tracé d'un circuit</b> : celui du Grand Prix du week-end, ou celui d'un circuit que vous choisissez. Le dessin est <b>vectoriel</b> — net à toute taille, aux couleurs du thème — avec une <b>flèche donnant le sens de la course</b>, la <b>voie des stands en pointillés</b>, et le <b>nom ou le numéro des virages</b> là où ils sont connus.</p>
+
+          <h4>Pourquoi une base de circuits, et pas une carte chargée à la demande</h4>
+          <p>La première version interrogeait <b>Overpass</b> — le service public qui donne accès aux données d'OpenStreetMap — au moment de l'affichage. Mesuré sur trois appels consécutifs pour le même circuit : <b>886 ms, puis 17,4 s, puis une erreur de quota</b>. Le relais de PiBoard abandonne à 15 s : <b>deux affichages sur trois échouaient</b>, et la tuile annonçait « aucun tracé dans OpenStreetMap ». C'était faux : le tracé existait, c'est le service qui n'avait pas répondu. Confondre une panne d'accès avec une absence de donnée est exactement ce que PiBoard s'interdit.</p>
+          <p>Un tracé de circuit ne change pas. Il est donc <b>relevé une fois</b> et publié dans une base, que la tuile lit. Résultat : l'affichage est <b>immédiat</b>, il fonctionne <b>hors connexion</b>, et il ne sollicite plus un service gratuit partagé par tous. La base est hébergée sur le dépôt et rafraîchie toutes les douze heures : un circuit <b>complété ou corrigé arrive sans nouvelle version de PiBoard</b>.</p>
+
+          <h4>Ce que la base contient, et ce qu'elle ne contient pas</h4>
+          <p><b>47 circuits</b> : ceux de la Formule 1, du MotoGP et des grandes épreuves d'endurance. <b>27 ont un tracé dessiné</b> ; les autres entrent dans la base avec leur fiche technique et se déclarent <b>incomplets</b>, pour que la tuile explique au lieu de se taire.</p>
+          <p><b>Un tracé n'est publié que s'il a été mesuré.</b> Sa longueur dessinée est confrontée à la longueur réelle du tour ; s'il s'en écarte, il n'est pas publié. Ce contrôle a rattrapé une erreur : j'avais compté les tronçons renvoyés par OpenStreetMap pour déclarer un circuit couvert — Monaco en avait onze, donc Monaco était bon. Faux : ces onze tronçons totalisent <b>cinquante mètres</b> sur un tour de 3 337. Le reste emprunte des rues ouvertes à la circulation, qu'OpenStreetMap ne distingue pas de la voirie ordinaire.</p>
+          <p>C'est le cas de <b>Monaco, Bakou, Singapour, Las Vegas, Melbourne, Madrid et Goiânia</b> : des circuits urbains sans tracé exploitable. La tuile le dit en toutes lettres, et affiche quand même leur fiche technique.</p>
+          <p>Enfin, les <b>trois secteurs</b> n'existent nulle part en données ouvertes : les points de chronométrage S1/S2/S3 ne sont publiés par personne. Colorer trois tiers de tour égaux serait facile et serait <b>faux</b>.</p>
+
+          <h4>Choisir le circuit</h4>
+          <div class="help-opt"><span class="help-opt-name">Circuit</span><span class="help-opt-desc">Vide = <b>celui du week-end</b>, suivi automatiquement depuis le calendrier de Formule 1 ; la tuile change seule de Grand Prix. Ou <b>un circuit épinglé</b>, choisi dans la liste : elle est remplie depuis la base, donc un circuit ajouté apparaît sans mise à jour de l'application. Un circuit épinglé n'interroge pas le calendrier.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fiche technique</span><span class="help-opt-desc">Longueur, lieu, année d'ouverture, championnats. La fiche n'affiche <b>que ce que la base porte</b> : un circuit sans longueur connue ne montre pas une ligne de tirets.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Noms des virages</span><span class="help-opt-desc">Très inégal d'un circuit à l'autre. À Austin, vingt et un virages sont nommés ou numérotés ; à Sepang on trouve « Genting Curve » à côté des virages 3, 10, 12, 13 et 15 ; ailleurs il n'y a rien. Rien n'est inventé. Sur une tuile étroite, les étiquettes disparaissent avant de devenir illisibles.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Sens de la course</span><span class="help-opt-desc">Une flèche posée sur le plus long tronçon à sens unique, là où le trait est le plus droit. La voie des stands ne donne jamais le sens : elle est à sens unique elle aussi, et indiquerait l'entrée des stands.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Météo des séances</span><span class="help-opt-desc">La prévision à l'heure de chaque séance du week-end, comme dans la tuile Formule 1. Source Open-Meteo, gratuite et sans clé.</span></div>
+
+          <h4>Pas de plan officiel, et c'est voulu</h4>
+          <p>Les plans de circuits publiés par la Formule 1 sont des <b>visuels sous droits</b>. PiBoard est publié sous licence libre sur un dépôt public : il ne les embarque pas. Le tracé est <b>dessiné</b> à partir d'OpenStreetMap, dont la licence ODbL exige que la source soit citée — elle l'est dans la tuile, à toutes les largeurs.</p>`,
+        en: `
+          <span class="help-size">Size: 4×4 by default, from 2×2 to 12×16</span>
+          <h4>Purpose</h4>
+          <p>To show a <b>circuit's outline</b>: the weekend's Grand Prix, or a circuit you pin. The drawing is <b>vector</b> — crisp at any size, in the theme's colours — with an <b>arrow giving the racing direction</b>, the <b>pit lane dashed</b>, and <b>corner names or numbers</b> where they are known.</p>
+
+          <h4>Why a circuit base rather than a map fetched on demand</h4>
+          <p>The first version queried <b>Overpass</b> — the public service that serves OpenStreetMap data — at display time. Measured over three consecutive calls for the same circuit: <b>886 ms, then 17.4 s, then a quota error</b>. PiBoard's relay gives up at 15 s, so <b>two displays out of three failed</b>, and the tile announced "no outline in OpenStreetMap". That was false: the outline existed, the service had not answered. Mistaking an access failure for missing data is precisely what PiBoard refuses to do.</p>
+          <p>A circuit outline does not change. It is therefore <b>surveyed once</b> and published in a base that the tile reads. The display is <b>instant</b>, works <b>offline</b>, and no longer leans on a free shared service. The base is hosted on the repository and refreshed every twelve hours: a <b>completed or corrected circuit arrives without a new PiBoard release</b>.</p>
+
+          <h4>What the base holds, and what it does not</h4>
+          <p><b>47 circuits</b>: Formula 1, MotoGP and the major endurance events. <b>27 have a drawn outline</b>; the others enter the base with their spec sheet and declare themselves <b>incomplete</b>, so the tile explains instead of staying silent.</p>
+          <p><b>An outline is published only if it has been measured.</b> Its drawn length is checked against the real lap length; if it differs, it is not published. That check caught a mistake: I had counted the ways OpenStreetMap returned to declare a circuit covered — Monaco had eleven, so Monaco was fine. Wrong: those eleven total <b>fifty metres</b> of a 3,337-metre lap. The rest runs on public roads, which OpenStreetMap does not tell apart from ordinary streets.</p>
+          <p>That is the case for <b>Monaco, Baku, Singapore, Las Vegas, Melbourne, Madrid and Goiânia</b>: street circuits with no usable outline. The tile says so plainly and still shows their spec sheet.</p>
+          <p>Finally, the <b>three sectors</b> exist nowhere in open data: the S1/S2/S3 timing points are published by nobody. Colouring three equal thirds of a lap would be easy and would be <b>wrong</b>.</p>
+
+          <h4>Choosing the circuit</h4>
+          <div class="help-opt"><span class="help-opt-name">Circuit</span><span class="help-opt-desc">Empty = <b>the weekend's</b>, followed automatically from the Formula 1 calendar. Or <b>a pinned circuit</b> from the list, which is filled from the base, so a newly added circuit appears without updating the application. A pinned circuit does not query the calendar.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Spec sheet</span><span class="help-opt-desc">Length, location, year opened, championships. It shows <b>only what the base carries</b>: a circuit with no known length shows no row of dashes.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Corner names</span><span class="help-opt-desc">Wildly uneven between circuits. Austin has twenty-one named or numbered corners; Sepang has "Genting Curve" alongside corners 3, 10, 12, 13 and 15; elsewhere there is nothing. Nothing is invented. On a narrow tile the labels go before they turn into mush.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Racing direction</span><span class="help-opt-desc">An arrow on the longest one-way segment, where the line is straightest. The pit lane never gives the direction: it is one-way too, and would point at the pit entry.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Session weather</span><span class="help-opt-desc">The forecast for each session's hour, as in the Formula 1 tile. Source: Open-Meteo, free and keyless.</span></div>
+
+          <h4>No official map, deliberately</h4>
+          <p>Formula 1's published circuit maps are <b>copyrighted visuals</b>. PiBoard is published under a free licence on a public repository and does not embed them. The outline is <b>drawn</b> from OpenStreetMap, whose ODbL licence requires the source to be credited — and it is, at every width.</p>`
+      }
+    },
+
+    {
       id: "f1",
       group: "tiles",
       title: { fr: "Formule 1", en: "Formula 1" },
@@ -1470,14 +1530,13 @@
           <h4>Objectif</h4>
           <p>Rassembler sur une seule tuile ce qu'un amateur de Formule 1 regarde pendant un week-end de Grand Prix : <b>quand ça commence</b>, <b>qui mène</b>, et <b>ce qui s'est passé la dernière fois</b>. La tuile est faite de <b>cartes</b> que l'on affiche ou que l'on cache une à une.</p>
 
-          <h4>Les sept cartes</h4>
+          <h4>Les six cartes</h4>
           <div class="help-opt"><span class="help-opt-name">Prochaine course</span><span class="help-opt-desc">Le Grand Prix à venir, son circuit, son pays et un <b>compte à rebours à la seconde</b>. Pendant le week-end, il vise la prochaine <b>séance</b> et non la course : le samedi matin, savoir que les qualifications commencent dans vingt minutes vaut mieux qu'un compte à rebours de deux jours.</span></div>
           <div class="help-opt"><span class="help-opt-name">Programme du week-end</span><span class="help-opt-desc">Toutes les séances avec leur jour et leur heure <b>dans votre fuseau</b>. L'API donne l'heure en UTC : un Grand Prix à 7 h UTC se court à 9 h chez vous, et c'est cette heure-là qui vous concerne. La séance en cours est mise en avant, les séances passées estompées.</span></div>
           <div class="help-opt"><span class="help-opt-name">Classement pilotes</span><span class="help-opt-desc">Position, drapeau, code à trois lettres, numéro, points et victoires.</span></div>
           <div class="help-opt"><span class="help-opt-name">Classement constructeurs</span><span class="help-opt-desc">Le championnat des écuries, dans la même forme.</span></div>
           <div class="help-opt"><span class="help-opt-name">Dernière course</span><span class="help-opt-desc">L'ordre d'arrivée, l'écart au vainqueur, les points, et le meilleur tour marqué d'un chronomètre.</span></div>
           <div class="help-opt"><span class="help-opt-name">Météo du circuit</span><span class="help-opt-desc">La prévision <b>à l'heure de chaque séance</b>, une ligne par séance : le temps, la température et la <b>probabilité de pluie</b>.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Plan du circuit</span><span class="help-opt-desc">Le tracé du circuit du week-end, <b>en vectoriel</b> : net à toute taille, aux couleurs du thème, avec une <b>flèche donnant le sens de la course</b>, la <b>voie des stands en pointillés</b>, et le <b>nom des virages</b> là où il est connu.</span></div>
 
           <h4>Un abandon n'est pas une vingtième place</h4>
           <p>L'API rend bien un classement final pour toutes les voitures, y compris celles parties au mur au deuxième tour. Afficher « 18<sup>e</sup> » pour une voiture qui n'a pas terminé raconte une autre course que celle qui a eu lieu : la tuile affiche donc <b>la cause de l'abandon</b> (Accident, Moteur, Boîte de vitesses…) à la place de la position, et la ligne est estompée.</p>
@@ -1487,11 +1546,8 @@
           <p>La <b>probabilité de pluie est le seul chiffre mis en couleur</b>, à partir de 30 %. C'est délibéré : en Formule 1, la température décide de la gomme et le vent gêne en courbe rapide, mais c'est la pluie qui rebat les cartes. Tout colorer reviendrait à ne rien mettre en avant.</p>
           <p>La prévision porte à <b>sept jours</b>. Une séance plus lointaine <b>garde sa ligne, avec un tiret</b> : la masquer donnerait un programme amputé où l'on croirait avoir tout vu, alors que le tiret dit « on ne sait pas encore ». Source : <b>Open-Meteo</b>, gratuit et sans clé, le même service que la tuile Météo.</p>
 
-          <h4>Le plan du circuit : d'où vient le tracé</h4>
-          <p>Les plans officiels de la Formule 1 sont des <b>visuels sous droits</b> : PiBoard ne les embarque pas. Le tracé est <b>dessiné</b> à partir d'<b>OpenStreetMap</b>, interrogé autour des coordonnées que l'API donne pour le circuit du week-end. C'est donc un vrai dessin vectoriel : il reste net quelle que soit la taille de la tuile, il suit la couleur du thème, et il ne doit rien à personne. La source est citée dans la carte, comme la licence ODbL l'exige.</p>
-          <p><b>Ce qu'OpenStreetMap sait, et ce qu'il ne sait pas.</b> Il porte le tracé, le <b>sens de la course</b>, la <b>voie des stands</b> — tracée en pointillés, parce que c'est du bitume mais que ce n'est pas la piste — et le <b>nom des virages</b>, parfois aussi leur <b>numéro</b>. C'est très inégal d'un circuit à l'autre : à Sepang, par exemple, on trouve à la fois « Genting Curve » et des virages numérotés 3, 10, 12, 13 et 15 ; ailleurs il n'y a rien du tout. La carte affiche ce qui existe et <b>n'invente jamais ce qui manque</b> : un virage sans nom reste sans étiquette.</p>
-          <p>Ce qui, en revanche, n'existe nulle part en données ouvertes, ce sont les <b>trois secteurs</b> : les points de chronométrage S1/S2/S3 ne sont publiés par personne. Colorer trois tiers de tour égaux serait facile et serait <b>faux</b> ; une carte sans secteurs vaut mieux qu'une carte qui invente les siens.</p>
-          <p>Deux conséquences pratiques. D'abord, les noms de virages <b>disparaissent sur une tuile étroite</b> : au-delà d'une certaine densité, ils se chevauchent et le tracé n'est plus lisible. Ensuite, le tracé est <b>gardé en cache par circuit</b> : un circuit ne change pas d'une semaine à l'autre, et Overpass — le service qui interroge OpenStreetMap — est public et partagé par tous. Changer de Grand Prix ne coûte qu'un seul relevé. Si Overpass est saturé, la carte le dit et <b>le reste de la tuile n'en souffre pas</b> : le tracé est chargé à part, précisément pour qu'une panne ne prive pas la tuile de son classement.</p>
+          <h4>Le plan du circuit a désormais sa propre tuile</h4>
+          <p>Le tracé des circuits n'est plus une carte de cette tuile : c'est une tuile à part entière, <b>Plan du circuit</b>, qui a sa propre fiche d'aide. Elle offre plus de réglages, affiche une fiche technique, et surtout elle lit une <b>base de circuits</b> au lieu d'interroger OpenStreetMap à chaque affichage — ce qui échouait deux fois sur trois.</p>
 
           <h4>Pas de logos, et c'est voulu</h4>
           <p>Les logos d'écuries, les photos de pilotes et les plans de circuits officiels sont des <b>marques déposées et des visuels sous droits</b>. PiBoard est publié sous licence libre sur un dépôt public : il ne les embarque pas. À la place, chaque ligne porte la <b>couleur de l'écurie</b> et le <b>code à trois lettres</b> du pilote (ANT, HAM, VER) — on reconnaît une ligne aussi vite, et sans rien devoir à personne. Le drapeau est un émoji : sur une machine sans police émoji complète, le code reste lisible et l'information n'est pas perdue.</p>
@@ -1507,7 +1563,7 @@
           <p>L'API <b>Jolpica</b>, successeur communautaire d'Ergast (fermé fin 2024), sans clé ni compte. C'est la même source que les intégrations Formule 1 de Home Assistant, et celle que lit déjà la tuile <i>Sports mécaniques</i>. L'historique couvre le championnat depuis 1950 : le réglage <b>Saison</b> accepte n'importe quelle année.</p>
           <p>Les tracés de circuits viennent d'<b>OpenStreetMap</b>, interrogé par le service public <b>Overpass</b>, sous licence ODbL. Les prévisions viennent d'<b>Open-Meteo</b>, gratuit et sans clé.</p>
           <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide pour la saison en cours, ou une année.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Cartes</span><span class="help-opt-desc">Sept cases à cocher, une par carte.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Cartes</span><span class="help-opt-desc">Six cases à cocher, une par carte. Le plan du circuit a sa propre tuile, « Plan du circuit ».</span></div>
           <div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème de la page » garde les cartes cohérentes avec le reste du tableau, et reste le défaut — une tuile qui jure avec ses voisines est une tuile ratée. « <b>Piste sombre</b> » leur donne le noir profond du paddock et un liseré rouge : un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « <b>Couleur choisie</b> » utilise la couleur du réglage suivant ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur que vous avez saisie est claire ou foncée. Le réglage ne concerne <b>que cette tuile</b>.</span></div>
           <div class="help-opt"><span class="help-opt-name">Lignes affichées</span><span class="help-opt-desc">Par tableau : vingt-deux lignes sont illisibles sur une tuile moyenne, dix couvrent ce qui se joue.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchir</span><span class="help-opt-desc">30 min par défaut. Un classement ne bouge qu'après une course ; le compte à rebours, lui, s'égrène sans rien demander au réseau.</span></div>`,
@@ -1516,14 +1572,13 @@
           <h4>Purpose</h4>
           <p>To gather on a single tile what a Formula 1 follower looks at during a Grand Prix weekend: <b>when it starts</b>, <b>who leads</b>, and <b>what happened last time</b>. The tile is made of <b>cards</b> shown or hidden one by one.</p>
 
-          <h4>The seven cards</h4>
+          <h4>The six cards</h4>
           <div class="help-opt"><span class="help-opt-name">Next race</span><span class="help-opt-desc">The upcoming Grand Prix, its circuit, its country and a <b>countdown to the second</b>. During the weekend it targets the next <b>session</b> rather than the race: on Saturday morning, knowing qualifying starts in twenty minutes beats a two-day countdown.</span></div>
           <div class="help-opt"><span class="help-opt-name">Weekend timetable</span><span class="help-opt-desc">Every session with its day and time <b>in your own time zone</b>. The API gives UTC; that is not the hour that concerns you. The live session is highlighted, past ones dimmed.</span></div>
           <div class="help-opt"><span class="help-opt-name">Driver standings</span><span class="help-opt-desc">Position, flag, three-letter code, number, points and wins.</span></div>
           <div class="help-opt"><span class="help-opt-name">Constructor standings</span><span class="help-opt-desc">The teams' championship, in the same shape.</span></div>
           <div class="help-opt"><span class="help-opt-name">Last race</span><span class="help-opt-desc">The finishing order, the gap to the winner, the points, and the fastest lap marked with a stopwatch.</span></div>
           <div class="help-opt"><span class="help-opt-name">Circuit weather</span><span class="help-opt-desc">The forecast <b>for each session's hour</b>, one row per session: the condition, the temperature and the <b>chance of rain</b>.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Circuit map</span><span class="help-opt-desc">The weekend circuit's outline, <b>in vector form</b>: crisp at any size, in the theme's colours, with an <b>arrow giving the racing direction</b>, the <b>pit lane dashed</b>, and <b>corner names</b> where they are known.</span></div>
 
           <h4>A retirement is not a twentieth place</h4>
           <p>The API returns a final classification for every car, including those that hit the wall on lap two. Showing "18th" for a car that did not finish tells a different story from the race that took place: the tile shows <b>the cause of the retirement</b> (Accident, Engine, Gearbox…) instead of the position, and dims the row.</p>
@@ -1533,11 +1588,8 @@
           <p>The <b>chance of rain is the only figure in colour</b>, from 30% up. That is deliberate: in Formula 1 temperature decides the tyre compound and wind bites in fast corners, but rain is what rewrites the race. Colouring everything would highlight nothing.</p>
           <p>The forecast reaches <b>seven days</b>. A session further out <b>keeps its row, with a dash</b>: hiding it would give a truncated programme one would believe complete, whereas the dash says "not known yet". Source: <b>Open-Meteo</b>, free and keyless, the same service as the Weather tile.</p>
 
-          <h4>The circuit map: where the outline comes from</h4>
-          <p>Official Formula 1 circuit maps are <b>copyrighted visuals</b>, and PiBoard does not embed them. The outline is <b>drawn</b> from <b>OpenStreetMap</b>, queried around the coordinates the API gives for the weekend's circuit. So it is a genuine vector drawing: crisp whatever the tile's size, following the theme's colour, and owing nothing to anyone. The source is credited inside the card, as the ODbL licence requires.</p>
-          <p><b>What OpenStreetMap knows, and what it does not.</b> It carries the outline, the <b>racing direction</b>, the <b>pit lane</b> — drawn dashed, because it is tarmac but it is not the track — and <b>corner names</b>, sometimes their <b>numbers</b> too. This varies wildly from circuit to circuit: at Sepang, for instance, you get both "Genting Curve" and corners numbered 3, 10, 12, 13 and 15; elsewhere there is nothing at all. The map shows what exists and <b>never invents what is missing</b>: an unnamed corner stays unlabelled.</p>
-          <p>What does not exist anywhere in open data is the <b>three sectors</b>: the S1/S2/S3 timing points are published by nobody. Colouring three equal thirds of a lap would be easy and would be <b>wrong</b>; a map without sectors beats a map that invents its own.</p>
-          <p>Two practical consequences. First, corner names <b>disappear on a narrow tile</b>: past a certain density they overlap and the outline stops being readable. Second, the outline is <b>cached per circuit</b>: a circuit does not change from one week to the next, and Overpass — the service that queries OpenStreetMap — is public and shared by everyone. Changing Grand Prix costs a single reading. If Overpass is overloaded the card says so and <b>the rest of the tile is unaffected</b>: the outline is loaded separately, precisely so that an outage does not cost the tile its standings.</p>
+          <h4>The circuit map now has a tile of its own</h4>
+          <p>Circuit outlines are no longer a card of this tile: they are a tile in their own right, <b>Circuit map</b>, with its own help page. It offers more settings, shows a spec sheet, and above all it reads a <b>circuit base</b> instead of querying OpenStreetMap on every display — which failed two times out of three.</p>
 
           <h4>No logos, deliberately</h4>
           <p>Team logos, driver photos and official circuit maps are <b>registered trademarks and copyrighted visuals</b>. PiBoard is published under a free licence on a public repository and does not embed them. Instead each row carries the <b>team colour</b> and the driver's <b>three-letter code</b> (ANT, HAM, VER) — just as quick to recognise, and owing nothing to anyone. The flag is an emoji: on a machine without a complete emoji font the code stays readable and nothing is lost.</p>
@@ -3072,7 +3124,7 @@
 
           <div class="help-credit"><span class="help-opt-name">TomTom</span> — <a href="https://www.tomtom.com" target="_blank">tomtom.com</a><br><span class="help-opt-desc">Données de trafic (flux et incidents) de la tuile Carte de trafic.</span></div>
           <div class="help-credit"><span class="help-opt-name">CARTO</span> — <a href="https://carto.com" target="_blank">carto.com</a><br><span class="help-opt-desc">Fonds de carte (Voyager, clair, sombre) des tuiles Carte de trafic, Radar météo et Avions en vue. Une clé gratuite est désormais requise, à saisir dans les réglages généraux, section « Cartes ».</span></div>
-          <div class="help-credit"><span class="help-opt-name">OpenStreetMap</span> — <a href="https://www.openstreetmap.org" target="_blank">openstreetmap.org</a><br><span class="help-opt-desc">Données cartographiques sous-jacentes des fonds de carte CARTO, service de géocodage (Nominatim) utilisé par la tuile Trajet domicile-travail pour convertir une adresse en coordonnées, et tracé des circuits de la carte « Plan du circuit » de la tuile Formule 1, interrogé via le service public Overpass. Données sous licence ODbL.</span></div>
+          <div class="help-credit"><span class="help-opt-name">OpenStreetMap</span> — <a href="https://www.openstreetmap.org" target="_blank">openstreetmap.org</a><br><span class="help-opt-desc">Données cartographiques sous-jacentes des fonds de carte CARTO, service de géocodage (Nominatim) utilisé par la tuile Trajet domicile-travail pour convertir une adresse en coordonnées, et tracés de la tuile « Plan du circuit », relevés une fois via le service public Overpass puis publiés dans une base. Données sous licence ODbL.</span></div>
           <div class="help-credit"><span class="help-opt-name">Project OSRM</span> — <a href="https://project-osrm.org" target="_blank">project-osrm.org</a><br><span class="help-opt-desc">Calcul d'itinéraires et de temps de trajet pour la tuile Trajet domicile-travail.</span></div>
           <div class="help-credit"><span class="help-opt-name">Open-Meteo</span> — <a href="https://open-meteo.com" target="_blank">open-meteo.com</a><br><span class="help-opt-desc">Prévisions météo (agrégeant plusieurs modèles nationaux), qualité de l'air et pollens (basés sur les prévisions CAMS Europe), service de recherche de ville utilisé par plusieurs tuiles, et prévisions à l'heure de chaque séance de la carte « Météo du circuit » de la tuile Formule 1.</span></div>
           <div class="help-credit"><span class="help-opt-name">RainViewer</span> — <a href="https://www.rainviewer.com" target="_blank">rainviewer.com</a><br><span class="help-opt-desc">Boucle radar de précipitations animée de la tuile Radar météo.</span></div>
@@ -3096,7 +3148,7 @@
 
           <div class="help-credit"><span class="help-opt-name">TomTom</span> — <a href="https://www.tomtom.com" target="_blank">tomtom.com</a><br><span class="help-opt-desc">Traffic data (flow and incidents) for the Traffic map tile.</span></div>
           <div class="help-credit"><span class="help-opt-name">CARTO</span> — <a href="https://carto.com" target="_blank">carto.com</a><br><span class="help-opt-desc">Base maps (Voyager, light, dark) for the Traffic map, Weather Radar and Planes Overhead tiles. A free key is now required, entered in the general settings under "Maps".</span></div>
-          <div class="help-credit"><span class="help-opt-name">OpenStreetMap</span> — <a href="https://www.openstreetmap.org" target="_blank">openstreetmap.org</a><br><span class="help-opt-desc">Underlying map data for the CARTO base maps, the geocoding service (Nominatim) used by the Commute time tile to turn an address into coordinates, and the circuit outlines of the Formula 1 tile's "Circuit map" card, queried through the public Overpass service. Data under the ODbL licence.</span></div>
+          <div class="help-credit"><span class="help-opt-name">OpenStreetMap</span> — <a href="https://www.openstreetmap.org" target="_blank">openstreetmap.org</a><br><span class="help-opt-desc">Underlying map data for the CARTO base maps, the geocoding service (Nominatim) used by the Commute time tile to turn an address into coordinates, and the outlines of the "Circuit map" tile, surveyed once through the public Overpass service and then published in a base. Data under the ODbL licence.</span></div>
           <div class="help-credit"><span class="help-opt-name">Project OSRM</span> — <a href="https://project-osrm.org" target="_blank">project-osrm.org</a><br><span class="help-opt-desc">Route and travel-time computation for the Commute time tile.</span></div>
           <div class="help-credit"><span class="help-opt-name">Open-Meteo</span> — <a href="https://open-meteo.com" target="_blank">open-meteo.com</a><br><span class="help-opt-desc">Weather forecasts (aggregating several national models), air quality and pollen (based on the CAMS Europe forecast), the city search service used by several tiles, and the per-session forecasts of the Formula 1 tile's "Circuit weather" card.</span></div>
           <div class="help-credit"><span class="help-opt-name">RainViewer</span> — <a href="https://www.rainviewer.com" target="_blank">rainviewer.com</a><br><span class="help-opt-desc">Animated precipitation radar loop for the Weather Radar tile.</span></div>
