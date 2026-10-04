@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.139.2
+
+- **La tuile « Plan du circuit » dit desormais CE QU'ON PEUT FAIRE quand
+  un trace manque, et pas seulement pourquoi il manque.** Le message
+  constatait l'absence et s'arretait la : la personne devant l'ecran
+  n'avait aucun moyen d'agir. Chaque absence porte maintenant sa ligne
+  « quoi faire », distincte du constat et presentee comme secondaire.
+
+  Elle differe selon le cas, et c'est voulu. Pour un circuit urbain,
+  suggerer de contribuer a OpenStreetMap enverrait quelqu'un perdre son
+  temps : les rues y sont deja, et la convention n'y veut pas qu'une
+  voie publique soit etiquetee comme piste de course. Ce qui regle le
+  probleme, c'est un trace releve a la main AJOUTE A LA BASE -- d'ou
+  l'adresse du depot dans le message, et le rappel que la base se met a
+  jour seule. Pour un circuit absent de la base, le signaler suffit.
+  Pour une panne reseau, il n'y a rien a faire, et le dire vaut mieux
+  que de suggerer une demarche inutile.
+
+- **CORRECTIF trouve en ecrivant le test** : j'avais mis un garde-fou
+  « si la traduction est absente, on masque la ligne ». Il masquait la
+  ligne des que `t()` renvoyait la cle -- ce que fait tout harnais de
+  test, et ce que ferait une traduction oubliee. Une cle manquante doit
+  se VOIR : une ligne cachee en silence ne se corrige jamais, une cle
+  affichee a l'ecran se corrige le jour meme.
+
 ## 1.139.1
 
 - **CORRECTIF -- la tuile « Plan du circuit » decalait toute sa rangee du

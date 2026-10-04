@@ -721,6 +721,7 @@
            correct and owe nothing to OpenStreetMap. */
         el.innerHTML = `<div class="pw-circuit">
           <div class="pwcir-msg">${esc(i18n.t(key))}</div>
+          ${this.howToHelp(key)}
           ${c.specs && this.ctx.settings.showSpecs !== false ? this.specs() : ""}
           <div class="pwcir-foot">
             <span class="pwcir-name">${esc(this.title())}</span>
@@ -801,6 +802,52 @@
        qu'elle n'a simplement jamais ete saisie.
        THE SPEC SHEET SHOWS ONLY WHAT THE BASE CARRIES. A circuit with an
        outline but no specs shows nothing rather than a row of dashes. */
+    /* UN MESSAGE QUI CONSTATE SANS DIRE QUOI FAIRE LAISSE SUR PLACE.
+       La tuile expliquait pourquoi le trace manquait -- c'etait deja
+       mieux que de mentir -- mais elle s'arretait la, et la personne
+       devant l'ecran n'avait aucun moyen d'agir. Une absence a une
+       cause ET une issue : on dit les deux.
+
+       L'issue n'est pas la meme selon le cas, et c'est pour cela qu'il
+       y a une phrase par situation plutot qu'une formule passe-partout.
+       Pour un circuit urbain, contribuer a OpenStreetMap ne reglerait
+       rien : les rues y sont deja, et la convention n'y veut pas qu'une
+       voie publique soit etiquetee comme piste de course. Ce qui regle
+       le probleme, c'est un trace releve a la main AJOUTE A LA BASE --
+       et comme la base est distante, il arrive sans nouvelle version.
+       Pour un circuit inconnu de la base, en revanche, le signaler
+       suffit. Pour une panne reseau, il n'y a rien a faire, et le dire
+       vaut mieux que de suggerer une demarche inutile.
+
+       A MESSAGE THAT STATES A FACT WITHOUT SAYING WHAT TO DO LEAVES THE
+       READER STUCK. The tile explained why the outline was missing --
+       better than lying -- but stopped there. An absence has a cause
+       AND a way out: both are said. The way out differs per case, hence
+       one sentence per situation rather than a catch-all. For a street
+       circuit, contributing to OpenStreetMap would fix nothing: the
+       streets are already there, and the convention does not tag a
+       public road as a racing track. What fixes it is a hand-surveyed
+       outline ADDED TO THE BASE -- which, being remote, arrives without
+       a new release. For a network outage there is nothing to do, and
+       saying so beats suggesting a pointless errand. */
+    howToHelp(key) {
+      const k = { "circuit.absent": "circuit.help.absent",
+        "circuit.unknown": "circuit.help.unknown",
+        "circuit.noRace": "circuit.help.noRace" }[key];
+      if (!k) return "";
+      /* Pas de garde-fou « si la traduction est absente, on masque » :
+         je l'avais mis, et il masquait la ligne des que `t()` renvoyait
+         la cle -- ce que fait tout harnais de test. Une traduction
+         manquante doit se VOIR, pas disparaitre : une ligne cachee en
+         silence ne se corrige jamais, une cle affichee a l'ecran se
+         corrige le jour meme.
+         No "hide it when the translation is missing" guard: I had one,
+         and it hid the line as soon as t() returned the key -- which is
+         what any test harness does. A missing translation must SHOW. */
+      const text = this.ctx.i18n.t(k);
+      return text ? `<div class="pwcir-help">${esc(text)}</div>` : "";
+    }
+
     /* ON NE CITE QUE CE QU'ON MONTRE. La tuile creditait Open-Meteo
        meme lorsque la meteo etait decochee : un credit pour une donnee
        absente n'est pas une politesse de trop, c'est une information

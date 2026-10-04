@@ -9535,6 +9535,26 @@ function catalogItemFor(catalog, document, widgetId) {
       await sleep(200);
       assert("aucun trace n'est dessine pour un circuit incomplet",
         !host.querySelector(".pwcir-track"));
+      /* UN CONSTAT SANS ISSUE LAISSE SUR PLACE. La tuile disait
+         pourquoi le trace manquait et s'arretait la : la personne
+         devant l'ecran n'avait aucun moyen d'agir. Chaque absence
+         porte donc sa ligne « quoi faire », et elle differe selon le
+         cas -- suggerer de cartographier un circuit urbain dans
+         OpenStreetMap enverrait quelqu'un perdre son temps, puisque
+         les rues y sont deja.
+         A STATEMENT WITHOUT A WAY OUT LEAVES THE READER STUCK. */
+      assert("la tuile dit ce qu'on peut faire pour y remedier",
+        !!host.querySelector(".pwcir-help"));
+      {
+        /* Le harnais rend les cles, pas les libelles : c'est donc le
+           fichier de langues qu'il faut verifier pour s'assurer que la
+           ligne dit vraiment OU signaler le circuit, dans les deux
+           langues. */
+        const i18nSrc = fs.readFileSync(path.join(PUB, "i18n.js"), "utf8");
+        const helps = [...i18nSrc.matchAll(/"circuit\.help\.absent":\s*"([^"]+)"/g)].map((m) => m[1]);
+        assert("et elle indique ou le signaler, dans les deux langues",
+          helps.length === 2 && helps.every((h) => /github\.com/.test(h)));
+      }
       assert("et la tuile explique pourquoi",
         (host.querySelector(".pwcir-msg") || {}).textContent === "circuit.absent");
       assert("mais la fiche technique reste affichee",

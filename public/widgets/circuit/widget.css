@@ -170,3 +170,19 @@
 @container (max-width: 210px) {
   .pw-circuit .pwcir-rec-who { display: none; }
 }
+
+/* LA LIGNE « QUOI FAIRE » EST SECONDAIRE AU CONSTAT, et doit se lire
+   comme telle : le message dit ce qui manque, cette ligne dit comment
+   y remedier. Lui donner le meme poids ferait deux paragraphes de meme
+   importance, et on ne saurait plus lequel est l'information.
+   THE "WHAT TO DO" LINE IS SECONDARY to the statement and must read as
+   such: the message says what is missing, this line says how to fix it.
+   Equal weight would give two paragraphs of equal importance. */
+.pw-circuit .pwcir-help {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--tile-edge);
+  color: var(--muted);
+  font-size: .88em;
+  line-height: 1.45;
+}

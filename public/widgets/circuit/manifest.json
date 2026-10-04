@@ -12,7 +12,7 @@
     "en": "A circuit's outline, drawn to scale.",
     "fr": "Le tracé d'un circuit, dessiné à l'échelle."
   },
-  "version": "1.0.1",
+  "version": "1.0.2",
   "size": {
     "w": 4,
     "h": 4,
