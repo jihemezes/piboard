@@ -1144,6 +1144,24 @@ const dom = new JSDOM(html, {
          de piste, une voie des stands, et du karting voisin qui porte
          le meme `highway=raceway`.
          Overpass, for the circuit map. */
+      /* Open-Meteo, pour la meteo du circuit. Les heures sont rendues
+         SANS fuseau, exactement comme le vrai service : c'est ce detail
+         qui decalerait toute la carte s'il etait mal lu.
+         Open-Meteo, for the circuit weather. Hours come back with NO
+         zone, exactly as the real service returns them. */
+      if (u.includes("/api/proxy") && u.includes("api.open-meteo.com")) {
+        FETCHES.push(u);
+        const t0 = Math.floor((MS_NOW - 6 * 3600000) / 3600000) * 3600000;
+        const time = [], temperature_2m = [], precipitation_probability = [], weather_code = [], wind_speed_10m = [];
+        for (let i = 0; i < 24 * 7; i++) {
+          time.push(new Date(t0 + i * 3600000).toISOString().slice(0, 16));
+          temperature_2m.push(20 + (i % 9));
+          precipitation_probability.push(i % 2 ? 70 : 5);
+          weather_code.push(i % 2 ? 95 : 0);
+          wind_speed_10m.push(12);
+        }
+        return json({ hourly: { time, temperature_2m, precipitation_probability, weather_code, wind_speed_10m } });
+      }
       if (u.includes("/api/proxy") && u.includes("overpass-api.de")) {
         FETCHES.push(u);
         return json({
@@ -9307,7 +9325,7 @@ function catalogItemFor(catalog, document, widgetId) {
       const hostB = document.createElement("div");
       document.body.appendChild(hostB);
       const wB = new Klass({
-        el: hostB, settings: { showNext: true, showSchedule: false, showDrivers: false, showConstructors: false, showResults: false, showCircuit: false },
+        el: hostB, settings: { showNext: true, showSchedule: false, showDrivers: false, showConstructors: false, showResults: false, showCircuit: false, showWeather: false },
         i18n: { t: (k) => k, fromManifest: (o) => (o && (o.fr || o.en)) || "" },
         api: { proxyUrl: (u) => u }
       });
@@ -9323,7 +9341,7 @@ function catalogItemFor(catalog, document, widgetId) {
     const host = document.createElement("div");
     document.body.appendChild(host);
     const settings = { season: "", showNext: true, showSchedule: true, showDrivers: true,
-                       showConstructors: true, showResults: true, showCircuit: false, driverRows: 10,
+                       showConstructors: true, showResults: true, showCircuit: false, showWeather: false, driverRows: 10,
                        constructorRows: 10, resultRows: 10, showTeamColors: true, refreshMinutes: 30 };
     const w = new Klass({
       el: host, settings, i18n,
@@ -9415,7 +9433,7 @@ function catalogItemFor(catalog, document, widgetId) {
       const wC = new Klass({
         el: hostC,
         settings: { showNext: false, showSchedule: false, showDrivers: false,
-                    showConstructors: false, showResults: false, showCircuit: true },
+                    showConstructors: false, showResults: false, showCircuit: true, showWeather: false },
         i18n,
         api: {
           proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u),
@@ -9467,6 +9485,55 @@ function catalogItemFor(catalog, document, widgetId) {
 
       wC.destroy();
       hostC.remove();
+    }
+
+    /* ---------- LA METEO DU CIRCUIT (1.138.4) ----------
+       Ce qui se joue ici : la prevision est bien appariee A L'HEURE DE
+       CHAQUE SEANCE -- une ligne par seance, et non un bulletin unique
+       pour le lieu -- et l'attribution d'Open-Meteo est portee par la
+       carte. */
+    {
+      const hostW = document.createElement("div");
+      document.body.appendChild(hostW);
+      const wW = new Klass({
+        el: hostW,
+        settings: { showNext: false, showSchedule: false, showDrivers: false,
+                    showConstructors: false, showResults: false, showCircuit: false, showWeather: true },
+        i18n,
+        api: {
+          proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u),
+          state: { get: () => Promise.resolve(null), put: () => Promise.resolve() }
+        }
+      });
+      wW.init();
+      await sleep(200);
+
+      const wxCalls = FETCHES.filter((u) => /open-meteo/.test(u));
+      assert("la meteo passe par le relais du serveur, jamais en direct",
+        wxCalls.length >= 1 && wxCalls.every((u) => u.startsWith("/api/proxy?url=")));
+      assert("une ligne de meteo PAR SEANCE, et non un bulletin unique pour le lieu",
+        hostW.querySelectorAll(".pwf1-wx:not(.pwf1-wx-head)").length === 5);
+      assert("chaque ligne porte une temperature et une probabilite de pluie",
+        [...hostW.querySelectorAll(".pwf1-wx:not(.pwf1-wx-head)")].every((r) =>
+          /\d+°/.test(r.querySelector(".pwf1-wx-temp").textContent)
+          && /\d+%/.test(r.querySelector(".pwf1-wx-rain").textContent)));
+      /* La pluie est le seul chiffre colore : si rien ne ressort quand
+         la moitie des heures sont a 70 %, le seuil ne sert a rien. */
+      assert("une forte probabilite de pluie est mise en avant",
+        hostW.querySelectorAll(".pwf1-wx-wet").length >= 1);
+      assert("Open-Meteo est cite", !!hostW.querySelector(".pwf1-wx-list .pwf1-circ-src"));
+
+      /* L'ATTRIBUTION NE SE MASQUE A AUCUNE LARGEUR : c'est une
+         obligation de licence (ODbL pour OpenStreetMap, citation
+         demandee par Open-Meteo), pas un element de confort. */
+      {
+        const css = fs.readFileSync(path.join(PUB, "widgets/f1/widget.css"), "utf8");
+        const hidden = /@container[^{]*\{[^@]*?\.pwf1-circ-src\s*\{[^}]*display:\s*none/s.test(css);
+        assert("l'attribution n'est masquee a aucune largeur", !hidden);
+      }
+
+      wW.destroy();
+      hostW.remove();
     }
 
     /* LE STYLE « PISTE » ne doit toucher que CETTE tuile, et doit aller

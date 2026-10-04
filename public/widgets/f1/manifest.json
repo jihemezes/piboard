@@ -2,7 +2,7 @@
   "_comment_fr": "POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes.",
   "_comment_en": "TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests.",
   "id": "f1",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
@@ -106,6 +106,19 @@
       "hint": {
         "en": "A VECTOR outline of the circuit, drawn from OpenStreetMap: crisp at any size, following the theme, and owing nothing to anyone -- the official Formula 1 maps are copyrighted and are not embedded. The arrow gives the racing DIRECTION, the dashed line is the pit lane, and corner names -- sometimes their numbers too -- appear where OpenStreetMap has them, which varies a lot from circuit to circuit. Nothing missing is invented. The three SECTORS are not available anywhere: the S1/S2/S3 timing points are published nowhere as open data, and three equal thirds would be a lie. The outline is cached per circuit, so changing Grand Prix costs one reading.",
         "fr": "Un tracé VECTORIEL du circuit, dessiné à partir d'OpenStreetMap : net à toute taille, il suit le thème et ne doit rien à personne — les plans officiels de la Formule 1 sont sous droits et ne sont pas embarqués. La flèche donne le SENS de la course, le pointillé est la voie des stands, et les noms de virages — parfois aussi leurs numéros — s'affichent là où OpenStreetMap les connaît, ce qui varie beaucoup d'un circuit à l'autre. Rien de ce qui manque n'est inventé. Les trois SECTEURS, eux, ne sont disponibles nulle part : les points de chronométrage S1/S2/S3 ne sont publiés nulle part en données ouvertes, et trois tiers de tour égaux seraient faux. Le tracé est gardé en cache par circuit : changer de Grand Prix ne coûte qu'un relevé."
+      }
+    },
+    {
+      "key": "showWeather",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Circuit weather\" card",
+        "fr": "Carte « Météo du circuit »"
+      },
+      "hint": {
+        "en": "The forecast AT EACH SESSION'S HOUR, not the weather right now: what one comes for is whether it will rain during qualifying, not what the sky looks like over the circuit on a Tuesday. One row per session, with the condition, the temperature and the chance of rain -- the only figure highlighted, because in Formula 1 it is the one that changes a race. The forecast reaches seven days, so a session further out keeps its row with a dash rather than being hidden. Source: Open-Meteo, free and without a key, the same as the Weather tile.",
+        "fr": "La prévision À L'HEURE DE CHAQUE SÉANCE, et non la météo de l'instant : ce qu'on vient chercher, c'est s'il pleuvra pendant les qualifications, pas le temps qu'il fait sur le circuit un mardi. Une ligne par séance, avec le temps, la température et la probabilité de pluie — le seul chiffre mis en avant, parce qu'en Formule 1 c'est celui qui change une course. La prévision porte à sept jours : une séance plus lointaine garde sa ligne avec un tiret plutôt que d'être masquée. Source : Open-Meteo, gratuit et sans clé, comme la tuile Météo."
       }
     },
     {

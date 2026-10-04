@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.138.4
+
+- **La METEO DU CIRCUIT, septieme carte de la tuile Formule 1.** Une
+  ligne par SEANCE, avec la prevision a l'heure de cette seance : le
+  temps, la temperature et la probabilite de pluie. La meteo d'une
+  course n'est pas la meteo d'un lieu -- « 24 degres, averses » pour Spa
+  ne dit rien d'utile ; ce qu'on vient chercher, c'est s'il pleuvra
+  PENDANT les qualifications, qui durent une heure et ont lieu samedi a
+  16 h.
+
+  La probabilite de pluie est le seul chiffre colore, a partir de 30 %.
+  En Formule 1, la temperature decide de la gomme et le vent gene en
+  courbe rapide, mais c'est la pluie qui rebat les cartes ; tout colorer
+  reviendrait a ne rien mettre en avant.
+
+  Une seance au-dela de l'horizon de sept jours GARDE SA LIGNE, avec un
+  tiret : la masquer donnerait un programme amputé ou l'on croirait
+  avoir tout vu. Source : Open-Meteo, gratuit et sans cle, comme la
+  tuile Meteo.
+
+  UTC DE BOUT EN BOUT. L'API des courses donne ses horaires en UTC, la
+  meteo est demandee en UTC et appariee en UTC ; la conversion vers le
+  fuseau du spectateur se fait UNE fois, a l'affichage. Open-Meteo rend
+  ses heures sous la forme « 2026-10-04T14:00 », SANS fuseau, et
+  `Date.parse` lit une telle chaine comme une heure LOCALE : le Z est
+  ajoute explicitement, faute de quoi toute la carte glisserait du
+  decalage du spectateur, sans la moindre erreur et avec des chiffres
+  parfaitement credibles.
+
+  L'heure retenue est l'heure pleine la PLUS PROCHE, et non l'heure
+  inferieure : une course a 14 h 50 se court sous le temps de 15 h.
+
+- **CORRECTIF -- l'attribution ne se masque plus sur une tuile etroite.**
+  Elle disparaissait sous 300 px avec les noms de virages. C'est une
+  faute, et pas seulement d'esthetique : OpenStreetMap est sous ODbL et
+  Open-Meteo demande d'etre cite, et une licence ne s'applique pas
+  seulement aux grands ecrans. Elle retrecit desormais au lieu de
+  disparaitre, et un test l'interdit a toute largeur.
+
 ## 1.138.3
 
 - **Le PLAN DU CIRCUIT, une sixieme carte de la tuile Formule 1.** Le

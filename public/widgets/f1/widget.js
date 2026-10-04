@@ -496,12 +496,129 @@
     return { x: to[0], y: to[1], angle };
   }
 
+  /* ---------- La meteo du circuit ----------
+     LA METEO D'UNE COURSE N'EST PAS LA METEO D'UN LIEU. Un bulletin
+     « 24 degres, averses » pour Spa ne dit rien d'utile : ce qu'on vient
+     chercher, c'est s'il pleuvra PENDANT les qualifications, qui durent
+     une heure et qui ont lieu samedi a 16 h. La carte donne donc une
+     ligne par SEANCE, avec la prevision a l'heure de cette seance -- et
+     non la meteo du moment, qui ne concerne personne.
+
+     POURQUOI LA PROBABILITE DE PLUIE EST MISE EN AVANT. En Formule 1,
+     c'est le seul chiffre qui change une course : la temperature decide
+     de la gomme, le vent gene en courbe rapide, mais la pluie
+     rebat les cartes. Elle est donc coloree des qu'elle devient
+     significative.
+
+     L'HEURE DE REFERENCE EST L'UTC, DE BOUT EN BOUT. L'API des courses
+     donne ses horaires en UTC ; la meteo est demandee en UTC
+     (`timezone=UTC`) et appariee en UTC. Convertir en route -- vers le
+     fuseau du circuit ou vers celui du spectateur -- n'apporterait rien
+     et ouvrirait la porte a un decalage d'une heure deux fois par an,
+     au changement d'heure. La conversion se fait UNE fois, a
+     l'affichage, comme pour le programme du week-end.
+
+     A RACE'S WEATHER IS NOT A PLACE'S WEATHER. "24 degrees, showers" for
+     Spa says nothing useful: what one comes for is whether it will rain
+     DURING qualifying, which lasts an hour and happens on Saturday at
+     4pm. So the card gives one line per SESSION, with the forecast for
+     that session's hour. UTC is the reference throughout: the race API
+     gives UTC, the weather is requested in UTC and matched in UTC.
+     Converting along the way would invite a one-hour slip twice a year,
+     at the daylight-saving change. */
+  const METEO = "https://api.open-meteo.com/v1/forecast";
+
+  /* Le meme tableau WMO que la tuile Meteo. Il est RECOPIE et non
+     partage : les tuiles de PiBoard sont independantes par construction
+     -- chacune se charge seule, se desinstalle seule, et aucune ne doit
+     cesser de fonctionner parce qu'une autre a ete retiree. Huit lignes
+     recopiees valent mieux qu'une dependance entre tuiles.
+     The same WMO table as the Weather tile, COPIED rather than shared:
+     PiBoard's tiles are independent by construction -- each loads and is
+     removed on its own, and none must break because another was
+     uninstalled. */
+  const WMO = [
+    { codes: [0], icon: "☀", fr: "Ciel dégagé", en: "Clear sky" },
+    { codes: [1, 2], icon: "⛅", fr: "Partiellement nuageux", en: "Partly cloudy" },
+    { codes: [3], icon: "☁", fr: "Couvert", en: "Overcast" },
+    { codes: [45, 48], icon: "🌫", fr: "Brouillard", en: "Fog" },
+    { codes: [51, 53, 55, 56, 57], icon: "🌦", fr: "Bruine", en: "Drizzle" },
+    { codes: [61, 63, 65, 66, 67, 80, 81, 82], icon: "🌧", fr: "Pluie", en: "Rain" },
+    { codes: [71, 73, 75, 77, 85, 86], icon: "🌨", fr: "Neige", en: "Snow" },
+    { codes: [95, 96, 99], icon: "⛈", fr: "Orage", en: "Thunderstorm" }
+  ];
+
+  function describeWeather(code) {
+    return WMO.find((w) => w.codes.includes(Number(code))) || null;
+  }
+
+  function weatherUrl(lat, lon) {
+    return METEO + `?latitude=${lat}&longitude=${lon}`
+      + "&hourly=temperature_2m,precipitation_probability,weather_code,wind_speed_10m"
+      + "&forecast_days=7&timezone=UTC";
+  }
+
+  /* Fonction PURE : la reponse horaire d'Open-Meteo devient une table
+     indexee par l'heure UTC pleine. Open-Meteo rend ses heures sous la
+     forme « 2026-10-04T14:00 », SANS fuseau : il faut ajouter le Z nous-
+     memes, sinon le navigateur les lit comme des heures LOCALES et toute
+     la meteo glisse d'autant d'heures que le decalage du spectateur.
+     PURE function. Open-Meteo returns hours as "2026-10-04T14:00" with
+     NO zone: the Z must be added, otherwise the browser reads them as
+     LOCAL times and the whole forecast slides by the viewer's offset. */
+  function parseWeather(json) {
+    const h = (json || {}).hourly;
+    if (!h || !Array.isArray(h.time) || !h.time.length) return null;
+    const by = new Map();
+    for (let i = 0; i < h.time.length; i++) {
+      const t = Date.parse(/[zZ]|[+-]\d\d:?\d\d$/.test(h.time[i]) ? h.time[i] : h.time[i] + "Z");
+      if (!Number.isFinite(t)) continue;
+      by.set(t, {
+        at: t,
+        temp: num(h.temperature_2m, i),
+        rain: num(h.precipitation_probability, i),
+        wind: num(h.wind_speed_10m, i),
+        code: num(h.weather_code, i)
+      });
+    }
+    return by.size ? by : null;
+  }
+
+  function num(arr, i) {
+    const v = Array.isArray(arr) ? arr[i] : null;
+    return typeof v === "number" && Number.isFinite(v) ? v : null;
+  }
+
+  /* On arrondit a l'heure pleine la plus PROCHE, et non a l'heure
+     inferieure : une course a 14 h 50 se court sous le temps de 15 h,
+     pas sous celui de 14 h. Et au-dela d'une heure et demie d'ecart on
+     ne rend rien : l'horizon d'Open-Meteo est de sept jours, et une
+     seance plus lointaine n'a pas de prevision -- le dire vaut mieux que
+     montrer la derniere heure connue comme si elle s'appliquait.
+     Rounded to the NEAREST full hour, not down: a race at 2:50pm runs in
+     3pm's weather. Beyond ninety minutes nothing is returned: Open-Meteo
+     reaches seven days, and a session further out has no forecast --
+     saying so beats showing the last known hour as if it applied. */
+  function weatherAt(table, when) {
+    if (!table || !Number.isFinite(when)) return null;
+    const HOUR = 3600000;
+    const near = Math.round(when / HOUR) * HOUR;
+    const hit = table.get(near);
+    if (hit) return hit;
+    for (const delta of [HOUR, -HOUR]) {
+      const alt = table.get(near + delta);
+      if (alt && Math.abs(alt.at - when) <= 1.5 * HOUR) return alt;
+    }
+    return null;
+  }
+
   class F1Widget {
     constructor(ctx) {
       this.ctx = ctx;
       this.data = null;
       this.error = null;
       this.circuit = null;
+      this.weather = null;
       this.timer = null;
       this.tick = null;
     }
@@ -592,7 +709,8 @@
          it left a tile showing ONLY the circuit map loading forever --
          no error, no message, since nothing had failed: the question
          had simply never been asked. Found by the end-to-end test. */
-      const needRaces = s.showNext !== false || s.showSchedule !== false || s.showCircuit !== false;
+      const needRaces = s.showNext !== false || s.showSchedule !== false
+        || s.showCircuit !== false || s.showWeather !== false;
       const jobs = [
         needRaces ? this.fetchJson(`${API}/${y}.json?limit=100`) : Promise.resolve(null),
         s.showDrivers !== false ? this.fetchJson(`${API}/${y}/driverStandings.json?limit=100`) : Promise.resolve(null),
@@ -618,6 +736,33 @@
       }
       this.render();
       if (this.ctx.settings.showCircuit !== false) this.refreshCircuit();
+      if (this.ctx.settings.showWeather !== false) this.refreshWeather();
+    }
+
+    /* COMME LE TRACE, LA METEO EST CHARGEE A PART -- mais pour une
+       raison opposee. Le trace ne change jamais et se garde en cache ;
+       la prevision, elle, se perime. Elle n'est donc PAS mise en cache
+       cote serveur, et repart a chaque relevé de la tuile. Open-Meteo
+       est gratuit, sans cle, et genereux ; une requete toutes les trente
+       minutes par circuit reste tres en deca de ce qu'il accepte.
+       LIKE THE OUTLINE, THE WEATHER IS LOADED SEPARATELY -- but for the
+       opposite reason. The outline never changes and is cached; the
+       forecast goes stale, so it is NOT cached and is re-read on every
+       refresh. */
+    async refreshWeather() {
+      const race = nextRace(this.data && this.data.races || [], Date.now())
+        || lastRace(this.data && this.data.races || [], Date.now());
+      if (!race || !Number.isFinite(race.lat) || !Number.isFinite(race.lon)) return;
+      try {
+        const json = await this.fetchJson(weatherUrl(race.lat, race.lon));
+        this.weather = { id: race.circuitId, table: parseWeather(json) };
+      } catch (e) {
+        /* Une meteo indisponible ne doit pas effacer la carte : elle le
+           dit, et le reste de la tuile n'en sait rien.
+           Unavailable weather must not wipe the card. */
+        this.weather = { id: race.circuitId, table: null, error: String((e && e.message) || e) };
+      }
+      this.render();
     }
 
     /* LE TRACE EST CHARGE A PART, ET NON AVEC LE RESTE. Overpass met
@@ -680,7 +825,8 @@
         s.showDrivers !== false ? () => this.cardDrivers() : null,
         s.showConstructors !== false ? () => this.cardConstructors() : null,
         s.showResults !== false ? () => this.cardResults() : null,
-        s.showCircuit !== false ? () => this.cardCircuit() : null
+        s.showCircuit !== false ? () => this.cardCircuit() : null,
+        s.showWeather !== false ? () => this.cardWeather(now) : null
       ].filter(Boolean);
 
       /* UNE SEULE CARTE COCHEE : LA TUILE DEVIENT CETTE CARTE. Plus de
@@ -885,6 +1031,65 @@
         </table>`);
     }
 
+    /* ---------- La meteo du circuit ---------- */
+    cardWeather(now) {
+      const i18n = this.ctx.i18n;
+      const title = i18n.t("f1.card.weather");
+      const race = nextRace(this.data.races || [], now) || lastRace(this.data.races || [], now);
+      if (!race) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.noData"))}</div>`);
+      if (!this.weather) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.loading"))}</div>`);
+      if (!this.weather.table) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.weather.none"))}</div>`);
+
+      const lang = /^en/i.test(String(i18n.t("clock.date.format") || "")) ? "en" : "fr";
+      const LIVE_MS = 90 * 60000;
+      let beyond = false;
+
+      const rows = race.sessions.map((x) => {
+        const w = weatherAt(this.weather.table, x.at);
+        const past = x.at + LIVE_MS <= now;
+        if (!w && !past) beyond = true;
+
+        /* UNE SEANCE SANS PREVISION GARDE SA LIGNE, avec un tiret. La
+           retirer donnerait un programme amputé ou l'on croirait avoir
+           tout vu ; le tiret dit « on ne sait pas », ce qui est la
+           verite.
+           A SESSION WITHOUT A FORECAST KEEPS ITS ROW, with a dash.
+           Dropping it would give a truncated programme one would
+           believe complete. */
+        const cond = w ? describeWeather(w.code) : null;
+        const rain = w && w.rain != null ? Math.round(w.rain) : null;
+        /* Le seuil de mise en avant est a 30 % : en dessous, une averse
+           reste une hypothese ; au-dessus, les equipes commencent a
+           raisonner en pneus pluie.
+           The highlight threshold is 30%: below that a shower is a
+           hypothesis; above it, teams start thinking wet tyres. */
+        const wet = rain != null && rain >= 30;
+
+        return `<div class="pwf1-wx${past ? " pwf1-sess-past" : ""}">
+          <span class="pwf1-sess-name">${esc(i18n.t("f1.session." + x.kind))}</span>
+          <span class="pwf1-wx-when">${esc(dayTime(x.at, this.locale()))}</span>
+          <span class="pwf1-wx-cond" title="${esc(cond ? cond[lang] : "")}">${cond ? cond.icon : "–"}</span>
+          <span class="pwf1-wx-temp">${w && w.temp != null ? esc(Math.round(w.temp) + "°") : "–"}</span>
+          <span class="pwf1-wx-rain${wet ? " pwf1-wx-wet" : ""}">${rain != null ? esc(rain + "%") : "–"}</span>
+        </div>`;
+      }).join("");
+
+      return this.card(title, `
+        <div class="pwf1-wx-list">
+          <div class="pwf1-sched-head">${esc(race.circuitName || race.name)}</div>
+          <div class="pwf1-wx pwf1-wx-head">
+            <span class="pwf1-sess-name">${esc(i18n.t("f1.wx.session"))}</span>
+            <span class="pwf1-wx-when"></span>
+            <span class="pwf1-wx-cond"></span>
+            <span class="pwf1-wx-temp">${esc(i18n.t("f1.wx.temp"))}</span>
+            <span class="pwf1-wx-rain">${esc(i18n.t("f1.wx.rain"))}</span>
+          </div>
+          ${rows}
+          ${beyond ? `<div class="pwf1-msg pwf1-wx-note">${esc(i18n.t("f1.weather.horizon"))}</div>` : ""}
+          <div class="pwf1-circ-foot"><span class="pwf1-circ-src">${esc(i18n.t("f1.weather.credit"))}</span></div>
+        </div>`);
+    }
+
     /* ---------- La carte du circuit ---------- */
     cardCircuit() {
       const i18n = this.ctx.i18n;
@@ -1029,6 +1234,7 @@
   window.PiBoardF1Helpers = {
     parseRaces, parseStandings, parseResults, nextRace, lastRace, nextSession,
     parseCircuit, projectCircuit, directionArrow, overpassUrl,
+    parseWeather, weatherAt, weatherUrl, describeWeather, WMO,
     countdown, whenOf, colorFor, flagFor, FLAG, COUNTRY_FLAG, TEAM_COLOR, RACE_LENGTH_MS
   };
 })();

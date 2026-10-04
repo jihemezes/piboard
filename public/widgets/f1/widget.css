@@ -426,5 +426,73 @@
    mush. */
 @container (max-width: 300px) {
   .pw-f1 .pwf1-circ-label { display: none; }
-  .pw-f1 .pwf1-circ-src { display: none; }
+}
+
+/* L'ATTRIBUTION NE SE MASQUE JAMAIS, a aucune largeur. J'avais commence
+   par la retirer avec les etiquettes sur une tuile etroite ; c'est une
+   faute, et pas seulement d'esthetique : OpenStreetMap est sous ODbL et
+   Open-Meteo demande d'etre cite, et une licence ne s'applique pas
+   seulement aux grands ecrans. Elle retrecit, elle ne disparait pas.
+   ATTRIBUTION IS NEVER HIDDEN, at any width. I had started by dropping
+   it along with the labels on a narrow tile; that is a fault, and not
+   merely a cosmetic one: OpenStreetMap is ODbL and Open-Meteo asks to be
+   credited, and a licence does not apply to large screens only. It
+   shrinks, it does not vanish. */
+@container (max-width: 300px) {
+  .pw-f1 .pwf1-circ-src { font-size: .72em; }
+}
+
+/* ---------- Meteo du circuit (1.138.4) ---------- */
+
+/* UNE GRILLE, ET NON DES BOITES FLEXIBLES. Les cinq colonnes doivent
+   s'ALIGNER d'une ligne a l'autre : avec `flex`, chaque ligne repartit
+   l'espace selon la longueur de son propre libelle, et la colonne des
+   temperatures serpente. Une grille partagee les met en colonnes nettes,
+   ce qui est le seul moyen de comparer deux seances d'un coup d'oeil.
+   A GRID, NOT FLEX BOXES. The five columns must LINE UP from row to
+   row: with flex, each row shares out space according to its own
+   label's length and the temperature column snakes. */
+.pw-f1 .pwf1-wx {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  align-items: center;
+  gap: 0 8px;
+  padding: 2px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pw-f1 .pwf1-wx:last-child { border-bottom: 0; }
+
+.pw-f1 .pwf1-wx-head {
+  font-size: .72em;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+
+.pw-f1 .pwf1-wx-when { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pw-f1 .pwf1-wx-cond { font-size: 1.1em; line-height: 1; text-align: center; min-width: 1.4em; }
+.pw-f1 .pwf1-wx-temp,
+.pw-f1 .pwf1-wx-rain { font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }
+.pw-f1 .pwf1-wx-temp { min-width: 3ch; }
+.pw-f1 .pwf1-wx-rain { min-width: 4ch; color: var(--muted); }
+
+/* LA PLUIE EST LE SEUL CHIFFRE COLORE de la carte, et c'est voulu : en
+   Formule 1, c'est celui qui change une course. Tout colorer reviendrait
+   a ne rien mettre en avant.
+   RAIN IS THE ONLY COLOURED FIGURE on the card, deliberately: in Formula
+   1 it is the one that changes a race. */
+.pw-f1 .pwf1-wx-wet { color: var(--accent); font-weight: 650; }
+
+.pw-f1 .pwf1-wx-note { margin-top: 4px; font-size: .82em; }
+.pw-f1 .pwf1-wx-list .pwf1-circ-foot { margin-top: 4px; justify-content: flex-end; }
+
+/* Sur une tuile etroite, la date part AVANT la pluie et la temperature :
+   le programme du week-end, juste a cote, porte deja les horaires, alors
+   que la meteo ne se lit nulle part ailleurs.
+   On a narrow tile the date goes BEFORE rain and temperature: the
+   weekend timetable next door already carries the times, whereas the
+   weather is readable nowhere else. */
+@container (max-width: 260px) {
+  .pw-f1 .pwf1-wx-when { display: none; }
+  .pw-f1 .pwf1-wx { grid-template-columns: minmax(0, 1fr) auto auto auto; }
 }

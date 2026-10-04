@@ -33,6 +33,40 @@
 # Nouveautes / What's new
 
 
+## 1.138.4
+
+**La meteo du circuit, seance par seance**
+
+Septieme carte de la tuile Formule 1 : la meteo du week-end, avec une
+ligne par seance et la prevision A L'HEURE DE CETTE SEANCE. Parce que la
+meteo d'une course n'est pas la meteo d'un lieu : ce qu'on vient
+chercher, c'est s'il pleuvra pendant les qualifications, pas le temps
+qu'il fait sur le circuit un mardi.
+
+Le temps, la temperature, et la probabilite de pluie -- le seul chiffre
+mis en couleur, parce qu'en Formule 1 c'est celui qui change une course.
+La prevision porte a sept jours ; au-dela, la seance garde sa ligne avec
+un tiret plutot que de disparaitre.
+
+Donnees Open-Meteo, gratuites et sans cle, comme la tuile Meteo.
+
+---
+
+**Circuit weather, session by session**
+
+A seventh card for the Formula 1 tile: the weekend's weather, one row
+per session, with the forecast FOR THAT SESSION'S HOUR. Because a race's
+weather is not a place's weather: what you come for is whether it will
+rain during qualifying, not what the sky looks like over the circuit on
+a Tuesday.
+
+The condition, the temperature, and the chance of rain -- the only figure
+in colour, because in Formula 1 it is the one that changes a race. The
+forecast reaches seven days; beyond that a session keeps its row with a
+dash rather than vanishing.
+
+Open-Meteo data, free and keyless, same as the Weather tile.
+
 ## 1.138.3
 
 **Le plan du circuit, et des cartes aux couleurs de la course**
