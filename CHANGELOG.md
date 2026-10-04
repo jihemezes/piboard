@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.139.1
+
+- **CORRECTIF -- la tuile « Plan du circuit » decalait toute sa rangee du
+  catalogue.** Elle etait la seule des trente-huit tuiles a ne pas
+  porter d'accroche (`tagline`). Or la carte du catalogue affiche
+  l'accroche et, a defaut, retombe sur la DESCRIPTION COMPLETE : sa
+  carte montrait donc un paragraphe de deux cent soixante-dix
+  caracteres, devenait deux fois plus haute que ses voisines et
+  deformait la grille.
+
+  Rien n'etait casse, rien ne levait d'erreur, et le texte affiche etait
+  juste : seule une capture d'ecran pouvait le montrer. Un test
+  (`test/widgetTaglines.test.js`) exige desormais une accroche bilingue
+  pour CHAQUE tuile du catalogue, lui impose un plafond de 90
+  caracteres, et refuse qu'elle soit la description recopiee -- ce qui
+  contournerait la regle par la lettre tout en reproduisant le defaut.
+
 ## 1.139.0
 
 - **Le plan du circuit devient une TUILE a part entiere, adossee a une

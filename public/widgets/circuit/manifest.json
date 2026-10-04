@@ -1,12 +1,26 @@
 {
   "id": "circuit",
-  "name": { "en": "Circuit map", "fr": "Plan du circuit" },
+  "name": {
+    "en": "Circuit map",
+    "fr": "Plan du circuit"
+  },
   "description": {
     "en": "The vector outline of a Formula 1 circuit, drawn from OpenStreetMap: the weekend's circuit, or any circuit pinned from the base. Racing direction, pit lane, corner names and numbers where they exist, spec sheet and the next session's weather.",
     "fr": "Le tracé vectoriel d'un circuit de Formule 1, dessiné à partir d'OpenStreetMap : celui du week-end, ou n'importe quel circuit épinglé depuis la base. Sens de la course, voie des stands, noms et numéros de virages là où ils existent, fiche technique et météo de la prochaine séance."
   },
-  "version": "1.0.0",
-  "size": { "w": 4, "h": 4, "minW": 2, "minH": 2, "maxW": 12, "maxH": 16 },
+  "tagline": {
+    "en": "A circuit's outline, drawn to scale.",
+    "fr": "Le tracé d'un circuit, dessiné à l'échelle."
+  },
+  "version": "1.0.1",
+  "size": {
+    "w": 4,
+    "h": 4,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 12,
+    "maxH": 16
+  },
   "settings": [
     {
       "key": "circuit",
@@ -14,8 +28,14 @@
       "default": "",
       "source": "api/circuit-catalog",
       "path": "catalog.circuits",
-      "emptyLabel": { "en": "Follow the Formula 1 calendar", "fr": "Suivre le calendrier de Formule 1" },
-      "label": { "en": "Circuit", "fr": "Circuit" },
+      "emptyLabel": {
+        "en": "Follow the Formula 1 calendar",
+        "fr": "Suivre le calendrier de Formule 1"
+      },
+      "label": {
+        "en": "Circuit",
+        "fr": "Circuit"
+      },
       "hint": {
         "en": "Left on \"Follow the Formula 1 calendar\", the tile shows the circuit of the Grand Prix under way, and switches by itself from one weekend to the next. Pick a circuit to pin it instead -- useful out of season, or to keep a favourite on the board all year. A pinned circuit costs no call to the racing API at all. The list is loaded from the circuit base, so a circuit added there appears here without updating PiBoard.",
         "fr": "Laissé sur « Suivre le calendrier de Formule 1 », la tuile affiche le circuit du Grand Prix en cours et change d'elle-même d'un week-end à l'autre. Choisissez un circuit pour l'épingler — utile hors saison, ou pour garder un favori toute l'année sur le tableau. Un circuit épinglé ne coûte aucun appel à l'API des courses. La liste vient de la base des circuits : un circuit ajouté là-bas apparaît ici sans mettre PiBoard à jour."
@@ -25,7 +45,10 @@
       "key": "showSpecs",
       "type": "checkbox",
       "default": true,
-      "label": { "en": "Spec sheet", "fr": "Fiche technique" },
+      "label": {
+        "en": "Spec sheet",
+        "fr": "Fiche technique"
+      },
       "hint": {
         "en": "Length, number of corners, race laps, race distance and lap record. These are facts OpenStreetMap does not carry: they come from the circuit base. A circuit whose outline is known but whose specs have not been entered shows nothing here rather than a row of dashes -- an empty row suggests lost data, when it was simply never filled in.",
         "fr": "Longueur, nombre de virages, nombre de tours, distance de course et record du tour. Ce sont des faits qu'OpenStreetMap ne porte pas : ils viennent de la base des circuits. Un circuit dont le tracé est connu mais dont la fiche n'a pas été saisie n'affiche rien ici, plutôt qu'une rangée de tirets — une ligne vide fait croire à une donnée perdue, alors qu'elle n'a simplement jamais été renseignée."
@@ -35,7 +58,10 @@
       "key": "showCorners",
       "type": "checkbox",
       "default": true,
-      "label": { "en": "Corner names and numbers", "fr": "Noms et numéros de virages" },
+      "label": {
+        "en": "Corner names and numbers",
+        "fr": "Noms et numéros de virages"
+      },
       "hint": {
         "en": "Shown where OpenStreetMap has them, which varies enormously: Austin has 21 numbered corners, Silverstone four named ones, and seventeen circuits of the season have none at all. Nothing is invented where the data is silent. The labels disappear on a narrow tile, where they would overlap and make the outline unreadable.",
         "fr": "Affichés là où OpenStreetMap les connaît, ce qui varie énormément : Austin a 21 virages numérotés, Silverstone quatre nommés, et dix-sept circuits de la saison n'en ont aucun. Rien n'est inventé là où la donnée se tait. Les étiquettes disparaissent sur une tuile étroite, où elles se chevaucheraient et rendraient le tracé illisible."
@@ -45,7 +71,10 @@
       "key": "showDirection",
       "type": "checkbox",
       "default": true,
-      "label": { "en": "Racing direction", "fr": "Sens de la course" },
+      "label": {
+        "en": "Racing direction",
+        "fr": "Sens de la course"
+      },
       "hint": {
         "en": "An arrow on the longest one-way straight, where the line is straightest and an arrow reads best. It follows OpenStreetMap's `oneway` tag, so it points the way the cars actually go; the pit lane is never used to decide it, since that would show the way into the pits rather than the way round the track.",
         "fr": "Une flèche sur la plus longue ligne droite à sens unique, là où le trait est le plus droit et où une flèche se lit. Elle suit l'étiquette `oneway` d'OpenStreetMap et indique donc le sens réel ; la voie des stands n'est jamais utilisée pour la déterminer, ce qui indiquerait le sens d'entrée aux stands et non celui du tour."
@@ -55,7 +84,10 @@
       "key": "showWeather",
       "type": "checkbox",
       "default": true,
-      "label": { "en": "Next session's weather", "fr": "Météo de la prochaine séance" },
+      "label": {
+        "en": "Next session's weather",
+        "fr": "Météo de la prochaine séance"
+      },
       "hint": {
         "en": "One compact line under the outline: the next session, its time in your own zone, and the forecast for that hour -- condition, temperature and chance of rain. One line only, deliberately: the Formula 1 tile carries the full session-by-session table, and repeating it here would eat the room the outline needs. Only shown when the tile follows the calendar, since a pinned circuit has no session to forecast. Source: Open-Meteo, free and keyless.",
         "fr": "Une ligne compacte sous le tracé : la prochaine séance, son heure dans votre fuseau, et la prévision à cette heure-là — temps, température et probabilité de pluie. Une seule ligne, délibérément : la tuile Formule 1 porte le tableau complet séance par séance, et le répéter ici mangerait la place du tracé. Affichée seulement quand la tuile suit le calendrier, un circuit épinglé n'ayant aucune séance à prévoir. Source : Open-Meteo, gratuit et sans clé."
@@ -67,7 +99,10 @@
       "default": 360,
       "min": 30,
       "max": 1440,
-      "label": { "en": "Refresh (minutes)", "fr": "Rafraîchir (minutes)" },
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchir (minutes)"
+      },
       "hint": {
         "en": "Six hours by default, and that is deliberate: an outline never changes. What moves is the weekend's circuit -- once a week -- and the weather, slowly. Reading every half hour would only make noise at three free services, and the outline itself comes from a base rather than from the network.",
         "fr": "Six heures par défaut, et c'est voulu : un tracé ne change jamais. Ce qui bouge, c'est le circuit du week-end — une fois par semaine — et la météo, lentement. Relever toutes les demi-heures ne ferait que du bruit chez trois services gratuits, et le tracé vient d'une base, non du réseau."
