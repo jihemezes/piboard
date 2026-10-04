@@ -9340,6 +9340,25 @@ function catalogItemFor(catalog, document, widgetId) {
         /\.pw-f1\s*\{[^}]*align-items:\s*start/.test(css));
     }
 
+    /* LA TUILE DOIT POUVOIR ETRE PETITE (1.138.2). La taille par defaut
+       est unique pour tout le widget alors que les cartes n'ont pas les
+       memes besoins : posee a la taille du classement, la tuile laissait
+       un grand vide autour du compte a rebours. Le defaut doit donc
+       servir les cartes COURTES, et le contenu savoir se serrer. */
+    {
+      const man = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/f1/manifest.json"), "utf8"));
+      assert("la taille par defaut sert les cartes courtes",
+        man.size.w <= 4 && man.size.h <= 4 && man.size.minW <= 2 && man.size.minH <= 2);
+      const css = fs.readFileSync(path.join(PUB, "widgets/f1/widget.css"), "utf8");
+      /* La largeur de reference doit etre celle de la TUILE, pas celle
+         de l'ecran : avec six tuiles cote a cote, `vw` dimensionnerait
+         le compte a rebours sur la largeur du moniteur. */
+      assert("le contenu se mesure sur la largeur de la tuile, pas de l'ecran",
+        /container-type:\s*inline-size/.test(css) && /cqw/.test(css) && !/\d+vw/.test(css));
+      assert("l'heure du programme n'est jamais la premiere tronquee",
+        /\.pwf1-sess-when\s*\{[^}]*flex:\s*0 0 auto/.test(css));
+    }
+
     /* DECOCHER UNE CARTE DOIT AUSSI EVITER SA REQUETE : une API
        communautaire gratuite se partage, et demander quatre fichiers
        pour n'en afficher qu'un serait impoli. */

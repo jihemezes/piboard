@@ -2,7 +2,7 @@
   "_comment_fr": "POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes.",
   "_comment_en": "TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests.",
   "id": "f1",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
@@ -17,10 +17,10 @@
     "fr": "Le week-end de F1, carte par carte."
   },
   "size": {
-    "w": 6,
-    "h": 8,
-    "minW": 3,
-    "minH": 3,
+    "w": 4,
+    "h": 4,
+    "minW": 2,
+    "minH": 2,
     "maxW": 12,
     "maxH": 16
   },

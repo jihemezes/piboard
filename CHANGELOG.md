@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.138.2
+
+- **La taille par defaut de la tuile Formule 1 passe de 6x8 a 4x4.** La
+  taille par defaut est UNIQUE pour tout le widget, alors que les cartes
+  n'ont pas du tout les memes besoins : « Prochaine course » tient en
+  cinq lignes, « Classement pilotes » en demande vingt-trois. Une tuile
+  posee a la taille du classement laissait donc un grand vide autour du
+  compte a rebours. Mieux vaut agrandir les deux tuiles qui le meritent
+  que reduire les cinq autres.
+
+- **Le contenu s'adapte desormais a la largeur REELLE de la tuile**
+  (`container-type: inline-size`), et non a celle de l'ecran -- toute la
+  difference quand six tuiles sont cote a cote. Le compte a rebours
+  grandit et retrecit avec sa tuile ; sous 230 px, le numero du pilote
+  et la colonne des victoires disparaissent, parce que trois colonnes
+  lisibles valent mieux que cinq tronquees.
+
+- **L'heure n'est plus tronquee dans le programme du week-end.** Le nom
+  de la seance et l'heure se disputaient la ligne, et c'est l'heure --
+  la seule information qu'on vient y chercher -- qui sautait. Le nom
+  cede le premier.
+
+- **Marge laterale retablie en mode carte unique** : a zero, la premiere
+  lettre passait sous le bord de la tuile.
+
+- **L'aide donne une taille conseillee par carte** (3x3 pour la
+  prochaine course, 3x7 pour le classement pilotes...), ce qui evite de
+  chercher par essais successifs.
+
 ## 1.138.1
 
 - **Une tuile Formule 1 a carte unique DEVIENT cette carte** : ni cadre

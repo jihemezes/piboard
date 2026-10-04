@@ -199,3 +199,71 @@
 .pw-f1 .pwf1-dnf { opacity: .55; }
 .pw-f1 .pwf1-dnf .pwf1-gap { font-style: italic; }
 .pw-f1 .pwf1-fast { color: var(--accent); flex: 0 0 auto; }
+
+/* ============================================================
+   1.138.2 — tenir dans une PETITE tuile.
+
+   LE PROBLEME. La taille par defaut d'une tuile est unique pour tout le
+   widget, alors que les cartes n'ont pas du tout les memes besoins :
+   « Prochaine course » tient en cinq lignes, « Classement pilotes » en
+   demande vingt-trois. Une tuile posee a la taille du classement laisse
+   donc un grand vide autour du compte a rebours, et une tuile reduite a
+   la taille du compte a rebours tronque le programme. La taille par
+   defaut passe a 4x4 -- la plus petite qui serve VRAIMENT les cartes
+   courtes -- et c'est le contenu qui doit desormais savoir se serrer,
+   puisque c'est lui qu'on retaille.
+   THE PROBLEM: the default tile size is one per widget, while the cards
+   have wildly different needs. The default drops to 4x4 and the content
+   now has to know how to tighten up.
+   ============================================================ */
+
+/* Les mesures en `em` suivent l'echelle de texte de la tuile (reglage
+   universel « Taille du texte ») : reduire la tuile et baisser l'echelle
+   serre reellement le contenu, au lieu de ne deplacer que les bords.
+   Sizes in `em` follow the tile's text scale, so lowering it actually
+   tightens the content. */
+.pw-f1 .pwf1-cd-wrap {
+  margin-top: 6px;
+  padding: 5px 8px;
+}
+
+/* Le compte a rebours s'adapte a la largeur REELLE de la tuile plutot
+   que d'etre fixe : sur une tuile de deux cases il reste lisible, sur
+   une tuile large il reprend sa taille d'affichage. `cqw` mesure la
+   largeur du conteneur, et non celle de l'ecran -- c'est toute la
+   difference quand on a six tuiles cote a cote.
+   The countdown follows the tile's REAL width rather than a fixed size;
+   `cqw` measures the container, not the screen -- which is the whole
+   point with six tiles side by side. */
+.pw-f1 { container-type: inline-size; }
+.pw-f1 .pwf1-cd { font-size: clamp(1.05em, 11cqw, 1.9em); }
+
+/* Le programme du week-end tronquait l'heure sur une tuile etroite : le
+   nom de la seance et l'heure se disputaient la ligne, et c'est l'heure
+   -- la seule information qu'on vient chercher -- qui sautait. Le nom
+   cede desormais le premier, et l'heure n'est jamais coupee.
+   The timetable clipped the time on a narrow tile: the session name and
+   the time fought over the line and the time -- the one thing one comes
+   for -- lost. The name now yields first. */
+.pw-f1 .pwf1-sess-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pw-f1 .pwf1-sess-when { flex: 0 0 auto; }
+
+/* En solo, un reste de marge laterale : a zero, le texte venait toucher
+   le bord de la tuile et la premiere lettre passait sous le cadre.
+   In solo mode a little side padding remains: at zero the text touched
+   the tile's edge and the first letter slipped under the frame. */
+.pw-f1.pwf1-solo .pwf1-card { padding: 0 2px; }
+
+/* Sur une tuile vraiment etroite (deux cases), on retire ce qui ne sert
+   qu'au confort : le numero du pilote et le nombre de victoires. Le
+   nom, les points et la position suffisent a lire un classement, et
+   mieux vaut trois colonnes lisibles que cinq tronquees.
+   On a genuinely narrow tile, what is mere comfort goes: the driver's
+   number and the win count. Three readable columns beat five truncated
+   ones. */
+@container (max-width: 230px) {
+  .pw-f1 .pwf1-num,
+  .pw-f1 .pwf1-wins,
+  .pw-f1 .pwf1-table th:nth-child(4) { display: none; }
+  .pw-f1 .pwf1-next-sub { display: none; }
+}

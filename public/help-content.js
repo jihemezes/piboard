@@ -1466,7 +1466,7 @@
       },
       html: {
         fr: `
-          <span class="help-size">Taille : 6×8 par défaut, de 3×3 à 12×16</span>
+          <span class="help-size">Taille : 4×4 par défaut, de 2×2 à 12×16</span>
           <h4>Objectif</h4>
           <p>Rassembler sur une seule tuile ce qu'un amateur de Formule 1 regarde pendant un week-end de Grand Prix : <b>quand ça commence</b>, <b>qui mène</b>, et <b>ce qui s'est passé la dernière fois</b>. La tuile est faite de <b>cartes</b> que l'on affiche ou que l'on cache une à une.</p>
 
@@ -1486,6 +1486,8 @@
           <h4>Disposer les cartes comme vous voulez</h4>
           <p><b>Ne cochez qu'une seule carte, et posez autant de tuiles Formule 1 que de cartes voulues.</b> Une tuile à carte unique n'affiche ni cadre ni titre interne : elle <i>devient</i> cette carte, et se déplace, se redimensionne et se renomme comme n'importe quelle tuile, avec la grille de PiBoard.</p>
           <p>C'est la bonne façon de procéder, parce que les cartes <b>ne sont pas déplaçables à l'intérieur d'une tuile</b> : rebâtir une grille dans la grille n'aurait aucun sens quand PiBoard en a déjà une. Et cela ne coûte rien : le relais partage son cache, donc cinq tuiles n'envoient pas cinq fois les mêmes requêtes.</p>
+          <p><b>Quelle taille donner à chaque tuile ?</b> La taille par défaut (4×4) est volontairement modeste : c'est la plus petite qui serve vraiment les cartes courtes, et il vaut mieux agrandir les deux tuiles qui le méritent que réduire les cinq autres. En pratique : <b>Prochaine course</b> 3×3, <b>Programme du week-end</b> 3×4, <b>Classement constructeurs</b> 3×5, <b>Classement pilotes</b> 3×7, <b>Dernière course</b> 4×7. Le réglage universel <b>Taille du texte</b> resserre encore le contenu si vous tenez à une tuile plus petite.</p>
+          <p>Le contenu s'adapte à la largeur réelle de la tuile : sur une tuile étroite, le numéro du pilote et la colonne des victoires disparaissent, parce que trois colonnes lisibles valent mieux que cinq tronquées. Et dans le programme, c'est le nom de la séance qui cède la place avant l'heure — l'heure est la seule chose qu'on vient y chercher.</p>
           <p>Si au contraire vous voulez tout au même endroit, cochez plusieurs cartes : elles se rangent alors sur autant de colonnes que la largeur en permet, chacune à la taille de son contenu. Une carte décochée n'est <b>pas demandée du tout</b> à l'API — elle est gratuite et partagée par tous, autant être poli.</p>
 
           <h4>Source</h4>
@@ -1495,7 +1497,7 @@
           <div class="help-opt"><span class="help-opt-name">Lignes affichées</span><span class="help-opt-desc">Par tableau : vingt-deux lignes sont illisibles sur une tuile moyenne, dix couvrent ce qui se joue.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rafraîchir</span><span class="help-opt-desc">30 min par défaut. Un classement ne bouge qu'après une course ; le compte à rebours, lui, s'égrène sans rien demander au réseau.</span></div>`,
         en: `
-          <span class="help-size">Size: 6×8 by default, from 3×3 to 12×16</span>
+          <span class="help-size">Size: 4×4 by default, from 2×2 to 12×16</span>
           <h4>Purpose</h4>
           <p>To gather on a single tile what a Formula 1 follower looks at during a Grand Prix weekend: <b>when it starts</b>, <b>who leads</b>, and <b>what happened last time</b>. The tile is made of <b>cards</b> shown or hidden one by one.</p>
 
@@ -1515,6 +1517,8 @@
           <h4>Arranging the cards as you wish</h4>
           <p><b>Tick a single card, and place as many Formula 1 tiles as you want cards.</b> A single-card tile shows neither frame nor inner title: it <i>becomes</i> that card, and moves, resizes and gets renamed like any tile, using PiBoard's own grid.</p>
           <p>That is the right way round, because cards <b>are not draggable inside a tile</b>: rebuilding a grid inside the grid would make no sense when PiBoard already has one. And it costs nothing: the relay shares its cache, so five tiles do not send the same requests five times.</p>
+          <p><b>What size for each tile?</b> The 4×4 default is deliberately modest: it is the smallest that genuinely serves the short cards, and it is better to enlarge the two tiles that deserve it than to shrink the other five. In practice: <b>Next race</b> 3×3, <b>Weekend timetable</b> 3×4, <b>Constructor standings</b> 3×5, <b>Driver standings</b> 3×7, <b>Last race</b> 4×7. The universal <b>Text size</b> setting tightens the content further.</p>
+          <p>The content follows the tile's real width: on a narrow tile the driver's number and the wins column disappear, because three readable columns beat five truncated ones. And in the timetable the session name yields before the time — the time is the one thing one comes for.</p>
           <p>If instead you want everything in one place, tick several cards: they flow into as many columns as the width allows, each at the size of its own content. An unticked card is <b>not requested at all</b>.</p>
 
           <h4>Source</h4>
