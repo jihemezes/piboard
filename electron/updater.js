@@ -21,8 +21,12 @@
        .deb reinstalle via `pkexec dpkg -i` (invite de mot de passe
        administrateur). Chaque architecture lit son propre fichier de
        version (latest-linux.yml pour x64, latest-linux-arm64.yml).
-     - macOS : mise a jour MANUELLE, par ouverture de la page de la
-       release dans le navigateur. Voir le bloc MACOS ci-dessous.
+     - macOS : depuis la 1.139.3 (certificat Developer ID + notarisation,
+       voir electron-builder.yml et docs/LINUX-MACOS.md), identique a
+       Windows et Linux -- telechargement puis installation via
+       Squirrel.Mac. Avant cette version, c'etait une mise a jour
+       MANUELLE par ouverture de la page de la release : voir
+       CHANGELOG.md pour l'historique de ce detour, retire ici.
 
    HOW IT WORKS: for each version, electron-builder publishes the
    installer files AND a "latest.yml" file in the matching GitHub
@@ -46,62 +50,64 @@
        reinstalled via `pkexec dpkg -i` (administrator password prompt).
        Each architecture reads its own version file (latest-linux.yml
        for x64, latest-linux-arm64.yml).
-     - macOS: MANUAL update, by opening the release's page in the
-       browser. See the MACOS block below.
+     - macOS: since 1.139.3 (Developer ID certificate + notarization,
+       see electron-builder.yml and docs/LINUX-MACOS.md), identical to
+       Windows and Linux -- downloaded then installed through
+       Squirrel.Mac. Before that version this was a MANUAL update by
+       opening the release's page: see CHANGELOG.md for the history of
+       that detour, now removed.
    ============================================================ */
 "use strict";
 
-const { app, dialog, shell } = require("electron");
+const { app, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
-const platform = require("../server/platform");
 
-/* ---------- MACOS : pourquoi la mise a jour n'est pas automatique ----------
-   Sous macOS, l'installation d'une mise a jour par electron-updater est
-   confiee a Squirrel.Mac, qui REFUSE une application non signee par
-   Apple (certificat Developer ID). PiBoard ne l'est pas.
+/* ---------- MACOS : pourquoi ce n'etait PAS automatique avant la 1.139.3 ----------
+   Historique conserve pour qui retomberait sur ce fichier en cherchant
+   pourquoi macOS se comportait differemment : jusqu'a cette version,
+   PiBoard n'etait pas signe par un certificat Developer ID Apple.
+   L'installation d'une mise a jour par electron-updater est confiee a
+   Squirrel.Mac, qui REFUSE de remplacer une application non signee.
 
-   Le piege, constate sur la 1.100.x : ce refus n'arrive pas au moment
-   ou on le croirait. La verification reussit (elle ne fait que lire un
-   fichier .yml), le telechargement reussit aussi et parait meme tres
-   rapide -- d'ou le message "pret a etre installe" en quelques
-   secondes. C'est SEULEMENT a l'installation que Squirrel.Mac verifie
-   la signature, echoue, et ne fait rien : l'application ne se ferme
-   pas, ne se relance pas, aucune fenetre d'erreur n'apparait. De
-   l'exterieur, "on clique sur redemarrer et il ne se passe rien".
+   Le piege, constate sur la 1.100.x : ce refus n'arrivait pas au
+   moment ou on l'attendrait. La verification reussissait (elle ne fait
+   que lire un fichier .yml), le telechargement aussi, et paraissait
+   meme tres rapide -- d'ou un "pret a etre installe" en quelques
+   secondes. C'etait SEULEMENT a l'installation que Squirrel.Mac
+   verifiait la signature, echouait, et ne faisait rien : l'application
+   ne se fermait pas, ne se relancait pas, aucune fenetre d'erreur
+   n'apparaissait. De l'exterieur, "on clique sur redemarrer et il ne
+   se passe rien". PiBoard contournait donc le probleme : la nouvelle
+   version etait SIGNALEE, mais le bouton ouvrait la page de la release
+   dans le navigateur plutot que de declencher un telechargement voue a
+   echouer silencieusement a l'installation.
 
-   Plutot que de laisser l'utilisateur dans cette impasse, la nouvelle
-   version est SIGNALEE sous macOS, mais le bouton ouvre la page de la
-   release dans le navigateur : le DMG se telecharge et s'installe a la
-   main, par-dessus l'ancienne application, en conservant les donnees.
-   Aucun telechargement n'est declenche dans l'application, aucun
-   redemarrage n'est propose.
+   Depuis la 1.139.3 (certificat Developer ID + notarisation, voir
+   electron-builder.yml), ce detour a disparu : macOS suit exactement
+   le meme chemin que Windows et Linux ci-dessous.
 
-   Le jour ou un certificat Developer ID sera en place (voir
-   electron-builder.yml et docs/LINUX-MACOS.md), il suffira de
-   supprimer ce detournement : le chemin normal fonctionnera.
+   MACOS: why this was NOT automatic before 1.139.3. History kept for
+   whoever lands on this file wondering why macOS used to behave
+   differently: until that version, PiBoard was not signed with an
+   Apple Developer ID certificate. Installing an update through
+   electron-updater is handed to Squirrel.Mac, which REFUSES to replace
+   an unsigned application.
 
-   MACOS: why updating is not automatic. There, installing an update is
-   handed to Squirrel.Mac, which REFUSES an application not signed by
-   Apple (Developer ID certificate). PiBoard is not signed.
-
-   The trap, observed on 1.100.x: that refusal does not happen where one
-   would expect. The check succeeds (it only reads a .yml file), the
-   download succeeds too and even looks very fast -- hence the "ready to
-   install" message within seconds. Only at INSTALL time does
+   The trap, observed on 1.100.x: that refusal did not happen where one
+   would expect. The check succeeded (it only reads a .yml file), the
+   download succeeded too and even looked very fast -- hence a "ready
+   to install" message within seconds. Only at INSTALL time did
    Squirrel.Mac verify the signature, fail, and do nothing: the
-   application neither quits nor restarts, and no error window appears.
-   From the outside, "you click restart and nothing happens".
+   application neither quit nor restarted, and no error window
+   appeared. From the outside, "you click restart and nothing
+   happens". PiBoard therefore worked around it: the new version was
+   ANNOUNCED, but the button opened the release's page in the browser
+   rather than starting a download doomed to fail silently at install
+   time.
 
-   Rather than leaving the user in that dead end, the new version is
-   ANNOUNCED on macOS, but the button opens the release's page in the
-   browser: the DMG is downloaded and installed by hand, over the old
-   application, keeping the data. No download is started inside the
-   application, no restart is offered.
-
-   Once a Developer ID certificate is in place (see electron-builder.yml
-   and docs/LINUX-MACOS.md), removing this detour is enough: the normal
-   path will work. */
-const MANUAL_UPDATE_ON_MAC = platform.id === "darwin";
+   Since 1.139.3 (Developer ID certificate + notarization, see
+   electron-builder.yml) that detour is gone: macOS now follows the
+   exact same path as Windows and Linux below. */
 const RELEASES_URL = "https://github.com/jihemezes/piboard/releases";
 
 function releaseUrl(version) {
@@ -168,60 +174,23 @@ function wireEvents() {
 
   autoUpdater.on("update-available", async (info) => {
     const win = parentWindow();
-    const options = MANUAL_UPDATE_ON_MAC
-      ? {
-          type: "info",
-          buttons: ["Ouvrir la page / Open the page", "Plus tard / Later"],
-          defaultId: 0,
-          cancelId: 1,
-          title: "PiBoard",
-          message: `PiBoard ${info.version} est disponible / is available`,
-          detail:
-            `Version installee / installed version : ${app.getVersion()}\n\n` +
-            "Sous macOS, l'installation se fait a la main : la page de la version va s'ouvrir " +
-            "dans le navigateur. Telecharge le fichier .dmg correspondant a ton Mac " +
-            "(arm64 pour Apple Silicon, x64 pour Intel), ouvre-le et glisse PiBoard dans " +
-            "Applications par-dessus l'ancienne version. Tes tuiles et tes reglages sont conserves.\n\n" +
-            /* Le rappel qui manquait (1.121.0). La copie qu'on vient de
-               telecharger porte a son tour l'attribut de quarantaine :
-               elle rouvrira donc sur « PiBoard est endommage », alors
-               meme que la version precedente fonctionnait. Sans cette
-               ligne, chaque mise a jour ramene le probleme du premier
-               lancement, et rien a l'ecran ne fait le lien.
-               The reminder that was missing (1.121.0): the freshly
-               downloaded copy carries the quarantine attribute in its
-               turn, so it reopens on "PiBoard is damaged" even though
-               the previous version worked. */
-            "Ensuite, relance cette commande une fois dans le Terminal, sans quoi macOS refusera " +
-            "d'ouvrir la nouvelle copie en la disant « endommagee » (elle ne l'est pas : PiBoard " +
-            "n'est pas notarise par Apple, faute de compte developpeur payant) :\n" +
-            "    xattr -dr com.apple.quarantine /Applications/PiBoard.app\n\n" +
-            "On macOS the installation is manual: the version's page will open in the browser. " +
-            "Download the .dmg matching your Mac (arm64 for Apple Silicon, x64 for Intel), open it " +
-            "and drag PiBoard into Applications over the old version. Your tiles and settings are kept.\n" +
-            "Then run this command once in Terminal, or macOS will refuse to open the new copy, " +
-            "calling it \"damaged\" (it is not: PiBoard is not notarized by Apple, for want of a " +
-            "paid developer account):\n" +
-            "    xattr -dr com.apple.quarantine /Applications/PiBoard.app"
-        }
-      : {
-          type: "info",
-          buttons: ["Telecharger / Download", "Plus tard / Later"],
-          defaultId: 0,
-          cancelId: 1,
-          title: "PiBoard",
-          message: `PiBoard ${info.version} est disponible / is available`,
-          detail:
-            `Version installee / installed version : ${app.getVersion()}\n` +
-            "La mise a jour sera installee a la fermeture de l'application.\n" +
-            "The update will be installed when the application closes."
-        };
+    const options = {
+      type: "info",
+      buttons: ["Telecharger / Download", "Plus tard / Later"],
+      defaultId: 0,
+      cancelId: 1,
+      title: "PiBoard",
+      message: `PiBoard ${info.version} est disponible / is available`,
+      detail:
+        `Version installee / installed version : ${app.getVersion()}\n` +
+        "La mise a jour sera installee a la fermeture de l'application.\n" +
+        "The update will be installed when the application closes."
+    };
     const result = win
       ? await dialog.showMessageBox(win, options)
       : await dialog.showMessageBox(options);
     if (result.response !== 0) return;
-    if (MANUAL_UPDATE_ON_MAC) shell.openExternal(releaseUrl(info.version));
-    else autoUpdater.downloadUpdate();
+    autoUpdater.downloadUpdate();
   });
 
   autoUpdater.on("update-not-available", () => {
@@ -238,21 +207,7 @@ function wireEvents() {
       type: "info",
       title: "PiBoard",
       message: "PiBoard est a jour / PiBoard is up to date",
-      /* Sur Mac, on profite du seul moment calme -- celui ou il n'y a
-         rien a installer -- pour dire que la mise a jour y est manuelle.
-         L'apprendre le jour ou une version sort, au milieu d'une
-         manipulation, est la plus mauvaise facon de le decouvrir.
-         On a Mac we use the one calm moment -- nothing to install -- to
-         say that updating is manual there. Learning it on the day a
-         release lands is the worst way to find out. */
-      detail: `Version ${app.getVersion()}` + (MANUAL_UPDATE_ON_MAC
-        ? "\n\nSous macOS, PiBoard ne se met pas a jour tout seul : il previent quand une version " +
-          "existe et ouvre sa page, l'installation restant manuelle. C'est la contrepartie d'une " +
-          "application non notarisee par Apple, ce qui suppose un compte developpeur payant.\n\n" +
-          "On macOS, PiBoard does not update itself: it announces a new version and opens its page, " +
-          "the installation staying manual. That is the price of an application not notarized by " +
-          "Apple, which requires a paid developer account."
-        : "")
+      detail: `Version ${app.getVersion()}`
     };
     if (win) dialog.showMessageBox(win, options);
     else dialog.showMessageBox(options);
@@ -318,10 +273,6 @@ function wireEvents() {
     if (!manualCheck) return;
     manualCheck = false;
     const win = parentWindow();
-    // Sous macOS, l'echec attendu (application non signee, voir
-    // l'en-tete) est explique plutot que laisse brut.
-    // On macOS the expected failure (unsigned application, see the
-    // header) is explained rather than left raw.
     /* Cas tres particulier, mais desormais frequent depuis que trois
        plateformes se partagent une meme release : la release existe
        (elle a ete creee par la publication Windows, rapide) mais le
@@ -360,17 +311,11 @@ function wireEvents() {
       return;
     }
 
-    const macHint = MANUAL_UPDATE_ON_MAC
-      ? "\n\nSous macOS, la mise a jour automatique exige une application signee par Apple ; " +
-        "PiBoard ne l'est pas encore. Telechargez la nouvelle version depuis " + RELEASES_URL + ".\n" +
-        "On macOS, automatic updating requires an Apple-signed application; PiBoard is not signed yet. " +
-        "Download the new version from " + RELEASES_URL + "."
-      : "";
     const options = {
       type: "warning",
       title: "PiBoard",
       message: "Verification impossible / Check failed",
-      detail: raw + macHint
+      detail: raw
     };
     if (win) dialog.showMessageBox(win, options);
     else dialog.showMessageBox(options);

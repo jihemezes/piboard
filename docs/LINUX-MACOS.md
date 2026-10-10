@@ -119,8 +119,21 @@ de sécurité, et à maintenir à chaque version. Non mis en place ;
 
 Installation : ouvrir le `.dmg`, glisser PiBoard dans *Applications*.
 
-**L'application n'est pas signée par Apple** (cela suppose un compte
-développeur payant). Deux conséquences, connues et acceptées :
+**Depuis la 1.139.3, l'application est signée (certificat Developer ID
+Application) et notariée par Apple**, grâce à un compte développeur
+payant. Gatekeeper ne bloque plus le premier lancement, et la mise à
+jour automatique (Squirrel.Mac) fonctionne exactement comme sous
+Windows et Linux — plus besoin de la commande `xattr` ni de
+réinstaller le `.dmg` à la main. Le certificat et la clé de
+notarisation vivent en secrets GitHub Actions
+(`.github/workflows/release.yml`) ; `electron-builder.yml` documente
+leur rôle.
+
+**Ce que ça ne couvre pas** : une construction locale
+(`npm run dist:mac`) sur une machine sans ces secrets, ou un fork du
+dépôt sans compte développeur Apple, reste **non signée** — electron-
+builder y retombe silencieusement sur une signature ad-hoc, et les
+deux points ci-dessous s'appliquent alors tels quels :
 
 1. **Premier lancement bloqué par Gatekeeper.** Le message dépend de
    l'architecture, et cette différence est ce qui rend le sujet
@@ -144,38 +157,16 @@ développeur payant). Deux conséquences, connues et acceptées :
 
    Cette commande agit sur **cette copie précise** et rien d'autre :
    aucune protection du système n'est désactivée. Elle est à refaire
-   après chaque nouveau téléchargement, mise à jour comprise — la
-   nouvelle copie arrive avec son propre attribut de quarantaine.
-
-   À noter, pour ne pas partir sur une fausse piste : l'application
-   **porte bien une signature ad-hoc** (electron-builder en pose une
-   d'office sur arm64, sans quoi le noyau refuserait tout simplement de
-   l'exécuter). Passer `identity: "-"` dans `electron-builder.yml` ne
-   changerait donc strictement rien — c'est la **notarisation** qui
-   manque, pas la signature. La seule correction réelle est un compte
-   développeur Apple payant.
-
-   Tout ceci est aussi expliqué à l'utilisateur dans l'aide intégrée,
-   fiche « Application de bureau macOS », et dans le README — un
-   fichier `docs/` ne se lit qu'après avoir eu le problème, et
-   seulement si l'on sait qu'il existe.
+   après chaque nouveau téléchargement d'une construction non signée.
 2. **Pas de mise à jour automatique** : l'installation est confiée à
    Squirrel.Mac, qui refuse par conception une application non signée.
-   Attention, ce refus n'arrive pas où on l'attend : la vérification et
-   le téléchargement réussissent (d'où un « prêt à installer » très
-   rapide), et c'est seulement à l'installation que la signature est
-   vérifiée — l'échec est alors silencieux, l'application ne se ferme
-   même pas. Depuis la 1.100.3, PiBoard ne tente donc plus rien de tout
-   cela sous macOS : il **signale** la nouvelle version et ouvre la page
-   de la release dans le navigateur. Mettre à jour = télécharger le
-   `.dmg` correspondant à son Mac et le réinstaller par-dessus
-   l'ancienne version. Les données
+   Mettre à jour = télécharger le `.dmg` correspondant à son Mac et le
+   réinstaller par-dessus l'ancienne version. Les données
    (`~/Library/Application Support/piboard/data`) sont conservées.
 
-Le jour où une signature Developer ID est disponible, il suffit de
-retirer `identity: null` de `electron-builder.yml`, de fournir le
-certificat au workflow (secrets `CSC_LINK` / `CSC_KEY_PASSWORD`, plus
-les identifiants de notarisation) et les deux limites disparaissent.
+Ces deux points ne concernent donc plus les releases officielles
+publiées depuis GitHub Actions — seulement une construction faite
+soi-même sans certificat.
 
 ### Publier — comment ça s'articule
 
@@ -389,8 +380,20 @@ comes up.
 
 Install: open the `.dmg`, drag PiBoard into *Applications*.
 
-**The app is not signed by Apple** (that requires a paid developer
-account). Two known and accepted consequences:
+**Since 1.139.3, the application is signed (Developer ID Application
+certificate) and notarized by Apple**, thanks to a paid developer
+account. Gatekeeper no longer blocks the first launch, and automatic
+updating (Squirrel.Mac) works exactly as on Windows and Linux — no
+more `xattr` command, no more reinstalling the `.dmg` by hand. The
+certificate and the notarization key live as GitHub Actions secrets
+(`.github/workflows/release.yml`); `electron-builder.yml` documents
+their role.
+
+**What this does not cover**: a local build (`npm run dist:mac`) on a
+machine without those secrets, or a fork of the repository with no
+Apple developer account, is still **unsigned** — electron-builder
+silently falls back to an ad-hoc signature there, and the two points
+below apply as written:
 
 1. **First launch blocked by Gatekeeper.** The message depends on the
    architecture, and that difference is what makes the subject
@@ -412,36 +415,15 @@ account). Two known and accepted consequences:
 
    That command acts on **that one copy** and nothing else: no system
    protection is turned off. It must be repeated after each new
-   download, updates included — the new copy arrives with its own
-   quarantine attribute.
-
-   Worth noting, so as not to chase the wrong lead: the application
-   **does carry an ad-hoc signature** (electron-builder applies one by
-   default on arm64, without which the kernel would simply refuse to
-   execute it). Setting `identity: "-"` in `electron-builder.yml` would
-   therefore change nothing at all — what is missing is
-   **notarization**, not the signature. The only real fix is a paid
-   Apple developer account.
-
-   All of this is also explained to the user in the built-in help,
-   "macOS desktop app" section, and in the README — a `docs/` file is
-   only read after having the problem, and only if one knows it
-   exists.
+   download of an unsigned build.
 2. **No automatic update**: installing is handed to Squirrel.Mac, which
-   refuses an unsigned application by design. Beware, that refusal does
-   not happen where one expects: the check and the download succeed
-   (hence a very fast "ready to install"), and only at install time is
-   the signature verified — the failure is then silent, the application
-   does not even quit. Since 1.100.3 PiBoard therefore attempts none of
-   that on macOS: it **announces** the new version and opens the
-   release's page in the browser. Updating = download the `.dmg`
-   matching your Mac and reinstall it over the old version. Data
+   refuses an unsigned application by design. Updating = download the
+   `.dmg` matching your Mac and reinstall it over the old version. Data
    (`~/Library/Application Support/piboard/data`) is kept.
 
-Once a Developer ID signature is available, remove `identity: null`
-from `electron-builder.yml`, hand the certificate to the workflow
-(`CSC_LINK` / `CSC_KEY_PASSWORD` secrets, plus the notarization
-credentials) and both limits go away.
+These two points therefore no longer apply to the official releases
+published from GitHub Actions — only to a build made without a
+certificate.
 
 ### Publishing — how it fits together
 

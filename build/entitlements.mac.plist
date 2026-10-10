@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!-- ============================================================
+     PiBoard - build/entitlements.mac.plist
+     Entitlements du "hardened runtime", requis par la notarisation
+     Apple depuis la 1.139.3 (voir electron-builder.yml). Ce ne sont
+     PAS des permissions App Sandbox (PiBoard n'est pas distribue par
+     le Mac App Store, donc pas sandboxe) : ce sont des EXCEPTIONS aux
+     protections par defaut du hardened runtime, sans lesquelles
+     Electron lui-meme (V8/JIT) crashe au lancement sur une
+     application signee.
+
+     Les binaires systeme que PiBoard lance en processus enfant (ping,
+     arp, dscacheutil, netstat, scutil, curl, ditto, vm_stat...) ne
+     sont pas concernes par ce fichier : le hardened runtime ne
+     restreint pas le lancement d'autres programmes, seulement ce que
+     le processus de PiBoard fait lui-meme en memoire. Ce qui regit
+     ces appels-la, c'est l'autorisation systeme "Reseau local" (voir
+     docs/LINUX-MACOS.md et le widget Analyse reseau) — separee de
+     la signature, meme si une signature stable est ce qui lui permet
+     desormais de persister correctement d'une mise a jour a l'autre.
+
+     Hardened runtime entitlements, required by Apple notarization
+     since 1.139.3 (see electron-builder.yml). These are NOT App
+     Sandbox permissions (PiBoard is not distributed through the Mac
+     App Store, so it is not sandboxed): they are EXCEPTIONS to the
+     hardened runtime's default protections, without which Electron
+     itself (V8/JIT) crashes on launch once the app is signed.
+
+     The system binaries PiBoard runs as child processes (ping, arp,
+     dscacheutil, netstat, scutil, curl, ditto, vm_stat...) are
+     unaffected by this file: hardened runtime does not restrict
+     launching other programs, only what PiBoard's own process does in
+     memory. What governs those calls is the system's "Local Network"
+     permission (see docs/LINUX-MACOS.md and the Network scan widget)
+     — separate from signing, even though a stable signature is what
+     now lets it persist correctly across updates.
+     ============================================================ -->
+<plist version="1.0">
+<dict>
+  <!-- Requis par V8 (le moteur JavaScript de Chromium/Node) pour
+       generer du code executable a la volee. Sans cette entree,
+       Electron crashe immediatement au lancement sous hardened
+       runtime, sur TOUTE application Electron, pas seulement PiBoard.
+       Required by V8 (Chromium/Node's JavaScript engine) to generate
+       executable code on the fly. Without this entry, Electron
+       crashes immediately on launch under hardened runtime, on ANY
+       Electron app, not just PiBoard. -->
+  <key>com.apple.security.cs.allow-jit</key>
+  <true/>
+
+  <!-- Meme besoin que ci-dessus pour certaines zones memoire de V8 non
+       couvertes par allow-jit seul.
+       Same need as above, for some V8 memory regions not covered by
+       allow-jit alone. -->
+  <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+  <true/>
+
+  <!-- Electron lit des variables DYLD_* pour charger certains de ses
+       composants internes (notamment en developpement local via
+       `npm run electron`) ; le hardened runtime les bloque sinon.
+       Electron reads DYLD_* variables to load some of its internal
+       components (notably in local development via `npm run
+       electron`); hardened runtime blocks them otherwise. -->
+  <key>com.apple.security.cs.allow-dyld-environment-variables</key>
+  <true/>
+
+  <!-- PiBoard n'embarque aucun module natif aujourd'hui, mais
+       Electron lui-meme charge des frameworks non signes par Apple
+       (ses propres .framework). Sans cette entree, le chargement
+       echoue sous hardened runtime.
+       PiBoard embeds no native module today, but Electron itself
+       loads frameworks not signed by Apple (its own .framework
+       bundles). Without this entry, loading fails under hardened
+       runtime. -->
+  <key>com.apple.security.cs.disable-library-validation</key>
+  <true/>
+</dict>
+</plist>

@@ -1,5 +1,67 @@
 # Changelog
 
+## 1.139.3
+
+- **macOS : PiBoard est desormais signe (certificat Developer ID
+  Application) et notarise par Apple**, grace a un compte developpeur
+  payant obtenu pour l'occasion. Le certificat et la cle API de
+  notarisation (App Store Connect) sont fournis au workflow GitHub
+  Actions par secrets, jamais codes en dur ni commis au depot. Trois
+  consequences directes :
+
+  1. **Plus de blocage Gatekeeper au premier lancement.** Le message
+     « PiBoard est endommage et ne peut pas etre ouvert » (Apple
+     Silicon) ou « developpeur non identifie » (Intel) disparait ; plus
+     besoin de la commande `xattr -dr com.apple.quarantine` a chaque
+     telechargement.
+  2. **La mise a jour automatique fonctionne enfin sur Mac**, comme
+     sous Windows et Linux : Squirrel.Mac refusait jusqu'ici d'installer
+     une application non signee, ce qui forcait PiBoard a se contenter
+     d'annoncer la nouvelle version et d'ouvrir sa page de release dans
+     le navigateur (voir `electron/updater.js`, ce detournement date de
+     la 1.100.3). Ce contournement est retire : macOS suit desormais
+     exactement le meme chemin que les deux autres plateformes.
+  3. **`hardenedRuntime: true`**, requis par la notarisation, avec un
+     nouveau fichier `build/entitlements.mac.plist` portant les quatre
+     exceptions dont Electron (V8/JIT) a besoin pour continuer de
+     fonctionner sous ce regime -- sans elles, l'application signee
+     crashe au lancement. Ce ne sont PAS des permissions App Sandbox :
+     PiBoard n'est pas distribue par le Mac App Store (voir plus bas),
+     et les binaires systeme lances en processus enfant (`ping`, `arp`,
+     `dscacheutil`...) n'en ont de toute facon pas besoin -- seule
+     l'autorisation systeme « Reseau local » les gouverne.
+
+  **Effet de bord attendu, a confirmer a l'usage** : avant cette
+  version, chaque mise a jour produisait une signature ad-hoc
+  DIFFERENTE (`identity: null`), et macOS lie certaines autorisations
+  (dont « Reseau local », tuile Analyse reseau) a la signature exacte
+  du binaire plutot qu'au seul identifiant d'application. Resultat
+  possible : une autorisation accordee et affichee comme active dans
+  Reglages Systeme, mais qui ne s'applique plus au nouveau binaire
+  apres une mise a jour -- echec silencieux, sans la moindre erreur. Une
+  signature desormais stable (meme certificat Developer ID d'une
+  version a l'autre) devrait faire disparaitre ce decalage. Aide
+  integree mise a jour en consequence (fiches « Application de bureau
+  macOS » et « Analyse reseau »).
+
+  **Ce qui ne change PAS** : une construction locale
+  (`npm run dist:mac`) sans les secrets, ou un fork sans compte
+  developpeur, retombe silencieusement sur l'ancien comportement non
+  signe -- `identity` est laisse absent plutot que force, precisement
+  pour permettre cette bascule automatique dans les deux sens.
+
+  **Volontairement hors perimetre : le Mac App Store.** Le meme compte
+  developpeur y donnerait acces, mais imposerait l'App Sandbox a toute
+  l'application -- or PiBoard lance en permanence des binaires systeme
+  externes (`ping`, `arp`, `dscacheutil`, `netstat`, `scutil`,
+  `vm_stat`, `curl`, `ditto`...), un usage tres restreint sous sandbox.
+  Rien n'est fait dans cette direction ; macOS reste de toute facon une
+  plateforme de developpement/test, pas une cible de deploiement
+  officielle.
+
+  Documentation mise a jour : `docs/LINUX-MACOS.md` (les deux
+  sections, FR et EN) et l'aide integree.
+
 ## 1.139.2
 
 - **La tuile « Plan du circuit » dit desormais CE QU'ON PEUT FAIRE quand

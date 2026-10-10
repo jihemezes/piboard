@@ -346,58 +346,64 @@ console.log("== Avions : noms d'aeroport documentes (1.94.0) ==")
 }
 console.log("  OK");
 
-/* Premier lancement sur macOS (1.121.0).
-   Ce qui est verifie ici n'est pas cosmetique : sans la commande exacte,
-   la fiche ne sert a rien -- c'est precisement l'information qui
-   manquait, et son absence a rendu PiBoard « impossible a faire
-   fonctionner » sur un Mac Apple Silicon pendant plusieurs versions.
-   On verifie aussi que la fiche dit que le probleme REVIENT a chaque
-   telechargement : sans cela, l'utilisateur croit a une regression a la
-   premiere mise a jour.
-   macOS first launch (1.121.0). Not cosmetic: without the exact
-   command the section is useless, and it must also say the problem
-   COMES BACK on every download. */
-console.log("== macOS : premier lancement et mise a jour manuelle (1.121.0) ==");
+/* Signature et notarisation macOS (1.139.3).
+   Avant cette version, la fiche devait porter la commande xattr EN
+   PREMIER PLAN : c'etait la seule issue, sur toute version telechargee.
+   Depuis la 1.139.3, les releases officielles sont signees et
+   notariees -- la commande xattr ne concerne plus qu'une construction
+   non signee (locale, ou anterieure a cette version), elle doit donc
+   rester presente mais explicitement rattachee a ce cas secondaire, et
+   la fiche doit d'abord affirmer que les releases officielles n'en ont
+   plus besoin.
+   macOS signing and notarization (1.139.3). Before this version the
+   card had to carry the xattr command FRONT AND CENTER: it was the
+   only way out, on any downloaded version. Since 1.139.3 official
+   releases are signed and notarized -- the xattr command now only
+   concerns an unsigned build (local, or older than this version), so
+   it must stay present but explicitly tied to that secondary case, and
+   the card must first state that official releases no longer need it. */
+console.log("== macOS : signature et notarisation (1.139.3) ==");
 {
   const e = entryById("macos-app");
   for (const [lang, html] of [["fr", e.html.fr], ["en", e.html.en]]) {
     assert.ok(/xattr -dr com\.apple\.quarantine \/Applications\/PiBoard\.app/.test(html),
-      `${lang} : la commande exacte doit figurer telle quelle`);
+      `${lang} : la commande exacte doit rester disponible pour une version non signee`);
     assert.ok(/Apple Silicon/.test(html),
       `${lang} : le cas Apple Silicon doit etre distingue de l'Intel`);
     assert.ok(/Intel/.test(html), `${lang} : le cas Intel doit etre decrit`);
-    assert.ok(/15/.test(html), `${lang} : le changement de macOS 15 doit etre dit`);
+    assert.ok(/1\.139\.3/.test(html),
+      `${lang} : la version a partir de laquelle l'app est signee doit etre nommee`);
   }
   assert.ok(/notaris/i.test(e.html.fr) && /notariz/i.test(e.html.en),
-    "la vraie cause -- l'absence de notarisation -- doit etre nommee, pas seulement contournee");
-  assert.ok(/chaque nouveau téléchargement/.test(e.html.fr) && /each new download/.test(e.html.en),
-    "le retour du probleme a chaque telechargement doit etre annonce");
-  assert.ok(/conservé/.test(e.html.fr) && /kept/.test(e.html.en),
-    "la conservation des tuiles et reglages a la mise a jour doit rassurer");
+    "la notarisation desormais en place doit etre nommee");
+  assert.ok(/Developer ID/.test(e.html.fr) && /Developer ID/.test(e.html.en),
+    "le type de certificat doit etre nomme");
+  assert.ok(/mise à jour automatique|automatique/.test(e.html.fr) && /automatic updating|automatically/.test(e.html.en),
+    "le retour de la mise a jour automatique sur Mac doit etre annonce");
 }
 console.log("  OK");
 
-/* Le rappel xattr doit aussi vivre dans le dialogue de mise a jour
-   macOS : c'est le seul endroit ou l'utilisateur se trouve au moment
-   precis ou il va telecharger une copie qui sera, elle aussi, en
-   quarantaine. Le dire uniquement dans l'aide reviendrait a compter sur
-   le fait qu'il la relise.
-   The xattr reminder must also live in the macOS update dialog: the one
-   place the user is at the very moment they download a copy that will
-   itself be quarantined. */
-console.log("== macOS : le dialogue de mise a jour rappelle la commande (1.121.0) ==");
+/* La mise a jour macOS suit desormais exactement le meme chemin que
+   Windows et Linux (1.139.3) : plus de detournement MANUAL_UPDATE_ON_MAC,
+   plus de rappel xattr dans le dialogue -- l'application etant signee,
+   Squirrel.Mac installe la mise a jour sans intervention. On verifie
+   l'ABSENCE de l'ancien detournement plutot que sa presence : un retour
+   de MANUAL_UPDATE_ON_MAC signalerait une regression de signature.
+   macOS updating now follows the exact same path as Windows and Linux
+   (1.139.3): no more MANUAL_UPDATE_ON_MAC detour, no more xattr
+   reminder in the dialog -- the application being signed, Squirrel.Mac
+   installs the update with no manual step. We check the ABSENCE of the
+   old detour rather than its presence: MANUAL_UPDATE_ON_MAC coming back
+   would signal a signing regression. */
+console.log("== macOS : la mise a jour suit le meme chemin que Windows/Linux (1.139.3) ==");
 {
   const updater = fs.readFileSync(path.join(__dirname, "..", "electron", "updater.js"), "utf8");
-  assert.ok(/MANUAL_UPDATE_ON_MAC/.test(updater), "le detournement macOS doit exister");
-  assert.ok(/xattr -dr com\.apple\.quarantine \/Applications\/PiBoard\.app/.test(updater),
-    "le dialogue de mise a jour macOS doit rappeler la commande exacte");
-  assert.ok(/endommagee|damaged/i.test(updater),
-    "le dialogue doit nommer le message que macOS affichera, pour que le lien se fasse");
-  // Le message « a jour » doit, sur Mac, dire que la mise a jour y est
-  // manuelle -- au moment calme, pas dans l'urgence d'une release.
-  const upToDate = updater.slice(updater.indexOf("update-not-available"), updater.indexOf("update-downloaded"));
-  assert.ok(/MANUAL_UPDATE_ON_MAC/.test(upToDate),
-    "le message « PiBoard est a jour » doit signaler la mise a jour manuelle sur Mac");
+  assert.ok(!/MANUAL_UPDATE_ON_MAC/.test(updater),
+    "le detournement macOS doit avoir disparu : l'app est signee depuis la 1.139.3");
+  assert.ok(!/xattr -dr com\.apple\.quarantine/.test(updater),
+    "le dialogue de mise a jour ne doit plus rappeler une commande qui ne s'applique plus");
+  assert.ok(/1\.139\.3/.test(updater),
+    "l'historique du detournement retire doit nommer la version qui l'a supprime");
 }
 console.log("  OK");
 

@@ -384,15 +384,20 @@ deb:
 #   - DMG : l'installeur classique (glisser PiBoard dans Applications).
 #   - ZIP : OBLIGATOIRE pour electron-updater sur macOS, qui ne sait
 #     mettre a jour qu'a partir d'une archive zip (pas d'un DMG).
-# SIGNATURE : sans certificat "Developer ID" Apple (compte developpeur
-# payant), l'application n'est ni signee ni notarisee. Consequences
-# assumees, documentees dans docs/LINUX-MACOS.md : Gatekeeper refuse
-# l'ouverture au premier lancement (contournable par l'utilisateur), et
-# electron-updater REFUSE de mettre a jour une application non signee
-# sur macOS -- la mise a jour y reste donc manuelle (retelecharger le
-# DMG) tant qu'aucune signature n'est en place. `identity: null` rend
-# cette absence de signature explicite plutot que subie, et evite
-# qu'electron-builder ne cherche un certificat sur la machine de build.
+# SIGNATURE ET NOTARISATION : depuis la 1.139.3, un compte developpeur
+# Apple payant est en place. Le certificat "Developer ID Application"
+# et la cle API de notarisation (App Store Connect) sont fournis au
+# workflow GitHub Actions par variables d'environnement (CSC_LINK /
+# CSC_KEY_PASSWORD pour la signature, APPLE_API_KEY / APPLE_API_KEY_ID /
+# APPLE_API_ISSUER pour la notarisation -- voir .github/workflows/
+# release.yml) : rien n'est donc code en dur ici, et aucun identifiant
+# ne vit dans ce depot. `identity` est volontairement absent (plutot que
+# force a `null`) pour laisser electron-builder decouvrir le certificat
+# quand CSC_LINK est present -- ce qui le laisse aussi retomber sans
+# erreur sur une construction non signee quand ces variables sont
+# absentes (une construction locale ou un fork sans compte developpeur,
+# par exemple), exactement le comportement d'avant la 1.139.3 dans ce
+# cas-la.
 #
 # macOS: Monterey (12) and later, Intel and Apple Silicon
 # The minimum macOS version is dictated by Electron, hence by Chromium:
@@ -404,15 +409,19 @@ deb:
 #   - DMG: the classic installer (drag PiBoard into Applications).
 #   - ZIP: REQUIRED by electron-updater on macOS, which can only update
 #     from a zip archive (not from a DMG).
-# SIGNING: without an Apple "Developer ID" certificate (paid developer
-# account), the application is neither signed nor notarized. Accepted
-# consequences, documented in docs/LINUX-MACOS.md: Gatekeeper refuses
-# the first launch (user-bypassable), and electron-updater REFUSES to
-# update an unsigned application on macOS -- updating there stays
-# manual (re-download the DMG) until signing is in place.
-# `identity: null` makes that absence of signature explicit rather than
-# incidental, and stops electron-builder from looking for a certificate
-# on the build machine.
+# SIGNING AND NOTARIZATION: since 1.139.3, a paid Apple developer
+# account is in place. The "Developer ID Application" certificate and
+# the notarization API key (App Store Connect) are handed to the
+# GitHub Actions workflow through environment variables (CSC_LINK /
+# CSC_KEY_PASSWORD for signing, APPLE_API_KEY / APPLE_API_KEY_ID /
+# APPLE_API_ISSUER for notarization -- see .github/workflows/
+# release.yml), so nothing is hardcoded here and no credential lives in
+# this repository. `identity` is deliberately left unset (rather than
+# forced to `null`) so electron-builder discovers the certificate when
+# CSC_LINK is present -- which also lets it fall back to an unsigned
+# build without error when those variables are absent (a local build,
+# or a fork with no developer account), exactly the pre-1.139.3
+# behaviour in that case.
 mac:
   target:
     - target: dmg
@@ -421,12 +430,17 @@ mac:
       arch: [x64, arm64]
   icon: build/icon.png
   category: public.app-category.utilities
-  identity: null
-  # Pas de "hardened runtime" sans signature : l'option n'a de sens
-  # qu'avec la notarisation.
-  # No hardened runtime without signing: the option only makes sense
-  # together with notarization.
-  hardenedRuntime: false
+  # "Hardened runtime" requis par la notarisation Apple. Les
+  # entitlements ci-dessous sont le minimum necessaire pour qu'Electron
+  # (V8/JIT) continue de fonctionner sous ce regime -- sans eux,
+  # l'application signee crashe au lancement.
+  # "Hardened runtime" is required by Apple notarization. The
+  # entitlements below are the minimum Electron (V8/JIT) needs to keep
+  # working under it -- without them, the signed application crashes on
+  # launch.
+  hardenedRuntime: true
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist
   gatekeeperAssess: false
   artifactName: "${productName}-${version}-mac-${arch}.${ext}"
   extendInfo:
