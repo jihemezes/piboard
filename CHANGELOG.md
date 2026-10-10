@@ -1,5 +1,49 @@
 # Changelog
 
+## 1.139.4
+
+- **Windows rejoint le workflow GitHub Actions : les trois plateformes
+  se construisent et se publient desormais d'un seul geste.** Jusqu'ici,
+  seuls les paquets Linux et macOS etaient construits par GitHub Actions
+  a chaque tag pousse -- l'installeur Windows se construisait et se
+  publiait a part, a la main, depuis le PC de developpement
+  (`npm run publish`), ce PC ayant longtemps ete la seule machine
+  disponible pour ca. Le poste de developpement etant desormais sous
+  macOS (voir la 1.139.3), il n'y a plus de machine Windows a demeure
+  pour cette etape, et il n'y avait de toute facon aucune raison
+  technique de la garder separee des deux autres.
+
+  - Nouveau job `windows` dans `.github/workflows/release.yml`, sur un
+    runner `windows-latest` : construit l'installeur NSIS et verifie
+    explicitement sa presence (`dist/*.exe` + `dist/latest.yml`) avant
+    de considerer la publication reussie -- meme principe deja en place
+    pour les jobs `linux` et `mac`.
+  - `npm run dist:win` / `npm run publish:win` ajoutes dans
+    `package.json`, en alias de `dist` / `publish` existants, pour que
+    les trois plateformes s'invoquent de facon symetrique
+    (`publish:win` / `publish:linux` / `publish:mac`) dans le workflow.
+    `npm run dist` et `npm run publish` restent inchanges et utilisables
+    tels quels pour une construction Windows locale ponctuelle (test
+    avant tag, ou depannage si GitHub Actions est indisponible).
+  - **Un seul geste suffit desormais pour une release complete** :
+    `git push origin vX.Y.Z` construit et publie Windows, Linux et
+    macOS dans la meme release GitHub. Le bloc de commandes de livraison
+    n'inclut donc plus `npm run publish` en etape separee.
+
+  Documentation mise a jour en consequence : `README.md` (FR/EN),
+  `docs/WINDOWS.md` (FR/EN -- la section "Publier une version" decrit
+  desormais le flux automatique, l'ancien flux manuel restant documente
+  comme option de secours), et les commentaires d'en-tete de
+  `.github/workflows/release.yml`, `electron-builder.yml` et
+  `scripts/publish.js`.
+
+  **Au passage** : `README.md` portait encore, depuis la 1.139.3, la
+  description obsolete du blocage Gatekeeper et de la mise a jour
+  automatique indisponible sur macOS -- corrige ici pour refleter la
+  signature et la notarisation deja en place (la mise a jour de
+  `docs/LINUX-MACOS.md` et de l'aide integree, elles, avaient bien ete
+  faites en 1.139.3 ; seul `README.md` avait ete omis par erreur).
+
 ## 1.139.3
 
 - **macOS : PiBoard est desormais signe (certificat Developer ID

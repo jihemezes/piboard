@@ -120,39 +120,31 @@ and later (Intel and Apple Silicon). Electron is only a shell around the
 very same Express server and interface — any widget written for the Pi
 works there unmodified.
 
-The Windows installer is built with `npm install && npm run dist` **on
-Windows** (full instructions: [`docs/WINDOWS.md`](docs/WINDOWS.md)); the
-Linux and macOS packages are built by GitHub Actions on every pushed tag
-(which format to pick, differences, known limits:
-[`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)).
+All three are built by GitHub Actions on every pushed tag (which format
+to pick, differences, known limits: [`docs/WINDOWS.md`](docs/WINDOWS.md)
+and [`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)). A local Windows build
+with `npm install && npm run dist` **on Windows** remains possible for a
+one-off test (see `docs/WINDOWS.md`), it just isn't required anymore for
+an official release.
 
-#### First launch on macOS: "PiBoard is damaged"
+#### First launch on macOS: signed and notarized since 1.139.3
 
-On first launch macOS refuses to open PiBoard with the message
-**"PiBoard is damaged and can't be opened"**. The application is not
-damaged: it simply is not **notarized** by Apple, which requires a paid
-developer account this free project does not have. macOS puts a
-"quarantine" attribute on every downloaded file, and for a non-notarized
-application it renders that as this misleading message — especially on
-Apple Silicon, where it offers no way around it.
+Since 1.139.3, PiBoard's macOS build is signed with a Developer ID
+certificate and notarized by Apple: it opens normally on both Intel and
+Apple Silicon, with no Gatekeeper warning, and automatic updates work
+there exactly as on Windows and Linux.
 
-Drag PiBoard into *Applications*, then run **once** in Terminal:
+An **unsigned** build (built locally from source without the signing
+secrets, or any release before 1.139.3) still gets the "PiBoard is
+damaged and can't be opened" message on first launch — the application
+is not damaged, it simply is not notarized, and macOS renders a missing
+"quarantine" clearance as this misleading message. The fix for that case
+is the same as before: drag PiBoard into *Applications*, then run
+**once** in Terminal:
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/PiBoard.app
 ```
-
-PiBoard then opens normally, at that launch and every later one. The
-command removes the quarantine attribute from that one copy; it has to
-be repeated after each **new** download. Nothing is disabled
-system-wide, and macOS's protection stays whole for everything else.
-
-A consequence of the same missing notarization: **automatic updates do
-not work on macOS** — `electron-updater` refuses to replace an unsigned
-application. PiBoard now says so explicitly instead of failing without
-explanation: on a Mac, checking for updates points to the releases page,
-where the `.dmg` is downloaded again. On Windows and Linux, automatic
-updating works normally.
 
 ### Side drawer (for map-first or content-first screens)
 
@@ -379,44 +371,34 @@ Electron n'est qu'une coquille autour du même serveur Express et de la
 même interface — tout widget écrit pour le Pi y fonctionne sans
 modification.
 
-L'installeur Windows se construit avec `npm install && npm run dist`
-**sous Windows** (marche à suivre complète :
-[`docs/WINDOWS.md`](docs/WINDOWS.md)) ; les paquets Linux et macOS sont
-construits par GitHub Actions à chaque tag poussé (quel format choisir,
-différences, limites connues :
-[`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)).
+Les trois sont construits par GitHub Actions à chaque tag poussé (quel
+format choisir, différences, limites connues :
+[`docs/WINDOWS.md`](docs/WINDOWS.md) et
+[`docs/LINUX-MACOS.md`](docs/LINUX-MACOS.md)). Une construction Windows
+locale avec `npm install && npm run dist` **sous Windows** reste possible
+pour un test ponctuel (voir `docs/WINDOWS.md`), elle n'est simplement
+plus nécessaire pour une release officielle.
 
-#### Premier lancement sur macOS : « PiBoard est endommagé »
+#### Premier lancement sur macOS : signée et notarisée depuis la 1.139.3
 
-Au premier lancement, macOS refuse d'ouvrir PiBoard avec le message
-**« PiBoard est endommagé et ne peut pas être ouvert »**. L'application
-n'est pas endommagée : elle n'est simplement pas **notarisée** par
-Apple, ce qui suppose un compte développeur payant que ce projet
-gratuit n'a pas. macOS pose un attribut de « quarantaine » sur tout
-fichier téléchargé, et pour une application non notarisée il traduit
-cela par ce message trompeur — particulièrement sur Apple Silicon, où
-il ne propose aucun contournement.
+Depuis la 1.139.3, le paquet macOS de PiBoard est signé avec un
+certificat Developer ID et notarisé par Apple : il s'ouvre normalement
+sur Intel comme sur Apple Silicon, sans avertissement Gatekeeper, et la
+mise à jour automatique y fonctionne exactement comme sous Windows et
+Linux.
 
-Glissez PiBoard dans *Applications*, puis lancez **une fois** dans le
-Terminal :
+Une construction **non signée** (compilée localement depuis les sources
+sans les secrets de signature, ou toute release antérieure à la 1.139.3)
+affiche toujours le message « PiBoard est endommagé et ne peut pas être
+ouvert » au premier lancement — l'application n'est pas endommagée, elle
+n'est simplement pas notarisée, et macOS traduit une habilitation de
+« quarantaine » manquante par ce message trompeur. Le correctif pour ce
+cas reste le même qu'avant : glissez PiBoard dans *Applications*, puis
+lancez **une fois** dans le Terminal :
 
 ```bash
 xattr -dr com.apple.quarantine /Applications/PiBoard.app
 ```
-
-PiBoard s'ouvre ensuite normalement, à ce lancement et à tous les
-suivants. La commande retire l'attribut de quarantaine sur cette copie
-précise ; elle est à refaire après chaque **nouveau** téléchargement.
-Rien n'est désactivé au niveau du système, et la protection de macOS
-reste entière pour tout le reste.
-
-Conséquence de la même absence de notarisation : **la mise à jour
-automatique ne fonctionne pas sous macOS** — `electron-updater` refuse
-de remplacer une application non signée. PiBoard le dit désormais
-explicitement au lieu d'échouer sans explication : sur Mac, la
-recherche de mise à jour renvoie vers la page des versions, où l'on
-retélécharge le `.dmg`. Sur Windows et Linux, la mise à jour
-automatique fonctionne normalement.
 
 ### Tiroir latéral (pour les écrans dédiés à une carte ou un contenu principal)
 

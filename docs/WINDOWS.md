@@ -36,6 +36,14 @@ Windows au premier lancement.
 
 ### Construire l'installeur
 
+**Pour une release officielle, cette section n'est plus nécessaire** :
+depuis la 1.139.4, `git push origin vX.Y.Z` suffit à construire et
+publier automatiquement l'installeur Windows, en même temps que les
+paquets Linux et macOS (voir « Publier une version » ci-dessous). Ce qui
+suit ne sert qu'à construire un `.exe` **localement**, pour un test
+ponctuel avant de tagger, ou en dépannage si GitHub Actions est
+indisponible.
+
 Prérequis : **Node.js ≥ 18.15** et **Git**, sur la machine Windows. La
 génération d'un installeur NSIS depuis Linux exigerait Wine et donne un
 résultat nettement moins fiable — mieux vaut construire directement sous
@@ -88,27 +96,43 @@ pas de raccourci et nécessite d'ouvrir le menu.
 `electron-updater` lit un fichier `latest.yml` déposé dans la release
 GitHub. C'est `electron-builder` qui le produit et le publie.
 
-1. **Créer un jeton d'accès GitHub** — sur github.com, *Settings →
-   Developer settings → Personal access tokens*. Un jeton classique avec
-   la portée `repo` suffit. Ce jeton n'est utilisé qu'au moment de
-   publier, depuis votre PC : il n'est **jamais** embarqué dans
-   l'application distribuée.
+**Depuis la 1.139.4, c'est entièrement automatique.** Le workflow
+GitHub Actions (`.github/workflows/release.yml`) construit et publie
+les trois plateformes — Windows compris — dès qu'un tag `v*` est
+poussé :
 
-2. **Le fournir à la commande**, dans PowerShell :
+```bash
+git tag v<version>
+git push origin v<version>
+```
 
-   ```powershell
-   $env:GH_TOKEN = "ghp_votre_jeton"
-   npm run publish
-   ```
-
-3. **Publier la release sur GitHub** — `electron-builder` crée la release
-   en mode brouillon. Tant qu'elle reste en brouillon, aucun client ne
-   la voit ; c'est en la publiant qu'elle devient visible des
-   installations existantes.
+Rien d'autre à faire : le jeton `GITHUB_TOKEN`, fourni automatiquement
+par GitHub Actions à chaque exécution, suffit à publier — aucun jeton
+personnel à créer ni à stocker. La release est publiée directement
+(jamais en brouillon, voir la section `publish:` d'`electron-builder.yml`),
+donc visible dès que le workflow se termine, sans étape manuelle sur
+GitHub.
 
 Le numéro de version publié est celui de `package.json`. La comparaison
 est faite en semver : il doit donc être strictement supérieur au
-précédent pour qu'une mise à jour soit proposée.
+précédent pour qu'une mise à jour soit proposée. Ce même numéro décide
+aussi si la release est marquée « pre-release » ou « latest » (voir
+`scripts/publish.js`).
+
+Jusqu'à la 1.139.3, cette étape se faisait à la main depuis le PC de
+développement (jeton d'accès personnel + `npm run publish`), le poste de
+développement étant alors sous Windows. `npm run publish` reste
+disponible telle quelle pour un besoin ponctuel (une machine Windows
+sous la main, un dépannage) :
+
+```powershell
+$env:GH_TOKEN = "ghp_votre_jeton"
+npm run publish
+```
+
+Un jeton classique avec la portée `repo` suffit ; il n'est utilisé qu'au
+moment de publier, depuis la machine qui lance la commande, et n'est
+**jamais** embarqué dans l'application distribuée.
 
 ### Tester la détection de mise à jour
 
@@ -125,8 +149,9 @@ ce qui n'est pas un échec, mais un test qui ne démontre rien.
 
 2. **Publier sur GitHub une version strictement supérieure** à celle-ci
    (un simple bump de `package.json` suffit pour un test, pas besoin
-   d'un vrai correctif) — `npm run dist` puis `npm run publish`, puis
-   publier le brouillon sur GitHub comme ci-dessus.
+   d'un vrai correctif) — taguer et pousser (`git push origin
+   v<version>`) comme ci-dessus, ou `npm run dist` puis `npm run
+   publish` pour une publication locale ponctuelle.
 
 3. **Sur la machine dont la version installée est plus ancienne**,
    ouvrir PiBoard, appuyer sur `Alt` pour révéler le menu, puis
@@ -207,6 +232,13 @@ first launch.
 
 ### Building the installer
 
+**For an official release, this section is no longer needed**: since
+1.139.4, `git push origin vX.Y.Z` alone builds and publishes the
+Windows installer automatically, together with the Linux and macOS
+packages (see "Publishing a release" below). What follows only builds
+a `.exe` **locally**, for a one-off test before tagging, or as a
+fallback if GitHub Actions is unavailable.
+
 Requirements: **Node.js ≥ 18.15** and **Git**, on the Windows machine.
 Generating an NSIS installer from Linux would require Wine and gives a
 markedly less reliable result — better to build directly on Windows.
@@ -257,25 +289,40 @@ no shortcut and requires opening the menu.
 `electron-updater` reads a `latest.yml` file dropped into the GitHub
 release. `electron-builder` is what produces and publishes it.
 
-1. **Create a GitHub access token** — on github.com, *Settings →
-   Developer settings → Personal access tokens*. A classic token with the
-   `repo` scope is enough. That token is only used when publishing, from
-   your PC: it is **never** embedded in the distributed application.
+**Since 1.139.4, this is entirely automatic.** The GitHub Actions
+workflow (`.github/workflows/release.yml`) builds and publishes all
+three platforms — Windows included — as soon as a `v*` tag is pushed:
 
-2. **Provide it to the command**, in PowerShell:
+```bash
+git tag v<version>
+git push origin v<version>
+```
 
-   ```powershell
-   $env:GH_TOKEN = "ghp_your_token"
-   npm run publish
-   ```
-
-3. **Publish the release on GitHub** — `electron-builder` creates the
-   release as a draft. While it stays a draft no client sees it; it is by
-   publishing it that it becomes visible to existing installations.
+Nothing else is needed: the `GITHUB_TOKEN`, automatically provided by
+GitHub Actions on every run, is enough to publish — no personal token to
+create or store. The release is published directly (never as a draft,
+see `electron-builder.yml`'s `publish:` section), so it becomes visible
+as soon as the workflow finishes, with no manual step on GitHub.
 
 The published version number is the one in `package.json`. Comparison is
 done in semver: it must therefore be strictly greater than the previous
-one for an update to be offered.
+one for an update to be offered. The same number also decides whether
+the release is marked "pre-release" or "latest" (see
+`scripts/publish.js`).
+
+Up to 1.139.3, this step was done by hand from the development PC (a
+personal access token + `npm run publish`), back when the development
+machine ran Windows. `npm run publish` still works as is for a one-off
+need (a Windows machine at hand, a fallback):
+
+```powershell
+$env:GH_TOKEN = "ghp_your_token"
+npm run publish
+```
+
+A classic token with the `repo` scope is enough; it is only used when
+publishing, from whichever machine runs the command, and is **never**
+embedded in the distributed application.
 
 ### Testing update detection
 
@@ -292,8 +339,8 @@ failure, but a test that demonstrates nothing.
 
 2. **Publish a strictly higher version** on GitHub than that one (a
    simple `package.json` bump is enough for a test, no real fix
-   required) — `npm run dist` then `npm run publish`, then publish the
-   draft on GitHub as above.
+   required) — tag and push (`git push origin v<version>`) as above, or
+   `npm run dist` then `npm run publish` for a one-off local publish.
 
 3. **On the machine whose installed version is older**, open PiBoard,
    press `Alt` to reveal the menu, then *Check for updates*. A window

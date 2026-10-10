@@ -25,16 +25,21 @@
         release »), ou avec PIBOARD_RELEASE=latest pour ce lancement.
 
    POURQUOI LE NUMERO DE VERSION ET PAS UN SIMPLE DRAPEAU. Parce que
-   deux machines publient dans la MEME release : le PC de
+   plusieurs machines publient dans la MEME release. Depuis la 1.139.4,
+   ce sont les trois jobs de GitHub Actions (windows, linux, mac,
+   declenches par le meme tag) ; jusqu'a la 1.139.3, c'etait le PC de
    developpement pour Windows (`npm run publish`) et GitHub Actions
-   pour Linux et macOS (declenche par le tag). La premiere arrivee
-   cree la release et fixe son statut. Un drapeau local ne serait
-   connu que du PC, et le statut dependrait alors de qui gagne la
-   course. Le numero de version, lui, est dans le depot : les deux
-   cotes lisent le meme et decident pareil. C'est aussi ce que
-   comprend deja le reste de la chaine -- le canal "Toutes les
-   versions (apercu)" des reglages s'appuie sur ce meme suffixe semver
-   (`allowPrerelease` dans electron/updater.js).
+   pour Linux et macOS -- la repartition a change, pas le probleme.
+   Dans les deux cas, la premiere arrivee cree la release et fixe son
+   statut. Un drapeau local ne serait connu que d'une seule machine, et
+   le statut dependrait alors de qui gagne la course. Le numero de
+   version, lui, est dans le depot : toutes les publications lisent le
+   meme et decident pareil, quelle que soit la machine qui les lance --
+   y compris une construction Windows locale ponctuelle (voir
+   docs/WINDOWS.md), qui reste possible et suit exactement la meme
+   regle. C'est aussi ce que comprend deja le reste de la chaine -- le
+   canal "Toutes les versions (apercu)" des reglages s'appuie sur ce
+   meme suffixe semver (`allowPrerelease` dans electron/updater.js).
 
    GARDE-FOU. Le script refuse de publier si le tag git couramment
    pointe sur HEAD ne correspond pas a la version de package.json :
@@ -48,13 +53,15 @@
    suffix (1.101.0-beta.1, -rc.2...) means pre-release, a plain number
    means latest; the PIBOARD_RELEASE environment variable
    (`prerelease` / `latest`) overrides it for one run. The version
-   number rather than a local flag, because two machines publish into
-   the same release (this PC for Windows, GitHub Actions for Linux and
-   macOS) and both must decide identically -- the version is in the
-   repository, a local flag would not be. Draft releases are
-   deliberately not offered: GitHub's API hides drafts from
-   unauthenticated clients, so the Raspberry Pi would stop seeing
-   updates entirely (see the `publish:` section of
+   number rather than a local flag, because several machines publish
+   into the same release -- since 1.139.4, the three GitHub Actions
+   jobs (windows, linux, mac, all triggered by the same tag); up to
+   1.139.3, the development PC for Windows (`npm run publish`) and
+   GitHub Actions for Linux and macOS -- and they must all decide
+   identically: the version is in the repository, a local flag would
+   not be. Draft releases are deliberately not offered: GitHub's API
+   hides drafts from unauthenticated clients, so the Raspberry Pi would
+   stop seeing updates entirely (see the `publish:` section of
    electron-builder.yml).
    ============================================================ */
 

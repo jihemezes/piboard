@@ -5,12 +5,14 @@
 # (DMG + ZIP, Intel et Apple Silicon) -- et de la publication des mises
 # a jour sur GitHub Releases.
 #
-# QUI CONSTRUIT QUOI : electron-builder ne sait pas produire un .deb ou
-# une AppImage depuis Windows, ni un DMG hors de macOS. L'installeur
-# Windows continue donc d'etre construit et publie depuis le PC de
-# developpement (`npm run publish`), tandis que les paquets Linux et
-# macOS sont construits par GitHub Actions (.github/workflows/
-# release.yml) a chaque tag `v*` pousse. Les trois deposent leurs
+# QUI CONSTRUIT QUOI : electron-builder ne sait pas produire un .exe
+# hors Windows, ni un .deb ou une AppImage depuis Windows, ni un DMG
+# hors de macOS. Depuis la 1.139.4, les TROIS paquets sont construits
+# par GitHub Actions (.github/workflows/release.yml), chacun sur le
+# type de machine que sa plateforme exige, a chaque tag `v*` pousse --
+# jusqu'a la 1.139.3, seuls Linux et macOS l'etaient la, l'installeur
+# Windows se construisant a part depuis le PC de developpement (voir
+# l'historique dans release.yml). Les trois deposent toujours leurs
 # fichiers dans la MEME release GitHub, celle du tag -- avec chacun
 # leur fichier de version (latest.yml, latest-linux.yml,
 # latest-linux-arm64.yml, latest-mac.yml) que lit electron-updater sur
@@ -21,15 +23,17 @@
 # ZIP, Intel and Apple Silicon) -- and publication of updates to
 # GitHub Releases.
 #
-# WHO BUILDS WHAT: electron-builder cannot produce a .deb or an AppImage
-# from Windows, nor a DMG outside macOS. The Windows installer therefore
-# keeps being built and published from the development PC (`npm run
-# publish`), while the Linux and macOS packages are built by GitHub
-# Actions (.github/workflows/release.yml) on every pushed `v*` tag. All
-# three drop their files into the SAME GitHub release, the tag's one --
-# each with its own version file (latest.yml, latest-linux.yml,
-# latest-linux-arm64.yml, latest-mac.yml) read by electron-updater on
-# the matching platform.
+# WHO BUILDS WHAT: electron-builder cannot produce a .exe outside
+# Windows, nor a .deb or an AppImage from Windows, nor a DMG outside
+# macOS. Since 1.139.4, all THREE packages are built by GitHub Actions
+# (.github/workflows/release.yml), each on the machine type its
+# platform requires, on every pushed `v*` tag -- up to 1.139.3, only
+# Linux and macOS were built there, the Windows installer being built
+# separately from the development PC (see the history in release.yml).
+# All three still drop their files into the SAME GitHub release, the
+# tag's one -- each with its own version file (latest.yml,
+# latest-linux.yml, latest-linux-arm64.yml, latest-mac.yml) read by
+# electron-updater on the matching platform.
 # ============================================================
 
 # Identifiant applicatif : chaine unique identifiant PiBoard aupres de
@@ -151,16 +155,25 @@ win:
   # Remarque : le nom d'editeur affiche par Windows (publisherName) ne se
   # regle qu'a travers signtoolOptions, et n'a d'effet qu'avec un
   # certificat de signature de code configure (cscLink/cscKeyPassword).
-  # Sans certificat -- notre cas pour l'instant -- ce champ est sans
-  # objet ; Windows affichera "Editeur inconnu" et l'avertissement
-  # SmartScreen habituel jusqu'a la mise en place d'une signature.
+  # Sans certificat -- notre cas pour l'instant, Windows n'a pas son
+  # equivalent du compte developpeur Apple mis en place pour macOS en
+  # 1.139.3 -- ce champ est sans objet ; Windows affichera "Editeur
+  # inconnu" et l'avertissement SmartScreen habituel jusqu'a la mise en
+  # place d'une signature. Sans rapport avec le job `windows` de
+  # release.yml (1.139.4) : celui-ci a change QUI construit l'installeur
+  # (GitHub Actions plutot que le PC de developpement), pas sa
+  # signature, qui reste absente dans les deux cas.
   #
   # Note: the publisher name shown by Windows (publisherName) is only
   # set through signtoolOptions, and only takes effect with a configured
   # code-signing certificate (cscLink/cscKeyPassword). Without a
-  # certificate -- our case for now -- this field is moot; Windows will
-  # show "Unknown publisher" and the usual SmartScreen warning until
-  # signing is set up.
+  # certificate -- our case for now, Windows has no equivalent of the
+  # Apple developer account set up for macOS in 1.139.3 -- this field is
+  # moot; Windows will show "Unknown publisher" and the usual SmartScreen
+  # warning until signing is set up. Unrelated to release.yml's `windows`
+  # job (1.139.4): that changed WHO builds the installer (GitHub Actions
+  # rather than the development PC), not its signature, which stays
+  # absent either way.
 
 nsis:
   # Installation PAR UTILISATEUR (%LOCALAPPDATA%\Programs\PiBoard) plutot
