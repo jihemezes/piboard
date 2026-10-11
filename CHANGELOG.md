@@ -1,5 +1,36 @@
 # Changelog
 
+## 1.140.0
+
+- **Miroir horizontal/vertical et rotation pour les images.** Trois
+  nouveaux réglages, disponibles partout où PiBoard affiche une image
+  en grand :
+  - **Fond de page** (fenêtre de configuration du fond, bouton ▣) :
+    deux boutons miroir et une liste de rotation (90°/180°/270°),
+    sous le voile.
+  - **Tuile Logo/Image** : les mêmes trois réglages dans la fenêtre de
+    la tuile, plus un accès direct dans la barre d'outils du
+    recadrage (↔, ↕, ⟳) qui apparaît en mode édition.
+  - **Diaporama** : les mêmes trois réglages, appliqués cette fois à
+    *toutes* les photos de la tuile (pas une par une) — utile pour
+    une collection entière issue d'un appareil mal orienté.
+  - Dans les trois cas, le réglage est **non destructif** : le
+    fichier image lui-même n'est jamais modifié, qu'il vienne de la
+    bibliothèque partagée ou d'un téléversement. La même image peut
+    donc être retournée à un endroit et intacte à un autre. Le
+    miroir s'applique après la rotation, pour toujours correspondre
+    à ce qui est actuellement affiché à l'écran, quel que soit
+    l'ordre dans lequel les deux réglages ont été touchés.
+  - Pour le fond de page, le miroir/la rotation passent par une
+    surcouche dédiée (comme le voile) plutôt que par une
+    transformation du plateau lui-même, afin que les tuiles posées
+    par-dessus ne soient jamais retournées ni pivotées. Seule
+    contrepartie, rare : sur une page qui déborde (défilement
+    activé) et dont le fond est retourné ou pivoté, ce fond ne
+    défile plus avec le contenu.
+  - Aide mise à jour (fiches « Logo / Image », « Diaporama » et
+    section « Fond de page ») pour les trois tuiles concernées.
+
 ## 1.139.7
 
 - **Correctif : la signature macOS echouait a l'import du certificat**

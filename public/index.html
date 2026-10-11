@@ -257,6 +257,20 @@
         <input type="range" id="pageBgDim" min="0" max="100" step="5">
         <small class="field-hint" data-i18n="pagebg.dim.hint">Blends the theme's background colour over the image. At 0 the photo is untouched; raise it until the tiles are comfortably readable, especially the transparent ones.</small>
       </label>
+      <div class="field page-bg-flip">
+        <span data-i18n="pagebg.orientation">Mirror and rotation</span>
+        <span class="page-bg-flip-row">
+          <button type="button" class="btn small" id="pageBgFlipH" data-i18n="pagebg.flipH">Flip horizontally</button>
+          <button type="button" class="btn small" id="pageBgFlipV" data-i18n="pagebg.flipV">Flip vertically</button>
+          <select id="pageBgRotate">
+            <option value="0" data-i18n="pagebg.rotate.0">No rotation</option>
+            <option value="90" data-i18n="pagebg.rotate.90">90° clockwise</option>
+            <option value="180" data-i18n="pagebg.rotate.180">180°</option>
+            <option value="270" data-i18n="pagebg.rotate.270">90° counter-clockwise</option>
+          </select>
+        </span>
+        <small class="field-hint" data-i18n="pagebg.orientation.hint">For a photo taken in the wrong orientation, or a mirrored logo. The mirror buttons toggle on and off and apply after rotation, so they always match what is currently shown below.</small>
+      </div>
     </div>
     <div class="modal-foot">
       <div class="form-actions">

@@ -339,11 +339,16 @@
         + '<span data-role="zoom"></span>'
         + `<button type="button" data-act="in" title="${escAttr(i18n.t("image.zoomIn"))}">+</button>`
         + `<button type="button" data-act="reset" title="${escAttr(i18n.t("image.cropReset"))}">&#8634;</button>`
+        + `<button type="button" data-act="fliph" data-role="fliph" title="${escAttr(i18n.t("image.flipH"))}">&#8596;</button>`
+        + `<button type="button" data-act="flipv" data-role="flipv" title="${escAttr(i18n.t("image.flipV"))}">&#8597;</button>`
+        + `<button type="button" data-act="rotate" title="${escAttr(i18n.t("image.rotate"))}">&#10227;</button>`
         + `<button type="button" data-act="pick" title="${escAttr(i18n.t("image.choose"))}">&#128247;</button>`
         + "</div>"
         + `<div class="pw-image-crophint">${esc(i18n.t("image.cropHint"))}</div>`;
 
       const zoomLabel = wrap.querySelector("[data-role=zoom]");
+      const flipHBtn = wrap.querySelector("[data-role=fliph]");
+      const flipVBtn = wrap.querySelector("[data-role=flipv]");
       const refresh = () => {
         const s = this.ctx.settings || {};
         // Plus aucune condition sur le cadrage : le zoom et le point de
@@ -353,6 +358,14 @@
         // act on all of them, so the toolbar and the handles always have
         // an effect.
         zoomLabel.textContent = clampZoom(s.zoom) + " %";
+        // Boutons de miroir : etat enfonce (classe "active") quand le
+        // reglage correspondant est actif, seul indice visuel disponible
+        // sans rouvrir les reglages de la tuile.
+        // Mirror buttons: pressed state ("active" class) when the
+        // matching setting is on, the only visual cue available without
+        // reopening the tile's settings.
+        flipHBtn.classList.toggle("active", !!s.flipH);
+        flipVBtn.classList.toggle("active", !!s.flipV);
       };
       this.refreshCropTools = refresh;
       refresh();
@@ -370,7 +383,7 @@
       };
       this.commitCrop = commit;
 
-      for (const act of ["in", "out", "reset", "pick"]) {
+      for (const act of ["in", "out", "reset", "fliph", "flipv", "rotate", "pick"]) {
         const b = wrap.querySelector('[data-act="' + act + '"]');
         b.addEventListener("pointerdown", (e) => e.stopPropagation());
         b.addEventListener("click", (e) => {
@@ -385,6 +398,9 @@
           // controls.
           if (act === "pick") this.openManager();
           else if (act === "reset") commit({ zoom: 100, focusX: 50, focusY: 50 }, true);
+          else if (act === "fliph") commit({ flipH: !s.flipH }, true);
+          else if (act === "flipv") commit({ flipV: !s.flipV }, true);
+          else if (act === "rotate") commit({ rotate: String((clampRotate(s.rotate) + 90) % 360) }, true);
           else commit({ zoom: clampZoom(clampZoom(s.zoom) + (act === "in" ? 10 : -10)) }, true);
         });
       }
@@ -727,7 +743,53 @@
     const zoom = clampZoom(s.zoom);
     img.style.objectPosition = x + "% " + y + "%";
     img.style.transformOrigin = x + "% " + y + "%";
-    img.style.transform = zoom === 100 ? "" : "scale(" + (zoom / 100) + ")";
+    img.style.transform = transformCss(s, zoom);
+  }
+
+  const ROTATIONS = new Set([0, 90, 180, 270]);
+
+  function clampRotate(v) {
+    const n = Number(v);
+    return ROTATIONS.has(n) ? n : 0;
+  }
+
+  /* Miroir + rotation + zoom en une seule chaine `transform`. Le miroir
+     est place AVANT la rotation dans la liste CSS, donc APPLIQUE EN
+     DERNIER au point (la liste se lit de droite a gauche) : il retourne
+     l'image telle qu'elle est actuellement vue a l'ecran, apres
+     rotation, plutot que selon les axes d'origine du fichier. Sans
+     cela, activer la rotation puis le miroir aurait un effet different
+     de l'inverse, ce que personne ne devine a l'usage.
+     Mirror + rotation + zoom in a single `transform` string. The mirror
+     comes BEFORE the rotation in the CSS list, so it is APPLIED LAST to
+     the point (the list reads right to left): it flips the image as
+     currently seen on screen, after rotation, rather than along the
+     file's original axes. Without this, turning on rotation then the
+     mirror would have a different effect from the reverse order, which
+     nobody would guess from the UI alone. */
+  function transformCss(s, zoom) {
+    const z = (Number.isFinite(zoom) ? zoom : clampZoom(s.zoom)) / 100;
+    const sx = (s.flipH ? -1 : 1) * z;
+    const sy = (s.flipV ? -1 : 1) * z;
+    const rotate = clampRotate(s.rotate);
+    const parts = [];
+    // Forme a une seule valeur quand les deux axes sont identiques --
+    // le cas le plus courant (aucun miroir, ou les deux a la fois) --
+    // pour produire EXACTEMENT la meme chaine qu'avant l'ajout du
+    // miroir (`scale(2)`, jamais `scale(2, 2)`) : des tests existants
+    // comparent cette chaine au caractere pres.
+    // Single-value form when both axes match -- the most common case
+    // (no mirror, or both at once) -- to produce EXACTLY the same
+    // string as before the mirror was added (`scale(2)`, never
+    // `scale(2, 2)`): existing tests compare this string character for
+    // character.
+    if (sx === sy) {
+      if (sx !== 1) parts.push("scale(" + sx + ")");
+    } else {
+      parts.push("scale(" + sx + ", " + sy + ")");
+    }
+    if (rotate) parts.push("rotate(" + rotate + "deg)");
+    return parts.join(" ");
   }
 
   ImageWidget._safeLink = safeLink;

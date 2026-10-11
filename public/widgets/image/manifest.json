@@ -135,6 +135,51 @@
       }
     },
     {
+      "key": "flipH",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Flip horizontally (mirror)",
+        "fr": "Miroir horizontal"
+      },
+      "hint": {
+        "en": "Mirrors the image left-right, as currently shown on screen. Works with every framing and combines with rotation below.",
+        "fr": "Retourne l'image gauche-droite, telle qu'elle apparaît actuellement à l'écran. Fonctionne avec tous les cadrages et se combine avec la rotation ci-dessous."
+      }
+    },
+    {
+      "key": "flipV",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Flip vertically (mirror)",
+        "fr": "Miroir vertical"
+      },
+      "hint": {
+        "en": "Mirrors the image top-bottom, as currently shown on screen. Works with every framing and combines with the horizontal mirror and rotation.",
+        "fr": "Retourne l'image haut-bas, telle qu'elle apparaît actuellement à l'écran. Fonctionne avec tous les cadrages et se combine avec le miroir horizontal et la rotation."
+      }
+    },
+    {
+      "key": "rotate",
+      "type": "select",
+      "default": "0",
+      "label": {
+        "en": "Rotation",
+        "fr": "Rotation"
+      },
+      "options": [
+        { "value": "0", "label": { "en": "None", "fr": "Aucune" } },
+        { "value": "90", "label": { "en": "90° clockwise", "fr": "90° à droite" } },
+        { "value": "180", "label": { "en": "180°", "fr": "180°" } },
+        { "value": "270", "label": { "en": "90° counter-clockwise", "fr": "90° à gauche" } }
+      ],
+      "hint": {
+        "en": "Useful for a photo taken in the wrong orientation. Applied after the mirror settings above, so the mirror always matches what you currently see on screen.",
+        "fr": "Utile pour une photo prise dans le mauvais sens. Appliquée après les réglages de miroir ci-dessus, pour que le miroir corresponde toujours à ce que vous voyez actuellement à l'écran."
+      }
+    },
+    {
       "key": "align",
       "type": "select",
       "default": "center",

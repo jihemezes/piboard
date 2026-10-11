@@ -185,6 +185,12 @@ body.editing .pw-image-crop {
   cursor: pointer;
 }
 .pw-image-croptools button:hover { background: rgba(255, 255, 255, 0.18); }
+/* Miroir actif : fond enfonce en permanence, pas seulement au survol --
+   c'est le seul indice que le reglage est actuellement applique.
+   Active mirror: a permanently pressed background, not just on hover --
+   the only cue that the setting is currently applied. */
+.pw-image-croptools button.active { background: rgba(255, 255, 255, 0.4); }
+.pw-image-croptools button.active:hover { background: rgba(255, 255, 255, 0.5); }
 .pw-image-croptools span { min-width: 3.4em; text-align: center; }
 
 .pw-image-crophint {

@@ -2770,6 +2770,20 @@ body.editing .grid-stack-item-content.tile-transparent {
    conteneur : un filtre aurait AUSSI atteint les tuiles posees dessus.
    The veil is a separate element rather than a filter on the container:
    a filter would have hit the tiles on top as well. */
+/* Surcouche dediee, utilisee uniquement quand le fond est retourne
+   et/ou pivote (voir applyPageBackground dans app.js). z-index negatif
+   explicite plutot que l'ordre dans le DOM : le voile doit rester
+   au-dessus quel que soit celui des deux qui a ete insere en premier.
+   Dedicated layer, used only when the background is flipped and/or
+   rotated (see applyPageBackground in app.js). Explicit negative
+   z-index rather than DOM order: the veil must stay on top whichever of
+   the two was inserted first. */
+.board-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
 .board-bg-veil {
   position: absolute;
   inset: 0;
@@ -2785,6 +2799,23 @@ body.editing .grid-stack-item-content.tile-transparent {
 
 .page-bg-card { width: min(620px, 96vw); }
 .page-bg-body { padding: 4px 18px 10px; }
+.page-bg-flip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+/* Boutons enfonces en permanence quand le reglage correspondant est
+   actif -- la seule indication visuelle que le miroir est en place,
+   la bascule elle-meme ne laissant rien d'autre a l'ecran.
+   Permanently pressed buttons when the matching setting is active --
+   the only visual cue that the mirror is in place, the toggle itself
+   leaving nothing else on screen. */
+.page-bg-flip-row .btn.active {
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+  border-color: var(--accent);
+}
 .page-bg-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));

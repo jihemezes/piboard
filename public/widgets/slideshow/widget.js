@@ -35,6 +35,27 @@
     });
   }
 
+  const SLIDE_ROTATIONS = new Set([0, 90, 180, 270]);
+
+  /* Chaine `transform` pour le miroir et la rotation, reglages globaux
+     a la tuile. Le miroir est place AVANT la rotation dans la liste CSS
+     -- donc applique EN DERNIER au point, la liste se lisant de droite
+     a gauche -- pour retourner les photos telles qu'elles sont
+     actuellement vues a l'ecran, apres rotation.
+     `transform` string for the mirror and rotation, both tile-wide
+     settings. The mirror comes BEFORE the rotation in the CSS list --
+     so it is applied LAST to the point, the list reading right to left
+     -- to flip the photos as currently seen on screen, after rotation. */
+  function slideTransform(s) {
+    const sx = s.flipH ? -1 : 1;
+    const sy = s.flipV ? -1 : 1;
+    const rotate = SLIDE_ROTATIONS.has(Number(s.rotate)) ? Number(s.rotate) : 0;
+    const parts = [];
+    if (sx !== 1 || sy !== 1) parts.push("scale(" + sx + ", " + sy + ")");
+    if (rotate) parts.push("rotate(" + rotate + "deg)");
+    return parts.join(" ");
+  }
+
   function shuffleArray(arr) {
     const a = arr.slice();
     for (let i = a.length - 1; i > 0; i--) {
@@ -170,7 +191,21 @@
       // photo as soon as its actual dimensions are known -- no need to
       // wait for all of them, each <img> updates independently.
       const slideEls = this.ctx.el.querySelectorAll(".pws-slide");
+      // Miroir et rotation : un reglage GLOBAL a la tuile (pas par
+      // photo), applique sur le CONTENEUR de chaque diapositive plutot
+      // que sur l'<img> elle-meme -- l'image est l'element qui porte
+      // l'animation Ken Burns (voir show()), et un transform statique au
+      // meme endroit entrerait en conflit avec elle. Les deux transforms
+      // vivent donc sur deux elements distincts, sans jamais se gener.
+      // Mirror and rotation: a GLOBAL tile setting (not per photo),
+      // applied to each slide's CONTAINER rather than to the <img>
+      // itself -- the image is the element carrying the Ken Burns
+      // animation (see show()), and a static transform on the same spot
+      // would conflict with it. The two transforms therefore live on two
+      // separate elements, never stepping on each other.
+      const orientation = slideTransform(s);
       slideEls.forEach((slideEl) => {
+        slideEl.style.transform = orientation;
         const img = slideEl.querySelector(".pws-slide-img");
         const url = img.getAttribute("src");
         const apply = () => this.applyFit(slideEl, img, url, s);

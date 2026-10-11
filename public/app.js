@@ -1298,9 +1298,12 @@
     "center left", "center center", "center right",
     "bottom left", "bottom center", "bottom right"];
 
+  const BG_ROTATIONS = new Set([0, 90, 180, 270]);
+
   function normalizeBackground(b) {
     const src = b && typeof b === "object" ? b : {};
     const dim = Number(src.dim);
+    const rotate = Number(src.rotate);
     return {
       image: typeof src.image === "string" ? src.image : "",
       mode: BG_MODES.includes(src.mode) ? src.mode : "cover",
@@ -1309,7 +1312,16 @@
       // couleur de fond du theme est melangee par-dessus.
       // 0 = photo as is; 100 = plain background. In between, the theme's
       // background colour is blended over it.
-      dim: Number.isFinite(dim) ? Math.max(0, Math.min(100, Math.round(dim))) : 0
+      dim: Number.isFinite(dim) ? Math.max(0, Math.min(100, Math.round(dim))) : 0,
+      // Miroir et rotation : des reglages, jamais une modification du
+      // fichier -- la meme image de la bibliotheque peut donc etre
+      // retournee sur une page et intacte sur une autre.
+      // Mirror and rotation: settings, never a change to the file --
+      // the same library image can therefore be flipped on one page and
+      // untouched on another.
+      flipH: !!src.flipH,
+      flipV: !!src.flipV,
+      rotate: BG_ROTATIONS.has(rotate) ? rotate : 0
     };
   }
 
@@ -1344,6 +1356,29 @@
     };
   }
 
+  /* Chaine `transform` pour le miroir et la rotation du fond de page.
+     Le miroir est place AVANT la rotation dans la liste CSS -- donc
+     applique EN DERNIER au point, la liste se lisant de droite a
+     gauche -- pour retourner le fond tel qu'il est actuellement vu a
+     l'ecran, apres rotation, plutot que selon les axes d'origine du
+     fichier. Chaine vide si rien n'est actif : c'est ce qui decide plus
+     bas si la surcouche dediee est necessaire.
+     `transform` string for the page background's mirror and rotation.
+     The mirror comes BEFORE the rotation in the CSS list -- so it is
+     applied LAST to the point, the list reading right to left -- to
+     flip the background as currently seen on screen, after rotation,
+     rather than along the file's original axes. Empty string when
+     nothing is active: that is what decides below whether the dedicated
+     layer is needed at all. */
+  function backgroundTransform(bg) {
+    const sx = bg.flipH ? -1 : 1;
+    const sy = bg.flipV ? -1 : 1;
+    const parts = [];
+    if (sx !== 1 || sy !== 1) parts.push("scale(" + sx + ", " + sy + ")");
+    if (bg.rotate) parts.push("rotate(" + bg.rotate + "deg)");
+    return parts.join(" ");
+  }
+
   function applyPageBackground(index) {
     const p = pageAt(index);
     if (!p || !p.el) return;
@@ -1351,7 +1386,50 @@
     const url = bg.image
       ? "/media/" + encodeURIComponent(backgroundMediaId(index)) + "/" + encodeURIComponent(bg.image)
       : "";
-    Object.assign(p.el.style, backgroundCss(bg, url));
+    const transform = url ? backgroundTransform(bg) : "";
+    let layer = p.el.querySelector(":scope > .board-bg-layer");
+    if (!transform) {
+      // Chemin inchange depuis l'origine de la fonctionnalite : le fond
+      // est une propriete CSS directe de .board, ce qui lui fait herite
+      // gratuitement de `background-attachment: local` quand la page
+      // deborde (voir backgroundCss). La surcouche dediee n'existe que
+      // pour le miroir et la rotation ; sans eux, on ne paie aucun cout
+      // ni risque supplementaire.
+      // Path unchanged since the feature's origin: the background is a
+      // direct CSS property of .board, which gets it `background-
+      // attachment: local` for free when the page overflows (see
+      // backgroundCss). The dedicated layer exists only for the mirror
+      // and rotation; without them, no extra cost or risk is paid.
+      Object.assign(p.el.style, backgroundCss(bg, url));
+      if (layer) layer.remove();
+    } else {
+      // Miroir et/ou rotation actifs : le fond passe sur une surcouche
+      // a part, pour que le `transform` ne retourne/tourne JAMAIS les
+      // tuiles posees dessus. .board est deja `position: absolute;
+      // overflow: hidden`, donc cette surcouche en `inset: 0` y est
+      // decoupee proprement, y compris apres une rotation de 90/270
+      // degres. Contrepartie acceptee : sur une page qui deborde (rare
+      // en combinaison avec un fond retourne), ce fond ne defile plus
+      // avec le contenu, faute du mecanisme `background-attachment:
+      // local` qui ne s'applique qu'a un fond CSS direct.
+      // Mirror and/or rotation active: the background moves to a
+      // separate layer, so the `transform` NEVER flips/rotates the
+      // tiles sitting on top. .board is already `position: absolute;
+      // overflow: hidden`, so this `inset: 0` layer is cleanly clipped
+      // by it, including after a 90/270 degree rotation. Accepted
+      // trade-off: on an overflowing page (rare in combination with a
+      // flipped background), this background no longer scrolls with the
+      // content, for lack of the `background-attachment: local`
+      // mechanism, which only applies to a direct CSS background.
+      Object.assign(p.el.style, backgroundCss(bg, ""));
+      if (!layer) {
+        layer = document.createElement("div");
+        layer.className = "board-bg-layer";
+        p.el.insertBefore(layer, p.el.firstChild);
+      }
+      Object.assign(layer.style, backgroundCss(bg, url));
+      layer.style.transform = transform;
+    }
     p.el.classList.toggle("has-bg-image", !!url);
     // Le voile est un element a part plutot qu'un filtre : un filtre sur
     // le conteneur affecterait AUSSI les tuiles posees dessus.
@@ -5301,6 +5379,9 @@
     posSel.value = target.background.position;
     $("pageBgMode").value = target.background.mode;
     $("pageBgDim").value = String(target.background.dim);
+    $("pageBgFlipH").classList.toggle("active", !!target.background.flipH);
+    $("pageBgFlipV").classList.toggle("active", !!target.background.flipV);
+    $("pageBgRotate").value = String(target.background.rotate);
 
     $("pageBgModal").hidden = false;
     refreshPageBgList();
@@ -9464,6 +9545,19 @@
     $("pageBgMode").addEventListener("change", (e) => commitPageBackground({ mode: e.target.value }));
     $("pageBgPosition").addEventListener("change", (e) => commitPageBackground({ position: e.target.value }));
     $("pageBgDim").addEventListener("input", (e) => commitPageBackground({ dim: e.target.value }));
+    onActivate($("pageBgFlipH"), () => {
+      const target = pageBgTarget();
+      const next = !(target && normalizeBackground(target.background).flipH);
+      $("pageBgFlipH").classList.toggle("active", next);
+      commitPageBackground({ flipH: next });
+    });
+    onActivate($("pageBgFlipV"), () => {
+      const target = pageBgTarget();
+      const next = !(target && normalizeBackground(target.background).flipV);
+      $("pageBgFlipV").classList.toggle("active", next);
+      commitPageBackground({ flipV: next });
+    });
+    $("pageBgRotate").addEventListener("change", (e) => commitPageBackground({ rotate: e.target.value }));
     onActivate($("tileReset"), () => resetTileSettings());
     onActivate($("libraryClose"), closeLibrary);
     wireThemeUi();

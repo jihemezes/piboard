@@ -1173,6 +1173,9 @@
           <div class="help-opt"><span class="help-opt-name">Bouton de remise à zéro</span><span class="help-opt-desc">Ramène le zoom à 100 % et le recadrage au centre. Ne touche ni au cadrage, ni à l'image.</span></div>
           <div class="help-opt"><span class="help-opt-name">Appareil photo</span><span class="help-opt-desc">Ouvre le gestionnaire d'images pour téléverser, choisir ou supprimer un fichier.</span></div>
           <p>Le résultat s'affiche <b>pendant</b> le geste ; l'enregistrement n'a lieu qu'au relâchement. Les champs numériques des réglages restent utiles pour poser une valeur exacte ou reproduire à l'identique le recadrage d'une autre tuile.</p>
+
+          <h4>Miroir et rotation</h4>
+          <p>Trois réglages, dans la fenêtre de configuration et aussi en accès direct dans la barre d'outils du recadrage (↔, ↕, ⟳) : <b>miroir horizontal</b>, <b>miroir vertical</b>, et <b>rotation</b> par pas de 90°. Utiles pour un logo fourni à l'envers, ou une photo prise dans le mauvais sens. Les deux boutons miroir de la barre d'outils restent enfoncés tant que le réglage est actif. Le miroir s'applique <b>après</b> la rotation : il retourne toujours l'image telle qu'elle est actuellement vue à l'écran, quel que soit l'ordre dans lequel les deux ont été réglés. <b>Le fichier n'est jamais modifié</b> : deux tuiles peuvent afficher la même image choisie dans la bibliothèque, l'une retournée et l'autre non.</p>
           <div class="help-opt"><span class="help-opt-name">Remplir la tuile</span><span class="help-opt-desc">L'image couvre toute la tuile, quitte à en rogner les bords. Pour une illustration de fond.</span></div>
           <div class="help-opt"><span class="help-opt-name">Étirer</span><span class="help-opt-desc">L'image est déformée pour remplir exactement la tuile. Rarement souhaitable.</span></div>
           <div class="help-opt"><span class="help-opt-name">Taille d'origine</span><span class="help-opt-desc">Aucun redimensionnement.</span></div>
@@ -1201,6 +1204,9 @@
           <div class="help-opt"><span class="help-opt-name">The reset button</span><span class="help-opt-desc">Brings the zoom back to 100% and the crop back to centre. Touches neither the framing nor the image.</span></div>
           <div class="help-opt"><span class="help-opt-name">The camera</span><span class="help-opt-desc">Opens the image manager to upload, pick or delete a file.</span></div>
           <p>The result appears <b>while</b> you drag; saving only happens on release. The numeric fields in the settings remain useful to set an exact value or to reproduce another tile's crop identically.</p>
+
+          <h4>Mirror and rotation</h4>
+          <p>Three settings, in the configuration window and also as direct shortcuts in the crop toolbar (↔, ↕, ⟳): <b>flip horizontally</b>, <b>flip vertically</b>, and <b>rotate</b> in 90° steps. Useful for a logo supplied the wrong way round, or a photo taken in the wrong orientation. The toolbar's two mirror buttons stay pressed while their setting is active. The mirror is applied <b>after</b> rotation: it always flips the image as currently seen on screen, whatever order the two were set in. <b>The file is never modified</b>: two tiles can show the same image picked from the library, one flipped and the other not.</p>
           <div class="help-opt"><span class="help-opt-name">Fill the tile</span><span class="help-opt-desc">The image covers the whole tile, cropping its edges if need be. For a background illustration.</span></div>
           <div class="help-opt"><span class="help-opt-name">Stretch</span><span class="help-opt-desc">The image is distorted to fill the tile exactly. Rarely desirable.</span></div>
           <div class="help-opt"><span class="help-opt-name">Original size</span><span class="help-opt-desc">No resizing at all.</span></div>
@@ -1392,7 +1398,8 @@
           <div class="help-opt"><span class="help-opt-name">Style de bordure</span><span class="help-opt-desc">Couleur unie ou photo floutée automatique, pour l'espace vide autour d'une photo affichée en entier.</span></div>
           <div class="help-opt"><span class="help-opt-name">Couleur de la bordure</span><span class="help-opt-desc">Utilisée seulement si le style de bordure est « Couleur unie ».</span></div>
           <div class="help-opt"><span class="help-opt-name">Ordre aléatoire</span><span class="help-opt-desc">Mélange l'ordre des photos plutôt que de suivre l'ordre de la source.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Effet de zoom lent</span><span class="help-opt-desc">Anime doucement chaque photo pendant son affichage.</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Effet de zoom lent</span><span class="help-opt-desc">Anime doucement chaque photo pendant son affichage.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Miroir horizontal / vertical, Pivoter</span><span class="help-opt-desc">S'appliquent à <b>toutes les photos</b> de cette tuile, telles qu'actuellement vues à l'écran — pas un réglage par photo. Utile pour une collection entière arrivée dans le mauvais sens (caméra montée à l'envers, par exemple). Le miroir s'applique après la rotation, pour toujours correspondre à ce qui est affiché. Les fichiers eux-mêmes ne sont jamais modifiés.</span></div>`,
         en: `
           <span class="help-size">Size: 4×3 by default, from 2×2 to 12×12</span>
           <h4>Goal</h4>
@@ -1411,7 +1418,8 @@
           <div class="help-opt"><span class="help-opt-name">Border style</span><span class="help-opt-desc">Solid color or automatic blurred photo, for the empty space around a fully-shown photo.</span></div>
           <div class="help-opt"><span class="help-opt-name">Border color</span><span class="help-opt-desc">Used only if the border style is "Solid color".</span></div>
           <div class="help-opt"><span class="help-opt-name">Shuffle order</span><span class="help-opt-desc">Randomizes photo order rather than following the source's order.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Slow zoom effect</span><span class="help-opt-desc">Gently animates each photo while it's shown.</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Slow zoom effect</span><span class="help-opt-desc">Gently animates each photo while it's shown.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Flip horizontally / vertically, Rotate</span><span class="help-opt-desc">Apply to <b>every photo</b> in this tile, as currently shown on screen — not a per-photo setting. Useful for a whole collection that came in with the wrong orientation (an upside-down mounted camera, for instance). The mirror is applied after rotation, so it always matches what is displayed. The files themselves are never changed.</span></div>`
       }
     },
 
@@ -2840,6 +2848,7 @@
           <div class="help-opt"><span class="help-opt-name">Étirer</span><span class="help-opt-desc">L'image remplit exactement l'écran, quitte à être déformée.</span></div>
           <div class="help-opt"><span class="help-opt-name">Répéter en mosaïque</span><span class="help-opt-desc">L'image est répétée à sa taille d'origine. Pour une texture ou un motif.</span></div>
           <p>Le réglage <b>« Voile sur l'image »</b> mélange la couleur de fond du thème par-dessus la photo. À 0, la photo est intacte ; à 100, on revient à un fond uni. <b>Montez-le jusqu'à ce que les tuiles redeviennent confortablement lisibles</b> : une photo contrastée rend illisibles les tuiles en fond transparent, et sans ce réglage il faudrait choisir entre un beau fond et un tableau lisible. Le voile passe sous les tuiles, jamais dessus.</p>
+          <p><b>Miroir et rotation</b> : deux boutons (miroir horizontal, miroir vertical) et une liste de rotation (90°, 180°, 270°), utiles pour une photo prise dans le mauvais sens ou un logo à retourner. Le miroir s'applique après la rotation, pour toujours correspondre à ce qui est affiché. <b>Le fichier n'est jamais modifié</b> : la même image de la bibliothèque peut être retournée sur une page et intacte sur une autre. Seule exception : sur une page qui déborde (défilement activé) <b>et</b> dont le fond est retourné ou pivoté, ce fond ne défile plus avec le contenu — un cas rare, et sans incidence sur les tuiles elles-mêmes.</p>
           <p>La page 1 étant aussi le plateau du <b>mode classique</b>, celui-ci profite du fond de page sans rien avoir à configurer de plus. Les tiroirs, eux, gardent la couleur du thème.</p>
 
           <h4>Défilement automatique</h4>
@@ -2883,6 +2892,7 @@
           <div class="help-opt"><span class="help-opt-name">Stretch</span><span class="help-opt-desc">The image fills the screen exactly, distorted if need be.</span></div>
           <div class="help-opt"><span class="help-opt-name">Tile it</span><span class="help-opt-desc">The image is repeated at its original size. For a texture or a pattern.</span></div>
           <p>The <b>"Veil over the image"</b> setting blends the theme's background colour over the photo. At 0 the photo is untouched; at 100 you are back to a plain background. <b>Raise it until the tiles become comfortably readable again</b>: a contrasted photo makes transparent-background tiles unreadable, and without this setting one would have to choose between a nice background and a legible board. The veil goes under the tiles, never over them.</p>
+          <p><b>Mirror and rotation</b>: two buttons (flip horizontally, flip vertically) and a rotation list (90°, 180°, 270°), useful for a photo taken in the wrong orientation or a logo that needs flipping. The mirror is applied after rotation, so it always matches what is displayed. <b>The file is never modified</b>: the same library image can be flipped on one page and left untouched on another. One exception: on a page that overflows (scrolling on) <b>and</b> whose background is flipped or rotated, that background no longer scrolls with the content — a rare case, and one with no effect on the tiles themselves.</p>
           <p>As page 1 is also the <b>classic mode</b>'s board, that mode benefits from page backgrounds with nothing more to configure. The drawers keep the theme's colour.</p>
 
           <h4>Automatic cycling</h4>
