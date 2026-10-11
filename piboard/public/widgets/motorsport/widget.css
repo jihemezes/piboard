@@ -1,0 +1,130 @@
+.pw-motorsport {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 10px 14px;
+  overflow: hidden;
+}
+
+/* En-tete : nom de l'evenement et circuit. Header: event name and circuit. */
+.pwms-head { flex-shrink: 0; margin-bottom: 6px; }
+.pwms-event {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwms-circuit {
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pwms-body { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* Un bloc par jour du week-end. One block per weekend day. */
+.pwms-day {
+  font-size: 10.5px;
+  font-family: var(--mono);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--accent);
+  margin: 8px 0 3px;
+}
+.pwms-day:first-child { margin-top: 0; }
+
+.pwms-session {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwms-session:last-child { border-bottom: none; }
+.pwms-label { flex: 1; min-width: 0; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pwms-time {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* Pastille de couleur par type de seance : les essais restent discrets,
+   la course ressort. Color chip per session type: practices stay
+   discreet, the race stands out. */
+.pwms-chip {
+  flex-shrink: 0;
+  width: 4px;
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--muted);
+}
+.pwms-kind-practice .pwms-chip { background: #8A98B2; }
+.pwms-kind-qualifying .pwms-chip { background: #F4A623; }
+.pwms-kind-sprint .pwms-chip { background: #9C6ADE; }
+.pwms-kind-race .pwms-chip { background: #E5384B; }
+.pwms-kind-race .pwms-label { font-weight: 700; }
+
+/* Seance passee : estompee, mais toujours lisible pour situer le
+   week-end. Past session: dimmed, but still readable to situate the
+   weekend. */
+.pwms-past { opacity: 0.42; }
+
+/* Seance en cours : meme pastille pulsante que les scores en direct.
+   Live session: same pulsing dot as the live sports scores. */
+.pwms-live .pwms-time { color: var(--accent); font-weight: 700; }
+.pwms-live .pwms-time::before {
+  content: "";
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-right: 5px;
+  animation: pwms-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pwms-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+
+/* Prochaine seance a venir : mise en avant discrete. Next upcoming
+   session: subtle emphasis. */
+.pwms-next .pwms-label, .pwms-next .pwms-time { color: var(--accent); font-weight: 700; }
+
+/* Mode calendrier : une ligne par evenement. Calendar mode: one row per
+   event. */
+.pwms-evt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwms-evt:last-child { border-bottom: none; }
+.pwms-evt-round {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+  min-width: 2.2em;
+}
+.pwms-evt-name { flex: 1; min-width: 0; font-size: 13px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pwms-evt-date {
+  flex-shrink: 0;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pwms-evt.pwms-current .pwms-evt-name { font-weight: 700; }
+.pwms-evt.pwms-current .pwms-evt-date { color: var(--accent); }
+
+.pw-motorsport .pwms-err, .pw-motorsport .pwms-empty {
+  margin: auto;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+.pwms-credit { flex-shrink: 0; font-size: 9.5px; color: var(--faint); margin-top: 5px; }

@@ -1,0 +1,3456 @@
+/* ============================================================
+   PiBoard - style.css
+   Deux themes : nuit (encre bleutee) et jour (papier).
+   Accent unique : framboise Raspberry Pi (#D6335C).
+   Aucune police externe : tout fonctionne hors ligne.
+   Two themes: night (blue-ink) and day (paper).
+   Single accent: Raspberry Pi raspberry (#D6335C).
+   No external fonts: everything works offline.
+   ============================================================ */
+
+:root {
+  --accent: #D6335C;
+  /* Jetons ajoutes avec les themes (1.111.0) : texte pose sur l'accent,
+     couleurs d'etat, epaisseur de bordure des tuiles. Valeurs par defaut
+     = l'apparence d'avant, remplacees par le theme actif (themes.js).
+     Tokens added with themes (1.111.0): text laid on the accent, status
+     colours, tile border width. Defaults = the former look, replaced by
+     the active theme (themes.js). */
+  --on-accent: #FFFFFF;
+  --ok: #4CAF7D;
+  --warn: #E0A63C;
+  --danger: #E0556F;
+  --tile-border-w: 1px;
+  --radius: 14px;
+  --gap: 10px;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  --mono: ui-monospace, "SF Mono", "Cascadia Mono", "DejaVu Sans Mono", monospace;
+}
+
+body[data-theme="dark"] {
+  --bg: #0B0E14;
+  --tile: #141926;
+  --tile-edge: #1E2536;
+  --text: #E8ECF4;
+  --muted: #8B93A7;
+  --faint: #565E73;
+  --overlay: rgba(6, 8, 12, 0.72);
+  --field-bg: #0E1220;
+}
+
+body[data-theme="light"] {
+  --bg: #EFEDE7;
+  --tile: #FFFFFF;
+  --tile-edge: #DDD9CF;
+  --text: #1B1F2A;
+  --muted: #6B7180;
+  --faint: #A3A8B4;
+  --overlay: rgba(30, 32, 38, 0.45);
+  --field-bg: #F6F5F1;
+}
+
+* { box-sizing: border-box; }
+
+/* L'attribut hidden gagne TOUJOURS, meme sur les elements en display:flex.
+   Sans cette regle, un display explicite neutralise hidden : c'etait la cause
+   du voile invisible .board-empty qui bloquait toute la souris.
+   The hidden attribute ALWAYS wins, even over display:flex rules. Without it,
+   an explicit display defeats hidden: this was the invisible .board-empty
+   veil swallowing every mouse event. */
+[hidden] { display: none !important; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+  transition: background 0.6s ease, color 0.6s ease;
+}
+
+body.hide-cursor, body.hide-cursor * { cursor: none !important; }
+
+.board {
+  position: absolute;
+  inset: 0;
+  padding: var(--gap);
+  /* Comportement par defaut INCHANGE : sur un ecran ou tout tient, le
+     tableau ne defile pas et n'affiche aucun ascenseur. Le defilement
+     n'est ouvert que par la classe .has-overflow, posee par
+     updateOverflow() apres mesure reelle du DOM. Garantie structurelle :
+     sans la classe, c'est bien overflow:hidden qui s'applique, pas un
+     ascenseur simplement rendu discret.
+     Default behaviour UNCHANGED: on a screen where everything fits, the
+     board neither scrolls nor shows a scrollbar. Scrolling is opened up
+     only by the .has-overflow class, set by updateOverflow() after an
+     actual DOM measurement. Structural guarantee: without the class it
+     really is overflow:hidden that applies, not a merely discreet
+     scrollbar. */
+  overflow: hidden;
+}
+
+.board.has-overflow {
+  overflow-y: auto;
+  /* Le defilement tactile du TABLEAU est gere a la main (2 doigts, voir
+     app.js) : `none` empeche le navigateur de s'approprier le glissement
+     a un doigt, qui ferait defiler le tableau des qu'on touche une carte
+     ou un diaporama. Uniquement en cas de debordement : sans la classe,
+     rien n'est modifie.
+     The BOARD's touch scrolling is handled manually (2 fingers, see
+     app.js): `none` stops the browser from claiming the one-finger drag,
+     which would scroll the board as soon as a map or slideshow is
+     touched. Only when overflowing: without the class, nothing changes. */
+  touch-action: none;
+}
+
+/* Contrepartie indispensable de la regle ci-dessus : `touch-action` se
+   resout en remontant la chaine des ancetres, donc un `none` sur .board
+   supprimerait AUSSI le defilement a un doigt A L'INTERIEUR des tuiles
+   (liste des courriels, bloc-notes, flux). On le retablit explicitement
+   au niveau du contenu de tuile.
+   Indispensable counterpart to the rule above: `touch-action` resolves by
+   walking up the ancestor chain, so a `none` on .board would ALSO kill
+   one-finger scrolling INSIDE the tiles (mail list, notes, feeds). We
+   restore it explicitly at tile-content level. */
+.board.has-overflow .grid-stack-item-content { touch-action: auto; }
+
+/* Aucune gouttiere reservee tant qu'il n'y a pas de debordement : une
+   largeur non nulle ici decalerait les tuiles de quelques pixels sur un
+   ecran normal, exactement ce qu'il ne faut pas.
+   No gutter reserved as long as there is no overflow: a non-zero width
+   here would shift the tiles by a few pixels on a normal screen, exactly
+   what must not happen. */
+.board::-webkit-scrollbar { width: 0; height: 0; }
+.board.has-overflow::-webkit-scrollbar { width: 8px; }
+.board.has-overflow::-webkit-scrollbar-track { background: transparent; }
+.board.has-overflow::-webkit-scrollbar-thumb {
+  background: var(--tile-edge);
+  border-radius: 4px;
+}
+.board.has-overflow::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+/* Cibles elargies au doigt / wider target for fingers */
+body.touch .board.has-overflow::-webkit-scrollbar { width: 12px; }
+
+.board-empty {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 20px;
+  text-align: center;
+  padding: 0 10vw;
+}
+
+/* ---------- Tuiles / tiles ---------- */
+
+.grid-stack-item-content {
+  background: var(--tile);
+  border: var(--tile-border-w) solid var(--tile-edge);
+  border-radius: var(--radius);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: background 0.6s ease, border-color 0.6s ease;
+}
+
+.tile-head {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  border-bottom: 1px dashed var(--tile-edge);
+  user-select: none;
+}
+
+body.editing .tile-head { display: flex; cursor: grab; }
+
+.tile-head .tile-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.tile-btn {
+  background: none;
+  border: none;
+  color: var(--muted);
+  padding: 2px;
+  cursor: pointer;
+  line-height: 0;
+}
+.tile-btn:hover { color: var(--text); }
+.tile-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* Barre de titre optionnelle des tuiles / optional tile title bar */
+.tile-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px 7px;
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--tile-edge);
+  flex-shrink: 0;
+  user-select: none;
+}
+.tile-title img { width: 14px; height: 14px; flex-shrink: 0; }
+.tile-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tile-body {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  /* Isole la tuile dans son propre contexte d'empilement CSS. Sans ça, un
+     z-index eleve pose A L'INTERIEUR d'une tuile (ex. les badges du
+     widget Trafic, montes a 1001 pour passer au-dessus des controles
+     natifs de Leaflet, eux-memes a 1000) peut "fuir" et rivaliser
+     directement avec des elements du document entier -- notamment les
+     fenetres modales de l'app (elles aussi a z-index:1000), qui se
+     retrouvaient alors recouvertes par un badge de tuile. Avec
+     isolation:isolate, un z-index interne, aussi eleve soit-il, reste
+     confine a la tuile et ne peut plus jamais depasser un element
+     exterieur comme une modale.
+     Isolates the tile in its own CSS stacking context. Without this, a
+     high z-index set INSIDE a tile (e.g. the Traffic widget's badges,
+     raised to 1001 to sit above Leaflet's own native controls, which are
+     themselves at 1000) could "leak" and compete directly with elements
+     from the whole document -- notably the app's modal windows (also at
+     z-index:1000), which ended up covered by a tile badge. With
+     isolation:isolate, an internal z-index, however high, stays confined
+     to the tile and can never again exceed an outside element like a
+     modal. */
+  isolation: isolate;
+}
+
+.tile-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 12px;
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+}
+
+/* Tuile hors de sa plage de planification : elle garde sa place dans la
+   grille (aucun deplacement des autres tuiles) et son widget est arrete.
+   Volontairement discret : la tuile ne doit pas attirer l'oeil comme le
+   ferait une erreur. Tile outside its scheduling window: it keeps its
+   spot in the grid (no other tile moves) and its widget is stopped.
+   Deliberately understated: the tile shouldn't draw the eye the way an
+   error would. */
+.tile-body.tile-paused {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 12px;
+}
+.tile-paused-msg { text-align: center; opacity: 0.5; }
+.tile-paused-title {
+  font-size: 14px;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+.tile-paused-hint {
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--faint);
+  margin-top: 3px;
+}
+
+/* Choix des jours dans les reglages de planification : une rangee de 7
+   petites cases, qui se replie si la colonne est etroite.
+   Day picker in the scheduling settings: a row of 7 small boxes, which
+   wraps if the column is narrow. */
+.sched-days { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+.sched-day {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 7px;
+  background: var(--field-bg);
+  font-size: 12px;
+  cursor: pointer;
+  text-transform: capitalize;
+}
+.sched-day input { margin: 0; }
+.sched-day:has(input:checked) { border-color: var(--accent); color: var(--accent); }
+
+body.editing .grid-stack-item-content {
+  border-color: var(--accent);
+  border-style: dashed;
+  cursor: grab;
+}
+
+/* Le contenu devient inerte en edition : les iframes, textarea et liens
+   ne capturent plus la souris, la tuile entiere se saisit d'un geste.
+   Content is inert while editing: iframes, textareas and links no longer
+   swallow the pointer, the whole tile can be grabbed anywhere. */
+body.editing .tile-body {
+  pointer-events: none;
+  opacity: 0.75;
+}
+
+body.editing .grid-stack-item.ui-draggable-dragging .grid-stack-item-content { cursor: grabbing; }
+
+/* Poignees de redimensionnement bien visibles / clearly visible resize handles */
+body.editing .ui-resizable-handle {
+  opacity: 1;
+  background: none;
+  z-index: 20;
+}
+body.editing .ui-resizable-se,
+body.editing .ui-resizable-sw {
+  width: 18px;
+  height: 18px;
+  bottom: 5px !important;
+  transform: none !important;
+}
+body.editing .ui-resizable-se {
+  right: 5px !important;
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  border-radius: 0 0 9px 0;
+}
+body.editing .ui-resizable-sw {
+  left: 5px !important;
+  border-left: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  border-radius: 0 0 0 9px;
+}
+body.editing .ui-resizable-e,
+body.editing .ui-resizable-w {
+  width: 10px;
+}
+body.editing .ui-resizable-s {
+  height: 10px;
+}
+body.editing .ui-resizable-e::after,
+body.editing .ui-resizable-w::after,
+body.editing .ui-resizable-s::after {
+  content: "";
+  position: absolute;
+  background: var(--accent);
+  border-radius: 3px;
+  opacity: 0.85;
+}
+body.editing .ui-resizable-e::after,
+body.editing .ui-resizable-w::after {
+  top: 50%;
+  margin-top: -14px;
+  height: 28px;
+  width: 4px;
+  left: 3px;
+}
+body.editing .ui-resizable-s::after {
+  left: 50%;
+  margin-left: -14px;
+  width: 28px;
+  height: 4px;
+  top: 3px;
+}
+
+.grid-stack-placeholder > .placeholder-content {
+  background: none !important;
+  border: 2px dashed var(--accent) !important;
+  border-radius: var(--radius);
+}
+
+/* ---------- Languette + barre d'outils / pull tab + toolbar ---------- */
+
+.dock {
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Barre-tiroir de configuration agrandie x2 par rapport aux dimensions
+   d'origine, pour un usage tactile au doigt sur ecran ~10". Ces tailles
+   sont desormais la base (que le "Mode tactile" soit active ou non) ; le
+   Mode tactile peut encore les agrandir davantage par-dessus.
+   Config pull-out bar enlarged 2x from its original dimensions, for
+   finger use on a ~10" touchscreen. These sizes are now the baseline
+   (whether "Touch mode" is on or not); Touch mode can still enlarge them
+   further on top. */
+.dock-tab {
+  width: 128px;
+  height: 24px;
+  border: none;
+  border-radius: 12px 12px 0 0;
+  background: var(--tile-edge);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0.55;
+  transition: opacity 0.2s ease, height 0.15s ease;
+}
+.dock-tab:hover { opacity: 1; height: 32px; }
+
+.dock-tab-dot {
+  width: 44px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.dock-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 18px;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+.dock-btn {
+  width: 88px;
+  height: 88px;
+  border: none;
+  border-radius: 18px;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dock-btn:hover { background: var(--field-bg); color: var(--text); }
+.dock-btn.active { color: var(--accent); background: var(--field-bg); }
+.dock-btn svg { width: 44px; height: 44px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+.dock-sep { width: 1px; height: 52px; background: var(--tile-edge); margin: 0 4px; }
+
+/* ---------- Modales / modals ---------- */
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: var(--overlay);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 4vh 4vw;
+}
+.modal[hidden] { display: none; }
+
+.modal-card {
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius);
+  width: min(560px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Redimensionnable a la souris (coin bas-droit, poignee native du
+     navigateur) : certains contenus injectes -- un mail mis en forme,
+     un article -- peuvent avoir besoin de plus de largeur que celle
+     par defaut pour rester lisibles. S'applique a TOUTES les fenetres
+     construites sur ce meme .modal-card (lecture de mail, article RSS,
+     detail meteo, reglages de tuile, aide, catalogue...), pas
+     seulement au courriel. Bornes pour ne jamais degenerer vers une
+     boite illisible (trop petite) ou qui deborde de l'ecran (trop
+     grande) ; overflow:hidden ci-dessus suffit deja a satisfaire
+     l'exigence CSS de resize (tout sauf "visible"), pas besoin de le
+     changer -- le contenu interne gere deja son propre defilement.
+     Resizable with the mouse (bottom-right corner, native browser
+     handle): some injected content -- a formatted email, an article --
+     may need more width than the default to stay readable. Applies to
+     EVERY window built on this same .modal-card (email reader, RSS
+     article, weather detail, tile settings, help, catalog...), not
+     just email. Bounded so it never degenerates into an unreadable box
+     (too small) or one that overflows the screen (too large);
+     overflow:hidden above already satisfies CSS resize's requirement
+     (anything but "visible"), no need to change it -- the inner content
+     already handles its own scrolling. */
+  resize: both;
+  min-width: 280px;
+  min-height: 160px;
+  max-width: 96vw;
+}
+/* Poignee de redimensionnement invisible sur tactile (aucune souris) :
+   evite un petit triangle inutile/perturbant sur le tableau mural.
+   Resize handle hidden on touch (no mouse): avoids a small, pointless/
+   distracting triangle on the wall-mounted board. */
+body.touch .modal-card { resize: none; }
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.modal-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+
+.modal-close {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.modal-close:hover { color: var(--text); }
+
+.modal-foot { padding: 0 18px 16px; }
+
+/* ---------- Catalogue / catalog ---------- */
+
+.catalog {
+  overflow-y: auto;
+  padding: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+
+/* Le catalogue s'est etoffe (plus d'une vingtaine de widgets) : une
+   fenetre plus large donne une vue d'ensemble sur 3-4 colonnes plutot
+   que de faire defiler une liste sur 1-2 colonnes. Reste responsive
+   (auto-fill) : redescend naturellement sur les ecrans etroits.
+   The catalog has grown (over twenty widgets now): a wider window gives
+   an overview across 3-4 columns rather than scrolling a 1-2 column
+   list. Stays responsive (auto-fill): naturally drops down on narrow
+   screens. */
+#catalogModal .modal-card {
+  width: min(1120px, 96vw);
+}
+
+.catalog-item {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  background: var(--field-bg);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: var(--font);
+  width: 100%;
+}
+.catalog-item:hover { border-color: var(--accent); }
+.catalog-item img { width: 30px; height: 30px; margin-top: 2px; }
+.catalog-item .ci-name { font-weight: 600; font-size: 14px; }
+/* Intitule court (voir "tagline" dans chaque manifeste) : la description
+   complete reste accessible via l'icone info, plutot que d'etre affichee
+   ici en permanence (source des paves de texte demesures d'origine).
+   Short blurb (see "tagline" in each manifest): the full description
+   stays available via the info icon, rather than being shown here
+   permanently (the source of the original oversized text blocks). */
+.catalog-item .ci-desc { color: var(--muted); font-size: 12.5px; margin-top: 3px; line-height: 1.4; }
+
+/* Enveloppe du catalogue general : meme motif que .config-picker-row
+   ci-dessous (bouton en coin superpose, hors du bouton principal --
+   un <button> ne peut pas en contenir un autre en HTML valide).
+   General catalog wrapper: same pattern as .config-picker-row below (a
+   corner button overlaid, outside the main button -- a <button> can't
+   validly contain another one in HTML). */
+/* En-tete de famille : occupe toute la largeur de la grille pour
+   separer visuellement les groupes de tuiles (voir CATALOG_FAMILIES
+   dans app.js). grid-column: 1 / -1 est indispensable ici -- sans
+   cela, l'en-tete serait traite comme une vignette de plus et se
+   glisserait dans une colonne, au milieu des tuiles.
+   Family header: spans the grid's full width to visually separate the
+   tile groups (see CATALOG_FAMILIES in app.js). grid-column: 1 / -1 is
+   essential here -- without it, the header would be treated as just
+   another card and slot into a column, in the middle of the tiles. */
+.catalog-family {
+  grid-column: 1 / -1;
+  margin: 6px 0 0;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--tile-edge);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+/* Le tout premier en-tete n'a pas besoin de l'espace destine a
+   separer sa famille de la precedente. The very first header doesn't
+   need the space meant to separate its family from the previous
+   one. */
+.catalog-family:first-child { margin-top: 0; }
+
+.catalog-item-wrap { position: relative; display: flex; }
+.catalog-item-wrap .catalog-item { flex: 1; }
+.catalog-item-wrap .ci-info {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: var(--tile-edge);
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.catalog-item-wrap .ci-info:hover { background: var(--accent); color: var(--on-accent); }
+
+/* Info-bulle partagee (voir showCatalogTooltip() dans app.js) : position
+   fixed calculee en JS, jamais rognee par le defilement du catalogue.
+   Shared tooltip (see showCatalogTooltip() in app.js): fixed position
+   computed in JS, never clipped by the catalog's scrolling. */
+.ci-tooltip {
+  position: fixed;
+  max-width: 320px;
+  background: var(--tile);
+  color: var(--text);
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  z-index: 3000;
+  pointer-events: none;
+}
+
+/* ---------- Selecteur de configuration enregistree / saved config picker ---------- */
+
+.config-picker-blank {
+  border-style: dashed;
+  color: var(--accent);
+}
+.config-picker-blank .ci-name { color: var(--accent); }
+
+.config-picker-row {
+  position: relative;
+  display: flex;
+}
+.config-picker-row .catalog-item { flex: 1; }
+.config-picker-row .cp-delete {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: var(--tile-edge);
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.config-picker-row .cp-delete:hover { background: var(--danger); color: #fff; }
+
+.exit-menu {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 20px;
+}
+.exit-option {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  background: var(--field-bg);
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-family: var(--font);
+}
+.exit-option:hover { border-color: var(--accent); }
+.exit-option-title { font-weight: 600; font-size: 14px; }
+.exit-option-desc { color: var(--muted); font-size: 12.5px; line-height: 1.45; }
+.exit-option-warn:hover { border-color: var(--warn); }
+
+/* ---------- Formulaires / forms ---------- */
+
+.form { padding: 16px 18px; overflow-y: auto; }
+
+.field { display: block; margin-bottom: 14px; }
+.field > span {
+  display: block;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 5px;
+}
+
+.field-row { display: flex; gap: 12px; }
+.field-row .field { flex: 1; }
+
+.field input[type="text"],
+.field input[type="number"],
+.field input[type="url"],
+.field input[type="password"],
+.field select,
+.field textarea {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 9px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+}
+.field textarea { min-height: 90px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.field-password-wrap { display: flex; gap: 8px; align-items: center; }
+.field-password-wrap input[type="password"],
+.field-password-wrap input[type="text"] { flex: 1; width: auto; }
+.field-password-wrap .field-password-toggle { flex: none; white-space: nowrap; }
+
+/* Etat d'un champ "secret" (voir fieldMarkup() cas "secret" dans
+   app.js) : indique si une valeur est enregistree, sans jamais
+   l'afficher. State of a "secret" field (see fieldMarkup()'s "secret"
+   case in app.js): says whether a value is stored, without ever showing
+   it. */
+.field-secret-status { display: block; margin-top: 3px; }
+.field-secret-status.field-secret-ok { color: var(--ok); }
+
+/* Suggestions d'adresse cliquables (voir fieldMarkup() cas "address" et
+   les gestionnaires delegues dans app.js) : meme famille visuelle que
+   .city-suggest, en position absolue sous le champ concerne.
+   Clickable address suggestions (see fieldMarkup()'s "address" case and
+   the delegated handlers in app.js): same visual family as
+   .city-suggest, absolutely positioned under the relevant field. */
+.field-address-wrap { position: relative; }
+.field-address-suggest {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 100%;
+  margin-top: 2px;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+.field-address-suggest button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 13px;
+  cursor: pointer;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.field-address-suggest button:last-child { border-bottom: none; }
+.field-address-suggest button:hover:not(:disabled) { background: var(--field-bg); }
+.field-address-suggest button:disabled { color: var(--muted); cursor: default; }
+
+.field.checkbox { display: flex; align-items: center; gap: 9px; }
+.field.checkbox > span { margin: 0; }
+.field.checkbox input { width: 17px; height: 17px; accent-color: var(--accent); }
+
+.field-hint {
+  display: block;
+  margin-top: 5px;
+  font-size: 11.5px;
+  line-height: 1.4;
+  color: var(--faint);
+}
+.field-hint a { color: var(--muted); }
+.field-hint code {
+  background: var(--field-bg);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--mono);
+  font-size: 11px;
+}
+
+.hint { font-size: 12px; color: var(--faint); margin: -6px 0 14px; line-height: 1.5; }
+
+.form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; margin-top: 6px; }
+/* Variante avec un bouton secondaire pousse a gauche (voir le bouton
+   "Sauvegarde et restauration..." des reglages generaux).
+   Variant with a secondary button pushed to the left (see the "Backup &
+   restore..." button in general settings). */
+.form-actions-split { justify-content: space-between; }
+
+/* ---------- Sauvegarde / restauration -- backups ---------- */
+.backups-modal-card { width: min(560px, 94vw); }
+.backups-confirm-card { width: min(420px, 92vw); }
+.backups-body { padding: 4px 4px 2px; }
+.backups-intro { color: var(--muted); font-size: 12.5px; line-height: 1.5; margin: 0 0 14px; }
+.backups-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+.backups-msg { font-size: 12.5px; color: var(--accent); margin: 0 0 10px; }
+.backups-msg.backups-msg-error { color: var(--danger); }
+.backups-empty { color: var(--muted); font-size: 13px; font-style: italic; text-align: center; padding: 20px 0; }
+
+.backups-list { list-style: none; margin: 0; padding: 0; max-height: 50vh; overflow-y: auto; }
+.backups-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.backups-item:last-child { border-bottom: none; }
+.backups-item-info { min-width: 0; }
+.backups-item-date { font-size: 13.5px; color: var(--text); font-weight: 600; }
+.backups-item-meta { font-size: 11.5px; color: var(--muted); margin-top: 1px; font-family: var(--mono); }
+.backups-item-actions { display: flex; gap: 6px; flex-shrink: 0; }
+.backups-confirm-date { font-family: var(--mono); font-size: 13px; color: var(--text); margin: -6px 0 4px; }
+
+#tileSaveConfigMsg {
+  display: inline;
+  margin-top: 0;
+  font-size: 12.5px;
+}
+#tileSaveConfigMsg.field-hint-error { color: var(--danger); }
+
+.btn {
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  background: var(--field-bg);
+  color: var(--text);
+  padding: 9px 18px;
+  font-size: 14px;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.danger { color: var(--danger); margin-right: auto; }
+.btn.danger:hover { border-color: var(--danger); }
+
+.about {
+  margin: 18px 0 2px;
+  font-size: 12px;
+  color: var(--faint);
+  text-align: center;
+}
+.about a { color: var(--muted); }
+
+/* ---------- Mise a jour du serveur / server self-update ----------
+   Section des reglages, bandeau de notification et fenetre de
+   progression (Raspberry Pi / Linux). Le bandeau est fixe en haut, hors
+   du flux : il ne doit deplacer aucune tuile, et reste sous les modales.
+   Settings section, notification banner and progress window (Raspberry
+   Pi / Linux). The banner is fixed at the top, out of flow: it must not
+   shift any tile, and stays below the modals. */
+.update-status { margin: 4px 0 2px; font-size: 13.5px; }
+.update-meta { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+.update-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+
+.update-banner {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 16px;
+  border-radius: 999px;
+  background: var(--tile);
+  border: 1px solid var(--accent);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  font-size: 13.5px;
+  max-width: 94vw;
+}
+.update-banner[hidden] { display: none; }
+.update-banner-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.update-card { width: min(640px, 96vw); }
+.update-body { padding: 4px 18px 8px; }
+.update-body p { margin: 6px 0 10px; line-height: 1.5; }
+.update-notes-title { font-weight: 600; margin-bottom: 4px !important; }
+.update-notes,
+.update-log {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 0;
+  max-height: 180px;
+  overflow: auto;
+  color: var(--muted);
+}
+.update-phase { font-weight: 600; }
+.update-bar {
+  height: 6px;
+  border-radius: 999px;
+  background: var(--tile-edge);
+  overflow: hidden;
+  margin: 4px 0 12px;
+  position: relative;
+}
+.update-bar-fill {
+  height: 100%;
+  width: 0;
+  background: var(--accent);
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+.update-bar-fill.indeterminate {
+  width: 30% !important;
+  animation: update-slide 1.2s ease-in-out infinite;
+}
+@keyframes update-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(340%); }
+}
+
+/* ---------- Tiroir lateral gauche / left side drawer ----------
+   Une seconde grille de widgets, tiree depuis le bord gauche. Les widgets
+   y tournent en permanence (le tiroir est seulement translate hors ecran,
+   jamais demonte), pour que compte a rebours, scores, etc. restent actifs.
+   A second widget grid, pulled from the left edge. Widgets keep running at
+   all times (the drawer is only translated off-screen, never unmounted),
+   so countdowns, scores, etc. stay live. */
+
+/* ---------- Tiroirs de tuiles / tile drawers ----------
+   Trois tiroirs independants (gauche, haut, droite), chacun une
+   deuxieme grille de widgets tiree depuis un bord de l'ecran. Les
+   widgets continuent de tourner en permanence (le tiroir est
+   seulement translate hors ecran, jamais demonte) : comptes a rebours,
+   scores, etc. restent a jour.
+
+   Chaque tiroir peut etre agrandi jusqu'a recouvrir presque tout
+   l'ecran (voir les bornes MIN/MAX dans applyDrawerSize() cote JS) --
+   c'est un calque independant du tableau, pas une subdivision de son
+   espace : plusieurs tiroirs ouverts et agrandis en meme temps se
+   superposent, celui manipule ou ouvert en dernier passant au premier
+   plan (voir bringDrawerToFront() cote JS).
+
+   Convention commune aux 3 tiroirs pour la languette : la fleche
+   pointe TOUJOURS dans le sens ou le tiroir va se deplacer au PROCHAIN
+   clic (fleche a droite = "va s'ouvrir vers la droite", etc.) -- c'est
+   la regle deja en place pour le tiroir gauche, simplement reprise
+   pour les deux autres.
+
+   Three independent drawers (left, top, right), each a second widget
+   grid pulled in from a screen edge. Widgets keep running at all
+   times (the drawer is only translated off-screen, never unmounted):
+   countdowns, scores, etc. stay live.
+
+   Each drawer can be enlarged to cover almost the whole screen (see
+   the MIN/MAX bounds in applyDrawerSize() JS-side) -- it's an
+   independent layer over the board, not a subdivision of its space:
+   several drawers open and enlarged at once will overlap, with
+   whichever was manipulated or opened last coming to the front (see
+   bringDrawerToFront() JS-side).
+
+   Convention shared by all 3 drawers for the pull tab: the arrow
+   ALWAYS points in the direction the drawer will travel on the NEXT
+   click (arrow pointing right = "will open to the right", etc.) --
+   this is the rule already in place for the left drawer, simply
+   carried over to the other two. */
+
+.drawer {
+  position: fixed;
+  z-index: 500; /* au-dessus du tableau, sous les modales (1000) ; ajuste dynamiquement, voir bringDrawerToFront() */
+  transition: transform 0.28s ease;
+  pointer-events: none; /* la languette reactive ses propres events */
+}
+.drawer.open { transform: none; }
+
+.drawer-inner {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--bg) 88%, black 12%);
+  overflow: hidden;
+  pointer-events: auto;
+}
+.drawer:not(.open) .drawer-inner { pointer-events: none; }
+
+.drawer-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+  padding: 24px;
+  pointer-events: none;
+}
+
+/* Languette : forme commune aux 3 tiroirs, seule sa position/rotation
+   change par variante ci-dessous.
+   Pull tab: shape shared by all 3 drawers, only position/rotation
+   changes per variant below. */
+.drawer-tab {
+  position: absolute;
+  border: 1px solid var(--tile-edge);
+  background: var(--tile);
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  padding: 0;
+}
+.drawer-tab:hover { color: var(--accent); }
+.drawer-tab svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.28s ease;
+}
+
+/* Poignee de redimensionnement : forme commune, position/curseur
+   varient par variante ci-dessous.
+   Resize handle: shape shared, position/cursor vary per variant
+   below. */
+.drawer-resize { position: absolute; pointer-events: none; }
+.drawer.open .drawer-resize { pointer-events: auto; }
+.drawer-resize::after {
+  content: "";
+  position: absolute;
+  background: transparent;
+  transition: background 0.15s ease;
+}
+.drawer-resize:hover::after,
+.drawer.resizing .drawer-resize::after { background: var(--accent); }
+.drawer.resizing { transition: none; }
+
+/* ---------- Variante gauche (existante) / left variant (existing) ---------- */
+.drawer-left {
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--drawer-w, 50vw);
+  min-width: 240px;
+  transform: translateX(-100%);
+}
+.drawer-left .drawer-inner {
+  border-right: 1px solid var(--tile-edge);
+  box-shadow: 6px 0 24px rgba(0, 0, 0, 0.35);
+}
+.drawer-left .drawer-tab {
+  right: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 84px;
+  border-left: none;
+  border-radius: 0 12px 12px 0;
+}
+.drawer-left.open .drawer-tab svg { transform: rotate(180deg); }
+.drawer-left .drawer-resize {
+  right: -5px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+}
+.drawer-left .drawer-resize::after { left: 4px; top: 0; bottom: 0; width: 2px; }
+
+/* ---------- Variante haute / top variant ---------- */
+.drawer-top {
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--drawer-top-h, 40vh);
+  min-height: 160px;
+  transform: translateY(-100%);
+}
+.drawer-top .drawer-inner {
+  border-bottom: 1px solid var(--tile-edge);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+}
+.drawer-top .drawer-tab {
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 84px;
+  height: 30px;
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+}
+/* Ferme : la fleche de base (pointe a droite) tourne pour pointer vers
+   le bas -- sens dans lequel le tiroir va s'ouvrir. Ouvert : pointe
+   vers le haut -- sens dans lequel il va se refermer.
+   Closed: the base arrow (points right) rotates to point down -- the
+   direction the drawer will open in. Open: points up -- the direction
+   it will close in. */
+.drawer-top .drawer-tab svg { transform: rotate(90deg); }
+.drawer-top.open .drawer-tab svg { transform: rotate(-90deg); }
+.drawer-top .drawer-resize {
+  bottom: -5px;
+  left: 0;
+  right: 0;
+  height: 10px;
+  cursor: ns-resize;
+}
+.drawer-top .drawer-resize::after { top: 4px; left: 0; right: 0; height: 2px; }
+
+/* ---------- Variante droite / right variant ---------- */
+.drawer-right {
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: var(--drawer-right-w, 38vw);
+  min-width: 240px;
+  transform: translateX(100%);
+}
+.drawer-right .drawer-inner {
+  border-left: 1px solid var(--tile-edge);
+  box-shadow: -6px 0 24px rgba(0, 0, 0, 0.35);
+}
+.drawer-right .drawer-tab {
+  left: -30px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 30px;
+  height: 84px;
+  border-right: none;
+  border-radius: 12px 0 0 12px;
+}
+/* Ferme : pointe vers la gauche -- sens d'ouverture. Ouvert : pointe
+   vers la droite -- sens de fermeture.
+   Closed: points left -- opening direction. Open: points right --
+   closing direction. */
+.drawer-right .drawer-tab svg { transform: rotate(180deg); }
+.drawer-right.open .drawer-tab svg { transform: rotate(0deg); }
+.drawer-right .drawer-resize {
+  left: -5px;
+  top: 0;
+  bottom: 0;
+  width: 10px;
+  cursor: ew-resize;
+}
+.drawer-right .drawer-resize::after { left: 4px; top: 0; bottom: 0; width: 2px; }
+
+/* ---------- Clavier virtuel / on-screen keyboard ---------- */
+
+.vkb {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1200; /* au-dessus des modales (1000) */
+  /* Clavier agrandi pour l'usage tactile au doigt. On vise ~x2 la
+     largeur d'origine (620 -> 1240px) mais on ne depasse jamais la
+     largeur de l'ecran (min() retombe automatiquement sur 96vw si 1240px
+     ne tient pas) : sur un ecran plus etroit, le clavier reste donc
+     entierement visible au lieu de deborder -- c'est le "x1,5 si x2 ne
+     passe pas" demande, gere ici en continu par le navigateur.
+     Keyboard enlarged for finger use on a touchscreen. We aim for ~2x
+     the original width (620 -> 1240px) but never exceed the screen width
+     (min() automatically falls back to 96vw if 1240px doesn't fit): on a
+     narrower screen the keyboard stays fully visible instead of
+     overflowing -- this is the requested "x1.5 if x2 doesn't fit",
+     handled continuously here by the browser. */
+  width: min(96vw, 1240px);
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 16px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.vkb[hidden] { display: none; }
+
+.vkb-row {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.vkb-key {
+  flex: 1;
+  min-width: 0;
+  /* Hauteur ~x2 (42 -> 84px) : une touche large comme un doigt.
+     Height ~2x (42 -> 84px): a key as wide as a fingertip. */
+  height: 84px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 26px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.vkb-key:active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+
+.vkb-key.vkb-wide { flex: 1.6; font-size: 20px; }
+.vkb-key.vkb-space { flex: 5; }
+.vkb-key.vkb-active { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.vkb-key.vkb-done { background: var(--accent); color: var(--on-accent); border-color: var(--accent); flex: 1.4; font-size: 20px; }
+
+/* Sur un ecran vraiment court en hauteur, des touches de 84px + une
+   modale peuvent trop remplir l'ecran : on reduit alors legerement la
+   hauteur des touches (repli "x1,5"), sans jamais repasser sous une
+   cible confortable au doigt.
+   On a screen that's genuinely short in height, 84px keys plus a modal
+   can fill too much: we then slightly reduce key height (the "x1.5"
+   fallback), without ever going below a comfortable finger target. */
+@media (max-height: 720px) {
+  .vkb-key { height: 64px; font-size: 22px; }
+  .vkb { padding: 12px; gap: 8px; }
+  .vkb-row { gap: 8px; }
+}
+
+/* ---------- Flash plein ecran (alerte de compte a rebours) / full-screen flash (countdown alert) ---------- */
+
+.board-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+  background: var(--accent);
+  opacity: 0;
+}
+
+@keyframes board-flash-pulse {
+  0%   { opacity: 0; }
+  15%  { opacity: 0.85; }
+  50%  { opacity: 0; }
+  100% { opacity: 0; }
+}
+
+/* Variante en boucle continue : la duree totale est pilotee par JS
+   (widgetApi.startAlert/stopAlert), pas par un nombre d'iterations CSS fixe.
+   Continuous loop variant: total duration is driven by JS
+   (widgetApi.startAlert/stopAlert), not by a fixed CSS iteration count. */
+.board-flash.board-flash-loop {
+  animation: board-flash-pulse 0.9s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-flash { display: none; }
+  * { transition: none !important; animation: none !important; }
+}
+
+/* Pastille "touchez l'ecran pour arreter" -- voir public/app.js:boardAlert.
+   Volontairement discrete (ne doit pas rivaliser avec le flash), et
+   pointer-events:none : elle n'a besoin de rien intercepter elle-meme,
+   le tap est capte au niveau du document entier, n'importe ou sur
+   l'ecran (y compris a travers cette pastille).
+   "Tap the screen to stop" chip -- see public/app.js:boardAlert.
+   Deliberately understated (must not compete with the flash), and
+   pointer-events:none: it doesn't need to intercept anything itself,
+   the tap is captured at the whole document level, anywhere on the
+   screen (including through this chip). */
+.board-tap-hint {
+  position: fixed;
+  left: 50%;
+  bottom: 6%;
+  transform: translateX(-50%);
+  z-index: 2001;
+  pointer-events: none;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(20, 20, 26, 0.72);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+  animation: board-tap-hint-fade 1.8s ease-in-out infinite;
+}
+
+@keyframes board-tap-hint-fade {
+  0%, 100% { opacity: 0.55; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .board-tap-hint { animation: none; opacity: 0.9; }
+}
+
+/* ---------- Recherche de ville / city search ---------- */
+
+.city-box { position: relative; }
+
+.city-suggest {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 50;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.city-suggest button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+}
+.city-suggest button:hover { background: var(--field-bg); }
+.city-suggest button small { color: var(--muted); }
+
+/* ---------- Champ "parcourir" (ex : chaines TV disponibles) / "browse" field (e.g. available TV channels) ----------
+   Meme famille visuelle que .city-suggest ci-dessus, mais en flux
+   normal (pas de position absolue) : le champ textarea qui suit ne doit
+   pas etre recouvert, et la liste peut etre longue (jusqu'a ~400
+   chaines pour le guide xmltvfr.fr "France").
+   Same visual family as .city-suggest above, but in normal flow (no
+   absolute positioning): the textarea that follows must not be
+   overlapped, and the list can be long (up to ~400 channels for the
+   xmltvfr.fr "France" guide). */
+.field-browse { margin: 6px 0 14px; }
+.field-browse-btn { margin-bottom: 6px; }
+.field-browse-list {
+  max-height: 260px;
+  overflow-y: auto;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+}
+.field-browse-list button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 8px 12px;
+  border: none;
+  border-bottom: 1px solid var(--tile-edge);
+  background: none;
+  color: var(--text);
+  font-family: var(--font);
+  font-size: 14px;
+  cursor: pointer;
+}
+.field-browse-list button:last-child { border-bottom: none; }
+.field-browse-list button:hover:not(:disabled) { background: var(--field-bg); }
+.field-browse-list button:disabled { color: var(--muted); cursor: default; }
+.field-browse-list button small { color: var(--accent); margin-left: 6px; }
+.field-browse-empty { padding: 10px 12px; color: var(--muted); font-size: 13.5px; }
+
+.city-current {
+  font-size: 12px;
+  color: var(--accent);
+  margin: 4px 0 0;
+}
+
+/* ---------- Couleurs personnalisees / custom colors ---------- */
+
+.color-grid {
+  display: grid;
+  grid-template-columns: auto 1fr 1fr;
+  gap: 8px 12px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+.color-grid .cg-head {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+}
+.color-grid .cg-row {
+  font-size: 13px;
+  color: var(--muted);
+}
+.color-grid input[type="color"] {
+  width: 100%;
+  height: 34px;
+  padding: 2px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  background: var(--field-bg);
+  cursor: pointer;
+}
+.btn.small { padding: 6px 12px; font-size: 12.5px; }
+
+/* Separateur de section dans les formulaires / form section separator */
+.form-sep {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.form-sep::before, .form-sep::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--tile-edge);
+}
+
+/* Sections de configuration : chaque groupe logique de reglages est
+   encadre et titre, pour organiser la fenetre en blocs coherents plutot
+   qu'une longue liste (limite le defilement). La section "generale"
+   (champs sans groupe) reste sans cadre.
+   Config sections: each logical group of settings is boxed and titled,
+   to organize the window into coherent blocks rather than one long list
+   (limits scrolling). The "general" section (ungrouped fields) stays
+   frameless. */
+.form-section {
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  padding: 14px 16px 4px;
+  margin: 0 0 16px;
+  min-width: 0;
+}
+.form-section > legend {
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding: 0 8px;
+  margin-left: -4px;
+}
+/* Outils multimedias : une ligne par outil -- nom, etat, bouton
+   d'installation -- alignee horizontalement. Le nom en chasse fixe
+   parce que c'est un nom de commande. L'etat "installe" se distingue
+   par le vert deja utilise ailleurs pour les indicateurs sains ; les
+   autres etats gardent la couleur attenuee des textes secondaires,
+   sans rouge : un outil facultatif absent n'est pas une erreur.
+   Media tools: one row per tool -- name, state, install button --
+   aligned horizontally. The name in a monospace face because it is a
+   command name. The "installed" state stands out with the green
+   already used elsewhere for healthy indicators; the other states keep
+   the muted colour of secondary text, with no red: a missing optional
+   tool is not an error. */
+#secMediaTools .field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.media-tool-name {
+  font-family: var(--mono);
+  font-size: 12.5px;
+  min-width: 70px;
+}
+.media-tool-state {
+  font-size: 12px;
+  color: var(--faint);
+}
+.media-tool-state.ok { color: var(--ok); }
+
+.form-section-plain {
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  margin: 0 0 4px;
+}
+
+/* ==================== Fiabilite tactile generale ====================
+   Independant du "Mode tactile" (qui, lui, agrandit les cibles) : ces
+   regles s'appliquent toujours, meme sans ce mode active, car elles ne
+   changent rien visuellement -- elles rendent juste le tap fiable.
+
+   Sans touch-action:manipulation, un ecran tactile peut interpreter un
+   tap legerement imprecis (ou deux taps rapprochés sur des icones
+   voisines) comme le debut d'un double-tap-zoom : le navigateur attend
+   ~300ms avant de valider le premier tap, au cas ou un second suivrait,
+   ce qui donne exactement l'impression de clics "aleatoires" un coup
+   sur deux. Le meme phenomene existe avec la selection de texte ou le
+   menu contextuel (appui un peu trop long sur une icone).
+
+   General touch reliability: independent from "Touch mode" (which
+   enlarges targets) -- these rules always apply, even with that mode
+   off, since they don't change anything visually, they just make taps
+   reliable.
+
+   Without touch-action:manipulation, a touchscreen can interpret a
+   slightly imprecise tap (or two taps close together on neighboring
+   icons) as the start of a double-tap-to-zoom gesture: the browser
+   waits ~300ms before validating the first tap, in case a second one
+   follows -- giving exactly the impression of "random" clicks working
+   every other time. The same happens with text selection or a context
+   menu (a press held just a bit too long on an icon). */
+.dock-tab, .dock-btn, .drawer-tab, .drawer-resize,
+.tile-btn, .modal-close, .btn,
+.field input[type="checkbox"], .field select, .field input[type="color"],
+.pwt-boost-trigger, .pwt-boost-menu button, .pwt-pause-btn {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Contenu de widget : neutraliser un eventuel touch-action:none impose
+   par Gridstack (parfois pose directement en style inline par la
+   bibliotheque pour ses propres besoins de glisser-deposer, ce qui
+   passerait devant une regle CSS normale -- d'ou le !important, limite
+   au mode non-edition). Le conteneur Leaflet lui-meme n'est PAS touche
+   ici : Leaflet a besoin de son propre touch-action:none pour gerer le
+   pincer-zoomer via ses propres gestionnaires tactiles JS ; le forcer a
+   "auto" ferait a l'inverse passer le geste au navigateur et casserait
+   ce pincer-zoomer au lieu de le reparer.
+   Widget content: neutralize any touch-action:none imposed by Gridstack
+   (sometimes set directly as an inline style by the library for its own
+   drag-and-drop needs, which would take precedence over a normal CSS
+   rule -- hence !important, scoped to non-editing mode). The Leaflet
+   container itself is NOT touched here: Leaflet needs its own
+   touch-action:none to handle pinch-zoom via its own JS touch handlers;
+   forcing it to "auto" would instead hand the gesture to the browser and
+   break that pinch-zoom rather than fix it. */
+body:not(.editing) .tile-body {
+  touch-action: auto !important;
+}
+body.editing .tile-body {
+  touch-action: none; /* la tuile entiere se saisit pour la deplacer / the whole tile is grabbed to move it */
+}
+   Active via Reglages > "Mode tactile". Agrandit toutes les cibles
+   d'interaction du tableau (onglets des tiroirs, boutons de la barre
+   d'outils, icones des tuiles, poignees de redimensionnement) aux
+   ~44px minimum recommandes pour un doigt, sans toucher au contenu
+   des widgets eux-memes.
+   Enabled via Settings > "Touch mode". Enlarges every interaction
+   target of the board (drawer tabs, toolbar buttons, tile icons,
+   resize handles) to the ~44px minimum recommended for a finger,
+   without touching the widgets' own content. */
+
+/* Languette de la barre d'outils / toolbar pull tab */
+body.touch .dock-tab { width: 148px; height: 30px; border-radius: 14px 14px 0 0; }
+body.touch .dock-tab:hover { height: 38px; }
+body.touch .dock-tab-dot { width: 52px; height: 7px; border-radius: 4px; }
+
+/* Boutons de la barre d'outils / toolbar buttons */
+body.touch .dock-bar { gap: 16px; padding: 18px 22px; }
+body.touch .dock-btn { width: 104px; height: 104px; border-radius: 20px; }
+body.touch .dock-btn svg { width: 52px; height: 52px; }
+
+/* Onglets des tiroirs (agrandis pour le doigt) / drawer tabs (enlarged for touch) */
+body.touch .drawer-left .drawer-tab { right: -48px; width: 48px; height: 132px; border-radius: 0 14px 14px 0; }
+body.touch .drawer-top .drawer-tab { bottom: -48px; width: 132px; height: 48px; border-radius: 0 0 14px 14px; }
+body.touch .drawer-right .drawer-tab { left: -48px; width: 48px; height: 132px; border-radius: 14px 0 0 14px; }
+body.touch .drawer-tab svg { width: 28px; height: 28px; }
+
+/* Poignees de redimensionnement des tiroirs : zone de prise elargie
+   Drawer resize handles: widened grab area */
+body.touch .drawer-left .drawer-resize,
+body.touch .drawer-right .drawer-resize { width: 24px; }
+body.touch .drawer-left .drawer-resize { right: -12px; }
+body.touch .drawer-right .drawer-resize { left: -12px; }
+body.touch .drawer-left .drawer-resize::after,
+body.touch .drawer-right .drawer-resize::after { left: 10px; width: 4px; }
+body.touch .drawer-top .drawer-resize { bottom: -12px; height: 24px; }
+body.touch .drawer-top .drawer-resize::after { top: 10px; height: 4px; }
+
+/* Icones des tuiles (engrenage, croix) / tile icons (gear, cross) */
+body.touch .tile-btn { padding: 10px; }
+body.touch .tile-btn svg { width: 24px; height: 24px; }
+body.touch .tile-title { gap: 10px; }
+
+/* Poignees de redimensionnement des tuiles en mode edition, agrandies
+   pour le doigt. On agrandit a la fois la zone de prise (le handle
+   lui-meme) ET l'indicateur visuel interne (::after pour les bords), afin
+   que la cible reste coherente avec ce qu'on voit.
+   Tile resize handles in edit mode, enlarged for the finger. We enlarge
+   both the grab area (the handle itself) AND the internal visual
+   indicator (::after for edges), so the target stays consistent with
+   what's shown. */
+body.touch.editing .ui-resizable-se,
+body.touch.editing .ui-resizable-sw {
+  width: 44px;
+  height: 44px;
+  border-width: 6px;
+  bottom: 6px !important;
+}
+body.touch.editing .ui-resizable-se { right: 6px !important; border-radius: 0 0 16px 0; }
+body.touch.editing .ui-resizable-sw { left: 6px !important; border-radius: 0 0 0 16px; }
+body.touch.editing .ui-resizable-e,
+body.touch.editing .ui-resizable-w { width: 28px; }
+body.touch.editing .ui-resizable-n,
+body.touch.editing .ui-resizable-s { height: 28px; }
+
+/* Barres visuelles des bords (E/W verticales, S horizontale) agrandies.
+   Edge visual bars (E/W vertical, S horizontal) enlarged. */
+body.touch.editing .ui-resizable-e::after,
+body.touch.editing .ui-resizable-w::after {
+  margin-top: -24px;
+  height: 48px;
+  width: 6px;
+  left: 8px;
+}
+body.touch.editing .ui-resizable-s::after {
+  margin-left: -24px;
+  width: 48px;
+  height: 6px;
+}
+
+/* ---- Fenetres de configuration en mode tactile ----
+   Champs, cases a cocher et boutons agrandis pour le doigt, et
+   disposition du formulaire sur plusieurs colonnes quand la largeur le
+   permet (le modal est elargi en mode tactile). Un champ tient sur une
+   colonne ; les elements larges (zone de texte, separateur de section,
+   case a cocher pleine ligne, indice) s'etendent sur toute la largeur.
+   Config windows in touch mode. Fields, checkboxes and buttons enlarged
+   for the finger, and the form laid out over several columns when width
+   allows (the modal is widened in touch mode). A field takes one column;
+   wide elements (textarea, section separator, full-row checkbox, hint)
+   span the full width. */
+
+/* Modal elargi pour laisser la place a 2 colonnes. Sur un ecran large
+   (>=1100px) on autorise 3 colonnes.
+   Modal widened to fit 2 columns. On a large screen (>=1100px) we allow
+   3 columns. */
+/* Largeur de la fenetre de configuration, adaptee au nombre de colonnes
+   reellement retenu par layoutFormColumns() (attribut data-cols pose par
+   le JS). Plus il y a de colonnes, plus la fenetre est large et occupe
+   l'ecran ; une seule colonne reste etroite et lisible. NON scope a
+   body.touch : la mise en colonnes est desormais active par defaut,
+   independamment du mode tactile (reglage "multiColumnForms", voir
+   layoutFormColumns() dans app.js) -- seul le confort tactile (cibles
+   agrandies) reste conditionne par ce mode.
+   Config window width, adapted to the column count actually chosen by
+   layoutFormColumns() (data-cols attribute set by the JS). The more
+   columns, the wider the window; a single column stays narrow and
+   readable. NOT scoped to body.touch: multi-column layout is now on by
+   default, independently of touch mode (the "multiColumnForms" setting,
+   see layoutFormColumns() in app.js) -- only touch comfort (enlarged
+   targets) stays gated behind that mode. */
+.modal-card[data-cols="1"] { width: min(620px, 96vw); }
+.modal-card[data-cols="2"] { width: min(1080px, 96vw); }
+.modal-card[data-cols="3"] { width: min(1600px, 96vw); }
+body.touch .modal-card { width: min(1000px, 96vw); }
+
+/* ---------- Largeur de la fenetre de configuration generale ----------
+   Les largeurs ci-dessus sont des PLAFONDS en pixels : sur un grand
+   ecran, la fenetre restait plantee a 620 ou 1080 px, perdue au milieu
+   du vide, alors que ses sections en colonnes demandent de la place.
+   Un plancher relatif est ajoute -- au moins 75 % de la largeur de
+   l'ecran -- tout en gardant le plafond a 96vw pour ne jamais toucher
+   les bords.
+
+   Regles placees APRES `body.touch .modal-card`, qui fixait sinon 1000px
+   quelle que soit la disposition et annulait le calcul par colonnes :
+   en mode tactile -- donc sur le tableau mural, ou le probleme se voit
+   le plus -- la fenetre etait toujours de largeur fixe.
+
+   Scope a #settingsModal a dessein : les autres fenetres batie sur
+   .modal-card (lecture de mail, article RSS, reglages d'une tuile)
+   n'ont pas le meme contenu et n'ont rien a gagner a occuper tout
+   l'ecran.
+
+   Width of the general settings window. The widths above are pixel
+   CEILINGS: on a large screen the window stayed stuck at 620 or 1080px,
+   lost in empty space, while its columned sections ask for room. A
+   relative floor is added -- at least 75% of the screen width -- while
+   keeping the 96vw ceiling so it never touches the edges. Placed AFTER
+   `body.touch .modal-card`, which otherwise pinned 1000px whatever the
+   layout. Scoped to #settingsModal on purpose: the other windows built
+   on .modal-card have different content and nothing to gain from
+   filling the screen. */
+#settingsModal .modal-card { width: min(96vw, max(620px, 75vw)); }
+#settingsModal .modal-card[data-cols="1"] { width: min(96vw, max(620px, 75vw)); }
+#settingsModal .modal-card[data-cols="2"] { width: min(96vw, max(1080px, 78vw)); }
+#settingsModal .modal-card[data-cols="3"] { width: min(96vw, max(1600px, 82vw)); }
+body.touch #settingsModal .modal-card { width: min(96vw, max(1000px, 75vw)); }
+body.touch .modal-head { padding: 18px 24px; }
+body.touch .modal-head h2 { font-size: 22px; }
+body.touch .modal-close { width: 52px; height: 52px; font-size: 30px; border-radius: 12px; }
+body.touch .modal-foot { padding: 0 24px 20px; }
+
+/* Le formulaire dispose les SECTIONS en grille : chaque section est une
+   cellule placee cote a cote, alignee en haut. Contrairement a CSS
+   "columns" (flux facon journal, qui remplit une colonne AVANT de passer
+   a la suivante et laisse souvent des colonnes vides quand une section
+   est plus haute que les autres), une grille plante reellement N
+   sections sur une rangee. C'est ce qui exploite enfin les 3 colonnes.
+   grid-auto-flow:row dense comble les trous laisses par des sections de
+   hauteurs inegales.
+   The form lays out SECTIONS in a grid: each section is a cell placed
+   side by side, top-aligned. Unlike CSS "columns" (newspaper flow, which
+   fills one column BEFORE moving to the next and often leaves columns
+   empty when a section is taller than the others), a grid actually
+   places N sections on a row. This is what finally uses the 3 columns.
+/* Disposition des sections calculee en JavaScript (voir layoutFormColumns
+   dans app.js) plutot que laissee au CSS. Ni CSS "columns" ni CSS Grid ne
+   savent choisir dynamiquement le NOMBRE de colonnes selon le contenu, ni
+   ranger chaque bloc dans la colonne ou il tient le mieux. Le JS mesure la
+   hauteur reelle de chaque section, essaie 1, 2 puis 3 colonnes, et retient
+   la repartition qui minimise la hauteur totale (donc le defilement), en
+   preferant moins de colonnes a hauteur egale (colonnes plus larges =
+   lignes plus longues, blocs moins hauts).
+   Section layout computed in JavaScript (see layoutFormColumns in app.js)
+   rather than left to CSS. Neither CSS "columns" nor CSS Grid can
+   dynamically choose the NUMBER of columns based on content, nor place
+   each block in the column where it best fits. The JS measures each
+   section's real height, tries 1, 2 then 3 columns, and keeps the layout
+   that minimizes total height (thus scrolling), preferring fewer columns
+   at equal height (wider columns = longer lines, shorter blocks). */
+body.touch .form {
+  padding: 20px 24px;
+}
+/* Rangee de colonnes creee par layoutFormColumns() : les colonnes cote a
+   cote. Les elements pleine largeur (actions, about) sont ajoutes APRES
+   cette rangee, donc restent sous les colonnes sur toute la largeur.
+   Structurel, donc non scope a body.touch (voir plus haut).
+   Column row created by layoutFormColumns(): columns side by side. The
+   full-width elements (actions, about) are appended AFTER this row, so
+   they stay below the columns across the full width. Structural, hence
+   not scoped to body.touch (see above). */
+.form .form-cols-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+/* Chaque colonne est une pile verticale de sections. Le "gap" remplace la
+   marge basse habituelle des sections (voir .form-col > .form-section
+   ci-dessous) pour un espacement uniforme.
+   Each column is a vertical stack of sections. The "gap" replaces
+   sections' usual bottom margin (see .form-col > .form-section below)
+   for uniform spacing. */
+.form .form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1 1 0;
+  min-width: 0;
+}
+.form-col > .form-section,
+.form-col > .form-section-plain {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+}
+/* Repli : un formulaire d'une seule section (donc jamais enveloppe dans
+   un .form-col, layoutFormColumns() n'optimisant qu'a partir de 2
+   sections) garde neanmoins ce style compact en mode tactile -- fidele
+   au comportement historique de ce mode.
+   Fallback: a single-section form (thus never wrapped in a .form-col,
+   since layoutFormColumns() only optimizes from 2 sections up) still
+   gets this compact styling in touch mode -- faithful to that mode's
+   historical behaviour. */
+body.touch .form-section,
+body.touch .form-section-plain {
+  width: 100%;
+  margin: 0;
+  min-width: 0;
+}
+/* Les champs a l'interieur d'une section ne doivent jamais deborder : on
+   borne leur largeur. Regle generale (toute section, colonnes ou non,
+   tactile ou non) : sans risque et evite un debordement si une colonne
+   est etroite. Fields inside a section must never overflow: we bound
+   their width. General rule (any section, columns or not, touch or
+   not): harmless, and prevents overflow when a column is narrow. */
+.form-section .field,
+.form-section .field input,
+.form-section .field select,
+.form-section .field textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+/* La zone d'action (Enregistrer/Supprimer) et le pied "about" restent
+   hors du systeme de colonnes : le JS les laisse en pleine largeur apres
+   les colonnes. The action row (Save/Remove) and "about" footer stay
+   outside the column system: the JS keeps them full-width after the
+   columns. */
+.form > .form-actions,
+.form > .about { width: 100%; }
+body.touch .form-actions { padding-top: 8px; width: 100%; }
+
+/* Champs plus grands (cible et lisibilite au doigt).
+   Larger fields (finger target and readability). */
+body.touch .field { margin-bottom: 18px; }
+body.touch .field > span { font-size: 16px; margin-bottom: 8px; }
+body.touch .field input[type="text"],
+body.touch .field input[type="number"],
+body.touch .field input[type="url"],
+body.touch .field select,
+body.touch .field textarea {
+  padding: 14px 14px;
+  font-size: 17px;
+  border-radius: 11px;
+  min-height: 52px;
+}
+body.touch .field textarea { min-height: 120px; }
+body.touch .field input[type="color"] { height: 52px; width: 100%; }
+
+/* Cases a cocher : grande cible tactile, libelle plus lisible.
+   Checkboxes: large touch target, more readable label. */
+body.touch .field.checkbox { gap: 14px; padding: 6px 0; }
+body.touch .field.checkbox input,
+body.touch .field input[type="checkbox"] {
+  width: 30px; height: 30px;
+  accent-color: var(--accent);
+  flex-shrink: 0;
+}
+body.touch .field.checkbox > span { font-size: 16px; }
+
+body.touch .field-hint { font-size: 13.5px; }
+body.touch .form-actions { padding-top: 8px; }
+body.touch .form-actions .btn { padding: 15px 28px; font-size: 17px; }
+
+/* Widget Trafic : bouton pause et menu "Rafraichir maintenant"
+   Traffic widget: pause button and "Refresh now" menu */
+body.touch .pwt-pause-btn { padding: 11px 18px; font-size: 15px; min-height: 44px; }
+body.touch .pwt-boost-trigger { padding: 12px 16px; font-size: 16px; min-height: 46px; }
+body.touch .pwt-boost-menu button { padding: 14px 16px; font-size: 17px; min-height: 48px; }
+
+/* ==================== Aide du tableau de bord ====================
+   Fenetre 2 colonnes : sommaire etroit a gauche, contenu large a droite.
+   Largeur fixe, reprise de celle deja definie pour les fenetres de
+   configuration a 3 colonnes (1600px) -- une fenetre d'aide se consulte,
+   elle n'a pas besoin de s'adapter au nombre de colonnes d'un formulaire.
+   Active que le mode tactile soit actif ou non (contrairement aux
+   formulaires, l'aide n'a pas de champs a taper).
+   Dashboard help. 2-column window: narrow table of contents on the left,
+   wide content on the right. Fixed width, reusing the one already defined
+   for 3-column config windows (1600px) -- a help window is for reading,
+   it doesn't need to adapt to a form's column count. Active whether touch
+   mode is on or not (unlike forms, help has no fields to type into). */
+.help-card {
+  width: min(1600px, 96vw) !important;
+  max-height: 90vh;
+}
+.help-body {
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  flex: 1;
+  min-height: 0;
+}
+.help-nav {
+  flex: 0 0 260px;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-right: 1px solid var(--tile-edge);
+}
+
+/* Recherche fixee en tete du sommaire (voir openHelp() dans app.js) :
+   utile des que la liste des tuiles s'allonge, pour retrouver une
+   entree sans avoir a faire defiler toute la colonne. Reste visible
+   quel que soit le defilement de la liste en dessous.
+   Search box pinned at the top of the sidebar (see openHelp() in
+   app.js): useful once the tile list grows long, to find an entry
+   without scrolling the whole column. Stays visible regardless of the
+   list's scroll position below it. */
+.help-nav-search {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.help-nav-search input {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 13px;
+}
+.help-nav-search input:focus { outline: none; border-color: var(--accent); }
+.help-nav-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 0; }
+.help-nav-empty {
+  padding: 16px 18px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-style: italic;
+  text-align: center;
+}
+.help-content {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  padding: 22px 32px;
+  line-height: 1.55;
+}
+
+/* Groupes du sommaire (Presentation, Tiroir, Tuiles, Remerciements)
+   Table of contents groups (Presentation, Drawer, Tiles, Credits) */
+.help-nav-group {
+  padding: 12px 18px 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.help-nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 18px;
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13.5px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+.help-nav-item:hover { color: var(--text); background: var(--field-bg); }
+.help-nav-item.active {
+  color: var(--text);
+  background: var(--field-bg);
+  border-left-color: var(--accent);
+  font-weight: 600;
+}
+
+/* Contenu d'une section : titre, paragraphes, listes d'options
+   Section content: title, paragraphs, option lists */
+.help-screenshot {
+  display: block;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--tile-edge);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+  margin: 4px 0 16px;
+}
+.help-content h3 {
+  margin: 0 0 4px;
+  font-size: 21px;
+}
+/* Pastille de version a cote d'un titre. Deux emplacements, une seule
+   regle : la rubrique « Demarrage rapide » de l'aide, et la fenetre de
+   lancement qui sert le MEME texte (source unique, voir
+   quickstart-content.js). Les deux doivent se ressembler jusqu'au bout,
+   d'ou un selecteur qui ne depend PAS du conteneur -- la version limitee
+   a `.help-content` laissait justement la fenetre de lancement sans
+   style.
+   Elle se lit au premier coup d'oeil sans voler la vedette au titre :
+   taille et graisse reduites, couleur discrete, et des chiffres a chasse
+   fixe pour qu'un numero reste lisible et ne danse pas d'une version a
+   l'autre.
+   Version badge next to a title. Two places, one rule: the help's
+   "Quick start" section and the launch window, which serves the SAME
+   text and must match it -- hence a selector that does NOT depend on the
+   container, the earlier `.help-content`-scoped version having left the
+   launch window unstyled. */
+.help-version {
+  margin-left: 8px;
+  font-family: var(--mono);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  vertical-align: middle;
+  white-space: nowrap;
+}
+.help-content .help-sub {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.help-content h4 {
+  margin: 24px 0 8px;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+}
+.help-content p { margin: 0 0 12px; color: var(--text); }
+.help-content ul { margin: 0 0 12px; padding-left: 20px; }
+.help-content li { margin-bottom: 6px; }
+.help-content .help-size {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 11.5px;
+  color: var(--muted);
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  padding: 2px 8px;
+  margin-bottom: 16px;
+}
+.help-changelog-version {
+  font-size: 16px !important;
+  text-transform: none !important;
+  letter-spacing: normal !important;
+  color: var(--text) !important;
+  padding-top: 14px;
+  border-top: 1px solid var(--tile-edge);
+}
+.help-changelog-version:first-child { padding-top: 0; border-top: none; margin-top: 0 !important; }
+/* Le mois se lit a cote du numero de version, en retrait : il situe la
+   nouveaute sans rivaliser avec elle.
+   The month reads next to the version number, set back: it places the
+   feature without competing with it. */
+.help-changelog-date {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--muted);
+  margin-left: 8px;
+}
+.help-whatsnew-more { margin: 18px 0 6px; }
+.help-whatsnew-old { margin-top: 18px; }
+/* Liste des options d'une tuile : nom en avant, description en dessous
+   A tile's option list: name upfront, description below */
+.help-opt { margin-bottom: 14px; }
+
+/* Procedure numerotee dans l'aide (obtention d'une cle API, par
+   exemple). Les puces des listes de l'aide sont neutralisees ailleurs ;
+   ici la numerotation EST l'information -- les etapes se suivent dans
+   l'ordre et l'une d'elles (activer l'API avant de creer la cle) ne
+   pardonne pas l'inversion.
+   Numbered procedure in the help (getting an API key, for instance).
+   List markers are neutralized elsewhere in the help; here the
+   numbering IS the information -- the steps follow one another and one
+   of them (enabling the API before creating the key) does not forgive
+   being swapped. */
+.help-steps {
+  margin: 10px 0 14px;
+  padding-left: 22px;
+  list-style: decimal;
+}
+.help-steps li {
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+.help-opt-name {
+  display: block;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--text);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.help-opt-desc { color: var(--muted); font-size: 13.5px; }
+/* Remerciements : liste de services externes avec lien
+   Credits: list of external services with a link */
+.help-credit { margin-bottom: 14px; }
+.help-credit a { color: var(--accent); }
+
+@media (max-width: 760px) {
+  .help-body { flex-direction: column; }
+  .help-nav { flex: 0 0 auto; max-width: none; max-height: 160px; border-right: none; border-bottom: 1px solid var(--tile-edge); }
+}
+
+/* ==================== Economiseur d'ecran ====================
+   Calque plein ecran. Mode "noir" : fond noir uni, rien d'autre. Mode
+   "diaporama" : la classe SlideshowWidget existante (deja chargee au
+   demarrage, voir loadWidgetAssets) est instanciee directement dans
+   #screensaverSlideshow -- aucun code de rendu duplique.
+   Full-screen overlay. "Black" mode: plain black background, nothing
+   else. "Slideshow" mode: the existing SlideshowWidget class (already
+   loaded at startup, see loadWidgetAssets) is instantiated directly
+   inside #screensaverSlideshow -- no duplicated rendering code. */
+.screensaver {
+  position: fixed;
+  inset: 0;
+  z-index: 3000;
+  background: #000;
+  cursor: pointer;
+}
+.screensaver[hidden] { display: none; }
+.screensaver-slideshow {
+  position: absolute;
+  inset: 0;
+}
+
+/* Section "Economiseur d'ecran" des reglages generaux : les 5 plages
+   horaires, chacune sur une ligne compacte (debut, fin, mode).
+   "Screensaver" section of the general settings: the 5 time slots, each
+   on a compact row (start, end, mode). */
+.ss-slot {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.ss-slot input[type="time"] { width: 110px; flex: none; }
+.ss-slot select { flex: 1; min-width: 0; }
+.ss-slot-sep { color: var(--faint); font-size: 12px; }
+
+/* Zone de gestion des photos de la veille : reprend le meme esprit visuel
+   que la gestion de photos du widget Diaporama (liste + suppression).
+   Screensaver photo management area: same visual spirit as the
+   Slideshow widget's own photo management (list + delete). */
+.ss-media-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+  max-height: 160px;
+  overflow-y: auto;
+}
+.ss-media-item {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--tile-edge);
+}
+.ss-media-item img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.ss-media-item button {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(0,0,0,0.65);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.ss-media-empty { color: var(--muted); font-size: 12.5px; margin: 6px 0; }
+
+/* ---------- Aide d'un widget depuis sa configuration ----------
+   Widget help from its settings window */
+
+/* Fenetre empilee AU-DESSUS d'une autre. Les fenetres du tableau sont
+   toutes a z-index 1000 : sans ce cran supplementaire, l'aide s'ouvrirait
+   DERRIERE la fenetre de configuration qui l'a appelee (a egalite de
+   z-index, c'est l'ordre du DOM qui tranche, et tileModal vient avant).
+   Window stacked ON TOP of another one. The board's windows all sit at
+   z-index 1000: without this extra step, the help would open BEHIND the
+   settings window that called it (on equal z-index, DOM order decides,
+   and tileModal comes first). */
+.modal-stacked { z-index: 1100; }
+
+/* Le titre prend toute la place restante pour que le "?" et la croix
+   restent colles a droite : l'en-tete est en space-between, un troisieme
+   element s'y retrouverait sinon isole au milieu. Regle volontairement
+   limitee a #tileModal pour ne rien changer aux autres fenetres.
+   The title takes all remaining space so that "?" and the cross stay
+   together on the right: the header is space-between, so a third element
+   would otherwise end up stranded in the middle. Rule deliberately
+   limited to #tileModal so no other window is affected. */
+#tileModal .modal-head h2 { flex: 1; }
+
+.modal-help {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  margin-right: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--tile-edge);
+  border-radius: 50%;
+  background: none;
+  color: var(--muted);
+  font-family: var(--font);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.modal-help:hover { color: var(--accent); border-color: var(--accent); }
+.modal-help[hidden] { display: none; }
+body.touch .modal-help { width: 30px; height: 30px; font-size: 16px; }
+
+/* Plus large que les 560 px par defaut d'une fenetre : ces fiches
+   contiennent des listes d'options a deux colonnes, illisibles a
+   l'etroit. Reste bien plus etroite que l'aide generale (1600 px), qui
+   doit loger son sommaire en plus.
+   Wider than a window's default 560px: these pages contain two-column
+   option lists that are unreadable when cramped. Stays much narrower
+   than the general help (1600px), which also has to fit its table of
+   contents. */
+.widget-help-card { width: min(760px, 96vw); }
+/* .help-content est prevu pour vivre dans .help-body (un conteneur flex
+   en ligne) : hors de ce contexte, il lui faut une hauteur bornee pour
+   que son propre defilement fonctionne.
+   .help-content is designed to live inside .help-body (a row flex
+   container): outside that context it needs a bounded height for its own
+   scrolling to work. */
+.widget-help-card .help-content { max-height: calc(90vh - 60px); }
+
+/* ---------- Encadre d'avertissement dans l'aide / help warning box ----------
+   Utilise pour les mises en garde qu'il ne faut pas rater dans un pave
+   de texte -- typiquement le rappel que la tuile Chaines TV ne fournit
+   aucun contenu. Volontairement sobre : une bordure laterale plutot
+   qu'un fond criard, pour rester lisible en theme jour comme en theme
+   nuit sans introduire de nouvelle couleur.
+   Used for warnings that must not be missed in a wall of text --
+   typically the reminder that the TV channels tile provides no content.
+   Deliberately restrained: a side border rather than a loud background,
+   to stay readable in both day and night themes without introducing a
+   new colour. */
+.help-warn {
+  border-left: 3px solid var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border-radius: 0 8px 8px 0;
+  padding: 10px 14px;
+  margin: 0 0 16px;
+  font-size: 13.5px;
+  line-height: 1.55;
+}
+
+/* ---------- Guide de demarrage rapide / quick start guide ---------- */
+
+.quickstart-card {
+  width: min(860px, 94vw);
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+}
+.quickstart-body {
+  padding: 4px 22px 8px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+  line-height: 1.6;
+}
+.quickstart-body h4 {
+  margin: 20px 0 8px;
+  font-size: 14px;
+  color: var(--text);
+}
+.quickstart-body p { margin: 0 0 10px; color: var(--text); }
+.quickstart-body .qs-lead { color: var(--muted); font-size: 14.5px; margin-bottom: 4px; }
+.quickstart-body .qs-foot {
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--tile-edge);
+  color: var(--muted);
+  font-size: 13px;
+}
+.quickstart-body .qs-shot {
+  display: block;
+  max-width: 100%;
+  border-radius: 10px;
+  border: 1px solid var(--tile-edge);
+  background: var(--tile);
+  padding: 4px;
+  margin: 6px 0 12px;
+}
+/* Legende des icones : deux colonnes tant qu'il y a la place, une seule
+   en dessous -- auto-fit plutot qu'un nombre fixe, pour ne pas casser
+   sur un ecran etroit ou en mode tactile.
+   Icon legend: two columns while there is room, one below -- auto-fit
+   rather than a fixed count, so it doesn't break on a narrow screen or
+   in touch mode. */
+.quickstart-body .qs-icons {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 6px 18px;
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickstart-body .qs-icons b { color: var(--text); margin-right: 6px; }
+.quickstart-body .qs-two {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 12px;
+  margin: 0 0 12px;
+}
+.quickstart-body .qs-two > div {
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
+.quickstart-body .qs-two b { color: var(--text); }
+
+.quickstart-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 14px 22px 18px;
+  border-top: 1px solid var(--tile-edge);
+}
+.quickstart-again {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13.5px;
+  cursor: pointer;
+}
+body.touch .quickstart-again { font-size: 15px; }
+body.touch .quickstart-again input { width: 20px; height: 20px; }
+
+/* ---------- Axe des abscisses temporel / time X axis ----------
+   Commun a tous les graphiques (voir public/chart-time-axis.js). Les
+   etiquettes sont positionnees en pourcentage sous le graphique plutot
+   que dans le SVG, qui est etire horizontalement
+   (`preserveAspectRatio="none"`) et deformerait le texte.
+   Shared by every chart (see public/chart-time-axis.js). Labels are
+   positioned by percentage under the chart rather than inside the SVG,
+   which is stretched horizontally (`preserveAspectRatio="none"`) and
+   would distort the text. */
+.pb-taxis {
+  position: relative;
+  height: 15px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.pb-taxis-tick {
+  position: absolute;
+  top: 0;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   MODE TABLEAU DE BORD / DASHBOARD MODE
+   ============================================================ */
+
+/* Les pages secondaires occupent exactement la meme surface que le
+   plateau principal, superposees a lui. Elles ne sont pas dans le flux :
+   deux pages visibles au meme instant pendant une transition ne doivent
+   pas se pousser l'une l'autre.
+   Secondary pages occupy exactly the same area as the main board,
+   stacked on it. They are out of flow: two pages visible at the same
+   instant during a transition must not push each other. */
+.board-page {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  /* La transition est posee en JavaScript au moment du changement (voir
+     goToPage) : declaree ici, elle animerait aussi le premier affichage.
+     The transition is set in JavaScript at switch time (see goToPage):
+     declared here, it would also animate the very first display. */
+  will-change: transform, opacity;
+}
+.board-page[hidden] { display: none; }
+
+/* En mode tableau de bord : ni tiroirs, ni languettes de tiroir, ni
+   barre d'outils classique. Le bandeau du bas les remplace tous.
+   In dashboard mode: no drawers, no drawer tabs, no classic toolbar.
+   The bottom bar replaces them all. */
+body.dashboard-mode .drawer,
+body.dashboard-mode .drawer-tab,
+body.dashboard-mode .dock { display: none !important; }
+
+/* ---------- Defilement tactile ----------
+   Les barres de defilement par defaut font quelques pixels : dessinees
+   pour la pointe d'une souris, pas pour un doigt. En mode tactile, et
+   seulement la, elles sont elargies partout ou du contenu defile --
+   tuiles, tiroirs, fenetres de reglages, aide.
+   Touch scrolling. Default scrollbars are a few pixels wide: drawn for a
+   mouse pointer, not a finger. In touch mode, and only there, they are
+   widened everywhere content scrolls -- tiles, drawers, settings
+   windows, help. */
+body.touch-scrollbars * {
+  scrollbar-width: auto;
+}
+body.touch-scrollbars ::-webkit-scrollbar {
+  width: 18px;
+  height: 18px;
+}
+body.touch-scrollbars ::-webkit-scrollbar-track {
+  background: transparent;
+}
+body.touch-scrollbars ::-webkit-scrollbar-thumb {
+  background: var(--tile-edge);
+  border-radius: 9px;
+  /* Bordure transparente : le curseur parait plus fin que la zone
+     tactile, qui reste large. Transparent border: the thumb looks
+     slimmer than the touch area, which stays wide. */
+  border: 4px solid transparent;
+  background-clip: padding-box;
+  min-height: 40px;
+}
+body.touch-scrollbars ::-webkit-scrollbar-thumb:active {
+  background: var(--accent);
+  background-clip: padding-box;
+}
+
+/* Glisser le contenu pour le faire defiler. La selection de texte est
+   coupee : c'est elle qui se declenchait a la place du defilement, et
+   surligner du texte dans une tuile murale n'a aucun usage. Les champs
+   de saisie gardent evidemment la selection, sans quoi on ne pourrait
+   plus corriger ce qu'on tape.
+   Drag the content to scroll. Text selection is switched off: it was
+   what triggered instead of scrolling, and highlighting text in a wall
+   tile serves no purpose. Input fields of course keep selection,
+   otherwise one could no longer fix what one types. */
+body.touch-drag-scroll {
+  -webkit-user-select: none;
+  user-select: none;
+}
+body.touch-drag-scroll input,
+body.touch-drag-scroll textarea,
+body.touch-drag-scroll [contenteditable] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* ---------- Affichage immersif : barre de fenetre ----------
+   Miroir exact du bandeau du bas, en haut de l'ecran. N'existe que
+   lorsque la fenetre est reellement passee en plein ecran (classe
+   "immersive" posee par app.js apres accord du processus Electron) :
+   ailleurs, la vraie barre de titre est deja la et une seconde barre
+   ne serait qu'un doublon.
+   Immersive display: window bar. Exact mirror of the bottom bar, at the
+   top of the screen. Only exists once the window has actually gone full
+   screen (class "immersive" set by app.js after the Electron process
+   agrees): elsewhere the real title bar is already there and a second
+   bar would merely duplicate it. */
+.win-hotzone {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 8px;
+  z-index: 960;
+}
+body.immersive .win-hotzone { display: block; }
+
+.win-bar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 970;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 4px 10px;
+  min-height: 32px;
+  box-sizing: border-box;
+  background: var(--tile);
+  border-bottom: 1px solid var(--tile-edge);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.28);
+  transform: translateY(-102%);
+  transition: transform 220ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.immersive .win-bar { display: flex; }
+body.immersive.win-open .win-bar { transform: translateY(0); }
+
+.win-title {
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0.8;
+  padding-left: 4px;
+}
+.win-actions { display: flex; gap: 6px; align-items: center; }
+.win-btn {
+  width: 30px;
+  height: 26px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+.win-btn:hover { background: var(--tile-edge); }
+.win-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.win-btn-danger:hover { background: #b3261e; color: #fff; }
+
+/* Bande de declenchement au survol : quelques pixels au bas de l'ecran.
+   Invisible, sans effet sur les clics ailleurs.
+   Hover trigger strip: a few pixels at the bottom of the screen.
+   Invisible, with no effect on clicks elsewhere. */
+.dash-hotzone {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 14px;
+  z-index: 940;
+}
+body.dashboard-mode .dash-hotzone { display: block; }
+
+.dash-bar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 950;
+  align-items: center;
+  gap: 14px;
+  padding: 6px 12px;
+  min-height: 38px;
+  box-sizing: border-box;
+  background: var(--tile);
+  border-top: 1px solid var(--tile-edge);
+  box-shadow: 0 -6px 22px rgba(0, 0, 0, 0.28);
+  transform: translateY(102%);
+  transition: transform 260ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+body.dashboard-mode .dash-bar { display: flex; }
+body.dashboard-mode.dash-open .dash-bar { transform: translateY(0); }
+
+/* Languette tactile : au doigt il n'y a pas de survol, donc une prise
+   permanente est indispensable. Elle disparait quand le bandeau est
+   sorti, pour ne pas doubler la meme commande.
+   Touch tab: with a finger there is no hover, so a permanent grip is
+   indispensable. It disappears once the bar is out, so as not to double
+   the same control. */
+.dash-tab {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  z-index: 945;
+  width: 74px;
+  height: 16px;
+  padding: 0;
+  border: 1px solid var(--tile-edge);
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  background: var(--tile);
+  cursor: pointer;
+}
+body.dashboard-mode.touch-mode .dash-tab { display: block; }
+body.dashboard-mode.touch-mode.dash-open .dash-tab { display: none; }
+.dash-tab-grip {
+  display: block;
+  width: 30px;
+  height: 3px;
+  margin: 5px auto 0;
+  border-radius: 2px;
+  background: var(--faint);
+}
+
+/* Marqueur "cette page a un fond" dans la liste des pages des reglages
+   generaux. Rien ne distinguait auparavant une page illustree d'une page
+   nue : il fallait ouvrir la fenetre de chaque page pour le savoir.
+   "This page has a background" marker in the pages list of the general
+   settings. Nothing used to tell an illustrated page from a bare one:
+   one had to open each page's window to find out. */
+.page-bg.has-bg {
+  border-color: var(--accent);
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.dash-pages { display: flex; gap: 6px; align-items: center; flex: none; }
+.dash-page-dot {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 6px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+.dash-page-dot.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+
+/* Zone reservee aux informations defilantes venues des tuiles. Vide pour
+   l'instant : elle prend la place disponible pour que les commandes
+   restent calees a droite quoi qu'il arrive.
+   Zone reserved for the scrolling information coming from tiles. Empty
+   for now: it takes the available room so the controls stay pinned right
+   whatever happens. */
+.dash-ticker {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.dash-actions { display: flex; gap: 4px; align-items: center; flex: none; }
+.dash-btn {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+}
+.dash-btn:hover { background: var(--field-bg); }
+.dash-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* ---------- Bandeau du mode Tableau de bord, au doigt ----------
+   Un ecran tactile est souvent PETIT : c'est exactement la ou le
+   bandeau etait le moins utilisable. L'agrandissement precedent
+   (30 -> 40 px) restait timide et tout paraissait minuscule. Les
+   commandes, les pastilles de page et les prises (languette, zone
+   sensible du bas) passent donc au DOUBLE de leur taille de base
+   (1.116.0). Le bandeau se retire de lui-meme : la hauteur qu'il prend
+   n'est payee que lorsqu'on s'en sert.
+   A touchscreen is often SMALL, which is exactly where this bar was
+   least usable. The previous bump was timid; controls, page dots and
+   grips now go to DOUBLE their base size. The bar slides away, so the
+   height it takes is only paid while it is used. */
+body.touch .dash-bar, body.touch-mode .dash-bar {
+  gap: 28px;
+  padding: 12px 24px;
+  min-height: 76px;
+}
+body.touch .dash-btn, body.touch-mode .dash-btn { width: 60px; height: 60px; border-radius: 16px; }
+body.touch .dash-btn svg, body.touch-mode .dash-btn svg { width: 36px; height: 36px; }
+body.touch .dash-actions, body.touch-mode .dash-actions { gap: 8px; }
+body.touch .dash-pages, body.touch-mode .dash-pages { gap: 12px; }
+body.touch .dash-page-dot, body.touch-mode .dash-page-dot {
+  min-width: 48px;
+  height: 48px;
+  padding: 0 12px;
+  border-radius: 24px;
+  font-size: 20px;
+}
+/* Le texte defilant suit sans ecraser le reste : une taille doublee en
+   ferait l'element dominant d'une barre de commandes.
+   The ticker follows without dominating a bar of controls. */
+body.touch .dash-ticker, body.touch-mode .dash-ticker { font-size: 18px; }
+/* Les PRISES, elles, comptent autant que les boutons : sans elles on
+   ne fait pas sortir le bandeau.
+   The GRIPS matter as much as the buttons: without them the bar does
+   not come out. */
+body.touch .dash-hotzone, body.touch-mode .dash-hotzone { height: 28px; }
+body.touch .dash-tab, body.touch-mode .dash-tab { width: 148px; height: 32px; border-radius: 16px 16px 0 0; }
+body.touch .dash-tab-grip, body.touch-mode .dash-tab-grip { width: 60px; height: 6px; margin-top: 10px; }
+
+/* ---------- Tuile transparente / transparent tile ----------
+   Prend le fond de la page au lieu du sien : c'est la meme surface qui
+   se poursuit, sans cadre ni ombre. Indispensable aux tuiles de style
+   (Texte, Logo) pour titrer une page sans qu'un rectangle apparaisse.
+   Takes the page's background instead of its own: the same surface
+   continues, with no frame and no shadow. Indispensable to the style
+   tiles (Text, Logo) for titling a page without a rectangle appearing. */
+.grid-stack-item-content.tile-transparent {
+  background: transparent !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+/* En mode edition, une tuile transparente redevient reperable : sans
+   cela, elle serait impossible a saisir ou meme a localiser.
+   In edit mode a transparent tile becomes locatable again: without this
+   it would be impossible to grab, or even to find. */
+body.editing .grid-stack-item-content.tile-transparent {
+  border-color: var(--tile-edge) !important;
+  border-style: dashed !important;
+  background: color-mix(in srgb, var(--tile) 35%, transparent) !important;
+}
+
+/* Editeur de pages dans les reglages generaux / pages editor in the
+   general settings */
+.pages-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 10px; }
+.page-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto auto auto auto;
+  gap: 6px;
+  align-items: center;
+  padding: 6px 8px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+  background: var(--field-bg);
+}
+.page-row-num {
+  min-width: 22px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.page-row input[type="text"], .page-row select { min-width: 0; }
+.page-row .page-del { color: var(--muted); }
+/* La page 1 est le plateau principal : elle ne peut pas etre supprimee,
+   sinon le tableau n'aurait plus de contenu par defaut.
+   Page 1 is the main board: it cannot be deleted, otherwise the board
+   would have no default content left. */
+.page-row.page-main .page-del { visibility: hidden; }
+@media (max-width: 620px) {
+  .page-row { grid-template-columns: auto 1fr auto; }
+}
+
+/* Sous-titres de familles dans le sommaire de l'aide : les tuiles y sont
+   regroupees comme dans le catalogue. Distingues des grands groupes par
+   un retrait et un filet, pour qu'on lise d'un coup d'oeil les deux
+   niveaux (« Tuiles » puis « Météo », « Sport »...).
+   Family sub-headings in the help sidebar: tiles are grouped there as in
+   the catalog. Distinguished from the top-level groups by an indent and
+   a rule, so both levels read at a glance ("Tiles" then "Weather",
+   "Sport"...). */
+.help-nav-group.help-nav-family {
+  margin-left: 6px;
+  padding-left: 8px;
+  border-left: 2px solid var(--tile-edge);
+  font-size: 11px;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  opacity: 0.85;
+}
+
+/* Duree propre a une page, laissee vide quand la page suit la duree
+   generale : la valeur generale s'affiche alors en filigrane.
+   A page's own duration, left empty when the page follows the general
+   one: the general value then shows as a placeholder. */
+.page-dwell { width: 5.5em; text-align: right; }
+
+/* ---------- Fond de page / page background ----------
+   Le voile est un element a part plutot qu'un filtre applique au
+   conteneur : un filtre aurait AUSSI atteint les tuiles posees dessus.
+   The veil is a separate element rather than a filter on the container:
+   a filter would have hit the tiles on top as well. */
+/* Surcouche dediee, utilisee uniquement quand le fond est retourne
+   et/ou pivote (voir applyPageBackground dans app.js). z-index negatif
+   explicite plutot que l'ordre dans le DOM : le voile doit rester
+   au-dessus quel que soit celui des deux qui a ete insere en premier.
+   Dedicated layer, used only when the background is flipped and/or
+   rotated (see applyPageBackground in app.js). Explicit negative
+   z-index rather than DOM order: the veil must stay on top whichever of
+   the two was inserted first. */
+.board-bg-layer {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+.board-bg-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--bg);
+}
+/* Les tuiles doivent rester au-dessus du voile. Sans cela, un voile a
+   80 % les aurait effacees avec le fond.
+   Tiles must stay above the veil. Without this, an 80% veil would have
+   wiped them out along with the background. */
+.board.has-bg-image .grid-stack { position: relative; z-index: 1; }
+
+.page-bg-card { width: min(620px, 96vw); }
+.page-bg-body { padding: 4px 18px 10px; }
+.page-bg-flip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+/* Boutons enfonces en permanence quand le reglage correspondant est
+   actif -- la seule indication visuelle que le miroir est en place,
+   la bascule elle-meme ne laissant rien d'autre a l'ecran.
+   Permanently pressed buttons when the matching setting is active --
+   the only visual cue that the mirror is in place, the toggle itself
+   leaving nothing else on screen. */
+.page-bg-flip-row .btn.active {
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+  border-color: var(--accent);
+}
+.page-bg-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  gap: 8px;
+  margin: 10px 0;
+  max-height: 34vh;
+  overflow: auto;
+}
+.page-bg-thumb {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  aspect-ratio: 16 / 10;
+  cursor: pointer;
+}
+.page-bg-thumb.selected { border-color: var(--accent); }
+.page-bg-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.page-bg-thumb-del {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.page-row .page-bg { color: var(--muted); }
+
+/* ---------- Bouton et encart de don / donation button and block ----------
+   Un bouton plutot qu'un lien, dans le guide de demarrage comme dans
+   l'aide : un lien au fil du texte se confond avec les autres, et se
+   vise mal au doigt sur un ecran tactile. La couleur reste celle des
+   boutons secondaires, avec un simple liseré : proposer un cafe ne
+   justifie pas de crier plus fort que le bouton « C'est parti » juste a
+   cote.
+   A button rather than a link, in the start guide as in the help: a link
+   in running text blends in with the others, and is hard to aim at with
+   a finger on a touchscreen. The colour stays that of secondary buttons,
+   with a simple outline: offering a coffee does not warrant shouting
+   louder than the "Get started" button right next to it. */
+.kofi-btn {
+  border-color: #FF5E5B;
+  color: #FF5E5B;
+}
+.kofi-btn:hover {
+  background: #FF5E5B;
+  color: #fff;
+  border-color: #FF5E5B;
+}
+
+.kofi-block {
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--tile-edge);
+}
+.kofi-block p {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+/* Le pied du guide aligne la case a cocher a gauche, les deux boutons a
+   droite. flex-wrap : sur un ecran etroit, les boutons passent a la
+   ligne plutot que d'ecraser le libelle de la case.
+   The guide's footer aligns the checkbox left and both buttons right.
+   flex-wrap: on a narrow screen the buttons wrap rather than squashing
+   the checkbox's label. */
+/* La case a cocher reste a gauche, les deux boutons partent ensemble a
+   droite : c'est le margin-left:auto du premier des deux qui cree la
+   coupure, le justify-content: space-between deja present ne sachant
+   pas repartir trois elements de cette facon.
+   The checkbox stays left, both buttons go right together: the
+   margin-left:auto of the first of the two creates the break, the
+   already-present justify-content: space-between being unable to lay
+   out three items that way. */
+.quickstart-foot .kofi-btn { margin-left: auto; }
+
+/* Bascule de langue, dans l'en-tete du guide : discrete, a gauche de la
+   croix de fermeture.
+   Language toggle, in the guide's header: discreet, left of the close
+   cross. */
+.quickstart-card .modal-head #quickStartLang { margin-left: auto; }
+
+/* ---------- Section de reglages sans effet dans le mode courant ----------
+   Grisee mais TOUJOURS utilisable : les tiroirs n'existent pas en mode
+   tableau de bord, les pages n'existent pas en mode classique, mais on
+   doit pouvoir les preparer avant de basculer -- et surtout la
+   disposition du panneau ne doit pas changer d'un mode a l'autre, sinon
+   les sections se decalent et l'on croit avoir perdu une option.
+   D'ou une mise en retrait visuelle, et non un masquage.
+   Settings section with no effect in the current mode. Dimmed but STILL
+   usable: drawers do not exist in dashboard mode, pages do not exist in
+   classic mode, yet one must be able to set them up before switching --
+   and above all the panel's layout must not change from one mode to the
+   other, otherwise sections shift and one believes an option was lost.
+   Hence a visual step back, not a hiding. */
+.section-inactive { opacity: 0.55; }
+.section-inactive:focus-within { opacity: 1; }
+
+.section-note {
+  margin: 0 0 10px;
+  padding: 7px 10px;
+  border-left: 3px solid var(--accent, #4C8DFF);
+  border-radius: 0 6px 6px 0;
+  background: rgba(127, 127, 127, 0.1);
+  color: var(--muted);
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* ---------- Bibliotheque d'images / image library ----------
+   Grille de vignettes plutot que liste : on choisit une image a l'oeil.
+   Fenetre large, car c'est le seul critere qui compte vraiment ici --
+   une grille de trois colonnes oblige a faire defiler pour comparer.
+   A grid of thumbnails rather than a list: one picks an image by eye. A
+   wide window, since that is the only criterion that really counts here
+   -- a three-column grid forces scrolling to compare. */
+.library-card {
+  width: min(1400px, 95vw);
+  height: 86vh;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+}
+.library-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.library-toolbar select,
+.library-toolbar input[type="search"] {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+.library-spacer { flex: 1 1 auto; }
+
+.library-grid {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 14px;
+  align-content: start;
+}
+.library-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-bottom: 8px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--tile-bg, transparent);
+}
+.library-item:hover { border-color: var(--accent, #4C8DFF); }
+.library-item img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
+  background: #1c1c1c;
+}
+.library-item-name {
+  padding: 0 10px;
+  font-size: 13.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.library-item-meta {
+  padding: 0 10px;
+  font-size: 11.5px;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Le bouton de suppression/masquage n'apparait qu'au survol : sur une
+   grille dense, trente croix permanentes attirent l'oeil plus que les
+   images elles-memes. Il reste accessible au clavier (focus-within).
+   The delete/hide button only appears on hover: on a dense grid, thirty
+   permanent crosses draw the eye more than the images themselves. It
+   stays reachable from the keyboard (focus-within). */
+.library-item-del {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+}
+.library-item:hover .library-item-del,
+.library-item:focus-within .library-item-del { opacity: 1; }
+
+.library-remote .library-get { margin: 4px 10px 0; align-self: flex-start; }
+
+.library-foot {
+  padding: 8px 16px;
+  border-top: 1px solid var(--tile-edge);
+  min-height: 2em;
+}
+.library-status-err { color: var(--danger); }
+
+/* ============================================================
+   Themes de couleurs (1.111.0)
+   ============================================================ */
+
+/* Page ou volet ayant son propre theme : il peint son fond et son texte,
+   les variables qu'il redefinit ne valant que pour ses descendants.
+   Page or drawer with its own theme: it paints its own background and
+   text, the variables it redefines only apply to its descendants. */
+.board.pb-themed {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font);
+}
+.drawer.pb-themed {
+  color: var(--text);
+  font-family: var(--font);
+}
+
+.theme-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.drawer-theme.has-theme,
+.page-theme.has-theme { border-color: var(--accent); color: var(--accent); }
+
+.theme-hint {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  background: var(--field-bg);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+/* Selecteur et editeur ancres a droite : pas de voile, le tableau reste
+   visible pour l'apercu en direct.
+   Picker and editor docked right: no veil, the board stays visible for
+   the live preview. */
+.modal.theme-dock {
+  background: transparent;
+  justify-content: flex-end;
+  align-items: stretch;
+  padding: 2vh 1.5vw;
+  pointer-events: none;
+}
+.modal.theme-dock .modal-card {
+  pointer-events: auto;
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.45);
+}
+.theme-card {
+  width: min(460px, 96vw);
+  max-height: 96vh;
+  resize: none;
+}
+.theme-body {
+  padding: 0 16px 10px;
+  overflow-y: auto;
+  flex: 1;
+}
+.theme-families,
+.theme-preview-mode,
+.theme-variant-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 10px;
+}
+.theme-preview-mode span { color: var(--muted); font-size: 12px; margin-right: 4px; }
+.theme-families .chip,
+.theme-preview-mode .chip,
+.theme-variant-tabs .chip {
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.theme-families .chip.active,
+.theme-preview-mode .chip.active,
+.theme-variant-tabs .chip.active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent);
+}
+.theme-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  gap: 10px;
+}
+.th-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px;
+  border: 2px solid transparent;
+  border-radius: 10px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.th-card:hover { border-color: var(--tile-edge); }
+.th-card.selected { border-color: var(--accent); }
+.th-name { font-size: 13px; font-weight: 600; }
+.th-meta { font-size: 11px; color: var(--muted); }
+.th-inherit .th-sw { opacity: 0.75; }
+
+.th-sw {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  height: 72px;
+  padding: 6px;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.th-sw-row { display: flex; gap: 4px; flex: 1; }
+.th-sw-tile {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 4px;
+  min-width: 0;
+}
+.th-sw-tile i { display: block; height: 3px; width: 80%; border-radius: 2px; }
+.th-sw-tile em { position: absolute; left: 4px; right: 4px; bottom: 4px; height: 3px; border-radius: 2px; }
+.th-sw-aa {
+  position: absolute;
+  right: 8px;
+  bottom: 4px;
+  font-size: 15px;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);
+}
+
+.theme-card .modal-foot { border-top: 1px solid var(--tile-edge); padding-top: 10px; }
+.theme-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.theme-tools .btn:disabled { opacity: 0.45; cursor: default; }
+
+.th-ed-colors {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 12px;
+  margin-bottom: 10px;
+}
+.th-ed-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+.th-ed-color input[type="color"] {
+  width: 38px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  background: none;
+  flex-shrink: 0;
+}
+.th-ed-style { margin-top: 10px; }
+.th-ed-style em { color: var(--muted); font-style: normal; font-size: 12px; }
+/* Echantillon des tuiles Texte et Horloge dans l'editeur de themes.
+   Il porte lui-meme les variables du brouillon (posees en ligne par
+   renderThemeSample), d'ou le var(--...) partout ci-dessous : chaque
+   couleur vient du theme en cours d'edition, jamais du theme applique a
+   la fenetre. Sans cela, l'echantillon montrerait le theme actuel --
+   c'est-a-dire exactement ce qu'on ne cherche pas a voir.
+   Sample of the Text and Clock tiles in the theme editor. It carries
+   the draft's variables itself, hence var(--...) throughout: every
+   colour comes from the theme being edited, never from the one applied
+   to the window. */
+.th-sample {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-top: 6px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+.th-sample-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-height: 74px;
+  padding: 10px 8px;
+  border: var(--tile-border-w) solid var(--tile-edge);
+  border-radius: var(--radius);
+  background: var(--tile);
+  color: var(--text);
+  font-family: var(--font);
+  text-align: center;
+  overflow: hidden;
+}
+/* Le titre prend l'accent : c'est precisement l'option ajoutee a la
+   tuile Texte, et la montrer eteinte n'aurait rien appris.
+   The title takes the accent: the very option added to the Text tile. */
+.th-sample-title {
+  color: var(--accent);
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.1;
+}
+.th-sample-time {
+  font-size: 22px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+/* La pastille de legende reste lisible sur les DEUX fonds : sur la
+   tuile elle suit --muted, sur l'horloge elle herite de la couleur
+   calculee pour ce fond, attenuee. On ne fige donc aucune couleur ici.
+   The caption stays readable on BOTH backgrounds, so no colour is
+   frozen here. */
+.th-sample-note { font-size: 10.5px; color: var(--muted); }
+.th-sample-clock .th-sample-note { color: inherit; opacity: 0.68; }
+.th-checks { list-style: none; margin: 4px 0 0; padding: 0; font-size: 12px; }
+.th-issue {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-bottom: 3px;
+  border-radius: 5px;
+  border-left: 3px solid var(--tile-edge);
+  background: var(--field-bg);
+}
+.th-issue span { color: var(--muted); white-space: nowrap; }
+.th-issue.th-error { border-left-color: var(--danger); }
+.th-issue.th-warn { border-left-color: var(--warn); }
+.th-issue.th-good { border-left-color: var(--ok); }
+.th-save-hint { color: var(--danger); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+
+/* Bandeau du tableau de bord : separateur avant la sortie (1.111.1).
+   Dashboard bar: separator before the exit button. */
+.dash-sep {
+  width: 1px;
+  align-self: stretch;
+  margin: 6px 4px;
+  background: var(--tile-edge);
+}
+
+/* Refus d'extinction / shutdown refused */
+.shutdown-denied-body { padding: 0 18px 12px; }
+.shutdown-denied-cmd,
+.shutdown-denied-detail {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--field-bg);
+  border: 1px solid var(--tile-edge);
+  white-space: pre-wrap;
+  word-break: break-all;
+  user-select: all;
+}
+.shutdown-denied-detail { user-select: text; color: var(--muted); }
+
+/* Explorateur de dossiers (1.113.2) / folder browser */
+.field-folder-wrap { display: flex; gap: 6px; align-items: center; }
+.field-folder-wrap input { flex: 1; min-width: 0; }
+.folder-card { width: min(560px, 96vw); max-height: 90vh; }
+.folder-body { padding: 0 16px 10px; overflow-y: auto; flex: 1; }
+.folder-toolbar { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.folder-path {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--muted);
+}
+.folder-list {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  max-height: 46vh;
+  overflow-y: auto;
+  border: 1px solid var(--tile-edge);
+  border-radius: 8px;
+}
+.folder-list li + li { border-top: 1px solid var(--tile-edge); }
+.folder-row {
+  display: block;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.folder-row:hover { background: var(--field-bg); }
+.folder-row small { color: var(--muted); margin-left: 6px; }
+.folder-msg { padding: 10px; color: var(--muted); font-size: 12px; }
+.folder-new { display: flex; gap: 6px; }
+.folder-new input { flex: 1; min-width: 0; }
+
+
+/* ---------- Participer (reglages generaux) et fenetre QR ----------
+   Deux boutons qui ouvrent un ticket GitHub deja rempli, et la fenetre
+   qui donne le meme lien en QR code pour le lire au telephone --
+   indispensable en kiosque, ou il n'y a ni clavier ni barre d'adresse.
+   Contribute section and the QR window. */
+.contribute-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 10px 0 8px;
+}
+
+.qr-card { max-width: 420px; }
+.qr-body { display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; }
+
+/* Le code reste carre et garde sa marge blanche : sans elle beaucoup de
+   lecteurs echouent. The code stays square and keeps its quiet zone. */
+.qr-image {
+  width: min(280px, 70vw);
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  background: var(--tile);
+  border-radius: var(--radius);
+}
+.qr-image svg { width: 100%; height: 100%; }
+
+.qr-url {
+  width: 100%;
+  margin: 0;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  word-break: break-all;
+  max-height: 4.5em;
+  overflow-y: auto;
+}
+.qr-actions { display: flex; gap: 8px; }
+
+/* Au doigt, les deux boutons prennent toute la largeur : on les vise
+   sans reflechir. On a finger the two buttons take the full width. */
+body.touch .contribute-actions .btn,
+body.touch-mode .contribute-actions .btn { flex: 1 1 100%; min-height: 44px; }
+body.touch .qr-image, body.touch-mode .qr-image { width: min(320px, 80vw); }
+
+/* ---------- Clone complet d'une installation ----------
+   Un encadre dans la fenetre des sauvegardes : la sauvegarde reste
+   locale, le clone s'emporte. Le distinguer visuellement evite de
+   confondre deux gestes aux consequences tres differentes.
+   Full clone box inside the backups window: a backup stays local, a
+   clone travels. */
+.clone-box {
+  margin: 14px 0 6px;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius);
+}
+.clone-box legend { padding: 0 6px; font-weight: 700; font-size: 13px; }
+.clone-box .field.checkbox { margin: 4px 0; }
+
+.clone-modal-card { max-width: 620px; }
+.clone-body { padding: 4px 16px 8px; max-height: 60vh; overflow-y: auto; }
+.clone-summary { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
+.clone-line { display: flex; justify-content: space-between; gap: 12px; font-size: 13px; }
+.clone-line span { color: var(--muted); }
+
+.clone-warn {
+  margin: 8px 0;
+  padding: 8px 10px;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+  font-size: 12.5px;
+}
+
+.clone-paths { display: flex; flex-direction: column; gap: 8px; }
+.clone-path {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius);
+  font-size: 12.5px;
+}
+/* Un chemin sans equivalent saute aux yeux : c'est la seule chose qui
+   demande une decision. A path with no equivalent stands out. */
+.clone-path-todo { border-color: var(--warn); }
+.clone-path-head { grid-column: 1; }
+.clone-path-from, .clone-path-to { grid-column: 1; color: var(--muted); word-break: break-all; }
+.clone-path-todo .clone-path-to { color: var(--warn); }
+.clone-path-pick { grid-column: 2; grid-row: 1 / span 3; align-self: center; }
+
+.clone-todo { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; }
+.clone-todo li { margin: 4px 0; }

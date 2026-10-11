@@ -1,0 +1,9891 @@
+/* ============================================================
+   PiBoard - app.js
+   Version 1.119.0
+
+   Coeur du tableau de bord :
+     - grille Gridstack (12 colonnes) et persistance serveur, plus un
+       tiroir lateral de tuiles independant
+     - chargement dynamique des widgets (catalogue serveur)
+     - languette + barre d'outils escamotable (ajout, edition, reglages,
+       aide, menu de sortie : reinitialiser le tableau de bord ou
+       revenir au bureau de Raspberry Pi OS)
+     - mode tactile optionnel : cibles agrandies partout (boutons,
+       poignees, formulaires), formulaires de configuration repartis
+       automatiquement en colonnes selon la hauteur reelle des sections
+       (voir layoutFormColumns())
+     - economiseur d'ecran : plages horaires en noir ou en diaporama
+       (reutilise directement la classe SlideshowWidget), plus un
+       declenchement manuel depuis la barre d'outils
+     - aide integree bilingue (voir help-content.js), navigable par
+       sommaire
+     - theme jour/nuit automatique (calcul solaire NOAA local)
+     - synchronisation multi-clients par SSE
+
+   Dashboard core:
+     - Gridstack grid (12 columns) with server persistence, plus an
+       independent side tile drawer
+     - dynamic widget loading (server catalog)
+     - pull tab + collapsible toolbar (add, edit, settings, help, exit
+       menu: reset the dashboard or return to the Raspberry Pi OS
+       desktop)
+     - optional touch mode: enlarged targets everywhere (buttons,
+       handles, forms), config forms automatically laid out in columns
+       based on each section's real height (see layoutFormColumns())
+     - screen saver: time slots in black or slideshow mode (directly
+       reuses the SlideshowWidget class), plus a manual trigger from the
+       toolbar
+     - built-in bilingual help (see help-content.js), browsable by table
+       of contents
+     - automatic day/night theme (local NOAA solar calc)
+     - multi-client sync through SSE
+   ============================================================ */
+(function () {
+  "use strict";
+
+  const i18n = window.PiBoardI18n;
+  const CLIENT_ID = "c-" + Math.random().toString(36).slice(2, 10);
+  const COLS = 12; // colonnes du tableau ET du tiroir : Gridstack n'a de
+  // regles CSS de largeur precompilees que pour 1 et 12 colonnes ; un autre
+  // nombre (ex. 6) laisse les tuiles a largeur nulle, invisibles.
+  // columns for the board AND the drawer: Gridstack only ships precompiled
+  // width CSS rules for 1 and 12 columns; any other count (e.g. 6) leaves
+  // tiles at zero width, invisible. The drawer stays compact simply
+  // because its container is narrower (50vw), not via a different column count.
+
+  let grid = null;
+  /* Trois tiroirs independants (gauche existant, haut, droite),
+     decrits generiquement pour eviter de tripler chaque bout de code
+     qui les manipule. "axis" determine le sens de redimensionnement
+     (x = largeur/pointeur horizontal, y = hauteur/pointeur vertical).
+     "layoutKey"/"sizeKey" sont le nom et la forme utilises dans le
+     layout persiste cote serveur -- "drawer"/"widthPct" est conserve
+     tel quel pour le tiroir gauche afin de rester compatible avec les
+     layouts deja enregistres avant l'ajout des deux autres tiroirs.
+     Three independent drawers (existing left, top, right), described
+     generically to avoid tripling every bit of code that manipulates
+     them. "axis" determines the resize direction (x = width/horizontal
+     pointer, y = height/vertical pointer). "layoutKey"/"sizeKey" are
+     the name and shape used in the server-persisted layout --
+     "drawer"/"widthPct" is kept as-is for the left drawer to stay
+     compatible with layouts already saved before the other two drawers
+     were added. */
+  const DRAWER_DEFS = [
+    { side: "left", zone: "drawer-left", axis: "x", cssVar: "--drawer-w",
+      layoutKey: "drawer", sizeKey: "widthPct", defaultSizePct: 50,
+      gridId: "drawerGrid", elId: "drawer", tabId: "drawerTab", resizeId: "drawerResize", emptyId: "drawerEmpty" },
+    { side: "top", zone: "drawer-top", axis: "y", cssVar: "--drawer-top-h",
+      layoutKey: "drawerTop", sizeKey: "heightPct", defaultSizePct: 40,
+      gridId: "drawerGridTop", elId: "drawerTop", tabId: "drawerTopTab", resizeId: "drawerTopResize", emptyId: "drawerTopEmpty" },
+    { side: "right", zone: "drawer-right", axis: "x", cssVar: "--drawer-right-w",
+      layoutKey: "drawerRight", sizeKey: "widthPct", defaultSizePct: 38,
+      gridId: "drawerGridRight", elId: "drawerRight", tabId: "drawerRightTab", resizeId: "drawerRightResize", emptyId: "drawerRightEmpty" }
+  ];
+  // Bornes communes aux 3 tiroirs : jusqu'a "quasi integralement" l'ecran
+  // (96%), sans jamais descendre sous une taille utilisable.
+  // Bounds shared by all 3 drawers: up to "almost entirely" the screen
+  // (96%), never shrinking below a usable size.
+  const DRAWER_MIN_PCT = 10;
+  const DRAWER_MAX_PCT = 96; // borne du redimensionnement a la souris/au doigt -- la poignee doit rester saisissable / mouse/touch resize bound -- the handle must stay reachable
+  const DRAWER_SETTINGS_MAX_PCT = 100; // borne des reglages generaux -- seule voie pour atteindre 100% (poignee alors hors ecran) / general settings bound -- the only way to reach 100% (handle would then be off-screen)
+  const drawers = new Map(); // side -> { def, grid, el, sizePct }
+  let drawerZIndexCounter = 500;
+  let settings = null;
+  let catalog = [];                 // manifestes / manifests
+  const widgetClasses = new Map();  // id -> classe / class
+  const tiles = new Map();          // tileId -> { conf, instance, manifest }
+  let editing = false;
+  let saveTimer = null;
+  let themeTimer = null;
+  let scheduleTicker = null;        // reevalue la planification des tuiles / re-evaluates tile scheduling
+
+  /* ---------- Registre public des widgets / public widget registry ---------- */
+
+  window.PiBoard = {
+    registerWidget(id, klass) { widgetClasses.set(id, klass); },
+    /* Ouvre la bibliotheque d'images pour une tuile. Expose ici pour que
+       les widgets n'aient pas a la reimplementer : ils fournissent leur
+       identifiant media, la section qui les concerne, et ce qu'il faut
+       rafraichir une fois l'image copiee chez eux.
+       Opens the image library for a tile. Exposed here so widgets need
+       not reimplement it: they supply their media id, the section that
+       concerns them, and what to refresh once the image has been copied
+       into their folder. */
+    openLibrary(target, section, onPicked) { openLibrary(target, section, onPicked); },
+    /* Ton ("dark" / "light") de la surface ou se trouve un element :
+       une page ou un volet peut avoir son propre theme. Les widgets
+       l'utilisent au lieu de lire <body> directement.
+       Tone of the surface an element sits on: a page or drawer may have
+       its own theme. Widgets use this instead of reading <body>. */
+    toneOf(el) {
+      const host = el && el.closest ? el.closest("[data-tone]") : null;
+      return (host && host.dataset.tone) || document.body.dataset.theme || "dark";
+    }
+  };
+
+  /* ---------- Petites aides / small helpers ---------- */
+
+  const $ = (id) => document.getElementById(id);
+
+  /* Active un element de facon fiable au clic souris ET au tap tactile.
+     Sur un ecran tactile, l'evenement "click" synthetise a partir d'un
+     tap peut etre retarde (~300ms) ou perdu selon le contexte, ce qui
+     donne l'impression de clics "aleatoires" un coup sur deux. On ecoute
+     donc "pointerup" (unifie souris + doigt + stylet, emis directement
+     par le geste), avec un garde-fou : ne declencher que si le geste est
+     un vrai tap/clic (bouton principal ou tactile), et pas la fin d'un
+     glissement. Un fallback "click" reste branche pour les rares
+     environnements sans Pointer Events (tres anciens navigateurs).
+     Reliably activates an element on both mouse click AND touch tap.
+     On a touchscreen, the "click" synthesized from a tap can be delayed
+     (~300ms) or lost depending on context, giving the impression of
+     "random" clicks working every other time. So we listen to
+     "pointerup" (unifies mouse + finger + stylus, emitted directly by
+     the gesture), with a guard: only fire on a real tap/click (primary
+     or touch), not the end of a drag. A "click" fallback stays wired for
+     the rare environments without Pointer Events (very old browsers). */
+  function onActivate(el, handler) {
+    if (!el) return;
+    let usedPointer = false;
+    if (window.PointerEvent) {
+      el.addEventListener("pointerup", (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return; // clic droit/milieu ignore
+        usedPointer = true;
+        handler(e);
+      });
+    }
+    // Fallback : si Pointer Events indisponible, ou pour tout chemin qui
+    // n'emettrait qu'un click classique. Le drapeau evite le double
+    // declenchement quand pointerup a deja fait le travail.
+    // Fallback: if Pointer Events unavailable, or for any path emitting
+    // only a classic click. The flag prevents double firing when
+    // pointerup already did the job.
+    el.addEventListener("click", (e) => {
+      if (usedPointer) { usedPointer = false; return; }
+      handler(e);
+    });
+  }
+
+  async function apiGet(url) {
+    const r = await fetch(url, { headers: { "x-piboard-client": CLIENT_ID } });
+    if (!r.ok) throw new Error(url + " -> " + r.status);
+    return r.json();
+  }
+
+  async function apiPut(url, body) {
+    const r = await fetch(url, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json", "x-piboard-client": CLIENT_ID },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(url + " -> " + r.status);
+    return r.json();
+  }
+
+  async function apiDelete(url) {
+    const r = await fetch(url, { method: "DELETE", headers: { "x-piboard-client": CLIENT_ID } });
+    if (!r.ok) throw new Error(url + " -> " + r.status);
+    return r.json();
+  }
+
+  const widgetApi = {
+    state: {
+      get: (key) => apiGet("/api/state/" + encodeURIComponent(key)).then((d) => d.value),
+      put: (key, value) => apiPut("/api/state/" + encodeURIComponent(key), { value })
+    },
+    proxyUrl: (url) => "/api/proxy?url=" + encodeURIComponent(url),
+    /* Cle CARTO des fonds de carte, partagee par les tuiles Trafic,
+       Radar et Avions. Elle vit dans les reglages GENERAUX et non dans
+       chaque tuile : les trois affichent le meme fond, et la ressaisir
+       trois fois n'aurait aucun sens.
+       Lue a l'appel et non capturee : `settings` est remplace a chaque
+       enregistrement, une capture renverrait donc l'ancienne valeur
+       apres modification.
+       CARTO base map key, shared by the Traffic, Radar and Planes
+       tiles. It lives in the GLOBAL settings rather than in each tile:
+       all three show the same base map, and re-typing it three times
+       would make no sense.
+       Read at call time rather than captured: `settings` is replaced on
+       every save, so a capture would return the stale value after a
+       change. */
+    cartoKey: () => (settings && settings.cartoKey ? String(settings.cartoKey).trim() : ""),
+    /* Appelle une URL de notification (webhook) via le serveur, pour eviter
+       tout probleme de CORS. Utilisable avec ntfy.sh, Voice Monkey (Alexa),
+       l'API SMS Free Mobile, Home Assistant, Pushover, IFTTT, etc.
+       Calls a notification URL (webhook) through the server, to avoid any
+       CORS issue. Works with ntfy.sh, Voice Monkey (Alexa), the Free
+       Mobile SMS API, Home Assistant, Pushover, IFTTT, etc. */
+    notify(url, method, body) {
+      if (!url) return Promise.resolve();
+      return apiPut("/api/notify", { url, method: method || "GET", body: body || "" })
+        .catch((e) => console.warn("[piboard] notify failed", e));
+    }
+  };
+
+  /* ============================================================
+     Alerte de tableau (flash plein ecran + son), duree controlable
+     et interruptible. Utilisee par le compte a rebours ; exposee via
+     widgetApi pour que d'autres widgets puissent s'en servir plus tard.
+     Board alert (full-screen flash + sound), controllable duration and
+     stoppable. Used by the countdown; exposed via widgetApi so other
+     widgets can use it later too.
+     ============================================================ */
+  const boardAlert = (() => {
+    function tone(ctx, t, freq, dur, type) {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = type || "sine";
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + dur + 0.02);
+    }
+
+    function bellTone(ctx, t, freq, dur) {
+      // Superposition de partiels non harmoniques : timbre approximatif de cloche
+      // Stacked inharmonic partials: an approximate bell timbre
+      [1, 2.4, 3.8].forEach((mult, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.value = freq * mult;
+        const amp = 0.22 / (i + 1);
+        gain.gain.setValueAtTime(amp, t);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t);
+        osc.stop(t + dur + 0.02);
+      });
+    }
+
+    /* Chaque son planifie UN cycle a partir de t0 et renvoie sa duree en
+       secondes (silence inclus avant la repetition suivante).
+       Each sound schedules ONE cycle starting at t0 and returns its
+       duration in seconds (including the gap before the next repeat). */
+    const SOUNDS = {
+      "beep-simple": (ctx, t0) => { tone(ctx, t0, 880, 0.3, "sine"); return 0.6; },
+      "beep-double": (ctx, t0) => {
+        tone(ctx, t0, 988, 0.15, "sine");
+        tone(ctx, t0 + 0.22, 988, 0.15, "sine");
+        return 0.75;
+      },
+      "siren-police": (ctx, t0) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        gain.gain.setValueAtTime(0.28, t0);
+        osc.frequency.setValueAtTime(600, t0);
+        osc.frequency.linearRampToValueAtTime(900, t0 + 0.6);
+        osc.frequency.linearRampToValueAtTime(600, t0 + 1.2);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t0); osc.stop(t0 + 1.2);
+        return 1.3;
+      },
+      "siren-firefighter": (ctx, t0) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        gain.gain.setValueAtTime(0.2, t0);
+        osc.frequency.setValueAtTime(500, t0);
+        osc.frequency.linearRampToValueAtTime(760, t0 + 0.3);
+        osc.frequency.linearRampToValueAtTime(500, t0 + 0.6);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t0); osc.stop(t0 + 0.6);
+        return 0.65;
+      },
+      "siren-fire-alarm": (ctx, t0) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "square";
+        osc.frequency.value = 970;
+        for (let i = 0; i < 4; i++) {
+          const s = t0 + i * 0.15;
+          gain.gain.setValueAtTime(0.0001, s);
+          gain.gain.exponentialRampToValueAtTime(0.26, s + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.0001, s + 0.11);
+        }
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t0); osc.stop(t0 + 0.65);
+        return 0.7;
+      },
+      "siren-submarine": (ctx, t0) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sawtooth";
+        gain.gain.setValueAtTime(0.3, t0);
+        osc.frequency.setValueAtTime(300, t0);
+        osc.frequency.exponentialRampToValueAtTime(140, t0 + 0.8);
+        gain.gain.setValueAtTime(0.3, t0 + 0.8);
+        gain.gain.linearRampToValueAtTime(0.0001, t0 + 1.0);
+        osc.connect(gain).connect(ctx.destination);
+        osc.start(t0); osc.stop(t0 + 1.0);
+        return 1.4;
+      },
+      "bell-train": (ctx, t0) => {
+        bellTone(ctx, t0, 1300, 0.5);
+        bellTone(ctx, t0 + 0.45, 1300, 0.5);
+        return 1.1;
+      },
+      "bell-door": (ctx, t0) => {
+        bellTone(ctx, t0, 1046, 0.6);
+        bellTone(ctx, t0 + 0.35, 784, 0.7);
+        return 1.4;
+      },
+      "jingle": (ctx, t0) => {
+        [523, 659, 784, 1046].forEach((f, i) => tone(ctx, t0 + i * 0.14, f, 0.16, "triangle"));
+        return 1.0;
+      }
+    };
+
+    /* state.dismiss regroupe les gestionnaires document (voir plus bas) :
+       null quand aucune alerte n'est active, pour ne jamais laisser de
+       gestionnaire globaux enregistres en dehors d'une alerte en cours.
+       state.dismiss groups the document-level handlers (see below):
+       null when no alert is active, so no global handler ever stays
+       registered outside of an ongoing alert. */
+    let state = { active: false, endTimer: null, soundTimer: null, flashEl: null, hintEl: null, ctx: null, onEndCb: null, dismiss: null };
+
+    /* Retire les gestionnaires d'arret au tap n'importe ou sur l'ecran,
+       poses par start() (voir plus bas). Removes the tap-anywhere
+       dismiss handlers set up by start() (see below). */
+    function removeDismissHandlers() {
+      if (!state.dismiss) return;
+      if (state.dismiss.pointerup) document.removeEventListener("pointerup", state.dismiss.pointerup);
+      document.removeEventListener("click", state.dismiss.click);
+      state.dismiss = null;
+    }
+
+    function stop() {
+      clearTimeout(state.endTimer);
+      clearTimeout(state.soundTimer);
+      if (state.flashEl && state.flashEl.parentNode) state.flashEl.remove();
+      if (state.hintEl && state.hintEl.parentNode) state.hintEl.remove();
+      if (state.ctx) { try { state.ctx.close(); } catch (e) { /* deja ferme */ } }
+      removeDismissHandlers();
+      // onEnd toujours appele a l'arret, quelle qu'en soit la cause --
+      // minuterie naturelle, bouton "Arreter" dedie d'une tuile, OU
+      // tap n'importe ou sur l'ecran (voir start()) : chaque widget
+      // n'a besoin d'implementer sa remise a jour d'affichage QU'UNE
+      // FOIS, dans onEnd, plutot que de la dupliquer dans son propre
+      // bouton "Arreter". Capture avant la remise a zero de l'etat, et
+      // appele apres, pour que le code de l'appelant puisse lire
+      // isActive()===false en toute coherence.
+      // onEnd always called on stop, whatever the cause -- natural
+      // timer, a tile's own dedicated "Stop" button, OR a tap anywhere
+      // on the screen (see start()): each widget only needs to
+      // implement its display reset ONCE, in onEnd, rather than
+      // duplicating it in its own "Stop" button. Captured before the
+      // state reset, called after, so the caller's code can read
+      // isActive()===false consistently.
+      const onEndCb = state.onEndCb;
+      state = { active: false, endTimer: null, soundTimer: null, flashEl: null, hintEl: null, ctx: null, onEndCb: null, dismiss: null };
+      if (onEndCb) onEndCb();
+    }
+
+    function start({ flash, soundName, durationMs, onEnd }) {
+      stop(); // une seule alerte a la fois / only one alert at a time
+      const dur = Math.max(1000, Math.min(300000, durationMs || 60000));
+      state.active = true;
+      state.onEndCb = onEnd || null;
+
+      if (flash) {
+        const overlay = document.createElement("div");
+        overlay.className = "board-flash board-flash-loop";
+        document.body.appendChild(overlay);
+        state.flashEl = overlay;
+      }
+
+      // Pastille discrete rappelant qu'un tap n'importe ou sur l'ecran
+      // arrete l'alerte -- affichee pour toute alerte (avec ou sans
+      // flash, ex. son seul), puisque ce geste marche desormais dans
+      // les deux cas (voir le gestionnaire de tap plus bas).
+      // Discreet chip reminding that a tap anywhere on the screen stops
+      // the alert -- shown for every alert (with or without flash, e.g.
+      // sound-only), since the gesture now works either way (see the
+      // tap handler below).
+      const hint = document.createElement("div");
+      hint.className = "board-tap-hint";
+      hint.textContent = i18n.t("common.tapToStopAlert");
+      document.body.appendChild(hint);
+      state.hintEl = hint;
+
+      if (soundName) {
+        try {
+          const Ctx = window.AudioContext || window.webkitAudioContext;
+          const ctx = new Ctx();
+          state.ctx = ctx;
+          const gen = SOUNDS[soundName] || SOUNDS["beep-simple"];
+          const endAt = ctx.currentTime + dur / 1000;
+          const scheduleNext = () => {
+            if (!state.active || ctx.currentTime >= endAt) return;
+            const cycleDur = gen(ctx, ctx.currentTime + 0.03);
+            state.soundTimer = setTimeout(scheduleNext, Math.max(60, (cycleDur - 0.03) * 1000));
+          };
+          scheduleNext();
+        } catch (e) { /* pas d'audio disponible / no audio available */ }
+      }
+
+      state.endTimer = setTimeout(stop, dur);
+
+      /* Arret au tap ou au clic N'IMPORTE OU sur l'ecran, meme sans le
+         flash affiche (alerte sonore seule) : phase de propagation
+         normale ("bubble"), PAS de capture. Un bouton "Arreter" dedie
+         d'une tuile (Compte a rebours, alarme de l'Horloge...) appelle
+         deja e.stopPropagation() sur son propre clic -- l'evenement
+         n'atteint alors jamais ce gestionnaire, et le bouton garde
+         l'entiere maitrise de son propre arret (pas de double
+         declenchement qui ferait, par exemple, repartir un minuteur a
+         zero au lieu de simplement l'arreter). Partout ailleurs sur
+         l'ecran -- l'overlay de flash, une autre tuile, le fond --
+         l'evenement remonte normalement et arrete l'alerte ici.
+         Meme convention pointerup+repli click qu'onActivate() plus
+         haut, pour la meme raison (reactivite tactile).
+         Stop on ANY tap or click on the screen, even without the flash
+         showing (sound-only alert): normal ("bubble") propagation
+         phase, NOT capture. A tile's own dedicated "Stop" button
+         (Countdown, Clock alarm...) already calls e.stopPropagation()
+         on its own click -- the event then never reaches this handler,
+         and the button keeps full control of its own stop path (no
+         double-trigger that would, e.g., restart a timer from scratch
+         instead of just stopping it). Everywhere else on the screen --
+         the flash overlay, another tile, the background -- the event
+         bubbles normally and stops the alert here. Same pointerup+click
+         fallback convention as onActivate() above, for the same reason
+         (touch responsiveness). */
+      const pointerupHandler = window.PointerEvent ? (e) => {
+        if (e.pointerType === "mouse" && e.button !== 0) return; // clic droit/milieu ignore
+        stop();
+      } : null;
+      const clickHandler = () => stop();
+      // Enregistrement differe (tick suivant) : si jamais startAlert()
+      // etait un jour appelee de facon synchrone depuis l'intérieur
+      // d'un gestionnaire de clic/tap, ce meme evenement en cours de
+      // propagation ne doit pas immediatement re-arreter l'alerte qui
+      // vient de demarrer. Aucun des appelants actuels (minuteries)
+      // n'est dans ce cas, mais autant s'en premunir a peu de frais.
+      // Deferred registration (next tick): if startAlert() were ever
+      // called synchronously from within a click/tap handler, that same
+      // still-propagating event must not immediately stop the alert
+      // that was just started. None of the current callers (timers) are
+      // in that situation, but it's cheap insurance regardless.
+      setTimeout(() => {
+        if (!state.active) return; // deja arretee entre-temps / already stopped in the meantime
+        if (pointerupHandler) document.addEventListener("pointerup", pointerupHandler);
+        document.addEventListener("click", clickHandler);
+        state.dismiss = { pointerup: pointerupHandler, click: clickHandler };
+      }, 0);
+    }
+
+    return { start, stop, isActive: () => state.active, SOUND_NAMES: Object.keys(SOUNDS) };
+  })();
+
+  widgetApi.startAlert = boardAlert.start;
+  widgetApi.stopAlert = boardAlert.stop;
+  widgetApi.isAlertActive = boardAlert.isActive;
+  window.PiBoard.startAlert = boardAlert.start;
+  window.PiBoard.stopAlert = boardAlert.stop;
+
+  /* ============================================================
+     Clavier virtuel (ecrans tactiles) / on-screen keyboard
+     Mecanisme du coeur, applicable a tout input[type=text] et
+     textarea de l'application (formulaires de reglages ET edition
+     directe dans un widget, ex. bloc-notes). Bascule AZERTY/QWERTY
+     selon la langue de l'interface. Se positionne au-dessus OU en
+     dessous du champ actif selon la place disponible, pour ne
+     jamais le masquer.
+     Core mechanism, applicable to any input[type=text] and textarea
+     in the app (settings forms AND direct in-widget editing, e.g.
+     notes). Switches AZERTY/QWERTY based on the interface language.
+     Positions itself above OR below the active field depending on
+     available room, so it never covers it.
+     ============================================================ */
+  const vkb = (() => {
+    const LAYOUTS = {
+      fr: {
+        letters: [
+          ["a", "z", "e", "r", "t", "y", "u", "i", "o", "p"],
+          ["q", "s", "d", "f", "g", "h", "j", "k", "l", "m"],
+          ["w", "x", "c", "v", "b", "n", "'", "-"]
+        ],
+        symbols: [
+          ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+          ["@", "#", "&", "_", "(", ")", "€", "%", "+", "="],
+          ["!", "?", ",", ".", ";", ":", "/", "\""]
+        ]
+      },
+      en: {
+        letters: [
+          ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
+          ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
+          ["z", "x", "c", "v", "b", "n", "m", "'", "-"]
+        ],
+        symbols: [
+          ["1", "2", "3", "4", "5", "6", "7", "8", "9", "0"],
+          ["@", "#", "&", "_", "(", ")", "$", "%", "+", "="],
+          ["!", "?", ",", ".", ";", ":", "/", "\""]
+        ]
+      }
+    };
+
+    let enabled = false;
+    let lang = "en";
+    let panel = null;
+    let target = null;   // element input/textarea actif
+    let shift = false;
+    let page = "letters"; // "letters" | "symbols"
+
+    function isTypable(el) {
+      if (!el) return false;
+      if (el.tagName === "TEXTAREA") return !el.readOnly && !el.disabled;
+      if (el.tagName === "INPUT") {
+        const t = (el.getAttribute("type") || "text").toLowerCase();
+        return (t === "text" || t === "url" || t === "search") && !el.readOnly && !el.disabled;
+      }
+      return false;
+    }
+
+    function insertAtCursor(text) {
+      if (!target) return;
+      const start = target.selectionStart ?? target.value.length;
+      const end = target.selectionEnd ?? target.value.length;
+      const before = target.value.slice(0, start);
+      const after = target.value.slice(end);
+      target.value = before + text + after;
+      const pos = start + text.length;
+      target.setSelectionRange(pos, pos);
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function backspace() {
+      if (!target) return;
+      const start = target.selectionStart ?? target.value.length;
+      const end = target.selectionEnd ?? target.value.length;
+      if (start === end && start > 0) {
+        target.value = target.value.slice(0, start - 1) + target.value.slice(end);
+        target.setSelectionRange(start - 1, start - 1);
+      } else {
+        target.value = target.value.slice(0, start) + target.value.slice(end);
+        target.setSelectionRange(start, start);
+      }
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+
+    function keyBtn(label, cls, handler) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "vkb-key" + (cls ? " " + cls : "");
+      b.textContent = label;
+      // pointerdown + preventDefault : le champ actif ne perd jamais le focus
+      // pointerdown + preventDefault: the active field never loses focus
+      b.addEventListener("pointerdown", (e) => { e.preventDefault(); handler(); });
+      return b;
+    }
+
+    function render() {
+      if (!panel) return;
+      panel.innerHTML = "";
+      const layout = LAYOUTS[lang] || LAYOUTS.en;
+      const rows = page === "symbols" ? layout.symbols : layout.letters;
+
+      rows.forEach((row, i) => {
+        const rowEl = document.createElement("div");
+        rowEl.className = "vkb-row";
+        row.forEach((ch) => {
+          const label = page === "letters" && shift ? ch.toUpperCase() : ch;
+          rowEl.appendChild(keyBtn(label, "", () => insertAtCursor(label)));
+        });
+        if (i === rows.length - 1 && page === "letters") {
+          rowEl.appendChild(keyBtn("⌫", "vkb-wide", backspace));
+        }
+        panel.appendChild(rowEl);
+      });
+
+      const bottom = document.createElement("div");
+      bottom.className = "vkb-row";
+      bottom.appendChild(keyBtn(
+        page === "letters" ? i18n.t("vkb.symbols") : i18n.t("vkb.letters"),
+        "vkb-wide",
+        () => { page = page === "letters" ? "symbols" : "letters"; render(); }
+      ));
+      if (page === "letters") {
+        bottom.appendChild(keyBtn(i18n.t("vkb.shift"), "vkb-wide" + (shift ? " vkb-active" : ""),
+          () => { shift = !shift; render(); }));
+      }
+      bottom.appendChild(keyBtn(i18n.t("vkb.space"), "vkb-space", () => insertAtCursor(" ")));
+      if (page === "symbols") {
+        bottom.appendChild(keyBtn("⌫", "vkb-wide", backspace));
+      }
+      bottom.appendChild(keyBtn(i18n.t("vkb.done"), "vkb-wide vkb-done", () => hide()));
+      panel.appendChild(bottom);
+
+      reposition();
+    }
+
+    /* Place le clavier au-dessus OU en dessous du champ actif, selon la
+       place disponible, pour ne jamais le recouvrir.
+       Places the keyboard above OR below the active field, depending on
+       available room, so it never covers it. */
+    function reposition() {
+      if (!panel || !target) return;
+      const rect = target.getBoundingClientRect();
+      const kbH = panel.offsetHeight || 230;
+      const margin = 10;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      let top;
+      if (spaceBelow >= kbH + margin || spaceBelow >= spaceAbove) {
+        top = Math.min(rect.bottom + margin, window.innerHeight - kbH - margin);
+      } else {
+        top = Math.max(margin, rect.top - kbH - margin);
+      }
+      top = Math.max(margin, Math.min(top, window.innerHeight - kbH - margin));
+      panel.style.top = top + "px";
+    }
+
+    function show(el) {
+      if (!enabled || !isTypable(el)) return;
+      target = el;
+      shift = false;
+      page = "letters";
+      if (!panel) panel = $("vkb");
+      panel.hidden = false;
+      render();
+    }
+
+    function hide() {
+      if (panel) panel.hidden = true;
+      if (target && document.activeElement === target) target.blur();
+      target = null;
+    }
+
+    function attach() {
+      document.addEventListener("focusin", (e) => {
+        if (isTypable(e.target)) show(e.target);
+        else if (panel && !panel.hidden && !panel.contains(e.target)) hide();
+      });
+      window.addEventListener("resize", () => { if (panel && !panel.hidden) reposition(); });
+    }
+
+    return {
+      attach,
+      setEnabled(v) { enabled = v; if (!v) hide(); },
+      setLang(l) { lang = l === "fr" ? "fr" : "en"; if (panel && !panel.hidden) render(); },
+      hide
+    };
+  })();
+
+  /* ---------- Theme : calcul solaire NOAA simplifie ----------
+     Retourne {sunrise, sunset} en heures locales decimales.
+     Returns {sunrise, sunset} as local decimal hours. */
+  function solarTimes(date, lat, lon) {
+    const rad = Math.PI / 180;
+    const day = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000);
+    const gamma = (2 * Math.PI / 365) * (day - 1 + (date.getHours() - 12) / 24);
+    const eqtime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma)
+      - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+    const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma)
+      - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma)
+      - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+    const cosHa = (Math.cos(90.833 * rad) / (Math.cos(lat * rad) * Math.cos(decl)))
+      - Math.tan(lat * rad) * Math.tan(decl);
+    if (cosHa > 1 || cosHa < -1) {
+      // Jour ou nuit polaire / polar day or night
+      return cosHa > 1 ? { sunrise: 12, sunset: 12 } : { sunrise: 0, sunset: 24 };
+    }
+    const ha = Math.acos(cosHa) / rad;
+    const tzOffset = -date.getTimezoneOffset(); // minutes
+    const sunrise = (720 - 4 * (lon + ha) - eqtime + tzOffset) / 60;
+    const sunset = (720 - 4 * (lon - ha) - eqtime + tzOffset) / 60;
+    return { sunrise, sunset };
+  }
+
+  /* ============================================================
+     Themes de couleurs (1.111.0)
+     ============================================================
+     Le catalogue, les calculs et le garde-fou de lisibilite sont dans
+     themes.js (module pur, teste hors ligne). Ici : l'APPLICATION des
+     jetons au bon endroit.
+       - theme du board : sur <body>, donc partout (tuiles, volets,
+         fenetres, barre d'outils) ;
+       - theme d'une page (mode tableau de bord) ou d'un volet (mode
+         classique) : sur le conteneur de la page ou du volet, qui
+         redefinit les variables pour ses seuls descendants ;
+       - couleur personnalisee d'une tuile : inchangee, elle l'emporte
+         toujours.
+     Le reglage Jour / Nuit / Auto choisit la variante ; un theme a
+     variante unique l'ignore.
+
+     Colour themes. Catalogue, maths and readability guard live in
+     themes.js (pure module, tested offline). Here: APPLYING the tokens
+     in the right place -- board theme on <body> (everywhere), page or
+     drawer theme on that container only (it redefines the variables for
+     its descendants), a tile's custom colour still wins. Day / Night /
+     Auto picks the variant; a single-variant theme ignores it. */
+  const TH = window.PiBoardThemes;
+  const DEFAULT_COLORS = {
+    dark: { bg: "#0B0E14", tile: "#141926" },
+    light: { bg: "#EFEDE7", tile: "#FFFFFF" }
+  };
+  const THEME_VAR_NAMES = Object.values(TH.CSS_VARS);
+  const drawerThemes = { left: null, top: null, right: null };
+  // Apercu en cours (selecteur ou editeur) : remplace temporairement le
+  // theme d'une cible sans rien enregistrer.
+  // Preview in progress (picker or editor): temporarily replaces a
+  // target's theme without saving anything.
+  let themePreview = null; // { target, theme (objet construit) | null = heriter, mode }
+
+  function currentColors() {
+    const t = TH.piboardTheme(settings.colors);
+    return {
+      dark: { bg: t.dark.bg, tile: t.dark.tile },
+      light: { bg: t.light.bg, tile: t.light.tile }
+    };
+  }
+
+  function userThemes() {
+    const list = Array.isArray(settings && settings.userThemes) ? settings.userThemes : [];
+    return list.map(TH.sanitizeUserTheme).filter(Boolean).map(TH.build);
+  }
+
+  function allThemes() {
+    return [TH.piboardTheme(settings && settings.colors)]
+      .concat(TH.builtinThemes().filter((t) => t.id !== "piboard"))
+      .concat(userThemes());
+  }
+
+  function themeById(id) {
+    if (!id) return null;
+    return allThemes().find((t) => t.id === id) || null;
+  }
+
+  function themeName(t) {
+    if (!t) return i18n.t("theme.inherit");
+    return (t.name && (t.name[i18n.lang] || t.name.fr || t.name.en)) || t.id;
+  }
+
+  function resolvedMode() {
+    let mode = settings.theme;
+    if (mode === "auto") {
+      const now = new Date();
+      const { sunrise, sunset } = solarTimes(now, settings.latitude, settings.longitude);
+      const h = now.getHours() + now.getMinutes() / 60;
+      mode = (h >= sunrise && h < sunset) ? "light" : "dark";
+    }
+    return mode === "light" ? "light" : "dark";
+  }
+
+  function setThemeVars(el, theme, mode) {
+    const v = TH.variant(theme, mode);
+    const vars = TH.toCssVars(v, theme.style);
+    for (const [k, val] of Object.entries(vars)) el.style.setProperty(k, val);
+    const tone = TH.toneOf(theme, mode);
+    el.dataset.tone = tone;
+    el.style.colorScheme = tone;
+    return tone;
+  }
+
+  function clearThemeVars(el) {
+    for (const k of THEME_VAR_NAMES) el.style.removeProperty(k);
+    delete el.dataset.tone;
+    el.style.colorScheme = "";
+    delete el.dataset.themeId;
+    el.classList.remove("pb-themed");
+  }
+
+  /* Cibles : { kind: "board" } | { kind: "page", index } | { kind: "drawer", side } */
+  function sameTarget(a, b) {
+    return !!a && !!b && a.kind === b.kind && a.index === b.index && a.side === b.side;
+  }
+
+  function targetThemeId(target) {
+    if (target.kind === "board") return settings.themeId || "piboard";
+    if (target.kind === "drawer") return drawerThemes[target.side] || null;
+    const p = target.index === 0 ? mainPage : pages[target.index - 1];
+    return (p && p.themeId) || null;
+  }
+
+  function targetElement(target) {
+    if (target.kind === "board") return document.body;
+    if (target.kind === "drawer") { const d = drawers.get(target.side); return d ? d.el : null; }
+    const p = pageAt(target.index);
+    return p ? p.el : null;
+  }
+
+  function targetLabel(target) {
+    if (target.kind === "board") return i18n.t("theme.target.board");
+    if (target.kind === "drawer") return i18n.t("theme.drawerFull." + target.side);
+    const p = pageAt(target.index);
+    return (p && p.name) || (i18n.t("dash.page") + " " + (target.index + 1));
+  }
+
+  function allTargets() {
+    const out = [{ kind: "board" }];
+    for (let i = 0; i < pageCount(); i++) out.push({ kind: "page", index: i });
+    for (const side of Object.keys(drawerThemes)) out.push({ kind: "drawer", side });
+    return out;
+  }
+
+  /* Applique TOUS les themes : board, pages, volets. Idempotent.
+     Applies ALL themes: board, pages, drawers. Idempotent. */
+  function applyTheme() {
+    const baseMode = resolvedMode();
+    for (const target of allTargets()) {
+      const el = targetElement(target);
+      if (!el) continue;
+      const preview = themePreview && sameTarget(themePreview.target, target) ? themePreview : null;
+      const mode = preview && preview.mode ? preview.mode : baseMode;
+      let theme;
+      if (preview) theme = preview.theme;
+      else theme = themeById(targetThemeId(target));
+      if (target.kind === "board") {
+        theme = theme || TH.piboardTheme(settings.colors);
+        const tone = setThemeVars(el, theme, mode);
+        // data-theme reste la reference historique des widgets et du CSS.
+        // data-theme stays the historical reference for widgets and CSS.
+        el.dataset.theme = tone;
+        el.dataset.themeId = theme.id;
+      } else if (theme) {
+        setThemeVars(el, theme, mode);
+        el.dataset.themeId = theme.id;
+        el.classList.add("pb-themed");
+      } else if (preview && preview.mode) {
+        // Heriter, mais apercu d'une autre variante : on applique celle
+        // du board dans ce mode. / Inheriting while previewing another
+        // variant: apply the board's in that mode.
+        setThemeVars(el, themeById(settings.themeId || "piboard") || TH.piboardTheme(settings.colors), mode);
+        el.classList.add("pb-themed");
+      } else {
+        clearThemeVars(el);
+      }
+    }
+    /* Les tuiles transparentes calculent leur couleur de texte d'apres le
+       fond REELLEMENT visible derriere elles : tout changement de theme
+       change la reponse.
+       Transparent tiles compute their text colour from the background
+       actually visible behind them: any theme change changes the
+       answer. */
+    for (const rec of tiles.values()) {
+      if (rec.conf && rec.conf.settings && rec.conf.settings._transparent) applyTileColor(rec);
+    }
+    window.dispatchEvent(new CustomEvent("piboard:theme"));
+    clearTimeout(themeTimer);
+    if (settings.theme === "auto") themeTimer = setTimeout(applyTheme, 60000);
+  }
+
+  /* ---------- Chargement des widgets / widget loading ---------- */
+
+  /* Version de l'application, servie par /api/version et injectee dans
+     l'URL des fichiers de widgets. Le serveur envoie pourtant deja
+     "no-cache, must-revalidate" sur le JS et le CSS ; mais une
+     revalidation suppose que le navigateur INTERROGE le serveur, ce qui
+     n'arrive pas toujours dans une application Electron empaquetee, ni
+     apres une mise a jour automatique ou l'ancien service worker et le
+     cache disque peuvent survivre. Une URL qui CHANGE a chaque version
+     ne laisse aucune place a l'ambiguite : ce n'est plus la meme
+     ressource, elle est forcement rechargee.
+     App version, served by /api/version and injected into widget file
+     URLs. The server already sends "no-cache, must-revalidate" on JS and
+     CSS; but revalidating assumes the browser ASKS the server, which does
+     not always happen in a packaged Electron app, nor after an auto-update
+     where the old service worker and disk cache can survive. A URL that
+     CHANGES with every version leaves no room for ambiguity: it is no
+     longer the same resource, so it must be reloaded. */
+  let assetVersion = "";
+
+  async function loadAssetVersion() {
+    try {
+      const r = await fetch("/api/version");
+      assetVersion = String((await r.json()).version || "");
+    } catch (e) {
+      // Sans version on retombe sur le comportement precedent : pas de
+      // parametre, donc le cache HTTP normal. Degradation, pas panne.
+      // With no version we fall back to the previous behaviour: no
+      // parameter, so plain HTTP caching. Degraded, not broken.
+      assetVersion = "";
+    }
+  }
+
+  function loadWidgetAssets(manifest) {
+    return new Promise((resolve) => {
+      const base = "widgets/" + manifest.dir + "/";
+      const bust = assetVersion ? "?v=" + encodeURIComponent(assetVersion) : "";
+      if (manifest.css !== false) {
+        const link = document.createElement("link");
+        link.rel = "stylesheet";
+        link.href = base + "widget.css" + bust;
+        document.head.appendChild(link);
+      }
+      const script = document.createElement("script");
+      script.src = base + "widget.js" + bust;
+      script.onload = () => resolve(true);
+      script.onerror = () => { console.warn("[piboard] widget js failed:", manifest.id); resolve(false); };
+      document.body.appendChild(script);
+    });
+  }
+
+  /* ---------- Tuiles / tiles ---------- */
+
+  /* Icone des reglages de tuile : des curseurs, PAS un engrenage.
+
+     L'icone precedente (un cercle entoure de huit rayons droits) etait un
+     engrenage simplifie, mais en supprimant les lobes elle etait devenue
+     le pictogramme d'un soleil -- ce que les utilisateurs lisaient
+     effectivement. Reprendre le vrai engrenage de la barre d'outils ne
+     reglait pas le probleme : il est rendu a 44 px dans le dock contre
+     15 px ici, et ses dents s'agglutinent a cette taille.
+
+     Les curseurs n'ont aucun detail sous 2 px, donc restent francs en
+     15 px. Bonus : deux icones distinctes separent visuellement les deux
+     niveaux de reglages (engrenage = general, curseurs = cette tuile),
+     confusion que le guide de demarrage rapide signale comme la plus
+     frequente. La barre d'outils garde son engrenage inchange.
+
+     Tile settings icon: sliders, NOT a gear.
+
+     The previous icon (a circle ringed by eight straight rays) was a
+     simplified gear, but dropping the lobes turned it into the pictogram
+     of a sun -- which is what users actually read. Reusing the toolbar's
+     real gear would not have fixed it: it renders at 44 px in the dock
+     versus 15 px here, and its teeth clog together at that size.
+
+     Sliders have no detail below 2 px, so they stay crisp at 15 px.
+     Bonus: two distinct icons visually separate the two levels of
+     settings (gear = global, sliders = this tile), the confusion the
+     quick start guide flags as the most common one. The toolbar keeps
+     its gear unchanged. */
+  function tileMarkup(conf, manifest) {
+    const name = i18n.fromManifest(manifest ? manifest.name : conf.widget);
+    return `
+      <div class="tile-head">
+        <span class="tile-name">${name}</span>
+        <button class="tile-btn tile-gear" title="${i18n.t("tile.settings")}">
+          <svg viewBox="0 0 24 24"><path d="M3 7h11M18 7h3M3 17h5M12 17h9"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>
+        </button>
+        <button class="tile-btn tile-x" title="${i18n.t("tile.remove")}">
+          <svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg>
+        </button>
+      </div>
+      <div class="tile-title" hidden>
+        <img src="widgets/${manifest ? manifest.dir : conf.widget}/icon.svg" alt="">
+        <span class="tile-title-text"></span>
+      </div>
+      <div class="tile-body"></div>`;
+  }
+
+  /* Barre de titre universelle : optionnelle sur chaque tuile.
+     Texte = titre personnalise, sinon nom du widget (langue courante).
+     Universal title bar: optional on every tile. Text = custom title,
+     otherwise the widget name in the current language. */
+  function applyTitleBar(rec) {
+    const bar = rec.el.querySelector(".tile-title");
+    if (!bar) return;
+    const s = rec.conf.settings || {};
+    const show = s._showTitle != null ? !!s._showTitle : !!(rec.manifest && rec.manifest.titleBar);
+    bar.hidden = !show;
+    bar.querySelector(".tile-title-text").textContent =
+      s._title || s.title || (rec.manifest ? i18n.fromManifest(rec.manifest.name) : rec.conf.widget);
+  }
+
+  /* Couleur de tuile personnalisee : independante du theme jour/nuit et des
+     couleurs globales. Vide/desactivee = couleur de tuile du theme courant.
+     Custom tile color: independent from the day/night theme and global
+     colors. Empty/disabled = current theme's tile color. */
+  /* Luminance perceptuelle approximative d'une couleur hex (0 = noir, 1 = blanc)
+     Approximate perceptual luminance of a hex color (0 = black, 1 = white) */
+  function relLuminance(hex) {
+    const c = (hex || "").replace("#", "");
+    if (c.length !== 6) return 0.5;
+    const r = parseInt(c.substr(0, 2), 16) / 255;
+    const g = parseInt(c.substr(2, 2), 16) / 255;
+    const b = parseInt(c.substr(4, 2), 16) / 255;
+    return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+  }
+
+  const LIGHT_TEXT_PALETTE = { "--text": "#F3F5FA", "--muted": "#C3C9DB", "--faint": "#9AA1B8",
+    "--tile-edge": "rgba(255,255,255,0.18)", "--field-bg": "rgba(255,255,255,0.08)" };
+  const DARK_TEXT_PALETTE = { "--text": "#1B1F2A", "--muted": "#5B6272", "--faint": "#848CA0",
+    "--tile-edge": "rgba(0,0,0,0.14)", "--field-bg": "rgba(0,0,0,0.05)" };
+  const OVERRIDE_PROPS = Object.keys(LIGHT_TEXT_PALETTE);
+
+  /* Le fond de page est-il sombre ? On lit la couleur REELLEMENT
+     calculee sur le plateau plutot que la variable `--bg` : un theme
+     personnalise, une couleur de page ou un mode jour/nuit peuvent
+     l'avoir remplacee, et c'est la couleur affichee qui compte.
+     `getComputedStyle` renvoie du "rgb(r, g, b)" : on le convertit avant
+     d'en calculer la luminosite, `relLuminance` attendant du
+     hexadecimal. Faute de mesure exploitable, on retombe sur le theme
+     declare -- jamais sur une supposition muette.
+
+     Is the page background dark? We read the colour ACTUALLY computed on
+     the board rather than the `--bg` variable: a custom theme, a page
+     colour or day/night mode may have replaced it, and it is the
+     displayed colour that counts. `getComputedStyle` returns
+     "rgb(r, g, b)": we convert it before computing its luminance, as
+     `relLuminance` expects hexadecimal. Failing a usable measurement, we
+     fall back on the declared theme -- never on a silent guess. */
+  function pageIsDark(rec) {
+    /* Surface REELLEMENT derriere la tuile : le conteneur theme le plus
+       proche (page, volet), a defaut le board puis <body>. Depuis les
+       themes par page et par volet, deux tuiles transparentes peuvent
+       reposer sur des fonds opposes.
+       The surface actually behind the tile: the nearest themed container
+       (page, drawer), else the board then <body>. Since per-page and
+       per-drawer themes, two transparent tiles may sit on opposite
+       backgrounds. */
+    const start = rec && rec.el ? rec.el.parentElement : ((typeof boardEl === "function" && boardEl()) || document.body);
+    for (let node = start; node && node.nodeType === 1; node = node.parentElement) {
+      let measured = null;
+      try { measured = getComputedStyle(node).backgroundColor; } catch (e) { /* pas encore en page / not laid out yet */ }
+      const rgb = String(measured || "").match(/^rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+      if (rgb) {
+        // Un fond totalement transparent ne dit rien de ce qu'on voit.
+        // A fully transparent background says nothing about what is seen.
+        const alpha = String(measured).match(/^rgba\([^)]*,\s*([\d.]+)\)$/);
+        if (!alpha || Number(alpha[1]) > 0.1) {
+          const hex = "#" + [1, 2, 3].map((i) => Number(rgb[i]).toString(16).padStart(2, "0")).join("");
+          return relLuminance(hex) < 0.5;
+        }
+      }
+      // Faute de mesure (jsdom ne resout pas var()), le ton declare du
+      // conteneur theme fait foi. / Without a measurement (jsdom does not
+      // resolve var()), the themed container's declared tone rules.
+      if (node.dataset && node.dataset.tone) return node.dataset.tone === "dark";
+      if (node === document.body) break;
+    }
+    return document.body.dataset.theme !== "light";
+  }
+
+  function applyTileColor(rec) {
+    const content = rec.el.querySelector(".grid-stack-item-content");
+    if (!content) return;
+    const s = rec.conf.settings || {};
+    /* Tuile transparente : elle prend le fond de la page au lieu du
+       sien. Elle l'emporte sur la couleur personnalisee -- les deux sont
+       contradictoires, et c'est la transparence qui a ete demandee en
+       dernier dans ce cas.
+       Transparent tile: it takes the page's background instead of its
+       own. It wins over the custom color -- the two contradict each
+       other, and transparency is what was asked for last in that case. */
+    content.classList.toggle("tile-transparent", !!s._transparent);
+    if (s._transparent) {
+      content.style.backgroundColor = "";
+      /* Le texte doit trancher sur ce que l'on VOIT reellement derriere
+         la tuile, c'est-a-dire le fond de la PAGE -- et non sur la
+         couleur de tuile, qui n'est plus peinte du tout.
+
+         Sans cela, la tuile continuait d'heriter de la couleur de texte
+         calculee pour son ancien fond : un texte sombre, pense pour une
+         tuile claire, se retrouvait sur un fond de page sombre et
+         devenait illisible. C'est exactement le meme raisonnement que
+         pour une couleur de tuile personnalisee, applique a la bonne
+         surface.
+
+         The text must contrast with what is actually SEEN behind the
+         tile, that is the PAGE's background -- not with the tile colour,
+         which is no longer painted at all.
+
+         Without this, the tile kept inheriting the text colour computed
+         for its former background: dark text, meant for a light tile,
+         ended up on a dark page background and became unreadable. This
+         is exactly the same reasoning as for a custom tile colour,
+         applied to the right surface. */
+      const palette = pageIsDark(rec) ? LIGHT_TEXT_PALETTE : DARK_TEXT_PALETTE;
+      for (const prop of OVERRIDE_PROPS) content.style.setProperty(prop, palette[prop]);
+      content.style.color = palette["--text"];
+      return;
+    }
+    if (s._customColor && s._bgColor) {
+      content.style.backgroundColor = s._bgColor;
+      // Le texte bascule automatiquement en clair ou en sombre selon la
+      // luminosite de la couleur choisie, pour garder un contraste lisible
+      // quel que soit le theme jour/nuit actif.
+      // Text automatically switches to light or dark based on the chosen
+      // color's luminance, to keep readable contrast regardless of the
+      // active day/night theme.
+      const palette = relLuminance(s._bgColor) < 0.5 ? LIGHT_TEXT_PALETTE : DARK_TEXT_PALETTE;
+      for (const prop of OVERRIDE_PROPS) content.style.setProperty(prop, palette[prop]);
+      // Certains elements de widget n'ecrivent pas explicitement
+      // "color: var(--text)" et heritent simplement de la couleur deja
+      // resolue du body : changer la variable seule ne les atteindrait pas.
+      // On fixe donc aussi "color" directement, qui s'herite normalement.
+      // Some widget elements don't explicitly write "color: var(--text)"
+      // and just inherit the already-resolved body color: changing the
+      // variable alone wouldn't reach them. So we also set "color"
+      // directly, which inherits normally.
+      content.style.color = palette["--text"];
+    } else {
+      content.style.backgroundColor = "";
+      content.style.color = "";
+      for (const prop of OVERRIDE_PROPS) content.style.removeProperty(prop);
+    }
+  }
+
+  /* Taille du texte par tuile : agrandit uniformement tout le contenu du
+     widget via la propriete CSS "zoom" (bien supportee par Chromium, le
+     navigateur du kiosque). Les widgets a police auto-ajustee (citation,
+     horloge...) se recalibrent d'eux-memes et ne changent pas ; ceux a
+     tailles fixes en px (RSS, meteo...) grossissent, ce qui est le but.
+     La tuile Trafic est exclue (le zoom CSS fausse les coordonnees de la
+     carte Leaflet).
+     Per-tile text size: uniformly enlarges the whole widget content via
+     the CSS "zoom" property (well supported by Chromium, the kiosk's
+     browser). Auto-fitting widgets (quote, clock...) recalibrate
+     themselves and don't change; fixed-px ones (RSS, weather...) grow,
+     which is the point. The Traffic tile is excluded (CSS zoom breaks
+     the Leaflet map's coordinates). */
+  function applyTextScale(rec) {
+    const body = rec.el.querySelector(".tile-body");
+    if (!body) return;
+    // Trafic : le zoom CSS fausse les coordonnees de la carte Leaflet.
+    // Citations : gere elle-meme l'echelle dans son propre calcul
+    // d'ajustement (fit()), pour rester coherente avec son algorithme
+    // qui vise deja "la plus grande taille qui tient" -- empiler un zoom
+    // CSS par-dessus un dimensionnement JS deja optimise donnait des
+    // interactions confuses (l'un peut annuler l'autre).
+    // Traffic: CSS zoom breaks the Leaflet map's coordinates.
+    // Quote: handles the scale itself within its own fit() calculation,
+    // to stay consistent with its algorithm which already aims for "the
+    // largest size that fits" -- stacking a CSS zoom on top of an
+    // already-optimized JS sizing gave confusing interactions (one could
+    // cancel out the other).
+    if (rec.conf.widget === "traffic" || rec.conf.widget === "quote") {
+      body.style.zoom = "";
+      return;
+    }
+    const scale = Number((rec.conf.settings || {})._textScale) || 1;
+    body.style.zoom = scale === 1 ? "" : String(scale);
+  }
+
+  /* Couleur hexadecimale actuelle d'une tuile (pour pre-remplir le selecteur)
+     Current hex color of a tile (to pre-fill the color picker) */
+  function currentTileColorHex(rec) {
+    const s = rec.conf.settings || {};
+    if (s._customColor && s._bgColor) return s._bgColor;
+    const rgb = getComputedStyle(rec.el.querySelector(".grid-stack-item-content")).backgroundColor;
+    const m = rgb.match(/\d+/g);
+    if (!m) return "#141926";
+    return "#" + m.slice(0, 3).map((n) => Number(n).toString(16).padStart(2, "0")).join("");
+  }
+
+  /* Grille Gridstack cible pour une zone donnee ("board" ou
+     "drawer-<side>"). Point d'entree unique reutilise par mountTile,
+     removeTile, etc. -- evite de reecrire le meme aiguillage a chaque
+     endroit. Target Gridstack grid for a given zone ("board" or
+     "drawer-<side>"). Single entry point reused by mountTile,
+     removeTile, etc. -- avoids rewriting the same lookup everywhere. */
+  /* ============================================================
+     MODE TABLEAU DE BORD : pages qui se remplacent en glissant
+     DASHBOARD MODE: pages that replace each other by sliding
+     ============================================================
+
+     DEUX MODES D'AFFICHAGE, choisis dans les reglages generaux :
+
+       "classic"   : le mode historique, inchange. Un seul plateau, trois
+                     tiroirs escamotables, la barre d'outils en bas.
+       "dashboard" : une suite de pages qui se remplacent, sans tiroirs,
+                     avec un fin bandeau en bas d'ecran.
+
+     COMMENT LES PAGES SONT RANGEES, et pourquoi ainsi. La page 1 EST le
+     plateau existant (`layout.tiles`) : elle n'est pas recopiee ailleurs.
+     Les pages suivantes vivent dans `layout.pages`, chacune avec ses
+     propres tuiles. Consequence voulue : un tableau existant devient une
+     page 1 sans aucune migration, et repasser en mode classique le
+     retrouve intact. L'inverse -- inventer un tableau `pages` contenant
+     AUSSI la page 1 -- aurait duplique la source de verite du plateau
+     principal, avec la garantie qu'un jour les deux divergent.
+
+     Les metadonnees de la page 1 (nom, transition) vivent dans
+     `layout.mainPage`, faute de pouvoir les ranger dans `layout.tiles`
+     qui est un tableau.
+
+     TOUTES LES PAGES SONT MONTEES en meme temps, pas seulement celle
+     qu'on regarde : une tuile Meteo de la page 3 doit avoir ses donnees
+     a jour quand la page arrive, pas commencer a les charger a ce
+     moment-la. C'est le comportement attendu d'un tableau de bord qui
+     defile. En contrepartie, ajouter des pages coute des ressources --
+     c'est un choix de l'utilisateur, et la planification horaire des
+     tuiles reste disponible pour endormir ce qui doit l'etre.
+
+     TWO DISPLAY MODES, chosen in the general settings:
+
+       "classic"   : the historical mode, unchanged. One board, three
+                     retractable drawers, the toolbar at the bottom.
+       "dashboard" : a series of pages replacing each other, no drawers,
+                     with a thin bar at the bottom of the screen.
+
+     HOW PAGES ARE STORED, and why this way. Page 1 IS the existing board
+     (`layout.tiles`): it is not copied anywhere else. Following pages
+     live in `layout.pages`, each with its own tiles. Intended
+     consequence: an existing board becomes page 1 with no migration at
+     all, and switching back to classic mode finds it intact. The
+     opposite -- inventing a `pages` array ALSO holding page 1 -- would
+     have duplicated the main board's source of truth, with the guarantee
+     that one day the two diverge.
+
+     Page 1's metadata (name, transition) lives in `layout.mainPage`,
+     for lack of anywhere to put it inside `layout.tiles`, which is an
+     array.
+
+     ALL PAGES ARE MOUNTED at once, not only the one being looked at: a
+     Weather tile on page 3 must have fresh data when the page arrives,
+     not start loading then. That is the expected behaviour of a
+     dashboard that cycles. In exchange, adding pages costs resources --
+     that is the user's choice, and per-tile scheduling remains available
+     to put to sleep whatever should be. */
+
+  const PAGE_DIRECTIONS = ["left", "right", "up", "down"];
+  const PAGE_EFFECTS = ["push", "cover", "uncover", "fade", "none"];
+  const PAGE_ANIM_MS = 520;
+
+  /* Pages secondaires (2..N) telles qu'enregistrees. La page 1 n'y est
+     pas : voir le commentaire ci-dessus.
+     Secondary pages (2..N) as saved. Page 1 is not in there: see the
+     comment above. */
+  let pages = [];                 // [{ id, name, transition, grid, el }]
+  let mainPage = { name: "", transition: { direction: "left", effect: "push" } };
+  let activePageIndex = 0;        // 0 = page 1 (le plateau) / 0 = page 1 (the board)
+  let pageAnimating = false;
+
+  /* Duree propre a une page : null quand elle suit la valeur generale.
+     Une duree sous le minimum est ramenee a null plutot que corrigee en
+     silence -- un champ vide ou un 0 saisi par erreur veut dire "pas de
+     duree propre", pas "trois secondes".
+     A page's own duration: null when it follows the general value. A
+     duration below the minimum falls back to null rather than being
+     silently corrected -- an empty field or a 0 typed by mistake means
+     "no own duration", not "three seconds". */
+  function normalizeDwell(v) {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= 3 ? Math.round(n) : null;
+  }
+
+  /* ---------- Fond de page / page background ----------
+     Une couleur unie ne suffit pas des lors qu'on compose de vraies
+     pages : un fond illustre, c'est ce qui distingue un tableau de bord
+     d'une grille de tuiles. Le fond est donc attache A CHAQUE PAGE, y
+     compris la page 1 -- qui est aussi le plateau du mode classique, qui
+     en beneficie donc sans rien demander.
+
+     Le fichier est stocke en local, par la meme API media que la tuile
+     Logo/Image : sous `data/`, jamais touche par les mises a jour et
+     inclus dans les sauvegardes. Chaque page a son propre dossier, ce
+     qui evite qu'en supprimer une efface le fond d'une autre.
+
+     `dim` assombrit (ou eclaircit) le fond derriere les tuiles. Sans lui,
+     une photo contrastee rend les tuiles transparentes illisibles, et
+     l'on serait oblige de choisir entre un beau fond et un tableau
+     lisible.
+
+     A plain colour is not enough once one composes real pages: an
+     illustrated background is what distinguishes a dashboard from a grid
+     of tiles. The background is therefore attached TO EACH PAGE,
+     including page 1 -- which is also the classic mode's board, and so
+     benefits from it without asking.
+
+     The file is stored locally, through the same media API as the
+     Logo/Image tile: under `data/`, never touched by updates and
+     included in backups. Each page has its own folder, which prevents
+     deleting one from wiping another's background.
+
+     `dim` darkens (or lightens) the background behind the tiles. Without
+     it, a contrasted photo makes transparent tiles unreadable, and one
+     would have to choose between a nice background and a legible
+     board. */
+  const BG_MODES = ["cover", "contain", "original", "stretch", "repeat"];
+  const BG_POSITIONS = ["top left", "top center", "top right",
+    "center left", "center center", "center right",
+    "bottom left", "bottom center", "bottom right"];
+
+  const BG_ROTATIONS = new Set([0, 90, 180, 270]);
+
+  function normalizeBackground(b) {
+    const src = b && typeof b === "object" ? b : {};
+    const dim = Number(src.dim);
+    const rotate = Number(src.rotate);
+    return {
+      image: typeof src.image === "string" ? src.image : "",
+      mode: BG_MODES.includes(src.mode) ? src.mode : "cover",
+      position: BG_POSITIONS.includes(src.position) ? src.position : "center center",
+      // 0 = photo telle quelle ; 100 = fond uni. Entre les deux, la
+      // couleur de fond du theme est melangee par-dessus.
+      // 0 = photo as is; 100 = plain background. In between, the theme's
+      // background colour is blended over it.
+      dim: Number.isFinite(dim) ? Math.max(0, Math.min(100, Math.round(dim))) : 0,
+      // Miroir et rotation : des reglages, jamais une modification du
+      // fichier -- la meme image de la bibliotheque peut donc etre
+      // retournee sur une page et intacte sur une autre.
+      // Mirror and rotation: settings, never a change to the file --
+      // the same library image can therefore be flipped on one page and
+      // untouched on another.
+      flipH: !!src.flipH,
+      flipV: !!src.flipV,
+      rotate: BG_ROTATIONS.has(rotate) ? rotate : 0
+    };
+  }
+
+  /* Identifiant du dossier media d'une page. Fixe pour la page 1 : elle
+     n'a pas d'identifiant propre, etant le plateau lui-meme.
+     A page's media folder id. Fixed for page 1: it has no id of its own,
+     being the board itself. */
+  function backgroundMediaId(index) {
+    const p = pageAt(index);
+    return "bg-" + (p && p.index > 0 ? p.id : "main");
+  }
+
+  /* Traduit le reglage en proprietes CSS. Les cinq modes se ramenent a
+     `background-size` et `background-repeat`, ce qui evite cinq chemins
+     de code separes.
+     Turns the setting into CSS properties. The five modes boil down to
+     `background-size` and `background-repeat`, which avoids five
+     separate code paths. */
+  function backgroundCss(bg, url) {
+    const size = { cover: "cover", contain: "contain", original: "auto",
+      stretch: "100% 100%", repeat: "auto" }[bg.mode] || "cover";
+    return {
+      backgroundImage: url ? `url("${url}")` : "",
+      backgroundSize: url ? size : "",
+      backgroundRepeat: url ? (bg.mode === "repeat" ? "repeat" : "no-repeat") : "",
+      backgroundPosition: url ? bg.position : "",
+      // Le fond ne doit pas defiler avec les tuiles quand la page
+      // deborde : il resterait a moitie hors champ.
+      // The background must not scroll with the tiles when the page
+      // overflows: it would end up half out of view.
+      backgroundAttachment: url ? "local" : ""
+    };
+  }
+
+  /* Chaine `transform` pour le miroir et la rotation du fond de page.
+     Le miroir est place AVANT la rotation dans la liste CSS -- donc
+     applique EN DERNIER au point, la liste se lisant de droite a
+     gauche -- pour retourner le fond tel qu'il est actuellement vu a
+     l'ecran, apres rotation, plutot que selon les axes d'origine du
+     fichier. Chaine vide si rien n'est actif : c'est ce qui decide plus
+     bas si la surcouche dediee est necessaire.
+     `transform` string for the page background's mirror and rotation.
+     The mirror comes BEFORE the rotation in the CSS list -- so it is
+     applied LAST to the point, the list reading right to left -- to
+     flip the background as currently seen on screen, after rotation,
+     rather than along the file's original axes. Empty string when
+     nothing is active: that is what decides below whether the dedicated
+     layer is needed at all. */
+  function backgroundTransform(bg) {
+    const sx = bg.flipH ? -1 : 1;
+    const sy = bg.flipV ? -1 : 1;
+    const parts = [];
+    if (sx !== 1 || sy !== 1) parts.push("scale(" + sx + ", " + sy + ")");
+    if (bg.rotate) parts.push("rotate(" + bg.rotate + "deg)");
+    return parts.join(" ");
+  }
+
+  function applyPageBackground(index) {
+    const p = pageAt(index);
+    if (!p || !p.el) return;
+    const bg = normalizeBackground(p.background);
+    const url = bg.image
+      ? "/media/" + encodeURIComponent(backgroundMediaId(index)) + "/" + encodeURIComponent(bg.image)
+      : "";
+    const transform = url ? backgroundTransform(bg) : "";
+    let layer = p.el.querySelector(":scope > .board-bg-layer");
+    if (!transform) {
+      // Chemin inchange depuis l'origine de la fonctionnalite : le fond
+      // est une propriete CSS directe de .board, ce qui lui fait herite
+      // gratuitement de `background-attachment: local` quand la page
+      // deborde (voir backgroundCss). La surcouche dediee n'existe que
+      // pour le miroir et la rotation ; sans eux, on ne paie aucun cout
+      // ni risque supplementaire.
+      // Path unchanged since the feature's origin: the background is a
+      // direct CSS property of .board, which gets it `background-
+      // attachment: local` for free when the page overflows (see
+      // backgroundCss). The dedicated layer exists only for the mirror
+      // and rotation; without them, no extra cost or risk is paid.
+      Object.assign(p.el.style, backgroundCss(bg, url));
+      if (layer) layer.remove();
+    } else {
+      // Miroir et/ou rotation actifs : le fond passe sur une surcouche
+      // a part, pour que le `transform` ne retourne/tourne JAMAIS les
+      // tuiles posees dessus. .board est deja `position: absolute;
+      // overflow: hidden`, donc cette surcouche en `inset: 0` y est
+      // decoupee proprement, y compris apres une rotation de 90/270
+      // degres. Contrepartie acceptee : sur une page qui deborde (rare
+      // en combinaison avec un fond retourne), ce fond ne defile plus
+      // avec le contenu, faute du mecanisme `background-attachment:
+      // local` qui ne s'applique qu'a un fond CSS direct.
+      // Mirror and/or rotation active: the background moves to a
+      // separate layer, so the `transform` NEVER flips/rotates the
+      // tiles sitting on top. .board is already `position: absolute;
+      // overflow: hidden`, so this `inset: 0` layer is cleanly clipped
+      // by it, including after a 90/270 degree rotation. Accepted
+      // trade-off: on an overflowing page (rare in combination with a
+      // flipped background), this background no longer scrolls with the
+      // content, for lack of the `background-attachment: local`
+      // mechanism, which only applies to a direct CSS background.
+      Object.assign(p.el.style, backgroundCss(bg, ""));
+      if (!layer) {
+        layer = document.createElement("div");
+        layer.className = "board-bg-layer";
+        p.el.insertBefore(layer, p.el.firstChild);
+      }
+      Object.assign(layer.style, backgroundCss(bg, url));
+      layer.style.transform = transform;
+    }
+    p.el.classList.toggle("has-bg-image", !!url);
+    // Le voile est un element a part plutot qu'un filtre : un filtre sur
+    // le conteneur affecterait AUSSI les tuiles posees dessus.
+    // The veil is a separate element rather than a filter: a filter on
+    // the container would affect the tiles on top as well.
+    let veil = p.el.querySelector(":scope > .board-bg-veil");
+    if (!url || !bg.dim) {
+      if (veil) veil.remove();
+      return;
+    }
+    if (!veil) {
+      veil = document.createElement("div");
+      veil.className = "board-bg-veil";
+      p.el.insertBefore(veil, p.el.firstChild);
+    }
+    veil.style.opacity = String(bg.dim / 100);
+  }
+
+  function applyAllBackgrounds() {
+    for (let i = 0; i < pageCount(); i++) applyPageBackground(i);
+  }
+
+  /* Identifiant de theme d'une page ou d'un volet : null = herite du
+     board. Un theme disparu (theme perso supprime) redevient null a
+     l'affichage, via themeById -- l'identifiant, lui, est conserve tel
+     quel pour ne rien perdre si le theme est reimporte.
+     Theme id of a page or drawer: null = inherits the board's. */
+  function normalizeThemeId(v) {
+    const id = typeof v === "string" ? v.trim() : "";
+    return /^[a-z0-9-]{1,40}$/i.test(id) ? id : null;
+  }
+
+  function normalizeTransition(t) {
+    const src = t && typeof t === "object" ? t : {};
+    return {
+      direction: PAGE_DIRECTIONS.includes(src.direction) ? src.direction : "left",
+      effect: PAGE_EFFECTS.includes(src.effect) ? src.effect : "push"
+    };
+  }
+
+  function dashboardMode() {
+    return !!settings && settings.displayMode === "dashboard";
+  }
+
+  function pageCount() { return 1 + pages.length; }
+
+  /* Descripteur d'une page par son index : l'index 0 designe le plateau
+     principal, dont la zone est "board" et non "page:<id>".
+     Page descriptor by index: index 0 is the main board, whose zone is
+     "board" and not "page:<id>". */
+  function pageAt(index) {
+    if (index <= 0) {
+      return { index: 0, id: "main", zone: "board", el: $("board"), grid,
+        name: mainPage.name, transition: mainPage.transition,
+        background: mainPage.background, themeIdRaw: mainPage.themeId || null };
+    }
+    const p = pages[index - 1];
+    /* "background" fait partie du descripteur au meme titre que le nom
+       et la transition. Il manquait ici -- et LUI SEUL : la page 1,
+       decrite juste au-dessus, l'avait bien. applyPageBackground() lit
+       le fond a travers ce descripteur, il ne voyait donc jamais celui
+       d'une page secondaire, et aucune image de fond ne s'affichait
+       au-dela de la page 1, alors qu'elle etait correctement choisie,
+       enregistree et rechargee.
+       "background" is part of the descriptor just like the name and the
+       transition. It was missing here -- and only here: page 1,
+       described just above, did have it. applyPageBackground() reads the
+       background through this descriptor, so it never saw a secondary
+       page's one, and no background image showed beyond page 1, even
+       though it was correctly picked, saved and reloaded. */
+    return p ? { index, id: p.id, zone: "page:" + p.id, el: p.el, grid: p.grid,
+      name: p.name, transition: p.transition, background: p.background, themeIdRaw: p.themeId || null } : null;
+  }
+
+  function currentZone() {
+    if (!dashboardMode()) return null;
+    const p = pageAt(activePageIndex);
+    return p ? p.zone : "board";
+  }
+
+  function newPageId() {
+    return "pg-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6);
+  }
+
+  /* Conteneur DOM + grille Gridstack d'une page secondaire. Cree une
+     seule fois par page, puis reutilise : reconstruire la grille a
+     chaque changement de page detruirait les tuiles montees dessus.
+     DOM container + Gridstack grid for a secondary page. Created once
+     per page, then reused: rebuilding the grid on every page change
+     would destroy the tiles mounted on it. */
+  function createPageElement(page) {
+    const el = document.createElement("main");
+    el.className = "board board-page";
+    el.id = "page-" + page.id;
+    el.dataset.pageId = page.id;
+    el.hidden = true;
+    const gs = document.createElement("div");
+    gs.className = "grid-stack";
+    gs.id = "pageGrid-" + page.id;
+    el.appendChild(gs);
+    document.body.insertBefore(el, $("dock"));
+
+    const pgGrid = GridStack.init({
+      column: COLS,
+      margin: 5,
+      float: true,
+      staticGrid: true,
+      resizable: { handles: "e,se,s,sw,w" },
+      alwaysShowResizeHandle: "mobile"
+    }, "#" + gs.id);
+    // Une page ajoutee PENDANT le mode edition doit naitre deverrouillee :
+    // sinon elle serait la seule page figee de la session.
+    // A page added WHILE in edit mode must be born unlocked: otherwise it
+    // would be the only frozen page of the session.
+    pgGrid.setStatic(!editing);
+    pgGrid.on("change", () => { if (editing) scheduleSave(); });
+    // Meme cablage que le plateau et les tiroirs, garde-fou du clic
+    // compris. Same wiring as the board and the drawers, edit-click
+    // guard included.
+    wireEditClick(pgGrid, gs);
+    page.el = el;
+    page.grid = pgGrid;
+    return page;
+  }
+
+  function destroyPageElement(page) {
+    if (page.grid) { try { page.grid.destroy(false); } catch (e) { /* deja detruite / already destroyed */ } }
+    if (page.el && page.el.parentNode) page.el.parentNode.removeChild(page.el);
+    page.grid = null;
+    page.el = null;
+  }
+
+  /* ---------- Changement de page / page switch ----------
+     L'animation est portee par les DEUX conteneurs : la page qui part et
+     celle qui arrive. Les cinq effets se ramenent a deux transformations
+     et une opacite, ce qui evite cinq chemins de code separes :
+       push    : les deux glissent ensemble, comme une pellicule ;
+       cover   : la nouvelle glisse PAR-DESSUS l'ancienne, qui ne bouge pas ;
+       uncover : la nouvelle est deja dessous, l'ancienne s'en va ;
+       fade    : fondu, sans deplacement ;
+       none    : remplacement immediat.
+     La direction est celle du DEPLACEMENT DU REGARD : "vers la gauche"
+     veut dire que la nouvelle page arrive par la droite, comme quand on
+     tourne une page.
+
+     The animation is carried by BOTH containers: the outgoing page and
+     the incoming one. The five effects boil down to two transforms and
+     an opacity, which avoids five separate code paths:
+       push    : both slide together, like a film strip;
+       cover   : the new one slides OVER the old one, which stays put;
+       uncover : the new one is already underneath, the old one leaves;
+       fade    : cross-fade, no movement;
+       none    : immediate replacement.
+     The direction is the one the EYE travels: "to the left" means the
+     new page arrives from the right, like turning a page. */
+  function offsetFor(direction, sign) {
+    switch (direction) {
+      case "right": return `translateX(${-sign * 100}%)`;
+      case "up": return `translateY(${sign * 100}%)`;
+      case "down": return `translateY(${-sign * 100}%)`;
+      default: return `translateX(${sign * 100}%)`;   // "left"
+    }
+  }
+
+  function goToPage(index, options) {
+    const opts = options || {};
+    if (!dashboardMode()) return;
+    const total = pageCount();
+    if (total < 1) return;
+    // Bouclage : depuis la derniere page, "suivant" revient a la
+    // premiere -- c'est ce qu'on attend d'un tableau qui defile.
+    // Wrap-around: from the last page, "next" returns to the first --
+    // what one expects from a cycling board.
+    const target = ((index % total) + total) % total;
+    if (target === activePageIndex) {
+      // Rester sur place remet malgre tout le compte a zero : cliquer le
+      // numero de la page affichee est une facon de dire "je la regarde".
+      // Staying put still resets the count: clicking the displayed
+      // page's number is a way of saying "I am looking at it".
+      if (!(options && options.auto)) scheduleAutoAdvance();
+      return;
+    }
+    if (pageAnimating) return;
+
+    const from = pageAt(activePageIndex);
+    const to = pageAt(target);
+    if (!from || !to) return;
+
+    /* La transition appliquee est celle de la page qui ARRIVE : chaque
+       page decrit la facon dont elle entre, ce qui rend le reglage
+       previsible quand on le modifie depuis cette page.
+       The applied transition is that of the INCOMING page: each page
+       describes how it enters, which makes the setting predictable when
+       edited from that page. */
+    const tr = normalizeTransition(to.transition);
+    // Reculer inverse le sens, sinon revenir en arriere donnerait
+    // l'impression d'avancer. Going back reverses the direction,
+    // otherwise stepping back would feel like moving forward.
+    const backwards = opts.backwards === true;
+    const dir = backwards ? oppositeDirection(tr.direction) : tr.direction;
+
+    activePageIndex = target;
+    renderPageIndicator();
+
+    if (tr.effect === "none" || opts.instant) {
+      from.el.hidden = true;
+      to.el.hidden = false;
+      finishPageSwitch(from, to);
+      return;
+    }
+
+    pageAnimating = true;
+    to.el.hidden = false;
+    const enterFrom = offsetFor(dir, 1);
+    const leaveTo = offsetFor(dir, -1);
+
+    // Etat de depart, sans transition : sinon le navigateur animerait
+    // aussi la MISE EN PLACE. Starting state, with no transition:
+    // otherwise the browser would also animate the SETUP.
+    for (const el of [from.el, to.el]) el.style.transition = "none";
+    from.el.style.zIndex = tr.effect === "cover" ? "1" : "2";
+    to.el.style.zIndex = tr.effect === "cover" ? "2" : "1";
+    to.el.style.transform = tr.effect === "fade" ? "none" : enterFrom;
+    to.el.style.opacity = tr.effect === "fade" ? "0" : "1";
+    from.el.style.transform = "none";
+    from.el.style.opacity = "1";
+    // Force le navigateur a prendre en compte l'etat de depart avant
+    // d'enchainer. Forces the browser to take the starting state into
+    // account before chaining. */
+    void to.el.offsetWidth;
+
+    for (const el of [from.el, to.el]) {
+      el.style.transition = `transform ${PAGE_ANIM_MS}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${PAGE_ANIM_MS}ms ease`;
+    }
+    to.el.style.transform = "none";
+    to.el.style.opacity = "1";
+    if (tr.effect === "push") from.el.style.transform = leaveTo;
+    else if (tr.effect === "uncover") from.el.style.transform = leaveTo;
+    else if (tr.effect === "fade") from.el.style.opacity = "0";
+    // "cover" : la page sortante ne bouge pas, la nouvelle passe dessus.
+    // "cover": the outgoing page does not move, the new one passes over.
+
+    setTimeout(() => {
+      for (const el of [from.el, to.el]) {
+        el.style.transition = "";
+        el.style.transform = "";
+        el.style.opacity = "";
+        el.style.zIndex = "";
+      }
+      from.el.hidden = true;
+      pageAnimating = false;
+      finishPageSwitch(from, to);
+    }, PAGE_ANIM_MS + 30);
+  }
+
+  function oppositeDirection(d) {
+    return { left: "right", right: "left", up: "down", down: "up" }[d] || "right";
+  }
+
+  /* Apres un changement de page, les tuiles de la page arrivee doivent
+     etre remesurees : celles qui se dimensionnent elles-memes (Citation,
+     Texte) ont ete montees dans un conteneur masque, donc de taille
+     nulle, et resteraient minuscules.
+     After a page switch, the arrived page's tiles must be re-measured:
+     those that size themselves (Quote, Text) were mounted in a hidden
+     container, hence of zero size, and would stay tiny. */
+  function finishPageSwitch(from, to) {
+    scheduleAutoAdvance();
+    updateCellHeight();
+    window.dispatchEvent(new Event("resize"));
+    document.dispatchEvent(new CustomEvent("piboard:page", { detail: { index: to.index, id: to.id } }));
+  }
+
+  function renderPageIndicator() {
+    const wrap = $("dashPages");
+    if (!wrap) return;
+    const total = pageCount();
+    wrap.innerHTML = "";
+    for (let i = 0; i < total; i++) {
+      const p = pageAt(i);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "dash-page-dot" + (i === activePageIndex ? " active" : "");
+      b.dataset.pageIndex = String(i);
+      b.title = p && p.name ? p.name : i18n.t("dash.page") + " " + (i + 1);
+      b.setAttribute("aria-label", b.title);
+      b.innerHTML = `<span>${i + 1}</span>`;
+      onActivate(b, () => goToPage(i, { backwards: i < activePageIndex }));
+      wrap.appendChild(b);
+    }
+    // Un tableau d'une seule page n'a pas de navigation a montrer.
+    // A single-page board has no navigation to show.
+    wrap.hidden = total < 2;
+  }
+
+  /* ---------- Defilement automatique / automatic page cycling ----------
+     Un tableau de bord mural n'a personne pour tourner les pages : sans
+     ce defilement, les pages 2 et suivantes ne seraient jamais vues.
+
+     LA DUREE EST PAR PAGE, avec une valeur generale par defaut. Une page
+     dense (un tableau de valeurs) demande plus de temps de lecture
+     qu'une page portant une grande horloge ; imposer la meme duree a
+     toutes aurait rendu l'option inutilisable des que les pages ne se
+     ressemblent pas.
+
+     LE DEFILEMENT SE SUSPEND des qu'il generait : en mode edition (on
+     deplace des tuiles, la page ne doit pas se derober), quand une
+     fenetre est ouverte (reglages, aide, details d'une tuile), et
+     pendant une transition. Il repart de zero apres toute navigation
+     manuelle : quelqu'un qui vient de choisir une page veut la regarder,
+     pas la voir disparaitre une seconde plus tard.
+
+     A wall dashboard has nobody to turn its pages: without this cycling,
+     pages 2 and beyond would never be seen.
+
+     THE DURATION IS PER PAGE, with a general default. A dense page (a
+     table of figures) needs more reading time than one carrying a large
+     clock; forcing the same duration on all of them would have made the
+     option unusable as soon as pages differ.
+
+     CYCLING SUSPENDS ITSELF whenever it would get in the way: in edit
+     mode (tiles are being moved, the page must not slip away), while a
+     window is open (settings, help, a tile's details), and during a
+     transition. It restarts from zero after any manual navigation:
+     someone who just picked a page wants to look at it, not see it
+     vanish a second later. */
+  const AUTO_MIN_SECONDS = 3;
+  const AUTO_DEFAULT_SECONDS = 30;
+  let autoTimer = null;
+
+  function autoAdvanceSeconds(index) {
+    const p = pageAt(index);
+    // Duree propre a la page si elle en a une, sinon la valeur generale.
+    // Page's own duration if it has one, otherwise the general value.
+    const own = Number(p && p.dwellSeconds);
+    if (Number.isFinite(own) && own >= AUTO_MIN_SECONDS) return own;
+    const global = Number(settings && settings.pageAutoSeconds);
+    return Number.isFinite(global) && global >= AUTO_MIN_SECONDS ? global : AUTO_DEFAULT_SECONDS;
+  }
+
+  function autoAdvanceBlocked() {
+    if (!dashboardMode()) return true;
+    if (!settings || !settings.pageAutoAdvance) return true;
+    if (pageCount() < 2) return true;
+    if (editing || pageAnimating) return true;
+    // Une fenetre ouverte veut dire que quelqu'un est en train de faire
+    // quelque chose. An open window means somebody is doing something.
+    if (document.querySelector(".modal:not([hidden])")) return true;
+    return false;
+  }
+
+  function stopAutoAdvance() {
+    clearTimeout(autoTimer);
+    autoTimer = null;
+  }
+
+  /* Reprogramme le prochain passage. Appelee apres chaque changement de
+     page, chaque modification de reglage et chaque ouverture/fermeture de
+     fenetre -- c'est la seule fonction qui arme le minuteur, de sorte
+     qu'il ne peut pas y en avoir deux en vol.
+     Schedules the next advance. Called after every page change, every
+     settings change and every window open/close -- it is the only
+     function arming the timer, so there cannot be two in flight. */
+  function scheduleAutoAdvance() {
+    stopAutoAdvance();
+    if (autoAdvanceBlocked()) return;
+    autoTimer = setTimeout(() => {
+      autoTimer = null;
+      // L'etat a pu changer pendant l'attente (edition ouverte, fenetre
+      // ouverte) : on revalide au lieu d'avancer aveuglement.
+      // State may have changed while waiting (edit mode, a window
+      // opened): revalidate instead of advancing blindly.
+      if (autoAdvanceBlocked()) { scheduleAutoAdvance(); return; }
+      goToPage(activePageIndex + 1, { auto: true });
+    }, autoAdvanceSeconds(activePageIndex) * 1000);
+  }
+
+  /* Toutes les grilles du tableau, quelle que soit la zone : plateau,
+     tiroirs et pages. Passer par cette liste plutot que d'enumerer les
+     zones a la main evite qu'une zone ajoutee plus tard soit oubliee --
+     c'est exactement ce qui est arrive aux grilles de pages, restees
+     verrouillees en mode edition.
+     Every grid of the board, whatever the zone: board, drawers and
+     pages. Going through this list rather than enumerating zones by hand
+     prevents a zone added later from being forgotten -- exactly what
+     happened to the page grids, which stayed locked in edit mode. */
+  function allGrids() {
+    const out = [grid];
+    for (const d of drawers.values()) if (d.grid) out.push(d.grid);
+    for (const p of pages) if (p.grid) out.push(p.grid);
+    return out;
+  }
+
+  /* Garde-fou du clic d'edition, partage par TOUTES les grilles.
+
+     Un glissement ou un redimensionnement se termine par un evenement de
+     clic sur la tuile : sans ce garde-fou, redimensionner une tuile
+     ouvrait sa fenetre de reglages alors que personne ne l'avait
+     demandee. Le drapeau reste leve un court instant apres la
+     manipulation, le temps que ce clic parasite passe.
+
+     Il etait pose au demarrage sur une liste figee (plateau + tiroirs).
+     Les grilles de PAGES, creees ensuite, en etaient donc exclues : sur
+     une page, tout redimensionnement ouvrait les reglages. C'est
+     desormais une fonction appliquee a chaque grille au moment ou elle
+     existe -- y compris a une page creee en cours de session.
+
+     Edit-click guard, shared by EVERY grid.
+
+     A drag or a resize ends with a click event on the tile: without this
+     guard, resizing a tile opened its settings window when nobody asked
+     for it. The flag stays raised for a short while after the
+     manipulation, long enough for that spurious click to go by.
+
+     It used to be set at boot on a frozen list (board + drawers). The
+     PAGE grids, created afterwards, were therefore excluded: on a page,
+     every resize opened the settings. It is now a function applied to
+     each grid as it comes into existence -- a page created mid-session
+     included. */
+  let justManipulated = false;
+
+  function wireEditClick(g, el) {
+    ["dragstart", "resizestart"].forEach((evt) => g.on(evt, () => { justManipulated = true; }));
+    ["dragstop", "resizestop"].forEach((evt) => g.on(evt, () => {
+      setTimeout(() => { justManipulated = false; }, 250);
+    }));
+    if (!el) return;
+    el.addEventListener("click", (e) => {
+      if (!editing || justManipulated) return;
+      if (e.target.closest(".tile-btn")) return;
+      const item = e.target.closest(".grid-stack-item");
+      if (item && item.dataset.tileId) openTileSettings(item.dataset.tileId);
+    });
+  }
+
+  function gridForZone(zone) {
+    if (!zone || zone === "board") return grid;
+    if (zone.startsWith("page:")) {
+      const p = pages.find((x) => x.id === zone.slice(5));
+      return p && p.grid ? p.grid : grid;
+    }
+    const d = drawers.get(zone.replace(/^drawer-/, ""));
+    return d ? d.grid : grid;
+  }
+
+  /* Cote(s) actuellement ouvert(s), dans l'ordre de leur z-index (le
+     plus recemment mis au premier plan en dernier) -- sert a decider
+     dans quel tiroir une nouvelle tuile doit atterrir quand plusieurs
+     sont ouverts a la fois (voir addTile).
+     Currently open side(s), ordered by z-index (most recently brought
+     to front last) -- used to decide which drawer a new tile should
+     land in when several are open at once (see addTile). */
+  function openDrawerSides() {
+    return Array.from(drawers.values())
+      .filter((d) => d.el.classList.contains("open"))
+      .sort((a, b) => (Number(a.el.style.zIndex) || 0) - (Number(b.el.style.zIndex) || 0))
+      .map((d) => d.def.side);
+  }
+
+  /* Fait passer un tiroir au premier plan par rapport aux deux autres.
+     Necessaire des lors que plusieurs tiroirs peuvent chacun recouvrir
+     "quasi integralement" l'ecran : sans cela, ouvrir/agrandir le
+     tiroir du haut par-dessus un tiroir gauche deja tres large le
+     laisserait inaccessible sous ce dernier.
+     Brings a drawer to the front relative to the other two. Needed
+     since several drawers can each cover "almost the entire" screen:
+     without this, opening/enlarging the top drawer over an already
+     very wide left drawer would leave it stuck underneath it. */
+  function bringDrawerToFront(side) {
+    const d = drawers.get(side);
+    if (!d) return;
+    drawerZIndexCounter += 1;
+    d.el.style.zIndex = String(drawerZIndexCounter);
+  }
+
+  /* Un seul tiroir ouvert a la fois : en ouvrir un referme les autres.
+     Puisque chaque tiroir peut desormais recouvrir la quasi-totalite de
+     l'ecran, en laisser plusieurs ouverts en meme temps les ferait se
+     superposer integralement -- inutile d'empiler, un seul a la fois
+     suffit et reste previsible.
+     Only one drawer open at a time: opening one closes the others.
+     Since each drawer can now cover almost the entire screen, leaving
+     several open at once would have them fully overlap -- no point
+     stacking, one at a time is enough and stays predictable. */
+  function closeOtherDrawers(exceptSide) {
+    drawers.forEach((d, side) => {
+      if (side !== exceptSide) d.el.classList.remove("open");
+    });
+  }
+
+  /* Applique la taille d'un tiroir (en % de l'ecran, largeur ou hauteur
+     selon son axe) via sa variable CSS dediee. Bornee par defaut a
+     [DRAWER_MIN_PCT, DRAWER_MAX_PCT] (redimensionnement a la
+     souris/au doigt) -- voir le commentaire sur ces constantes plus
+     haut. Un maxPct plus eleve peut etre fourni explicitement (voir les
+     champs numeriques des reglages generaux, qui autorisent jusqu'a
+     100%).
+     Applies a drawer's size (as a % of the screen, width or height
+     depending on its axis) through its own CSS variable. Clamped by
+     default to [DRAWER_MIN_PCT, DRAWER_MAX_PCT] (mouse/touch resize) --
+     see the comment on those constants above. A higher maxPct can be
+     supplied explicitly (see the general settings' number fields, which
+     allow up to 100%). */
+  function applyDrawerSize(side, pct, maxPct) {
+    const d = drawers.get(side);
+    if (!d) return;
+    d.sizePct = Math.max(DRAWER_MIN_PCT, Math.min(maxPct != null ? maxPct : DRAWER_MAX_PCT, Math.round(pct)));
+    const unit = d.def.axis === "x" ? "vw" : "vh";
+    document.documentElement.style.setProperty(d.def.cssVar, d.sizePct + unit);
+  }
+
+
+  async function mountTile(conf, zone) {
+    zone = zone || "board";
+    const targetGrid = gridForZone(zone);
+    const manifest = catalog.find((m) => m.id === conf.widget);
+
+    // Garde-fou : une tuile enregistree AVANT que son minimum de manifest
+    // ne soit releve (ex. tuile Trafic sauvee en 2x2 alors que le minimum
+    // est passe a 4x3) resterait sinon sous la taille minimale, car
+    // Gridstack n'applique minW/minH qu'a la creation, pas retroactivement
+    // aux dimensions fournies. On hisse donc conf.w/conf.h au minimum ici,
+    // ce qui evite les chevauchements d'overlays sur une tuile trop petite.
+    // Safety net: a tile saved BEFORE its manifest minimum was raised
+    // (e.g. a Traffic tile saved at 2x2 while the minimum is now 4x3)
+    // would otherwise stay below the minimum size, because Gridstack only
+    // applies minW/minH at creation, not retroactively to the provided
+    // dimensions. So we raise conf.w/conf.h to the minimum here, which
+    // prevents overlapping overlays on a too-small tile.
+    if (manifest && manifest.size) {
+      if (manifest.size.minW) conf.w = Math.max(conf.w || 1, manifest.size.minW);
+      if (manifest.size.minH) conf.h = Math.max(conf.h || 1, manifest.size.minH);
+    }
+
+    const el = targetGrid.addWidget({
+      x: conf.x, y: conf.y, w: conf.w, h: conf.h,
+      minW: manifest && manifest.size ? manifest.size.minW : 1,
+      minH: manifest && manifest.size ? manifest.size.minH : 1,
+      maxW: manifest && manifest.size ? manifest.size.maxW : undefined,
+      maxH: manifest && manifest.size ? manifest.size.maxH : undefined,
+      content: tileMarkup(conf, manifest)
+    });
+    el.dataset.tileId = conf.id;
+
+    const record = { conf, manifest, instance: null, el, zone };
+    tiles.set(conf.id, record);
+    applyTitleBar(record);
+    applyTileColor(record);
+    applyTextScale(record);
+
+    onActivate(el.querySelector(".tile-gear"), (e) => {
+      e.stopPropagation();
+      openTileSettings(conf.id);
+    });
+    onActivate(el.querySelector(".tile-x"), (e) => {
+      e.stopPropagation();
+      removeTile(conf.id);
+    });
+
+    // Demarre le widget, ou le laisse d'emblee en pause si sa
+    // planification l'exclut a cet instant (voir syncTileSchedule).
+    // Starts the widget, or leaves it paused from the outset if its
+    // schedule excludes it right now (see syncTileSchedule).
+    syncTileSchedule(record);
+
+    // Renvoye pour permettre a l'appelant d'agir sur la tuile qui vient
+    // d'etre montee (voir addTile -> scrollTileIntoView).
+    // Returned so the caller can act on the tile just mounted
+    // (see addTile -> scrollTileIntoView).
+    return record;
+  }
+
+  /* ---------- Planification par tuile / per-tile scheduling ----------
+     Une tuile hors de sa plage n'est PAS masquee (la disposition ne bouge
+     jamais) : elle reste en place avec un message "En pause", et son
+     widget est reellement DETRUIT. C'est le vrai interet de la
+     fonctionnalite : un widget detruit arrete ses minuteries et ses
+     appels reseau -- la tuile Trajet cesse par exemple de consommer le
+     quota TomTom la nuit et le week-end.
+     A tile outside its window is NOT hidden (the layout never moves): it
+     stays in place with a "Paused" message, and its widget is actually
+     DESTROYED. That's the real point of the feature: a destroyed widget
+     stops its timers and network calls -- the Commute tile, for
+     instance, stops eating the TomTom quota at night and on weekends. */
+
+  // Indexees par Date.getDay() (0 = dimanche) / indexed by Date.getDay()
+  // (0 = Sunday).
+  const SCHED_DAY_KEYS = ["_schedSun", "_schedMon", "_schedTue", "_schedWed", "_schedThu", "_schedFri", "_schedSat"];
+  // Ordre d'affichage : semaine d'abord, dimanche en dernier (usage
+  // francais/europeen). Display order: week first, Sunday last
+  // (French/European convention).
+  const SCHED_DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+
+  function schedDayLabels() {
+    const locale = i18n.t("clock.date.format");
+    // 7 janvier 2024 etait un dimanche : donne les 7 noms dans l'ordre de
+    // getDay(). January 7, 2024 was a Sunday: yields the 7 names in
+    // getDay() order.
+    return [...Array(7)].map((_, i) =>
+      new Date(2024, 0, 7 + i).toLocaleDateString(locale, { weekday: "short" }));
+  }
+
+  function parseHHMM(v) {
+    const m = /^(\d{1,2}):(\d{2})$/.exec(String(v || ""));
+    if (!m) return null;
+    const h = Number(m[1]), mi = Number(m[2]);
+    if (h > 23 || mi > 59) return null;
+    return h * 60 + mi;
+  }
+
+  /* Vraie si la tuile doit tourner maintenant. Sans planification active,
+     toujours vraie -- une tuile existante ne change donc pas de
+     comportement.
+     True if the tile should be running now. With no active schedule,
+     always true -- an existing tile therefore doesn't change behavior. */
+  function isWithinSchedule(s, now) {
+    if (!s || s._schedEnabled !== true) return true;
+    const days = SCHED_DAY_KEYS.map((k) => !!s[k]);
+    // Aucun jour coche = tous les jours, plutot qu'une tuile
+    // definitivement en pause (qui aurait tout l'air d'un bug).
+    // No day checked = every day, rather than a permanently paused tile
+    // (which would look exactly like a bug).
+    const anyDay = days.some(Boolean);
+    const dayOk = (d) => !anyDay || days[d];
+
+    const from = parseHHMM(s._schedFrom);
+    const to = parseHHMM(s._schedTo);
+    // Plage horaire incomplete ou degeneree : on ne filtre que sur les
+    // jours. Incomplete or degenerate time window: filter on days only.
+    if (from == null || to == null || from === to) return dayOk(now.getDay());
+
+    const mins = now.getHours() * 60 + now.getMinutes();
+    if (from < to) return dayOk(now.getDay()) && mins >= from && mins < to;
+
+    // Plage a cheval sur minuit (ex. 22:00 -> 06:00) : le jour coche
+    // designe le jour ou la plage COMMENCE, donc un samedi 2 h releve du
+    // vendredi soir. Window crossing midnight (e.g. 22:00 -> 06:00): the
+    // checked day refers to the day the window STARTS on, so Saturday
+    // 2am belongs to Friday evening.
+    if (mins >= from) return dayOk(now.getDay());
+    if (mins < to) return dayOk((now.getDay() + 6) % 7);
+    return false;
+  }
+
+  // Resume lisible de la plage, affiche sous le message "En pause".
+  // Readable summary of the window, shown under the "Paused" message.
+  function scheduleSummary(s) {
+    const labels = schedDayLabels();
+    const days = SCHED_DAY_KEYS.map((k) => !!s[k]);
+    const chosen = SCHED_DAY_ORDER.filter((d) => days[d]);
+    const dayPart = (chosen.length === 0 || chosen.length === 7)
+      ? i18n.t("tile.schedule.everyDay")
+      : chosen.map((d) => labels[d]).join(", ");
+    const from = parseHHMM(s._schedFrom), to = parseHHMM(s._schedTo);
+    const timePart = (from == null || to == null || from === to)
+      ? "" : ` · ${s._schedFrom}–${s._schedTo}`;
+    return dayPart + timePart;
+  }
+
+  function destroyInstance(rec) {
+    if (!rec.instance) return;
+    try { rec.instance.destroy && rec.instance.destroy(); } catch (e) { /* noop */ }
+    rec.instance = null;
+  }
+
+  function startWidget(rec) {
+    const body = rec.el.querySelector(".tile-body");
+    if (!body) return;
+    const Klass = widgetClasses.get(rec.conf.widget);
+    if (!Klass) {
+      body.innerHTML = `<div class="tile-error">${i18n.t("tile.error")}</div>`;
+      return;
+    }
+    body.classList.remove("tile-paused");
+    body.innerHTML = "";
+    try {
+      const instance = new Klass({
+        el: body,
+        settings: Object.assign({}, defaultsFor(rec.manifest), rec.conf.settings || {}),
+        instanceId: rec.conf.id,
+        manifest: rec.manifest,
+        api: widgetApi,
+        /* URL d'un fichier de la tuile (donnees, module...) portant le
+           numero de version, comme widget.js et widget.css. Sans lui,
+           une tuile qui va chercher ses propres fichiers peut recevoir
+           la version d'AVANT la mise a jour, gardee en cache par le
+           kiosque -- le reste de la tuile etant, lui, a jour.
+           URL of one of the tile's files (data, module...) carrying the
+           version number, like widget.js and widget.css. Without it, a
+           tile fetching its own files can get the version from BEFORE
+           the update, kept in the kiosk's cache. */
+        assetUrl(file) {
+          const bust = assetVersion ? "?v=" + encodeURIComponent(assetVersion) : "";
+          return "widgets/" + rec.manifest.dir + "/" + String(file) + bust;
+        },
+        /* Permet a une tuile d'ecrire l'un de SES PROPRES reglages, et
+           qu'il soit enregistre comme n'importe quel autre. Utilise par
+           la tuile Logo/Image, dont le choix du fichier se fait dans un
+           gestionnaire ouvert depuis la tuile, pas dans le formulaire de
+           reglages. Sans cela, le choix serait perdu au rechargement.
+           Lets a tile write one of ITS OWN settings, and have it saved
+           like any other. Used by the Logo/Image tile, whose file choice
+           happens in a manager opened from the tile, not in the settings
+           form. Without this the choice would be lost on reload. */
+        updateSettings(patch) {
+          if (!patch || typeof patch !== "object") return;
+          rec.conf.settings = Object.assign({}, rec.conf.settings, patch);
+          if (rec.instance) rec.instance.ctx.settings = Object.assign({}, rec.instance.ctx.settings, patch);
+          scheduleSave();
+        },
+        i18n
+      });
+      rec.instance = instance;
+      // init peut etre lent (reseau) : on ne bloque pas les autres tuiles
+      // init may be slow (network): don't block the other tiles
+      Promise.resolve(instance.init()).catch((e) => {
+        console.error("[piboard] widget init failed:", rec.conf.widget, e);
+        body.innerHTML = `<div class="tile-error">${i18n.t("tile.error")}</div>`;
+      });
+    } catch (e) {
+      console.error("[piboard] widget init failed:", rec.conf.widget, e);
+      body.innerHTML = `<div class="tile-error">${i18n.t("tile.error")}</div>`;
+    }
+  }
+
+  function pauseWidget(rec) {
+    destroyInstance(rec);
+    const body = rec.el.querySelector(".tile-body");
+    if (!body) return;
+    body.classList.add("tile-paused");
+    body.innerHTML = `
+      <div class="tile-paused-msg">
+        <div class="tile-paused-title">${i18n.t("tile.paused")}</div>
+        <div class="tile-paused-hint">${escapeHtmlAttr(scheduleSummary(rec.conf.settings || {}))}</div>
+      </div>`;
+  }
+
+  /* Applique la planification a une tuile. N'agit qu'aux transitions (ou
+     au tout premier appel) pour ne pas relancer un widget a chaque tick.
+     Applies the schedule to a tile. Only acts on transitions (or on the
+     very first call) so a widget isn't restarted on every tick. */
+  function syncTileSchedule(rec) {
+    const paused = !isWithinSchedule(rec.conf.settings || {}, new Date());
+    if (rec.paused === paused && (paused || rec.instance)) return;
+    rec.paused = paused;
+    if (paused) pauseWidget(rec); else startWidget(rec);
+  }
+
+  function startScheduleTicker() {
+    clearInterval(scheduleTicker);
+    // Toutes les 30 s : assez reactif pour une plage a la minute pres,
+    // sans cout notable (une comparaison de dates par tuile).
+    // Every 30s: responsive enough for a minute-accurate window, at no
+    // notable cost (one date comparison per tile).
+    scheduleTicker = setInterval(() => {
+      for (const [, rec] of tiles) syncTileSchedule(rec);
+    }, 30000);
+  }
+
+  function defaultsFor(manifest) {
+    const out = {};
+    if (manifest && Array.isArray(manifest.settings)) {
+      for (const f of manifest.settings) out[f.key] = f.default;
+    }
+    return out;
+  }
+
+  function unmountAll() {
+    for (const [, rec] of tiles) {
+      try { rec.instance && rec.instance.destroy && rec.instance.destroy(); } catch (e) { /* noop */ }
+    }
+    tiles.clear();
+    /* Les grilles de pages doivent etre videes elles aussi : oubliees
+       ici, leurs elements survivaient au rechargement du layout et les
+       tuiles s'y accumulaient en double a chaque nouveau rendu.
+       The page grids must be emptied too: left out here, their items
+       survived a layout reload and the tiles piled up in duplicate on
+       every new render. */
+    for (const g of allGrids()) g.removeAll();
+  }
+
+  /* Aligne les pages en memoire sur celles du layout : cree les
+     conteneurs manquants, detruit ceux des pages disparues, et remet les
+     pages dans l'ordre enregistre. Les pages deja presentes sont
+     CONSERVEES telles quelles -- les recreer a chaque enregistrement
+     ferait clignoter tout le tableau a chaque deplacement de tuile.
+     Aligns the in-memory pages with the layout's: creates missing
+     containers, destroys those of vanished pages, and puts the pages
+     back in the saved order. Pages already present are KEPT as they are
+     -- recreating them on every save would flash the whole board on
+     every tile move. */
+  function syncPages(layout) {
+    const saved = Array.isArray(layout.pages) ? layout.pages : [];
+    mainPage = {
+      name: (layout.mainPage && typeof layout.mainPage.name === "string") ? layout.mainPage.name : "",
+      transition: normalizeTransition(layout.mainPage && layout.mainPage.transition),
+      dwellSeconds: normalizeDwell(layout.mainPage && layout.mainPage.dwellSeconds),
+      background: normalizeBackground(layout.mainPage && layout.mainPage.background),
+      themeId: normalizeThemeId(layout.mainPage && layout.mainPage.themeId)
+    };
+    const existing = new Map(pages.map((p) => [p.id, p]));
+    const next = [];
+    for (const raw of saved) {
+      const id = String(raw && raw.id || "").trim() || newPageId();
+      const page = existing.get(id) || createPageElement({ id });
+      existing.delete(id);
+      page.name = typeof raw.name === "string" ? raw.name : "";
+      page.transition = normalizeTransition(raw.transition);
+      page.dwellSeconds = normalizeDwell(raw.dwellSeconds);
+      page.background = normalizeBackground(raw.background);
+      page.themeId = normalizeThemeId(raw.themeId);
+      page.tiles = Array.isArray(raw.tiles) ? raw.tiles : [];
+      next.push(page);
+    }
+    for (const gone of existing.values()) destroyPageElement(gone);
+    pages = next;
+    if (activePageIndex >= pageCount()) activePageIndex = 0;
+  }
+
+  /* Bascule entre le mode classique et le mode tableau de bord. Tout
+     passe par une classe sur <body> plutot que par des styles poses a la
+     main : le mode change l'apparence de plusieurs elements
+     (tiroirs, barre d'outils, bandeau), et une classe unique garantit
+     qu'ils basculent tous ensemble, sans etat intermediaire incoherent.
+     Switches between classic and dashboard mode. Everything goes through
+     a class on <body> rather than hand-applied styles: the mode changes
+     the appearance of several elements (drawers, toolbar, bar), and a
+     single class guarantees they all switch together, with no
+     inconsistent in-between state. */
+  /* ---------- Defilement tactile ----------
+     Sur un ecran tactile, faire defiler le contenu d'une tuile etait
+     penible pour deux raisons independantes :
+
+     - les barres de defilement font quelques pixels de large, dessinees
+       pour un pointeur de souris, pas pour un doigt ;
+     - poser le doigt sur le contenu et le faire glisser ne fait pas
+       defiler mais SELECTIONNE DU TEXTE, ce qui n'a aucun interet ici.
+       C'est le signe que la dalle remonte des evenements de souris
+       plutot que de vrais evenements tactiles -- auquel cas le
+       navigateur ne declenche jamais son defilement natif.
+
+     Les deux se corrigent separement, et l'utilisateur choisit : barres
+     larges, glisser pour defiler, les deux (defaut), ou rien.
+
+     Touch scrolling. On a touchscreen, scrolling a tile's content was
+     awkward for two independent reasons: scrollbars are a few pixels
+     wide, drawn for a mouse pointer, not a finger; and pressing the
+     content and dragging SELECTS TEXT rather than scrolling -- the sign
+     that the panel reports mouse events rather than real touch events,
+     in which case the browser never triggers its native scrolling. Both
+     are fixed separately, and the user chooses: wide bars, drag to
+     scroll, both (default), or neither. */
+  function touchScrollMode() {
+    if (!settings.touchMode) return "off";
+    const m = settings.touchScroll || "both";
+    return ["both", "drag", "bars", "off"].indexOf(m) >= 0 ? m : "both";
+  }
+
+  function applyTouchScroll() {
+    const mode = touchScrollMode();
+    document.body.classList.toggle("touch-scrollbars", mode === "both" || mode === "bars");
+    document.body.classList.toggle("touch-drag-scroll", mode === "both" || mode === "drag");
+  }
+
+  /* Element defilant sous le doigt : le premier ancetre qui deborde
+     REELLEMENT. Un conteneur qui declare overflow:auto sans depasser sa
+     hauteur ne defile pas -- s'en saisir avalerait le geste sans rien
+     faire bouger. Nearest scrollable element under the finger: the first
+     ancestor that actually overflows. A container declaring
+     overflow:auto without exceeding its height does not scroll --
+     grabbing it would swallow the gesture without moving anything. */
+  function scrollableUnder(node) {
+    for (let el = node; el && el !== document.body; el = el.parentElement) {
+      const st = getComputedStyle(el);
+      const canY = /(auto|scroll)/.test(st.overflowY) && el.scrollHeight - el.clientHeight > 2;
+      const canX = /(auto|scroll)/.test(st.overflowX) && el.scrollWidth - el.clientWidth > 2;
+      if (canY || canX) return el;
+    }
+    return null;
+  }
+
+  function initTouchDragScroll() {
+    let target = null;
+    let startX = 0, startY = 0, startTop = 0, startLeft = 0, moved = false;
+
+    document.addEventListener("pointerdown", (e) => {
+      if (!document.body.classList.contains("touch-drag-scroll")) return;
+      // Le geste ne doit pas voler les interactions ordinaires : un
+      // champ, un bouton, un lien restent prioritaires.
+      // The gesture must not steal ordinary interactions: a field, a
+      // button, a link keep priority.
+      if (e.target.closest("input, textarea, select, button, a, [contenteditable]")) return;
+      // Ni le deplacement des tuiles : en mode edition, la grille a la
+      // main. Nor tile dragging: in edit mode the grid comes first.
+      if (e.target.closest(".grid-stack-item-content .tile-head")) return;
+      const el = scrollableUnder(e.target);
+      if (!el) return;
+      target = el;
+      startX = e.clientX; startY = e.clientY;
+      startTop = el.scrollTop; startLeft = el.scrollLeft;
+      moved = false;
+    }, true);
+
+    document.addEventListener("pointermove", (e) => {
+      if (!target) return;
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      if (!moved && Math.abs(dx) < 4 && Math.abs(dy) < 4) return;
+      moved = true;
+      target.scrollTop = startTop - dy;
+      target.scrollLeft = startLeft - dx;
+      /* Le geste est consomme : sans cela le navigateur poursuit sa
+         selection de texte par-dessus le defilement, et l'on se
+         retrouve avec du contenu surligne en bleu a chaque glissement.
+         The gesture is consumed: otherwise the browser carries on
+         selecting text on top of the scrolling, leaving content
+         highlighted in blue after every drag. */
+      e.preventDefault();
+      const sel = window.getSelection && window.getSelection();
+      if (sel && !sel.isCollapsed) sel.removeAllRanges();
+    }, { capture: true, passive: false });
+
+    const end = () => { target = null; moved = false; };
+    document.addEventListener("pointerup", end, true);
+    document.addEventListener("pointercancel", end, true);
+  }
+
+  function applyDisplayMode() {
+    const dash = dashboardMode();
+    document.body.classList.toggle("dashboard-mode", dash);
+    if (!dash) {
+      // Retour au mode classique : on revient a la page 1, sinon le
+      // plateau resterait masque derriere une page devenue invisible.
+      // Back to classic mode: return to page 1, otherwise the board
+      // would stay hidden behind a now-invisible page.
+      for (const p of pages) if (p.el) p.el.hidden = true;
+      $("board").hidden = false;
+      activePageIndex = 0;
+      stopAutoAdvance();
+      applyImmersive();
+      return;
+    }
+    // En mode tableau de bord, les tiroirs n'existent pas : on les ferme
+    // pour qu'aucun ne reste ouvert par-dessus les pages.
+    // In dashboard mode drawers do not exist: we close them so none
+    // stays open over the pages.
+    for (const d of drawers.values()) d.el.classList.remove("open");
+    for (let i = 0; i < pageCount(); i++) {
+      const p = pageAt(i);
+      if (p && p.el) p.el.hidden = i !== activePageIndex;
+    }
+    renderPageIndicator();
+    scheduleAutoAdvance();
+    applyImmersive();
+  }
+
+  async function renderLayout(layout) {
+    unmountAll();
+    syncPages(layout);
+    for (const g of allGrids()) g.batchUpdate();
+
+    for (const conf of layout.tiles) await mountTile(conf, "board");
+    for (const p of pages) {
+      for (const conf of p.tiles || []) await mountTile(conf, "page:" + p.id);
+    }
+    let anyDrawerTiles = false;
+    for (const d of drawers.values()) {
+      const saved = layout[d.def.layoutKey] || { [d.def.sizeKey]: d.def.defaultSizePct, tiles: [] };
+      applyDrawerSize(d.def.side, saved[d.def.sizeKey] || d.def.defaultSizePct);
+      drawerThemes[d.def.side] = normalizeThemeId(saved.themeId);
+      for (const conf of saved.tiles || []) { await mountTile(conf, d.def.zone); anyDrawerTiles = true; }
+    }
+
+    for (const g of allGrids()) g.batchUpdate(false);
+
+    renderPageIndicator();
+    applyDisplayMode();
+    applyAllBackgrounds();
+    applyTheme();
+    $("boardEmpty").hidden = layout.tiles.length > 0;
+    updateOverflow();
+    for (const d of drawers.values()) {
+      let count = 0;
+      for (const [, r] of tiles) if (r.zone === d.def.zone) count++;
+      $(d.def.emptyId).hidden = count > 0;
+    }
+    startScheduleTicker();
+  }
+
+  function serializeZone(sourceGrid, zone) {
+    const out = [];
+    for (const node of sourceGrid.engine.nodes) {
+      const id = node.el && node.el.dataset.tileId;
+      const rec = id && tiles.get(id);
+      if (!rec || rec.zone !== zone) continue;
+      out.push({
+        id,
+        widget: rec.conf.widget,
+        x: node.x, y: node.y, w: node.w, h: node.h,
+        settings: rec.conf.settings || {}
+      });
+    }
+    return out;
+  }
+
+  function serializeLayout() {
+    const out = {
+      tiles: serializeZone(grid, "board"),
+      mainPage: { name: mainPage.name, transition: mainPage.transition,
+        dwellSeconds: mainPage.dwellSeconds != null ? mainPage.dwellSeconds : null,
+        background: mainPage.background, themeId: mainPage.themeId || null },
+      /* Les pages sont enregistrees meme en mode classique : basculer
+         d'un mode a l'autre ne doit rien detruire, et une bascule faite
+         par erreur doit pouvoir etre annulee sans perte.
+         Pages are saved even in classic mode: switching from one mode to
+         the other must destroy nothing, and a switch made by mistake
+         must be undoable without loss. */
+      pages: pages.map((p) => ({
+        id: p.id,
+        name: p.name || "",
+        transition: p.transition,
+        dwellSeconds: p.dwellSeconds != null ? p.dwellSeconds : null,
+        background: p.background,
+        themeId: p.themeId || null,
+        tiles: p.grid ? serializeZone(p.grid, "page:" + p.id) : (p.tiles || [])
+      }))
+    };
+    for (const d of drawers.values()) {
+      out[d.def.layoutKey] = {
+        [d.def.sizeKey]: d.sizePct,
+        themeId: drawerThemes[d.def.side] || null,
+        tiles: serializeZone(d.grid, d.def.zone)
+      };
+    }
+    return out;
+  }
+
+  function scheduleSave() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => {
+      apiPut("/api/layout", serializeLayout()).catch((e) => console.error("[piboard] save failed", e));
+    }, 600);
+  }
+
+  /* Recherche d'un emplacement libre dans la zone VISIBLE de la grille
+     (12 colonnes x gridRows lignes). Essaie d'abord la taille par defaut du
+     widget, puis la reduit progressivement vers son minimum si necessaire,
+     pour qu'une tuile ne soit jamais placee hors champ (invisible, donc
+     impossible a saisir) faute de place.
+     Finds a free spot within the VISIBLE grid area (12 columns x gridRows
+     rows). Tries the widget's default size first, then progressively
+     shrinks it toward its minimum if needed, so a tile is never placed
+     off-screen (invisible, hence impossible to grab) for lack of room. */
+  function shrinkPath(defaultW, defaultH, minW, minH) {
+    const path = [];
+    let w = defaultW, h = defaultH;
+    path.push({ w, h });
+    while (w > minW || h > minH) {
+      if (w > minW && (h <= minH || w >= h)) w--;
+      else if (h > minH) h--;
+      path.push({ w, h });
+    }
+    return path;
+  }
+
+  function fitsAt(x, y, w, h, cols, rows, occupied) {
+    if (x + w > cols || y + h > rows) return false;
+    for (const n of occupied) {
+      const overlap = x < n.x + n.w && x + w > n.x && y < n.y + n.h && y + h > n.y;
+      if (overlap) return false;
+    }
+    return true;
+  }
+
+  function findPlacement(defaultW, defaultH, minW, minH, targetGrid, cols) {
+    const rows = Math.max(4, settings.gridRows || 8);
+    const occupied = targetGrid.engine.nodes.map((n) => ({ x: n.x, y: n.y, w: n.w, h: n.h }));
+    for (const cand of shrinkPath(Math.min(defaultW, cols), defaultH, minW || 1, minH || 1)) {
+      for (let y = 0; y <= rows - cand.h; y++) {
+        for (let x = 0; x <= cols - cand.w; x++) {
+          if (fitsAt(x, y, cand.w, cand.h, cols, rows, occupied)) {
+            return { x, y, w: cand.w, h: cand.h };
+          }
+        }
+      }
+    }
+    // Grille pleine meme au minimum : on laisse Gridstack se debrouiller
+    // (autoPosition), quitte a deborder, plutot que de refuser l'ajout.
+    // Grid fully packed even at minimum size: let Gridstack figure it out
+    // (autoPosition), even if it overflows, rather than refusing to add.
+    return { x: undefined, y: undefined, w: Math.min(defaultW, cols), h: defaultH };
+  }
+
+  async function addTile(widgetId) {
+    // Un tiroir ouvert = la tuile y atterrit ; le tableau sinon. Si
+    // plusieurs tiroirs sont ouverts a la fois, celui le plus recemment
+    // mis au premier plan (voir bringDrawerToFront) l'emporte -- c'est
+    // presque toujours celui que la personne regarde activement.
+    // An open drawer = the tile lands there; the board otherwise. If
+    // several drawers are open at once, whichever was most recently
+    // brought to front (see bringDrawerToFront) wins -- that's almost
+    // always the one being actively looked at.
+    const openSides = openDrawerSides();
+    const activeSide = openSides.length ? openSides[openSides.length - 1] : null;
+    /* En mode tableau de bord, une nouvelle tuile atterrit sur la page
+       AFFICHEE, pas sur le plateau principal : ajouter une tuile depuis
+       la page 3 et la voir apparaitre sur la page 1 serait deroutant.
+       In dashboard mode a new tile lands on the DISPLAYED page, not on
+       the main board: adding a tile from page 3 and seeing it appear on
+       page 1 would be baffling. */
+    const zone = dashboardMode() ? currentZone() : (activeSide ? ("drawer-" + activeSide) : "board");
+    const targetGrid = gridForZone(zone);
+    const cols = COLS;
+    const manifest = catalog.find((m) => m.id === widgetId);
+
+    // Si ce type de widget possede des configurations enregistrees
+    // (tuiles nommees supprimees precedemment), proposer de reutiliser
+    // l'une d'elles plutot que de repartir de zero -- utile pour un
+    // widget instancie plusieurs fois avec des reglages differents
+    // (ex. deux tuiles "Page web" vers des URLs distinctes).
+    // If this widget type has saved configurations (previously removed
+    // named tiles), offer to reuse one instead of starting from
+    // scratch -- useful for a widget instantiated several times with
+    // different settings (e.g. two "Web page" tiles pointing at
+    // different URLs).
+    let settings = defaultsFor(manifest);
+    try {
+      const saved = await apiGet("/api/tile-configs/" + encodeURIComponent(widgetId));
+      if (saved && saved.length) {
+        const choice = await openConfigPicker(manifest, saved);
+        if (choice === false) return; // annule par l'utilisateur / cancelled by the user
+        if (choice) settings = Object.assign({}, defaultsFor(manifest), choice.settings);
+      }
+    } catch (e) {
+      console.warn("[piboard] configurations enregistrees indisponibles:", e);
+    }
+
+    const size = (manifest && manifest.size) || { w: 2, h: 2 };
+    const place = findPlacement(size.w, size.h, size.minW, size.minH, targetGrid, cols);
+    const conf = {
+      id: "t-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6),
+      widget: widgetId,
+      x: place.x, y: place.y,
+      w: place.w, h: place.h,
+      settings
+    };
+    mountTile(conf, zone).then((rec) => {
+      $("boardEmpty").hidden = true;
+      if (activeSide) $(drawers.get(activeSide).def.emptyId).hidden = true;
+      updateOverflow();
+      // Tuile posee hors de la zone visible (findPlacement n'a plus
+      // trouve de place, cas de repli) : on l'amene sous les yeux plutot
+      // que de laisser la personne la chercher.
+      // Tile placed outside the visible area (findPlacement ran out of
+      // room, fallback case): bring it into view rather than leaving the
+      // person to hunt for it.
+      if (zone === "board" && rec && rec.el) scrollTileIntoView(rec.el);
+      scheduleSave();
+    });
+  }
+
+  function removeTile(tileId) {
+    const rec = tiles.get(tileId);
+    if (!rec) return;
+    // Une tuile nommee (titre personnalise) voit sa configuration
+    // conservee cote serveur sous ce nom, pour ce type de widget --
+    // elle pourra etre reproposee si l'on rajoute une tuile du meme
+    // type plus tard (voir addTile ci-dessus). Une tuile sans titre
+    // personnalise n'a pas de nom fiable pour l'identifier : rien
+    // n'est conserve dans ce cas.
+    // A named tile (custom title) has its configuration kept
+    // server-side under that name, for that widget type -- it can be
+    // offered again if a tile of the same type is added later (see
+    // addTile above). A tile without a custom title has no reliable
+    // name to identify it by: nothing is kept in that case.
+    const title = rec.conf.settings && String(rec.conf.settings._title || "").trim();
+    if (title) {
+      apiPut("/api/tile-configs/" + encodeURIComponent(rec.conf.widget), { title, settings: rec.conf.settings })
+        .catch((e) => console.warn("[piboard] configuration non conservee:", e));
+    }
+    try { rec.instance && rec.instance.destroy && rec.instance.destroy(); } catch (e) { /* noop */ }
+    // Efface aussi le secret eventuel de cette tuile : un mot de passe de
+    // boite mail n'a aucune raison de survivre a la tuile qui l'utilisait.
+    // Also clears this tile's secret, if any: a mailbox password has no
+    // reason to outlive the tile that used it.
+    fetch("/api/tile-secrets/" + encodeURIComponent(tileId), { method: "DELETE" })
+      .catch((e) => console.warn("[piboard] secret non efface:", e));
+    gridForZone(rec.zone).removeWidget(rec.el);
+    tiles.delete(tileId);
+    let boardCount = 0;
+    const drawerCounts = new Map();
+    for (const [, r] of tiles) {
+      if (r.zone === "board") boardCount++;
+      else drawerCounts.set(r.zone, (drawerCounts.get(r.zone) || 0) + 1);
+    }
+    $("boardEmpty").hidden = boardCount > 0;
+    for (const d of drawers.values()) $(d.def.emptyId).hidden = (drawerCounts.get(d.def.zone) || 0) > 0;
+    updateOverflow();
+    scheduleSave();
+  }
+
+  /* ---------- Parametres d'une tuile / tile settings ---------- */
+
+  let tileModalTarget = null;
+
+  /* Regroupe les champs par section logique (propriete "group" du
+     manifest) et rend chaque groupe dans un encadre visuel titre. Le but
+     est d'organiser les fenetres de configuration en blocs coherents
+     plutot qu'une longue liste a plat, pour limiter le defilement.
+     Les champs sans "group" sont rassembles dans une premiere section
+     "generale" sans titre (comportement naturel des reglages de base).
+     L'ordre des sections suit celui de leur premiere apparition dans le
+     manifest, donc l'auteur du manifest controle l'agencement.
+     Groups fields by logical section (manifest "group" property) and
+     renders each group in a titled visual box. The goal is to organize
+     config windows into coherent blocks rather than one long flat list,
+     to limit scrolling. Fields without "group" are gathered into a first
+     untitled "general" section (natural behavior for basic settings).
+     Section order follows first appearance in the manifest, so the
+     manifest author controls the layout. */
+  /* Calcule et applique la meilleure disposition en colonnes des sections
+     d'un formulaire, une fois celui-ci rendu et visible (les hauteurs
+     reelles ne sont mesurables qu'a ce moment). Actif des lors que le
+     reglage "multiColumnForms" est active (c'est le cas par defaut,
+     independamment du mode tactile -- voir settings.multiColumnForms) ;
+     sinon le formulaire reste en une colonne.
+
+     Principe : on essaie 1, 2 puis 3 colonnes (dans la limite de ce que la
+     largeur permet). Pour chaque nombre de colonnes, on range les sections
+     dans l'ordre, chacune dans la colonne actuellement la moins haute
+     (repartition "au plus court", type LPT) ; la hauteur du formulaire est
+     alors celle de la colonne la plus haute. On retient le nombre de
+     colonnes qui MINIMISE cette hauteur -- donc le defilement. A hauteur
+     quasi egale, on prefere MOINS de colonnes (colonnes plus larges =
+     champs plus lisibles, lignes plus longues), ce qui evite par exemple
+     une 3e colonne vide quand 2 colonnes suffisent (cas RSS).
+
+     Computes and applies the best column layout for a form's sections,
+     once rendered and visible (real heights are only measurable then).
+     Active whenever the "multiColumnForms" setting is on (the default,
+     independently of touch mode -- see settings.multiColumnForms);
+     otherwise the form stays single-column.
+     Approach: try 1, 2 then 3 columns (within what width allows). For
+     each count, place sections in order, each into the currently shortest
+     column (shortest-first, LPT-like); the form height is then the
+     tallest column's. Keep the count that MINIMIZES that height -- thus
+     scrolling. At near-equal height, prefer FEWER columns (wider columns =
+     more readable fields, longer lines), which avoids e.g. an empty 3rd
+     column when 2 suffice (RSS case). */
+  function layoutFormColumns(form, opts) {
+    if (!form) return;
+    const modalCardReset = form.closest(".modal-card");
+    // Par defaut : pas d'info de colonnes (largeur par defaut du modal).
+    // On ne la (re)pose qu'apres un calcul multi-colonnes reussi. Cela
+    // evite de garder une largeur large sur un widget simple ouvert
+    // ensuite. Default: no column info (modal's default width). We only
+    // (re)set it after a successful multi-column layout. This avoids
+    // keeping a wide width on a simple widget opened afterwards.
+    if (modalCardReset) delete modalCardReset.dataset.cols;
+    if (!settings.multiColumnForms) return;
+
+    // Si le formulaire a deja ete dispose en colonnes lors d'une ouverture
+    // precedente (cas du modal de reglages, dont le HTML est statique et
+    // reutilise), on "aplatit" d'abord : on remet toutes les sections et
+    // elements pleine largeur comme enfants directs du formulaire, dans
+    // l'ordre, avant de recalculer. Sans cela, la 2e ouverture verrait des
+    // .form-col au lieu des sections.
+    // If the form was already laid out in columns on a previous open (the
+    // settings modal case, whose HTML is static and reused), first
+    // "flatten": move all sections and full-width elements back as direct
+    // children of the form, in order, before recomputing. Otherwise the
+    // 2nd open would see .form-col instead of the sections.
+    const existingRow = form.querySelector(":scope > .form-cols-row");
+    if (existingRow) {
+      const restored = [];
+      form.querySelectorAll(".form-col > *").forEach((el) => restored.push(el));
+      const trailing = Array.from(form.children).filter((el) => el !== existingRow);
+      form.innerHTML = "";
+      restored.forEach((el) => form.appendChild(el));
+      trailing.forEach((el) => form.appendChild(el));
+    }
+
+    // Recuperer les sections (blocs a repartir) et les elements pleine
+    // largeur (actions, about) qui restent en dehors des colonnes.
+    // Collect sections (blocks to distribute) and full-width elements
+    // (actions, about) that stay outside the columns.
+    const all = Array.from(form.children);
+    const sections = all.filter((el) =>
+      el.classList.contains("form-section") || el.classList.contains("form-section-plain"));
+    const fullWidth = all.filter((el) =>
+      el.classList.contains("form-actions") || el.classList.contains("about"));
+    if (sections.length < 2) return; // rien a optimiser
+
+    const gap = 24;
+    const minCol = 300;
+    const maxAvailWidth = Math.min(window.innerWidth * 0.96, 1700) - 48; // -padding
+    const maxByWidth = Math.max(1, Math.floor((maxAvailWidth + gap) / (minCol + gap)));
+    const maxCols = Math.min(3, maxByWidth, sections.length);
+
+    // Elargir le modal a sa largeur MAX potentielle AVANT de mesurer les
+    // hauteurs : la largeur d'une section influe sur sa hauteur (les champs
+    // se reorganisent). En mesurant deja a la largeur cible, la
+    // repartition calculee reste valable une fois le modal elargi. On
+    // ajustera ensuite la largeur au nombre de colonnes reellement retenu.
+    // Widen the modal to its MAX potential width BEFORE measuring heights:
+    // a section's width affects its height (fields reflow). By measuring at
+    // the target width already, the computed layout stays valid once the
+    // modal is widened. We then adjust the width to the actually chosen
+    // column count.
+    const modalCard = form.closest(".modal-card");
+    if (modalCard) modalCard.dataset.cols = String(maxCols);
+
+    // Mesurer la hauteur de chaque section (marge verticale incluse).
+    // Measure each section's height (vertical margin included).
+    const heights = sections.map((el) => {
+      const r = el.getBoundingClientRect();
+      return r.height + 16; // + gap vertical entre sections / + vertical gap between sections
+    });
+
+    // Pour un nombre de colonnes donne, repartir et renvoyer la hauteur
+    // max resultante + l'affectation.
+    //
+    // Important : on traite les sections par hauteur DECROISSANTE (indices
+    // tries dans "order" ci-dessous), pas dans leur ordre d'apparition --
+    // c'est l'algorithme classique "LPT" (Longest Processing Time first) de
+    // repartition en colonnes. Sans ce tri, un gros bloc arrivant tard
+    // (ex. "Ecran de veille", place apres "Ecran tactile" dans le
+    // formulaire) ne pouvait rejoindre que les colonnes deja partiellement
+    // remplies par les blocs precedents, forcant parfois un petit bloc
+    // (ex. "Ecran tactile") a se retrouver seul dans sa propre colonne
+    // alors qu'il aurait largement sa place a cote du gros bloc. Traiter
+    // les gros blocs en premier laisse ensuite les petits se glisser la ou
+    // il reste le plus de place, quel que soit leur ordre d'origine.
+    //
+    // For a given column count, distribute and return the resulting max
+    // height + the assignment.
+    //
+    // Important: sections are processed by DECREASING height (indices
+    // sorted in "order" below), not in their appearance order -- this is
+    // the classic "LPT" (Longest Processing Time first) column-packing
+    // algorithm. Without this sort, a large block arriving late (e.g.
+    // "Screen saver", placed after "Touchscreen" in the form) could only
+    // join columns already partially filled by earlier blocks, sometimes
+    // forcing a small block (e.g. "Touchscreen") to end up alone in its
+    // own column when it would easily fit next to the large block.
+    // Processing large blocks first leaves the small ones free to slot in
+    // wherever there's the most room left, regardless of their original
+    // order.
+    const order = heights.map((_, i) => i).sort((a, b) => heights[b] - heights[a]);
+
+    function trial(nCols) {
+      const colH = new Array(nCols).fill(0);
+      const assign = new Array(nCols).fill(null).map(() => []);
+      for (const i of order) {
+        let min = 0;
+        for (let c = 1; c < nCols; c++) if (colH[c] < colH[min]) min = c;
+        assign[min].push(i);
+        colH[min] += heights[i];
+      }
+      // Chaque colonne retrouve l'ordre d'origine des sections (l'ordre
+      // d'AFFECTATION ci-dessus sert seulement a bien repartir, pas a
+      // l'affichage final).
+      // Each column gets sections back in their original order (the
+      // ASSIGNMENT order above is only for good packing, not for final
+      // display).
+      assign.forEach((col) => col.sort((a, b) => a - b));
+      return { height: Math.max(...colH), assign };
+    }
+
+    /* Deux politiques, selon l'appelant.
+
+       Par defaut (fenetre de reglages d'une TUILE) : preferer MOINS de
+       colonnes tant que la hauteur n'est pas nettement meilleure (marge
+       de 8 %). Des colonnes plus larges restent plus lisibles, et cela
+       evite une 3e colonne quasi vide sur un widget simple.
+
+       Avec `preferMax` (fenetre de reglages GENERAUX, voir
+       openSettings) : preferer AU CONTRAIRE le maximum de colonnes des
+       que la hauteur ne s'en trouve pas degradee. Cette fenetre a six
+       sections d'un coup, toutes consultees en survol plutot que lues en
+       continu ; l'etaler sur trois colonnes supprime pratiquement tout
+       defilement. Le facteur 1.0001 (au lieu de 0.92) fait gagner le
+       plus grand n a hauteur egale, sans jamais retenir un decoupage qui
+       rendrait le formulaire PLUS haut.
+
+       Two policies, depending on the caller.
+
+       By default (a TILE's settings window): prefer FEWER columns unless
+       the height is clearly better (8% margin). Wider columns stay more
+       readable, and this avoids a nearly empty 3rd column on a simple
+       widget.
+
+       With `preferMax` (GENERAL settings window, see openSettings):
+       prefer INSTEAD the maximum number of columns as soon as the height
+       is not made worse by it. That window has six sections at once, all
+       scanned rather than read through; spreading it over three columns
+       removes practically all scrolling. The 1.0001 factor (instead of
+       0.92) lets the largest n win at equal height, without ever picking
+       a split that would make the form TALLER. */
+    const margin = (opts && opts.preferMax) ? 1.0001 : 0.92;
+    let best = null;
+    for (let n = 1; n <= maxCols; n++) {
+      const t = trial(n);
+      if (!best || t.height < best.height * margin) best = { n, ...t };
+    }
+    if (!best) return;
+
+    // Construire les colonnes et y deplacer les sections selon best.assign.
+    // Build the columns and move the sections into them per best.assign.
+    const cols = [];
+    for (let c = 0; c < best.n; c++) {
+      const col = document.createElement("div");
+      col.className = "form-col";
+      best.assign[c].forEach((idx) => col.appendChild(sections[idx]));
+      cols.push(col);
+    }
+    // Reconstruire le formulaire : d'abord une rangee de colonnes, puis
+    // les elements pleine largeur (actions, about) en dessous.
+    // Rebuild the form: first a row of columns, then the full-width
+    // elements (actions, about) below.
+    const row = document.createElement("div");
+    row.className = "form-cols-row";
+    cols.forEach((c) => row.appendChild(c));
+    form.innerHTML = "";
+    form.appendChild(row);
+    fullWidth.forEach((el) => form.appendChild(el));
+
+    // Ajuster la largeur du modal au nombre de colonnes FINALEMENT retenu
+    // (best.n peut etre < maxCols, ex. RSS ou 2 colonnes suffisent alors
+    // que 3 tenaient en largeur). C'est ce qui evite une fenetre trop
+    // large avec une colonne vide.
+    // Adjust the modal width to the FINALLY chosen column count (best.n
+    // may be < maxCols, e.g. RSS where 2 columns suffice while 3 fit in
+    // width). This avoids an over-wide window with an empty column.
+    if (modalCard) modalCard.dataset.cols = String(best.n);
+  }
+
+  function fieldsBySection(fields, settings) {
+    const sections = [];
+    const byName = new Map();
+    for (const f of fields) {
+      const name = f.group ? i18n.fromManifest(f.group) : "";
+      let sec = byName.get(name);
+      if (!sec) { sec = { name, fields: [] }; byName.set(name, sec); sections.push(sec); }
+      sec.fields.push(f);
+    }
+    return sections.map((sec) => {
+      const inner = sec.fields
+        .map((f) => fieldMarkup(f, settings[f.key] !== undefined ? settings[f.key] : f.default))
+        .join("");
+      // Une section titree est un encadre ; la section generale (sans
+      // titre) reste sans cadre pour ne pas alourdir les widgets simples.
+      // A titled section is a boxed group; the untitled general section
+      // stays frameless so simple widgets aren't made heavier.
+      if (!sec.name) return `<div class="form-section form-section-plain">${inner}</div>`;
+      return `<fieldset class="form-section"><legend>${sec.name}</legend>${inner}</fieldset>`;
+    }).join("");
+  }
+
+  function fieldMarkup(f, value) {
+    const label = i18n.fromManifest(f.label);
+    const v = value == null ? "" : value;
+    const hint = f.hint ? `<small class="field-hint">${i18n.fromManifest(f.hint)}</small>` : "";
+    switch (f.type) {
+      case "select": {
+        // Options avec regroupement facultatif (propriete "group" par
+        // option, ex. les fuseaux horaires groupes par continent) :
+        // rendu en <optgroup>, dans l'ordre de premiere apparition des
+        // groupes. Une option sans "group" reste au niveau racine --
+        // comportement inchange pour tous les champs select existants,
+        // aucun d'eux n'utilisant cette propriete.
+        // Options with optional grouping (a per-option "group" property,
+        // e.g. time zones grouped by continent): rendered as
+        // <optgroup>, in the groups' first-seen order. An option with no
+        // "group" stays at the root level -- unchanged behavior for
+        // every existing select field, none of which use this property.
+        const opts = f.options || [];
+        const optionHtml = (o) => `<option value="${o.value}" ${String(o.value) === String(v) ? "selected" : ""}>${i18n.fromManifest(o.label)}</option>`;
+        let body = "";
+        const groupOrder = [];
+        const byGroup = new Map();
+        for (const o of opts) {
+          if (!o.group) { body += optionHtml(o); continue; }
+          const gLabel = i18n.fromManifest(o.group);
+          if (!byGroup.has(gLabel)) { byGroup.set(gLabel, []); groupOrder.push(gLabel); }
+          byGroup.get(gLabel).push(o);
+        }
+        body += groupOrder.map((g) => `<optgroup label="${escapeHtmlAttr(g)}">${byGroup.get(g).map(optionHtml).join("")}</optgroup>`).join("");
+        return `<label class="field"><span>${label}</span><select data-key="${f.key}">${body}</select>${hint}</label>`;
+      }
+      /* Type "remoteselect" : un menu deroulant dont les options ne sont
+         PAS dans le manifeste mais chargees depuis le serveur.
+
+         POURQUOI IL A FALLU UN TYPE DE PLUS. La liste des circuits vit
+         dans une base distante, justement pour qu'un circuit ajoute
+         n'exige pas une version de PiBoard. La figer dans le manifeste
+         annulerait tout l'interet : on publierait une version pour
+         ajouter une ligne a un menu. Le champ va donc chercher ses
+         options a l'ouverture des reglages, et affiche la liste reelle
+         du moment -- y compris les circuits arrives depuis la derniere
+         mise a jour.
+
+         La valeur ENREGISTREE est conservee meme si la liste n'a pas pu
+         etre chargee : le menu affiche alors la seule valeur connue
+         plutot que de retomber sur « automatique » en silence. Perdre
+         un reglage parce qu'une liste n'a pas repondu serait le pire
+         des comportements.
+
+         Type "remoteselect": a dropdown whose options are NOT in the
+         manifest but loaded from the server. The circuit list lives in a
+         remote base precisely so that adding a circuit does not require
+         a PiBoard release; freezing it in the manifest would defeat the
+         whole point. The STORED value is kept even when the list could
+         not be loaded -- the menu then shows that one known value rather
+         than silently falling back to "automatic". */
+      case "remoteselect": {
+        const first = f.emptyLabel
+          ? `<option value="">${i18n.fromManifest(f.emptyLabel)}</option>`
+          : "";
+        return `<label class="field"><span>${label}</span>`
+          + `<select data-key="${f.key}" data-remote-src="${escapeHtmlAttr(f.source || "")}"`
+          + ` data-remote-path="${escapeHtmlAttr(f.path || "")}" data-remote-value="${escapeHtmlAttr(String(v == null ? "" : v))}">`
+          + `${first}</select>${hint}</label>`;
+      }
+      /* Champ "fuseau horaire" : construit sa liste d'options a la volee
+         via Intl.supportedValuesOf("timeZone") -- la meme API que celle
+         qui alimente deja l'affichage reel du fuseau (voir nowInZone()
+         dans le widget Horloge), plutot qu'une liste figee de ~420
+         entrees x4 champs embarquee dans chaque manifeste (essaye
+         d'abord, ecarte : 437 Ko rien que pour ce widget). Regroupee par
+         continent (optgroup, voir le cas "select" juste au-dessus).
+         Repli sur une petite liste si l'API est indisponible (tres
+         ancien navigateur) : mieux qu'un champ vide.
+         "Time zone" field: builds its option list on the fly via
+         Intl.supportedValuesOf("timeZone") -- the same API that already
+         powers the actual zone display (see nowInZone() in the Clock
+         widget), rather than a fixed list of ~420 entries x4 fields
+         embedded in every manifest (tried first, dropped: 437 KB for
+         this widget alone). Grouped by continent (optgroup, see the
+         "select" case just above). Falls back to a short list if the
+         API is unavailable (very old browser): better than an empty
+         field. */
+      case "timezone": {
+        const FALLBACK_ZONES = ["UTC", "Europe/Paris", "Europe/London", "America/New_York", "America/Los_Angeles", "Asia/Tokyo", "Asia/Shanghai", "Australia/Sydney"];
+        let zones;
+        try { zones = typeof Intl.supportedValuesOf === "function" ? Intl.supportedValuesOf("timeZone") : FALLBACK_ZONES; }
+        catch (e) { zones = FALLBACK_ZONES; }
+        const CONTINENT_LABELS = {
+          Africa: { en: "Africa", fr: "Afrique" }, America: { en: "America", fr: "Amérique" },
+          Antarctica: { en: "Antarctica", fr: "Antarctique" }, Arctic: { en: "Arctic", fr: "Arctique" },
+          Asia: { en: "Asia", fr: "Asie" }, Atlantic: { en: "Atlantic", fr: "Atlantique" },
+          Australia: { en: "Australia", fr: "Australie" }, Europe: { en: "Europe", fr: "Europe" },
+          Indian: { en: "Indian Ocean", fr: "Océan Indien" }, Pacific: { en: "Pacific", fr: "Pacifique" },
+          Etc: { en: "Other", fr: "Autre" }
+        };
+        const emptyLabel = f.emptyLabel || { en: "— System's own —", fr: "— Fuseau du système —" };
+        /* Fuseaux dont PiBoard rattrape lui-meme le decalage parce que
+           la base embarquee dans Chromium/Electron est en retard (voir
+           public/tzfix.js). On les marque ICI, au moment du choix :
+           l'utilisateur qui selectionne « Casablanca » voit tout de
+           suite que l'heure affichee ne sera pas celle de la base, et
+           n'ira pas chercher un bug ailleurs. La marque disparait
+           d'elle-meme quand Electron rattrape son retard, puisque
+           correctedZones() ne rend que les fuseaux REELLEMENT corriges.
+           Zones whose offset PiBoard fixes itself because the database
+           embedded in Chromium/Electron lags (see public/tzfix.js).
+           Flagged HERE, at choosing time; the flag disappears by itself
+           once Electron catches up. */
+        const fixed = new Set(window.PiBoardTzFix ? window.PiBoardTzFix.correctedZones() : []);
+        const fixedMark = i18n.t("tzfix.pickerMark");
+        let body = `<option value="" ${v ? "" : "selected"}>${i18n.fromManifest(emptyLabel)}</option>`;
+        const byGroup = new Map();
+        const order = [];
+        for (const z of zones) {
+          const slash = z.indexOf("/");
+          const continent = slash === -1 ? "Etc" : z.slice(0, slash);
+          const city = (slash === -1 ? z : z.slice(slash + 1)).replace(/_/g, " ");
+          const gLabel = i18n.fromManifest(CONTINENT_LABELS[continent] || { en: continent, fr: continent });
+          if (!byGroup.has(gLabel)) { byGroup.set(gLabel, []); order.push(gLabel); }
+          byGroup.get(gLabel).push({ value: z, city });
+        }
+        order.sort((a, b) => a.localeCompare(b));
+        body += order.map((g) => {
+          const items = [...byGroup.get(g)].sort((a, b) => a.city.localeCompare(b.city));
+          const optsHtml = items.map((it) => {
+            const city = it.city + (fixed.has(it.value) ? " " + fixedMark : "");
+            return `<option value="${it.value}" ${String(it.value) === String(v) ? "selected" : ""}>${escapeHtmlAttr(city)}</option>`;
+          }).join("");
+          return `<optgroup label="${escapeHtmlAttr(g)}">${optsHtml}</optgroup>`;
+        }).join("");
+        return `<label class="field"><span>${label}</span><select data-key="${f.key}">${body}</select>${hint}</label>`;
+      }
+      /* Type "rows" : editeur de lignes repetables (nom + place +
+         instrument), utilise par la tuile Bourse. Generique : les
+         colonnes sont decrites dans le manifeste.
+
+         ASTUCE QUI EVITE DE TOUCHER A LA COLLECTE : le tableau ecrit son
+         contenu en JSON dans un <input type="hidden" data-key="...">.
+         collectTileFormValues(), qui parcourt simplement [data-key],
+         continue donc de fonctionner sans UNE SEULE modification, et le
+         type reste reutilisable par d'autres widgets plus tard.
+
+         Type "rows": repeatable row editor (name + exchange +
+         instrument), used by the Stocks tile. Generic: the columns are
+         described in the manifest.
+
+         THE TRICK THAT AVOIDS TOUCHING COLLECTION: the table writes its
+         contents as JSON into a <input type="hidden" data-key="...">.
+         collectTileFormValues(), which simply walks [data-key], therefore
+         keeps working with NOT A SINGLE change, and the type stays
+         reusable by other widgets later. */
+      case "rows": {
+        let initial = [];
+        try { initial = typeof v === "string" ? JSON.parse(v || "[]") : (Array.isArray(v) ? v : []); }
+        catch (e) { initial = []; }
+        let def = [];
+        try { def = typeof f.default === "string" ? JSON.parse(f.default || "[]") : (Array.isArray(f.default) ? f.default : []); }
+        catch (e) { def = []; }
+        /* Les donnees passent par une Map cote JS, PAS par des attributs
+           HTML. Meme avec un echappement correct, faire transiter du JSON
+           par un attribut est fragile pour rien : ici la structure reste
+           un objet JavaScript de bout en bout, sans aucun aller-retour
+           par du texte a echapper puis a reparser.
+           The data goes through a JS-side Map, NOT through HTML
+           attributes. Even with correct escaping, routing JSON through an
+           attribute is needlessly fragile: here the structure stays a
+           JavaScript object end to end, with no round trip through text
+           that must be escaped and then re-parsed. */
+        rowsFieldData.set(f.key, { initial, def });
+        return `<div class="field field-rows" data-rows-field="${f.key}" data-rows-src="${escapeHtmlAttr(f.source || "")}">
+          <span>${label}</span>
+          <div class="rows-body"></div>
+          <div class="rows-dup" hidden>${escapeHtmlAttr(i18n.t("rows.duplicate"))}</div>
+          <div class="rows-actions">
+            <button type="button" class="rows-add">+ ${escapeHtmlAttr(i18n.t("rows.add"))}</button>
+            <!-- Sans ce bouton, les valeurs par defaut du manifeste ne
+                 s'appliquent QUE tant que le reglage n'a jamais ete
+                 enregistre : une fois la liste videe, il n'existait
+                 aucun moyen de la retrouver.
+                 Without this button, the manifest's defaults apply ONLY
+                 while the setting has never been saved: once the list
+                 was emptied there was no way at all to get it back. -->
+            <button type="button" class="rows-reset">${escapeHtmlAttr(i18n.t("rows.reset"))}</button>
+          </div>
+          <input type="hidden" data-key="${f.key}">
+          ${hint}
+        </div>`;
+      }
+      /* Type "multipick" : choix MULTIPLE dans un catalogue range par
+         familles, avec recherche, plus la possibilite d'ajouter une
+         entree absente du catalogue.
+
+         POURQUOI IL A FALLU UN NOUVEAU TYPE. La tuile Statut de service
+         se reglait par un textarea « Nom = adresse », une ligne par
+         service. C'est parfait pour trois services qu'on connait par
+         coeur, et intenable des qu'on en propose soixante : il faut
+         alors connaitre l'adresse exacte de la page de statut de chaque
+         fournisseur, la taper sans faute, et savoir laquelle existe. Un
+         catalogue coche repond aux trois a la fois.
+
+         MEME ASTUCE QUE LE TYPE "rows", ET POUR LA MEME RAISON : la
+         liste choisie est ecrite en JSON dans un
+         <input type="hidden" data-key="...">. collectTileFormValues(),
+         qui parcourt simplement [data-key], continue donc de
+         fonctionner sans UNE SEULE modification, et le type reste
+         reutilisable par d'autres tuiles (IPTV, RSS, Programme TV ont
+         le meme probleme).
+
+         Type "multipick": MULTIPLE choice from a catalogue arranged by
+         families, with search, plus the option of adding an entry the
+         catalogue does not hold. WHY A NEW TYPE WAS NEEDED: a textarea
+         is perfect for three services known by heart and untenable once
+         sixty are offered -- one must then know each provider's exact
+         status-page address, type it without error, and know which
+         exists. A ticked catalogue answers all three at once. SAME TRICK
+         AS "rows", for the same reason: the chosen list is written as
+         JSON into a hidden input, so collectTileFormValues() keeps
+         working unchanged and the type stays reusable. */
+      case "multipick": {
+        let initial = [];
+        try { initial = typeof v === "string" ? JSON.parse(v || "[]") : (Array.isArray(v) ? v : []); }
+        catch (e) { initial = []; }
+        let def = [];
+        try { def = typeof f.default === "string" ? JSON.parse(f.default || "[]") : (Array.isArray(f.default) ? f.default : []); }
+        catch (e) { def = []; }
+        multipickData.set(f.key, { initial, def, max: Number(f.max) || 25, alerts: !!f.alerts });
+        return `<div class="field field-wide field-multipick" data-multipick-field="${f.key}" data-multipick-src="${escapeHtmlAttr(f.source || "")}">
+          <span>${label}</span>
+          <div class="mp-bar">
+            <input type="search" class="mp-search" placeholder="${escapeHtmlAttr(i18n.t("mp.searchPlaceholder"))}" autocomplete="off" spellcheck="false">
+            <span class="mp-count"></span>
+          </div>
+          <div class="mp-fams"></div>
+          <div class="mp-add">
+            <button type="button" class="btn small mp-add-toggle">+ ${escapeHtmlAttr(i18n.t("mp.addOther"))}</button>
+            <div class="mp-add-form" hidden>
+              <input type="text" class="mp-add-name" placeholder="${escapeHtmlAttr(i18n.t("mp.addName"))}" autocomplete="off">
+              <input type="text" class="mp-add-url" placeholder="${escapeHtmlAttr(i18n.t("mp.addUrl"))}" autocomplete="off" spellcheck="false">
+              <button type="button" class="btn small mp-add-test">${escapeHtmlAttr(i18n.t("mp.addTest"))}</button>
+              <div class="mp-add-msg" hidden></div>
+            </div>
+          </div>
+          <input type="hidden" data-key="${f.key}">
+          ${hint}
+        </div>`;
+      }
+      case "checkbox":
+        return `<label class="field checkbox"><input type="checkbox" data-key="${f.key}" ${v ? "checked" : ""}><span>${label}</span></label>${hint}`;
+      case "number":
+        return `<label class="field"><span>${label}</span><input type="number" data-key="${f.key}" value="${v}" ${f.min != null ? `min="${f.min}"` : ""} ${f.max != null ? `max="${f.max}"` : ""} ${f.step != null ? `step="${f.step}"` : ""}>${hint}</label>`;
+      case "textarea": {
+        /* Bouton optionnel "parcourir" : disponible pour tout champ
+           textarea declarant "browseChannels" dans le manifest (voir
+           server/index.js: GET /api/tele-channels pour le premier
+           usage, widget Programme TV). Generique par construction --
+           un futur widget pourrait reutiliser le meme mecanisme avec
+           son propre point d'entree -- mais le gestionnaire de clic
+           (voir plus bas, ".field-browse-btn") lit pour l'instant des
+           noms de champs specifiques au Programme TV pour construire
+           la requete ; a generaliser le jour ou un second widget en a
+           besoin.
+           Optional "browse" button: available for any textarea field
+           declaring "browseChannels" in the manifest (see
+           server/index.js: GET /api/tele-channels for the first use,
+           TV guide widget). Generic by construction -- a future widget
+           could reuse the same mechanism with its own endpoint -- but
+           the click handler (see below, ".field-browse-btn") currently
+           reads TV-guide-specific field names to build the request; to
+           be generalized once a second widget needs it. */
+        const browse = f.browseChannels;
+        const browseUi = browse
+          ? `<div class="field-browse">
+               <button type="button" class="btn small field-browse-btn" data-endpoint="${browse.endpoint}">${i18n.fromManifest(browse.label)}</button>
+               ${browse.hint ? `<small class="field-hint">${i18n.fromManifest(browse.hint)}</small>` : ""}
+               <div class="field-browse-list" hidden></div>
+             </div>`
+          : "";
+        return `<label class="field field-wide"><span>${label}</span><textarea data-key="${f.key}" autocomplete="off" spellcheck="false">${escapeHtml(v)}</textarea>${hint}</label>${browseUi}`;
+      }
+      case "datetime":
+        return `<label class="field"><span>${label}</span><input type="datetime-local" data-key="${f.key}" value="${v}">${hint}</label>`;
+      case "color":
+        return `<label class="field"><span>${label}</span><input type="color" data-key="${f.key}" value="${v || "#000000"}">${hint}</label>`;
+      case "time":
+        return `<label class="field"><span>${label}</span><input type="time" data-key="${f.key}" value="${v}">${hint}</label>`;
+      /* Champ "folder" : un chemin sur la machine qui fait tourner
+         PiBoard, avec un bouton pour le choisir dans un explorateur de
+         dossiers (et en creer un au besoin). Taper le chemin a la main
+         reste possible -- c'est le meme champ texte.
+         "folder" field: a path on the machine running PiBoard, with a
+         button to pick it in a folder browser (and create one if
+         needed). Typing the path by hand still works. */
+      /* Champ "discover" : une liste construite en interrogeant le
+         PiBoard plutot qu'ecrite dans le manifeste -- les appareils
+         presents sur le reseau ne sont connus qu'au moment ou l'on
+         ouvre les reglages. Le manifeste declare "source" (la route a
+         interroger) et, facultativement, "fills" : les autres champs
+         du formulaire que le choix doit remplir (adresse, numero de
+         serie, modele...). Generique par construction : premier usage
+         par la tuile Imprimante 3D, reutilisable pour tout materiel
+         qui s'annonce sur le reseau.
+         "discover" field: a list built by asking the PiBoard rather
+         than written in the manifest -- devices on the network are
+         only known when the settings are opened. The manifest declares
+         "source" and, optionally, "fills": the sibling fields the
+         choice must fill in. */
+      case "discover": {
+        const fills = JSON.stringify(f.fills || {}).replace(/"/g, "&quot;");
+        return `<div class="field field-discover" data-discover-src="${escapeHtmlAttr(f.source || "")}" data-discover-fills="${fills}">
+          <span>${label}</span>
+          <div class="field-discover-wrap">
+            <select data-key="${f.key}" data-discover-select>
+              <option value="${escapeHtmlAttr(String(v))}" selected>${v ? escapeHtmlAttr(String(v)) : i18n.t("discover.none")}</option>
+            </select>
+            <button type="button" class="btn small field-discover-scan">${i18n.t("discover.scan")}</button>
+          </div>
+          <small class="field-hint field-discover-msg"></small>
+          ${hint}
+        </div>`;
+      }
+      case "folder":
+        return `<label class="field"><span>${label}</span><div class="field-folder-wrap"><input type="text" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-folder-browse" data-for="${f.key}">${i18n.t("folder.browse")}</button></div>${hint}</label>`;
+      case "password":
+        return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div>${hint}</label>`;
+      /* Champ "secret" : contrairement a "password" ci-dessus, la valeur
+         n'est JAMAIS conservee dans les reglages de la tuile (donc jamais
+         dans layout.json, ni dans une configuration exportable). Elle est
+         envoyee au coffre chiffre du serveur (voir server/tileSecrets.js)
+         et n'en redescend jamais : le champ reste donc vide a la
+         reouverture, avec une mention indiquant qu'un secret est deja
+         enregistre. A reserver aux vrais secrets (mot de passe de boite
+         mail...) -- "password" suffit pour une cle d'API qu'on accepte de
+         voir figurer dans les reglages.
+         "secret" field: unlike "password" above, the value is NEVER kept
+         in the tile's settings (so never in layout.json, nor in an
+         exportable config). It is sent to the server's encrypted vault
+         (see server/tileSecrets.js) and never comes back down: the field
+         is therefore empty on reopening, with a note saying a secret is
+         already stored. Reserved for genuine secrets (mailbox
+         password...) -- "password" is enough for an API key one accepts
+         seeing in the settings. */
+      case "secret":
+        return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-secret-key="${f.key}" value="" autocomplete="off" spellcheck="false" placeholder="${i18n.t("field.secret.placeholder")}"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div><small class="field-hint field-secret-status" data-secret-status="${f.key}"></small>${hint}</label>`;
+      /* Champ adresse avec suggestions cliquables (voir les gestionnaires
+         delegues plus bas, ".field-address-input"/".field-address-suggest") :
+         recherche Nominatim debouncee des la saisie, resultats affiches
+         en liste -- cliquer une suggestion remplit le champ avec
+         l'adresse complete telle que comprise. Meme principe que la
+         recherche de ville des reglages generaux (voir initCitySearch()),
+         plus fiable qu'une simple confirmation textuelle : plus besoin de
+         taper une adresse parfaitement formee, ni de deviner si ce qui a
+         ete compris correspond a ce qui etait vise.
+         Address field with clickable suggestions (see the delegated
+         handlers further below, ".field-address-input"/
+         ".field-address-suggest"): debounced Nominatim search as you
+         type, results shown as a list -- clicking a suggestion fills the
+         field with the full address as understood. Same idea as the
+         general settings' city search (see initCitySearch()), more
+         reliable than a plain text confirmation: no need to type a
+         perfectly-formed address, or guess whether what got understood
+         matches what was meant. */
+      case "address":
+        return `<label class="field field-address-wrap"><span>${label}</span><input type="text" data-key="${f.key}" class="field-address-input" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><div class="field-address-suggest" hidden></div>${hint}</label>`;
+      default:
+        // autocomplete="off" : evite que Chromium propose une suggestion
+        // au-dessus du champ, ce qui sur ecran tactile intercepte le
+        // premier tap suivant (ex. sur le bouton Enregistrer) sans
+        // qu'il atteigne sa cible.
+        // autocomplete="off": prevents Chromium from popping up a
+        // suggestion above the field, which on a touchscreen intercepts
+        // the next tap (e.g. on the Save button) before it reaches its
+        // target.
+        return `<label class="field"><span>${label}</span><input type="text" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false">${hint}</label>`;
+    }
+  }
+
+  /* Remet la tuile a ses reglages d'origine : ceux du manifeste, plus
+     les reglages universels (titre, couleur, echelle du texte,
+     transparence, planification) revenus a leur etat neutre.
+
+     Ce qui est deliberement CONSERVE : rien d'autre. Une tuile Image
+     garde son fichier -- le fichier televerse n'est pas un reglage, et le
+     perdre obligerait a le rechercher ; une tuile dont les reglages
+     partent en vrille doit pouvoir revenir a un etat sain sans qu'on
+     ait a tout reconstruire, ce qui est justement l'usage vise apres
+     s'etre perdu dans un recadrage.
+
+     La confirmation n'est pas facultative : l'action efface un travail
+     de reglage qui peut etre long, et rien ne permettrait de le
+     retrouver.
+
+     Puts the tile back to its original settings: the manifest's, plus
+     the universal settings (title, colour, text scale, transparency,
+     scheduling) returned to their neutral state.
+
+     What is deliberately KEPT: nothing else. An Image tile keeps its
+     file -- an uploaded file is not a setting, and losing it would mean
+     hunting for it again; a tile whose settings have gone haywire must
+     be able to return to a sane state without everything being rebuilt,
+     which is precisely the use after getting lost in a crop.
+
+     The confirmation is not optional: the action wipes settings work
+     that can be long, and nothing would bring it back. */
+  function resetTileSettings() {
+    const rec = tiles.get(tileModalTarget);
+    if (!rec) return;
+    if (!window.confirm(i18n.t("tile.reset.confirm"))) return;
+
+    const defaults = {};
+    for (const field of (rec.manifest && rec.manifest.settings) || []) {
+      if (field && field.key !== undefined) defaults[field.key] = field.default;
+    }
+    // Le fichier d'une tuile Image n'est pas un reglage comme un autre :
+    // c'est un fichier televerse, qu'on ne veut pas avoir a rechoisir.
+    // An Image tile's file is not a setting like the others: it is an
+    // uploaded file, which one does not want to have to pick again.
+    const kept = rec.conf.settings || {};
+    if (kept.image !== undefined) defaults.image = kept.image;
+
+    rec.conf.settings = defaults;
+    if (rec.instance && rec.instance.ctx) rec.instance.ctx.settings = Object.assign({}, defaults);
+    applyTitleBar(rec);
+    applyTileColor(rec);
+    applyTextScale(rec);
+    if (rec.instance && typeof rec.instance.onSettingsChanged === "function") {
+      try { rec.instance.onSettingsChanged(defaults); } catch (e) { console.warn("[piboard] reset", e); }
+    }
+    syncTileSchedule(rec);
+    scheduleSave();
+    // Le formulaire est reconstruit pour montrer les valeurs revenues :
+    // le laisser tel quel afficherait les anciennes, et l'on croirait
+    // que rien ne s'est passe.
+    // The form is rebuilt to show the restored values: leaving it as is
+    // would display the old ones, and one would think nothing happened.
+    openTileSettings(tileModalTarget);
+  }
+
+  function openTileSettings(tileId) {
+    const rec = tiles.get(tileId);
+    if (!rec || !rec.manifest) return;
+    tileModalTarget = tileId;
+    const form = $("tileForm");
+    const fields = rec.manifest.settings || [];
+    $("tileModalTitle").textContent = i18n.fromManifest(rec.manifest.name);
+    // Le bouton n'apparait que si ce widget a effectivement une fiche :
+    // proposer une aide vide serait pire que ne rien proposer.
+    // The button only appears if this widget actually has a page:
+    // offering empty help would be worse than offering none.
+    const helpBtn = $("tileHelpBtn");
+    if (helpBtn) {
+      const hasHelp = !!widgetHelpSection(rec.conf.widget);
+      helpBtn.hidden = !hasHelp;
+      helpBtn.onclick = hasHelp ? (e) => { e.stopPropagation(); openWidgetHelp(rec.conf.widget); } : null;
+    }
+    const s = rec.conf.settings || {};
+    const showTitleNow = s._showTitle != null ? !!s._showTitle : !!rec.manifest.titleBar;
+    const textScaleNow = String(s._textScale || "1");
+    const textScaleField = rec.conf.widget === "traffic" ? "" : `
+      <label class="field">
+        <span>${i18n.t("tile.textScale")}</span>
+        <select data-key="_textScale">
+          ${[["0.5", "50 %"], ["0.65", "65 %"], ["0.8", "80 %"], ["1", "100 %"], ["1.15", "115 %"],
+             ["1.3", "130 %"], ["1.5", "150 %"], ["1.75", "175 %"], ["2", "200 %"]]
+            .map(([v, l]) => `<option value="${v}" ${textScaleNow === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select>
+        <small class="field-hint">${i18n.t("tile.textScale.hint")}</small>
+      </label>`;
+    const universal = `
+      <fieldset class="form-section">
+        <legend>${i18n.t("tile.appearance")}</legend>
+        <label class="field checkbox">
+          <input type="checkbox" data-key="_showTitle" ${showTitleNow ? "checked" : ""}>
+          <span>${i18n.t("tile.showTitle")}</span>
+        </label>
+        <label class="field">
+          <span>${i18n.t("tile.customTitle")}</span>
+          <input type="text" data-key="_title" value="${String(s._title || "").replace(/"/g, "&quot;")}"
+                 placeholder="${i18n.fromManifest(rec.manifest.name)}">
+        </label>
+        ${textScaleField}
+        <label class="field checkbox">
+          <input type="checkbox" data-key="_transparent" ${s._transparent ? "checked" : ""}>
+          <span>${i18n.t("tile.transparent")}</span>
+        </label>
+        <small class="field-hint">${i18n.t("tile.transparent.hint")}</small>
+        <label class="field checkbox">
+          <input type="checkbox" data-key="_customColor" ${s._customColor ? "checked" : ""}>
+          <span>${i18n.t("tile.customColor")}</span>
+        </label>
+        <label class="field">
+          <span>${i18n.t("tile.color")}</span>
+          <input type="color" data-key="_bgColor" value="${currentTileColorHex(rec)}">
+        </label>
+      </fieldset>
+      <fieldset class="form-section">
+        <legend>${i18n.t("tile.schedule")}</legend>
+        <label class="field checkbox">
+          <input type="checkbox" data-key="_schedEnabled" ${s._schedEnabled ? "checked" : ""}>
+          <span>${i18n.t("tile.schedule.enable")}</span>
+        </label>
+        <small class="field-hint">${i18n.t("tile.schedule.enable.hint")}</small>
+        <div class="field">
+          <span>${i18n.t("tile.schedule.days")}</span>
+          <div class="sched-days">
+            ${SCHED_DAY_ORDER.map((d) => `
+              <label class="sched-day">
+                <input type="checkbox" data-key="${SCHED_DAY_KEYS[d]}" ${s[SCHED_DAY_KEYS[d]] ? "checked" : ""}>
+                <span>${schedDayLabels()[d]}</span>
+              </label>`).join("")}
+          </div>
+          <small class="field-hint">${i18n.t("tile.schedule.days.hint")}</small>
+        </div>
+        <label class="field">
+          <span>${i18n.t("tile.schedule.from")}</span>
+          <input type="time" data-key="_schedFrom" value="${String(s._schedFrom || "")}">
+        </label>
+        <label class="field">
+          <span>${i18n.t("tile.schedule.to")}</span>
+          <input type="time" data-key="_schedTo" value="${String(s._schedTo || "")}">
+          <small class="field-hint">${i18n.t("tile.schedule.time.hint")}</small>
+        </label>
+      </fieldset>`;
+    form.innerHTML = fieldsBySection(fields, s) + universal;
+
+    /* Une option de liste peut pre-remplir d'autres champs du formulaire
+       via sa propriete "fills" du manifeste (ex. choisir un fournisseur
+       de courriel renseigne le serveur IMAP et son port). Ne remplace
+       que les champs concernes, et seulement au choix explicite d'une
+       option -- jamais a l'ouverture, pour ne pas ecraser une
+       configuration manuelle deja en place.
+       A select option can pre-fill other form fields via its manifest
+       "fills" property (e.g. picking a mail provider fills in the IMAP
+       server and its port). Only replaces the fields concerned, and only
+       on an explicit option choice -- never on opening, so an existing
+       manual configuration is not overwritten. */
+    fields.filter((f) => f.type === "select" && (f.options || []).some((o) => o.fills)).forEach((f) => {
+      const sel = form.querySelector(`select[data-key="${f.key}"]`);
+      if (!sel) return;
+      sel.addEventListener("change", () => {
+        const opt = (f.options || []).find((o) => String(o.value) === sel.value);
+        if (!opt || !opt.fills) return;
+        for (const [key, value] of Object.entries(opt.fills)) {
+          const target = form.querySelector(`[data-key="${key}"]`);
+          if (!target) continue;
+          if (target.type === "checkbox") target.checked = !!value;
+          else target.value = value;
+        }
+      });
+    });
+
+    // Editeurs de lignes (type "rows") : listes dependantes + saisie
+    // libre. Initialises apres l'insertion du formulaire, le catalogue
+    // etant charge depuis le serveur.
+    // Row editors (type "rows"): dependent dropdowns + free text.
+    // Initialised after the form is inserted, the catalog being fetched
+    // from the server.
+    form.querySelectorAll("[data-rows-field]").forEach((el) => initRowsEditor(el));
+
+    // Selecteurs multiples (type "multipick") : catalogue range par
+    // familles, charge depuis un fichier statique.
+    // Multiple pickers (type "multipick"): catalogue arranged by
+    // families, loaded from a static file.
+    form.querySelectorAll("[data-multipick-field]").forEach((el) => initMultipick(el));
+
+    // Menus deroulants dont les options viennent du serveur (type
+    // "remoteselect").
+    // Dropdowns whose options come from the server ("remoteselect").
+    form.querySelectorAll("select[data-remote-src]").forEach((el) => initRemoteSelect(el));
+
+    // Etat de chaque secret ("enregistre" / "non defini") : demande au
+    // serveur, jamais devine depuis les reglages -- ils ne le contiennent
+    // pas. Each secret's state ("stored" / "not set"): asked of the
+    // server, never guessed from the settings -- they don't contain it.
+    fields.filter((f) => f.type === "secret").forEach((f) => refreshSecretStatus(tileId, f.key));
+    $("tileSaveConfigMsg").textContent = "";
+    $("tileSaveConfigMsg").classList.remove("field-hint-error");
+    $("tileModal").hidden = false;
+    // Apres affichage (hauteurs mesurables) : calculer la meilleure
+    // disposition en colonnes. requestAnimationFrame garantit que le
+    // navigateur a bien effectue la mise en page.
+    // After display (heights measurable): compute the best column layout.
+    // requestAnimationFrame ensures the browser has laid things out.
+    requestAnimationFrame(() => layoutFormColumns(form));
+  }
+
+  /* Cache du catalogue : une seule requete par session, quel que soit le
+     nombre d'ouvertures de la fenetre de reglages.
+     Catalog cache: a single request per session, however many times the
+     settings window is opened. */
+  let rowsCatalogCache = null;
+
+  /* Valeurs des champs "rows" en attente d'initialisation, transmises de
+     fieldMarkup() a initRowsEditor() sans passer par le DOM.
+     "rows" field values awaiting initialisation, handed from
+     fieldMarkup() to initRowsEditor() without going through the DOM. */
+  const rowsFieldData = new Map();
+
+  /* Valeurs et options des champs "multipick", transmises de
+     fieldMarkup() a initMultipick() sans passer par le DOM -- meme
+     principe que pour les champs "rows" juste au-dessus.
+     "multipick" field values and options, handed from fieldMarkup() to
+     initMultipick() without going through the DOM. */
+  const multipickData = new Map();
+
+  /* Catalogues deja charges, par adresse. Le catalogue des services est
+     un fichier statique de quelques dizaines de kilo-octets : le relire
+     a chaque ouverture des reglages n'apporterait rien.
+     Catalogues already loaded, by address. */
+  const multipickCatalogs = new Map();
+
+  async function loadMultipickCatalog(src) {
+    if (!src) return { families: [], services: [] };
+    if (multipickCatalogs.has(src)) return multipickCatalogs.get(src);
+    try {
+      const r = await fetch(src);
+      const body = await r.json();
+      /* Deux formes acceptees : la reponse de `api/service-catalog`,
+         qui enveloppe le catalogue dans `{ catalog: ... }`, et le
+         fichier statique `data/service-catalog.json`, qui est le
+         catalogue lui-meme. Accepter les deux permet de se replier sur
+         le fichier quand la route n'existe pas -- pendant une mise a
+         jour partielle, par exemple.
+         Two shapes accepted: the api/service-catalog answer, which
+         wraps the catalogue in { catalog: ... }, and the static file,
+         which is the catalogue itself. Accepting both allows falling
+         back to the file when the route is absent. */
+      const data = (body && body.catalog && typeof body.catalog === "object") ? body.catalog : body;
+      const out = {
+        families: Array.isArray(data.families) ? data.families : [],
+        services: Array.isArray(data.services) ? data.services : []
+      };
+      if (!out.services.length) throw new Error("catalogue vide / empty catalogue");
+      multipickCatalogs.set(src, out);
+      return out;
+    } catch (e) {
+      /* Repli sur le fichier livre avec la version : mieux vaut un
+         catalogue un peu ancien qu'une fenetre de reglages sans aucune
+         case a cocher. Fallback to the file shipped with the version:
+         a slightly old catalogue beats a settings window with no
+         checkboxes at all. */
+      if (src !== "data/service-catalog.json") {
+        console.warn("[piboard] catalogue par la route indisponible, repli sur le fichier livre", e);
+        return loadMultipickCatalog("data/service-catalog.json");
+      }
+      console.warn("[piboard] catalogue multipick indisponible", e);
+      return { families: [], services: [] };
+    }
+  }
+
+  /* ---------- Menu deroulant alimente par le serveur / server-fed dropdown ---------- */
+
+  const remoteSelectCache = new Map();
+
+  async function initRemoteSelect(el) {
+    const src = el.dataset.remoteSrc;
+    const want = el.dataset.remoteValue || "";
+    if (!src) return;
+
+    /* La valeur enregistree est posee AVANT tout appel reseau. Si le
+       chargement echoue ou tarde, le champ porte deja la bonne valeur,
+       et un enregistrement des reglages ne l'efface pas.
+       The stored value is set BEFORE any network call: if loading fails
+       or lags, the field already carries the right value and saving the
+       settings does not wipe it. */
+    if (want && !el.querySelector(`option[value="${CSS.escape(want)}"]`)) {
+      const keep = document.createElement("option");
+      keep.value = want;
+      keep.textContent = want;
+      el.appendChild(keep);
+    }
+    el.value = want;
+
+    let list;
+    try {
+      if (remoteSelectCache.has(src)) {
+        list = remoteSelectCache.get(src);
+      } else {
+        const body = await (await fetch(src)).json();
+        let node = body;
+        for (const step of String(el.dataset.remotePath || "").split(".").filter(Boolean)) {
+          node = node && node[step];
+        }
+        /* Deux formes acceptees : un tableau d'objets {id, name}, et un
+           dictionnaire { id: { name } } -- la base des circuits est un
+           dictionnaire, pour que la recherche par identifiant soit
+           immediate cote tuile.
+           Two shapes accepted: an array of {id, name}, and a dictionary
+           { id: { name } } -- the circuit base is a dictionary so that
+           lookup by id is immediate on the tile's side. */
+        if (Array.isArray(node)) {
+          list = node.map((o) => ({ value: String(o.id || o.value || ""), label: String(o.name || o.label || o.id || "") }));
+        } else if (node && typeof node === "object") {
+          list = Object.keys(node).map((k) => ({ value: k, label: String((node[k] && node[k].name) || k) }));
+        } else {
+          list = [];
+        }
+        list.sort((a, b) => a.label.localeCompare(b.label));
+        remoteSelectCache.set(src, list);
+      }
+    } catch (e) {
+      console.warn("[piboard] liste distante indisponible pour", src, e);
+      return;
+    }
+    if (!list.length) return;
+
+    const current = el.value;
+    const head = el.querySelector('option[value=""]');
+    el.innerHTML = "";
+    if (head) el.appendChild(head);
+    for (const o of list) {
+      const opt = document.createElement("option");
+      opt.value = o.value;
+      opt.textContent = o.label;
+      el.appendChild(opt);
+    }
+    /* Si la valeur enregistree ne figure plus dans la liste -- un
+       circuit retire de la base -- on la garde quand meme, affichee
+       telle quelle. La faire disparaitre changerait le reglage de la
+       personne sans le lui dire.
+       If the stored value is no longer in the list -- a circuit dropped
+       from the base -- it is kept and shown as is. Making it vanish
+       would change the person's setting without telling them. */
+    if (current && !list.some((o) => o.value === current)) {
+      const keep = document.createElement("option");
+      keep.value = current;
+      keep.textContent = current;
+      el.appendChild(keep);
+    }
+    el.value = current;
+  }
+
+  /* ---------- Selecteur multiple a cases a cocher / checkbox picker ----------
+     TROIS DECISIONS D'INTERFACE, chacune contre une version plus simple
+     qui a ete essayee puis ecartee :
+
+     1. LES FAMILLES SONT PLIEES PAR DEFAUT, sauf celles qui contiennent
+        deja un service coche. Tout deplier donnait une liste de soixante
+        lignes dans laquelle il fallait faire defiler pour retrouver ses
+        propres choix -- exactement ce que le selecteur devait supprimer.
+
+     2. LA RECHERCHE DEPLIE TOUT, le temps de la recherche. Filtrer sans
+        deplier laissait des familles fermees affichant « 2 resultats »
+        qu'il fallait encore ouvrir : deux gestes pour une frappe.
+
+     3. LA CLOCHE N'EXISTE QUE SUR LES SERVICES COCHES. Surveiller vingt
+        services et vouloir etre reveille pour les vingt n'arrive jamais ;
+        sans ce reglage par service, l'option d'alerte devenait
+        inutilisable des qu'on cochait beaucoup, et la personne la coupait
+        entierement -- donc ne serait plus alertee pour les deux services
+        qui comptent vraiment.
+
+     THREE UI DECISIONS, each against a simpler version that was tried
+     and dropped: families are COLLAPSED by default except those already
+     holding a ticked service (expanding all gave a sixty-line list in
+     which one had to scroll to find one's own choices); SEARCH EXPANDS
+     everything for its duration (filtering without expanding left closed
+     families announcing "2 results" that still had to be opened: two
+     gestures per keystroke); and the BELL exists only on ticked services
+     (wanting to be woken for all twenty never happens, and without a
+     per-service setting the alert option became unusable as soon as many
+     were ticked, so people switched it off entirely -- and were then not
+     alerted for the two services that did matter). */
+  async function initMultipick(el) {
+    const hidden = el.querySelector("input[type=hidden]");
+    const famsBox = el.querySelector(".mp-fams");
+    const countBox = el.querySelector(".mp-count");
+    const search = el.querySelector(".mp-search");
+
+    const opts = multipickData.get(el.dataset.multipickField) || { initial: [], def: [], max: 25, alerts: false };
+    let picked = Array.isArray(opts.initial) ? opts.initial.map((x) => Object.assign({}, x)) : [];
+    const max = opts.max;
+
+    /* Le champ cache est renseigne IMMEDIATEMENT, avant d'attendre le
+       catalogue : enregistrer pendant ce chargement (ou alors qu'il a
+       echoue) enverrait sinon une chaine vide, donc effacerait la liste
+       des services surveilles. Meme piege que pour les champs "rows",
+       meme parade.
+       The hidden field is filled IMMEDIATELY, before awaiting the
+       catalogue: saving during that load (or after it failed) would
+       otherwise send an empty string and so wipe the watched services.
+       Same trap as the "rows" fields, same guard. */
+    hidden.value = JSON.stringify(picked);
+
+    const cat = await loadMultipickCatalog(el.dataset.multipickSrc);
+    const byId = new Map(cat.services.map((s) => [s.id, s]));
+
+    function famLabel(fam) {
+      return (fam.icon ? fam.icon + " " : "") + i18n.fromManifest(fam.label);
+    }
+
+    function isPicked(id) { return picked.some((p) => p.id === id); }
+    function pickedOf(id) { return picked.find((p) => p.id === id) || null; }
+
+    function sync() {
+      hidden.value = JSON.stringify(picked);
+      countBox.textContent = i18n.t("mp.count").replace("{n}", picked.length).replace("{max}", max);
+      countBox.classList.toggle("mp-count-full", picked.length >= max);
+    }
+
+    /* Les services ajoutes a la main ne sont PAS perdus dans la famille
+       « Mes services » du catalogue : ils y sont rajoutes a la volee,
+       sinon un service coche hier mais absent du catalogue
+       disparaitrait de l'ecran tout en restant surveille -- un reglage
+       invisible qu'on ne peut plus decocher.
+       Hand-added services are injected into the "My services" family, or
+       a service ticked yesterday but absent from the catalogue would
+       vanish from the screen while still being watched: an invisible
+       setting that can no longer be unticked. */
+    function allItems() {
+      const extra = picked.filter((p) => !byId.has(p.id))
+        .map((p) => ({ id: p.id, name: p.name, url: p.url, adapter: p.adapter || "auto", api: p.api || null, family: "custom", custom: true }));
+      return cat.services.concat(extra);
+    }
+
+    function render() {
+      const q = (search.value || "").trim().toLowerCase();
+      const items = allItems();
+      const families = cat.families.length
+        ? cat.families.slice()
+        : [{ id: "custom", icon: "➕", label: { fr: "Mes services", en: "My services" } }];
+      /* Une famille citee par un service mais absente de la liste des
+         familles ne doit pas faire disparaitre ce service. */
+      for (const it of items) {
+        if (!families.some((f) => f.id === it.family)) families.push({ id: it.family, label: { fr: it.family, en: it.family } });
+      }
+
+      famsBox.innerHTML = families.map((fam) => {
+        const list = items.filter((it) => it.family === fam.id).filter((it) => {
+          if (!q) return true;
+          return (it.name + " " + (it.url || "") + " " + i18n.fromManifest(fam.label)).toLowerCase().indexOf(q) !== -1;
+        });
+        if (!list.length) return "";
+        const chosen = list.filter((it) => isPicked(it.id)).length;
+        const open = !!q || chosen > 0;
+        const rows = list.map((it) => {
+          const on = isPicked(it.id);
+          const p = pickedOf(it.id);
+          const full = !on && picked.length >= max;
+          const bell = (opts.alerts && on)
+            ? `<button type="button" class="mp-bell ${p && p.alert ? "mp-bell-on" : ""}" data-bell="${escapeHtmlAttr(it.id)}" title="${escapeHtmlAttr(i18n.t(p && p.alert ? "mp.bellOn" : "mp.bellOff"))}">${p && p.alert ? "🔔" : "🔕"}</button>`
+            : "";
+          return `<label class="mp-item ${full ? "mp-item-full" : ""}">
+            <input type="checkbox" data-pick="${escapeHtmlAttr(it.id)}" ${on ? "checked" : ""} ${full ? "disabled" : ""}>
+            <span class="mp-item-name">${escapeHtml(it.name)}</span>
+            <span class="mp-item-host">${escapeHtml(hostOf(it.url))}</span>
+            ${bell}
+          </label>`;
+        }).join("");
+        return `<details class="mp-fam" ${open ? "open" : ""}>
+          <summary>${escapeHtml(famLabel(fam))}<span class="mp-fam-n">${chosen ? chosen + "/" + list.length : list.length}</span></summary>
+          <div class="mp-fam-body">${rows}</div>
+        </details>`;
+      }).join("") || `<div class="field-hint">${escapeHtml(i18n.t("mp.noCatalog"))}</div>`;
+
+      sync();
+    }
+
+    function hostOf(url) {
+      try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return ""; }
+    }
+
+    famsBox.addEventListener("change", (e) => {
+      const box = e.target.closest("[data-pick]");
+      if (!box) return;
+      const id = box.dataset.pick;
+      if (box.checked) {
+        if (picked.length >= max) { box.checked = false; return; }
+        const src = byId.get(id);
+        if (src) {
+          picked.push({ id: src.id, name: src.name, url: src.url, adapter: src.adapter || "auto", api: src.api || null, family: src.family, alert: true });
+        }
+      } else {
+        picked = picked.filter((p) => p.id !== id);
+      }
+      render();
+    });
+
+    famsBox.addEventListener("click", (e) => {
+      const bell = e.target.closest("[data-bell]");
+      if (!bell) return;
+      /* Le bouton vit DANS un <label> : sans ces deux lignes, le clic
+         serait aussi recu par la case a cocher du label et decocherait
+         le service qu'on voulait simplement rendre silencieux.
+         The button lives INSIDE a <label>: without these two lines the
+         click would also reach the label's checkbox and untick the very
+         service one merely wanted to silence. */
+      e.preventDefault();
+      e.stopPropagation();
+      const p = pickedOf(bell.dataset.bell);
+      if (p) p.alert = !p.alert;
+      render();
+    });
+
+    search.addEventListener("input", render);
+
+    /* ---------- Ajout d'un service hors catalogue ----------
+       On SONDE l'adresse avant d'accepter. Enregistrer d'abord et
+       decouvrir plus tard que le format n'est pas lisible donnerait une
+       ligne grise sans explication sur la tuile ; ici la reponse arrive
+       pendant qu'on est encore devant le champ, et elle nomme le format
+       trouve -- ce qui dit aussi que l'adresse est la bonne.
+       The address is PROBED before being accepted: saving first and
+       finding out later would give an unexplained grey line on the tile,
+       whereas here the answer arrives while one is still looking at the
+       field, and it names the format found -- which also says the
+       address is right. */
+    const addToggle = el.querySelector(".mp-add-toggle");
+    const addForm = el.querySelector(".mp-add-form");
+    const addName = el.querySelector(".mp-add-name");
+    const addUrl = el.querySelector(".mp-add-url");
+    const addTest = el.querySelector(".mp-add-test");
+    const addMsg = el.querySelector(".mp-add-msg");
+
+    addToggle.addEventListener("click", () => {
+      addForm.hidden = !addForm.hidden;
+      if (!addForm.hidden) addUrl.focus();
+    });
+
+    addTest.addEventListener("click", async () => {
+      const url = (addUrl.value || "").trim();
+      if (!url) return;
+      if (picked.length >= max) {
+        addMsg.hidden = false;
+        addMsg.className = "mp-add-msg mp-add-err";
+        addMsg.textContent = i18n.t("mp.full").replace("{max}", max);
+        return;
+      }
+      addMsg.hidden = false;
+      addMsg.className = "mp-add-msg";
+      addMsg.textContent = i18n.t("mp.testing");
+      addTest.disabled = true;
+      try {
+        const r = await fetch("api/service-status/detect?url=" + encodeURIComponent(url));
+        const d = await r.json();
+        if (!d || !d.ok) {
+          addMsg.className = "mp-add-msg mp-add-err";
+          addMsg.textContent = i18n.t(d && d.error === "bad-url" ? "mp.badUrl" : "mp.notDetected");
+          return;
+        }
+        const name = (addName.value || "").trim() || d.name || hostOf(d.url);
+        picked.push({
+          id: "custom:" + d.url,
+          name,
+          url: d.url,
+          adapter: d.adapter,
+          api: null,
+          family: "custom",
+          alert: true
+        });
+        addName.value = "";
+        addUrl.value = "";
+        addMsg.className = "mp-add-msg mp-add-ok";
+        addMsg.textContent = i18n.t("mp.detected").replace("{format}", d.adapter)
+          + (d.approximate ? " · " + i18n.t("mp.approximate") : "");
+        render();
+      } catch (e) {
+        addMsg.className = "mp-add-msg mp-add-err";
+        addMsg.textContent = i18n.t("mp.notDetected");
+      } finally {
+        addTest.disabled = false;
+      }
+    });
+
+    render();
+  }
+
+  /* La source d'un champ "rows" peut etre DYNAMIQUE. Deux substitutions :
+       {tileId}      -> identifiant de la tuile en cours d'edition
+       {field:cle}   -> valeur courante d'un autre champ du formulaire
+     C'est ce qui permet au selecteur de Home Assistant d'interroger
+     l'instance de la personne (son adresse, son jeton) plutot qu'un
+     catalogue fige comme celui de la tuile Bourse.
+     A "rows" field's source can be DYNAMIC. Two substitutions:
+       {tileId}      -> id of the tile being edited
+       {field:key}   -> current value of another field in the form
+     This is what lets the Home Assistant picker query the person's own
+     instance (their address, their token) rather than a fixed catalog
+     like the Stocks tile's. */
+  function resolveRowsSource(src, form) {
+    return String(src || "").replace(/\{tileId\}/g, encodeURIComponent(tileModalTarget || ""))
+      .replace(/\{field:([A-Za-z0-9_]+)\}/g, (_, key) => {
+        const el = form && form.querySelector(`[data-key="${key}"]`);
+        return encodeURIComponent(el ? el.value : "");
+      });
+  }
+
+  /* Cache par URL RESOLUE et non global : deux tuiles Home Assistant
+     pointant des instances differentes ne doivent pas se partager un
+     catalogue.
+     Cached by RESOLVED URL rather than globally: two Home Assistant tiles
+     pointing at different instances must not share a catalog. */
+  async function loadRowsCatalog(src) {
+    if (!src) return [];
+    if (rowsCatalogCache && rowsCatalogCache.src === src) return rowsCatalogCache.data;
+    try {
+      const r = await fetch(src);
+      const data = (await r.json()).exchanges || [];
+      rowsCatalogCache = { src, data };
+      return data;
+    } catch (e) {
+      console.warn("[piboard] catalogue indisponible", e);
+      return [];
+    }
+  }
+
+  async function initRowsEditor(el) {
+    const hidden = el.querySelector("input[type=hidden]");
+    const body = el.querySelector(".rows-body");
+
+    const data = rowsFieldData.get(el.dataset.rowsField) || { initial: [], def: [] };
+    let rows = Array.isArray(data.initial) ? data.initial.map((r) => ({ ...r })) : [];
+    const defaults = Array.isArray(data.def) ? data.def : [];
+
+    /* Le champ cache est renseigne IMMEDIATEMENT, avant d'attendre le
+       catalogue : enregistrer pendant ce chargement (ou alors qu'il a
+       echoue) enverrait sinon une chaine vide, donc effacerait la liste.
+       The hidden field is filled IMMEDIATELY, before awaiting the
+       catalog: saving during that load (or after it failed) would
+       otherwise send an empty string, and so wipe the list. */
+    hidden.value = JSON.stringify(rows);
+
+    const exchanges = await loadRowsCatalog(resolveRowsSource(el.dataset.rowsSrc, el.closest(".form")));
+
+    /* Catalogue vide alors qu'une source etait prevue : on le DIT. Sans
+       ce message, la personne verrait des listes deroulantes vides sans
+       savoir si son adresse est fausse, son jeton refuse, ou son service
+       injoignable.
+       Empty catalog although a source was expected: we SAY so. Without
+       this message the person would face empty dropdowns with no way to
+       tell whether their address is wrong, their token refused, or their
+       service unreachable. */
+    if (el.dataset.rowsSrc && !exchanges.length) {
+      const warn = document.createElement("small");
+      warn.className = "field-hint rows-warn";
+      warn.textContent = i18n.t("rows.noCatalog");
+      el.appendChild(warn);
+    }
+
+    const CUSTOM = "__custom__";
+
+    // Source de verite unique : le tableau `rows`. Le DOM n'est qu'un
+    // reflet, reconstruit a chaque changement. Plus simple a garder
+    // coherent qu'une synchronisation champ par champ, et le nombre de
+    // lignes reste petit.
+    // Single source of truth: the `rows` array. The DOM is just a
+    // reflection, rebuilt on every change. Easier to keep consistent than
+    // field-by-field syncing, and the row count stays small.
+    function commit() {
+      // Les lignes sans instrument ne sont PAS enregistrees : une ligne
+      // en cours de saisie ne doit pas produire d'entree fantome sur la
+      // tuile. Elle reste visible dans le formulaire tant qu'il est
+      // ouvert, elle disparait simplement a l'enregistrement.
+      // Rows with no instrument are NOT saved: a row still being filled
+      // in must not produce a phantom entry on the tile. It stays visible
+      // in the form while it is open, it just does not survive saving.
+      hidden.value = JSON.stringify(rows.filter((r) => r && r.symbol));
+    }
+
+    function labelOf(x) {
+      return typeof x === "string" ? x : i18n.fromManifest(x);
+    }
+
+    function render() {
+      body.innerHTML = rows.map((row, i) => {
+        const ex = exchanges.find((e) => e.id === row.exchange) || exchanges[0] || { instruments: [] };
+        const known = (ex.instruments || []).some((it) => it.symbol === row.symbol);
+        const isCustom = row.symbol && !known;
+        const exOpts = exchanges.map((e) =>
+          `<option value="${escapeHtmlAttr(e.id)}" ${e.id === row.exchange ? "selected" : ""}>${escapeHtmlAttr(labelOf(e.label))}</option>`).join("");
+        // Invite explicite tant qu'aucun instrument n'est choisi : sans
+        // elle, le menu afficherait le premier de la liste et laisserait
+        // croire qu'un choix a ete fait.
+        // Explicit prompt while no instrument is chosen: without it the
+        // menu would show the first of the list and suggest a choice had
+        // been made.
+        const placeholder = row.symbol
+          ? ""
+          : `<option value="" selected>${escapeHtmlAttr(i18n.t("rows.choose"))}</option>`;
+        const inOpts = placeholder + (ex.instruments || []).map((it) =>
+          `<option value="${escapeHtmlAttr(it.symbol)}" ${it.symbol === row.symbol ? "selected" : ""}>${escapeHtmlAttr(labelOf(it.label))}</option>`).join("")
+          + `<option value="${CUSTOM}" ${isCustom ? "selected" : ""}>${escapeHtmlAttr(i18n.t("rows.custom"))}</option>`;
+        return `<div class="rows-row" data-i="${i}">
+          <input class="rows-name" type="text" value="${escapeHtmlAttr(row.name || "")}" placeholder="${escapeHtmlAttr(i18n.t("rows.name"))}">
+          <select class="rows-ex">${exOpts}</select>
+          <select class="rows-in">${inOpts}</select>
+          <input class="rows-custom" type="text" value="${escapeHtmlAttr(isCustom ? row.symbol : "")}" placeholder="${escapeHtmlAttr(i18n.t("rows.symbol"))}" ${isCustom ? "" : "hidden"}>
+          <button type="button" class="rows-del" aria-label="${escapeHtmlAttr(i18n.t("rows.remove"))}">&times;</button>
+        </div>`;
+      }).join("");
+      commit();
+    }
+
+    body.addEventListener("input", (e) => {
+      const rowEl = e.target.closest(".rows-row");
+      if (!rowEl) return;
+      const i = Number(rowEl.dataset.i);
+      if (e.target.classList.contains("rows-name")) { rows[i].name = e.target.value; commit(); }
+      else if (e.target.classList.contains("rows-custom")) { rows[i].symbol = e.target.value.trim(); commit(); }
+    });
+
+    body.addEventListener("change", (e) => {
+      const rowEl = e.target.closest(".rows-row");
+      if (!rowEl) return;
+      const i = Number(rowEl.dataset.i);
+      if (e.target.classList.contains("rows-ex")) {
+        // Changer de place invalide l'instrument : on retombe sur le
+        // premier de la nouvelle place plutot que de garder un symbole
+        // qui n'y existe pas.
+        // Changing exchange invalidates the instrument: we fall back to
+        // the new exchange's first one rather than keeping a symbol that
+        // does not exist there.
+        rows[i].exchange = e.target.value;
+        // On vide le symbole au lieu d'en imposer un : l'ancien
+        // n'existe pas sur la nouvelle place, et en choisir un d'office
+        // afficherait une valeur que la personne n'a pas demandee.
+        // We clear the symbol rather than forcing one: the old one does
+        // not exist on the new exchange, and picking one automatically
+        // would display a value the person never asked for.
+        rows[i].symbol = "";
+        render();
+      } else if (e.target.classList.contains("rows-in")) {
+        if (e.target.value === CUSTOM) {
+          rows[i].symbol = "";
+          render();
+          const c = body.querySelector(`.rows-row[data-i="${i}"] .rows-custom`);
+          if (c) { c.hidden = false; c.focus(); }
+        } else if (rows.some((r, j) => j !== i && r.symbol === e.target.value)) {
+          // Ce symbole est deja dans la liste : l'accepter creerait
+          // exactement le doublon qu'on cherche a eviter.
+          // This symbol is already in the list: accepting it would create
+          // precisely the duplicate we are trying to avoid.
+          rows[i].symbol = "";
+          render();
+          const warn = el.querySelector(".rows-dup");
+          if (warn) { warn.hidden = false; setTimeout(() => { warn.hidden = true; }, 4000); }
+        } else {
+          rows[i].symbol = e.target.value;
+          // Un nom laisse vide reprend le libelle de l'instrument : on
+          // evite une ligne sans intitule sans jamais ecraser un nom
+          // choisi par la personne.
+          // An empty name adopts the instrument's label: avoids an
+          // unlabelled row without ever overwriting a name the person
+          // chose.
+          if (!rows[i].name) {
+            const ex = exchanges.find((x) => x.id === rows[i].exchange);
+            const it = ex && ex.instruments.find((y) => y.symbol === e.target.value);
+            if (it) rows[i].name = labelOf(it.label);
+          }
+          render();
+        }
+      }
+    });
+
+    body.addEventListener("click", (e) => {
+      const del = e.target.closest(".rows-del");
+      if (!del) return;
+      rows.splice(Number(del.closest(".rows-row").dataset.i), 1);
+      render();
+    });
+
+    el.querySelector(".rows-reset").addEventListener("click", () => {
+      const def = defaults;
+      // Fusion et non remplacement : restaurer les indices ne doit pas
+      // effacer les valeurs que la personne a ajoutees elle-meme. On
+      // n'ajoute que les symboles absents.
+      // Merge, not replace: restoring the indices must not wipe the
+      // securities the person added themselves. We only add symbols that
+      // are missing.
+      const have = new Set(rows.map((r) => r.symbol));
+      for (const d of def) if (!have.has(d.symbol)) rows.push({ ...d });
+      render();
+    });
+
+    el.querySelector(".rows-add").addEventListener("click", () => {
+      // Symbole VIDE, deliberement. Pre-remplir avec le premier
+      // instrument de la premiere famille (le CAC 40) faisait apparaitre
+      // un doublon sur la tuile des le clic sur "+", avant meme que la
+      // personne ait choisi quoi que ce soit -- et comme le nom restait
+      // vide, la ligne fautive etait difficile a reperer dans le
+      // formulaire.
+      // EMPTY symbol, deliberately. Pre-filling with the first instrument
+      // of the first family (the CAC 40) made a duplicate appear on the
+      // tile the moment "+" was clicked, before the person had chosen
+      // anything -- and since the name stayed empty, the offending row was
+      // hard to spot in the form.
+      const ex = exchanges[0] || { id: "", instruments: [] };
+      rows.push({ name: "", exchange: ex.id, symbol: "" });
+      render();
+    });
+
+    render();
+  }
+
+  function collectTileFormValues() {
+    const values = {};
+    $("tileForm").querySelectorAll("[data-key]").forEach((input) => {
+      const key = input.dataset.key;
+      if (input.type === "checkbox") values[key] = input.checked;
+      else if (input.type === "number") values[key] = input.value === "" ? null : Number(input.value);
+      else values[key] = input.value;
+    });
+    return values;
+  }
+
+  /* Envoie les champs "secret" renseignes au coffre du serveur, puis vide
+     le champ : la valeur ne doit ni rester a l'ecran, ni rejoindre les
+     reglages de la tuile (voir le cas "secret" de fieldMarkup()). Un
+     champ laisse vide ne touche a rien -- c'est ce qui permet de rouvrir
+     les reglages pour changer autre chose sans effacer le mot de passe
+     deja enregistre.
+     Sends filled-in "secret" fields to the server's vault, then clears
+     the field: the value must neither stay on screen nor join the tile's
+     settings (see fieldMarkup()'s "secret" case). A field left empty
+     touches nothing -- which is what lets you reopen the settings to
+     change something else without wiping the already-stored password. */
+  function pushTileSecrets(tileId) {
+    const inputs = $("tileForm").querySelectorAll("[data-secret-key]");
+    const jobs = [];
+    inputs.forEach((input) => {
+      if (input.value === "") return;
+      const key = input.dataset.secretKey;
+      jobs.push(
+        apiPut(`/api/tile-secrets/${encodeURIComponent(tileId)}/${encodeURIComponent(key)}`, { value: input.value })
+          .then(() => { input.value = ""; refreshSecretStatus(tileId, key); })
+          .catch((e) => console.warn("[piboard] secret non enregistre:", e))
+      );
+    });
+    return Promise.all(jobs);
+  }
+
+  function refreshSecretStatus(tileId, key) {
+    const el = $("tileForm").querySelector(`[data-secret-status="${key}"]`);
+    if (!el) return;
+    fetch(`/api/tile-secrets/${encodeURIComponent(tileId)}/${encodeURIComponent(key)}`)
+      .then((r) => r.json())
+      .then((d) => {
+        el.textContent = i18n.t(d.configured ? "field.secret.set" : "field.secret.unset");
+        el.classList.toggle("field-secret-ok", !!d.configured);
+      })
+      .catch(() => { el.textContent = ""; });
+  }
+
+  function applyTileFormValues(rec, values) {
+    rec.conf.settings = Object.assign({}, rec.conf.settings, values);
+    applyTitleBar(rec);
+    applyTileColor(rec);
+    applyTextScale(rec);
+    scheduleSave();
+
+    // La planification a pu changer : une tuile peut devoir passer en
+    // pause (ou en sortir) immediatement, sans attendre le prochain tick.
+    // Scheduling may have changed: a tile may need to pause (or resume)
+    // immediately, without waiting for the next tick.
+    const shouldPause = !isWithinSchedule(rec.conf.settings, new Date());
+    if (shouldPause !== !!rec.paused) {
+      rec.paused = shouldPause;
+      if (shouldPause) pauseWidget(rec); else startWidget(rec);
+      return; // le widget vient d'etre (re)cree avec les nouveaux reglages / the widget was just (re)created with the new settings
+    }
+    if (shouldPause) {
+      pauseWidget(rec); // rafraichit le resume de la plage affiche / refreshes the displayed window summary
+      return;
+    }
+
+    const merged = Object.assign({}, defaultsFor(rec.manifest), rec.conf.settings);
+    if (rec.instance && rec.instance.onSettingsChanged) {
+      rec.instance.onSettingsChanged(merged);
+    } else {
+      // Remontage complet / full remount
+      destroyInstance(rec);
+      startWidget(rec);
+    }
+  }
+
+  function saveTileSettings() {
+    const rec = tiles.get(tileModalTarget);
+    if (!rec) return;
+    const tileId = tileModalTarget;
+    // Les secrets partent au coffre AVANT de relancer le widget : sans
+    // cela, sa toute premiere requete tomberait sur un coffre encore
+    // vide et afficherait une erreur d'identifiants a tort.
+    // Secrets go to the vault BEFORE restarting the widget: otherwise
+    // its very first request would hit a still-empty vault and wrongly
+    // show a credentials error.
+    pushTileSecrets(tileId).then(() => {
+      applyTileFormValues(rec, collectTileFormValues());
+    });
+    $("tileModal").hidden = true;
+    closeWidgetHelp(); // fenetre soeur, ne se ferme pas seule / sibling window, doesn't close on its own
+    vkb.hide();
+  }
+
+  /* Enregistrement EXPLICITE d'une configuration reutilisable, sans
+     attendre la suppression de la tuile (voir removeTile) -- rend la
+     fonctionnalite visible et decouvrable directement dans les
+     parametres de la tuile, plutot que purement implicite. Applique
+     aussi les reglages courants a la tuile (comme "Enregistrer"), mais
+     laisse la fenetre ouverte pour confirmer visuellement le succes.
+     EXPLICIT save of a reusable configuration, without waiting for the
+     tile to be removed (see removeTile) -- makes the feature visible
+     and discoverable directly in the tile's settings, rather than
+     purely implicit. Also applies the current settings to the tile
+     (like "Save"), but leaves the window open to visually confirm
+     success. */
+  function saveTileConfigForReuse() {
+    const rec = tiles.get(tileModalTarget);
+    if (!rec) return;
+    const values = collectTileFormValues();
+    const title = String(values._title || "").trim();
+    const msgEl = $("tileSaveConfigMsg");
+    if (!title) {
+      msgEl.classList.add("field-hint-error");
+      msgEl.textContent = i18n.t("tile.saveConfig.needTitle");
+      return;
+    }
+    applyTileFormValues(rec, values);
+    apiPut("/api/tile-configs/" + encodeURIComponent(rec.conf.widget), { title, settings: rec.conf.settings })
+      .then(() => {
+        msgEl.classList.remove("field-hint-error");
+        msgEl.textContent = i18n.t("tile.saveConfig.done");
+      })
+      .catch((e) => {
+        msgEl.classList.add("field-hint-error");
+        msgEl.textContent = i18n.t("tile.saveConfig.error");
+        console.warn("[piboard] configuration non enregistree:", e);
+      });
+  }
+
+  /* ---------- Catalogue / catalog ---------- */
+
+  /* Familles du catalogue : regroupent les tuiles par usage plutot que
+     de les presenter en une seule longue liste alphabetique. L'ordre
+     des familles ET celui des tuiles a l'interieur de chacune sont
+     ceux definis ici, deliberement -- pas un tri automatique : c'est
+     un classement editorial (les tuiles les plus courantes d'abord au
+     sein de leur famille).
+
+     Une tuile absente de toute famille atterrit automatiquement dans
+     "Divers" (voir openCatalog) : ajouter un widget sans toucher a
+     cette table reste donc sans danger, il apparaitra simplement en
+     fin de catalogue plutot que de disparaitre.
+
+     Catalog families: group tiles by purpose rather than presenting
+     them as one long alphabetical list. The order of the families AND
+     of the tiles within each are the ones defined here, deliberately
+     -- not an automatic sort: this is an editorial ordering (the most
+     common tiles first within their family).
+
+     A tile missing from every family automatically lands in
+     "Miscellaneous" (see openCatalog): adding a widget without
+     touching this table is therefore harmless, it will simply show up
+     at the end of the catalog rather than disappearing. */
+  const CATALOG_FAMILIES = [
+    { key: "weather", ids: ["weather", "radar", "airquality", "astronomy"] },
+    /* La tuile Bourse rejoint Cryptos dans "Informations" : on cherche
+       les deux au meme endroit. Une famille "Finance" distincte se
+       defendrait, mais elle deplacerait Cryptos, dont la place ici
+       resulte d'une segmentation deliberee anterieure -- ce n'est pas le
+       sujet de cette correction.
+       The Stocks tile joins Crypto in "Information": one looks for both
+       in the same place. A separate "Finance" family would be defensible,
+       but it would move Crypto, whose place here comes from an earlier
+       deliberate segmentation -- not the subject of this fix. */
+    { key: "info", ids: ["rss", "webview", "crypto", "stocks"] },
+    { key: "commute", ids: ["traffic", "commute", "planes"] },
+    /* Maison & energie : Tempo et Home Assistant parlent tous deux de ce
+       qui se passe DANS le logement, ce qu'aucune famille existante ne
+       couvrait.
+       Home & energy: Tempo and Home Assistant both speak of what happens
+       INSIDE the home, which no existing family covered. */
+    { key: "home", ids: ["tempo", "homeassistant", "bambu"] },
+    { key: "personal", ids: ["calendar", "mailbox", "notes"] },
+    /* « Enregistrements TV » se range a cote de « Chaines TV », dont
+       elle est le pendant : l'une lance l'enregistrement, l'autre le
+       surveille. Elle avait ete livree sans etre classee et tombait
+       donc dans « Divers », loin de la tuile avec laquelle elle
+       s'utilise -- le classement par famille n'a d'interet que s'il est
+       tenu a jour a chaque nouvelle tuile.
+       "TV recordings" sits next to "TV channels", its counterpart: one
+       starts the recording, the other watches over it. It shipped
+       unclassified and therefore landed in "Miscellaneous", far from
+       the tile it is used with. */
+    { key: "entertainment", ids: ["teleprog", "iptv", "iptvrec", "youtube", "slideshow"] },
+    { key: "sport", ids: ["f1", "circuit", "motorsport", "sportscore", "standings"] },
+    /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
+       systeme, elle surveille une consommation et un seuil, meme si la
+       ressource surveillee n'est pas celle de la machine.
+       The AI usage tile joins "System & Network": like System status, it
+       watches a consumption against a limit, even though the resource
+       watched is not the machine's own. */
+    /* « Statut de service » rejoint « Systeme & Reseau », a cote de
+       « Veille reseau » : les deux repondent a la meme question -- ce
+       dont je depends repond-il ? -- l'une pour les machines du reseau
+       local, l'autre pour les services en ligne. On les cherche au meme
+       endroit le jour ou quelque chose ne marche plus.
+       "Service status" joins "System & Network", next to "Network
+       watch": both answer the same question -- is what I depend on
+       responding? -- one for local machines, the other for online
+       services. One looks for them in the same place on the day
+       something stops working. */
+    { key: "system", ids: ["system", "speedtest", "networkscan", "hostwatch", "servicestatus", "aiusage"] },
+    /* Mise en page : les deux tuiles de STYLE, qui n'affichent aucune
+       donnee et servent a composer une page (titre, logo). Les ranger
+       dans "Divers" les aurait noyees parmi des tuiles d'information,
+       alors qu'on les cherche au moment precis ou l'on met en forme.
+       Page design: the two STYLE tiles, which display no data and serve
+       to compose a page (title, logo). Filing them under
+       "Miscellaneous" would have drowned them among information tiles,
+       whereas one looks for them at the very moment of laying a page
+       out. */
+    { key: "style", ids: ["text", "image"] },
+    { key: "misc", ids: ["clock", "countdown", "quote"] }
+  ];
+
+  function openCatalog() {
+    const list = $("catalogList");
+    list.innerHTML = "";
+
+    // Repartition des manifestes dans les familles, en conservant
+    // l'ordre defini ci-dessus. Toute tuile non classee rejoint
+    // "Divers" plutot que d'etre omise.
+    // Distributes the manifests into families, preserving the order
+    // defined above. Any unclassified tile joins "Miscellaneous"
+    // rather than being dropped.
+    const byId = new Map(catalog.map((m) => [m.id, m]));
+    const placed = new Set();
+    const groups = CATALOG_FAMILIES.map((fam) => {
+      const items = fam.ids.map((id) => byId.get(id)).filter(Boolean);
+      items.forEach((m) => placed.add(m.id));
+      return { key: fam.key, items };
+    });
+    const orphans = catalog.filter((m) => !placed.has(m.id));
+    if (orphans.length) {
+      const misc = groups.find((g) => g.key === "misc");
+      if (misc) misc.items.push(...orphans);
+      else groups.push({ key: "misc", items: orphans });
+    }
+
+    for (const group of groups) {
+      if (!group.items.length) continue;
+      const header = document.createElement("h3");
+      header.className = "catalog-family";
+      header.textContent = i18n.t("catalog.family." + group.key);
+      list.appendChild(header);
+
+      for (const m of group.items) {
+        list.appendChild(buildCatalogItem(m));
+      }
+    }
+    $("catalogModal").hidden = false;
+  }
+
+  /* Une entree du catalogue (vignette cliquable + bouton d'information).
+     Extraite de openCatalog pour que celle-ci reste lisible une fois le
+     regroupement par familles ajoute.
+     One catalog entry (clickable tile + info button). Extracted from
+     openCatalog so it stays readable now that family grouping was
+     added. */
+  function buildCatalogItem(m) {
+    const wrap = document.createElement("div");
+    wrap.className = "catalog-item-wrap";
+    const btn = document.createElement("button");
+    btn.className = "catalog-item";
+    // Intitule court, focalise sur la fonction premiere de la tuile
+    // (voir "tagline" dans chaque manifeste) -- la description
+    // complete, plus longue, reste accessible via l'icone info au
+    // survol/tap plutot que d'etre affichee en permanence dans la
+    // liste, ce qui produisait des paves de texte demesures.
+    // Short blurb, focused on the tile's primary function (see
+    // "tagline" in each manifest) -- the full, longer description
+    // stays available via the info icon on hover/tap rather than
+    // being permanently shown in the list, which produced oversized
+    // text blocks.
+    const tagline = m.tagline ? i18n.fromManifest(m.tagline) : i18n.fromManifest(m.description);
+    btn.innerHTML = `
+      <img src="widgets/${m.dir}/icon.svg" alt="">
+      <span>
+        <span class="ci-name">${i18n.fromManifest(m.name)}</span><br>
+        <span class="ci-desc">${tagline}</span>
+      </span>`;
+    btn.addEventListener("click", () => {
+      $("catalogModal").hidden = true;
+      if (!editing) toggleEdit(true);
+      addTile(m.id);
+    });
+    wrap.appendChild(btn);
+
+    if (m.tagline) {
+      // Bouton separe (pas imbrique dans btn, un <button> ne peut pas
+      // en contenir un autre) positionne par-dessus, dans le coin.
+      // Separate button (not nested inside btn, a <button> can't
+      // contain another one) positioned on top, in the corner.
+      const info = document.createElement("button");
+      info.type = "button";
+      info.className = "ci-info";
+      info.setAttribute("aria-label", i18n.t("catalog.moreInfo"));
+      info.textContent = "ⓘ";
+      info.addEventListener("mouseenter", () => showCatalogTooltip(info, i18n.fromManifest(m.description)));
+      info.addEventListener("mouseleave", hideCatalogTooltip);
+      info.addEventListener("click", (e) => {
+        e.stopPropagation();
+        catalogTooltipEl && !catalogTooltipEl.hidden
+          ? hideCatalogTooltip()
+          : showCatalogTooltip(info, i18n.fromManifest(m.description));
+      });
+      wrap.appendChild(info);
+    }
+    return wrap;
+  }
+
+  /* Info-bulle partagee (une seule instance reutilisee, plutot qu'une par
+     tuile) pour la description complete d'un widget -- positionnee en
+     "fixed" a partir des coordonnees reelles du bouton info, pour ne
+     jamais se faire rogner par le defilement du catalogue.
+     Shared tooltip (a single reused instance, rather than one per tile)
+     for a widget's full description -- "fixed" positioned from the info
+     button's real coordinates, so it never gets clipped by the
+     catalog's scrolling. */
+  let catalogTooltipEl = null;
+  function showCatalogTooltip(triggerEl, text) {
+    if (!catalogTooltipEl) {
+      catalogTooltipEl = document.createElement("div");
+      catalogTooltipEl.className = "ci-tooltip";
+      catalogTooltipEl.hidden = true;
+      document.body.appendChild(catalogTooltipEl);
+    }
+    catalogTooltipEl.textContent = text;
+    catalogTooltipEl.hidden = false;
+    const r = triggerEl.getBoundingClientRect();
+    // Mesure une fois affichee (dimensions encore inconnues avant) pour
+    // la garder dans l'ecran, en la faisant plutot passer au-dessus si
+    // elle deborderait en bas. Measured once shown (dimensions unknown
+    // before that) to keep it on screen, flipping it above instead if it
+    // would overflow at the bottom.
+    const tw = catalogTooltipEl.offsetWidth, th = catalogTooltipEl.offsetHeight;
+    let left = Math.min(Math.max(8, r.left), window.innerWidth - tw - 8);
+    let top = r.bottom + 6;
+    if (top + th > window.innerHeight - 8) top = r.top - th - 6;
+    catalogTooltipEl.style.left = left + "px";
+    catalogTooltipEl.style.top = top + "px";
+  }
+  function hideCatalogTooltip() {
+    if (catalogTooltipEl) catalogTooltipEl.hidden = true;
+  }
+
+  /* ---------- Selecteur de configuration enregistree / saved config picker ----------
+     Propose une configuration deja enregistree (tuile nommee supprimee
+     precedemment) ou une configuration vierge, pour un type de widget
+     donne. Retourne une Promise qui se resout en :
+       - false  si l'utilisateur a ferme la fenetre sans choisir
+                (annulation -- la tuile ne doit pas etre ajoutee) ;
+       - null   si "Nouvelle configuration (vierge)" a ete choisi ;
+       - { title, settings, savedAt } si une configuration enregistree
+                a ete choisie.
+     Offers an already-saved configuration (previously removed named
+     tile) or a blank one, for a given widget type. Returns a Promise
+     that resolves to:
+       - false  if the user closed the window without choosing
+                (cancelled -- the tile must not be added);
+       - null   if "New (blank) configuration" was chosen;
+       - { title, settings, savedAt } if a saved configuration was
+                chosen. */
+  function openConfigPicker(manifest, savedConfigs) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const settle = (value) => {
+        if (settled) return;
+        settled = true;
+        $("configPickerModal").hidden = true;
+        resolve(value);
+      };
+
+      $("configPickerTitle").textContent = i18n.t("configPicker.title") + " " + i18n.fromManifest(manifest.name);
+
+      const list = $("configPickerList");
+      list.innerHTML = "";
+
+      const blankBtn = document.createElement("button");
+      blankBtn.className = "catalog-item config-picker-blank";
+      blankBtn.innerHTML = `<span class="ci-name">${i18n.t("configPicker.blank")}</span>`;
+      blankBtn.addEventListener("click", () => settle(null));
+      list.appendChild(blankBtn);
+
+      for (const cfg of savedConfigs) {
+        const row = document.createElement("div");
+        row.className = "config-picker-row";
+
+        const btn = document.createElement("button");
+        btn.className = "catalog-item";
+        btn.innerHTML = `
+          <span>
+            <span class="ci-name">${escapeHtmlAttr(cfg.title)}</span><br>
+            <span class="ci-desc">${i18n.t("configPicker.savedOn")} ${formatSavedDate(cfg.savedAt)}</span>
+          </span>`;
+        btn.addEventListener("click", () => settle(cfg));
+
+        const del = document.createElement("button");
+        del.type = "button";
+        del.className = "cp-delete";
+        del.setAttribute("aria-label", i18n.t("configPicker.delete"));
+        del.textContent = "\u00d7";
+        del.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          try {
+            await apiDelete("/api/tile-configs/" + encodeURIComponent(manifest.id) + "/" + encodeURIComponent(cfg.title));
+            row.remove();
+          } catch (err) {
+            console.warn("[piboard] suppression de la configuration impossible:", err);
+          }
+        });
+
+        row.appendChild(btn);
+        row.appendChild(del);
+        list.appendChild(row);
+      }
+
+      const modal = $("configPickerModal");
+      const onBackdrop = (e) => {
+        if (e.target === modal || e.target.hasAttribute("data-close")) settle(false);
+      };
+      modal.addEventListener("click", onBackdrop, { once: true });
+
+      modal.hidden = false;
+    });
+  }
+
+  /* Echappement pour un ATTRIBUT HTML. Les guillemets DOIVENT en faire
+     partie : sans eux, la premiere `"` de la valeur ferme l'attribut et
+     tout ce qui suit est perdu ou, pire, interprete comme du balisage.
+     C'etait un bug latent : il ne se voyait pas tant qu'aucune valeur ne
+     contenait de guillemet, puis il a vide silencieusement l'editeur de
+     lignes de la tuile Bourse (le JSON en contient a chaque cle), la
+     valeur relue etant tronquee a `[{`.
+     Escaping for an HTML ATTRIBUTE. Quotes MUST be included: without
+     them, the value's first `"` closes the attribute and everything after
+     it is lost or, worse, parsed as markup. This was a latent bug: it
+     stayed invisible while no value contained a quote, then it silently
+     emptied the Stocks tile's row editor (JSON has one at every key), the
+     value read back being truncated to `[{`. */
+  /* Echappement pour du CONTENU HTML (texte entre balises). Il manquait
+     jusqu'en 1.110.2 alors que la bibliotheque d'images l'appelait : la
+     fenetre restait bloquee sur « Chargement... » des qu'elle avait une
+     image a afficher (ReferenceError levee hors du try).
+     Escaping for HTML CONTENT (text between tags). It was missing until
+     1.110.2 although the image library called it: the window stayed
+     stuck on "Loading..." as soon as it had an image to show
+     (ReferenceError thrown outside the try). */
+  function escapeHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function escapeHtmlAttr(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function formatSavedDate(iso) {
+    try {
+      const locale = i18n.lang === "fr" ? "fr-FR" : "en-US";
+      return new Date(iso).toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch (e) {
+      return "";
+    }
+  }
+
+  /* ---------- Mode edition / edit mode ---------- */
+
+  function toggleEdit(force) {
+    editing = force != null ? force : !editing;
+    // Gridstack calcule les positions de glisser-deposer par rapport au
+    // haut de sa grille : entrer en edition avec le tableau defile
+    // decalerait chaque prise du montant du defilement. On remonte donc
+    // en haut avant d'activer les poignees.
+    // Gridstack computes drag-and-drop positions relative to the top of
+    // its grid: entering edit mode with the board scrolled would offset
+    // every grab by the scroll amount. So we return to the top before
+    // enabling the handles.
+    if (editing) {
+      const b = boardEl();
+      if (b) b.scrollTop = 0;
+    }
+    document.body.classList.toggle("editing", editing);
+    /* Toutes les grilles doivent etre deverrouillees, pas seulement le
+       plateau et les tiroirs. Les grilles de PAGES sont creees apres
+       coup, une par page du mode tableau de bord : oubliees ici, elles
+       restaient `staticGrid: true` en permanence et il devenait
+       impossible de deplacer ou de redimensionner la moindre tuile sur
+       une page 2 ou 3, sans le moindre message -- les poignees ne
+       repondaient simplement pas.
+       Every grid must be unlocked, not just the board and the drawers.
+       The PAGE grids are created afterwards, one per dashboard mode
+       page: left out here, they stayed `staticGrid: true` for good and
+       it became impossible to move or resize any tile on a page 2 or 3,
+       with no message at all -- the handles simply did not respond. */
+    for (const g of allGrids()) g.setStatic(!editing);
+    $("btnEdit").classList.toggle("active", editing);
+    // Barre visible en permanence pendant l'edition ; minuterie au retour
+    // Toolbar stays visible while editing; timer re-armed on exit
+    showDockBar(true);
+  }
+
+  /* ---------- Dock ---------- */
+
+  let dockTimer = null;
+
+  function showDockBar(show) {
+    $("dockBar").hidden = !show;
+    $("dockTab").style.visibility = show ? "hidden" : "visible";
+    clearTimeout(dockTimer);
+    if (show && !editing) {
+      dockTimer = setTimeout(() => showDockBar(false), 20000);
+    }
+  }
+
+  /* ---------- Parametres globaux / global settings ---------- */
+
+  let pendingCity = null; // { name, lat, lon } choisi mais pas encore enregistre
+
+  function cityCurrentLabel() {
+    const name = pendingCity ? pendingCity.name : settings.cityName;
+    return name ? i18n.t("settings.city.current") + " " + name : "";
+  }
+
+  /* ---------- Integration a l'application de bureau / desktop app integration ----------
+     Le tableau de bord est servi par le meme serveur Express dans les
+     deux cas : rien ne distingue a priori une fenetre de l'application
+     Windows d'un onglet de navigateur ouvert sur le Pi. On interroge
+     donc le serveur, qui sait si un processus Electron s'est enregistre
+     aupres de lui. Les reglages qui n'ont de sens que sur le bureau
+     restent masques partout ailleurs.
+     The dashboard is served by the same Express server in both cases:
+     nothing inherently distinguishes a Windows application window from a
+     browser tab opened on the Pi. We therefore ask the server, which
+     knows whether an Electron process registered itself with it.
+     Settings that only make sense on the desktop stay hidden everywhere
+     else. */
+  let appIntegration = { desktopApp: false, autoStart: { supported: false, enabled: false } };
+
+  async function refreshAppIntegration() {
+    try {
+      const r = await fetch("/api/system/app-integration");
+      if (!r.ok) return;
+      appIntegration = await r.json();
+    } catch (e) {
+      // Serveur plus ancien ou route indisponible : on reste sur les
+      // valeurs par defaut, la section demeure simplement masquee.
+      // Older server or route unavailable: we keep the defaults, the
+      // section simply stays hidden.
+    }
+  }
+
+  function fillDesktopAppForm() {
+    const supported = !!(appIntegration.desktopApp && appIntegration.autoStart && appIntegration.autoStart.supported);
+    $("secDesktopApp").hidden = !supported;
+    $("setAutoStart").checked = supported && !!appIntegration.autoStart.enabled;
+    $("setImmersive").checked = !!settings.immersive;
+  }
+
+  /* ---------- Outils multimedias facultatifs / optional media tools ----------
+     ffmpeg et VLC ne servent qu'a la tuile IPTV : rattraper un son
+     AC3/DTS inaudible, et relayer les chaines en direct qui refusent
+     une connexion directe. Ils ne sont pas installes avec PiBoard
+     (plusieurs centaines de Mo pour une fonction que la plupart des
+     installations n'utilisent pas), d'ou cette section qui dit ou on en
+     est et propose de les ajouter apres coup.
+
+     Le bouton n'apparait que si le serveur declare pouvoir installer
+     (`canInstall` : Linux + application de bureau + requete locale).
+     Partout ailleurs -- Windows, macOS, Raspberry Pi en kiosque,
+     navigateur distant -- on affiche la commande a taper, qui depend du
+     systeme et vient donc du serveur.
+
+     ffmpeg and VLC only serve the IPTV tile: fixing inaudible AC3/DTS
+     sound, and relaying live channels that refuse a direct connection.
+     They are not installed with PiBoard (several hundred MB for a
+     feature most installations do not use), hence this section saying
+     where things stand and offering to add them afterwards.
+
+     The button only appears if the server declares it can install
+     (`canInstall`: Linux + desktop application + local request).
+     Everywhere else -- Windows, macOS, a kiosk Raspberry Pi, a remote
+     browser -- the command to type is shown, which depends on the
+     system and therefore comes from the server. */
+  let mediaTools = null;
+
+  async function refreshMediaTools() {
+    try {
+      const r = await fetch("/api/system/media-tools");
+      if (!r.ok) return;
+      mediaTools = await r.json();
+    } catch (e) {
+      // Serveur plus ancien : la section reste sur son etat precedent.
+      // Older server: the section keeps its previous state.
+    }
+  }
+
+  function fillMediaToolsForm() {
+    const section = $("secMediaTools");
+    if (!section) return;
+    if (!mediaTools) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    const lang = settings.lang === "fr" ? "fr" : "en";
+    let anyMissing = false;
+    [["ffmpeg", "Ffmpeg"], ["vlc", "Vlc"]].forEach(([key, suffix]) => {
+      const tool = (mediaTools.tools || {})[key] || {};
+      const state = $("mediaState" + suffix);
+      const button = $("mediaInstall" + suffix);
+      if (state) {
+        state.textContent = tool.installed
+          ? i18n.t("settings.media.present")
+          : i18n.t("settings.media.absent");
+        state.classList.toggle("ok", !!tool.installed);
+      }
+      if (button) button.hidden = !!tool.installed || !mediaTools.canInstall;
+      if (!tool.installed) anyMissing = true;
+    });
+    const hint = $("mediaToolsHint");
+    if (hint) {
+      if (!anyMissing) {
+        hint.textContent = "";
+        hint.hidden = true;
+      } else if (mediaTools.canInstall) {
+        /* Deux installations tres differentes derriere le meme bouton :
+           un gestionnaire de paquets qui demande un mot de passe, ou un
+           simple telechargement qui n'en demande aucun. Annoncer l'un
+           pour l'autre laisserait attendre une fenetre qui ne vient
+           jamais -- ou inquieter pour une elevation de privileges qui
+           n'a pas lieu.
+           Two very different installations behind one button. */
+        hint.textContent = mediaTools.installMode === "download"
+          ? i18n.t("settings.media.hint.download")
+          : i18n.t("settings.media.hint.button");
+        hint.hidden = false;
+      } else {
+        /* Commande a taper : on ne montre que celles des outils
+           reellement absents, pour ne pas suggerer de reinstaller ce qui
+           est deja la.
+           Command to type: only the genuinely missing tools are shown,
+           so as not to suggest reinstalling what is already there. */
+        const commands = ["ffmpeg", "vlc"]
+          .filter((key) => !(((mediaTools.tools || {})[key] || {}).installed))
+          .map((key) => (((mediaTools.tools || {})[key] || {}).hint || {})[lang])
+          .filter(Boolean);
+        hint.textContent = i18n.t("settings.media.hint.manual") + " " + commands.join("  |  ");
+        hint.hidden = false;
+      }
+    }
+  }
+
+  async function installMediaTool(tool, button) {
+    const label = button.textContent;
+    button.disabled = true;
+    button.textContent = i18n.t("settings.media.installing");
+    let result = null;
+    try {
+      const r = await fetch("/api/system/media-tools/install", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tool })
+      });
+      result = await r.json();
+    } catch (e) {
+      result = { ok: false, reason: "failed" };
+    }
+    button.disabled = false;
+    button.textContent = label;
+    await refreshMediaTools();
+    fillMediaToolsForm();
+    if (result && result.ok) return;
+    /* Une annulation de la fenetre de mot de passe n'est pas une panne :
+       on ne montre alors aucun message d'erreur, l'etat inchange suffit.
+       Cancelling the password window is not a failure: no error message
+       is shown then, the unchanged state says enough. */
+    const reason = result && result.reason;
+    if (reason === "cancelled") return;
+    const hint = $("mediaToolsHint");
+    if (hint) {
+      hint.hidden = false;
+      /* Chaque motif appelle une conduite DIFFERENTE, et les confondre
+         enverrait l'utilisateur sur une fausse piste : « pas encore
+         publie » ne se corrige pas de son cote et ne doit pas lui faire
+         verifier sa connexion, la ou un echec de telechargement, lui,
+         se retente.
+         Each reason calls for a DIFFERENT course of action. */
+      const messages = {
+        "no-auth-agent": "settings.media.error.noauth",
+        "not-published": "settings.media.error.notPublished",
+        "download-failed": "settings.media.error.download",
+        "extract-failed": "settings.media.error.extract"
+      };
+      hint.textContent = i18n.t(messages[reason] || "settings.media.error");
+    }
+  }
+
+  /* ---------- Affichage immersif / immersive display ----------
+     Plein ecran veritable de l'application de bureau : ni barre de
+     titre, ni barre des taches Windows. La fenetre elle-meme ne peut
+     etre commandee que par le processus principal Electron, d'ou l'aller
+     -retour par le serveur (meme chemin que le lancement au demarrage).
+
+     Le mode n'est demande qu'en mode tableau de bord : en mode
+     classique, la barre d'outils et les tiroirs supposent une fenetre
+     ordinaire, et masquer sa barre de titre n'apporterait rien.
+
+     L'etat REEL de la fenetre est la reponse du serveur, pas le
+     souhait : si Electron n'est pas la (navigateur, Raspberry Pi), la
+     classe n'est pas posee et la barre de fenetre interne n'apparait
+     jamais -- il n'y a alors rien a remplacer.
+
+     True full screen for the desktop application: no title bar, no
+     Windows taskbar. The window itself can only be commanded by the
+     Electron main process, hence the round trip through the server (the
+     same path as launch at startup).
+     The mode is only requested in dashboard mode: in classic mode the
+     toolbar and drawers assume an ordinary window, and hiding its title
+     bar would bring nothing.
+     The window's REAL state is the server's answer, not the wish: if
+     Electron is not there (browser, Raspberry Pi) the class is not set
+     and the in-app window bar never appears -- there is then nothing to
+     replace. */
+  let immersiveApplied = null;
+
+  async function requestImmersive(enabled) {
+    if (!appIntegration.desktopApp) return false;
+    try {
+      const r = await fetch("/api/system/immersive", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled: !!enabled })
+      });
+      if (!r.ok) return false;
+      const res = await r.json();
+      const on = !!(res.supported && res.enabled);
+      document.body.classList.toggle("immersive", on);
+      if (!on) document.body.classList.remove("win-open");
+      return on;
+    } catch (e) {
+      // Serveur plus ancien ou route absente : on reste en fenetre
+      // ordinaire, ce qui est toujours utilisable.
+      // Older server or missing route: we stay in an ordinary window,
+      // which is always usable.
+      return false;
+    }
+  }
+
+  function applyImmersive() {
+    const wanted = !!(appIntegration.desktopApp && settings && settings.immersive && dashboardMode());
+    // Sans ce garde-fou, chaque rendu de disposition renverrait la meme
+    // demande a Electron, qui refait alors une transition de plein ecran
+    // visible a l'ecran. Without this guard every layout render would
+    // send the same request to Electron, which then replays a full
+    // screen transition, visible on screen.
+    if (immersiveApplied === wanted) return;
+    immersiveApplied = wanted;
+    requestImmersive(wanted);
+  }
+
+  /* Sortie manuelle par la barre de fenetre : on repasse en fenetre sans
+     toucher au reglage enregistre. Le choix est delibere -- on quitte le
+     plein ecran pour faire autre chose sur le PC, pas pour renoncer au
+     mode immersif, qui revient au prochain demarrage.
+     Manual exit through the window bar: we go back to a window without
+     touching the saved setting. The choice is deliberate -- one leaves
+     full screen to do something else on the PC, not to give up immersive
+     mode, which comes back on the next startup. */
+  async function leaveImmersive() {
+    immersiveApplied = false;
+    await requestImmersive(false);
+  }
+
+  /* ---------- Mise a jour automatique du serveur / server self-update ----------
+     Raspberry Pi et Linux uniquement (le serveur dit s'il le supporte :
+     sous Windows, c'est electron-updater qui s'en charge et la section
+     reste masquee). Trois surfaces :
+       - la section "Mises a jour" des reglages generaux : etat, bouton
+         de verification, bouton d'installation ;
+       - un bandeau discret en haut de l'ecran quand une version est
+         disponible -- l'equivalent kiosque de la boite de dialogue
+         Windows, refermable pour la session ("Plus tard") ;
+       - une fenetre de progression, qui attend ensuite le retour du
+         serveur et recharge la page toute seule.
+     Le serveur pousse ses changements d'etat par SSE ("update"), ce qui
+     permet a un kiosque sans clavier de se recharger de lui-meme quand
+     la mise a jour a ete lancee depuis un autre appareil du reseau.
+
+     Raspberry Pi and Linux only (the server says whether it supports
+     it: on Windows electron-updater does the job and the section stays
+     hidden). Three surfaces:
+       - the "Updates" section of general settings: state, check button,
+         install button;
+       - a discreet banner at the top of the screen when a version is
+         available -- the kiosk's equivalent of the Windows dialog,
+         dismissable for the session ("Later");
+       - a progress window, which then waits for the server to come back
+         and reloads the page by itself.
+     The server pushes its state changes over SSE ("update"), which lets
+     a keyboard-less kiosk reload itself when the update was started from
+     another device on the network. */
+  let updateStatus = { supported: false, available: false, currentVersion: null, latestVersion: null, job: { phase: "idle", log: [] } };
+  let updateDismissedVersion = null;   // "Plus tard" ne vaut que pour la session / "Later" only lasts the session
+  let updateChecking = false;
+  let updateMode = null;               // null | "confirm" | "progress" | "wait" | "error"
+  let updatePollTimer = null;
+  let updateWaitTimer = null;
+
+  function tf(key, vars) {
+    let text = i18n.t(key);
+    for (const [k, v] of Object.entries(vars || {})) text = text.split("{" + k + "}").join(String(v));
+    return text;
+  }
+
+  function updateBusy() {
+    const ph = (updateStatus.job && updateStatus.job.phase) || "idle";
+    return ["downloading", "extracting", "installing", "restarting"].includes(ph);
+  }
+
+  async function refreshUpdateStatus() {
+    try {
+      const r = await fetch("/api/update/status", { cache: "no-store" });
+      if (!r.ok) return;
+      updateStatus = await r.json();
+    } catch (e) {
+      // Serveur plus ancien : la section reste masquee / older server: section stays hidden
+      return;
+    }
+    renderUpdateState();
+  }
+
+  function renderUpdateState() {
+    const st = updateStatus;
+    /* Le choix du niveau de mise a jour reste TOUJOURS visible : c'est
+       un reglage de l'utilisateur, applique aussi bien par le serveur
+       (Raspberry Pi / Linux) que par l'application de bureau Windows via
+       electron-updater. Seuls les boutons de verification et
+       d'installation, qui n'ont de sens que si le serveur gere ses
+       propres mises a jour, suivent l'etat "supported".
+       C'etait le defaut de la 1.85.0 : toute la section etait masquee
+       des que le serveur ne se mettait pas a jour lui-meme, et le
+       selecteur de canal devenait donc invisible dans l'application de
+       bureau -- alors meme qu'il la concerne.
+       The update level choice stays ALWAYS visible: it is a user
+       setting, applied both by the server (Raspberry Pi / Linux) and by
+       the Windows desktop application through electron-updater. Only the
+       check and install buttons, which only make sense if the server
+       handles its own updates, follow the "supported" state.
+       That was 1.85.0's flaw: the whole section was hidden as soon as
+       the server did not update itself, so the channel selector became
+       invisible in the desktop application -- the very place it applies
+       to. */
+    const sup = !!st.supported;
+    $("updServerControls").hidden = !sup;
+    // Le bouton d'installation n'a de sens que si le serveur installe
+    // lui-meme : dans l'application de bureau, c'est electron-updater qui
+    // s'en charge apres sa propre boite de dialogue.
+    // The install button only makes sense if the server installs by
+    // itself: in the desktop application, electron-updater does it after
+    // its own dialog.
+    $("updApplyBtn").hidden = true;
+    $("updServerHint").hidden = !sup;
+    $("updDesktopHint").hidden = sup;
+
+    /* Bandeau : uniquement hors installation, et pas apres un "Plus tard"
+       sur cette meme version. Banner: only outside an install, and not
+       after a "Later" on this very version. */
+    const showBanner = sup && st.available && st.latestVersion !== updateDismissedVersion && !updateBusy() && updateMode === null;
+    $("updateBanner").hidden = !showBanner;
+    if (showBanner) {
+      // Une pre-version est annoncee comme telle des le bandeau : on ne
+      // decouvre pas apres coup qu'on installe une version d'essai.
+      // A pre-release is announced as such from the banner on: one does
+      // not find out afterwards that a trial version is being installed.
+      $("updateBannerText").textContent = tf("update.available", { v: "v" + st.latestVersion })
+        + (st.prerelease ? " (" + i18n.t("update.prerelease") + ")" : "");
+    }
+
+    if (!sup) return;
+    let text;
+    if (updateChecking) text = i18n.t("update.checking");
+    else if (updateBusy()) text = i18n.t("update.inProgress");
+    else if (st.available) {
+      text = tf("update.available", { v: "v" + st.latestVersion })
+        + (st.prerelease ? " (" + i18n.t("update.prerelease") + ")" : "");
+    }
+    else if (st.checkError) {
+      const why = st.checkError === "no-release" ? i18n.t("update.checkFailed.noRelease") : st.checkError;
+      text = tf("update.checkFailed", { e: why });
+    } else if (st.checkedAt) {
+      /* La version vue chez GitHub est nommee, pas seulement « a jour ».
+         Deux etats etaient jusqu'ici indiscernables : PiBoard est
+         reellement a jour, et GitHub ne montre pas les versions plus
+         recentes (c'etait le cas des releases restees en brouillon,
+         invisibles a l'API). Voir « la derniere version publiee est
+         v1.94.3 » alors qu'on en attendait une plus haute designe le
+         probleme du premier coup d'oeil.
+         The version seen at GitHub is named, not merely "up to date".
+         Two states were indistinguishable until now: PiBoard really is
+         up to date, and GitHub does not show the newer versions (the
+         case with releases left as drafts, invisible to the API).
+         Seeing "the latest published version is v1.94.3" when a higher
+         one was expected points at the problem at first glance. */
+      text = st.latestVersion
+        ? tf("update.upToDateAt", { v: "v" + st.latestVersion })
+        : i18n.t("update.upToDate");
+    }
+    else text = i18n.t("update.neverChecked");
+    $("updStatusText").textContent = text;
+
+    const meta = [tf("update.installed", { v: "v" + (st.currentVersion || "?") })];
+    if (st.checkedAt) {
+      const d = new Date(st.checkedAt);
+      meta.push(tf("update.lastCheck", { t: d.toLocaleString(i18n.lang === "fr" ? "fr-FR" : "en-GB", { dateStyle: "short", timeStyle: "short" }) }));
+    }
+    $("updMetaText").textContent = meta.join(" — ");
+
+    const applyBtn = $("updApplyBtn");
+    applyBtn.hidden = !(st.available && !updateBusy());
+    applyBtn.textContent = tf("update.install", { v: "v" + st.latestVersion });
+    $("updCheckBtn").disabled = updateChecking || updateBusy();
+  }
+
+  async function checkForUpdatesNow() {
+    /* Application de bureau : le serveur ne gere pas ses mises a jour,
+       c'est electron-updater qui cherche et qui affiche sa propre boite
+       de dialogue. Le bouton doit donc l'appeler, sinon il ne ferait
+       rien du tout la ou il est pourtant le seul chemin vers une
+       verification manuelle depuis l'interface.
+       Desktop application: the server does not handle its own updates,
+       electron-updater does the looking and shows its own dialog. The
+       button must therefore call it, otherwise it would do nothing at
+       all where it is nonetheless the only path to a manual check from
+       the interface. */
+    if (!updateStatus.supported) {
+      const btn = $("updCheckBtn");
+      btn.disabled = true;
+      try {
+        await fetch("/api/update/check-desktop", { method: "POST" });
+      } catch (e) {
+        // La boite de dialogue d'electron-updater rapporte elle-meme
+        // l'echec ; rien a afficher ici.
+        // electron-updater's own dialog reports the failure; nothing to
+        // show here.
+      }
+      btn.disabled = false;
+      return;
+    }
+    if (updateChecking || updateBusy()) return;
+    updateChecking = true;
+    renderUpdateState();
+    try {
+      const r = await fetch("/api/update/check", { method: "POST" });
+      if (r.ok) updateStatus = await r.json();
+    } catch (e) {
+      // L'etat precedent reste affiche / previous state stays shown
+    }
+    updateChecking = false;
+    // Une verification manuelle re-propose la version, meme apres un
+    // "Plus tard". A manual check offers the version again, even after a
+    // "Later".
+    updateDismissedVersion = null;
+    renderUpdateState();
+  }
+
+  function dismissUpdateBanner() {
+    updateDismissedVersion = updateStatus.latestVersion;
+    $("updateBanner").hidden = true;
+  }
+
+  function setUpdateMode(mode) {
+    updateMode = mode;
+    const confirm = mode === "confirm";
+    $("updConfirm").hidden = !confirm;
+    $("updProgress").hidden = confirm;
+    $("updCancelBtn").hidden = !confirm;
+    $("updGoBtn").hidden = !confirm;
+    $("updRetryBtn").hidden = mode !== "error";
+    $("updCloseBtn").hidden = !(mode === "error" || mode === "wait-failed");
+    $("updateModalClose").hidden = (mode === "progress" || mode === "wait");
+  }
+
+  function openUpdateModal() {
+    const st = updateStatus;
+    if (!st.available) return;
+    $("updateBanner").hidden = true;
+    $("updConfirmText").textContent = tf("update.confirm.text", { v: "v" + st.latestVersion, c: "v" + st.currentVersion })
+      + (st.prerelease ? " " + i18n.t("update.confirm.prerelease") : "");
+    $("updNotesWrap").hidden = !st.notes;
+    $("updNotes").textContent = st.notes || "";
+    $("updLog").textContent = "";
+    $("updBarFill").style.width = "0%";
+    $("updBarFill").classList.remove("indeterminate");
+    setUpdateMode(updateBusy() ? "progress" : "confirm");
+    $("updateModal").hidden = false;
+    if (updateBusy()) startUpdatePolling();
+  }
+
+  function closeUpdateModal() {
+    $("updateModal").hidden = true;
+    stopUpdatePolling();
+    // Un job en cours continue cote serveur ; on garde l'etat visible
+    // dans les reglages et on se fie au SSE pour le recharge final.
+    // A running job goes on server-side; state stays visible in settings
+    // and SSE is relied upon for the final reload.
+    updateMode = null;
+    renderUpdateState();
+  }
+
+  async function startUpdate() {
+    setUpdateMode("progress");
+    $("updPhaseText").textContent = tf("update.phase.downloading", { v: "v" + updateStatus.latestVersion });
+    try {
+      const r = await fetch("/api/update/apply", { method: "POST" });
+      const body = await r.json().catch(() => null);
+      if (body && body.job) updateStatus = body;
+      if (!r.ok && r.status !== 409) {
+        showUpdateError((body && body.error) || ("HTTP " + r.status), false);
+        return;
+      }
+    } catch (e) {
+      showUpdateError(String(e.message || e), false);
+      return;
+    }
+    startUpdatePolling();
+  }
+
+  function startUpdatePolling() {
+    stopUpdatePolling();
+    const tick = async () => {
+      try {
+        const r = await fetch("/api/update/status", { cache: "no-store" });
+        if (r.ok) updateStatus = await r.json();
+      } catch (e) {
+        // Le serveur redemarre peut-etre deja / the server may already be restarting
+        if (updateStatus.job && updateStatus.job.phase === "restarting") { stopUpdatePolling(); waitForServerRestart(false); return; }
+      }
+      renderUpdateProgress();
+    };
+    updatePollTimer = setInterval(tick, 700);
+    tick();
+  }
+
+  function stopUpdatePolling() {
+    if (updatePollTimer) clearInterval(updatePollTimer);
+    updatePollTimer = null;
+  }
+
+  function renderUpdateProgress() {
+    const job = updateStatus.job || {};
+    const fill = $("updBarFill");
+    let text = "";
+    if (job.phase === "downloading") {
+      text = tf("update.phase.downloading", { v: "v" + job.version });
+      const p = job.progress;
+      if (p && p.total) { fill.classList.remove("indeterminate"); fill.style.width = Math.min(100, Math.round(100 * p.bytes / p.total)) + "%"; }
+      else fill.classList.add("indeterminate");
+      if (p && p.bytes) text += " " + (p.bytes / 1048576).toFixed(1) + " Mo";
+    } else if (job.phase === "extracting" || job.phase === "installing") {
+      text = i18n.t("update.phase." + job.phase);
+      fill.classList.add("indeterminate");
+    } else if (job.phase === "restarting") {
+      fill.classList.remove("indeterminate");
+      fill.style.width = "100%";
+      stopUpdatePolling();
+      waitForServerRestart(false);
+      return;
+    } else if (job.phase === "error") {
+      stopUpdatePolling();
+      showUpdateError(job.error, !!job.rolledBack);
+      return;
+    }
+    $("updPhaseText").textContent = text;
+    $("updLog").textContent = (job.log || []).slice(-15).join("\n");
+    $("updLog").scrollTop = $("updLog").scrollHeight;
+  }
+
+  function showUpdateError(message, rolledBack) {
+    setUpdateMode("error");
+    $("updateModal").hidden = false;
+    $("updBarFill").classList.remove("indeterminate");
+    $("updPhaseText").textContent = tf("update.phase.error", { e: message || "?" })
+      + (rolledBack ? " " + i18n.t("update.phase.rolledBack") : "");
+    $("updLog").textContent = ((updateStatus.job && updateStatus.job.log) || []).slice(-15).join("\n");
+    renderUpdateState();
+  }
+
+  /* Attente du retour du serveur apres la coupure volontaire. La version
+     doit CHANGER : c'est la preuve que le nouveau code tourne. Un serveur
+     qui revient avec la meme version n'a pas ete redemarre (lancement a
+     la main sans superviseur, par exemple) et l'utilisateur doit le
+     savoir plutot que de voir la page se recharger sur l'ancien code.
+     `silent` : declenche par le SSE sur un affichage qui n'a pas lance
+     la mise a jour (kiosque mural) -- pas de fenetre, juste le
+     rechargement final.
+     Waiting for the server after its deliberate shutdown. The version
+     must CHANGE: that's the proof the new code is running. A server that
+     comes back with the same version was not restarted (manual launch
+     without a supervisor, for instance) and the user must know rather
+     than see the page reload on the old code. `silent`: triggered by SSE
+     on a display that didn't start the update (wall kiosk) -- no window,
+     just the final reload. */
+  function waitForServerRestart(silent) {
+    if (updateWaitTimer) return;
+    if (!silent) {
+      setUpdateMode("wait");
+      $("updateModal").hidden = false;
+    }
+    const oldVersion = updateStatus.currentVersion;
+    const target = updateStatus.job && updateStatus.job.version;
+    const started = Date.now();
+    let sawDown = false;
+    const MAX_S = 180;
+    const finish = (text) => {
+      clearInterval(updateWaitTimer); updateWaitTimer = null;
+      if (!silent) { setUpdateMode("wait-failed"); $("updPhaseText").textContent = text; }
+    };
+    updateWaitTimer = setInterval(async () => {
+      const elapsed = Math.round((Date.now() - started) / 1000);
+      if (!silent) $("updPhaseText").textContent = tf("update.waiting", { s: elapsed });
+      let version = null;
+      try {
+        const r = await fetch("/api/version", { cache: "no-store" });
+        if (r.ok) version = (await r.json()).version || null;
+      } catch (e) {
+        sawDown = true;
+      }
+      if (version && version !== oldVersion) {
+        clearInterval(updateWaitTimer); updateWaitTimer = null;
+        if (!silent) $("updPhaseText").textContent = tf("update.reloading", { v: "v" + (target || version) });
+        setTimeout(() => location.reload(), 800);
+        return;
+      }
+      if (version && version === oldVersion && (sawDown || elapsed > 40)) {
+        finish(tf("update.sameVersion", { v: "v" + version }));
+        return;
+      }
+      if (elapsed >= MAX_S) finish(tf("update.noReturn", { s: MAX_S }));
+    }, 1500);
+  }
+
+  /* ---------- Editeur de pages (reglages generaux) / pages editor ----------
+     Il agit directement sur les pages en memoire, puis enregistre : les
+     pages portent des tuiles montees, il n'est donc pas possible de les
+     reconstruire depuis un formulaire au moment de valider sans tout
+     demonter. Chaque modification est appliquee immediatement, comme le
+     redimensionnement d'un tiroir.
+     It acts directly on the in-memory pages, then saves: pages carry
+     mounted tiles, so they cannot be rebuilt from a form at validation
+     time without tearing everything down. Every change is applied
+     immediately, like resizing a drawer. */
+  /* Le panneau de reglages garde EXACTEMENT la meme disposition dans les
+     deux modes d'affichage. Auparavant, l'editeur de pages apparaissait
+     et disparaissait selon le mode : les sections suivantes se
+     decalaient, et l'on croyait avoir perdu une option en changeant de
+     mode. Les deux sections concernees -- tiroirs et pages -- restent
+     donc toujours visibles ET modifiables ; seule une note signale
+     celle qui ne s'applique pas au mode courant, et son contenu est
+     grise. Rien n'est perdu : ce qu'on y regle est conserve et
+     reprendra effet au changement de mode.
+     The settings panel keeps EXACTLY the same layout in both display
+     modes. The pages editor used to appear and disappear with the mode:
+     the following sections shifted, and one believed an option had been
+     lost by switching. Both sections concerned -- drawers and pages --
+     therefore stay visible AND editable at all times; only a note points
+     out the one that does not apply to the current mode, and its content
+     is dimmed. Nothing is lost: what is set there is kept and takes
+     effect again when the mode changes. */
+  function applySettingsModeNotes() {
+    const dash = $("setDisplayMode").value === "dashboard";
+    const mark = (el, inactive) => {
+      if (!el) return;
+      el.classList.toggle("section-inactive", inactive);
+      const note = el.querySelector(".section-note");
+      if (note) note.hidden = !inactive;
+    };
+    mark($("secDrawers"), dash);
+    // La section « Mode d'affichage » contient le selecteur lui-meme, qui
+    // reste evidemment actif : seul l'editeur de pages est grise.
+    // The "Display mode" section holds the selector itself, which stays
+    // active of course: only the pages editor is dimmed.
+    const pagesBox = $("pagesEditor");
+    if (pagesBox) {
+      pagesBox.classList.toggle("section-inactive", !dash);
+      const note = pagesBox.parentElement && pagesBox.parentElement.querySelector(".section-note");
+      if (note) note.hidden = dash;
+    }
+  }
+
+  function renderPagesEditor() {
+    const box = $("pagesEditor");
+    const list = $("pagesList");
+    if (!box || !list) return;
+    applySettingsModeNotes();
+
+    const dirLabels = PAGE_DIRECTIONS.map((d) => [d, i18n.t("page.dir." + d)]);
+    const fxLabels = PAGE_EFFECTS.map((f) => [f, i18n.t("page.fx." + f)]);
+    list.innerHTML = "";
+    for (let i = 0; i < pageCount(); i++) {
+      const p = pageAt(i);
+      const row = document.createElement("div");
+      row.className = "page-row" + (i === 0 ? " page-main" : "");
+      row.innerHTML = `
+        <span class="page-row-num">${i + 1}</span>
+        <input type="text" data-role="name" value="${escapeHtmlAttr(p.name || "")}"
+               placeholder="${escapeHtmlAttr(i18n.t("dash.page") + " " + (i + 1))}">
+        <select data-role="dir">
+          ${dirLabels.map(([v, l]) => `<option value="${v}" ${p.transition.direction === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select>
+        <select data-role="fx">
+          ${fxLabels.map(([v, l]) => `<option value="${v}" ${p.transition.effect === v ? "selected" : ""}>${l}</option>`).join("")}
+        </select>
+        <input type="number" class="page-dwell" data-role="dwell" min="3" max="3600" step="1"
+               value="${p.dwellSeconds != null ? p.dwellSeconds : ""}"
+               placeholder="${escapeHtmlAttr(String(autoAdvanceSeconds(i)))}"
+               title="${escapeHtmlAttr(i18n.t("settings.pages.dwell"))}">
+        <button type="button" class="btn small page-bg${normalizeBackground(p.background).image ? " has-bg" : ""}" data-role="bg"
+                title="${escapeHtmlAttr(i18n.t(normalizeBackground(p.background).image ? "pagebg.btnHas" : "pagebg.btnNone"))}">&#9635;</button>
+        <button type="button" class="btn small page-theme${p.themeIdRaw ? " has-theme" : ""}" data-role="theme"
+                title="${escapeHtmlAttr(i18n.t("theme.pageBtn") + " : " + themeName(themeById(p.themeIdRaw)))}">&#9680;</button>
+        <button type="button" class="btn small page-del" data-role="del"
+                title="${escapeHtmlAttr(i18n.t("settings.pages.delete"))}">&times;</button>`;
+      const target = i === 0 ? mainPage : pages[i - 1];
+      row.querySelector("[data-role=name]").addEventListener("input", (e) => {
+        target.name = e.target.value;
+        renderPageIndicator();
+        scheduleSave();
+      });
+      row.querySelector("[data-role=dir]").addEventListener("change", (e) => {
+        target.transition = normalizeTransition({ direction: e.target.value, effect: target.transition.effect });
+        scheduleSave();
+      });
+      row.querySelector("[data-role=fx]").addEventListener("change", (e) => {
+        target.transition = normalizeTransition({ direction: target.transition.direction, effect: e.target.value });
+        scheduleSave();
+      });
+      row.querySelector("[data-role=dwell]").addEventListener("change", (e) => {
+        // Champ vide = la page suit la duree generale. Empty field = the
+        // page follows the general duration.
+        target.dwellSeconds = normalizeDwell(e.target.value);
+        e.target.value = target.dwellSeconds != null ? target.dwellSeconds : "";
+        scheduleAutoAdvance();
+        scheduleSave();
+      });
+      onActivate(row.querySelector("[data-role=bg]"), () => openPageBackground(i));
+      onActivate(row.querySelector("[data-role=theme]"), () => openThemePicker({ kind: "page", index: i }));
+      if (i > 0) {
+        onActivate(row.querySelector("[data-role=del]"), () => deletePage(i));
+      }
+      list.appendChild(row);
+    }
+  }
+
+  /* ---------- Fenetre du fond de page / page background window ----------
+     Chaque modification est appliquee immediatement a la page visee et
+     enregistree : on voit le resultat en reglant, plutot que d'avoir a
+     valider pour decouvrir ce qu'on a fait -- le defaut exact qui avait
+     ete signale sur le recadrage de la tuile Image.
+     Every change is applied to the target page and saved immediately: one
+     sees the result while adjusting, rather than having to validate to
+     discover what was done -- the exact defect that had been reported on
+     the Image tile's cropping. */
+  let pageBgIndex = 0;
+
+  function pageBgTarget() {
+    return pageBgIndex === 0 ? mainPage : pages[pageBgIndex - 1];
+  }
+
+  function openPageBackground(index) {
+    pageBgIndex = index;
+    const target = pageBgTarget();
+    if (!target) return;
+    target.background = normalizeBackground(target.background);
+    const p = pageAt(index);
+    $("pageBgFor").textContent = (p && p.name) || (i18n.t("dash.page") + " " + (index + 1));
+
+    const posSel = $("pageBgPosition");
+    posSel.innerHTML = BG_POSITIONS.map((v) =>
+      `<option value="${v}">${escapeHtmlAttr(i18n.t("pagebg.pos." + v.replace(" ", "-")))}</option>`).join("");
+    posSel.value = target.background.position;
+    $("pageBgMode").value = target.background.mode;
+    $("pageBgDim").value = String(target.background.dim);
+    $("pageBgFlipH").classList.toggle("active", !!target.background.flipH);
+    $("pageBgFlipV").classList.toggle("active", !!target.background.flipV);
+    $("pageBgRotate").value = String(target.background.rotate);
+
+    $("pageBgModal").hidden = false;
+    refreshPageBgList();
+    refreshPageBgThemeHint();
+  }
+
+  function commitPageBackground(patch) {
+    const target = pageBgTarget();
+    if (!target) return;
+    target.background = normalizeBackground(Object.assign({}, target.background, patch));
+    applyPageBackground(pageBgIndex);
+    refreshPageBgList();
+    refreshPageBgThemeHint();
+    // La liste des pages, derriere cette fenetre, porte le marqueur
+    // "cette page a un fond" : il doit suivre le changement tout de
+    // suite. The pages list, behind this window, carries the "this page
+    // has a background" marker: it must follow the change at once.
+    renderPagesEditor();
+    scheduleSave();
+  }
+
+
+
+  /* ============================================================
+     Selecteur de themes et editeur (1.111.0)
+     ============================================================
+     Le selecteur est ancre sur le cote et laisse le tableau visible :
+     un clic sur un theme l'applique AUSSITOT a la cible, pour de vrai,
+     mais en simple apercu -- rien n'est enregistre avant « Appliquer »,
+     et « Annuler » rend l'etat d'avant. L'editeur fonctionne de meme :
+     chaque retouche se voit en direct sur la cible.
+
+     The picker is docked on the side and keeps the board visible:
+     clicking a theme applies it AT ONCE to the target, for real, but as
+     a mere preview -- nothing is saved before "Apply", and "Cancel"
+     restores the previous state. The editor works the same way: every
+     tweak shows live on the target. */
+  const themeUi = {
+    target: null,          // cible en cours / current target
+    selected: undefined,   // id choisi (null = heriter) / chosen id (null = inherit)
+    family: "all",
+    mode: null,            // variante forcee pour l'apercu / variant forced for preview
+    hiddenModals: [],
+    editor: null           // { id, isPiboard, isNew, draft, variant }
+  };
+
+  function hideModalsForPreview() {
+    themeUi.hiddenModals = ["settingsModal", "pageBgModal"].filter((id) => $(id) && !$(id).hidden);
+    for (const id of themeUi.hiddenModals) $(id).hidden = true;
+  }
+
+  function restoreHiddenModals() {
+    for (const id of themeUi.hiddenModals) $(id).hidden = false;
+    themeUi.hiddenModals = [];
+  }
+
+  function targetBackgroundFile(target) {
+    if (!target || target.kind !== "page") return "";
+    const p = target.index === 0 ? mainPage : pages[target.index - 1];
+    return p ? normalizeBackground(p.background).image : "";
+  }
+
+  function openThemePicker(target) {
+    themeUi.target = target;
+    themeUi.selected = targetThemeId(target);
+    themeUi.mode = null;
+    const matching = TH.findMatching(allThemes(), targetBackgroundFile(target));
+    themeUi.family = matching.length ? "match" : "all";
+    hideModalsForPreview();
+    $("themeModal").hidden = false;
+    $("themeFor").textContent = targetLabel(target);
+    renderThemePicker();
+  }
+
+  function previewTheme() {
+    const theme = themeUi.selected ? themeById(themeUi.selected) : null;
+    themePreview = { target: themeUi.target, theme: themeUi.target.kind === "board" ? (theme || TH.piboardTheme(settings.colors)) : theme, mode: themeUi.mode };
+    applyTheme();
+  }
+
+  function closeThemePicker(apply) {
+    const target = themeUi.target;
+    themePreview = null;
+    if (apply && target) {
+      const id = themeUi.selected || null;
+      if (target.kind === "board") {
+        settings.themeId = id || "piboard";
+        apiPut("/api/settings", { themeId: settings.themeId }).catch((e) => console.error("[piboard] theme save failed", e));
+      } else if (target.kind === "drawer") {
+        drawerThemes[target.side] = id;
+        scheduleSave();
+      } else {
+        const p = target.index === 0 ? mainPage : pages[target.index - 1];
+        if (p) p.themeId = id;
+        scheduleSave();
+      }
+    }
+    applyTheme();
+    $("themeModal").hidden = true;
+    restoreHiddenModals();
+    refreshThemeButtons();
+  }
+
+  /* Vignette : un mini tableau peint avec les jetons du theme.
+     Thumbnail: a mini board painted with the theme's tokens. */
+  function themeSwatchHtml(theme, mode) {
+    const v = TH.variant(theme, mode);
+    const st = theme.style;
+    const r = Math.max(0, Math.round(st.radius / 3));
+    const b = st.border ? Math.max(1, Math.round(st.border / 1.5)) : 0;
+    const tile = (w) => `<span class="th-sw-tile" style="flex:${w};background:${v.tile};border:${b}px solid ${v.tileEdge};border-radius:${r}px">
+        <i style="background:${v.text}"></i><i style="background:${v.muted};width:55%"></i>
+        <em style="background:${v.accent}"></em></span>`;
+    return `<span class="th-sw" style="background:${v.bg};font-family:${escapeHtmlAttr(TH.FONTS[st.font])}">
+      <span class="th-sw-row">${tile(2)}${tile(1)}</span>
+      <span class="th-sw-row">${tile(1)}${tile(1)}${tile(1)}</span>
+      <span class="th-sw-aa" style="color:${v.text}">Aa</span></span>`;
+  }
+
+  function renderThemePicker() {
+    const target = themeUi.target;
+    const mode = themeUi.mode || resolvedMode();
+    const themes = allThemes();
+    const matching = TH.findMatching(themes, targetBackgroundFile(target));
+    const families = ["all"].concat(matching.length ? ["match"] : [], TH.FAMILIES,
+      userThemes().length ? ["user"] : []);
+    $("themeFamilies").innerHTML = families.map((f) =>
+      `<button type="button" class="chip${f === themeUi.family ? " active" : ""}" data-family="${f}">${escapeHtml(i18n.t("theme.family." + f))}</button>`
+    ).join("");
+    $("themeFamilies").querySelectorAll("[data-family]").forEach((el) => onActivate(el, () => {
+      themeUi.family = el.dataset.family;
+      renderThemePicker();
+    }));
+
+    let list = themes;
+    if (themeUi.family === "match") list = matching;
+    else if (themeUi.family === "user") list = themes.filter((t) => t.user);
+    else if (themeUi.family !== "all") list = themes.filter((t) => t.families.includes(themeUi.family));
+
+    const cards = [];
+    if (target.kind !== "board") {
+      const inherited = themeById(settings.themeId || "piboard") || TH.piboardTheme(settings.colors);
+      cards.push(`<button type="button" class="th-card th-inherit${themeUi.selected == null ? " selected" : ""}" data-id="">
+        ${themeSwatchHtml(inherited, mode)}
+        <span class="th-name">${escapeHtml(i18n.t("theme.inherit"))}</span>
+        <span class="th-meta">${escapeHtml(themeName(inherited))}</span></button>`);
+    }
+    for (const t of list) {
+      const both = t.dark && t.light;
+      const sel = (themeUi.selected || (target.kind === "board" ? "piboard" : null)) === t.id;
+      cards.push(`<button type="button" class="th-card${sel ? " selected" : ""}" data-id="${escapeHtmlAttr(t.id)}">
+        ${themeSwatchHtml(t, mode)}
+        <span class="th-name">${escapeHtml(themeName(t))}</span>
+        <span class="th-meta">${escapeHtml(both ? i18n.t("theme.dayNight") : i18n.t(TH.toneOf(t, mode) === "dark" ? "theme.fixedDark" : "theme.fixedLight"))}${t.user ? " \u00b7 " + escapeHtml(i18n.t("theme.mine")) : ""}</span></button>`);
+    }
+    $("themeGrid").innerHTML = cards.join("") || `<p class="field-hint">${escapeHtml(i18n.t("theme.none"))}</p>`;
+    $("themeGrid").querySelectorAll(".th-card").forEach((el) => onActivate(el, () => {
+      themeUi.selected = el.dataset.id || null;
+      $("themeGrid").querySelectorAll(".th-card").forEach((c) => c.classList.toggle("selected", c === el));
+      previewTheme();
+      updateThemePickerButtons();
+    }));
+    $("themeModeDark").classList.toggle("active", mode === "dark");
+    $("themeModeLight").classList.toggle("active", mode === "light");
+    updateThemePickerButtons();
+  }
+
+  function updateThemePickerButtons() {
+    const t = themeUi.selected ? themeById(themeUi.selected) : (themeUi.target.kind === "board" ? themeById("piboard") : null);
+    $("themeEdit").disabled = !t || !(t.user || t.id === "piboard");
+    $("themeDuplicate").disabled = !t;
+    $("themeExport").disabled = !t;
+    const sel = themeUi.selected || (themeUi.target.kind === "board" ? "piboard" : null);
+    $("themeCurrent").textContent = i18n.t("theme.selected") + " " + (sel ? themeName(themeById(sel)) : i18n.t("theme.inherit"));
+  }
+
+  /* ---------- Editeur / editor ---------- */
+
+  const EDIT_KEYS = ["bg", "tile", "tileEdge", "text", "muted", "faint", "accent", "onAccent", "fieldBg", "ok", "warn", "danger"];
+
+  function plainTheme(t) {
+    return {
+      id: t.id, name: Object.assign({}, t.name),
+      dark: t.dark ? Object.assign({}, t.dark) : null,
+      light: t.light ? Object.assign({}, t.light) : null,
+      style: Object.assign({}, t.style)
+    };
+  }
+
+  function newUserId() {
+    return "u-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
+  }
+
+  function openThemeEditor(source, how) {
+    // how: "edit" | "duplicate" | "new" | "import"
+    let draft = plainTheme(source);
+    const isPiboard = how === "edit" && source.id === "piboard";
+    if (how !== "edit") {
+      draft.id = newUserId();
+      if (how === "duplicate") {
+        draft.name = { fr: themeName(source) + " (copie)", en: (source.name.en || themeName(source)) + " (copy)" };
+      }
+    }
+    if (!draft.dark && !draft.light) draft.dark = TH.derive({}, "dark");
+    themeUi.editor = {
+      id: draft.id, isPiboard, isNew: how !== "edit", draft,
+      variant: (themeUi.mode || resolvedMode()) === "light" && draft.light ? "light" : (draft.dark ? "dark" : "light")
+    };
+    $("themeModal").hidden = true;
+    $("themeEditor").hidden = false;
+    renderThemeEditor();
+    previewDraft();
+  }
+
+  function draftTheme() {
+    const e = themeUi.editor;
+    return TH.build({ id: e.draft.id, name: e.draft.name, dark: e.draft.dark, light: e.draft.light, style: e.draft.style, user: !e.isPiboard });
+  }
+
+  function previewDraft() {
+    const e = themeUi.editor;
+    themePreview = { target: themeUi.target, theme: draftTheme(), mode: e.variant };
+    applyTheme();
+    renderReadability();
+  }
+
+  function renderThemeEditor() {
+    const e = themeUi.editor;
+    const d = e.draft;
+    $("thEdName").value = themeName(d);
+    $("thEdName").disabled = e.isPiboard;
+    $("thEdVarDark").classList.toggle("active", e.variant === "dark");
+    $("thEdVarLight").classList.toggle("active", e.variant === "light");
+    const v = d[e.variant];
+    $("thEdHasVariant").checked = !!v;
+    $("thEdHasVariant").disabled = e.isPiboard || (!!v && !d[e.variant === "dark" ? "light" : "dark"]);
+    $("thEdColors").hidden = !v;
+    if (v) {
+      $("thEdColors").innerHTML = EDIT_KEYS.map((k) => `
+        <label class="th-ed-color"><input type="color" data-key="${k}" value="${escapeHtmlAttr(String(v[k]).slice(0, 7))}">
+        <span>${escapeHtml(i18n.t("theme.token." + k))}</span></label>`).join("");
+      $("thEdColors").querySelectorAll("input[type=color]").forEach((inp) => inp.addEventListener("input", () => {
+        v[inp.dataset.key] = inp.value.toUpperCase();
+        if (inp.dataset.key === "accent") {
+          v.onAccent = TH.onColor(v.accent);
+          const oa = $("thEdColors").querySelector('[data-key="onAccent"]');
+          if (oa) oa.value = v.onAccent;
+        }
+        delete v.overlay;
+        previewDraft();
+      }));
+    }
+    $("thEdRadius").value = d.style.radius;
+    $("thEdRadiusVal").textContent = d.style.radius + " px";
+    $("thEdBorder").value = d.style.border;
+    $("thEdBorderVal").textContent = d.style.border + " px";
+    $("thEdFont").innerHTML = TH.FONT_KEYS.map((k) =>
+      `<option value="${k}" ${d.style.font === k ? "selected" : ""} style="font-family:${escapeHtmlAttr(TH.FONTS[k])}">${escapeHtml(i18n.t("theme.font." + k))}</option>`).join("");
+    $("thEdDelete").hidden = e.isNew || e.isPiboard;
+    $("thEdReset").hidden = !e.isPiboard;
+    renderThemeSample();
+    renderReadability();
+  }
+
+  /* Echantillon des deux tuiles de mise en page dans l'editeur.
+
+     POURQUOI IL EXISTE. L'apercu en direct du theme, c'est le tableau
+     lui-meme -- ce qui est excellent, sauf pour les tuiles Texte et
+     Horloge : on ne les voit que si la page ouverte en porte, et leurs
+     nouvelles options d'accord au theme ne se jugent qu'une fois
+     cochees sur une vraie tuile. Deviner l'effet d'une couleur d'accent
+     sur un grand titre avant de l'appliquer n'etait pas raisonnable.
+
+     Il ne REJOUE PAS les widgets : ce sont deux blocs de demonstration,
+     a qui l'on pose les variables du brouillon en cours d'edition. Faire
+     vivre deux vrais widgets dans une fenetre de reglages aurait
+     demande de les instancier, de les faire tiquer et de les detruire a
+     la fermeture -- beaucoup de machinerie, et un risque de fuite, pour
+     montrer une couleur.
+
+     Sample of the two layout tiles inside the editor. The theme's live
+     preview is the board itself, which is excellent except for the Text
+     and Clock tiles: they only show if the open page carries them, and
+     their new theme-matching options can only be judged once ticked.
+     It does NOT re-run the widgets: two demonstration blocks, handed
+     the draft's variables. Running two real widgets inside a settings
+     window would have meant instantiating, ticking and destroying them
+     -- much machinery, and a leak risk, to show a colour. */
+  function renderThemeSample() {
+    const host = $("thEdSample");
+    if (!host) return;
+    const e = themeUi.editor;
+    const variant = TH.variant(draftTheme(), e.variant);
+    if (!variant) { host.hidden = true; return; }
+    host.hidden = false;
+
+    const vars = TH.toCssVars(variant, draftTheme().style);
+    host.style.cssText = "";
+    for (const [name, value] of Object.entries(vars)) host.style.setProperty(name, value);
+
+    /* Le fond de l'horloge reprend EXACTEMENT le calcul du widget (voir
+       bgColorFor dans widgets/clock/widget.js) : la couleur de tuile du
+       theme, eclaircie le jour et assombrie la nuit de la meme fraction.
+       Un echantillon qui ne montrerait pas la vraie teinte ne servirait
+       a rien -- ou pire, induirait en erreur.
+       The clock's background reuses EXACTLY the widget's calculation. */
+    const clock = $("thEdSampleClock");
+    if (clock) {
+      const isDay = e.variant === "light";
+      const rgb = hexToRgbTriplet(variant.tile);
+      if (rgb) {
+        const target = isDay ? 255 : 0;
+        const shaded = rgb.map((c) => Math.round(c + (target - c) * 0.12));
+        clock.style.backgroundColor = `rgb(${shaded.join(", ")})`;
+        const lum = (0.2126 * shaded[0] + 0.7152 * shaded[1] + 0.0722 * shaded[2]) / 255;
+        clock.style.color = lum < 0.5 ? "#F3F5FA" : "#1B1F2A";
+      }
+    }
+  }
+
+  function hexToRgbTriplet(hex) {
+    const c = String(hex || "").replace("#", "");
+    if (c.length !== 6) return null;
+    const out = [0, 2, 4].map((i) => parseInt(c.substr(i, 2), 16));
+    return out.every((n) => Number.isFinite(n)) ? out : null;
+  }
+
+  function renderReadability() {
+    const e = themeUi.editor;
+    if (!e) return;
+    const t = draftTheme();
+    const out = [];
+    let blocking = false;
+    for (const mode of ["dark", "light"]) {
+      if (!t[mode]) continue;
+      for (const is of TH.checkReadability(t[mode])) {
+        if (is.level === "error") blocking = true;
+        out.push(`<li class="th-issue th-${is.level}">${escapeHtml(i18n.t("theme.variant." + mode))} \u2014 ${escapeHtml(i18n.t("theme.check." + is.id))}
+          <span>${is.ratio} : 1 (${escapeHtml(i18n.t("theme.check.min"))} ${is.min})</span></li>`);
+      }
+    }
+    $("thEdChecks").innerHTML = out.length ? out.join("")
+      : `<li class="th-issue th-good">${escapeHtml(i18n.t("theme.check.allGood"))}</li>`;
+    $("thEdSave").disabled = blocking;
+    $("thEdFix").disabled = !out.length;
+    $("thEdSaveHint").hidden = !blocking;
+  }
+
+  function closeThemeEditor(saved) {
+    $("themeEditor").hidden = true;
+    const e = themeUi.editor;
+    themeUi.editor = null;
+    if (saved && e) themeUi.selected = e.isPiboard ? (themeUi.target.kind === "board" ? "piboard" : "piboard") : e.id;
+    $("themeModal").hidden = false;
+    renderThemePicker();
+    previewTheme();
+  }
+
+  async function saveThemeEditor() {
+    const e = themeUi.editor;
+    const t = draftTheme();
+    // Le voile est toujours recalcule : il n'est pas editable.
+    // The overlay is always recomputed: it is not editable.
+    const clean = (v) => { if (!v) return null; const o = Object.assign({}, v); delete o.overlay; return o; };
+    if (e.isPiboard) {
+      settings.colors = { dark: clean(t.dark), light: clean(t.light), style: t.style };
+      await apiPut("/api/settings", { colors: settings.colors }).catch((err) => console.error("[piboard] theme save failed", err));
+    } else {
+      const name = String($("thEdName").value || "").trim() || i18n.t("theme.untitled");
+      const entry = TH.sanitizeUserTheme({ id: e.id, name: { fr: name, en: name }, dark: clean(t.dark), light: clean(t.light), style: t.style });
+      if (!entry) return;
+      const list = (Array.isArray(settings.userThemes) ? settings.userThemes : []).filter((x) => x && x.id !== e.id);
+      list.push(entry);
+      settings.userThemes = list;
+      await apiPut("/api/settings", { userThemes: list }).catch((err) => console.error("[piboard] theme save failed", err));
+    }
+    closeThemeEditor(true);
+  }
+
+  async function deleteUserTheme() {
+    const e = themeUi.editor;
+    if (!e || e.isPiboard || !window.confirm(i18n.t("theme.deleteConfirm"))) return;
+    settings.userThemes = (settings.userThemes || []).filter((x) => x && x.id !== e.id);
+    await apiPut("/api/settings", { userThemes: settings.userThemes }).catch(() => null);
+    if (themeUi.selected === e.id) themeUi.selected = themeUi.target.kind === "board" ? "piboard" : null;
+    themeUi.editor = null;
+    $("themeEditor").hidden = true;
+    $("themeModal").hidden = false;
+    renderThemePicker();
+    previewTheme();
+  }
+
+  /* Pixels d'une image, reduite a 96x96 : assez pour une palette, et
+     rapide meme sur un Raspberry Pi. Remplacable par les tests (jsdom
+     ne dessine pas).
+     An image's pixels, shrunk to 96x96: enough for a palette, and fast
+     even on a Raspberry Pi. Replaceable by tests (jsdom does not draw). */
+  window.PiBoard._imagePixels = function (url) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const c = document.createElement("canvas");
+          c.width = 96; c.height = 96;
+          const g = c.getContext("2d");
+          g.drawImage(img, 0, 0, 96, 96);
+          resolve(g.getImageData(0, 0, 96, 96).data);
+        } catch (err) { reject(err); }
+      };
+      img.onerror = () => reject(new Error("image"));
+      img.src = url;
+    });
+  };
+
+  async function themeFromImage(url, label) {
+    const status = $("thEdImgStatus");
+    status.hidden = false;
+    status.textContent = i18n.t("theme.image.working");
+    try {
+      const data = await window.PiBoard._imagePixels(url);
+      const made = TH.themeFromPalette(TH.extractPalette(data, 6), label);
+      if (!made) throw new Error("palette");
+      const e = themeUi.editor;
+      e.draft.dark = made.dark;
+      e.draft.light = made.light;
+      if (!e.isPiboard) e.draft.name = made.name;
+      e.variant = made.preferred;
+      status.hidden = true;
+      renderThemeEditor();
+      previewDraft();
+    } catch (err) {
+      console.warn("[piboard] theme depuis image", err);
+      status.textContent = i18n.t("theme.image.failed");
+    }
+  }
+
+  function exportTheme(t) {
+    const data = plainTheme(t);
+    delete data.id;
+    const blob = new Blob([JSON.stringify({ piboardTheme: 1, theme: data }, null, 2)], { type: "application/json" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "piboard-theme-" + String(themeName(t)).replace(/[^\w-]+/g, "_") + ".json";
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  }
+
+  async function importTheme(file) {
+    try {
+      const raw = JSON.parse(await file.text());
+      const src = raw && raw.theme ? raw.theme : raw;
+      const entry = TH.sanitizeUserTheme(Object.assign({}, src, { id: newUserId() }));
+      if (!entry) throw new Error("invalid");
+      openThemeEditor(TH.build(entry), "import");
+    } catch (err) {
+      window.alert(i18n.t("theme.importFailed"));
+    }
+  }
+
+  /* Libelles des boutons de theme dans les reglages (board, pages,
+     volets) : ils affichent le theme en vigueur.
+     Theme button labels in the settings (board, pages, drawers). */
+  function refreshThemeButtons() {
+    const cur = $("setThemeName");
+    if (cur) cur.textContent = themeName(themeById(settings.themeId || "piboard") || TH.piboardTheme(settings.colors));
+    for (const side of Object.keys(drawerThemes)) {
+      const b = document.querySelector(`[data-drawer-theme="${side}"]`);
+      if (b) {
+        const t = themeById(drawerThemes[side]);
+        b.textContent = t ? themeName(t) : i18n.t("theme.inherit");
+        b.classList.toggle("has-theme", !!t);
+      }
+    }
+    if (!$("settingsModal").hidden || themeUi.hiddenModals.includes("settingsModal")) renderPagesEditor();
+    refreshPageBgThemeHint();
+  }
+
+  /* Suggestion dans la fenetre du fond de page : un theme assorti a
+     l'image choisie. Rien n'est applique d'office.
+     Suggestion in the page background window: a theme matching the
+     chosen image. Nothing is applied automatically. */
+  function refreshPageBgThemeHint() {
+    const box = $("pageBgThemeHint");
+    if (!box || $("pageBgModal").hidden) return;
+    const target = { kind: "page", index: pageBgIndex };
+    const matches = TH.findMatching(allThemes(), targetBackgroundFile(target));
+    const current = targetThemeId(target);
+    const show = matches.length && !matches.some((m) => m.id === current);
+    box.hidden = !show;
+    if (show) $("pageBgThemeHintText").textContent = i18n.t("pagebg.themeHint") + " " + matches.map(themeName).join(", ");
+  }
+
+  function wireThemeUi() {
+    onActivate($("themeClose"), () => closeThemePicker(false));
+    onActivate($("themeCancel"), () => closeThemePicker(false));
+    onActivate($("themeApply"), () => closeThemePicker(true));
+    onActivate($("themeModeDark"), () => { themeUi.mode = "dark"; renderThemePicker(); previewTheme(); });
+    onActivate($("themeModeLight"), () => { themeUi.mode = "light"; renderThemePicker(); previewTheme(); });
+    const selectedTheme = () => themeById(themeUi.selected || (themeUi.target.kind === "board" ? "piboard" : "")) ;
+    onActivate($("themeNew"), () => openThemeEditor(TH.build({ id: "new", n: [i18n.t("theme.untitled"), i18n.t("theme.untitled")],
+      dark: TH.variant(TH.piboardTheme(settings.colors), "dark"), light: TH.variant(TH.piboardTheme(settings.colors), "light"), s: TH.DEFAULT_STYLE }), "new"));
+    onActivate($("themeEdit"), () => { const t = selectedTheme(); if (t) openThemeEditor(t, "edit"); });
+    onActivate($("themeDuplicate"), () => { const t = selectedTheme(); if (t) openThemeEditor(t, "duplicate"); });
+    onActivate($("themeExport"), () => { const t = selectedTheme(); if (t) exportTheme(t); });
+    onActivate($("themeImport"), () => $("themeImportFile").click());
+    $("themeImportFile").addEventListener("change", (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (f) importTheme(f);
+    });
+
+    onActivate($("thEdClose"), () => closeThemeEditor(false));
+    onActivate($("thEdCancel"), () => closeThemeEditor(false));
+    onActivate($("thEdSave"), () => saveThemeEditor());
+    onActivate($("thEdDelete"), () => deleteUserTheme());
+    onActivate($("thEdReset"), () => {
+      const e = themeUi.editor;
+      if (!e || !window.confirm(i18n.t("theme.resetConfirm"))) return;
+      e.draft = plainTheme(TH.piboardTheme(null));
+      renderThemeEditor();
+      previewDraft();
+    });
+    const setVariant = (m) => { themeUi.editor.variant = m; renderThemeEditor(); previewDraft(); };
+    onActivate($("thEdVarDark"), () => setVariant("dark"));
+    onActivate($("thEdVarLight"), () => setVariant("light"));
+    $("thEdHasVariant").addEventListener("change", (ev) => {
+      const e = themeUi.editor;
+      const other = e.variant === "dark" ? "light" : "dark";
+      if (ev.target.checked) {
+        const base = e.draft[other];
+        e.draft[e.variant] = base
+          ? TH.derive({ bg: TH.mix(base.bg, e.variant === "dark" ? "#000000" : "#FFFFFF", 0.85),
+              tile: TH.mix(base.tile, e.variant === "dark" ? "#1A1A1A" : "#FFFFFF", 0.8),
+              text: e.variant === "dark" ? "#EDEFF4" : "#1B1F2A", accent: base.accent }, e.variant)
+          : TH.derive({}, e.variant);
+        e.draft[e.variant] = TH.autoFix(e.draft[e.variant]);
+      } else if (e.draft[other]) {
+        e.draft[e.variant] = null;
+      }
+      renderThemeEditor();
+      previewDraft();
+    });
+    $("thEdName").addEventListener("input", (ev) => {
+      const e = themeUi.editor;
+      e.draft.name = { fr: ev.target.value, en: ev.target.value };
+    });
+    $("thEdRadius").addEventListener("input", (ev) => {
+      themeUi.editor.draft.style.radius = Number(ev.target.value);
+      $("thEdRadiusVal").textContent = ev.target.value + " px";
+      previewDraft();
+    });
+    $("thEdBorder").addEventListener("input", (ev) => {
+      themeUi.editor.draft.style.border = Number(ev.target.value);
+      $("thEdBorderVal").textContent = ev.target.value + " px";
+      previewDraft();
+    });
+    $("thEdFont").addEventListener("change", (ev) => {
+      themeUi.editor.draft.style.font = ev.target.value;
+      previewDraft();
+    });
+    onActivate($("thEdDerive"), () => {
+      const e = themeUi.editor;
+      const v = e.draft[e.variant];
+      if (!v) return;
+      e.draft[e.variant] = TH.derive({ bg: v.bg, tile: v.tile, text: v.text, accent: v.accent }, e.variant);
+      renderThemeEditor();
+      previewDraft();
+    });
+    onActivate($("thEdFix"), () => {
+      const e = themeUi.editor;
+      for (const m of ["dark", "light"]) if (e.draft[m]) e.draft[m] = TH.autoFix(TH.derive(e.draft[m], m));
+      renderThemeEditor();
+      previewDraft();
+    });
+    onActivate($("thEdFromLibrary"), () => {
+      openLibrary(null, "backgrounds", (item) => themeFromImage(item.url, item.name), { pickOnly: true });
+    });
+    onActivate($("thEdFromFile"), () => $("thEdImageFile").click());
+    $("thEdImageFile").addEventListener("change", (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      ev.target.value = "";
+      if (!f) return;
+      const url = URL.createObjectURL(f);
+      themeFromImage(url, f.name.replace(/\.[^.]+$/, "")).finally(() => setTimeout(() => URL.revokeObjectURL(url), 2000));
+    });
+    onActivate($("thEdFromPage"), () => {
+      const p = boardEl();
+      const bgImg = p && p.style.backgroundImage;
+      const m = String(bgImg || "").match(/url\("?([^")]+)"?\)/);
+      if (!m) { const st = $("thEdImgStatus"); st.hidden = false; st.textContent = i18n.t("theme.image.noPageBg"); return; }
+      themeFromImage(m[1], decodeURIComponent(m[1].split("/").pop()).replace(/\.[^.]+$/, ""));
+    });
+    onActivate($("thEdExport"), () => exportTheme(draftTheme()));
+
+    onActivate($("setThemeChoose"), () => openThemePicker({ kind: "board" }));
+    document.querySelectorAll("[data-drawer-theme]").forEach((b) =>
+      onActivate(b, () => openThemePicker({ kind: "drawer", side: b.dataset.drawerTheme })));
+    onActivate($("pageBgThemeHintBtn"), () => openThemePicker({ kind: "page", index: pageBgIndex }));
+  }
+
+  /* ============================================================
+     Explorateur de dossiers (1.113.2)
+     ============================================================
+     Choisir un dossier SUR LA MACHINE QUI FAIT TOURNER PIBOARD -- pas
+     sur celle qui regarde le tableau. La distinction compte des que le
+     tableau est ouvert depuis un autre poste : un selecteur de fichiers
+     de navigateur, lui, ne verrait que la machine locale, et ne sait de
+     toute facon pas designer un dossier.
+     Picking a folder ON THE MACHINE RUNNING PIBOARD -- not on the one
+     looking at the board. A browser's own file picker would only see
+     the local machine, and cannot designate a folder anyway. */
+  const folderPicker = { onPick: null, current: "", separator: "/" };
+
+  function openFolderPicker(startPath, onPick) {
+    folderPicker.onPick = onPick || null;
+    $("folderModal").hidden = false;
+    $("folderNewName").value = "";
+    $("folderStatus").hidden = true;
+    loadFolder(String(startPath || "").trim());
+  }
+
+  function closeFolderPicker() {
+    $("folderModal").hidden = true;
+    folderPicker.onPick = null;
+  }
+
+  function folderStatus(text, isError) {
+    const el = $("folderStatus");
+    el.hidden = !text;
+    el.textContent = text || "";
+    el.classList.toggle("field-hint-error", !!isError);
+  }
+
+  /* Sans chemin de depart (ou avec un chemin devenu invalide), on
+     propose les points de depart plutot qu'une erreur : disques,
+     dossier personnel, points de montage.
+     Without a starting path (or with one gone invalid), the starting
+     points are offered rather than an error. */
+  async function loadFolder(dir) {
+    const list = $("folderList");
+    list.innerHTML = `<li class="folder-msg">${escapeHtml(i18n.t("common.loading"))}</li>`;
+    if (!dir) return loadRoots();
+    let data;
+    try {
+      const r = await fetch("/api/fs/list?path=" + encodeURIComponent(dir));
+      data = await r.json();
+      if (!r.ok) throw new Error(data.error || "");
+    } catch (e) {
+      folderStatus(i18n.t("folder.unreadable") + " " + String(e.message || e), true);
+      return loadRoots();
+    }
+    folderPicker.current = data.path;
+    $("folderPath").textContent = data.path;
+    $("folderChoose").disabled = false;
+    if (!data.writable) folderStatus(i18n.t("folder.readonly"), true);
+    else folderStatus("");
+    const rows = [];
+    if (data.parent) rows.push(`<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(data.parent)}">↑ ${escapeHtml(i18n.t("folder.up"))}</button></li>`);
+    for (const d of data.dirs) {
+      rows.push(`<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(d.path)}">${escapeHtml(d.name)}</button></li>`);
+    }
+    list.innerHTML = rows.join("") || `<li class="folder-msg">${escapeHtml(i18n.t("folder.empty"))}</li>`;
+    list.querySelectorAll("[data-go]").forEach((b) => onActivate(b, () => loadFolder(b.dataset.go)));
+  }
+
+  async function loadRoots() {
+    const list = $("folderList");
+    try {
+      const data = await fetch("/api/fs/roots").then((r) => r.json());
+      folderPicker.separator = data.separator || "/";
+      folderPicker.current = "";
+      $("folderPath").textContent = i18n.t("folder.roots");
+      $("folderChoose").disabled = true;
+      list.innerHTML = (data.roots || []).map((r) =>
+        `<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(r.path)}">${escapeHtml(r.name)} <small>${escapeHtml(r.path)}</small></button></li>`).join("");
+      list.querySelectorAll("[data-go]").forEach((b) => onActivate(b, () => loadFolder(b.dataset.go)));
+    } catch (e) {
+      list.innerHTML = `<li class="folder-msg">${escapeHtml(i18n.t("folder.unreadable"))}</li>`;
+    }
+  }
+
+  async function createFolder() {
+    const name = String($("folderNewName").value || "").trim();
+    if (!name || !folderPicker.current) return;
+    try {
+      const r = await fetch("/api/fs/mkdir", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ parent: folderPicker.current, name })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || "");
+      $("folderNewName").value = "";
+      /* On entre dans le dossier cree : c'est presque toujours celui
+         qu'on voulait choisir. We step into the folder just created. */
+      loadFolder(data.path);
+    } catch (e) {
+      folderStatus(i18n.t("folder.createFailed") + " " + String(e.message || e), true);
+    }
+  }
+
+  /* Recherche d'appareils pour les champs "discover" (voir
+     fieldMarkup). Un seul gestionnaire delegue : les champs
+     n'existent qu'a l'ouverture des reglages d'une tuile.
+     Device search for "discover" fields: one delegated handler. */
+  function wireDiscoverFields() {
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest && e.target.closest(".field-discover-scan");
+      if (!btn) return;
+      const field = btn.closest(".field-discover");
+      const msg = field.querySelector(".field-discover-msg");
+      const sel = field.querySelector("[data-discover-select]");
+      const src = field.dataset.discoverSrc;
+      if (!src) return;
+      btn.disabled = true;
+      msg.textContent = i18n.t("discover.searching");
+      try {
+        const res = await fetch(src, { cache: "no-store" });
+        const data = await res.json();
+        const list = data.printers || data.items || [];
+        if (!list.length) {
+          msg.textContent = data.error ? i18n.t("discover.failed") + " " + data.error : i18n.t("discover.empty");
+          return;
+        }
+        const current = sel.value;
+        sel.innerHTML = list.map((it) => {
+          const value = it.serial || it.id || "";
+          const text = [it.name || it.model || value, it.model && it.name ? "(" + it.model + ")" : "", it.host || ""]
+            .filter(Boolean).join(" ");
+          return `<option value="${escapeHtmlAttr(value)}" data-item="${escapeHtmlAttr(JSON.stringify(it))}" ${value === current ? "selected" : ""}>${escapeHtmlAttr(text)}</option>`;
+        }).join("");
+        msg.textContent = i18n.t("discover.found").replace("{n}", String(list.length));
+        applyDiscoverChoice(field);
+      } catch (err) {
+        msg.textContent = i18n.t("discover.failed") + " " + (err.message || err);
+      } finally {
+        btn.disabled = false;
+      }
+    });
+    document.addEventListener("change", (e) => {
+      const sel = e.target.closest && e.target.closest("[data-discover-select]");
+      if (sel) applyDiscoverChoice(sel.closest(".field-discover"));
+    });
+  }
+
+  /* Le choix remplit les champs voisins declares dans "fills" : on evite
+     ainsi de recopier a la main une adresse IP et un numero de serie
+     releves sur un petit ecran.
+     The choice fills the sibling fields declared in "fills". */
+  function applyDiscoverChoice(field) {
+    if (!field) return;
+    const sel = field.querySelector("[data-discover-select]");
+    const opt = sel && sel.selectedOptions && sel.selectedOptions[0];
+    if (!opt || !opt.dataset.item) return;
+    let item = null;
+    try { item = JSON.parse(opt.dataset.item); } catch (e) { return; }
+    let fills = {};
+    try { fills = JSON.parse(field.dataset.discoverFills || "{}"); } catch (e) { fills = {}; }
+    const form = field.closest("form") || field.parentElement;
+    for (const key of Object.keys(fills)) {
+      const value = item[fills[key]];
+      if (value == null || value === "") continue;
+      const input = form.querySelector(`[data-key="${key}"]`);
+      if (input) input.value = value;
+    }
+  }
+
+  /* ---------- Participer : signaler un bug, demander une fonction ----------
+     Le ticket est OUVERT PRE-REMPLI : version, plateforme, langue et un
+     canevas de questions. Un rapport qui arrive avec ces elements se
+     traite ; un « ca marche pas » ne se traite pas. Rien n'est envoye
+     par PiBoard : la page s'ouvre, on lit, on corrige, on publie
+     soi-meme.
+     The ticket opens PRE-FILLED: version, platform, language and a
+     short template. Nothing is sent by PiBoard: the page opens, you
+     read, edit and post it yourself. */
+  const REPO_URL = "https://github.com/jihemezes/piboard";
+  const contributeInfo = { version: "", platform: "", desktop: false };
+
+  function contributeContext() {
+    const nav = window.navigator || {};
+    const ua = String(nav.userAgent || "");
+    const guess = /Windows/.test(ua) ? "Windows"
+      : /Mac OS X|Macintosh/.test(ua) ? "macOS"
+        : /Android/.test(ua) ? "Android"
+          : /iPhone|iPad/.test(ua) ? "iOS"
+            : /Linux|X11/.test(ua) ? "Linux" : "?";
+    return {
+      version: contributeInfo.version || "?",
+      platform: contributeInfo.platform || guess,
+      mode: contributeInfo.desktop ? "application de bureau / desktop application"
+        : "navigateur / browser",
+      browser: ua.slice(0, 160),
+      screen: (window.screen ? window.screen.width + "x" + window.screen.height : "?")
+        + (document.body.classList.contains("touch") || document.body.classList.contains("touch-mode")
+          ? " (tactile / touch)" : ""),
+      lang: i18n.lang
+    };
+  }
+
+  /* Les deux canevas, dans la langue de l'interface : un rapport ecrit
+     dans sa langue est un rapport qu'on ecrit vraiment.
+     The two templates, in the interface language. */
+  function contributeBody(kind) {
+    const c = contributeContext();
+    const facts = [
+      "- PiBoard : v" + c.version,
+      "- " + (c.lang === "fr" ? "Plateforme" : "Platform") + " : " + c.platform + " (" + c.mode + ")",
+      "- " + (c.lang === "fr" ? "Écran" : "Screen") + " : " + c.screen,
+      "- " + (c.lang === "fr" ? "Langue" : "Language") + " : " + c.lang,
+      "- " + (c.lang === "fr" ? "Navigateur" : "Browser") + " : " + c.browser
+    ].join("\n");
+
+    if (kind === "bug") {
+      return c.lang === "fr"
+        ? "## Ce qui se passe\n\n\n\n## Ce que j'attendais\n\n\n\n## Comment le reproduire\n\n1. \n2. \n3. \n\n## Tuile concernée\n\n\n\n## Contexte technique\n\n" + facts
+          + "\n\n<!-- Une capture d'écran aide beaucoup : glissez-la dans ce champ. -->\n"
+        : "## What happens\n\n\n\n## What I expected\n\n\n\n## How to reproduce it\n\n1. \n2. \n3. \n\n## Tile concerned\n\n\n\n## Technical context\n\n" + facts
+          + "\n\n<!-- A screenshot helps a lot: drop one into this field. -->\n";
+    }
+    return c.lang === "fr"
+      ? "## Le besoin\n\n\n\n## Comment je m'en servirais\n\n\n\n## Ce que je fais aujourd'hui à la place\n\n\n\n## Contexte technique\n\n" + facts + "\n"
+      : "## The need\n\n\n\n## How I would use it\n\n\n\n## What I do instead today\n\n\n\n## Technical context\n\n" + facts + "\n";
+  }
+
+  function contributeUrl(kind) {
+    const c = contributeContext();
+    const title = kind === "bug"
+      ? (c.lang === "fr" ? "[Bug] " : "[Bug] ")
+      : (c.lang === "fr" ? "[Idée] " : "[Idea] ");
+    const q = new URLSearchParams({
+      title: title,
+      body: contributeBody(kind),
+      labels: kind === "bug" ? "bug" : "enhancement"
+    });
+    return REPO_URL + "/issues/new?" + q.toString();
+  }
+
+  /* Ouvrir le lien : dans un onglet quand c'est possible, sinon par le
+     QR code -- en kiosque sur le Pi il n'y a ni clavier ni barre
+     d'adresse, et le QR est alors la SEULE voie praticable.
+     Open in a tab when possible, otherwise through the QR code: on a
+     kiosk Pi there is no keyboard and no address bar. */
+  function openContribute(kind) {
+    const url = contributeUrl(kind);
+    const win = window.open(url, "_blank", "noopener");
+    if (!win) openQr(url, i18n.t(kind === "bug" ? "contribute.bug" : "contribute.feature"));
+  }
+
+  /* ---------- Fenetre QR ----------
+     Generique : elle affiche le lien qu'on lui donne. Le generateur
+     (public/qrcode.js) est autonome, donc utilisable pour toute autre
+     chose plus tard.
+     Generic: it shows whatever link it is given. */
+  function openQr(url, title) {
+    const modal = $("qrModal");
+    if (!modal) return;
+    $("qrTitle").textContent = title || i18n.t("qr.title");
+    $("qrUrl").textContent = url;
+    const box = $("qrImage");
+    try {
+      /* Correction haute : le code est souvent lu de biais, sur un
+         ecran brillant, par un telephone tenu a la main.
+         High correction: read at an angle, off a glossy screen. */
+      box.innerHTML = window.PiBoardQR.toSvg(url, {
+        level: "M",
+        dark: getComputedStyle(document.body).getPropertyValue("--text").trim() || "#000",
+        light: getComputedStyle(document.body).getPropertyValue("--tile").trim() || "#fff"
+      });
+      box.dataset.failed = "";
+    } catch (e) {
+      // Un lien trop long pour un QR : on le dit, et le lien reste copiable.
+      box.innerHTML = "";
+      box.dataset.failed = String(e.message || e);
+      box.textContent = i18n.t("qr.tooLong");
+    }
+    modal.hidden = false;
+  }
+
+  /* ---------- Clone complet d'une installation ----------
+     Export : les cases cochees decident de ce qui part. Import : on
+     REGARDE d'abord (combien de tuiles, quelle version, quels chemins
+     demandent une decision), on choisit les dossiers introuvables, puis
+     on applique -- et une sauvegarde de securite est prise cote serveur
+     juste avant d'ecrire.
+     Export: the checkboxes decide what travels. Import: look first,
+     choose the missing folders, then apply -- with a safety backup
+     taken server-side just before writing. */
+  let cloneFile = null;          // le fichier choisi, en attente d'application
+  let cloneInfo = null;          // ce que le serveur en a dit
+  const clonePathChoices = {};   // "tuile|reglage" -> dossier choisi
+
+  function cloneOptions() {
+    return {
+      includeImages: $("cloneImages").checked,
+      includeServiceKeys: $("cloneServiceKeys").checked,
+      includePersonalSecrets: $("clonePersonal").checked,
+      passphrase: $("clonePersonal").checked ? $("clonePassphrase").value : ""
+    };
+  }
+
+  async function exportClone() {
+    const btn = $("cloneExportBtn");
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const res = await fetch("/api/clone/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cloneOptions())
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      const name = (res.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = name ? name[1] : "piboard-clone.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+      showBackupsMsg(i18n.t("clone.exported").replace("{size}", formatSize(blob.size)));
+    } catch (e) {
+      showBackupsMsg(i18n.t("clone.exportFailed") + " " + (e.message || e), true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = was;
+    }
+  }
+
+  function formatSize(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return n + " o";
+    if (n < 1024 * 1024) return Math.round(n / 1024) + " Ko";
+    if (n < 1024 * 1024 * 1024) return (n / (1024 * 1024)).toFixed(1) + " Mo";
+    return (n / (1024 * 1024 * 1024)).toFixed(2) + " Go";
+  }
+
+  function showBackupsMsg(text, isError) {
+    const el = $("backupsMsg");
+    if (!el) return;
+    el.hidden = false;
+    el.textContent = text;
+    el.classList.toggle("backups-msg-error", !!isError);
+  }
+
+  /* Premier temps : on regarde sans rien ecrire. */
+  async function inspectClone(file) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/clone/inspect", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
+  }
+
+  function cloneSummaryHtml(info) {
+    const c = info.counts || {};
+    const m = info.manifest || {};
+    const contents = m.contents || {};
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtmlAttr(label)}</span><b>${escapeHtmlAttr(String(value))}</b></div>`;
+    let html = '<div class="clone-summary">';
+    html += line(i18n.t("clone.info.made"), new Date(m.createdAt || Date.now()).toLocaleString(i18n.lang === "fr" ? "fr-FR" : "en-GB"));
+    html += line(i18n.t("clone.info.from"), (m.platform || "?") + (m.appVersion ? " · v" + m.appVersion : ""));
+    html += line(i18n.t("clone.info.tiles"), (c.tiles || 0) + (c.pages ? " · " + i18n.t("clone.info.pages").replace("{n}", c.pages) : ""));
+    html += line(i18n.t("clone.info.images"), contents.images ? (c.media + c.library) + " · " + formatSize(contents.mediaBytes || 0) : i18n.t("clone.info.none"));
+    html += line(i18n.t("clone.info.serviceKeys"), contents.serviceKeys ? i18n.t("common.yes") : i18n.t("common.no"));
+    html += line(i18n.t("clone.info.personal"), contents.personalSecrets
+      ? (contents.encrypted ? i18n.t("clone.info.encrypted") : i18n.t("common.yes")) : i18n.t("common.no"));
+    html += "</div>";
+
+    if (!info.intact) html += `<p class="clone-warn">${escapeHtmlAttr(i18n.t("clone.damaged"))}</p>`;
+    if (info.newer) html += `<p class="clone-warn">${escapeHtmlAttr(i18n.t("clone.newer"))}</p>`;
+    if (info.needsPassphrase) {
+      html += `<label class="field"><span>${escapeHtmlAttr(i18n.t("clone.passphraseAsk"))}</span>
+        <input type="password" id="cloneImportPassphrase" autocomplete="off"></label>`;
+    }
+
+    /* Les chemins : ce qui a ete traduit tout seul, et ce qui attend
+       une decision. C'est le coeur du « sans reconfigurer ». */
+    const paths = info.paths || [];
+    if (paths.length) {
+      html += `<h4>${escapeHtmlAttr(i18n.t("clone.paths.title"))}</h4><div class="clone-paths">`;
+      for (const p of paths) {
+        const id = p.tile + "|" + p.key;
+        const chosen = clonePathChoices[id] || p.to;
+        html += `<div class="clone-path${p.needsChoice && !clonePathChoices[id] ? " clone-path-todo" : ""}">
+          <div class="clone-path-head"><b>${escapeHtmlAttr(p.widget)}</b> · ${escapeHtmlAttr(p.key)}</div>
+          <div class="clone-path-from">${escapeHtmlAttr(p.from)}</div>
+          <div class="clone-path-to">${chosen
+    ? "→ " + escapeHtmlAttr(chosen)
+    : escapeHtmlAttr(i18n.t("clone.paths.missing"))}</div>
+          <button type="button" class="btn small clone-path-pick" data-path="${escapeHtmlAttr(id)}">${escapeHtmlAttr(i18n.t("folder.browse"))}</button>
+        </div>`;
+      }
+      html += "</div>";
+    }
+    return html;
+  }
+
+  function openClonePreview(file, info) {
+    cloneFile = file;
+    cloneInfo = info;
+    for (const k of Object.keys(clonePathChoices)) delete clonePathChoices[k];
+    $("cloneModalTitle").textContent = i18n.t("clone.preview.title");
+    $("cloneBody").innerHTML = cloneSummaryHtml(info);
+    $("cloneActions").hidden = false;
+    $("cloneApplyBtn").disabled = false;
+    $("cloneModal").hidden = false;
+  }
+
+  async function applyCloneNow() {
+    if (!cloneFile) return;
+    const btn = $("cloneApplyBtn");
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const form = new FormData();
+      form.append("file", cloneFile);
+      form.append("paths", JSON.stringify(clonePathChoices));
+      const pass = $("cloneImportPassphrase");
+      if (pass) form.append("passphrase", pass.value);
+      const res = await fetch("/api/clone/import", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      $("cloneModalTitle").textContent = i18n.t("clone.report.title");
+      $("cloneBody").innerHTML = cloneReportHtml(data);
+      $("cloneActions").hidden = true;
+    } catch (e) {
+      $("cloneBody").innerHTML = `<p class="clone-warn">${escapeHtmlAttr(i18n.t("clone.importFailed") + " " + (e.message || e))}</p>`;
+      btn.disabled = false;
+    } finally {
+      btn.textContent = was;
+    }
+  }
+
+  /* Rapport d'import : ce qui a ete pose, ce qui reste a faire. Sans
+     lui, un clone « reussi » peut laisser trois tuiles muettes sans
+     qu'on comprenne pourquoi.
+     Without this report, a "successful" clone can leave three tiles
+     silent with no explanation. */
+  function cloneReportHtml(data) {
+    const r = data.report || {};
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtmlAttr(label)}</span><b>${escapeHtmlAttr(String(value))}</b></div>`;
+    let html = '<div class="clone-summary">';
+    html += line(i18n.t("clone.report.config"), (r.config || []).length);
+    html += line(i18n.t("clone.report.images"), (r.media || 0) + (r.library || 0));
+    html += line(i18n.t("clone.report.secrets"), r.secrets || 0);
+    html += line(i18n.t("clone.report.paths"), (r.paths || []).length);
+    html += "</div>";
+
+    const todo = [];
+    for (const w of r.warnings || []) {
+      if (w.kind === "path") todo.push(i18n.t("clone.report.pathTodo").replace("{widget}", w.widget).replace("{key}", w.key).replace("{from}", w.from));
+      else if (w.kind === "passphrase") todo.push(i18n.t("clone.report.passphraseMissing"));
+      else if (w.kind === "passphrase-wrong") todo.push(i18n.t("clone.report.passphraseWrong"));
+      else if (w.kind === "secret") todo.push(i18n.t("clone.report.secretFailed").replace("{key}", w.key));
+    }
+    /* Les secrets NON emportes sont a ressaisir : c'est la premiere
+       cause de tuile muette apres un clone. */
+    const contents = (data.info && data.info.manifest && data.info.manifest.contents) || {};
+    if (!contents.serviceKeys) todo.push(i18n.t("clone.report.noServiceKeys"));
+    if (!contents.personalSecrets) todo.push(i18n.t("clone.report.noPersonal"));
+
+    if (todo.length) {
+      html += `<h4>${escapeHtmlAttr(i18n.t("clone.report.todo"))}</h4><ul class="clone-todo">`;
+      for (const t of todo) html += `<li>${escapeHtmlAttr(t)}</li>`;
+      html += "</ul>";
+    }
+    if (data.safety) html += `<p class="hint">${escapeHtmlAttr(i18n.t("clone.report.safety"))}</p>`;
+    html += `<div class="form-actions"><button type="button" class="btn primary" id="cloneReloadBtn">${escapeHtmlAttr(i18n.t("clone.report.reload"))}</button></div>`;
+    return html;
+  }
+
+  function wireClone() {
+    const personal = $("clonePersonal");
+    if (personal) {
+      const sync = () => {
+        $("clonePassphraseField").hidden = !personal.checked;
+        $("clonePersonalWarn").hidden = !personal.checked;
+      };
+      personal.addEventListener("change", sync);
+      sync();
+    }
+    const exportBtn = $("cloneExportBtn");
+    if (exportBtn) onActivate(exportBtn, exportClone);
+
+    const importBtn = $("cloneImportBtn");
+    const input = $("cloneImportInput");
+    if (importBtn && input) {
+      onActivate(importBtn, () => input.click());
+      input.addEventListener("change", async () => {
+        const file = input.files && input.files[0];
+        input.value = "";
+        if (!file) return;
+        showBackupsMsg(i18n.t("clone.reading"));
+        try {
+          openClonePreview(file, await inspectClone(file));
+          showBackupsMsg("");
+          $("backupsMsg").hidden = true;
+        } catch (e) {
+          showBackupsMsg(i18n.t("clone.importFailed") + " " + (e.message || e), true);
+        }
+      });
+    }
+
+    const apply = $("cloneApplyBtn");
+    if (apply) onActivate(apply, applyCloneNow);
+
+    /* Choix d'un dossier pour un chemin sans equivalent : on reutilise
+       le selecteur de dossier deja present, plutot qu'un champ texte ou
+       il faudrait taper un chemin a l'aveugle.
+       Reuses the existing folder picker rather than a blind text box. */
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest && e.target.closest(".clone-path-pick");
+      if (!btn) return;
+      const id = btn.dataset.path;
+      openFolderPicker("", (picked) => {
+        clonePathChoices[id] = picked;
+        if (cloneInfo) $("cloneBody").innerHTML = cloneSummaryHtml(cloneInfo);
+      });
+    });
+    document.addEventListener("click", (e) => {
+      if (e.target && e.target.id === "cloneReloadBtn") location.reload();
+    });
+
+    wirePageTransfer();
+  }
+
+  /* ---------- Export / import d'UNE page / one page's transfer ----------
+     Meme forme que le clone complet juste au-dessus -- memes cases, meme
+     apercu avant ecriture, meme selecteur de dossier -- parce que c'est
+     le meme geste a une autre echelle. Deux interfaces differentes pour
+     deux portees du meme travail auraient oblige a reapprendre.
+     The same shape as the full clone above, because it is the same
+     gesture at another scale. */
+
+  let pagexFile = null;      // fichier en attente d'import / file awaiting import
+  let pagexInfo = null;      // ce que l'apercu a appris / what the preview learned
+  const pagexPathChoices = {};
+
+  function pagexOptions() {
+    return {
+      pageId: $("pagexPage") ? $("pagexPage").value : "",
+      includeImages: $("pagexImages").checked,
+      includeServiceKeys: $("pagexServiceKeys").checked,
+      includePersonalSecrets: $("pagexPersonal").checked,
+      passphrase: $("pagexPersonal").checked ? $("pagexPassphrase").value : ""
+    };
+  }
+
+  function showPagexMsg(text, isError) {
+    const el = $("pagexMsg");
+    if (!el) return;
+    el.hidden = !text;
+    el.textContent = text || "";
+    el.classList.toggle("backups-msg-error", !!isError);
+  }
+
+  /* La liste des pages vient du SERVEUR et non de l'etat du navigateur :
+     c'est lui qui detient la disposition enregistree, et une page creee
+     depuis un autre ecran doit figurer dans la liste.
+     The page list comes from the SERVER, which holds the saved layout: a
+     page created from another screen must appear in the list. */
+  async function loadPagexPages(selectId) {
+    const sel = $("pagexPage");
+    if (!sel) return;
+    try {
+      const r = await fetch("/api/page/list");
+      const d = await r.json();
+      const pages = Array.isArray(d.pages) ? d.pages : [];
+      sel.innerHTML = pages.map((p, i) => {
+        const name = p.name || (p.id === "main"
+          ? i18n.t("pagex.mainPage")
+          : i18n.t("pagex.pageN").replace("{n}", i + 1));
+        return `<option value="${escapeHtmlAttr(p.id)}">${escapeHtml(name)} · `
+          + escapeHtml(i18n.t("pagex.tileCount").replace("{n}", p.tiles)) + `</option>`;
+      }).join("");
+      if (selectId) sel.value = selectId;
+    } catch (e) {
+      sel.innerHTML = "";
+    }
+  }
+
+  async function exportPage() {
+    const btn = $("pagexExportBtn");
+    if (!btn) return;
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const res = await fetch("/api/page/export", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(pagexOptions())
+      });
+      if (!res.ok) throw new Error("HTTP " + res.status);
+      const blob = await res.blob();
+      const name = (res.headers.get("Content-Disposition") || "").match(/filename="([^"]+)"/);
+      downloadBlob(blob, name ? name[1] : "piboard-page.zip");
+      showPagexMsg(i18n.t("pagex.exported").replace("{size}", formatSize(blob.size)));
+    } catch (e) {
+      showPagexMsg(i18n.t("pagex.exportFailed") + " " + (e.message || e), true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = was;
+    }
+  }
+
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+  }
+
+  function pagexSummaryHtml(info) {
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`;
+    const m = info.manifest || {};
+    let html = "";
+
+    if (!info.intact) {
+      html += `<p class="clone-warn">${escapeHtml(i18n.t("pagex.damaged"))}</p>`;
+    }
+    if (info.newer) {
+      html += `<p class="clone-warn">${escapeHtml(i18n.t("clone.newer"))}</p>`;
+    }
+
+    html += line(i18n.t("pagex.info.page"), info.page && info.page.name ? info.page.name : i18n.t("pagex.unnamed"));
+    html += line(i18n.t("pagex.info.from"), (m.platform || "?") + (m.appVersion ? " · v" + m.appVersion : ""));
+    html += line(i18n.t("pagex.info.tiles"), String((info.counts && info.counts.tiles) || 0));
+    if (info.widgets && info.widgets.length) html += line(i18n.t("pagex.info.widgets"), info.widgets.join(", "));
+    html += line(i18n.t("pagex.info.images"),
+      ((info.counts && info.counts.media) || 0) + " · " + formatSize((info.counts && info.counts.mediaBytes) || 0));
+    html += line(i18n.t("pagex.info.theme"), i18n.t(info.hasTheme ? "common.yes" : "common.no"));
+
+    /* La DESTINATION, qui est le vrai choix de cette fenetre. Elle est
+       posee avant les details : c'est elle qui decide si quelque chose
+       sera ecrase, et c'est donc elle qu'on doit lire en premier.
+       The DESTINATION is this window's real choice, and the one that
+       decides whether anything gets overwritten -- so it comes first. */
+    const pages = Array.isArray(info.existingPages) ? info.existingPages : [];
+    const opts = pages.map((p, i) => {
+      const name = p.name || (p.id === "main" ? i18n.t("pagex.mainPage") : i18n.t("pagex.pageN").replace("{n}", i + 1));
+      return `<option value="${escapeHtmlAttr(p.id)}">${escapeHtml(name)} · `
+        + escapeHtml(i18n.t("pagex.tileCount").replace("{n}", p.tiles)) + `</option>`;
+    }).join("");
+    html += `<div class="clone-section"><h4>${escapeHtml(i18n.t("pagex.dest.title"))}</h4>
+      <label class="field checkbox"><input type="radio" name="pagexMode" value="new" checked>
+        <span>${escapeHtml(i18n.t("pagex.dest.new"))}</span></label>
+      <label class="field checkbox"><input type="radio" name="pagexMode" value="replace">
+        <span>${escapeHtml(i18n.t("pagex.dest.replace"))}</span></label>
+      <label class="field checkbox"><input type="radio" name="pagexMode" value="merge">
+        <span>${escapeHtml(i18n.t("pagex.dest.merge"))}</span></label>
+      <label class="field" id="pagexTargetField" hidden>
+        <span>${escapeHtml(i18n.t("pagex.dest.which"))}</span>
+        <select id="pagexTarget">${opts}</select>
+      </label>
+      <small class="field-hint">${escapeHtml(i18n.t("pagex.dest.hint"))}</small></div>`;
+
+    if (info.needsPassphrase) {
+      html += `<div class="clone-section"><h4>${escapeHtml(i18n.t("pagex.passphraseNeeded"))}</h4>
+        <input type="password" id="pagexImportPassphrase" autocomplete="off" spellcheck="false"></div>`;
+    }
+
+    const paths = Array.isArray(info.paths) ? info.paths : [];
+    if (paths.length) {
+      html += `<div class="clone-section"><h4>${escapeHtml(i18n.t("pagex.paths"))}</h4>`;
+      for (const p of paths) {
+        const chosen = pagexPathChoices[p.tile + "." + p.key];
+        const to = chosen || p.to;
+        html += `<div class="clone-path"><div class="clone-path-from">${escapeHtml(p.widget || "")} · ${escapeHtml(p.from || "")}</div>`
+          + (to
+            ? `<div class="clone-path-to">→ ${escapeHtml(to)}</div>`
+            : `<div class="clone-path-to clone-path-missing">${escapeHtml(i18n.t("pagex.pathChoose"))}</div>`)
+          + `<button type="button" class="btn small pagex-path-pick" data-path="${escapeHtmlAttr(p.tile + "." + p.key)}">${escapeHtml(i18n.t("pagex.pathPick"))}</button></div>`;
+      }
+      html += `</div>`;
+    }
+
+    html += `<p class="field-hint">${escapeHtml(i18n.t("pagex.safety"))}</p>`;
+    return html;
+  }
+
+  function openPagexPreview(file, info) {
+    pagexFile = file;
+    pagexInfo = info;
+    for (const k of Object.keys(pagexPathChoices)) delete pagexPathChoices[k];
+    $("pagexBody").innerHTML = pagexSummaryHtml(info);
+    syncPagexTarget();
+    $("pagexApplyBtn").disabled = !info.intact;
+    $("pagexModal").hidden = false;
+  }
+
+  /* Le choix de la page de destination ne concerne QUE « remplacer » et
+     « fusionner » : le laisser visible pour « nouvelle page » ferait
+     croire qu'on va ecrire dans la page affichee.
+     The destination page only concerns "replace" and "merge": leaving it
+     visible for "new page" would suggest writing into the shown page. */
+  function syncPagexTarget() {
+    const mode = pagexMode();
+    const field = $("pagexTargetField");
+    if (field) field.hidden = mode === "new";
+    const apply = $("pagexApplyBtn");
+    if (apply) apply.textContent = i18n.t(mode === "new" ? "pagex.applyNew" : "pagex.apply");
+  }
+
+  function pagexMode() {
+    const checked = document.querySelector('input[name="pagexMode"]:checked');
+    return checked ? checked.value : "new";
+  }
+
+  async function applyPageNow() {
+    if (!pagexFile) return;
+    const btn = $("pagexApplyBtn");
+    btn.disabled = true;
+    const was = btn.textContent;
+    btn.textContent = i18n.t("clone.working");
+    try {
+      const form = new FormData();
+      form.append("file", pagexFile);
+      form.append("mode", pagexMode());
+      const target = $("pagexTarget");
+      if (target) form.append("targetPageId", target.value);
+      form.append("paths", JSON.stringify(pagexPathChoices));
+      const pass = $("pagexImportPassphrase");
+      if (pass) form.append("passphrase", pass.value);
+      const res = await fetch("/api/page/import", { method: "POST", body: form });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+      $("pagexBody").innerHTML = pagexReportHtml(data);
+      $("pagexActions").innerHTML =
+        `<button type="button" class="btn primary" id="pagexReloadBtn">${escapeHtml(i18n.t("pagex.reload"))}</button>`;
+    } catch (e) {
+      showPagexMsg(i18n.t("pagex.importFailed") + " " + (e.message || e), true);
+      $("pagexModal").hidden = true;
+    } finally {
+      btn.textContent = was;
+    }
+  }
+
+  function pagexReportHtml(data) {
+    const r = data.report || {};
+    const line = (label, value) => `<div class="clone-line"><span>${escapeHtml(label)}</span><b>${escapeHtml(value)}</b></div>`;
+    let html = `<p>${escapeHtml(i18n.t("pagex.done"))}</p>`;
+    html += line(i18n.t("pagex.info.tiles"), String(r.tiles || 0));
+    html += line(i18n.t("pagex.info.images"), String(r.media || 0));
+    if (r.secrets) html += line(i18n.t("clone.report.secrets"), String(r.secrets));
+    if (r.themeAdded) html += line(i18n.t("pagex.info.theme"), r.themeAdded);
+    for (const w of (r.warnings || [])) {
+      const key = w.code === "theme-exists" ? "pagex.warn.themeExists"
+        : w.code === "passphrase-missing" ? "clone.report.passphraseMissing"
+          : w.code === "passphrase-wrong" ? "clone.report.passphraseWrong" : null;
+      if (key) html += `<p class="clone-warn">${escapeHtml(i18n.t(key))}</p>`;
+    }
+    /* La sauvegarde prise avant ecriture est RAPPELEE ici, et
+       telechargeable : savoir qu'un retour arriere existe au moment ou
+       l'on vient d'ecraser une page vaut mieux que de le decouvrir en
+       cherchant.
+       The backup taken before writing is recalled here, and
+       downloadable: knowing a way back exists at the moment one has just
+       overwritten a page beats discovering it while searching. */
+    if (data.safety) {
+      html += `<p class="field-hint">${escapeHtml(i18n.t("pagex.safetyDone"))}</p>`;
+      html += `<div class="backups-actions"><button type="button" class="btn small" id="pagexSafetyDl" data-id="${escapeHtmlAttr(data.safety)}">`
+        + escapeHtml(i18n.t("pagex.safetyDownload")) + `</button></div>`;
+    }
+    return html;
+  }
+
+  function wirePageTransfer() {
+    if (!$("pageTransferBox")) return;
+    loadPagexPages();
+
+    const personal = $("pagexPersonal");
+    if (personal) {
+      const sync = () => {
+        $("pagexPassphraseField").hidden = !personal.checked;
+        $("pagexPersonalWarn").hidden = !personal.checked;
+      };
+      personal.addEventListener("change", sync);
+      sync();
+    }
+
+    const exportBtn = $("pagexExportBtn");
+    if (exportBtn) onActivate(exportBtn, exportPage);
+
+    const importBtn = $("pagexImportBtn");
+    const input = $("pagexImportInput");
+    if (importBtn && input) {
+      onActivate(importBtn, () => input.click());
+      input.addEventListener("change", async () => {
+        const file = input.files && input.files[0];
+        input.value = "";
+        if (!file) return;
+        showPagexMsg(i18n.t("clone.reading"));
+        try {
+          const info = await inspectPageFile(file);
+          showPagexMsg("");
+          openPagexPreview(file, info);
+        } catch (e) {
+          showPagexMsg(i18n.t("pagex.importFailed") + " " + (e.message || e), true);
+        }
+      });
+    }
+
+    const apply = $("pagexApplyBtn");
+    if (apply) onActivate(apply, applyPageNow);
+
+    document.addEventListener("change", (e) => {
+      if (e.target && e.target.name === "pagexMode") syncPagexTarget();
+    });
+    document.addEventListener("click", (e) => {
+      const pick = e.target.closest && e.target.closest(".pagex-path-pick");
+      if (pick) {
+        const id = pick.dataset.path;
+        openFolderPicker("", (picked) => {
+          pagexPathChoices[id] = picked;
+          if (pagexInfo) { $("pagexBody").innerHTML = pagexSummaryHtml(pagexInfo); syncPagexTarget(); }
+        });
+        return;
+      }
+      if (e.target && e.target.id === "pagexReloadBtn") location.reload();
+      if (e.target && e.target.id === "pagexSafetyDl") {
+        /* Meme route que la liste des sauvegardes : une seule facon de
+           recuperer un fichier de sauvegarde, pas deux.
+           The same route as the backups list: one way to fetch a
+           backup file, not two. */
+        window.open("/api/backups/" + encodeURIComponent(e.target.dataset.id) + "/download", "_blank");
+      }
+    });
+  }
+
+  async function inspectPageFile(file) {
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch("/api/page/inspect", { method: "POST", body: form });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || ("HTTP " + res.status));
+    return data;
+  }
+
+  function wireContribute() {
+    const bug = $("btnReportBug");
+    const feature = $("btnRequestFeature");
+    if (bug) {
+      onActivate(bug, () => openContribute("bug"));
+      bug.addEventListener("contextmenu", (e) => { e.preventDefault(); openQr(contributeUrl("bug"), i18n.t("contribute.bug")); });
+    }
+    if (feature) {
+      onActivate(feature, () => openContribute("feature"));
+      feature.addEventListener("contextmenu", (e) => { e.preventDefault(); openQr(contributeUrl("feature"), i18n.t("contribute.feature")); });
+    }
+    const qrClose = $("qrClose");
+    if (qrClose) onActivate(qrClose, () => { $("qrModal").hidden = true; });
+    const qrCopy = $("qrCopy");
+    if (qrCopy) {
+      onActivate(qrCopy, () => {
+        const text = $("qrUrl").textContent;
+        if (navigator.clipboard) navigator.clipboard.writeText(text).catch(() => {});
+        qrCopy.textContent = i18n.t("qr.copied");
+        setTimeout(() => { qrCopy.textContent = i18n.t("qr.copy"); }, 2000);
+      });
+    }
+  }
+
+  function wireFolderPicker() {
+    onActivate($("folderClose"), closeFolderPicker);
+    onActivate($("folderCancel"), closeFolderPicker);
+    onActivate($("folderRoots"), () => loadRoots());
+    onActivate($("folderCreate"), () => createFolder());
+    $("folderNewName").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); createFolder(); }
+    });
+    onActivate($("folderChoose"), () => {
+      const pick = folderPicker.current;
+      const cb = folderPicker.onPick;
+      closeFolderPicker();
+      if (cb && pick) cb(pick);
+    });
+  }
+
+  /* ============================================================
+     Bibliotheque d'images
+     ============================================================
+     Une seule fenetre pour les trois usages (fond de page, tuile Logo,
+     diaporama). Elle ne connait pas ses appelants : on lui passe une
+     destination -- l'identifiant media de la tuile -- et ce qu'il faut
+     faire une fois l'image copiee. Le serveur copie l'image de la
+     bibliotheque vers le dossier de la tuile (voir server/library.js
+     pour le pourquoi de la copie).
+
+     A single window for the three uses (page background, Logo tile,
+     slideshow). It does not know its callers: it is handed a
+     destination -- the tile's media id -- and what to do once the image
+     is copied. The server copies the library image into the tile's
+     folder (see server/library.js for why a copy). */
+  const libraryState = {
+    items: [],
+    sections: [],
+    categories: [],
+    target: null,     // identifiant media de destination / destination media id
+    onPicked: null,   // rappel apres copie / callback after copying
+    section: "backgrounds"
+  };
+
+  let libraryLoadSeq = 0;
+
+  /* `opts.pickOnly` : choisir une image SANS la copier nulle part (le
+     rappel recoit { id, url, file }). Sert a tirer un theme d'un fond.
+     `opts.pickOnly`: pick an image WITHOUT copying it anywhere (the
+     callback receives { id, url, file }). Used to derive a theme from a
+     background. */
+  function openLibrary(target, section, onPicked, opts) {
+    libraryState.target = target;
+    libraryState.pickOnly = !!(opts && opts.pickOnly);
+    libraryState.onPicked = onPicked || null;
+    if (section) libraryState.section = section;
+    $("libraryModal").hidden = false;
+    refreshLibrary();
+  }
+
+  function closeLibrary() {
+    $("libraryModal").hidden = true;
+  }
+
+  function librarySetStatus(text, kind) {
+    const el = $("libraryStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("library-status-err", kind === "err");
+  }
+
+  async function refreshLibrary() {
+    const grid = $("libraryGrid");
+    if (!grid) return;
+    grid.innerHTML = `<p class="field-hint">${i18n.t("library.loading")}</p>`;
+    librarySetStatus("");
+    /* Chaque appel porte un numero : si l'utilisateur change de section
+       pendant un chargement, la reponse la plus ancienne ne vient pas
+       ecraser la plus recente.
+       Each call carries a number: if the user switches section during a
+       load, the older answer does not overwrite the newer one. */
+    const seq = ++libraryLoadSeq;
+    let failure = null;
+    try {
+      const r = await fetch("/api/library?section=" + encodeURIComponent(libraryState.section));
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ("status " + r.status));
+      if (seq !== libraryLoadSeq) return;
+      libraryState.items = Array.isArray(data.items) ? data.items : [];
+      libraryState.sections = Array.isArray(data.sections) && data.sections.length ? data.sections : ["backgrounds", "logos", "photos"];
+      libraryState.categories = Array.isArray(data.categories) ? data.categories : [];
+    } catch (e) {
+      if (seq !== libraryLoadSeq) return;
+      console.warn("[piboard] bibliotheque", e);
+      libraryState.items = [];
+      failure = e;
+    }
+    /* L'affichage est lui aussi protege : une erreur ici laissait le
+       message « Chargement... » en place indefiniment, sans rien dire.
+       Un echec doit se VOIR, et se distinguer d'un chargement en cours.
+       Rendering is guarded too: an error here used to leave the
+       "Loading..." message in place forever, silently. A failure must
+       SHOW, and be told apart from a load in progress. */
+    try {
+      renderLibraryFilters();
+      if (failure) {
+        grid.innerHTML = `<p class="field-hint library-status-err">${escapeHtml(i18n.t("library.loadFailed"))}</p>`;
+        librarySetStatus(String(failure.message || failure), "err");
+      } else {
+        renderLibraryGrid();
+      }
+    } catch (e) {
+      console.error("[piboard] affichage de la bibliotheque", e);
+      grid.innerHTML = `<p class="field-hint library-status-err">${escapeHtml(i18n.t("library.loadFailed"))}</p>`;
+      librarySetStatus(String(e.message || e), "err");
+    }
+  }
+
+  function renderLibraryFilters() {
+    const sectionSel = $("librarySection");
+    const catSel = $("libraryCategory");
+    if (sectionSel) {
+      sectionSel.innerHTML = libraryState.sections
+        .map((s) => `<option value="${s}" ${s === libraryState.section ? "selected" : ""}>${i18n.t("library.section." + s)}</option>`)
+        .join("");
+    }
+    if (catSel) {
+      const current = catSel.value;
+      catSel.innerHTML = `<option value="">${i18n.t("library.category.any")}</option>` +
+        libraryState.categories.map((c) => `<option value="${escapeHtmlAttr(c)}">${escapeHtml(c)}</option>`).join("");
+      catSel.value = libraryState.categories.includes(current) ? current : "";
+    }
+  }
+
+  function renderLibraryGrid() {
+    const grid = $("libraryGrid");
+    if (!grid) return;
+    const cat = $("libraryCategory").value;
+    const tone = $("libraryTone").value;
+    const q = String($("librarySearch").value || "").trim().toLowerCase();
+
+    const items = libraryState.items.filter((it) => {
+      if (cat && it.category !== cat) return false;
+      if (tone && it.tone !== tone) return false;
+      if (q && !((it.name || "") + " " + (it.category || "") + " " + (it.author || "")).toLowerCase().includes(q)) return false;
+      return true;
+    });
+
+    if (!items.length) {
+      grid.innerHTML = `<p class="field-hint">${i18n.t("library.empty")}</p>`;
+      return;
+    }
+
+    grid.innerHTML = items.map((it) => `
+      <div class="library-item" data-id="${escapeHtmlAttr(it.id)}">
+        <img src="${escapeHtmlAttr(it.thumb || it.url)}" alt="" loading="lazy">
+        <span class="library-item-name">${escapeHtml(it.name)}</span>
+        <span class="library-item-meta">${escapeHtml([
+          it.category || "",
+          it.width && it.height ? it.width + "\u00d7" + it.height : "",
+          it.author ? "\u00a9 " + it.author : ""
+        ].filter(Boolean).join(" \u00b7 "))}</span>
+        <button type="button" class="library-item-del" data-origin="${it.origin}"
+                title="${escapeHtmlAttr(i18n.t(it.origin === "user" ? "library.delete" : "library.hide"))}">&times;</button>
+      </div>`).join("");
+
+    grid.querySelectorAll(".library-item").forEach((el) => {
+      onActivate(el, (e) => {
+        if (e && e.target && e.target.closest(".library-item-del")) return;
+        pickLibraryItem(el.dataset.id);
+      });
+      onActivate(el.querySelector(".library-item-del"), async (e) => {
+        if (e) e.stopPropagation();
+        const isUser = el.querySelector(".library-item-del").dataset.origin === "user";
+        // Un element livre est masque, pas efface : il reviendrait a la
+        // mise a jour suivante, et l'utilisateur croirait a un bug.
+        // A shipped item is hidden, not erased: it would come back with
+        // the next update and the user would think it a bug.
+        if (!window.confirm(i18n.t(isUser ? "library.deleteConfirm" : "library.hideConfirm"))) return;
+        await fetch("/api/library/" + encodeURIComponent(el.dataset.id), { method: "DELETE" }).catch(() => null);
+        refreshLibrary();
+      });
+    });
+  }
+
+  async function pickLibraryItem(id) {
+    if (libraryState.pickOnly) {
+      const it = libraryState.items.find((x) => x.id === id);
+      closeLibrary();
+      if (it && libraryState.onPicked) libraryState.onPicked({ id, url: it.url, file: it.file, name: it.name });
+      return;
+    }
+    if (!libraryState.target) return;
+    librarySetStatus(i18n.t("library.copying"));
+    try {
+      const r = await fetch("/api/media/" + encodeURIComponent(libraryState.target) + "/from-library", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id })
+      });
+      const out = await r.json();
+      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      librarySetStatus("");
+      closeLibrary();
+      if (libraryState.onPicked) libraryState.onPicked(out.name);
+    } catch (e) {
+      console.warn("[piboard] copie depuis la bibliotheque", e);
+      librarySetStatus(i18n.t("library.copyFailed"), "err");
+    }
+  }
+
+  async function uploadToLibrary(files) {
+    if (!files || !files.length) return;
+    const form = new FormData();
+    for (const f of files) form.append("images", f);
+    librarySetStatus(i18n.t("library.uploading"));
+    try {
+      const r = await fetch("/api/library/" + encodeURIComponent(libraryState.section), { method: "POST", body: form });
+      const out = await r.json();
+      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      librarySetStatus("");
+      refreshLibrary();
+    } catch (e) {
+      console.warn("[piboard] ajout a la bibliotheque", e);
+      librarySetStatus(i18n.t("library.uploadFailed"), "err");
+    }
+  }
+
+  /* Catalogue en ligne : on liste ce qui est disponible, et chaque
+     element se telecharge a la demande dans la bibliotheque
+     personnelle. Rien n'est rapatrie automatiquement -- une connexion
+     de campagne n'a pas a subir un pre-chargement decide par le
+     tableau de bord.
+     Online catalogue: we list what is available, and each item
+     downloads on demand into the personal library. Nothing is fetched
+     automatically -- a rural connection should not suffer a pre-fetch
+     decided by the dashboard. */
+  async function showLibraryCatalog() {
+    const grid = $("libraryGrid");
+    grid.innerHTML = `<p class="field-hint">${i18n.t("library.loading")}</p>`;
+    let items = [];
+    try {
+      const r = await fetch("/api/library-catalog");
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ("status " + r.status));
+      items = (data.items || []).filter((i) => i.section === libraryState.section);
+    } catch (e) {
+      console.warn("[piboard] catalogue en ligne", e);
+      grid.innerHTML = `<p class="field-hint">${i18n.t("library.catalogFailed")}</p>`;
+      return;
+    }
+    if (!items.length) {
+      grid.innerHTML = `<p class="field-hint">${i18n.t("library.catalogEmpty")}</p>`;
+      return;
+    }
+    grid.innerHTML = items.map((it, i) => `
+      <div class="library-item library-remote" data-idx="${i}">
+        <img src="${escapeHtmlAttr(it.thumb || it.url)}" alt="" loading="lazy">
+        <span class="library-item-name">${escapeHtml(it.name || it.file || "")}</span>
+        <span class="library-item-meta">${escapeHtml([it.category || "", it.author ? "\u00a9 " + it.author : ""].filter(Boolean).join(" \u00b7 "))}</span>
+        <button type="button" class="btn small library-get">${i18n.t("library.get")}</button>
+      </div>`).join("");
+    grid.querySelectorAll(".library-item").forEach((el) => {
+      onActivate(el.querySelector(".library-get"), async (e) => {
+        if (e) e.stopPropagation();
+        librarySetStatus(i18n.t("library.downloading"));
+        try {
+          const r = await fetch("/api/library-catalog/fetch", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ entry: items[Number(el.dataset.idx)] })
+          });
+          const out = await r.json();
+          if (!r.ok) throw new Error(out.error || ("status " + r.status));
+          librarySetStatus("");
+          refreshLibrary();
+        } catch (err) {
+          console.warn("[piboard] telechargement catalogue", err);
+          librarySetStatus(i18n.t("library.downloadFailed"), "err");
+        }
+      });
+    });
+  }
+
+  async function refreshPageBgList() {
+    const grid = $("pageBgGrid");
+    const status = $("pageBgStatus");
+    const target = pageBgTarget();
+    if (!grid || !target) return;
+    status.hidden = true;
+    const mediaId = backgroundMediaId(pageBgIndex);
+    try {
+      const data = await fetch("/api/media/" + encodeURIComponent(mediaId)).then((r) => r.json());
+      const items = data.items || [];
+      const current = target.background.image || "";
+      grid.innerHTML = items.length
+        ? items.map((it) => `
+            <div class="page-bg-thumb${it.name === current ? " selected" : ""}" data-name="${escapeHtmlAttr(it.name)}">
+              <img src="${escapeHtmlAttr(it.url)}" alt="">
+              <button type="button" class="page-bg-thumb-del" title="${escapeHtmlAttr(i18n.t("pagebg.delete"))}">&times;</button>
+            </div>`).join("")
+        : `<p class="field-hint">${i18n.t("pagebg.empty")}</p>`;
+      grid.querySelectorAll(".page-bg-thumb").forEach((el) => {
+        onActivate(el, (e) => {
+          if (e && e.target && e.target.closest(".page-bg-thumb-del")) return;
+          commitPageBackground({ image: el.dataset.name });
+        });
+        onActivate(el.querySelector(".page-bg-thumb-del"), async (e) => {
+          if (e) e.stopPropagation();
+          await fetch("/api/media/" + encodeURIComponent(mediaId) + "/" + encodeURIComponent(el.dataset.name),
+            { method: "DELETE" }).catch(() => null);
+          // Le fond qui vient d'etre supprime ne doit pas rester
+          // reference : la page afficherait une image introuvable.
+          // The just-deleted background must not stay referenced: the
+          // page would show a missing image.
+          if (target.background.image === el.dataset.name) commitPageBackground({ image: "" });
+          else refreshPageBgList();
+        });
+      });
+    } catch (e) {
+      status.hidden = false;
+      status.textContent = i18n.t("pagebg.error");
+    }
+  }
+
+  async function uploadPageBackground(fileList) {
+    if (!fileList || !fileList.length) return;
+    const status = $("pageBgStatus");
+    status.hidden = false;
+    status.textContent = i18n.t("common.loading");
+    const form = new FormData();
+    // Champ "photos" : c'est le nom attendu par l'API media, partagee
+    // avec le Diaporama et la tuile Logo/Image.
+    // Field "photos": the name the media API, shared with the Slideshow
+    // and the Logo/Image tile, expects.
+    for (const f of fileList) form.append("photos", f);
+    try {
+      const res = await fetch("/api/media/" + encodeURIComponent(backgroundMediaId(pageBgIndex)),
+        { method: "POST", body: form });
+      if (!res.ok) throw new Error("status " + res.status);
+      status.hidden = true;
+      /* Televerser une image POUR un fond de page, c'est vouloir la voir
+         en fond : si la page n'en a pas encore, la derniere arrivee est
+         choisie d'office. Sans cela, l'image apparaissait dans la
+         pellicule sans rien changer a la page, et il fallait deviner
+         qu'un clic supplementaire sur la vignette etait attendu.
+         Uploading an image FOR a page background means wanting to see it
+         as the background: if the page has none yet, the last one in is
+         picked outright. Without this, the image appeared in the strip
+         without changing anything on the page, and one had to guess that
+         an extra click on the thumbnail was expected. */
+      const target = pageBgTarget();
+      const had = target && normalizeBackground(target.background).image;
+      await refreshPageBgList();
+      if (!had) {
+        const data = await fetch("/api/media/" + encodeURIComponent(backgroundMediaId(pageBgIndex)))
+          .then((r) => r.json()).catch(() => null);
+        const items = (data && data.items) || [];
+        // La liste est triee du plus ancien au plus recent : la derniere
+        // entree est celle qui vient d'etre televersee.
+        // The list is sorted oldest first: the last entry is the one just
+        // uploaded.
+        if (items.length) commitPageBackground({ image: items[items.length - 1].name });
+      }
+    } catch (e) {
+      status.hidden = false;
+      status.textContent = i18n.t("pagebg.uploadError");
+    }
+    $("pageBgFile").value = "";
+  }
+
+  function addPage() {
+    const page = createPageElement({ id: newPageId() });
+    page.name = "";
+    page.transition = normalizeTransition(null);
+    page.dwellSeconds = null;
+    page.background = normalizeBackground(null);
+    page.tiles = [];
+    pages.push(page);
+    applyDisplayMode();
+    renderPagesEditor();
+    renderPageIndicator();
+    scheduleSave();
+  }
+
+  /* Supprimer une page detruit AUSSI ses tuiles : elles n'existent que
+     la. On demonte proprement chacune d'elles plutot que de retirer le
+     conteneur, sans quoi leurs minuteries et leurs connexions
+     continueraient de tourner dans le vide.
+     Deleting a page ALSO destroys its tiles: they exist nowhere else. We
+     unmount each of them cleanly rather than removing the container,
+     otherwise their timers and connections would keep running into the
+     void. */
+  function deletePage(index) {
+    const p = pages[index - 1];
+    if (!p) return;
+    const zone = "page:" + p.id;
+    const count = Array.from(tiles.values()).filter((r) => r.zone === zone).length;
+    const label = p.name || (i18n.t("dash.page") + " " + (index + 1));
+    if (count > 0 && !window.confirm(i18n.t("settings.pages.confirmDelete").replace("{n}", count).replace("{name}", label))) return;
+    for (const [id, rec] of Array.from(tiles.entries())) {
+      if (rec.zone !== zone) continue;
+      destroyInstance(rec);
+      tiles.delete(id);
+    }
+    destroyPageElement(p);
+    pages.splice(index - 1, 1);
+    if (activePageIndex >= pageCount()) activePageIndex = 0;
+    applyDisplayMode();
+    renderPagesEditor();
+    renderPageIndicator();
+    scheduleSave();
+  }
+
+  function fillUpdatesForm() {
+    renderUpdateState();
+  }
+
+  /* Changer de canal ne sert a rien tant que la verification n'a pas ete
+     refaite : la version affichee viendrait encore de l'ancien canal.
+     On relance donc une verification a l'enregistrement, mais SEULEMENT
+     si le reglage a change -- sinon chaque enregistrement des reglages
+     generaux irait solliciter GitHub sans raison.
+     Switching channel is useless until the check has been re-run: the
+     version shown would still come from the old channel. So we re-run a
+     check on save, but ONLY if the setting changed -- otherwise every
+     save of the general settings would hit GitHub for nothing. */
+  function onUpdateChannelSaved(previous, next) {
+    if (previous === next) return;
+    updateDismissedVersion = null;
+    checkForUpdatesNow();
+  }
+
+  function openSettings() {
+    $("setLang").value = settings.lang;
+    $("setTheme").value = settings.theme;
+    $("setRows").value = settings.gridRows;
+    $("setKeyboard").checked = !!settings.keyboardEnabled;
+    $("setTouch").checked = !!settings.touchMode;
+    $("setTouchScroll").value = settings.touchScroll || "both";
+    $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
+    $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
+    $("setCartoKey").value = settings.cartoKey || "";
+    $("setUpdateChannel").value = settings.updateChannel === "preview" ? "preview" : "stable";
+    $("setDisplayMode").value = settings.displayMode === "dashboard" ? "dashboard" : "classic";
+    $("setPageAuto").checked = !!settings.pageAutoAdvance;
+    $("setPageAutoSeconds").value = settings.pageAutoSeconds || 30;
+    renderPagesEditor();
+    // Couverture des tiroirs : lue depuis leur etat reel (persiste via
+    // le layout, pas les reglages generaux -- voir le commentaire sur
+    // les ecouteurs "change" plus bas) plutot que dupliquee ici.
+    // Drawer coverage: read from their actual state (persisted via the
+    // layout, not general settings -- see the comment on the "change"
+    // listeners below) rather than duplicated here.
+    for (const def of DRAWER_DEFS) {
+      const d = drawers.get(def.side);
+      if (d) $("setDrawer" + def.side[0].toUpperCase() + def.side.slice(1) + "Pct").value = d.sizePct;
+    }
+    pendingCity = null;
+    $("setCity").value = "";
+    $("citySuggest").hidden = true;
+    $("cityCurrent").textContent = cityCurrentLabel();
+    const colors = currentColors();
+    $("setDarkBg").value = colors.dark.bg;
+    $("setDarkTile").value = colors.dark.tile;
+    $("setLightBg").value = colors.light.bg;
+    $("setLightTile").value = colors.light.tile;
+    refreshThemeButtons();
+    fillScreensaverForm();
+    fillDesktopAppForm();
+    fillMediaToolsForm();
+    /* Relecture a chaque ouverture des reglages : l'outil a pu etre
+       installe entre-temps en dehors de PiBoard (apt, logitheque). La
+       fenetre s'affiche sans attendre la reponse, qui ne fait que
+       rafraichir deux lignes.
+       Re-read on every opening of the settings: the tool may have been
+       installed meanwhile outside PiBoard (apt, software centre). The
+       window shows without waiting for the answer, which only refreshes
+       two lines. */
+    refreshMediaTools().then(fillMediaToolsForm);
+    fillUpdatesForm();
+    $("settingsModal").hidden = false;
+    requestAnimationFrame(() => layoutFormColumns(document.querySelector("#settingsModal .form"), { preferMax: true }));
+  }
+
+  async function saveSettings() {
+    const previousChannel = settings.updateChannel === "preview" ? "preview" : "stable";
+    const body = {
+      lang: $("setLang").value,
+      theme: $("setTheme").value,
+      gridRows: Math.max(4, Math.min(16, Number($("setRows").value) || 8)),
+      keyboardEnabled: $("setKeyboard").checked,
+      touchMode: $("setTouch").checked,
+      touchScroll: $("setTouchScroll").value,
+      multiColumnForms: $("setMultiColumnForms").checked,
+      quickStartOnLaunch: $("setQuickStart").checked,
+      cartoKey: $("setCartoKey").value.trim(),
+      updateChannel: $("setUpdateChannel").value === "preview" ? "preview" : "stable",
+      displayMode: $("setDisplayMode").value === "dashboard" ? "dashboard" : "classic",
+      immersive: $("setImmersive").checked,
+      pageAutoAdvance: $("setPageAuto").checked,
+      pageAutoSeconds: Math.max(3, Math.min(3600, Number($("setPageAutoSeconds").value) || 30)),
+      /* Les quatre pastilles retouchent le theme PiBoard : on fusionne,
+         pour ne pas effacer ce que l'editeur de themes y a regle.
+         The four swatches tweak the PiBoard theme: merge, so as not to
+         wipe what the theme editor set there. */
+      colors: Object.assign({}, settings.colors, {
+        dark: Object.assign({}, settings.colors && settings.colors.dark, { bg: $("setDarkBg").value, tile: $("setDarkTile").value }),
+        light: Object.assign({}, settings.colors && settings.colors.light, { bg: $("setLightBg").value, tile: $("setLightTile").value })
+      }),
+      screensaver: collectScreensaverSettings()
+    };
+    if (pendingCity) {
+      body.cityName = pendingCity.name;
+      body.latitude = pendingCity.lat;
+      body.longitude = pendingCity.lon;
+    }
+    /* Le lancement au demarrage de la session n'est PAS un reglage
+       PiBoard : il vit dans le systeme d'exploitation, pas dans
+       data/settings.json. Il est donc applique par une route dediee,
+       separement, et son echec eventuel ne doit pas empecher
+       l'enregistrement du reste.
+       Launch at session startup is NOT a PiBoard setting: it lives in
+       the operating system, not in data/settings.json. It is therefore
+       applied through a dedicated route, separately, and its possible
+       failure must not prevent the rest from being saved. */
+    if (appIntegration.desktopApp && appIntegration.autoStart && appIntegration.autoStart.supported) {
+      const wanted = $("setAutoStart").checked;
+      if (wanted !== !!appIntegration.autoStart.enabled) {
+        try {
+          const r = await fetch("/api/system/autostart", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ enabled: wanted })
+          });
+          if (r.ok) appIntegration.autoStart = await r.json();
+        } catch (e) {
+          // Sans effet sur le reste des reglages / no effect on the other settings
+        }
+      }
+    }
+
+    /* Un changement de cle CARTO doit se voir tout de suite. Les tuiles
+       cartographiques construisent leur URL de fond une seule fois, a
+       la creation de la couche Leaflet : sans remontage, la carte
+       garderait ses tuiles filigranees jusqu'au prochain rechargement
+       de page, et on croirait la cle refusee alors qu'elle est bonne.
+       A CARTO key change must show immediately. The map tiles build
+       their base URL once, when the Leaflet layer is created: without a
+       remount the map would keep its watermarked tiles until the next
+       page reload, and one would think the key was rejected when it is
+       in fact fine. */
+    const cartoChanged = (settings.cartoKey || "") !== body.cartoKey;
+
+    settings = await apiPut("/api/settings", body);
+    if (cartoChanged) remountMapTiles();
+    onUpdateChannelSaved(previousChannel, body.updateChannel);
+    scheduleAutoAdvance();
+    $("settingsModal").hidden = true;
+    vkb.hide();
+    applySettings();
+    vkb.setEnabled(!!settings.keyboardEnabled);
+    vkb.setLang(settings.lang);
+  }
+
+  /* Les trois tuiles qui partagent le fond de carte CARTO. Liste
+     explicite plutot qu'une detection : une tuile qui n'affiche pas de
+     carte n'a aucune raison d'etre redemarree, et un remontage inutile
+     relance des appels reseau.
+     The three tiles sharing the CARTO base map. An explicit list rather
+     than detection: a tile showing no map has no reason to be
+     restarted, and a needless remount re-fires network calls. */
+  const MAP_WIDGETS = ["traffic", "radar", "planes"];
+
+  function remountMapTiles() {
+    for (const rec of tiles.values()) {
+      if (!MAP_WIDGETS.includes(rec.conf.widget)) continue;
+      // Remontage COMPLET et non onSettingsChanged : la couche de fond
+      // Leaflet doit etre reconstruite, ce qu'un simple rafraichissement
+      // des reglages ne fait pas.
+      // FULL remount rather than onSettingsChanged: the Leaflet base
+      // layer has to be rebuilt, which merely refreshing the settings
+      // does not do.
+      destroyInstance(rec);
+      startWidget(rec);
+    }
+  }
+
+  /* Autocompletion de ville (Open-Meteo, comme City Road Traffic)
+     City autocomplete (Open-Meteo geocoding) */
+  let citySearchTimer = null;
+
+  async function citySearch(query) {
+    const url = "https://geocoding-api.open-meteo.com/v1/search?count=5&name=" + encodeURIComponent(query)
+      + "&language=" + (i18n.lang === "fr" ? "fr" : "en");
+    const data = await fetch(url).then((r) => r.json());
+    return (data.results || []).map((r) => ({
+      name: r.name,
+      detail: [r.admin1, r.country].filter(Boolean).join(", "),
+      lat: r.latitude,
+      lon: r.longitude
+    }));
+  }
+
+  function initCitySearch() {
+    const input = $("setCity");
+    const list = $("citySuggest");
+
+    input.addEventListener("input", () => {
+      clearTimeout(citySearchTimer);
+      const q = input.value.trim();
+      if (q.length < 2) { list.hidden = true; return; }
+      citySearchTimer = setTimeout(async () => {
+        try {
+          const results = await citySearch(q);
+          list.innerHTML = results.length
+            ? results.map((r, idx) =>
+                `<button type="button" data-idx="${idx}">${r.name} <small>${r.detail}</small></button>`
+              ).join("")
+            : `<button type="button" disabled>${i18n.t("settings.city.none")}</button>`;
+          list.hidden = false;
+          list._results = results;
+        } catch (e) {
+          list.hidden = true;
+        }
+      }, 300);
+    });
+
+    list.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-idx]");
+      if (!btn) return;
+      const r = list._results[Number(btn.dataset.idx)];
+      pendingCity = { name: r.name + (r.detail ? " (" + r.detail + ")" : ""), lat: r.lat, lon: r.lon };
+      input.value = "";
+      list.hidden = true;
+      $("cityCurrent").textContent = cityCurrentLabel();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!e.target.closest(".city-box")) list.hidden = true;
+    });
+  }
+
+  /* Menu "Quitter le tableau de bord" : deux options distinctes.
+     - Reinitialiser le tableau de bord : un simple location.reload().
+       Purement cote navigateur, ca marche a l'identique depuis le
+       kiosque ou depuis n'importe quel autre navigateur qui affiche
+       PiBoard -- chacun ne recharge que son propre onglet. Pas besoin
+       du serveur ni de toucher au processus Chromium : c'est deja un
+       rechargement complet et fiable du tableau de bord.
+     - Revenir au bureau : appelle /api/system/exit-to-desktop cote
+       serveur. Le fichier autostart labwc reellement deploye enveloppe
+       Chromium dans le superviseur "lwrespawn", qui le relance
+       automatiquement des qu'il se ferme -- tuer Chromium seul ne
+       revele donc jamais le bureau. Cette route tue D'ABORD lwrespawn,
+       PUIS Chromium (voir server/index.js pour le detail et pourquoi
+       l'ordre compte). N'agit que depuis le kiosque local ; depuis un
+       autre navigateur, le serveur refuse et on se contente de fermer
+       l'onglet (meme logique que documentee plus bas dans
+       performExit()).
+
+     "Exit dashboard" menu: two distinct options.
+     - Reset the dashboard: a plain location.reload(). Purely
+       client-side, works identically from the kiosk or from any other
+       browser displaying PiBoard -- each one only reloads its own tab.
+       No need for the server or to touch the Chromium process at all:
+       this is already a complete, reliable reload of the dashboard.
+     - Return to the desktop: calls the server's
+       /api/system/exit-to-desktop. The actually deployed labwc autostart
+       file wraps Chromium in the "lwrespawn" supervisor, which
+       automatically relaunches it as soon as it closes -- so killing
+       Chromium alone never reveals the desktop. This route kills
+       lwrespawn FIRST, THEN Chromium (see server/index.js for the
+       detail and why the order matters). Only acts from the local
+       kiosk; from another browser, the server refuses and we just close
+       the tab (same logic documented further below in performExit()). */
+  function openExitMenu() {
+    /* La troisieme sortie n'apparait que la ou elle fonctionne : le
+       serveur dit s'il tourne sous Linux (canShutdown). Sous Windows et
+       macOS, le menu d'arret du systeme est a portee de souris, doubler
+       ce bouton ici n'apporterait rien. Le reglage est relu a chaque
+       ouverture plutot qu'une fois au demarrage : le meme onglet peut
+       avoir ete ouvert sur un autre PiBoard (favori, ecran partage).
+       The third exit only appears where it works: the server says
+       whether it runs on Linux (canShutdown). On Windows and macOS the
+       system's shutdown menu is a mouse click away, duplicating that
+       button here would add nothing. The flag is re-read on each
+       opening rather than once at startup: the same tab may have been
+       pointed at another PiBoard (bookmark, shared screen). */
+    $("exitOptionShutdown").hidden = !appIntegration.canShutdown;
+    $("exitMenuModal").hidden = false;
+  }
+
+  function resetDashboard() {
+    $("exitMenuModal").hidden = true;
+    location.reload();
+  }
+
+  async function performExit(endpoint, fallbackText) {
+    try {
+      await fetch(endpoint, { method: "POST" });
+    } catch (e) {
+      console.warn("[piboard] exit", endpoint, e);
+    }
+    // Dans les deux cas (le kiosque local va se fermer de lui-meme, ou la
+    // requete a ete refusee car on est ailleurs) : fermer l'onglet est le
+    // bon geste ici, ou n'a simplement aucun effet si le navigateur
+    // l'interdit (onglet non ouvert par script) -- sans consequence.
+    // Either way (the local kiosk is about to close on its own, or the
+    // request was refused because we're elsewhere): closing the tab is
+    // the right move here, or simply has no effect if the browser
+    // disallows it (tab not opened by script) -- harmless either way.
+    window.close();
+    // window.close() est une restriction de securite universelle des
+    // navigateurs : un script ne peut fermer que les onglets qu'il a
+    // lui-meme ouverts via window.open(). Sur un onglet ouvert
+    // normalement (tape dans la barre d'adresse, favori, etc.), l'appel
+    // echoue silencieusement -- aucune page web, aucun code cote client,
+    // ne peut contourner cette regle. Si on est encore la un instant
+    // plus tard, c'est que ca s'est produit : on affiche alors un
+    // message clair plutot que de laisser croire que rien ne s'est passe.
+    // window.close() is a universal browser security restriction: a
+    // script can only close tabs it opened itself via window.open(). On
+    // a normally-opened tab (typed in the address bar, a bookmark, etc.),
+    // the call silently fails -- no web page, no client-side code, can
+    // bypass this rule. If we're still here a moment later, that's what
+    // happened: we then show a clear message instead of leaving the
+    // impression that nothing happened.
+    setTimeout(() => {
+      $("exitFallbackText").textContent = fallbackText;
+      $("exitFallback").hidden = false;
+    }, 300);
+  }
+
+  function exitToDesktop() {
+    $("exitMenuModal").hidden = true;
+    performExit("/api/system/exit-to-desktop", i18n.t("exit.desktop.fallback"));
+  }
+
+  /* Extinction de la machine. Trois differences avec les deux autres
+     sorties, toutes voulues :
+       1. Une confirmation. Les deux autres sont rattrapables en
+          quelques secondes ; celle-ci oblige a se lever pour rallumer,
+          et le bouton est juste sous le doigt sur un ecran tactile.
+       2. On ATTEND la reponse au lieu de fermer l'onglet aussitot :
+          systemd-logind laisse quelques secondes avant de couper, et
+          surtout un refus (droits insuffisants sur une installation
+          ancienne) doit pouvoir etre explique plutot que de laisser
+          croire a une extinction qui n'aura pas lieu.
+       3. Aucun repli "vous pouvez fermer cet onglet" : si tout va bien
+          la machine s'eteint, l'onglet disparait avec elle.
+     Powering the machine off. Three differences from the other two
+     exits, all deliberate:
+       1. A confirmation. The other two are undoable within seconds;
+          this one means getting up to switch the machine back on, and
+          the button sits right under the finger on a touchscreen.
+       2. The response is AWAITED instead of closing the tab at once:
+          systemd-logind leaves a few seconds before cutting power, and
+          above all a refusal (insufficient rights on an older install)
+          must be explainable rather than suggesting a shutdown that
+          will not happen.
+       3. No "you may close this tab" fallback: if all goes well the
+          machine switches off, and the tab goes with it. */
+  async function shutdownMachine() {
+    if (!window.confirm(i18n.t("exit.shutdown.confirm"))) return;
+    const btn = $("exitOptionShutdown");
+    const title = btn.querySelector(".exit-option-title");
+    const label = title.textContent;
+    title.textContent = i18n.t("exit.shutdown.going");
+    btn.disabled = true;
+    try {
+      const r = await fetch("/api/system/shutdown", { method: "POST" });
+      const out = await r.json().catch(() => ({}));
+      if (out && out.ok) return; // la machine s'eteint / the machine is going down
+      console.warn("[piboard] shutdown", out);
+      showShutdownDenied(out || {});
+    } catch (e) {
+      console.warn("[piboard] shutdown", e);
+      showShutdownDenied({ cause: "unknown", detail: String(e.message || e) });
+    }
+    title.textContent = label;
+    btn.disabled = false;
+  }
+
+  /* Refus d'extinction : la CAUSE reelle, et la commande exacte qui la
+     corrige quand elle existe. Le message generique d'avant renvoyait
+     toujours a install.sh, meme quand la cause etait ailleurs.
+     Shutdown refused: the actual CAUSE, and the exact command that
+     fixes it when there is one. */
+  function shutdownFixCommand(out) {
+    if (!out.fixScriptExists || !out.fixScript) return "";
+    const user = out.user ? " " + out.user : "";
+    const extra = out.cause === "multiple-sessions" ? " --other-sessions"
+      : out.cause === "inhibited" ? " --ignore-inhibit" : "";
+    if (out.cause === "unknown") return "";
+    return "sudo bash " + out.fixScript + user + extra;
+  }
+
+  function showShutdownDenied(out) {
+    const cause = ["no-rule", "multiple-sessions", "inhibited"].includes(out.cause) ? out.cause : "unknown";
+    let text = i18n.t("exit.shutdown.cause." + cause);
+    if (cause === "multiple-sessions" && out.otherUsers && out.otherUsers.length) text += " (" + out.otherUsers.join(", ") + ")";
+    $("shutdownDeniedCause").textContent = text;
+    const cmd = shutdownFixCommand(out);
+    $("shutdownDeniedCmd").textContent = cmd;
+    $("shutdownDeniedCmd").hidden = !cmd;
+    $("shutdownDeniedFixIntro").hidden = !cmd;
+    const details = [out.detail || ""].concat((out.blockers || []).map((b) => "inhibit: " + b)).filter(Boolean);
+    $("shutdownDeniedDetail").textContent = details.join("\n") || "-";
+    $("exitMenuModal").hidden = true;
+    $("shutdownDeniedModal").hidden = false;
+  }
+
+  /* ---------- Economiseur d'ecran / screensaver ---------- */
+
+  const SS_SLOT_COUNT = 5;
+  let ssActiveInstance = null;   // instance SlideshowWidget en cours, ou null (mode noir / inactif)
+  let ssActiveSlotKey = null;    // identifie la plage actuellement affichee, pour eviter de la rouvrir apres reveil manuel
+  let ssDismissedKey = null;     // plage que l'utilisateur a explicitement fermee (ne se rouvre pas avant la prochaine plage)
+
+  /* Options du delai avant retour automatique en veille, en minutes ; 0 =
+     desactive (comportement d'origine : reste reveille jusqu'a la
+     prochaine plage). Options for the auto-return-to-screensaver delay,
+     in minutes; 0 = disabled (original behavior: stays awake until the
+     next slot). */
+  const SS_INACTIVITY_OPTIONS = [0, 1, 2, 5, 10, 15, 30];
+
+  /* Horodatage de la derniere activite utilisateur (touche/clic/tap),
+     utilise uniquement pour re-endormir automatiquement l'ecran apres un
+     reveil manuel pendant une plage programmee (voir checkScreensaver).
+     Timestamp of the last user activity (key/click/tap), used only to
+     automatically put the screen back to sleep after a manual wake
+     during a scheduled slot (see checkScreensaver). */
+  let ssLastActivityAt = Date.now();
+
+  /* Construit les 5 lignes de plages horaires dans le formulaire de
+     reglages. Une plage avec debut ET fin vides est simplement ignoree au
+     moment de la sauvegarde (meme principe que les trajets supplementaires
+     du widget Trajet domicile-travail).
+     Builds the 5 time-slot rows in the settings form. A slot with both
+     start AND end empty is simply skipped when saving (same principle as
+     the Commute time widget's extra trips). */
+  function renderScreensaverSlots() {
+    const el = $("ssSlots");
+    let html = "";
+    for (let i = 0; i < SS_SLOT_COUNT; i++) {
+      html += `
+        <div class="ss-slot">
+          <span>${i18n.t("ss.slot")} ${i + 1}</span>
+          <input type="time" id="setSSSlot${i}Start">
+          <span class="ss-slot-sep">→</span>
+          <input type="time" id="setSSSlot${i}End">
+          <select id="setSSSlot${i}Mode">
+            <option value="black">${i18n.t("ss.mode.black")}</option>
+            <option value="slideshow">${i18n.t("ss.mode.slideshow")}</option>
+            <option value="displayOff">${i18n.t("ss.mode.displayOff")}</option>
+          </select>
+        </div>`;
+    }
+    el.innerHTML = html;
+  }
+
+  /* Remplit le select du delai avant retour automatique en veille.
+     Rendu une seule fois au demarrage (meme principe que
+     renderScreensaverSlots ci-dessus, dont les options "Noir"/"Diaporama"
+     ne sont elles non plus jamais re-rendues apres un changement de
+     langue). Fills the auto-return delay select. Rendered once at
+     startup (same principle as renderScreensaverSlots above, whose
+     "Black"/"Slideshow" options also never get re-rendered after a
+     language change). */
+  function renderScreensaverInactivityOptions() {
+    const el = $("setSSInactivityTimeout");
+    el.innerHTML = SS_INACTIVITY_OPTIONS.map((min) =>
+      `<option value="${min}">${min === 0 ? i18n.t("ss.inactivityTimeout.never") : min + " min"}</option>`
+    ).join("");
+  }
+
+  function fillScreensaverForm() {
+    const ss = settings.screensaver || {};
+    $("setSSEnabled").checked = !!ss.enabled;
+    const slots = ss.slots || [];
+    for (let i = 0; i < SS_SLOT_COUNT; i++) {
+      const s = slots[i] || {};
+      $("setSSSlot" + i + "Start").value = s.start || "";
+      $("setSSSlot" + i + "End").value = s.end || "";
+      $("setSSSlot" + i + "Mode").value = s.mode || "black";
+    }
+    // Repli "uploaded" -> "upload" : une config deja enregistree AVANT ce
+    // correctif contient encore l'ancienne valeur erronee. Sans cette
+    // conversion silencieuse, il aurait fallu re-selectionner et
+    // re-enregistrer manuellement pour que le correctif prenne effet.
+    // Fallback "uploaded" -> "upload": a config already saved BEFORE this
+    // fix still holds the old, wrong value. Without this silent
+    // conversion, one would have had to manually reselect and re-save for
+    // the fix to take effect.
+    const savedSource = ss.slideshowSource === "uploaded" ? "upload" : ss.slideshowSource;
+    $("setSSSource").value = savedSource || "upload";
+    $("setSSFolderPath").value = ss.slideshowFolderPath || "";
+    $("setSSWebdavUrl").value = ss.slideshowWebdavUrl || "";
+    $("setSSWebdavUser").value = ss.slideshowWebdavUser || "";
+    $("setSSWebdavPass").value = ss.slideshowWebdavPass || "";
+    $("setSSImages").value = ss.slideshowImages || "";
+    $("setSSInterval").value = ss.slideshowInterval || 12;
+    $("setSSShuffle").checked = !!ss.slideshowShuffle;
+    // Comportement historique (avant que ce reglage soit expose) : le
+    // zoom lent etait toujours actif, sans reglage possible -- coche
+    // par defaut pour ne rien changer aux installations existantes.
+    // Historical behavior (before this setting was exposed): the slow
+    // zoom was always on, with no way to disable it -- checked by
+    // default so existing installs see no change.
+    $("setSSKenBurns").checked = ss.slideshowKenBurns != null ? !!ss.slideshowKenBurns : true;
+    $("setSSFitLandscape").value = ss.slideshowFitLandscape || "cover";
+    $("setSSFitPortrait").value = ss.slideshowFitPortrait || "contain";
+    $("setSSContainBg").value = ss.slideshowContainBackground || "color";
+    $("setSSContainBgColor").value = ss.slideshowContainBackgroundColor || "#000000";
+    $("setSSInactivityTimeout").value = SS_INACTIVITY_OPTIONS.includes(Number(ss.inactivityTimeout))
+      ? String(ss.inactivityTimeout) : "5";
+    loadScreensaverMedia();
+  }
+
+  function collectScreensaverSettings() {
+    const slots = [];
+    for (let i = 0; i < SS_SLOT_COUNT; i++) {
+      slots.push({
+        start: $("setSSSlot" + i + "Start").value || "",
+        end: $("setSSSlot" + i + "End").value || "",
+        mode: $("setSSSlot" + i + "Mode").value || "black"
+      });
+    }
+    return {
+      enabled: $("setSSEnabled").checked,
+      slots,
+      slideshowSource: $("setSSSource").value,
+      slideshowFolderPath: $("setSSFolderPath").value,
+      slideshowWebdavUrl: $("setSSWebdavUrl").value,
+      slideshowWebdavUser: $("setSSWebdavUser").value,
+      slideshowWebdavPass: $("setSSWebdavPass").value,
+      slideshowImages: $("setSSImages").value,
+      slideshowInterval: Math.max(3, Number($("setSSInterval").value) || 12),
+      slideshowShuffle: $("setSSShuffle").checked,
+      slideshowKenBurns: $("setSSKenBurns").checked,
+      slideshowFitLandscape: $("setSSFitLandscape").value,
+      slideshowFitPortrait: $("setSSFitPortrait").value,
+      slideshowContainBackground: $("setSSContainBg").value,
+      slideshowContainBackgroundColor: $("setSSContainBgColor").value,
+      inactivityTimeout: Number($("setSSInactivityTimeout").value) || 0
+    };
+  }
+
+  /* Photos televersees pour la veille : meme mecanisme que le widget
+     Diaporama (server/media.js), avec un identifiant synthetique mais
+     valide selon son format habituel ("t-" + alphanumerique) -- aucune
+     tuile Diaporama n'a besoin d'exister pour que ce dossier de photos
+     fonctionne, il vit independamment sous data/media/t-screensaver/.
+     Uploaded photos for the screensaver: same mechanism as the Slideshow
+     widget (server/media.js), with a synthetic id that's still valid per
+     its usual format ("t-" + alphanumeric) -- no Slideshow tile needs to
+     exist for this photo folder to work, it lives independently under
+     data/media/t-screensaver/. */
+  const SS_MEDIA_ID = "t-screensaver";
+
+  async function loadScreensaverMedia() {
+    let items = [];
+    try {
+      // Le serveur renvoie { items: [...] }, pas directement un tableau --
+      // exactement comme le lit deja le widget Diaporama (data.items || []).
+      // Ma version precedente traitait la reponse comme si c'etait deja le
+      // tableau : items.map() plantait alors silencieusement a chaque
+      // rafraichissement, y compris juste apres un upload qui, lui, avait
+      // reellement reussi cote serveur -- donnant l'impression trompeuse
+      // que rien ne s'etait televerse.
+      // The server returns { items: [...] }, not a plain array -- exactly
+      // as the Slideshow widget already reads it (data.items || []). My
+      // previous version treated the response as if it were already the
+      // array: items.map() then silently threw on every refresh, including
+      // right after an upload that had actually succeeded server-side --
+      // giving the misleading impression that nothing was uploaded.
+      const data = await fetch("/api/media/" + SS_MEDIA_ID).then((r) => r.json());
+      items = data.items || [];
+    } catch (e) { /* dossier pas encore cree, liste vide / folder not created yet, empty list */ }
+    const list = $("ssMediaList");
+    $("ssMediaEmpty").hidden = items.length > 0;
+    // On utilise le champ "url" deja fourni par le serveur (comme le fait
+    // le diaporama), plutot que de reconstruire un chemin a la main :
+    // c'etait aussi une erreur ("/api/media/..." ne sert pas le fichier,
+    // seulement sa fiche JSON -- le fichier lui-meme est servi sur
+    // "/media/..." sans le prefixe /api).
+    // We use the "url" field already provided by the server (as the
+    // Slideshow widget does), rather than hand-building a path: that was
+    // also wrong ("/api/media/..." doesn't serve the file, only its JSON
+    // listing -- the file itself is served at "/media/..." without the
+    // /api prefix).
+    list.innerHTML = items.map((it) => `
+      <div class="ss-media-item">
+        <img src="${it.url}" alt="">
+        <button type="button" data-name="${it.name.replace(/"/g, "&quot;")}" aria-label="${i18n.t("common.close")}">&times;</button>
+      </div>`).join("");
+    list.querySelectorAll("button[data-name]").forEach((btn) => {
+      onActivate(btn, async () => {
+        await fetch("/api/media/" + SS_MEDIA_ID + "/" + encodeURIComponent(btn.dataset.name), { method: "DELETE" });
+        loadScreensaverMedia();
+      });
+    });
+  }
+
+  function wireScreensaverUpload() {
+    // Declenchement du selecteur de fichiers via un "click" natif classique,
+    // pas via onActivate() (base sur pointerup) : c'est exactement ce que
+    // fait deja le widget Diaporama pour son propre bouton d'upload (qui,
+    // lui, fonctionne). Un input[type=file] cache, declenche depuis un
+    // gestionnaire pointerup plutot que click, peut ne pas ouvrir le
+    // selecteur de fichiers natif de facon fiable selon le navigateur --
+    // c'etait l'ecart exact avec le diaporama.
+    // File picker triggered via a plain, classic "click", not via
+    // onActivate() (pointerup-based): this is exactly what the Slideshow
+    // widget already does for its own upload button (which does work). A
+    // hidden input[type=file], triggered from a pointerup handler rather
+    // than click, may not reliably open the native file picker depending
+    // on the browser -- that was the exact discrepancy with the slideshow.
+    $("ssUploadBtn").addEventListener("click", () => $("ssFileInput").click());
+    /* Meme bibliotheque que le fond de page, section « photos » : la
+       photo choisie est copiee dans le dossier du diaporama, donc elle
+       rejoint les photos televersees et suit exactement le meme chemin
+       ensuite. Rien de specifique au diaporama n'a eu a etre ecrit.
+       Same library as the page background, "photos" section: the chosen
+       photo is copied into the slideshow's folder, so it joins the
+       uploaded photos and follows exactly the same path afterwards.
+       Nothing slideshow-specific had to be written. */
+    $("ssLibraryBtn").addEventListener("click", () => {
+      openLibrary(SS_MEDIA_ID, "photos", () => loadScreensaverMedia());
+    });
+    $("ssFileInput").addEventListener("change", async () => {
+      const files = $("ssFileInput").files;
+      if (!files || !files.length) return;
+      const form = new FormData();
+      for (const f of files) form.append("photos", f);
+      try {
+        await fetch("/api/media/" + SS_MEDIA_ID, { method: "POST", body: form });
+      } catch (e) {
+        console.warn("[piboard] screensaver upload", e);
+      }
+      $("ssFileInput").value = "";
+      loadScreensaverMedia();
+    });
+  }
+
+  /* Une plage est active si l'heure courante s'y trouve. Gere le
+     passage a minuit (ex. 22:00 -> 06:00) exactement comme le calendrier
+     de rafraichissement du widget Trafic.
+     A slot is active if the current time falls within it. Handles
+     crossing midnight (e.g. 22:00 -> 06:00) exactly like the Traffic
+     widget's refresh schedule. */
+  function isSlotActive(slot, hhmm) {
+    if (!slot.start || !slot.end || slot.start === slot.end) return false;
+    if (slot.start < slot.end) return hhmm >= slot.start && hhmm < slot.end;
+    return hhmm >= slot.start || hhmm < slot.end; // plage traversant minuit / slot crossing midnight
+  }
+
+  function currentHHMM() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  }
+
+  function anyModalOpen() {
+    return Array.from(document.querySelectorAll(".modal")).some((m) => !m.hidden);
+  }
+
+  function checkScreensaver() {
+    // Une session lancee manuellement (bouton "Lancer le cadre photo" du
+    // tiroir) ne doit JAMAIS etre interrompue par le calendrier
+    // automatique -- ni parce que l'economiseur programme est desactive,
+    // ni parce qu'on est hors de toute plage horaire. Sans ce garde-fou,
+    // le prochain passage de checkScreensaver() (toutes les 15s) refermait
+    // la veille manuelle des le premier tick, quelle que soit la photo en
+    // cours -- exactement le bug observe ("on ne voit qu'une seule
+    // image"). Seul un reveil explicite (clic/tap/touche) la referme.
+    // A manually-launched session ("Start photo frame" button in the
+    // drawer) must NEVER be interrupted by the automatic schedule -- not
+    // because the scheduled screensaver is disabled, nor because we're
+    // outside any time slot. Without this guard, the next
+    // checkScreensaver() pass (every 15s) closed the manual screensaver on
+    // its very first tick, whatever photo was showing -- exactly the
+    // observed bug ("only one image is shown"). Only an explicit wake
+    // (click/tap/key) closes it.
+    if (ssActiveSlotKey === "manual") return;
+
+    const ss = settings && settings.screensaver;
+    if (!ss || !ss.enabled) {
+      if (ssActiveSlotKey) deactivateScreensaver();
+      return;
+    }
+    // Ne jamais se declencher pendant une session de configuration active
+    // (edition du tableau, ou une fenetre de reglages ouverte).
+    // Never trigger during an active configuration session (editing the
+    // board, or a settings window open).
+    if (editing || anyModalOpen()) return;
+
+    const hhmm = currentHHMM();
+    const slots = ss.slots || [];
+    const match = slots.find((s) => isSlotActive(s, hhmm));
+
+    if (!match) {
+      if (ssActiveSlotKey) deactivateScreensaver();
+      ssDismissedKey = null; // hors de toute plage : on reautorise un futur declenchement / outside any slot: re-arm for a future trigger
+      return;
+    }
+
+    const key = match.start + "-" + match.end + "-" + match.mode;
+    if (key === ssDismissedKey) {
+      // Reveille manuellement pour cette occurrence : normalement on ne le
+      // rouvre pas tout seul, SAUF si le delai d'inactivite configure est
+      // ecoule -- on est toujours dans la meme plage horaire, donc on doit
+      // revenir en veille au bout d'un moment sans aucune action.
+      // Manually woken for this occurrence: normally we don't reopen it on
+      // our own, EXCEPT if the configured inactivity delay has elapsed --
+      // we're still within the same time slot, so it should return to
+      // sleep after a while with no activity at all.
+      const timeoutMin = Number(ss.inactivityTimeout) || 0;
+      if (timeoutMin <= 0) return;
+      if (Date.now() - ssLastActivityAt < timeoutMin * 60000) return;
+      ssDismissedKey = null; // delai ecoule : on retombe dans le cas normal ci-dessous / delay elapsed: fall through to the normal case below
+    }
+    if (key === ssActiveSlotKey) return; // deja affiche pour cette plage
+    activateScreensaver(match, key);
+  }
+
+  function activateScreensaver(slot, key) {
+    ssActiveSlotKey = key;
+    const overlay = $("screensaverOverlay");
+    const ssiEl = $("screensaverSlideshow");
+    ssiEl.hidden = slot.mode !== "slideshow";
+    if (slot.mode === "displayOff") setDisplayPower(false);
+
+    if (slot.mode === "slideshow") {
+      const manifest = catalog.find((m) => m.id === "slideshow");
+      const Klass = widgetClasses.get("slideshow");
+      if (Klass && manifest) {
+        const ss = settings.screensaver;
+        // Meme repli qu'a l'ouverture des reglages (voir fillScreensaverForm) :
+        // garde-fou independant, au cas ou la veille se declenche sans que
+        // les reglages n'aient ete rouverts/re-enregistres depuis le
+        // correctif.
+        // Same fallback as when opening settings (see fillScreensaverForm):
+        // an independent safety net, in case the screensaver triggers
+        // without settings having been reopened/re-saved since the fix.
+        const ssSource = ss.slideshowSource === "uploaded" ? "upload" : ss.slideshowSource;
+        const ssSettings = Object.assign({}, defaultsFor(manifest), {
+          source: ssSource,
+          folderPath: ss.slideshowFolderPath,
+          webdavUrl: ss.slideshowWebdavUrl,
+          webdavUser: ss.slideshowWebdavUser,
+          webdavPass: ss.slideshowWebdavPass,
+          images: ss.slideshowImages,
+          intervalSeconds: ss.slideshowInterval,
+          shuffle: !!ss.slideshowShuffle,
+          // Comportement historique : zoom lent actif par defaut tant
+          // que le reglage n'a jamais ete enregistre (voir
+          // fillScreensaverForm ci-dessus pour le meme repli).
+          // Historical behavior: slow zoom on by default until the
+          // setting has ever been saved (see fillScreensaverForm above
+          // for the same fallback).
+          kenBurns: ss.slideshowKenBurns != null ? !!ss.slideshowKenBurns : true,
+          fitLandscape: ss.slideshowFitLandscape || "cover",
+          fitPortrait: ss.slideshowFitPortrait || "contain",
+          containBackground: ss.slideshowContainBackground || "color",
+          containBackgroundColor: ss.slideshowContainBackgroundColor || "#000000",
+          _showTitle: false
+        });
+        try {
+          ssActiveInstance = new Klass({
+            el: ssiEl, settings: ssSettings, instanceId: SS_MEDIA_ID,
+            manifest, api: widgetApi, i18n
+          });
+          Promise.resolve(ssActiveInstance.init()).catch((e) => console.warn("[piboard] screensaver slideshow", e));
+        } catch (e) {
+          console.warn("[piboard] screensaver slideshow init", e);
+        }
+      }
+    }
+    overlay.hidden = false;
+  }
+
+  /* Lance le cadre photo immediatement, depuis le bouton du tiroir de
+     configuration -- independant du calendrier programme (les plages
+     horaires de la section "Economiseur d'ecran"). Fonctionne meme si
+     l'economiseur automatique est desactive dans les reglages : c'est un
+     geste explicite de l'utilisateur, pas une regle programmee, donc les
+     garde-fous du declenchement automatique (pas pendant l'edition, pas
+     si une fenetre est deja ouverte) ne s'appliquent pas ici -- si on
+     clique ce bouton depuis le tiroir, une fenetre modale n'est de toute
+     facon pas ouverte en meme temps. Reutilise la meme config de photos
+     dediee que la veille programmee (section Ecran de veille des
+     reglages).
+     Launches the photo frame immediately, from the config drawer's
+     button -- independent of the programmed schedule (the time slots in
+     the "Screen saver" section). Works even if the automatic screensaver
+     is disabled in settings: this is an explicit user gesture, not a
+     scheduled rule, so the automatic-trigger safety nets (not while
+     editing, not if a window is already open) don't apply here -- if this
+     button is clicked from the drawer, a modal window isn't open at the
+     same time anyway. Reuses the same dedicated photo config as the
+     scheduled screensaver (Settings' "Screen saver" section). */
+  function launchScreensaverNow() {
+    showDockBar(false);
+    activateScreensaver({ mode: "slideshow" }, "manual");
+  }
+
+  /* ---------- Extinction reelle de l'ecran ----------
+     Le calque noir de l'economiseur ne coupe pas la dalle : elle reste
+     allumee et consomme. La plage reglee sur "Eteindre l'ecran" demande
+     en plus au systeme de couper l'alimentation de la sortie video.
+
+     Le calque noir est POSE MALGRE TOUT, et c'est delibere : si la
+     commande echoue -- outil absent, pile graphique inattendue --, on
+     retombe exactement sur l'ancien comportement au lieu de laisser le
+     tableau de bord allume toute la nuit. Un repli silencieux vaut mieux
+     qu'une panne silencieuse.
+
+     Le reveil est assure par le meme ecouteur qu'avant : ecran eteint,
+     la dalle tactile et le clavier continuent d'emettre leurs
+     evenements, que le compositeur transmet toujours a la page.
+
+     True display power off. The screen saver's black overlay does not
+     cut the panel: it stays lit and draws power. A slot set to "Turn
+     the display off" additionally asks the system to cut the video
+     output's power. The black overlay is laid down ANYWAY, deliberately:
+     if the command fails -- tool missing, unexpected graphics stack --
+     we fall back exactly on the old behaviour instead of leaving the
+     dashboard lit all night. Waking uses the same listener as before:
+     with the display off, the touch panel and keyboard keep emitting
+     their events, which the compositor still delivers to the page. */
+  let ssDisplayOff = false;
+
+  async function setDisplayPower(on) {
+    try {
+      const r = await fetch("/api/system/display-power", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ on: !!on })
+      });
+      if (!r.ok) return { ok: false };
+      const res = await r.json();
+      if (res.ok) ssDisplayOff = !on;
+      return res;
+    } catch (e) {
+      return { ok: false };
+    }
+  }
+
+  function deactivateScreensaver() {
+    ssActiveSlotKey = null;
+    const overlay = $("screensaverOverlay");
+    overlay.hidden = true;
+    if (ssActiveInstance) {
+      try { if (ssActiveInstance.destroy) ssActiveInstance.destroy(); } catch (e) { /* ignore */ }
+      ssActiveInstance = null;
+    }
+    $("screensaverSlideshow").innerHTML = "";
+    // Rallumer avant tout le reste : tant que la dalle est coupee, rien
+    // de ce qui suit n'est visible. Turn the panel back on before
+    // anything else: while it is off, none of the rest is visible.
+    if (ssDisplayOff) setDisplayPower(true);
+  }
+
+  /* Reveil : clic/tap/touche n'importe ou pendant que la veille est
+     affichee. On memorise la plage pour ne pas la rouvrir aussitot --
+     elle ne redeviendra active qu'a la prochaine occurrence (nouvelle
+     plage, ou le lendemain pour une plage quotidienne).
+     Wake: click/tap/key anywhere while the screensaver is shown. The slot
+     is remembered so it doesn't reopen immediately -- it only becomes
+     active again at the next occurrence (a new slot, or the next day for
+     a daily slot). */
+  function wakeScreensaver() {
+    if ($("screensaverOverlay").hidden) return;
+    ssDismissedKey = ssActiveSlotKey;
+    deactivateScreensaver();
+  }
+
+  /* Marque une activite utilisateur, pour le compte a rebours du retour
+     automatique en veille (voir checkScreensaver). Appelee sur tout clic/
+     tap/touche, que la veille soit affichee ou non -- c'est bien
+     l'inactivite pendant la periode REVEILLEE qui doit etre mesuree.
+     Marks user activity, for the auto-return-to-screensaver countdown
+     (see checkScreensaver). Called on any click/tap/key, whether the
+     screensaver is shown or not -- it's inactivity during the AWAKE
+     period that must be measured. */
+  function noteScreensaverActivity() {
+    ssLastActivityAt = Date.now();
+  }
+
+
+  /* ---------- Aide du tableau de bord / dashboard help ---------- */
+
+  let helpActiveId = null;
+
+  /* Le contenu bilingue complet est defini dans help-content.js (charge
+     avant app.js), sous window.PIBOARD_HELP -- un tableau de sections
+     {id, group, title:{fr,en}, sub:{fr,en}, html:{fr,en}}. On se contente
+     ici de construire le sommaire (groupe par groupe) et de basculer
+     l'affichage de la section active. Separer le contenu (donnees) du
+     rendu (ce fichier) permet de faire evoluer l'aide sans toucher a la
+     logique d'affichage.
+     The full bilingual content is defined in help-content.js (loaded
+     before app.js), as window.PIBOARD_HELP -- an array of sections
+     {id, group, title:{fr,en}, sub:{fr,en}, html:{fr,en}}. Here we only
+     build the table of contents (group by group) and switch which
+     section is shown. Separating content (data) from rendering (this
+     file) lets the help text evolve without touching display logic. */
+  /* Normalise une chaine pour la recherche : minuscules, accents retires
+     (NFD decompose "é" en "e" + accent combinant, qu'on retire ensuite).
+     Applique aux deux cotes de la comparaison (index construit a
+     l'ouverture ET saisie de l'utilisateur) -- sans ca, taper "meteo"
+     sans accent ne trouvait pas "Météo".
+     Normalizes a string for search: lowercase, diacritics stripped (NFD
+     decomposes "é" into "e" + a combining accent, then removed).
+     Applied on both sides of the comparison (index built on open AND the
+     user's input) -- without this, typing "meteo" without an accent
+     wouldn't find "Météo". */
+  function normalizeSearch(s) {
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+
+  /* ---------- Sauvegarde / restauration -- backups ----------
+     Voir server/backups.js : instantanes horodates de toute la
+     configuration, mot de passe de boite mail toujours exclu.
+     See server/backups.js: timestamped snapshots of the whole
+     configuration, mailbox password always excluded. */
+
+  function formatBackupDate(iso) {
+    try {
+      const locale = i18n.lang === "fr" ? "fr-FR" : "en-US";
+      return new Date(iso).toLocaleString(locale, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+    } catch (e) {
+      return iso;
+    }
+  }
+
+  function showBackupsMessage(text, isError) {
+    const el = $("backupsMsg");
+    el.textContent = text;
+    el.hidden = !text;
+    el.classList.toggle("backups-msg-error", !!isError);
+  }
+
+  async function refreshBackupsList() {
+    const listEl = $("backupsList");
+    try {
+      const data = await fetch("/api/backups").then((r) => r.json());
+      const items = data.backups || [];
+      $("backupsEmpty").hidden = items.length > 0;
+      listEl.innerHTML = items.map((b) => `
+        <li class="backups-item" data-backup-id="${b.id}">
+          <div class="backups-item-info">
+            <div class="backups-item-date">${escapeHtmlAttr(b.label || formatBackupDate(b.createdAt))}</div>
+            <div class="backups-item-meta">${b.label ? formatBackupDate(b.createdAt) + " · " : ""}${b.tileCount != null ? i18n.t("backups.tileCount").replace("{n}", b.tileCount) : ""}${b.appVersion ? " · v" + escapeHtmlAttr(b.appVersion) : ""}</div>
+          </div>
+          <div class="backups-item-actions">
+            <button type="button" class="btn small" data-action="download" title="${i18n.t("backups.download")}">⬇</button>
+            <button type="button" class="btn small" data-action="restore">${i18n.t("backups.restoreConfirmAction")}</button>
+            <button type="button" class="btn small danger" data-action="delete" title="${i18n.t("common.delete")}">🗑</button>
+          </div>
+        </li>`).join("");
+    } catch (e) {
+      listEl.innerHTML = "";
+      showBackupsMessage(i18n.t("backups.error"), true);
+    }
+  }
+
+  function openBackups() {
+    $("settingsModal").hidden = true;
+    showBackupsMessage("");
+    $("backupsModal").hidden = false;
+    refreshBackupsList();
+  }
+
+  let pendingRestoreId = null;
+
+  function askRestoreConfirm(id, dateLabel) {
+    pendingRestoreId = id;
+    $("backupRestoreConfirmDate").textContent = dateLabel;
+    $("backupRestoreConfirmModal").hidden = false;
+  }
+
+  async function doRestore(id) {
+    try {
+      await fetch(`/api/backups/${encodeURIComponent(id)}/restore`, { method: "POST" }).then((r) => {
+        if (!r.ok) throw new Error("restore failed");
+        return r.json();
+      });
+      // Le plus sur pour reprendre un etat propre (grille, tuiles,
+      // reglages, tiroir) est de recharger entierement la page plutot
+      // que d'essayer de reappliquer chaque partie a chaud.
+      // The safest way to pick up a clean state (grid, tiles, settings,
+      // drawer) is a full page reload rather than trying to reapply
+      // every part live.
+      window.location.reload();
+    } catch (e) {
+      showBackupsMessage(i18n.t("backups.restoreError"), true);
+    }
+  }
+
+  function wireBackups() {
+    $("openBackupsBtn").addEventListener("click", openBackups);
+
+    $("backupCreateBtn").addEventListener("click", async () => {
+      showBackupsMessage(i18n.t("common.loading"));
+      try {
+        await fetch("/api/backups", {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: "{}"
+        }).then((r) => { if (!r.ok) throw new Error("create failed"); return r.json(); });
+        showBackupsMessage(i18n.t("backups.created"));
+        refreshBackupsList();
+      } catch (e) {
+        showBackupsMessage(i18n.t("backups.error"), true);
+      }
+    });
+
+    $("backupImportBtn").addEventListener("click", () => $("backupImportInput").click());
+    $("backupImportInput").addEventListener("change", async () => {
+      const file = $("backupImportInput").files[0];
+      $("backupImportInput").value = "";
+      if (!file) return;
+      showBackupsMessage(i18n.t("common.loading"));
+      try {
+        const body = new FormData();
+        body.append("file", file);
+        const res = await fetch("/api/backups/import", { method: "POST", body });
+        if (!res.ok) throw new Error("import failed");
+        // L'import restaure immediatement (voir server/backups.js) :
+        // recharge pour reprendre le nouvel etat, comme apres une
+        // restauration classique. Import restores immediately (see
+        // server/backups.js): reloads to pick up the new state, just
+        // like after a regular restore.
+        window.location.reload();
+      } catch (e) {
+        showBackupsMessage(i18n.t("backups.importError"), true);
+      }
+    });
+
+    $("backupsList").addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-action]");
+      if (!btn) return;
+      const li = btn.closest("[data-backup-id]");
+      const id = li.dataset.backupId;
+      const action = btn.dataset.action;
+
+      if (action === "download") {
+        // Telechargement direct : une simple navigation suffit, le
+        // serveur fixe deja l'en-tete Content-Disposition.
+        // Direct download: a plain navigation is enough, the server
+        // already sets the Content-Disposition header.
+        window.open(`/api/backups/${encodeURIComponent(id)}/download`, "_blank");
+      } else if (action === "restore") {
+        askRestoreConfirm(id, li.querySelector(".backups-item-date").textContent);
+      } else if (action === "delete") {
+        try {
+          await fetch(`/api/backups/${encodeURIComponent(id)}`, { method: "DELETE" });
+          refreshBackupsList();
+        } catch (e) {
+          showBackupsMessage(i18n.t("backups.error"), true);
+        }
+      }
+    });
+
+    $("backupRestoreConfirmBtn").addEventListener("click", () => {
+      if (pendingRestoreId) doRestore(pendingRestoreId);
+      $("backupRestoreConfirmModal").hidden = true;
+    });
+  }
+
+  function openHelp() {
+    const sections = window.PIBOARD_HELP || [];
+    if (!sections.length) return;
+
+    const groupLabels = {
+      presentation: i18n.t("help.group.presentation"),
+      drawer: i18n.t("help.group.drawer"),
+      tiles: i18n.t("help.group.tiles"),
+      platform: i18n.t("help.group.platform"),
+      credits: i18n.t("help.group.credits")
+    };
+
+    /* ---------- Sommaire : les tuiles reprennent les familles du catalogue
+       La section "Tuiles" comptait une trentaine d'entrees a la file, dans
+       un ordre qui n'etait celui d'aucune autre partie de l'application :
+       on cherchait la fiche d'une tuile en parcourant toute la liste.
+       Elle est desormais decoupee selon les MEMES familles que le
+       catalogue d'ajout de tuiles (CATALOG_FAMILIES) -- une seule
+       classification a apprendre, et la fiche se trouve la ou l'on avait
+       trouve la tuile.
+       ---------- Sidebar: tiles follow the catalog's families
+       The "Tiles" section listed some thirty entries in a row, in an
+       order matching no other part of the application: finding a tile's
+       page meant scanning the whole list. It is now split along the SAME
+       families as the tile-adding catalog (CATALOG_FAMILIES) -- one
+       single classification to learn, and the page is found where the
+       tile was found. */
+    const familyOfTile = new Map();
+    for (const fam of CATALOG_FAMILIES) for (const id of fam.ids) familyOfTile.set(id, fam.key);
+    // Les fiches de tuile portent l'identifiant du widget comme id de
+    // section : c'est ce qui permet ce rapprochement sans table
+    // supplementaire a tenir a jour.
+    // Tile pages carry the widget id as their section id: that is what
+    // makes this matching possible with no extra table to maintain.
+    const tileFamilyOrder = CATALOG_FAMILIES.map((f) => f.key).concat(["misc"]);
+    const sortedSections = sections.slice().sort((a, b) => {
+      if (a.group !== "tiles" || b.group !== "tiles") return 0;
+      const fa = tileFamilyOrder.indexOf(familyOfTile.get(a.id) || "misc");
+      const fb = tileFamilyOrder.indexOf(familyOfTile.get(b.id) || "misc");
+      return fa - fb;
+    });
+
+    const nav = $("helpNav");
+    let lastHeading = null;
+    const itemsHtml = sortedSections.map((sec) => {
+      /* Dans la section des tuiles, l'intitule affiche est celui de la
+         FAMILLE ; ailleurs, celui du groupe d'aide. Une tuile absente de
+         toute famille retombe sur "Divers", comme dans le catalogue --
+         jamais omise. In the tiles section the displayed heading is the
+         FAMILY's; elsewhere, the help group's. A tile missing from every
+         family falls back to "Miscellaneous", as in the catalog -- never
+         dropped. */
+      const isTile = sec.group === "tiles";
+      const key = isTile ? ("family:" + (familyOfTile.get(sec.id) || "misc")) : sec.group;
+      const label = isTile
+        ? i18n.t("catalog.family." + (familyOfTile.get(sec.id) || "misc"))
+        : (groupLabels[sec.group] || sec.group);
+      const groupHtml = key !== lastHeading
+        ? `<div class="help-nav-group${isTile ? " help-nav-family" : ""}" data-help-group="${key}">${label}</div>` : "";
+      lastHeading = key;
+      return groupHtml +
+        `<button type="button" class="help-nav-item" data-help-id="${sec.id}" data-help-search="${normalizeSearch(i18n.fromManifest(sec.title))}">${i18n.fromManifest(sec.title)}</button>`;
+    }).join("");
+    // Recherche en tete du sommaire : utile des que la liste des tuiles
+    // s'allonge (plus de 20 desormais) pour retrouver une entree sans
+    // faire defiler. Filtre les boutons par leur titre normalise, et
+    // masque un en-tete de groupe devenu entierement vide plutot que de
+    // laisser un titre de section sans rien dessous.
+    // Search box at the top of the sidebar: useful once the tile list
+    // grows long (20+ now) to find an entry without scrolling. Filters
+    // buttons by their normalized title, and hides a group header that
+    // became entirely empty rather than leaving a section title with
+    // nothing underneath it.
+    nav.innerHTML =
+      `<div class="help-nav-search">
+        <input type="search" id="helpNavSearch" placeholder="${i18n.t("help.search")}" autocomplete="off">
+      </div>
+      <div class="help-nav-list" id="helpNavList">${itemsHtml}</div>
+      <div class="help-nav-empty" id="helpNavEmpty" hidden>${i18n.t("help.searchEmpty")}</div>`;
+
+    const searchInput = $("helpNavSearch");
+    const listEl = $("helpNavList");
+    const emptyEl = $("helpNavEmpty");
+    searchInput.addEventListener("input", () => {
+      const q = normalizeSearch(searchInput.value.trim());
+      listEl.querySelectorAll(".help-nav-item").forEach((btn) => {
+        btn.hidden = !(!q || btn.dataset.helpSearch.includes(q));
+      });
+      // Un groupe reste visible tant qu'au moins un de ses boutons l'est
+      // -- reparcourt dans l'ordre du DOM plutot que par cle, chaque
+      // en-tete de groupe n'etant suivi que par les boutons lui
+      // appartenant jusqu'au prochain en-tete.
+      // A group stays visible as long as at least one of its buttons
+      // does -- walked in DOM order rather than by key, since each group
+      // header is only followed by the buttons belonging to it, up to
+      // the next header.
+      let currentGroupHeader = null, groupHasVisible = false;
+      listEl.querySelectorAll(".help-nav-group, .help-nav-item").forEach((el) => {
+        if (el.classList.contains("help-nav-group")) {
+          if (currentGroupHeader) currentGroupHeader.hidden = !groupHasVisible;
+          currentGroupHeader = el;
+          groupHasVisible = false;
+        } else if (!el.hidden) {
+          groupHasVisible = true;
+        }
+      });
+      if (currentGroupHeader) currentGroupHeader.hidden = !groupHasVisible;
+      emptyEl.hidden = !!listEl.querySelector(".help-nav-item:not([hidden])");
+    });
+
+    listEl.querySelectorAll("[data-help-id]").forEach((btn) => {
+      onActivate(btn, () => showHelpSection(btn.dataset.helpId));
+    });
+
+    showHelpSection(helpActiveId && sections.some((s) => s.id === helpActiveId)
+      ? helpActiveId : sections[0].id);
+    $("helpModal").hidden = false;
+  }
+
+  let changelogRaw = null; // mis en cache apres le premier chargement / cached after first load
+
+  /* Convertisseur markdown-lite pour le changelog : titres ##, listes a
+     puces (a plat, sans imbrication -- suffisant pour une lecture
+     rapide), gras, code en ligne, et separateurs ---. Meme esprit que le
+     rendu du bloc-notes (widgets/notes/widget.js), en plus simple.
+     Markdown-lite converter for the changelog: ## headings, bullet
+     lists (flat, no nesting -- enough for a quick read), bold, inline
+     code, and --- separators. Same spirit as the Notes widget's
+     rendering (widgets/notes/widget.js), simpler. */
+  function mdLiteToHtml(md) {
+    const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    const inline = (s) => esc(s)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+    let html = "", inList = false;
+    const closeList = () => { if (inList) { html += "</ul>"; inList = false; } };
+    for (const line of md.split("\n")) {
+      if (/^#{1,2}\s+/.test(line)) { closeList(); html += `<h4>${inline(line.replace(/^#{1,2}\s+/, ""))}</h4>`; continue; }
+      const li = line.match(/^\s*-\s+(.*)$/);
+      if (li) { if (!inList) { html += "<ul>"; inList = true; } html += `<li>${inline(li[1])}</li>`; continue; }
+      if (line.trim() === "") { closeList(); continue; }
+      closeList();
+      html += `<p>${inline(line)}</p>`;
+    }
+    closeList();
+    return html;
+  }
+
+  /* Chaque version est bilingue, separee par une ligne "---" (voir
+     WHATSNEW.md et CHANGELOG.md, meme format) : n'affiche que le bloc
+     correspondant a la langue active plutot que le doublon FR+EN
+     complet. Une date facultative suit la version : "## 1.87.0 -
+     2026-04-12".
+     Each version is bilingual, split by a "---" line (see WHATSNEW.md
+     and CHANGELOG.md, same format): shows only the block matching the
+     active language. An optional date follows the version. */
+  function parseVersions(raw) {
+    return raw.replace(/\r\n/g, "\n").split(/\n(?=## )/).map((part) => {
+      const m = part.match(/^##\s+(\S+)(?:\s*[-—]\s*(\d{4}-\d{2}-\d{2}))?\s*\n([\s\S]*)$/);
+      return m ? { version: m[1], date: m[2] || null, body: m[3] } : null;
+    }).filter(Boolean);
+  }
+
+  /* Une date ISO devient "avril 2026" / "April 2026" : le mois situe une
+     nouveaute bien mieux qu'un numero de version, et le jour exact
+     n'apporte rien a qui revient apres six mois.
+     An ISO date becomes "April 2026": the month places a feature far
+     better than a version number, and the exact day adds nothing. */
+  function monthLabel(iso, lang) {
+    const d = new Date(iso + "T12:00:00");
+    if (isNaN(d)) return "";
+    try {
+      const s = d.toLocaleDateString(lang === "fr" ? "fr-FR" : "en-GB", { month: "long", year: "numeric" });
+      return s.charAt(0).toUpperCase() + s.slice(1);
+    } catch (e) { return iso; }
+  }
+
+  function versionBlockHtml({ version, date, body }, lang) {
+    const halves = body.split(/\n-{3,}\n/);
+    const chosen = halves.length >= 2 ? (lang === "fr" ? halves[0] : halves[1]) : body;
+    const when = date ? ` <span class="help-changelog-date">${monthLabel(date, lang)}</span>` : "";
+    return `<h4 class="help-changelog-version">v${version}${when}</h4>` + mdLiteToHtml(chosen.trim());
+  }
+
+  function renderChangelog(raw, lang) {
+    const versions = parseVersions(raw);
+    if (!versions.length) return `<p class="help-sub">${i18n.t("help.changelogEmpty")}</p>`;
+    return versions.map((v) => versionBlockHtml(v, lang)).join("");
+  }
+
+  /* Seuil de repli de l'historique. 1.87.0 est la version du MODE
+     TABLEAU DE BORD : tout ce qui precede decrit une application qui
+     n'avait pas encore de pages, et n'interesse plus qu'a titre
+     d'archive. La page s'ouvre donc sur les nouveautes recentes, le
+     reste tenant derriere un bouton.
+     History fold threshold. 1.87.0 is the DASHBOARD MODE release:
+     everything before it describes an app that had no pages yet. */
+  const WHATSNEW_FOLD = "1.87.0";
+
+  function cmpVersion(a, b) {
+    const pa = String(a).split("."), pb = String(b).split(".");
+    for (let i = 0; i < 3; i++) {
+      const d = (parseInt(pa[i], 10) || 0) - (parseInt(pb[i], 10) || 0);
+      if (d) return d;
+    }
+    return 0;
+  }
+
+  /* Rend les nouveautes en deux parties : les versions recentes, puis
+     l'historique replie derriere un bouton. Le bouton n'apparait que
+     s'il y a effectivement quelque chose a replier.
+     Renders what's new in two parts: recent versions, then the older
+     history folded behind a button that only appears if there is
+     something to fold. */
+  function renderWhatsNew(raw, lang) {
+    const versions = parseVersions(raw);
+    if (!versions.length) return `<p class="help-sub">${i18n.t("help.changelogEmpty")}</p>`;
+    const recent = versions.filter((v) => cmpVersion(v.version, WHATSNEW_FOLD) >= 0);
+    const older = versions.filter((v) => cmpVersion(v.version, WHATSNEW_FOLD) < 0);
+    let html = (recent.length ? recent : versions).map((v) => versionBlockHtml(v, lang)).join("");
+    if (recent.length && older.length) {
+      html += `<button type="button" class="btn help-whatsnew-more" id="whatsnewMore">${i18n.t("help.whatsnewMore")}</button>`;
+      html += `<div class="help-whatsnew-old" id="whatsnewOld" hidden>`
+        + older.map((v) => versionBlockHtml(v, lang)).join("") + `</div>`;
+    }
+    return html;
+  }
+
+  /* Aide d'un SEUL widget, ouverte par-dessus sa fenetre de
+     configuration. Reutilise exactement la meme source que l'aide
+     generale (window.PIBOARD_HELP, ou l'identifiant d'une fiche de tuile
+     est celui du widget) : il n'y a donc qu'un seul contenu a tenir a
+     jour, et une fiche ajoutee la apparait automatiquement ici.
+     A SINGLE widget's help, opened on top of its settings window. Reuses
+     exactly the same source as the general help (window.PIBOARD_HELP,
+     where a tile page's id is the widget's id): there is therefore only
+     one body of content to maintain, and a page added there shows up
+     here automatically. */
+  function widgetHelpSection(widgetId) {
+    return (window.PIBOARD_HELP || []).find((sec) => sec.id === widgetId && sec.group === "tiles") || null;
+  }
+
+  function openWidgetHelp(widgetId) {
+    const sec = widgetHelpSection(widgetId);
+    if (!sec) return;
+    $("widgetHelpTitle").textContent = i18n.fromManifest(sec.title);
+    const screenshotHtml = sec.screenshot
+      ? `<img class="help-screenshot" src="${sec.screenshot}" alt="${i18n.fromManifest(sec.title)}" loading="lazy">`
+      : "";
+    const content = $("widgetHelpContent");
+    content.innerHTML =
+      (sec.sub ? `<p class="help-sub">${i18n.fromManifest(sec.sub)}</p>` : "") +
+      screenshotHtml +
+      i18n.fromManifest(sec.html);
+    content.scrollTop = 0;
+    $("widgetHelpModal").hidden = false;
+  }
+
+  function closeWidgetHelp() {
+    $("widgetHelpModal").hidden = true;
+  }
+
+  function showHelpSection(id) {
+    const sections = window.PIBOARD_HELP || [];
+    const sec = sections.find((s) => s.id === id);
+    if (!sec) return;
+    helpActiveId = id;
+
+    $("helpNav").querySelectorAll("[data-help-id]").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.helpId === id);
+    });
+
+    const content = $("helpContent");
+    // Capture d'ecran optionnelle (voir help-content.js, champ
+    // "screenshot" d'une section) : simple chemin d'image relatif a
+    // public/, affichee au-dessus du texte si present, sans rien changer
+    // pour les nombreuses sections qui n'en ont pas encore.
+    // Optional screenshot (see help-content.js, a section's "screenshot"
+    // field): a plain image path relative to public/, shown above the
+    // text if present, with no change for the many sections that don't
+    // have one yet.
+    const screenshotHtml = sec.screenshot
+      ? `<img class="help-screenshot" src="${sec.screenshot}" alt="${i18n.fromManifest(sec.title)}" loading="lazy">`
+      : "";
+    content.innerHTML =
+      `<h3>${i18n.fromManifest(sec.title)}</h3>` +
+      (sec.sub ? `<p class="help-sub">${i18n.fromManifest(sec.sub)}</p>` : "") +
+      screenshotHtml +
+      i18n.fromManifest(sec.html);
+    content.scrollTop = 0;
+
+    // La rubrique "Demarrage rapide" de l'aide n'a pas de contenu propre :
+    // elle reutilise le MEME texte que la fenetre de lancement (source
+    // unique, voir quickstart-content.js) plutot que d'en maintenir une
+    // copie qui divergerait a la premiere retouche.
+    // The help's "Quick start" section has no content of its own: it
+    // reuses the SAME text as the launch window (single source, see
+    // quickstart-content.js) rather than maintaining a copy that would
+    // drift on the first edit.
+    if (id === "quickstart") {
+      const qs = (window.PIBOARD_QUICKSTART || {})[settings.lang === "fr" ? "fr" : "en"];
+      /* Version affichee des l'ouverture de l'aide, a cote du titre.
+         Elle figurait deja dans « A propos » et dans les reglages
+         generaux, mais les deux demandent d'aller la chercher : la
+         premiere question qu'on se pose en ouvrant l'aide -- « sur quelle
+         version suis-je ? » -- merite une reponse sans un clic de plus,
+         notamment pour signaler un bug ou verifier qu'une mise a jour
+         est bien passee.
+         On reutilise `assetVersion`, deja chargee au demarrage pour
+         l'URL des fichiers de widgets : aucun appel reseau de plus. Si
+         elle manque (chargement echoue), la pastille est simplement
+         absente -- jamais un « v » orphelin ou un « inconnu » inquietant.
+         The version shown as soon as the help opens, next to the title.
+         It already appeared under "About" and in the general settings,
+         but both require going to look for it. Reuses `assetVersion`,
+         already loaded at startup, so no extra network call; if it is
+         missing the badge is simply absent. */
+      const badge = assetVersion
+        ? ` <span class="help-version">v${escapeHtml(assetVersion)}</span>`
+        : "";
+      if (qs) content.innerHTML = `<h3>${i18n.fromManifest(sec.title)}${badge}</h3>` + qs + kofiBlockHtml();
+    }
+
+    if (id === "about") {
+      // Meme encart qu'au « Demarrage rapide », ajoute apres le texte de
+      // la fiche. Same block as in "Quick start", appended after the
+      // section's text.
+      content.insertAdjacentHTML("beforeend", kofiBlockHtml());
+      // Meme source que la version affichee dans les reglages generaux
+      // (voir plus haut /api/version) : un seul appel reseau au demarrage
+      // aurait suffi, mais la reutilisation d'un cache introduirait un
+      // couplage pour un gain negligeable -- ce texte n'est lu qu'a
+      // l'ouverture volontaire de cette section precise.
+      // Same source as the version shown in general settings (see
+      // /api/version above): a single network call at startup would have
+      // been enough, but reusing a cache would add coupling for a
+      // negligible gain -- this text is only read when this specific
+      // section is deliberately opened.
+      fetch("/api/version").then((r) => r.json()).then((d) => {
+        const el = document.getElementById("helpAppVersion");
+        if (el && d && d.version) el.textContent = "v" + d.version;
+      }).catch(() => {});
+      renderTzFixDiagnostic();
+    }
+
+    if (id === "changelog") {
+      const renderNow = () => {
+        // La section a pu changer pendant le chargement reseau / the
+        // section may have changed during the network load.
+        if (helpActiveId !== "changelog") return;
+        const zone = document.createElement("div");
+        zone.className = "help-changelog";
+        zone.innerHTML = renderWhatsNew(changelogRaw, i18n.lang);
+        content.appendChild(zone);
+        /* Depliage de l'historique ancien : le bouton disparait une fois
+           utilise, il n'y a rien a replier ensuite.
+           Unfolding the older history: the button disappears once used,
+           there is nothing to fold back. */
+        const more = zone.querySelector("#whatsnewMore");
+        const old = zone.querySelector("#whatsnewOld");
+        if (more && old) more.addEventListener("click", () => { old.hidden = false; more.remove(); });
+      };
+      if (changelogRaw) {
+        renderNow();
+      } else {
+        fetch("/api/whatsnew").then((r) => {
+          if (!r.ok) throw new Error("status " + r.status);
+          return r.text();
+        }).then((text) => {
+          changelogRaw = text;
+          renderNow();
+        }).catch((e) => {
+          console.warn("[piboard] nouveautes indisponibles / what's new unavailable:", e);
+          if (helpActiveId === "changelog") {
+            const err = document.createElement("p");
+            err.className = "help-sub";
+            // Le detail (ex. "status 404") aide a diagnostiquer sans
+            // ouvrir les outils de developpement -- un 404 signifie
+            // typiquement que le serveur n'a pas ete redemarre depuis la
+            // mise a jour qui a ajoute cette route.
+            // The detail (e.g. "status 404") helps diagnose without
+            // opening devtools -- a 404 typically means the server
+            // hasn't been restarted since the update that added this
+            // route.
+            const detail = (e && e.message) ? ` (${e.message})` : "";
+            err.textContent = i18n.t("help.changelogError") + detail;
+            content.appendChild(err);
+          }
+        });
+      }
+    }
+  }
+
+  /* ---------- Diagnostic des fuseaux horaires / time zone diagnostic ----
+
+     POURQUOI CETTE LIGNE. Une horloge fausse d'une heure ne se voit pas :
+     elle a l'air parfaitement normale, et c'est ce qui la rend couteuse
+     -- le Maroc est passe a GMT un dimanche, et l'ecran a menti jusqu'a
+     ce que quelqu'un s'en apercoive. On affiche donc ICI, noir sur
+     blanc, ce que la base de fuseaux embarquee croit, ce que la loi dit,
+     et ce que PiBoard corrige de lui-meme (voir public/tzfix.js).
+
+     Elle ne raconte volontairement RIEN quand il n'y a rien a dire : si
+     la base embarquee est a jour sur tous les fuseaux surveilles, une
+     seule ligne rassurante, pas un tableau.
+
+     WHY THIS LINE. A clock that is one hour off looks perfectly normal,
+     which is what makes it expensive. So we show, in plain sight, what
+     the embedded zone database believes, what the law says, and what
+     PiBoard corrects on its own (see public/tzfix.js). It deliberately
+     says almost nothing when there is nothing to say. */
+  function renderTzFixDiagnostic() {
+    const host = document.getElementById("helpTzFix");
+    if (!host) return;
+    if (!window.PiBoardTzFix) { host.innerHTML = ""; return; }
+    const rep = window.PiBoardTzFix.report();
+    if (!rep.zones.length) { host.innerHTML = ""; return; }
+    const title = `<h4>${escapeHtml(i18n.t("tzfix.title"))}</h4>`;
+    if (!rep.correctedCount) {
+      host.innerHTML = title + `<p class="help-sub">${escapeHtml(i18n.t("tzfix.upToDate"))}</p>`;
+      return;
+    }
+    const rows = rep.zones.filter((z) => z.corrected).map((z) => {
+      const label = i18n.fromManifest(z.label);
+      // « Casablanca : la base embarquee dit UTC+1, la loi dit UTC —
+      // PiBoard corrige. » Le nom du fuseau ET le libelle du pays :
+      // l'un se retrouve dans les reglages, l'autre se comprend.
+      return `<li><b>${escapeHtml(z.zone)}</b> — ${escapeHtml(label)}<br>`
+        + `<span class="help-sub">${escapeHtml(i18n.t("tzfix.embedded"))} ${escapeHtml(z.embeddedText)}`
+        + ` · ${escapeHtml(i18n.t("tzfix.legal"))} ${escapeHtml(z.expectedText)}`
+        + ` · ${escapeHtml(z.source)}</span></li>`;
+    }).join("");
+    host.innerHTML = title
+      + `<p class="help-sub">${escapeHtml(i18n.t("tzfix.stale"))}</p>`
+      + `<ul>${rows}</ul>`
+      + `<p class="help-sub">${escapeHtml(i18n.t("tzfix.selfClearing"))}</p>`;
+  }
+
+  /* ---------- Debordement du tableau / board overflow ----------
+
+     Une tuile ajoutee alors que la zone visible est pleine est placee par
+     Gridstack SOUS la derniere ligne visible (voir findPlacement, cas de
+     repli autoPosition). Avec overflow:hidden elle devenait invisible ET
+     insaisissable. On rend cette zone atteignable, sans jamais rien
+     changer sur un ecran ou tout tient.
+
+     A tile added while the visible area is full is placed by Gridstack
+     BELOW the last visible row (see findPlacement, autoPosition fallback).
+     With overflow:hidden it became invisible AND ungrabbable. We make that
+     area reachable, without ever changing anything on a screen where
+     everything fits. */
+
+  let boardOverflowing = false;
+
+  /* Le plateau VISIBLE, pas forcement le premier du document. En mode
+     tableau de bord, la page affichee est un autre element .board :
+     mesurer et faire defiler le plateau principal, masque, revenait a
+     laisser la page courante deborder sans jamais pouvoir atteindre son
+     bas.
+     The VISIBLE board, not necessarily the document's first. In
+     dashboard mode the displayed page is another .board element:
+     measuring and scrolling the hidden main board meant letting the
+     current page overflow with no way to ever reach its bottom. */
+  function boardEl() {
+    if (dashboardMode()) {
+      const p = pageAt(activePageIndex);
+      if (p && p.el) return p.el;
+    }
+    return document.getElementById("board") || document.querySelector(".board");
+  }
+
+  /* Mesure REELLE du DOM plutot qu'un calcul en lignes
+     (grid.getRow() > gridRows). Le calcul ignorerait le padding de
+     .board, la marge des tuiles et l'arrondi Math.floor d'updateCellHeight,
+     et se tromperait donc d'un ou deux pixels dans les deux sens.
+     ACTUAL DOM measurement rather than a row count
+     (grid.getRow() > gridRows). The row count would ignore .board's
+     padding, the tiles' margin and updateCellHeight's Math.floor
+     rounding, and would therefore be off by a pixel or two either way. */
+  function updateOverflow() {
+    const board = boardEl();
+    if (!board) return;
+    // La tolerance de 1px absorbe les arrondis sous-pixel : sans elle,
+    // certains facteurs de zoom faisaient apparaitre et disparaitre
+    // l'ascenseur en boucle.
+    // The 1px tolerance absorbs sub-pixel rounding: without it, some zoom
+    // factors made the scrollbar flicker in and out.
+    const over = board.scrollHeight > board.clientHeight + 1;
+    /* L'etat est compare a CELUI DE L'ELEMENT, plus a un drapeau unique.
+       Avec plusieurs plateaux (une page par ecran du mode tableau de
+       bord), un drapeau partage faisait croire que le travail etait deja
+       fait des qu'une autre page avait le meme etat : la page affichee
+       restait alors sans defilement, son bas inatteignable.
+       The state is compared to THE ELEMENT'S, no longer to a single
+       flag. With several boards (one page per dashboard screen), a
+       shared flag made it look like the work was already done as soon as
+       another page had the same state: the displayed page then stayed
+       without scrolling, its bottom unreachable. */
+    if (over === board.classList.contains("has-overflow")) return;
+    boardOverflowing = over;
+    board.classList.toggle("has-overflow", over);
+    // Si le debordement disparait (tuile supprimee, gridRows augmente),
+    // on serait reste bloque sur un scrollTop devenu impossible a annuler
+    // puisque le defilement vient d'etre referme.
+    // If the overflow goes away (tile removed, gridRows raised), we would
+    // stay stuck at a scrollTop that can no longer be undone, scrolling
+    // having just been closed off.
+    if (!over) board.scrollTop = 0;
+  }
+
+  /* Fait defiler jusqu'a une tuile posee hors champ. Sans cela, la
+     personne n'a aucun indice de l'endroit ou sa tuile a atterri -- c'est
+     precisement le symptome d'origine.
+     Scrolls to a tile placed off-screen. Without this, the person has no
+     clue where their tile landed -- which is precisely the original
+     symptom. */
+  function scrollTileIntoView(el) {
+    const board = boardEl();
+    if (!board || !el || !boardOverflowing) return;
+    const top = el.offsetTop;
+    const bottom = top + el.offsetHeight;
+    if (top < board.scrollTop) {
+      board.scrollTo({ top: Math.max(0, top - 10), behavior: "smooth" });
+    } else if (bottom > board.scrollTop + board.clientHeight) {
+      board.scrollTo({ top: bottom - board.clientHeight + 10, behavior: "smooth" });
+    }
+  }
+
+  /* Defilement tactile a DEUX doigts. Deux plutot que trois : c'est le
+     geste standard des pavés tactiles, et trois doigts est deja capte par
+     le systeme sur beaucoup d'environnements. Un doigt reste
+     integralement disponible aux widgets.
+     TWO-finger touch scrolling. Two rather than three: it is the standard
+     trackpad gesture, and three fingers is already captured by the system
+     on many environments. One finger stays entirely available to the
+     widgets. */
+  function initBoardScroll() {
+    const board = boardEl();
+    if (!board) return;
+
+    let lastY = null;
+
+    function avgY(touches) {
+      let sum = 0;
+      for (let i = 0; i < touches.length; i++) sum += touches[i].clientY;
+      return sum / touches.length;
+    }
+
+    board.addEventListener("touchstart", (e) => {
+      lastY = e.touches.length >= 2 ? avgY(e.touches) : null;
+    }, { passive: true, capture: true });
+
+    // passive:false est OBLIGATOIRE : un ecouteur passif voit son
+    // preventDefault() ignore, et le navigateur ferait defiler lui-meme.
+    // Capture pour passer AVANT les gestionnaires des widgets, qui
+    // pourraient sinon consommer le geste.
+    // passive:false is MANDATORY: a passive listener has its
+    // preventDefault() ignored, and the browser would scroll by itself.
+    // Capture so we run BEFORE the widgets' handlers, which could
+    // otherwise swallow the gesture.
+    board.addEventListener("touchmove", (e) => {
+      if (!boardOverflowing || e.touches.length < 2 || lastY == null) return;
+      const y = avgY(e.touches);
+      e.preventDefault();
+      board.scrollTop -= (y - lastY);
+      lastY = y;
+    }, { passive: false, capture: true });
+
+    board.addEventListener("touchend", (e) => {
+      lastY = e.touches.length >= 2 ? avgY(e.touches) : null;
+    }, { passive: true, capture: true });
+
+    // La molette n'a besoin d'aucun code : overflow-y:auto suffit, et le
+    // comportement natif (l'enfant defilant consomme d'abord, le tableau
+    // ensuite) est exactement celui attendu. La tuile Trafic conserve
+    // ainsi son zoom a la molette, Leaflet appelant preventDefault().
+    // The wheel needs no code at all: overflow-y:auto is enough, and the
+    // native behaviour (the scrolling child consumes first, then the
+    // board) is exactly the one expected. The Traffic tile thus keeps its
+    // wheel zoom, Leaflet calling preventDefault().
+  }
+
+  /* ---------- Guide de demarrage rapide / quick start guide ---------- */
+
+  /* Adresse de dons, en un seul endroit cote interface. Elle existe
+     aussi dans package.json, la fiche AppStream, FUNDING.yml et le
+     README : quatre lecteurs qui ne se parlent pas. Ici, une constante
+     evite au moins de la repeter entre le guide et l'aide.
+     Donation address, in a single place on the interface side. It also
+     exists in package.json, the AppStream metadata, FUNDING.yml and the
+     README: four readers that do not talk to each other. Here a
+     constant at least avoids repeating it between the guide and the
+     help. */
+  const KOFI_URL = "https://ko-fi.com/jihemezes";
+
+  function openKofi() {
+    window.open(KOFI_URL, "_blank", "noopener");
+  }
+
+  /* Encart de don, ajoute en bas du « Démarrage rapide » et de « À
+     propos » de l'aide. Un BOUTON et non un lien : un lien au fil du
+     texte se confond avec les autres, alors que l'intention est ici de
+     proposer quelque chose -- et un bouton se vise au doigt sur un
+     ecran tactile, ce qu'un lien de dix pixels de haut ne permet pas.
+     Le texte reste leger : personne ne doit se sentir redevable d'un
+     logiciel gratuit.
+     Donation block, appended at the bottom of the help's "Quick start"
+     and "About". A BUTTON rather than a link: a link in running text
+     blends in with the others, whereas the intent here is to offer
+     something -- and a button can be aimed at with a finger on a
+     touchscreen, which a ten-pixel-tall link cannot. The wording stays
+     light: nobody should feel indebted over free software. */
+  function kofiBlockHtml() {
+    return `
+      <div class="kofi-block">
+        <p>${i18n.t("kofi.blurb")}</p>
+        <button type="button" class="btn kofi-btn" data-kofi>${i18n.t("kofi.button")}</button>
+      </div>`;
+  }
+
+  /* Ouvre le guide. `auto` distingue l'ouverture automatique au lancement
+     de l'ouverture manuelle depuis l'aide : dans le second cas la case
+     "afficher a chaque lancement" reflete toujours le reglage, mais la
+     personne consulte volontairement -- il n'y a rien a enregistrer tant
+     qu'elle ne touche pas a la case.
+     Opens the guide. `auto` tells apart the automatic open at launch from
+     a manual open via the help: in the latter case the "show at every
+     launch" checkbox still reflects the setting, but the person is
+     looking it up on purpose -- there is nothing to save unless they
+     actually touch the checkbox. */
+  function openQuickStart() {
+    const content = (window.PIBOARD_QUICKSTART || {})[settings.lang === "fr" ? "fr" : "en"];
+    if (!content) return;
+    $("quickStartBody").innerHTML = content;
+    $("quickStartAgain").checked = settings.quickStartOnLaunch !== false;
+    // Le bouton annonce la langue vers laquelle il bascule, pas la
+    // langue courante : « Français » quand on est en anglais. C'est la
+    // convention qui se comprend sans avoir a lire l'interface, y
+    // compris quand on ne comprend justement pas la langue affichee.
+    // The button announces the language it switches TO, not the current
+    // one: "Français" while in English. That is the convention one grasps
+    // without reading the interface -- including when one does not
+    // understand the displayed language in the first place.
+    $("quickStartLang").textContent = settings.lang === "fr" ? "English" : "Français";
+    renderQuickStartVersion();
+    $("quickStartModal").hidden = false;
+  }
+
+  /* Version a cote du titre du guide de lancement, comme dans la
+     rubrique « Demarrage rapide » de l'aide -- qui sert le MEME texte
+     (source unique, voir quickstart-content.js). Les deux fenetres
+     doivent donc se ressembler jusqu'au bout : la version visible dans
+     l'une et absente de l'autre serait une incoherence d'autant plus
+     genante que c'est la premiere fenetre que voit un nouvel
+     utilisateur.
+     `assetVersion` est deja chargee et ATTENDUE au demarrage, bien avant
+     l'ouverture du guide (voir boot()) : aucun appel reseau ici, et
+     aucune course. Si elle manquait malgre tout, la pastille reste vide
+     plutot que d'afficher un « v » orphelin.
+     The version next to the launch guide's title, as in the help's
+     "Quick start" section -- which serves the SAME text, so the two
+     windows must match to the end. `assetVersion` is already loaded and
+     AWAITED at boot, well before the guide opens: no network call and no
+     race. Should it be missing, the badge stays empty. */
+  function renderQuickStartVersion() {
+    const el = $("quickStartVersion");
+    if (!el) return;
+    el.textContent = assetVersion ? "v" + assetVersion : "";
+  }
+
+  /* Bascule la langue de toute l'application depuis le guide, et la
+     conserve. On reaffiche le guide dans la foulee : son contenu est du
+     HTML deja traduit (quickstart-content.js), il ne suit pas le
+     mecanisme data-i18n.
+     Switches the whole application's language from the guide, and keeps
+     it. The guide is re-rendered right after: its content is
+     already-translated HTML (quickstart-content.js), it does not follow
+     the data-i18n mechanism. */
+  function toggleQuickStartLang() {
+    const next = settings.lang === "fr" ? "en" : "fr";
+    settings.lang = next;
+    i18n.setLang(next);
+    const again = $("quickStartAgain").checked;
+    openQuickStart();
+    $("quickStartAgain").checked = again;
+    apiPut("/api/settings", { lang: next })
+      .catch((e) => console.warn("[piboard] langue non enregistree:", e));
+  }
+
+  function closeQuickStart() {
+    $("quickStartModal").hidden = true;
+    // N'enregistre QUE si la case a change : un guide simplement consulte
+    // depuis l'aide ne doit pas reecrire les reglages, et une ecriture
+    // inutile declencherait un evenement SSE "settings" vers les autres
+    // ecrans pour rien.
+    // Saves ONLY if the checkbox changed: a guide merely consulted from
+    // the help must not rewrite the settings, and a needless write would
+    // fire a "settings" SSE event to the other screens for nothing.
+    const wanted = $("quickStartAgain").checked;
+    if (wanted === (settings.quickStartOnLaunch !== false)) return;
+    settings.quickStartOnLaunch = wanted;
+    apiPut("/api/settings", { quickStartOnLaunch: wanted })
+      .catch((e) => console.warn("[piboard] preference demarrage rapide non enregistree:", e));
+  }
+
+  function applySettings() {
+    i18n.setLang(settings.lang);
+    // Mode tactile : cibles agrandies via CSS (voir body.touch dans style.css)
+    // Touch mode: enlarged targets via CSS (see body.touch in style.css)
+    document.body.classList.toggle("touch", !!settings.touchMode);
+    // Le bandeau du mode tableau de bord a besoin de savoir s'il est en
+    // tactile pour afficher sa languette : la classe "touch" existante
+    // sert de source unique, dupliquee sous le nom attendu par le CSS du
+    // bandeau. The dashboard bar needs to know whether it is in touch
+    // mode to show its tab: the existing "touch" class is the single
+    // source, mirrored under the name the bar's CSS expects.
+    document.body.classList.toggle("touch-mode", !!settings.touchMode);
+    applyTouchScroll();
+    applyDisplayMode();
+    vkb.setLang(settings.lang);
+    vkb.setEnabled(!!settings.keyboardEnabled);
+    applyTheme();
+    updateCellHeight();
+    // Les tuiles peuvent dependre de la langue / tiles may depend on language
+    for (const [, rec] of tiles) {
+      applyTitleBar(rec);
+      if (rec.instance && rec.instance.onLangChanged) rec.instance.onLangChanged(settings.lang);
+    }
+  }
+
+  function updateCellHeight() {
+    const gap = 10;
+    const rows = settings.gridRows || 8;
+    const cell = Math.floor((window.innerHeight - gap) / rows);
+    /* Toutes les grilles, pages comprises. Les grilles de pages
+       n'etaient pas dans cette liste : elles gardaient la hauteur de
+       cellule par defaut de Gridstack, sans rapport avec l'ecran, et
+       leurs tuiles debordaient donc par le bas.
+       Every grid, pages included. The page grids were not in this list:
+       they kept Gridstack's default cell height, unrelated to the
+       screen, so their tiles overflowed off the bottom. */
+    for (const g of allGrids()) g.cellHeight(cell);
+    // APRES le recalcul, jamais avant : on mesurerait sinon la hauteur
+    // d'avant redimensionnement. La dependance ne va que dans ce sens --
+    // la hauteur de cellule derive de window.innerHeight, jamais de la
+    // hauteur du contenu -- il n'y a donc aucune boucle de retour.
+    // AFTER the recompute, never before: we would otherwise measure the
+    // pre-resize height. The dependency only goes this way -- cell height
+    // derives from window.innerHeight, never from content height -- so
+    // there is no feedback loop.
+    updateOverflow();
+  }
+
+  /* ---------- Curseur en kiosque / kiosk cursor ---------- */
+
+  let cursorTimer = null;
+  function armCursorHide() {
+    document.body.classList.remove("hide-cursor");
+    clearTimeout(cursorTimer);
+    cursorTimer = setTimeout(() => document.body.classList.add("hide-cursor"), 8000);
+  }
+
+  /* ---------- SSE ---------- */
+
+  function initSse() {
+    const es = new EventSource("/api/events");
+    es.addEventListener("layout", async (ev) => {
+      const data = JSON.parse(ev.data || "{}");
+      if (data.source === CLIENT_ID || editing) return;
+      renderLayout(await apiGet("/api/layout"));
+    });
+    es.addEventListener("settings", async (ev) => {
+      const data = JSON.parse(ev.data || "{}");
+      if (data.source === CLIENT_ID) return;
+      settings = await apiGet("/api/settings");
+      applySettings();
+    });
+
+    /* Rediffusion des evenements serveur vers les widgets, sous forme
+       d'evenements DOM "piboard:<nom>". Un widget qui a besoin d'etre
+       pousse (Home Assistant : une porte qui s'ouvre) ecoute donc sur
+       `window` au lieu d'ouvrir SON PROPRE EventSource -- ce qui
+       multiplierait les connexions SSE par le nombre de tuiles, pour le
+       meme flux.
+       Server events are re-broadcast to widgets as DOM events named
+       "piboard:<name>". A widget that needs to be pushed to (Home
+       Assistant: a door opening) therefore listens on `window` instead of
+       opening ITS OWN EventSource -- which would multiply SSE connections
+       by the number of tiles, for one and the same stream. */
+    /* Mise a jour serveur : nouvelle version trouvee par la verification
+       periodique, ou installation lancee depuis un autre appareil. En
+       phase "restarting", CET affichage attend le retour du serveur et se
+       recharge sur le nouveau code, meme s'il n'a rien demande.
+       Server update: new version found by the periodic check, or install
+       started from another device. In the "restarting" phase, THIS
+       display waits for the server to come back and reloads on the new
+       code, even though it asked for nothing. */
+    es.addEventListener("update", async (ev) => {
+      let data = {};
+      try { data = JSON.parse(ev.data || "{}"); } catch (e) { /* charge utile vide / empty payload */ }
+      if (data.phase === "restarting" && updateMode !== "wait" && updateMode !== "progress") {
+        if (!updateStatus.job) updateStatus.job = {};
+        updateStatus.job.phase = "restarting";
+        updateStatus.job.version = data.latestVersion || null;
+        renderUpdateState();
+        waitForServerRestart(true);
+        return;
+      }
+      if (updateMode === null || updateMode === "error") refreshUpdateStatus();
+    });
+
+    for (const name of ["ha-states"]) {
+      es.addEventListener(name, (ev) => {
+        let data = {};
+        try { data = JSON.parse(ev.data || "{}"); } catch (e) { /* charge utile vide / empty payload */ }
+        window.dispatchEvent(new CustomEvent("piboard:" + name, { detail: data }));
+      });
+    }
+  }
+
+  /* ---------- Demarrage / boot ---------- */
+
+  async function boot() {
+    settings = await apiGet("/api/settings");
+    /* Au demarrage, on rallume sans condition : si PiBoard a ete relance
+       (ou le Pi redemarre) alors que l'ecran etait coupe par une plage,
+       personne ne verrait plus rien -- et le reveil au toucher suppose
+       precisement de voir quelque chose pour savoir qu'il y a lieu de
+       toucher. La commande est sans effet si l'ecran est deja allume.
+       At startup we turn the display on unconditionally: if PiBoard was
+       restarted while the display was off, nothing would be visible --
+       and waking by touch assumes seeing something in the first place.
+       The command is a no-op if the display is already on. */
+    setDisplayPower(true);
+
+    await refreshAppIntegration();
+    await refreshMediaTools();
+    refreshUpdateStatus();
+    i18n.setLang(settings.lang);
+    vkb.attach();
+    vkb.setLang(settings.lang);
+    vkb.setEnabled(!!settings.keyboardEnabled);
+
+    // Version affichee dans les reglages generaux : recuperee du serveur
+    // (source unique de verite, voir /api/version), plutot que codee en
+    // dur ici -- evite un texte de version obsolete apres une mise a
+    // jour. Echec silencieux : le texte de repli statique du HTML reste
+    // affiche si l'appel echoue.
+    // Version shown in general settings: fetched from the server (single
+    // source of truth, see /api/version), rather than hardcoded here --
+    // avoids a stale version string after an update. Fails silently: the
+    // HTML's static fallback text stays shown if the call fails.
+    fetch("/api/version").then((r) => r.json()).then((d) => {
+      if (!d) return;
+      if (d.version) $("appVersion").textContent = "v" + d.version;
+      // Memorise pour le pre-remplissage d'un ticket (voir openContribute).
+      contributeInfo.version = d.version || "";
+      contributeInfo.platform = d.platformName || "";
+      contributeInfo.desktop = !!d.desktop;
+    }).catch(() => {});
+
+    grid = GridStack.init({
+      column: COLS,
+      margin: 5,
+      float: true,
+      staticGrid: true,
+      // En mode edition, toute la surface de la tuile sert de prise
+      // In edit mode, the whole tile surface is the drag handle
+      resizable: { handles: "e,se,s,sw,w" },
+      // Tactile (iPad, ecran tactile) : poignees toujours affichees
+      // Touch (iPad, touchscreen): handles always shown
+      alwaysShowResizeHandle: "mobile"
+    }, "#grid");
+
+    // Un GridStack independant par tiroir, construit depuis DRAWER_DEFS
+    // plutot que triple a la main -- les trois se comportent a
+    // l'identique (memes options), seul l'element DOM cible differe.
+    // An independent GridStack per drawer, built from DRAWER_DEFS
+    // rather than hand-tripled -- all three behave identically (same
+    // options), only the target DOM element differs.
+    for (const def of DRAWER_DEFS) {
+      const dGrid = GridStack.init({
+        column: COLS,
+        margin: 5,
+        float: true,
+        staticGrid: true,
+        resizable: { handles: "e,se,s,sw,w" },
+        alwaysShowResizeHandle: "mobile"
+      }, "#" + def.gridId);
+      drawers.set(def.side, { def, grid: dGrid, el: $(def.elId), sizePct: def.defaultSizePct });
+    }
+
+    // AVANT tout chargement de widget : la version doit etre connue au
+    // moment ou les URL sont construites, sinon le premier chargement de
+    // la session passerait encore sans parametre.
+    // BEFORE loading any widget: the version must be known when the URLs
+    // are built, otherwise the session's first load would still go
+    // through without the parameter.
+    await loadAssetVersion();
+
+    updateCellHeight();
+    initBoardScroll();
+    window.addEventListener("resize", updateCellHeight);
+    grid.on("change", () => { updateOverflow(); if (editing) scheduleSave(); });
+    drawers.forEach((d) => d.grid.on("change", () => { if (editing) scheduleSave(); }));
+
+    /* En mode edition : un clic simple sur une tuile ouvre ses parametres.
+       Un drag/resize qui vient de se terminer ne compte pas comme un clic.
+       While editing: a plain click on a tile opens its settings.
+       A drag/resize that just ended does not count as a click. */
+    for (const g of allGrids()) wireEditClick(g, g.el);
+
+    /* Tiroirs (gauche, haut, droite) : languette d'ouverture + poignee de
+       redimensionnement pour chacun, construites generiquement depuis
+       DRAWER_DEFS. La taille de chaque tiroir est persistee dans le
+       layout ; son etat ouvert/ferme ne l'est pas (au demarrage kiosque,
+       le tableau doit occuper tout l'ecran). Ouvrir un tiroir, ou
+       commencer a le redimensionner, le fait passer au premier plan --
+       utile des lors que plusieurs tiroirs, chacun pouvant recouvrir
+       quasi tout l'ecran, peuvent se superposer.
+       Drawers (left, top, right): pull tab + resize handle for each,
+       built generically from DRAWER_DEFS. Each drawer's size is
+       persisted in the layout; its open/closed state is not (on kiosk
+       boot, the board must have the whole screen). Opening a drawer, or
+       starting to resize it, brings it to the front -- useful since
+       several drawers, each able to cover almost the whole screen, can
+       overlap. */
+    for (const def of DRAWER_DEFS) {
+      const d = drawers.get(def.side);
+      const tabEl = $(def.tabId);
+      tabEl.addEventListener("click", () => {
+        const opening = !d.el.classList.contains("open");
+        if (opening) closeOtherDrawers(def.side); // un seul tiroir ouvert a la fois / only one drawer open at a time
+        d.el.classList.toggle("open");
+        if (opening) bringDrawerToFront(def.side);
+      });
+
+      const resizeHandle = $(def.resizeId);
+      let resizing = false;
+      const onResizeMove = (e) => {
+        if (!resizing) return;
+        const pos = e.touches ? e.touches[0] : e;
+        const pct = def.axis === "x"
+          ? (def.side === "right"
+            ? ((window.innerWidth - pos.clientX) / window.innerWidth) * 100
+            : (pos.clientX / window.innerWidth) * 100)
+          : ((pos.clientY) / window.innerHeight) * 100;
+        applyDrawerSize(def.side, pct);
+      };
+      const onResizeEnd = () => {
+        if (!resizing) return;
+        resizing = false;
+        d.el.classList.remove("resizing");
+        document.removeEventListener("pointermove", onResizeMove);
+        document.removeEventListener("pointerup", onResizeEnd);
+        scheduleSave();
+      };
+      resizeHandle.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        resizing = true;
+        d.el.classList.add("resizing");
+        bringDrawerToFront(def.side);
+        document.addEventListener("pointermove", onResizeMove);
+        document.addEventListener("pointerup", onResizeEnd);
+      });
+
+      /* Champ numerique des reglages generaux (section "Tiroirs de
+         tuiles") : une alternative decouverte plus facilement que la
+         fine poignee de redimensionnement, et la seule voie pour
+         atteindre exactement 100% (au-dela de 96%, la poignee sortirait
+         de l'ecran et ne serait plus saisissable a la souris). Applique
+         immediatement (pas besoin du bouton "Enregistrer" de la
+         fenetre) et persiste comme un redimensionnement a la souris,
+         via le layout -- ce n'est pas un reglage general a proprement
+         parler, seulement sa commande la plus pratique.
+         Number field in general settings ("Tile drawers" section): an
+         alternative that's easier to discover than the thin resize
+         handle, and the only way to reach exactly 100% (past 96%, the
+         handle would land off-screen and no longer be reachable with a
+         mouse). Applies immediately (no need for the window's "Save"
+         button) and persists like a mouse resize, through the layout --
+         not really a general setting, just its most convenient
+         control. */
+      const pctFieldId = "setDrawer" + def.side[0].toUpperCase() + def.side.slice(1) + "Pct";
+      $(pctFieldId).addEventListener("change", (e) => {
+        applyDrawerSize(def.side, Number(e.target.value) || d.sizePct, DRAWER_SETTINGS_MAX_PCT);
+        e.target.value = d.sizePct; // reflete la valeur reellement appliquee (bornee) / reflects the actually applied (clamped) value
+        scheduleSave();
+      });
+    }
+
+    applyTheme();
+    // Appliquer le mode tactile des le demarrage. Sans cela, la classe
+    // body.touch n'etait posee que lors de l'ENREGISTREMENT des reglages
+    // (saveSettings -> applySettings), jamais au chargement : apres un
+    // redemarrage, la case "Mode tactile" restait cochee mais son effet
+    // n'etait pas applique tant qu'on ne re-enregistrait pas les reglages.
+    // Apply touch mode from startup. Without this, the body.touch class
+    // was only set when SAVING settings (saveSettings -> applySettings),
+    // never on load: after a restart, the "Touch mode" checkbox stayed
+    // checked but its effect wasn't applied until settings were re-saved.
+    document.body.classList.toggle("touch", !!settings.touchMode);
+    // Le bandeau du mode tableau de bord a besoin de savoir s'il est en
+    // tactile pour afficher sa languette : la classe "touch" existante
+    // sert de source unique, dupliquee sous le nom attendu par le CSS du
+    // bandeau. The dashboard bar needs to know whether it is in touch
+    // mode to show its tab: the existing "touch" class is the single
+    // source, mirrored under the name the bar's CSS expects.
+    document.body.classList.toggle("touch-mode", !!settings.touchMode);
+    applyTouchScroll();
+    applyDisplayMode();
+
+    catalog = await apiGet("/api/widgets");
+    await Promise.all(catalog.map(loadWidgetAssets));
+
+    await renderLayout(await apiGet("/api/layout"));
+
+    initSse();
+
+    /* ---------- Bandeau du mode tableau de bord / dashboard bar ----------
+       Le bandeau sort au survol de la bande de quelques pixels au bas de
+       l'ecran, et rentre des que la souris quitte l'ensemble. En mode
+       tactile, la languette permanente prend le relais du survol, qui
+       n'existe pas au doigt.
+       The bar comes out when the few-pixel strip at the bottom of the
+       screen is hovered, and goes back in as soon as the mouse leaves the
+       whole thing. In touch mode, the permanent tab takes over from
+       hovering, which does not exist with a finger. */
+    let dashHideTimer = null;
+    function showDashBar(show) {
+      clearTimeout(dashHideTimer);
+      document.body.classList.toggle("dash-open", !!show);
+    }
+    function scheduleDashHide() {
+      clearTimeout(dashHideTimer);
+      // Petit delai : sans lui, le bandeau disparaitrait pendant le
+      // trajet de la souris entre la bande de declenchement et un
+      // bouton, ce qui le rendrait inutilisable.
+      // Short delay: without it the bar would vanish while the mouse
+      // travels from the trigger strip to a button, making it unusable.
+      dashHideTimer = setTimeout(() => document.body.classList.remove("dash-open"), 320);
+    }
+    /* ---------- Barre de fenetre de l'affichage immersif ----------
+       Meme mecanique que le bandeau du bas, en miroir : bande de
+       declenchement de quelques pixels tout en haut, et un delai avant
+       la fermeture pour que la souris puisse atteindre les boutons.
+       La touche F9 fait la meme chose sans souris -- indispensable sur
+       un ecran mural pilote au clavier sans fil, ou l'angle superieur
+       est parfois hors de portee.
+       Immersive display's window bar. Same mechanics as the bottom bar,
+       mirrored: a few-pixel trigger strip at the very top, and a delay
+       before closing so the mouse can reach the buttons. The F9 key does
+       the same without a mouse -- indispensable on a wall screen driven
+       by a wireless keyboard, where the top corner is sometimes out of
+       reach. */
+    let winHideTimer = null;
+    function showWinBar(show) {
+      clearTimeout(winHideTimer);
+      document.body.classList.toggle("win-open", !!show);
+    }
+    function scheduleWinHide() {
+      clearTimeout(winHideTimer);
+      winHideTimer = setTimeout(() => document.body.classList.remove("win-open"), 320);
+    }
+    initTouchDragScroll();
+
+    /* Bouton de test de l'extinction : la commande qui fonctionne depend
+       de la pile graphique installee, et l'utilisateur ne peut pas
+       l'essayer autrement qu'en attendant une plage horaire nocturne.
+       L'ecran s'eteint cinq secondes, se rallume seul, et la METHODE qui
+       a marche est affichee -- ou la liste de celles qui ont echoue.
+       Test button for display power off: which command works depends on
+       the installed graphics stack, and the user cannot otherwise try it
+       without waiting for a night-time slot. The screen goes off for
+       five seconds, comes back on its own, and the METHOD that worked is
+       shown -- or the list of those that failed. */
+    onActivate($("btnTestDisplayOff"), async () => {
+      const out = $("ssDisplayTestResult");
+      out.hidden = false;
+      out.textContent = i18n.t("ss.displayTest.running");
+      const off = await setDisplayPower(false);
+      setTimeout(async () => {
+        await setDisplayPower(true);
+        out.textContent = off.ok
+          ? tf("ss.displayTest.ok", { m: off.method })
+          : tf("ss.displayTest.failed", { m: (off.tried || []).join(", ") || "\u2014" });
+      }, 5000);
+    });
+
+    $("winHotzone").addEventListener("mouseenter", () => showWinBar(true));
+    $("winBar").addEventListener("mouseenter", () => showWinBar(true));
+    $("winBar").addEventListener("mouseleave", scheduleWinHide);
+    $("winHotzone").addEventListener("mouseleave", scheduleWinHide);
+    onActivate($("winMinimize"), async () => {
+      showWinBar(false);
+      try { await fetch("/api/system/minimize", { method: "POST" }); } catch (e) { /* sans effet visible / no visible effect */ }
+    });
+    onActivate($("winWindowed"), () => {
+      showWinBar(false);
+      leaveImmersive();
+    });
+    onActivate($("winQuit"), async () => {
+      showWinBar(false);
+      try { await fetch("/api/system/exit-to-desktop", { method: "POST" }); } catch (e) { /* la fenetre se ferme / the window closes */ }
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "F9") return;
+      if (!document.body.classList.contains("immersive")) return;
+      e.preventDefault();
+      showWinBar(!document.body.classList.contains("win-open"));
+    });
+
+    $("dashHotzone").addEventListener("mouseenter", () => showDashBar(true));
+    $("dashBar").addEventListener("mouseenter", () => showDashBar(true));
+    $("dashBar").addEventListener("mouseleave", scheduleDashHide);
+    $("dashHotzone").addEventListener("mouseleave", scheduleDashHide);
+    onActivate($("dashTab"), () => showDashBar(true));
+    onActivate($("dashPrev"), () => goToPage(activePageIndex - 1, { backwards: true }));
+    onActivate($("dashNext"), () => goToPage(activePageIndex + 1));
+    onActivate($("dashAdd"), openCatalog);
+    onActivate($("dashEdit"), () => toggleEdit());
+    onActivate($("dashSettings"), openSettings);
+    onActivate($("dashHelp"), openHelp);
+    onActivate($("dashScreensaverNow"), () => launchScreensaverNow());
+    onActivate($("dashExit"), () => openExitMenu());
+
+    /* Glissement du doigt pour changer de page. Le seuil evite qu'un
+       simple appui un peu traine sur une tuile ne fasse defiler la page,
+       et l'axe dominant evite qu'un defilement vertical dans une tuile ne
+       soit pris pour un changement de page.
+       Finger swipe to change page. The threshold prevents a slightly
+       dragged tap on a tile from scrolling the page, and the dominant
+       axis prevents vertical scrolling inside a tile from being taken
+       for a page change. */
+    let touchStart = null;
+    document.addEventListener("touchstart", (e) => {
+      if (!dashboardMode() || editing || e.touches.length !== 1) { touchStart = null; return; }
+      touchStart = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    }, { passive: true });
+    document.addEventListener("touchend", (e) => {
+      if (!touchStart || !dashboardMode() || editing) return;
+      const end = e.changedTouches && e.changedTouches[0];
+      const start = touchStart;
+      touchStart = null;
+      if (!end) return;
+      const dx = end.clientX - start.x;
+      const dy = end.clientY - start.y;
+      if (Date.now() - start.t > 900) return;
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
+      goToPage(activePageIndex + (dx < 0 ? 1 : -1), { backwards: dx > 0 });
+    }, { passive: true });
+
+    /* Fleches du clavier : indispensable pour une telecommande de
+       presentation ou un clavier sans fil pose a cote d'un ecran mural.
+       Ignorees des qu'un champ a le focus, sinon taper dans un reglage
+       ferait defiler les pages.
+       Keyboard arrows: indispensable for a presentation remote or a
+       wireless keyboard next to a wall screen. Ignored as soon as a field
+       has focus, otherwise typing in a setting would scroll the pages. */
+    document.addEventListener("keydown", (e) => {
+      if (!dashboardMode() || editing) return;
+      const t = e.target;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (document.querySelector(".modal:not([hidden])")) return;
+      if (e.key === "ArrowRight" || e.key === "PageDown") { e.preventDefault(); goToPage(activePageIndex + 1); }
+      else if (e.key === "ArrowLeft" || e.key === "PageUp") { e.preventDefault(); goToPage(activePageIndex - 1, { backwards: true }); }
+    });
+
+    /* Dock */
+    onActivate($("dockTab"), () => showDockBar(true));
+    onActivate($("btnCollapse"), () => showDockBar(false));
+    onActivate($("btnAdd"), openCatalog);
+    onActivate($("btnEdit"), () => toggleEdit());
+    onActivate($("btnSettings"), openSettings);
+    onActivate($("btnHelp"), openHelp);
+    onActivate($("quickStartClose"), closeQuickStart);
+    onActivate($("quickStartLang"), toggleQuickStartLang);
+    /* Les boutons de don de l'aide sont recrees a chaque affichage de
+       section : on ecoute donc au niveau du document plutot que de
+       recabler apres chaque rendu.
+       The help's donation buttons are rebuilt on every section display:
+       so we listen at document level rather than rewiring after each
+       render. */
+    document.addEventListener("click", (e) => {
+      if (e.target.closest("[data-kofi]")) openKofi();
+    });
+    onActivate($("quickStartKofi"), openKofi);
+    // La croix de fermeture du modal passe par le gestionnaire generique
+    // [data-close] : on lui greffe l'enregistrement de la case, sinon
+    // fermer par la croix perdrait le choix qui vient d'etre fait.
+    // The modal's close cross goes through the generic [data-close]
+    // handler: we graft the checkbox save onto it, otherwise closing via
+    // the cross would lose the choice just made.
+    $("quickStartModal").querySelector("[data-close]")
+      .addEventListener("click", closeQuickStart);
+    onActivate($("btnScreensaverNow"), () => launchScreensaverNow());
+    onActivate($("btnExit"), () => openExitMenu());
+    onActivate($("exitOptionReset"), () => resetDashboard());
+    onActivate($("exitOptionDesktop"), () => exitToDesktop());
+    onActivate($("exitOptionShutdown"), () => shutdownMachine());
+    $("setDisplayMode").addEventListener("change", renderPagesEditor);
+    onActivate($("pageAddBtn"), () => addPage());
+    onActivate($("pageBgClose"), () => { $("pageBgModal").hidden = true; });
+    onActivate($("pageBgDone"), () => { $("pageBgModal").hidden = true; });
+    onActivate($("pageBgUpload"), () => $("pageBgFile").click());
+    /* La bibliotheque ecrit dans le dossier media de la page, puis on
+       applique aussitot l'image copiee comme fond : l'utilisateur a
+       choisi une image, il s'attend a la voir, pas a devoir la
+       re-selectionner dans la grille juste en dessous.
+       The library writes into the page's media folder, then the copied
+       image is applied as the background right away: the user picked an
+       image, they expect to see it, not to have to re-select it in the
+       grid just below. */
+    onActivate($("pageBgLibrary"), () => {
+      openLibrary(backgroundMediaId(pageBgIndex), "backgrounds", (name) => {
+        commitPageBackground({ image: name });
+        refreshPageBgList();
+      });
+    });
+    onActivate($("pageBgNone"), () => commitPageBackground({ image: "" }));
+    $("pageBgFile").addEventListener("change", (e) => uploadPageBackground(e.target.files));
+    $("pageBgMode").addEventListener("change", (e) => commitPageBackground({ mode: e.target.value }));
+    $("pageBgPosition").addEventListener("change", (e) => commitPageBackground({ position: e.target.value }));
+    $("pageBgDim").addEventListener("input", (e) => commitPageBackground({ dim: e.target.value }));
+    onActivate($("pageBgFlipH"), () => {
+      const target = pageBgTarget();
+      const next = !(target && normalizeBackground(target.background).flipH);
+      $("pageBgFlipH").classList.toggle("active", next);
+      commitPageBackground({ flipH: next });
+    });
+    onActivate($("pageBgFlipV"), () => {
+      const target = pageBgTarget();
+      const next = !(target && normalizeBackground(target.background).flipV);
+      $("pageBgFlipV").classList.toggle("active", next);
+      commitPageBackground({ flipV: next });
+    });
+    $("pageBgRotate").addEventListener("change", (e) => commitPageBackground({ rotate: e.target.value }));
+    onActivate($("tileReset"), () => resetTileSettings());
+    onActivate($("libraryClose"), closeLibrary);
+    wireThemeUi();
+    wireFolderPicker();
+    wireDiscoverFields();
+    wireContribute();
+    wireClone();
+    onActivate($("libraryAdd"), () => $("libraryFile").click());
+    onActivate($("libraryOnline"), showLibraryCatalog);
+    $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));
+    $("librarySection").addEventListener("change", (e) => {
+      libraryState.section = e.target.value;
+      refreshLibrary();
+    });
+    $("libraryCategory").addEventListener("change", renderLibraryGrid);
+    $("libraryTone").addEventListener("change", renderLibraryGrid);
+    $("librarySearch").addEventListener("input", renderLibraryGrid);
+    onActivate($("updCheckBtn"), () => checkForUpdatesNow());
+    onActivate($("updApplyBtn"), () => openUpdateModal());
+    onActivate($("updateBannerInstall"), () => openUpdateModal());
+    onActivate($("updateBannerLater"), () => dismissUpdateBanner());
+    onActivate($("updGoBtn"), () => startUpdate());
+    onActivate($("updCancelBtn"), () => closeUpdateModal());
+    onActivate($("updCloseBtn"), () => closeUpdateModal());
+    onActivate($("updateModalClose"), () => closeUpdateModal());
+    onActivate($("updRetryBtn"), () => openUpdateModal());
+
+    /* Boutons "Afficher/Masquer" des champs mot de passe : delegue sur
+       document car ces boutons existent aussi bien dans le formulaire
+       statique (mot de passe WebDAV de la veille) que dans les
+       formulaires de tuile regeneres dynamiquement (widget Diaporama) --
+       un seul gestionnaire couvre les deux sans re-cablage a chaque
+       ouverture de modale.
+       "Show/Hide" buttons for password fields: delegated on document
+       since these buttons exist both in the static form (screen
+       saver's WebDAV password) and in tile forms that get regenerated
+       dynamically (Slideshow widget) -- a single handler covers both
+       without rewiring on every modal open. */
+    /* Explorateur de dossiers, pour les champs "folder". Meme raison
+       qu'au-dessus pour le gestionnaire delegue : ces boutons vivent
+       dans des formulaires regeneres a chaque ouverture.
+       Folder browser, for "folder" fields. */
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".field-folder-browse");
+      if (!btn) return;
+      const input = btn.parentElement.querySelector("input[data-key]");
+      if (!input) return;
+      openFolderPicker(input.value, (chosen) => { input.value = chosen; });
+    });
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".field-password-toggle");
+      if (!btn) return;
+      const input = btn.previousElementSibling;
+      if (!input) return;
+      const reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      btn.textContent = i18n.t(reveal ? "field.password.hide" : "field.password.show");
+    });
+
+    /* Suggestions cliquables pour les champs "address" (voir
+       fieldMarkup() : cas "address") : recherche Nominatim debouncee
+       400ms apres la derniere frappe, resultats affiches en liste --
+       cliquer une suggestion remplit le champ avec l'adresse complete.
+       Delegue sur document pour la meme raison que les gestionnaires
+       ci-dessus : le formulaire de tuile est regenere a chaque ouverture.
+       Le debounce est stocke sur l'element lui-meme (pas de fuite entre
+       plusieurs champs adresse dans le meme formulaire, ex. domicile +
+       travail + jusqu'a 5 trajets supplementaires du widget Trajet).
+       Clickable suggestions for "address" fields (see fieldMarkup():
+       "address" case): debounced Nominatim search 400ms after the last
+       keystroke, results shown as a list -- clicking a suggestion fills
+       the field with the full address. Delegated on document for the
+       same reason as the handlers above: the tile form is regenerated
+       on every open. The debounce is stored on the element itself (no
+       leakage between several address fields in the same form, e.g.
+       home + work + up to 5 extra trips in the Commute widget). */
+    document.addEventListener("input", (e) => {
+      const input = e.target.closest(".field-address-input");
+      if (!input) return;
+      const list = input.parentElement.querySelector(".field-address-suggest");
+      if (!list) return;
+      clearTimeout(input._addrTimer);
+      const q = input.value.trim();
+      if (q.length < 3) { list.hidden = true; return; }
+      input._addrTimer = setTimeout(async () => {
+        try {
+          const url = "https://nominatim.openstreetmap.org/search?format=json&limit=5&q=" + encodeURIComponent(q);
+          const data = await fetch("/api/proxy?url=" + encodeURIComponent(url)).then((r) => r.json());
+          // La saisie a change entre-temps : reponse perimee, on l'ignore.
+          // The input changed in the meantime: stale response, ignored.
+          if (input.value.trim() !== q) return;
+          const results = Array.isArray(data) ? data.filter((r) => r.display_name) : [];
+          list.innerHTML = results.length
+            ? results.map((r, idx) => `<button type="button" data-idx="${idx}">${escapeHtmlAttr(r.display_name)}</button>`).join("")
+            : `<button type="button" disabled>${i18n.t("field.address.notfound")}</button>`;
+          list._results = results;
+          list.hidden = false;
+        } catch (err) {
+          list.hidden = true;
+        }
+      }, 400);
+    });
+
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".field-address-suggest button[data-idx]");
+      if (!btn) return;
+      const list = btn.closest(".field-address-suggest");
+      const input = list.previousElementSibling;
+      if (!input || !list._results) return;
+      const r = list._results[Number(btn.dataset.idx)];
+      if (!r) return;
+      input.value = r.display_name;
+      input.dispatchEvent(new Event("change", { bubbles: true }));
+      list.hidden = true;
+    });
+
+    // Clic ailleurs qu'un champ adresse : referme toute liste de
+    // suggestions ouverte, sans fermer la modale elle-meme. Click
+    // elsewhere than an address field: closes any open suggestion list,
+    // without closing the modal itself.
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".field-address-wrap")) return;
+      document.querySelectorAll(".field-address-suggest:not([hidden])").forEach((el) => { el.hidden = true; });
+    });
+
+    /* Bouton "Parcourir les chaines disponibles" du champ "channels" du
+       widget Programme TV (voir fieldMarkup() : cas "textarea" /
+       "browseChannels"). Delegue sur document pour la meme raison que
+       le bouton mot de passe ci-dessus : le formulaire de tuile est
+       regenere a chaque ouverture.
+       Specifique au Programme TV pour l'instant : les noms de champs
+       lus ci-dessous (source/xmltvfrGuide/xmltvUrl/scrapeAdapter/
+       scrapeUrl) et le mappage vers le parametre "guide" attendu par
+       /api/tele-channels sont ceux de CE widget. Si un second widget
+       adopte un jour "browseChannels", generaliser via une regle de
+       correspondance portee par le manifest plutot que ces noms en dur.
+
+       "Browse available channels" button for the TV guide widget's
+       "channels" field (see fieldMarkup(): "textarea" /
+       "browseChannels" case). Delegated on document for the same reason
+       as the password button above: the tile form is regenerated on
+       every open.
+       TV-guide-specific for now: the field names read below
+       (source/xmltvfrGuide/xmltvUrl/scrapeAdapter/scrapeUrl) and the
+       mapping to the "guide" parameter expected by /api/tele-channels
+       belong to THIS widget. If a second widget ever adopts
+       "browseChannels", generalize through a manifest-carried mapping
+       rule instead of these hardcoded names. */
+    document.addEventListener("click", async (e) => {
+      const btn = e.target.closest(".field-browse-btn");
+      if (!btn) return;
+      // ".form" et non "form" : #tileForm/#settingsForm sont des <div
+      // class="form">, pas de veritables balises <form> (l'app ne
+      // soumet jamais de formulaire HTML classique -- tout passe par
+      // fetch()). ".form" and not "form": #tileForm/#settingsForm are
+      // <div class="form">, not actual <form> tags (the app never
+      // submits a classic HTML form -- everything goes through
+      // fetch()).
+      const form = btn.closest(".form");
+      const textarea = form && form.querySelector('textarea[data-key="channels"]');
+      const listBox = btn.parentElement.querySelector(".field-browse-list");
+      if (!form || !textarea || !listBox) return;
+
+      const fieldValue = (key) => {
+        const el = form.querySelector(`[data-key="${key}"]`);
+        return el ? el.value : "";
+      };
+      const params = new URLSearchParams();
+      params.set("source", fieldValue("source") || "xmltvfr");
+      params.set("guide", fieldValue("xmltvfrGuide") === "france" ? "france" : "tnt");
+      if (fieldValue("xmltvUrl")) params.set("xmltvUrl", fieldValue("xmltvUrl"));
+      if (fieldValue("scrapeAdapter")) params.set("scrapeAdapter", fieldValue("scrapeAdapter"));
+      if (fieldValue("scrapeUrl")) params.set("scrapeUrl", fieldValue("scrapeUrl"));
+
+      const wasOpen = !listBox.hidden;
+      listBox.hidden = true;
+      if (wasOpen) return; // un 2e clic referme simplement la liste / a 2nd click just closes the list
+
+      btn.disabled = true;
+      const originalLabel = btn.textContent;
+      btn.textContent = i18n.t("field.browse.loading");
+      try {
+        const list = await fetch(`${btn.dataset.endpoint}?${params.toString()}`).then((r) => r.json());
+        if (!Array.isArray(list) || !list.length) {
+          listBox.innerHTML = `<div class="field-browse-empty">${i18n.t("field.browse.empty")}</div>`;
+        } else {
+          // Chaines deja presentes dans le textarea : pas reproposees en
+          // double, mais visuellement signalees (deja ajoutee).
+          // Channels already present in the textarea: not offered again
+          // as a duplicate, but visually flagged (already added).
+          const current = new Set(
+            textarea.value.split("\n").map((s) => s.trim().toLowerCase()).filter(Boolean)
+          );
+          listBox.innerHTML = list.map((c, idx) => {
+            const already = current.has(c.name.toLowerCase()) || current.has(String(c.id).toLowerCase());
+            return `<button type="button" data-idx="${idx}" ${already ? "disabled" : ""}>${c.name}${already ? ` <small>${i18n.t("field.browse.added")}</small>` : ""}</button>`;
+          }).join("");
+          listBox._items = list;
+        }
+        listBox.hidden = false;
+      } catch (err) {
+        listBox.innerHTML = `<div class="field-browse-empty">${i18n.t("field.browse.error")}</div>`;
+        listBox.hidden = false;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = originalLabel;
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      const item = e.target.closest(".field-browse-list button[data-idx]");
+      if (!item) return;
+      const listBox = item.closest(".field-browse-list");
+      const form = item.closest(".form"); // voir la note ci-dessus / see the note above
+      const textarea = form && form.querySelector('textarea[data-key="channels"]');
+      if (!textarea || !listBox || !listBox._items) return;
+      const chosen = listBox._items[Number(item.dataset.idx)];
+      if (!chosen) return;
+      const lines = textarea.value.split("\n").map((s) => s.trim()).filter(Boolean);
+      lines.push(chosen.name);
+      textarea.value = lines.join("\n");
+      item.disabled = true;
+      item.innerHTML = `${chosen.name} <small>${i18n.t("field.browse.added")}</small>`;
+    });
+
+    // Clic ailleurs dans la modale : referme toute liste ouverte, sans
+    // fermer la modale elle-meme (comportement attendu d'un menu
+    // deroulant). Click elsewhere in the modal: closes any open list,
+    // without closing the modal itself (expected dropdown behaviour).
+    document.addEventListener("click", (e) => {
+      if (e.target.closest(".field-browse")) return;
+      document.querySelectorAll(".field-browse-list:not([hidden])").forEach((el) => { el.hidden = true; });
+    });
+
+    $("settingsSave").addEventListener("click", () => saveSettings().catch(console.error));
+    initCitySearch();
+    $("mediaInstallFfmpeg").addEventListener("click", (e) => installMediaTool("ffmpeg", e.currentTarget));
+    $("mediaInstallVlc").addEventListener("click", (e) => installMediaTool("vlc", e.currentTarget));
+
+    $("colorsReset").addEventListener("click", () => {
+      $("setDarkBg").value = DEFAULT_COLORS.dark.bg;
+      $("setDarkTile").value = DEFAULT_COLORS.dark.tile;
+      $("setLightBg").value = DEFAULT_COLORS.light.bg;
+      $("setLightTile").value = DEFAULT_COLORS.light.tile;
+    });
+    $("tileSave").addEventListener("click", saveTileSettings);
+    $("tileSaveConfig").addEventListener("click", saveTileConfigForReuse);
+    $("tileRemove").addEventListener("click", () => {
+      $("tileModal").hidden = true;
+      closeWidgetHelp();
+      vkb.hide();
+      removeTile(tileModalTarget);
+    });
+
+    /* Fermeture des modales / modal closing */
+    document.querySelectorAll(".modal").forEach((modal) => {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal || e.target.hasAttribute("data-close")) {
+          modal.hidden = true;
+          // L'aide d'un widget est une fenetre SOEUR de tileModal, pas une
+          // fenetre fille : fermer la configuration ne la refermerait donc
+          // pas, elle resterait a flotter seule au-dessus du tableau.
+          // A widget's help is a SIBLING window of tileModal, not a child:
+          // closing the settings would therefore not close it, and it
+          // would be left floating alone above the board.
+          if (modal.id === "tileModal") closeWidgetHelp();
+          // Fermee par le fond : remettre l'etat interne d'aplomb (le
+          // bandeau, notamment, depend de savoir si la fenetre est ouverte).
+          // Closed via the backdrop: resync internal state (the banner,
+          // notably, depends on knowing whether the window is open).
+          if (modal.id === "updateModal") closeUpdateModal();
+          vkb.hide();
+          hideCatalogTooltip(); // vit hors de la modale (position fixed) : ne se referme pas toute seule / lives outside the modal (fixed position): doesn't close on its own
+        }
+      });
+    });
+    // Le defilement de la liste rend la position "fixed" de l'info-bulle
+    // perimee : on la referme plutot que de la laisser flotter au mauvais
+    // endroit. Scrolling the list makes the tooltip's "fixed" position
+    // stale: closing it rather than letting it float in the wrong place.
+    $("catalogList").addEventListener("scroll", hideCatalogTooltip, { passive: true });
+
+    /* Curseur / cursor */
+    ["mousemove", "mousedown", "keydown", "touchstart"].forEach((evt) =>
+      document.addEventListener(evt, armCursorHide, { passive: true })
+    );
+    armCursorHide();
+
+    /* Sauvegarde / restauration / backup and restore */
+    wireBackups();
+
+    /* Economiseur d'ecran / screensaver */
+    renderScreensaverSlots();
+    renderScreensaverInactivityOptions();
+    wireScreensaverUpload();
+    // Reveil : clic souris, tap tactile ou n'importe quelle touche --
+    // exactement ce qui a ete demande, rien de plus (un simple survol/
+    // mousemove ne reveille pas, pour eviter un reveil accidentel). Ces
+    // memes evenements font aussi office de marqueur d'activite pour le
+    // retour automatique en veille apres un delai d'inactivite.
+    // Wake: mouse click, touch tap, or any key -- exactly as requested,
+    // nothing more (a plain hover/mousemove does not wake it, to avoid
+    // an accidental wake-up). These same events also mark activity for
+    // the auto-return-to-screensaver-after-idle feature.
+    ["mousedown", "touchstart", "keydown"].forEach((evt) =>
+      document.addEventListener(evt, () => { noteScreensaverActivity(); wakeScreensaver(); }, { passive: true })
+    );
+    checkScreensaver();
+    setInterval(checkScreensaver, 15000);
+
+    /* Guide de demarrage rapide, en TOUTE FIN de boot : le tableau est
+       deja rendu derriere, donc la personne voit le guide par-dessus son
+       PiBoard reel plutot que devant un ecran vide. Au tout premier
+       lancement, aucun settings.json n'existe encore et
+       DEFAULT_SETTINGS.quickStartOnLaunch vaut true -- le guide s'ouvre
+       donc de lui-meme, sans drapeau "premier lancement" a maintenir.
+       Quick start guide, at the VERY END of boot: the board is already
+       rendered behind, so the person sees the guide over their actual
+       PiBoard rather than over a blank screen. On the very first launch
+       no settings.json exists yet and DEFAULT_SETTINGS.quickStartOnLaunch
+       is true -- so the guide opens by itself, with no "first launch"
+       flag to maintain. */
+    if (settings.quickStartOnLaunch !== false) openQuickStart();
+  }
+
+  boot().catch((e) => {
+    console.error("[piboard] boot failed", e);
+    document.body.innerHTML = "<pre style='color:#E0556F;padding:2rem'>PiBoard failed to start:\n" + e + "</pre>";
+  });
+})();

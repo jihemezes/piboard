@@ -1,0 +1,296 @@
+{
+  "id": "image",
+  "dir": "image",
+  "version": "0.5.0",
+  "name": {
+    "en": "Logo / Image",
+    "fr": "Logo / Image"
+  },
+  "tagline": {
+    "en": "A locally stored image or logo.",
+    "fr": "Une image ou un logo stocké en local."
+  },
+  "description": {
+    "en": "A style tile: displays an image stored on the PiBoard machine itself (no external address, nothing to fetch from the Internet). Upload it from the tile's settings; it is kept in the data/ folder and therefore survives updates. Framing, crop (zoom and choice of the visible part), position, rounding and opacity are adjustable, and an optional link opens a page when the image is clicked. The image can also be picked from PiBoard's shared library (shipped backgrounds, logos and your own images), common to the Logo/Image tile and to page backgrounds.",
+    "fr": "Une tuile de style : affiche une image stockée sur la machine PiBoard elle-même (aucune adresse externe, rien à récupérer sur Internet). Vous la téléversez depuis les réglages de la tuile ; elle est conservée dans le dossier data/ et survit donc aux mises à jour. Le cadrage, le recadrage (zoom et choix de la partie visible), la position, l'arrondi et l'opacité sont réglables, et un lien optionnel ouvre une page au clic sur l'image. L'image peut aussi être choisie dans la bibliothèque partagée de PiBoard (fonds livrés, logos et vos propres images), commune à la tuile Logo/Image et aux fonds de page."
+  },
+  "size": {
+    "w": 2,
+    "h": 2,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "image",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Image file",
+        "fr": "Fichier image"
+      },
+      "hint": {
+        "en": "Read-only here: it shows the chosen file's name. To pick or change an image, switch to edit mode and use the camera in the toolbar at the bottom of the tile. On an empty tile, a button in the middle of the tile does the same.",
+        "fr": "En lecture seule ici : ce champ affiche le nom du fichier choisi. Pour choisir ou changer une image, passez en mode édition et utilisez l'appareil photo de la barre d'outils, en bas de la tuile. Sur une tuile vide, un bouton au milieu de la tuile fait la même chose."
+      }
+    },
+    {
+      "key": "fit",
+      "type": "select",
+      "default": "contain",
+      "label": {
+        "en": "Framing",
+        "fr": "Cadrage"
+      },
+      "options": [
+        {
+          "value": "contain",
+          "label": {
+            "en": "Whole image (may leave margins)",
+            "fr": "Image entière (peut laisser des marges)"
+          }
+        },
+        {
+          "value": "crop",
+          "label": {
+            "en": "Crop (zoom and move)",
+            "fr": "Recadrer (zoomer et déplacer)"
+          }
+        },
+        {
+          "value": "cover",
+          "label": {
+            "en": "Fill the tile (may crop)",
+            "fr": "Remplir la tuile (peut rogner)"
+          }
+        },
+        {
+          "value": "fill",
+          "label": {
+            "en": "Stretch (distorts)",
+            "fr": "Étirer (déforme)"
+          }
+        },
+        {
+          "value": "none",
+          "label": {
+            "en": "Original size",
+            "fr": "Taille d'origine"
+          }
+        }
+      ],
+      "hint": {
+        "en": "For a logo, keep the whole image: it is the only framing that never crops nor distorts it. Cropping fills the tile instead, cutting off whatever sticks out. The zoom and the two positions below work with every framing.",
+        "fr": "Pour un logo, gardez « Image entière » : c'est le seul cadrage qui ne le rogne ni ne le déforme jamais. « Recadrer » remplit au contraire la tuile en coupant ce qui dépasse. Le zoom et les deux positions ci-dessous fonctionnent avec tous les cadrages."
+      }
+    },
+    {
+      "key": "zoom",
+      "type": "number",
+      "default": 100,
+      "min": 20,
+      "max": 500,
+      "step": 5,
+      "label": {
+        "en": "Zoom (%)",
+        "fr": "Zoom (%)"
+      },
+      "hint": {
+        "en": "100% leaves the image at the size the framing above gives it. Above, it is enlarged and its edges leave the tile; below, it shrinks within the tile. Works with every framing.",
+        "fr": "100 % laisse l'image à la taille que lui donne le cadrage ci-dessus. Au-delà, elle est agrandie et ses bords sortent de la tuile ; en deçà, elle rétrécit dans la tuile. Fonctionne avec tous les cadrages."
+      }
+    },
+    {
+      "key": "focusX",
+      "type": "number",
+      "default": 50,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "label": {
+        "en": "Horizontal position of the crop (%)",
+        "fr": "Position horizontale du recadrage (%)"
+      },
+      "hint": {
+        "en": "0 keeps the left edge, 100 the right edge, 50 the centre. Also the point the zoom starts from. Works with every framing.",
+        "fr": "0 conserve le bord gauche, 100 le bord droit, 50 le centre. C'est aussi le point d'où part le zoom. Fonctionne avec tous les cadrages."
+      }
+    },
+    {
+      "key": "focusY",
+      "type": "number",
+      "default": 50,
+      "min": 0,
+      "max": 100,
+      "step": 1,
+      "label": {
+        "en": "Vertical position of the crop (%)",
+        "fr": "Position verticale du recadrage (%)"
+      },
+      "hint": {
+        "en": "0 keeps the top edge, 100 the bottom edge, 50 the centre. Useful to keep a face or a logo in frame rather than the middle of the picture. Works with every framing.",
+        "fr": "0 conserve le haut, 100 le bas, 50 le centre. Utile pour garder un visage ou un logo dans le cadre plutôt que le milieu de l'image. Fonctionne avec tous les cadrages."
+      }
+    },
+    {
+      "key": "flipH",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Flip horizontally (mirror)",
+        "fr": "Miroir horizontal"
+      },
+      "hint": {
+        "en": "Mirrors the image left-right, as currently shown on screen. Works with every framing and combines with rotation below.",
+        "fr": "Retourne l'image gauche-droite, telle qu'elle apparaît actuellement à l'écran. Fonctionne avec tous les cadrages et se combine avec la rotation ci-dessous."
+      }
+    },
+    {
+      "key": "flipV",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Flip vertically (mirror)",
+        "fr": "Miroir vertical"
+      },
+      "hint": {
+        "en": "Mirrors the image top-bottom, as currently shown on screen. Works with every framing and combines with the horizontal mirror and rotation.",
+        "fr": "Retourne l'image haut-bas, telle qu'elle apparaît actuellement à l'écran. Fonctionne avec tous les cadrages et se combine avec le miroir horizontal et la rotation."
+      }
+    },
+    {
+      "key": "rotate",
+      "type": "select",
+      "default": "0",
+      "label": {
+        "en": "Rotation",
+        "fr": "Rotation"
+      },
+      "options": [
+        { "value": "0", "label": { "en": "None", "fr": "Aucune" } },
+        { "value": "90", "label": { "en": "90° clockwise", "fr": "90° à droite" } },
+        { "value": "180", "label": { "en": "180°", "fr": "180°" } },
+        { "value": "270", "label": { "en": "90° counter-clockwise", "fr": "90° à gauche" } }
+      ],
+      "hint": {
+        "en": "Useful for a photo taken in the wrong orientation. Applied after the mirror settings above, so the mirror always matches what you currently see on screen.",
+        "fr": "Utile pour une photo prise dans le mauvais sens. Appliquée après les réglages de miroir ci-dessus, pour que le miroir corresponde toujours à ce que vous voyez actuellement à l'écran."
+      }
+    },
+    {
+      "key": "align",
+      "type": "select",
+      "default": "center",
+      "label": {
+        "en": "Horizontal position",
+        "fr": "Position horizontale"
+      },
+      "options": [
+        {
+          "value": "left",
+          "label": {
+            "en": "Left",
+            "fr": "Gauche"
+          }
+        },
+        {
+          "value": "center",
+          "label": {
+            "en": "Centered",
+            "fr": "Centrée"
+          }
+        },
+        {
+          "value": "right",
+          "label": {
+            "en": "Right",
+            "fr": "Droite"
+          }
+        }
+      ]
+    },
+    {
+      "key": "valign",
+      "type": "select",
+      "default": "middle",
+      "label": {
+        "en": "Vertical position",
+        "fr": "Position verticale"
+      },
+      "options": [
+        {
+          "value": "top",
+          "label": {
+            "en": "Top",
+            "fr": "Haut"
+          }
+        },
+        {
+          "value": "middle",
+          "label": {
+            "en": "Middle",
+            "fr": "Milieu"
+          }
+        },
+        {
+          "value": "bottom",
+          "label": {
+            "en": "Bottom",
+            "fr": "Bas"
+          }
+        }
+      ]
+    },
+    {
+      "key": "padding",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 80,
+      "step": 1,
+      "label": {
+        "en": "Inner margin (px)",
+        "fr": "Marge intérieure (px)"
+      }
+    },
+    {
+      "key": "radius",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 50,
+      "step": 1,
+      "label": {
+        "en": "Corner rounding (px)",
+        "fr": "Arrondi des coins (px)"
+      }
+    },
+    {
+      "key": "opacity",
+      "type": "number",
+      "default": 100,
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "label": {
+        "en": "Opacity (%)",
+        "fr": "Opacité (%)"
+      }
+    },
+    {
+      "key": "link",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Link opened on click",
+        "fr": "Lien ouvert au clic"
+      },
+      "hint": {
+        "en": "Optional. A full address (https://…). Left empty, the image is not clickable.",
+        "fr": "Facultatif. Une adresse complète (https://…). Laissé vide, l'image n'est pas cliquable."
+      }
+    }
+  ]
+}

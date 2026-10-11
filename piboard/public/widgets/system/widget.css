@@ -1,0 +1,216 @@
+.pw-system {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  padding: 10px 14px;
+}
+.pw-system .pws-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.pw-system .pws-row { display: flex; flex-direction: column; gap: 3px; }
+.pw-system .pws-row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  /* `space-between` seul ne garantit AUCUN espace : des que le libelle
+     et la valeur remplissent la largeur, ils se touchent. Sur une tuile
+     etroite, "RAM" et "5,2 / 8 GB" finissaient colles. Le `gap` est un
+     minimum, il ne s'ajoute pas a l'espace deja reparti.
+     `space-between` alone guarantees NO space: as soon as the label and
+     the value fill the width, they touch. On a narrow tile, "RAM" and
+     "5.2 / 8 GB" ended up stuck together. The `gap` is a minimum; it does
+     not add to the space already distributed. */
+  gap: 1em;
+  font-size: 12.5px;
+  color: var(--text);
+}
+/* Si la place manque vraiment, c'est le LIBELLE qui se tronque : la
+   valeur chiffree est l'information, le libelle se devine.
+   If space really runs out, it is the LABEL that gets truncated: the
+   figure is the information, the label can be guessed. */
+.pw-system .pws-row-head > span:first-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pw-system .pws-row-head .pws-val {
+  font-variant-numeric: tabular-nums;
+  color: var(--muted);
+  font-family: var(--mono);
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+/* Lignes cliquables (CPU, RAM, disque) : la zone de clic couvre la
+   ligne entiere, barre comprise, pour rester atteignable au doigt.
+   Clickable rows (CPU, RAM, disk): the hit area covers the whole row,
+   bar included, so it stays reachable with a finger. */
+.pw-system .pws-row.pws-clickable {
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 5px;
+  margin: 0 -0.25em;
+  padding: 0.1em 0.25em;
+}
+.pw-system .pws-row.pws-clickable:hover { background: var(--tile-edge); }
+.pw-system .pws-bar {
+  height: 7px;
+  border-radius: 4px;
+  background: var(--tile-edge);
+  overflow: hidden;
+}
+.pw-system .pws-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #3FA96B;
+  transition: width 0.5s ease, background-color 0.5s ease;
+}
+/* La couleur de remplissage est posee en ligne par le widget (reglages
+   "Couleurs & seuils") ; la valeur ci-dessus n'est qu'un repli avant le
+   premier rendu. The fill color is set inline by the widget ("Colors &
+   thresholds" settings); the value above is only a fallback before the
+   first render. */
+.pw-system .pws-err {
+  margin: auto;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* ---------- Adresses des cartes reseau / network adapter addresses ---------- */
+
+.pws-net {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.6em;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-radius: 5px;
+  padding: 0.05em 0.2em;
+  margin-top: 0.15em;
+}
+.pws-net:hover { background: var(--tile-edge); }
+.pws-net-name {
+  font-size: 0.8em;
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pws-net-ip { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.pws-net-na { color: var(--muted); font-style: italic; }
+/* Adresse perimee (dernier releve en echec) : attenuee plutot que cachee
+   -- une IP d'il y a une heure vaut mieux qu'un vide.
+   Stale address (latest lookup failed): dimmed rather than hidden -- an
+   hour-old IP beats a blank. */
+.pws-net.pws-stale .pws-net-ip { opacity: 0.55; }
+
+/* ---------- Fenetre de configuration reseau / network config window ---------- */
+
+.pwn-modal { width: min(900px, 94vw); max-height: 88vh; display: flex; flex-direction: column; }
+.pwn-body { padding: 4px 22px 20px; overflow-y: auto; }
+
+.pwn-host {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding-bottom: 12px;
+  margin-bottom: 14px;
+  border-bottom: 1px solid var(--tile-edge);
+  font-size: 14px;
+  color: var(--muted);
+}
+.pwn-host b { color: var(--text); font-size: 16px; }
+.pwn-suffix { font-family: var(--mono); font-size: 12.5px; }
+.pwn-public { margin-left: auto; font-size: 13px; }
+.pwn-public b { font-family: var(--mono); font-size: 13.5px; }
+.pwn-stale { font-size: 11.5px; font-style: italic; }
+
+/* Plusieurs cartes tiennent cote a cote quand la largeur le permet, une
+   seule colonne sinon : sur le Pi en portrait, deux colonnes seraient
+   illisibles.
+   Several adapters sit side by side when width allows, a single column
+   otherwise: on the Pi in portrait, two columns would be unreadable. */
+.pwn-card + .pwn-card { margin-top: 16px; }
+@media (min-width: 720px) {
+  .pwn-body { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .pwn-host, .pwn-partial, .pwn-empty { grid-column: 1 / -1; }
+  .pwn-card + .pwn-card { margin-top: 0; }
+}
+
+.pwn-card { border: 1px solid var(--tile-edge); border-radius: 10px; padding: 12px 14px; }
+.pwn-title { margin: 0 0 10px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+
+.pwn-kind { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+.pwn-wifi { background: #3FA96B; }
+.pwn-wired { background: #5B8DEF; }
+
+.pwn-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 5px 12px;
+  font-size: 13px;
+}
+.pwn-list dt { color: var(--muted); white-space: nowrap; }
+.pwn-list dd { margin: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+.pwn-na { color: var(--muted); font-family: inherit; font-style: italic; }
+
+.pwn-partial, .pwn-empty {
+  margin-top: 14px;
+  font-size: 12.5px;
+  color: var(--muted);
+  border-left: 3px solid var(--tile-edge);
+  padding-left: 10px;
+}
+
+/* ---------- Fenetre des graphiques / charts window ---------- */
+
+.pwg-modal { width: min(760px, 94vw); }
+.pwg-body { padding: 4px 22px 20px; }
+
+.pwg-tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.pwg-tab {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwg-tab.active { color: var(--text); border-color: var(--muted); }
+body.touch .pwg-tab { font-size: 15px; padding: 8px 20px; }
+
+.pwg-now {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.pwg-now-val { font-size: 26px; font-variant-numeric: tabular-nums; color: var(--text); }
+.pwg-now-lbl { font-size: 13px; color: var(--muted); }
+
+.pwg-chart {
+  width: 100%;
+  height: 200px;
+  border-radius: 10px;
+  background: var(--bg);
+  border: 1px solid var(--tile-edge);
+}
+.pwg-hint { margin-top: 10px; font-size: 12.5px; color: var(--muted); }
+
+/* Axe temporel commun sous la courbe / shared time axis under the curve */
+.pwg-taxis { margin-bottom: 2px; }

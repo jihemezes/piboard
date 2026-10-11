@@ -1,0 +1,1131 @@
+/* ============================================================
+   PiBoard - server/platform/linux.js
+   Implementation Linux / Raspberry Pi OS de l'interface decrite dans
+   server/platform/index.js. C'est le comportement historique de
+   PiBoard, deplace ici tel quel : aucune modification fonctionnelle
+   n'a ete apportee lors de l'extraction, afin que le Pi se comporte
+   exactement comme avant.
+
+   Linux / Raspberry Pi OS implementation of the interface described in
+   server/platform/index.js. This is PiBoard's historical behaviour,
+   moved here as-is: no functional change was made during extraction,
+   so the Pi behaves exactly as before.
+   ============================================================ */
+"use strict";
+
+const fs = require("fs");
+const { execFile, exec, spawn } = require("child_process");
+const { isValidIp, normalizeMac } = require("../ipv4");
+
+const id = "linux";
+
+/* ---------- Ping (ICMP) ----------
+   -c 1 : un seul paquet / a single packet
+   -W n : delai d'attente en SECONDES / timeout in SECONDS */
+function pingArgs(ip, timeoutSec) {
+  return ["-c", "1", "-W", String(timeoutSec), ip];
+}
+
+/* Sous Linux, le code de sortie de `ping` suffit : il n'est nul que si
+   une reponse ICMP echo a bien ete recue.
+   On Linux, `ping`'s exit code is enough: it is only zero when an ICMP
+   echo reply was actually received. */
+function pingSucceeded(err /*, stdout */) {
+  return !err;
+}
+
+/* ---------- Table ARP du noyau / kernel ARP table ----------
+   Format de /proc/net/arp :
+     IP address  HW type  Flags  HW address         Mask  Device
+     192.168.1.1 0x1      0x2    a4:2b:b0:11:22:33  *     eth0
+   Fonction pure separee de la lecture disque, pour rester testable sans
+   dependre du vrai /proc/net/arp de la machine qui execute les tests.
+   Format of /proc/net/arp (see above). Pure function kept separate from
+   the disk read, so it stays testable without depending on the real
+   /proc/net/arp of the machine running the tests. */
+function parseArp(raw, allowedIps) {
+  const found = [];
+  const lines = String(raw || "").trim().split("\n").slice(1); // 1re ligne = en-tetes / 1st line = headers
+  for (const line of lines) {
+    const cols = line.trim().split(/\s+/);
+    // Colonnes : IP address / HW type / Flags / HW address / Mask / Device
+    if (cols.length < 6) continue;
+    const ip = cols[0];
+    const flags = cols[2];
+    const mac = cols[3];
+    if (flags !== "0x2") continue; // 0x2 = ATF_COM, entree resolue / resolved entry
+    if (!isValidIp(ip)) continue;
+    if (allowedIps && !allowedIps.has(ip)) continue;
+    found.push({ ip, mac: normalizeMac(mac) || mac });
+  }
+  return found;
+}
+
+function readArpEntries(allowedIps) {
+  try {
+    const raw = fs.readFileSync("/proc/net/arp", "utf8");
+    return Promise.resolve(parseArp(raw, allowedIps));
+  } catch (e) {
+    return Promise.resolve([]); // /proc absent : on se contente du ping / no /proc: ping alone is used
+  }
+}
+
+/* ---------- Resolution de nom inverse / reverse name lookup ----------
+   `getent hosts` passe par la couche de resolution du systeme, qui
+   respecte /etc/nsswitch.conf et consulte donc le module mDNS
+   (Avahi) : c'est la seule facon d'obtenir les noms ".local" des autres
+   machines du reseau (telephones, imprimantes...), qu'aucune requete
+   PTR classique ne fournirait.
+   `getent hosts` goes through the system resolver, which respects
+   /etc/nsswitch.conf and therefore consults the mDNS module (Avahi):
+   this is the only way to get other LAN machines' ".local" names
+   (phones, printers...), which no plain PTR query would provide. */
+function reverseLookup(ip, timeoutMs) {
+  return new Promise((resolve) => {
+    if (!isValidIp(ip)) return resolve(null);
+    execFile("getent", ["hosts", ip], { timeout: timeoutMs }, (err, stdout) => {
+      if (err || !stdout) return resolve(null);
+      // Format attendu : "192.168.1.42   nom-machine.local"
+      // Expected format: "192.168.1.42   device-name.local"
+      const parts = String(stdout).trim().split(/\s+/);
+      if (parts.length < 2 || !parts[1]) return resolve(null);
+      resolve(parts[1].replace(/\.$/, ""));
+    });
+  });
+}
+
+/* ---------- Supports amovibles / removable media ----------
+   Racines standards ou Pi OS (et la plupart des distributions Linux de
+   bureau) montent les supports amovibles, sous la forme
+   /media/<utilisateur>/<volume>. Standard roots where Pi OS (and most
+   desktop Linux distributions) mount removable media, in the form
+   /media/<user>/<volume>. */
+const MOUNT_ROOTS = ["/media", "/run/media"];
+
+function listRemovableVolumes(roots) {
+  const path = require("path");
+  const volumes = [];
+  for (const root of roots || MOUNT_ROOTS) {
+    let userDirs;
+    try {
+      userDirs = fs.readdirSync(root, { withFileTypes: true });
+    } catch (e) {
+      continue; // racine absente sur ce systeme / root not present on this system
+    }
+    for (const userDir of userDirs) {
+      if (!userDir.isDirectory() || userDir.name.startsWith(".")) continue;
+      const userPath = path.join(root, userDir.name);
+      let volDirs;
+      try {
+        volDirs = fs.readdirSync(userPath, { withFileTypes: true });
+      } catch (e) {
+        continue;
+      }
+      for (const volDir of volDirs) {
+        if (!volDir.isDirectory() || volDir.name.startsWith(".")) continue;
+        volumes.push({ label: volDir.name, path: path.join(userPath, volDir.name) });
+      }
+    }
+  }
+  return volumes;
+}
+
+/* ---------- Temperature CPU / CPU temperature ---------- */
+function cpuTemperature() {
+  try {
+    const raw = fs.readFileSync("/sys/class/thermal/thermal_zone0/temp", "utf8");
+    return Math.round((Number(raw.trim()) / 1000) * 10) / 10;
+  } catch (e) {
+    return null;
+  }
+}
+
+/* ---------- Racine du systeme de fichiers / filesystem root ---------- */
+function filesystemRoot() {
+  return "/";
+}
+
+/* ---------- Sortie du kiosque / leaving kiosk mode ----------
+   Le fichier autostart de labwc ne lance PAS Chromium directement : il
+   l'enveloppe dans le superviseur "lwrespawn", qui le relance
+   automatiquement des qu'il se termine. D'ou deux comportements
+   distincts :
+     - exitKiosk (\"Reinitialiser le tableau de bord\") : tue Chromium
+       SEUL, en laissant lwrespawn le relancer -- un reset complet.
+     - exitToDesktop (\"Revenir au bureau\") : tue D'ABORD lwrespawn (le
+       superviseur), PUIS Chromium -- sans superviseur, plus rien ne le
+       relance et le bureau reste visible.
+   L'ordre est CRITIQUE : l'inverse laisse lwrespawn relancer Chromium
+   dans l'instant qui suit.
+
+   labwc's autostart file does NOT launch Chromium directly: it wraps it
+   in the \"lwrespawn\" supervisor, which relaunches it automatically as
+   soon as it exits. Hence two distinct behaviours:
+     - exitKiosk (\"Reset the dashboard\"): kills Chromium ALONE, letting
+       lwrespawn relaunch it -- a complete reset.
+     - exitToDesktop (\"Return to the desktop\"): kills lwrespawn (the
+       supervisor) FIRST, THEN Chromium -- with no supervisor, nothing
+       relaunches it and the desktop stays visible.
+   The order is CRITICAL: the reverse lets lwrespawn relaunch Chromium
+   within the instant that follows. */
+
+/* -x : ne cible que les processus dont le nom exact (comm) est
+   "chromium" -- jamais lwrespawn lui-meme. Erreur ignoree
+   volontairement : si aucun processus ne correspond (deja ferme, nom
+   different sur ce systeme), ce n'est pas bloquant.
+   -x: only targets processes whose exact name (comm) is "chromium" --
+   never lwrespawn itself. Error deliberately ignored: if no process
+   matches (already closed, different name on this system), it is not
+   blocking. */
+function exitKiosk() {
+  exec("pkill -x chromium", () => {});
+  return { ok: true };
+}
+
+function exitToDesktop() {
+  exec("pkill -x lwrespawn; pkill -x chromium", () => {});
+  return { ok: true };
+}
+
+/* ---------- Extinction de la machine / powering the machine off ----------
+   Troisieme sortie possible, a cote de \"Reinitialiser\" et \"Revenir au
+   bureau\" : eteindre pour de bon le Pi ou l'ordinateur. Utile la ou
+   PiBoard est justement la seule chose affichee -- un ecran mural n'a
+   ni menu de bureau ni bouton d'arret a portee.
+
+   La difficulte n'est pas la commande mais le DROIT de l'executer. Le
+   service systemd tourne sous un utilisateur sans privileges et avec
+   NoNewPrivileges=true (voir install/piboard.service), ce qui interdit
+   par construction tout passage par sudo : sudo est un binaire setuid,
+   et NoNewPrivileges lui retire justement ce pouvoir. Une regle
+   sudoers ne changerait donc RIEN ici -- c'est le piege de ce sujet.
+
+   Ce qui marche, en revanche, c'est systemctl poweroff : ce n'est pas
+   une elevation de privileges mais un simple message D-Bus adresse a
+   systemd-logind, qui decide ensuite selon polkit. Aucun setuid, donc
+   NoNewPrivileges ne gene pas. Reste a ce que polkit dise oui :
+     - Application de bureau Linux : l'utilisateur a une session
+       graphique active locale, et la regle polkit par defaut de toute
+       distribution autorise ce cas sans mot de passe. Ca marche sans
+       rien installer.
+     - Pi en kiosque (service systemd, pas de session) : polkit refuse
+       par defaut. install/install.sh depose donc une regle
+       /etc/polkit-1/rules.d/ qui autorise CETTE SEULE action a
+       l'utilisateur du service. Une installation faite avant la 1.104.0
+       n'a pas cette regle : l'extinction echoue alors proprement et
+       l'interface explique quoi faire.
+   Dernier recours, pkexec : il ouvre une fenetre de mot de passe sur un
+   bureau graphique. Inutile sur le kiosque (personne a qui demander) et
+   redondant avec le premier cas, mais il rattrape les configurations
+   intermediaires (session graphique sans la regle par defaut).
+
+   Third possible exit, next to \"Reset\" and \"Return to the desktop\":
+   actually powering the Pi or the computer off. Useful precisely where
+   PiBoard is the only thing on screen -- a wall display has neither a
+   desktop menu nor a power button within reach.
+
+   The difficulty is not the command but the RIGHT to run it. The
+   systemd service runs as an unprivileged user with
+   NoNewPrivileges=true (see install/piboard.service), which rules out
+   sudo by construction: sudo is a setuid binary, and NoNewPrivileges is
+   exactly what strips it of that power. A sudoers rule would therefore
+   change NOTHING here -- the trap of this subject.
+
+   What does work is systemctl poweroff: not a privilege escalation but
+   a plain D-Bus message to systemd-logind, which then decides through
+   polkit. No setuid, so NoNewPrivileges does not get in the way. Polkit
+   still has to say yes:
+     - Linux desktop application: the user has an active local graphical
+       session, and every distribution's default polkit rule allows that
+       case without a password. It works with nothing to install.
+     - Kiosk Pi (systemd service, no session): polkit refuses by
+       default. install/install.sh therefore drops a
+       /etc/polkit-1/rules.d/ rule allowing THAT SINGLE action to the
+       service user. An installation made before 1.104.0 has no such
+       rule: powering off then fails cleanly and the interface explains
+       what to do.
+   Last resort, pkexec: it opens a password window on a graphical
+   desktop. Useless on the kiosk (nobody to ask) and redundant with the
+   first case, but it catches in-between setups (graphical session
+   without the default rule). */
+/* Diagnostic d'un refus (1.111.1). Le message d'erreur etait le meme
+   quelle que soit la cause, et le detail retenait l'echec de pkexec --
+   le dernier recours, qui ne PEUT pas marcher sous le service (setuid
+   neutralise par NoNewPrivileges) -- masquant celui de systemctl. On
+   demande maintenant a polkit, action par action, ce qui est refuse :
+     - power-off                 : la regle PiBoard est absente ou vise
+                                   un autre utilisateur. Cas typique :
+                                   Pi installe avant la 1.104.0 puis mis
+                                   a jour -- les mises a jour ne touchent
+                                   jamais /etc ;
+     - power-off-multiple-sessions : un AUTRE utilisateur a une session
+                                   ouverte (SSH, bureau...) ;
+     - power-off-ignore-inhibit  : un programme bloque l'extinction.
+   `classifyShutdownFailure` est pure, testee hors ligne.
+
+   Diagnosing a refusal (1.111.1). The error message was the same
+   whatever the cause, and the detail kept pkexec's failure -- the last
+   resort, which CANNOT work under the service -- hiding systemctl's. We
+   now ask polkit, action by action, what is refused. */
+const POWER_ACTIONS = {
+  powerOff: "org.freedesktop.login1.power-off",
+  multi: "org.freedesktop.login1.power-off-multiple-sessions",
+  inhibit: "org.freedesktop.login1.power-off-ignore-inhibit"
+};
+
+function classifyShutdownFailure(d) {
+  const pk = d.pk || {};
+  if (pk.powerOff === false) return "no-rule";
+  if ((d.otherUsers || []).length && pk.multi !== true) return "multiple-sessions";
+  if ((d.blockers || []).length && pk.inhibit !== true) return "inhibited";
+  if (pk.powerOff == null && /not authorized|access denied|interactive authentication required/i.test(d.error || "")) return "no-rule";
+  return "unknown";
+}
+
+/* `loginctl list-sessions --no-legend` : colonnes SESSION UID USER ...
+   Utilisateurs AUTRES que celui du service ayant une session. */
+function parseOtherUsers(text, me) {
+  const out = new Set();
+  for (const line of String(text || "").split("\n")) {
+    const cols = line.trim().split(/\s+/);
+    if (cols.length >= 3 && /^\d+$/.test(cols[1]) && cols[2] !== me) out.add(cols[2]);
+  }
+  return [...out];
+}
+
+/* `systemd-inhibit --list --no-legend --no-pager` : WHO UID USER PID COMM
+   WHAT WHY MODE. Verrous BLOQUANTS portant sur l'extinction. */
+function parseBlockers(text) {
+  const out = [];
+  for (const line of String(text || "").split("\n")) {
+    const cols = line.trim().split(/\s+/);
+    if (cols.length < 6 || cols[cols.length - 1] !== "block") continue;
+    if (!cols.some((c) => c.split(":").includes("shutdown"))) continue;
+    out.push(cols.join(" "));
+  }
+  return out;
+}
+
+function runCapture(cmd, args, timeout) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: timeout || 8000 }, (err, stdout, stderr) => {
+      resolve({ err, code: err ? (typeof err.code === "number" ? err.code : -1) : 0, stdout: String(stdout || ""), stderr: String(stderr || "") });
+    });
+  });
+}
+
+async function diagnoseShutdown(systemctlError) {
+  const me = require("os").userInfo().username;
+  const pk = {};
+  for (const [key, action] of Object.entries(POWER_ACTIONS)) {
+    // pkcheck : 0 = autorise ; 1, 2, 3 = refuse / challenge ; absent = inconnu.
+    const r = await runCapture("pkcheck", ["--action-id", action, "--process", String(process.pid)]);
+    if (r.err && r.err.code === "ENOENT") { pk[key] = null; continue; }
+    pk[key] = r.code === 0;
+  }
+  const sessions = await runCapture("loginctl", ["list-sessions", "--no-legend", "--no-pager"]);
+  const inhib = await runCapture("systemd-inhibit", ["--list", "--no-legend", "--no-pager"]);
+  const d = {
+    error: systemctlError,
+    pk,
+    user: me,
+    otherUsers: parseOtherUsers(sessions.stdout, me),
+    blockers: parseBlockers(inhib.stdout)
+  };
+  d.cause = classifyShutdownFailure(d);
+  return d;
+}
+
+function fixScriptPath() {
+  return require("path").join(__dirname, "..", "..", "install", "enable-poweroff.sh");
+}
+
+function shutdown() {
+  return new Promise((resolve) => {
+    execFile("systemctl", ["poweroff"], { timeout: 10000 }, async (err, _out, stderr) => {
+      if (!err) return resolve({ ok: true, method: "logind" });
+      const sysErr = String(stderr || err.message || "").trim();
+      /* pkexec n'a de sens qu'avec une session graphique (fenetre de mot
+         de passe). Sous le service systemd il echoue toujours : on ne
+         l'essaie que hors service (application de bureau).
+         pkexec only makes sense with a graphical session (password
+         window). Under the systemd service it always fails: only tried
+         outside the service (desktop application). */
+      if (!process.env.INVOCATION_ID) {
+        const r = await runCapture("pkexec", ["systemctl", "poweroff"], 60000);
+        if (!r.err) return resolve({ ok: true, method: "pkexec" });
+      }
+      let diag = { cause: "unknown", error: sysErr };
+      try { diag = await diagnoseShutdown(sysErr); } catch (e) { /* diagnostic best effort */ }
+      resolve({
+        ok: false,
+        reason: "not-permitted",
+        cause: diag.cause,
+        detail: sysErr,
+        user: diag.user,
+        otherUsers: diag.otherUsers || [],
+        blockers: diag.blockers || [],
+        fixScript: fixScriptPath(),
+        fixScriptExists: require("fs").existsSync(fixScriptPath())
+      });
+    });
+  });
+}
+
+/* ---------- Mise a jour automatique / self-update ----------
+   Sur Linux, le serveur peut se mettre a jour lui-meme depuis les
+   releases GitHub (voir server/selfUpdate.js) : `tar` est present sur
+   toute distribution Debian/Ubuntu/Pi OS, et le dossier de
+   l'application appartient a l'utilisateur du service. C'est la
+   contrepartie d'electron-updater sous Windows.
+   On Linux the server can update itself from GitHub releases (see
+   server/selfUpdate.js): `tar` ships with every Debian/Ubuntu/Pi OS
+   distribution, and the application folder belongs to the service user.
+   This is the counterpart of electron-updater on Windows. */
+function updateSupport() {
+  return { supported: true, method: "github-archive" };
+}
+
+/* Redemarrage apres mise a jour. Deux situations :
+     - service systemd (INVOCATION_ID est pose par systemd >= 232 pour
+       chaque unite) : on quitte avec un code NON NUL. Le fichier
+       install/piboard.service declare Restart=on-failure : un code 0
+       ne relancerait PAS le service, un code non nul si. Les
+       installations plus recentes ont Restart=always, ou les deux
+       marchent. Le processus n'a pas le droit d'appeler
+       `systemctl restart` lui-meme (utilisateur sans privileges,
+       NoNewPrivileges=true) : cette sortie volontaire est le seul
+       levier disponible, et il suffit.
+     - lance a la main (node server/index.js, npm start, pm2 sans
+       relance...) : personne ne nous relancera. On demarre un remplacant
+       detache qui attend une seconde (le temps que ce processus libere
+       le port), puis on quitte.
+   Restart after an update. Two situations:
+     - systemd service (INVOCATION_ID is set by systemd >= 232 for every
+       unit): exit with a NON-ZERO code. install/piboard.service declares
+       Restart=on-failure: a 0 code would NOT relaunch the service, a
+       non-zero one does. Newer installs have Restart=always, where both
+       work. The process is not allowed to call `systemctl restart`
+       itself (unprivileged user, NoNewPrivileges=true): this deliberate
+       exit is the only lever available, and it is enough.
+     - started by hand (node server/index.js, npm start, pm2 without
+       relaunch...): nobody will bring us back. We spawn a detached
+       replacement that waits one second (for this process to free the
+       port), then exit. */
+function restartServer() {
+  const underSystemd = !!process.env.INVOCATION_ID;
+  if (!underSystemd) {
+    try {
+      const script = process.argv[1] || "server/index.js";
+      const child = spawn("/bin/sh", ["-c", "sleep 1; exec \"$0\" \"$1\"", process.execPath, script], {
+        cwd: process.cwd(),
+        env: process.env,
+        detached: true,
+        stdio: "ignore"
+      });
+      child.unref();
+    } catch (e) {
+      return { ok: false, reason: String(e.message || e) };
+    }
+  }
+  setTimeout(() => process.exit(underSystemd ? 3 : 0), 200);
+  return { ok: true, method: underSystemd ? "systemd" : "respawn" };
+}
+
+/* ---------- Charge du GPU / GPU usage ----------
+
+   Aucune interface unique sous Linux : chaque famille de carte expose
+   sa charge a un endroit different, et le Raspberry Pi ne l'expose pas
+   du tout. Trois sources sont donc essayees dans l'ordre, de la moins
+   couteuse a la plus couteuse :
+
+   1. `/sys/class/drm/cardN/device/gpu_busy_percent` -- fichier fourni
+      par le pilote amdgpu (cartes AMD). Simple lecture de fichier, pas
+      de processus lance : c'est la source ideale quand elle existe.
+   2. `nvidia-smi --query-gpu=... --format=csv,noheader,nounits` --
+      cartes NVIDIA (y compris un Jetson). Sortie CSV STABLE et non
+      localisee, contrairement a la sortie par defaut de l'outil.
+   3. `/sys/class/drm/cardN/gt_act_freq_mhz` (Intel) donne une
+      FREQUENCE, pas une charge : la convertir en pourcentage serait une
+      invention. On ne l'utilise donc PAS -- mieux vaut annoncer
+      "indisponible" qu'un chiffre faux.
+
+   RASPBERRY PI : le VideoCore n'expose nulle part sa charge. `vcgencmd`
+   donne la temperature (deja lue comme temperature CPU sur cette
+   machine, le capteur est le meme SoC) et des frequences, jamais un
+   pourcentage d'occupation. Sur un Pi, cette fonction renvoie donc
+   `null` et la tuile masque simplement la ligne GPU : c'est la seule
+   reponse honnete.
+
+   No single interface on Linux: each card family exposes its load
+   somewhere different, and the Raspberry Pi does not expose it at all.
+   Three sources are tried in order, cheapest first:
+
+   1. `/sys/class/drm/cardN/device/gpu_busy_percent` -- file provided by
+      the amdgpu driver (AMD cards). A plain file read, no process
+      spawned: the ideal source when present.
+   2. `nvidia-smi --query-gpu=... --format=csv,noheader,nounits` --
+      NVIDIA cards (including a Jetson). STABLE, non-localised CSV
+      output, unlike the tool's default output.
+   3. `/sys/class/drm/cardN/gt_act_freq_mhz` (Intel) gives a FREQUENCY,
+      not a load: turning it into a percentage would be making things
+      up. So it is NOT used -- announcing "unavailable" beats a wrong
+      figure.
+
+   RASPBERRY PI: the VideoCore exposes its load nowhere. `vcgencmd`
+   gives the temperature (already read as the CPU temperature on this
+   machine, the sensor is the same SoC) and frequencies, never an
+   occupancy percentage. On a Pi this function therefore returns `null`
+   and the tile simply hides the GPU row: the only honest answer. */
+
+/* Sortie attendue : "23, 45, 1024, 2048, NVIDIA GeForce RTX 3060"
+   (utilisation %, temperature C, memoire utilisee Mio, memoire totale,
+   nom). Fonction pure, testable sans carte NVIDIA.
+   Expected output: "23, 45, 1024, 2048, NVIDIA GeForce RTX 3060"
+   (utilisation %, temperature C, used memory MiB, total, name). Pure
+   function, testable without an NVIDIA card. */
+function parseNvidiaSmi(raw) {
+  const line = String(raw || "").split(/\r?\n/).find((l) => l.trim());
+  if (!line) return null;
+  const cols = line.split(",").map((c) => c.trim());
+  const pct = Number(cols[0]);
+  if (!Number.isFinite(pct)) return null;
+  const num = (v) => (Number.isFinite(Number(v)) ? Number(v) : null);
+  const memUsed = num(cols[2]);
+  const memTotal = num(cols[3]);
+  return {
+    percent: Math.max(0, Math.min(100, Math.round(pct))),
+    tempC: num(cols[1]),
+    memPercent: memTotal ? Math.round((memUsed / memTotal) * 1000) / 10 : null,
+    name: cols[4] || null
+  };
+}
+
+/* Le fichier amdgpu contient un entier seul ("37\n").
+   The amdgpu file holds a bare integer ("37\n"). */
+function parseGpuBusyPercent(raw) {
+  const text = String(raw == null ? "" : raw).trim();
+  // Number("") vaut 0, pas NaN : sans ce test, un fichier vide ou
+  // tronque se lirait comme un GPU parfaitement au repos.
+  // Number("") is 0, not NaN: without this check, an empty or truncated
+  // file would read as a perfectly idle GPU.
+  if (!/^\d+$/.test(text)) return null;
+  const n = Number(text);
+  if (!Number.isFinite(n)) return null;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function readAmdGpu() {
+  let cards;
+  try { cards = fs.readdirSync("/sys/class/drm"); } catch (e) { return null; }
+  for (const card of cards) {
+    if (!/^card\d+$/.test(card)) continue;
+    let pct = null;
+    try { pct = parseGpuBusyPercent(fs.readFileSync("/sys/class/drm/" + card + "/device/gpu_busy_percent", "utf8")); }
+    catch (e) { continue; }
+    if (pct == null) continue;
+    let tempC = null;
+    // La temperature vit dans le sous-dossier hwmon, dont le numero
+    // varie : on prend le premier trouve.
+    // The temperature lives in the hwmon subfolder, whose number varies:
+    // we take the first one found.
+    try {
+      const base = "/sys/class/drm/" + card + "/device/hwmon";
+      for (const h of fs.readdirSync(base)) {
+        const raw = Number(fs.readFileSync(base + "/" + h + "/temp1_input", "utf8").trim());
+        if (Number.isFinite(raw)) { tempC = Math.round(raw / 100) / 10; break; }
+      }
+    } catch (e) { /* pas de capteur expose / no sensor exposed */ }
+    return { percent: pct, tempC, memPercent: null, name: null, source: "amdgpu" };
+  }
+  return null;
+}
+
+const GPU_TIMEOUT_MS = 4000;
+const NVIDIA_QUERY = "utilization.gpu,temperature.gpu,memory.used,memory.total,name";
+
+function gpuUsage() {
+  const amd = readAmdGpu();
+  if (amd) return Promise.resolve(amd);
+  return new Promise((resolve) => {
+    execFile("nvidia-smi", ["--query-gpu=" + NVIDIA_QUERY, "--format=csv,noheader,nounits"],
+      { timeout: GPU_TIMEOUT_MS, encoding: "utf8" }, (err, stdout) => {
+        // nvidia-smi absent (cas de loin le plus courant : pas de carte
+        // NVIDIA) : ce n'est pas une erreur, juste une absence.
+        // nvidia-smi missing (by far the most common case: no NVIDIA
+        // card): not an error, merely an absence.
+        if (err && !stdout) return resolve(null);
+        const parsed = parseNvidiaSmi(stdout);
+        resolve(parsed ? Object.assign(parsed, { source: "nvidia-smi" }) : null);
+      });
+  });
+}
+
+/* Emplacements ou chercher ffmpeg, par ordre de priorite. Sur un Pi OS
+   ou un PC Linux, ffmpeg s'installe via le gestionnaire de paquets et
+   se retrouve dans le PATH : le simple nom suffit presque toujours. Les
+   chemins absolus couvrent le cas d'un PATH restreint (service systemd
+   demarre avec un environnement minimal, notamment).
+   Where to look for ffmpeg, in priority order. On Pi OS or a Linux PC,
+   ffmpeg installs via the package manager and lands in PATH: the bare
+   name almost always suffices. The absolute paths cover a restricted
+   PATH (a systemd service started with a minimal environment, notably). */
+/* ---------- Extinction reelle de l'ecran / true display power off -----
+   L'economiseur d'ecran de PiBoard pose un calque noir : instantane et
+   toujours reveillable, mais la dalle reste allumee et consomme. Pour
+   economiser vraiment, il faut couper l'alimentation de la sortie
+   video, ce qui depend de la pile graphique -- et Pi OS a change deux
+   fois de pile en peu d'annees.
+
+   Quatre methodes sont donc essayees dans l'ordre, de la plus moderne a
+   la plus ancienne, jusqu'a ce que l'une reussisse :
+
+     1. wlopm      -- Wayland (labwc, wayfire) : c'est le cas de Pi OS
+                      Bookworm et Trixie, la cible principale.
+     2. wlr-randr  -- meme famille, present quand wlopm ne l'est pas ;
+                      demande le nom de la sortie, d'ou l'appel prealable
+                      sans argument pour le lire.
+     3. xset dpms  -- X11, pour Pi OS Bullseye et les PC Linux restes
+                      sous serveur X.
+     4. vcgencmd   -- micrologiciel Raspberry Pi, dernier recours ; il ne
+                      fonctionne plus avec le pilote KMS des versions
+                      recentes, d'ou sa place en fin de liste plutot
+                      qu'en tete.
+
+   La methode qui a fonctionne est renvoyee a l'appelant : l'interface
+   l'affiche, pour qu'un echec se diagnostique sans ouvrir un terminal.
+
+   True display power off. PiBoard's screen saver lays a black overlay:
+   instant and always wakeable, but the panel stays lit and draws power.
+   Real saving means cutting the video output's power, which depends on
+   the graphics stack -- and Pi OS has changed stack twice in a few
+   years. Four methods are tried in order, newest to oldest, until one
+   succeeds. The method that worked is returned to the caller: the
+   interface displays it, so a failure can be diagnosed without opening
+   a terminal. */
+
+/* Environnement des clients Wayland. Le serveur PiBoard tourne en
+   service systemd, avec un environnement minimal : ni XDG_RUNTIME_DIR
+   ni WAYLAND_DISPLAY. Sans eux, wlopm et wlr-randr ne trouvent pas le
+   compositeur et echouent avec un message peu parlant. Le repertoire
+   d'execution se deduit de l'uid, et le nom du socket est LU dans ce
+   repertoire plutot que suppose : "wayland-0" est le cas courant, pas
+   une garantie.
+   Wayland clients' environment. The PiBoard server runs as a systemd
+   service with a minimal environment: neither XDG_RUNTIME_DIR nor
+   WAYLAND_DISPLAY. The runtime directory is derived from the uid, and
+   the socket name is READ from that directory rather than assumed:
+   "wayland-0" is the common case, not a guarantee. */
+function waylandEnv() {
+  const env = Object.assign({}, process.env);
+  if (!env.XDG_RUNTIME_DIR) {
+    try {
+      env.XDG_RUNTIME_DIR = "/run/user/" + process.getuid();
+    } catch (e) { /* getuid absent (Windows) : sans objet ici */ }
+  }
+  if (!env.WAYLAND_DISPLAY && env.XDG_RUNTIME_DIR) {
+    try {
+      const sock = fs.readdirSync(env.XDG_RUNTIME_DIR)
+        .filter((f) => /^wayland-\d+$/.test(f))
+        .sort()[0];
+      if (sock) env.WAYLAND_DISPLAY = sock;
+    } catch (e) { /* repertoire illisible : les methodes X11 restent */ }
+  }
+  if (!env.DISPLAY) env.DISPLAY = ":0";
+  return env;
+}
+
+/* Commandes a essayer, dans l'ordre. Fonction PURE (aucun effet, aucun
+   acces disque) pour rester testable : c'est l'ordre et les arguments
+   qui comptent, et une inversion "on"/"off" passerait autrement
+   inapercue jusqu'a l'ecran reste noir.
+   Commands to try, in order. PURE function (no effects, no disk access)
+   to stay testable: order and arguments are what matter, and an
+   on/off inversion would otherwise go unnoticed until the screen stayed
+   black. */
+function displayPowerCommands(on, outputName) {
+  const state = on ? "on" : "off";
+  const list = [
+    { method: "wlopm", cmd: "wlopm", args: ["--" + state, "*"] }
+  ];
+  if (outputName) {
+    list.push({ method: "wlr-randr", cmd: "wlr-randr", args: ["--output", outputName, "--" + state] });
+  }
+  list.push({ method: "xset", cmd: "xset", args: on ? ["dpms", "force", "on"] : ["dpms", "force", "off"] });
+  list.push({ method: "vcgencmd", cmd: "vcgencmd", args: ["display_power", on ? "1" : "0"] });
+  return list;
+}
+
+/* Nom de la premiere sortie video, lu chez wlr-randr. Null si l'outil
+   est absent : la methode correspondante est alors simplement sautee.
+   Name of the first video output, read from wlr-randr. */
+function firstWaylandOutput(env) {
+  return new Promise((resolve) => {
+    execFile("wlr-randr", [], { timeout: 3000, env }, (err, stdout) => {
+      if (err) return resolve(null);
+      const m = String(stdout || "").match(/^(\S+)/m);
+      resolve(m ? m[1] : null);
+    });
+  });
+}
+
+function runOnce(cmd, args, env) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: 5000, env }, (err) => resolve(!err));
+  });
+}
+
+async function setDisplayPower(on) {
+  const env = waylandEnv();
+  const output = await firstWaylandOutput(env);
+  const tried = [];
+  for (const c of displayPowerCommands(!!on, output)) {
+    tried.push(c.method);
+    /* xset refuse d'agir si DPMS est desactive : on l'active avant, sans
+       se soucier de l'echec (l'appel suivant tranchera).
+       xset refuses to act when DPMS is disabled: enable it first,
+       ignoring failure -- the next call decides. */
+    if (c.method === "xset") await runOnce("xset", ["+dpms"], env);
+    if (await runOnce(c.cmd, c.args, env)) {
+      return { ok: true, method: c.method, on: !!on };
+    }
+  }
+  return { ok: false, method: null, on: !!on, tried };
+}
+
+function ffmpegCandidates() {
+  return ["ffmpeg", "/usr/bin/ffmpeg", "/usr/local/bin/ffmpeg", "/snap/bin/ffmpeg"];
+}
+
+function ffmpegInstallHint() {
+  return { fr: "sudo apt install ffmpeg", en: "sudo apt install ffmpeg" };
+}
+
+/* Chromium, pour le rendu d'une page web en image cote serveur (voir
+   server/webviewShot.js). Sur un Raspberry Pi en kiosque, il est deja
+   installe et tourne -- c'est le navigateur meme qui affiche PiBoard :
+   aucune dependance supplementaire a installer dans le cas d'usage
+   principal. "chromium" est le nom du paquet sous Pi OS/Debian recent,
+   "chromium-browser" celui des versions plus anciennes ; les deux sont
+   testes, ainsi que Chrome au cas ou.
+   Chromium, for server-side rendering of a web page to an image (see
+   server/webviewShot.js). On a Raspberry Pi kiosk it's already
+   installed and running -- it's the very browser displaying PiBoard:
+   no extra dependency to install in the main use case. "chromium" is
+   the package name on recent Pi OS/Debian, "chromium-browser" on older
+   ones; both are tried, plus Chrome just in case. */
+function chromiumCandidates() {
+  return [
+    "chromium",
+    "/usr/bin/chromium",
+    "chromium-browser",
+    "/usr/bin/chromium-browser",
+    "/snap/bin/chromium",
+    "google-chrome",
+    "/usr/bin/google-chrome"
+  ];
+}
+
+function chromiumInstallHint() {
+  return { fr: "sudo apt install chromium", en: "sudo apt install chromium" };
+}
+
+/* cvlc (VLC sans interface graphique) : necessaire pour le relais des
+   chaines en direct qu'un fournisseur IPTV rejette avec un 405 face a
+   ffmpeg -- confirme par examen du lecteur de reference officiel, qui
+   utilise libVLC nativement pour le direct plutot que le pipeline
+   video du navigateur. VLC/cvlc s'installe egalement via le
+   gestionnaire de paquets sur Pi OS/Linux, meme logique de recherche
+   que ffmpeg. cvlc (VLC without a graphical interface): needed to
+   relay live channels an IPTV provider rejects with a 405 when faced
+   with ffmpeg -- confirmed by examining the official reference player,
+   which uses libVLC natively for live rather than the browser's video
+   pipeline. VLC/cvlc also installs via the package manager on Pi
+   OS/Linux, same lookup logic as ffmpeg. */
+function vlcCandidates() {
+  return ["cvlc", "/usr/bin/cvlc", "/usr/local/bin/cvlc", "/snap/bin/vlc.cvlc"];
+}
+
+function vlcInstallHint() {
+  return { fr: "sudo apt install vlc-bin vlc-plugin-base", en: "sudo apt install vlc-bin vlc-plugin-base" };
+}
+
+/* ---------- Installation des outils multimedias depuis l'interface ----------
+   ffmpeg et VLC ne sont PAS des dependances du paquet PiBoard : ils ne
+   servent qu'aux flux IPTV recalcitrants, pesent lourd (plusieurs
+   centaines de Mo avec leurs dependances) et seraient imposes a la
+   majorite des installations qui n'en ont aucun usage. Ils restent
+   donc facultatifs, installables apres coup depuis les reglages --
+   d'ou ces deux fonctions.
+
+   La commande est fixe et ne contient AUCUNE donnee venue du
+   navigateur : la liste de paquets est choisie ici, l'appelant ne
+   transmet qu'un nom d'outil parmi deux. C'est la condition pour
+   accepter d'installer des paquets sur demande d'une page web, fut-elle
+   locale.
+
+   pkexec (et non sudo) parce qu'il ouvre la fenetre d'authentification
+   graphique du bureau : l'utilisateur voit ce qui va etre installe et
+   saisit son mot de passe dans une boite de dialogue du systeme, pas
+   dans PiBoard -- qui ne voit jamais ce mot de passe. Sans session
+   graphique (serveur systemd d'un Pi en kiosque), pkexec n'a personne a
+   qui demander et echoue proprement : c'est pourquoi l'interface ne
+   propose le bouton que dans l'application de bureau.
+
+   ffmpeg and VLC are NOT dependencies of the PiBoard package: they only
+   serve stubborn IPTV streams, weigh a lot (several hundred MB with
+   their dependencies) and would be forced upon the majority of
+   installations that have no use for them. They stay optional,
+   installable afterwards from the settings -- hence these two
+   functions.
+
+   The command is fixed and contains NO data coming from the browser:
+   the package list is chosen here, the caller only passes one of two
+   tool names. That is the condition for agreeing to install packages at
+   the request of a web page, local though it may be.
+
+   pkexec (rather than sudo) because it opens the desktop's graphical
+   authentication window: the user sees what is about to be installed
+   and types their password into a system dialog, not into PiBoard --
+   which never sees that password. With no graphical session (the
+   systemd server of a kiosk Pi), pkexec has nobody to ask and fails
+   cleanly: that is why the interface only offers the button in the
+   desktop application. */
+const MEDIA_PACKAGES = {
+  ffmpeg: ["ffmpeg"],
+  vlc: ["vlc-bin", "vlc-plugin-base"]
+};
+
+function mediaPackages(tool) {
+  return MEDIA_PACKAGES[tool] || null;
+}
+
+function installMediaTool(tool) {
+  const packages = mediaPackages(tool);
+  if (!packages) return Promise.resolve({ ok: false, reason: "unknown-tool" });
+  return new Promise((resolve) => {
+    /* apt-get plutot qu'apt : c'est l'interface stable, faite pour etre
+       appelee par un programme (apt affiche un avertissement a ce
+       sujet). DEBIAN_FRONTEND=noninteractive evite qu'un paquet ouvre
+       un questionnaire dans un terminal que personne ne regarde.
+       apt-get rather than apt: it is the stable interface, meant to be
+       called by a program (apt prints a warning about this).
+       DEBIAN_FRONTEND=noninteractive prevents a package from opening a
+       questionnaire in a terminal nobody is watching. */
+    const args = ["env", "DEBIAN_FRONTEND=noninteractive", "apt-get", "install", "-y"].concat(packages);
+    execFile("pkexec", args, { timeout: 15 * 60 * 1000, maxBuffer: 8 * 1024 * 1024 }, (err, stdout, stderr) => {
+      if (!err) return resolve({ ok: true, packages, output: String(stdout || "").slice(-4000) });
+      /* pkexec sort avec 126 si l'utilisateur annule ou echoue
+         l'authentification, 127 s'il n'a pas pu demander du tout (pas de
+         session graphique, agent absent). Les distinguer evite
+         d'afficher "erreur" quand l'utilisateur a simplement clique sur
+         Annuler.
+         pkexec exits with 126 if the user cancels or fails
+         authentication, 127 if it could not ask at all (no graphical
+         session, missing agent). Telling them apart avoids showing an
+         "error" when the user simply clicked Cancel. */
+      /* ENOENT (une chaine, pas un nombre) signifie que pkexec n'est pas
+         installe du tout : sur les bureaux completes c'est rare, mais
+         une image minimale ou un conteneur n'en a pas. Le resultat est
+         le meme pour l'utilisateur que 127 -- aucune fenetre de mot de
+         passe possible -- d'ou le meme motif.
+         ENOENT (a string, not a number) means pkexec is not installed at
+         all: rare on complete desktops, but a minimal image or a
+         container has none. The outcome for the user is the same as 127
+         -- no password window possible -- hence the same reason. */
+      const code = err.code;
+      const reason = code === 126 ? "cancelled"
+        : (code === 127 || code === "ENOENT") ? "no-auth-agent"
+        : "failed";
+      resolve({
+        ok: false,
+        reason,
+        packages,
+        output: (String(stderr || "") + String(stdout || "")).slice(-4000)
+      });
+    });
+  });
+}
+
+
+/* ---------- Configuration reseau / network configuration ----------
+
+   Sous Linux, aucune commande ne donne tout : on assemble trois sources
+   independantes, chacune facultative.
+
+   1. `ip route` -> passerelle par defaut, par carte. Sortie stable et
+      NON localisee, contrairement a `ipconfig` sous Windows.
+   2. `resolvectl status` -> DNS et domaine de recherche quand
+      systemd-resolved est en place (cas de Pi OS Trixie). Repli sur
+      /etc/resolv.conf sinon -- fichier universel, mais qui sur une
+      machine avec systemd-resolved ne contient que 127.0.0.53, d'ou
+      l'ordre.
+   3. Baux DHCP -> presence d'un fichier de bail, serveur et expiration.
+      Les emplacements varient selon le client (dhcpcd sur Pi OS,
+      dhclient ailleurs) : on essaie les deux.
+
+   Chaque etage echoue independamment : perdre les DNS ne doit pas faire
+   perdre la passerelle.
+
+   On Linux no single command gives everything: we assemble three
+   independent sources, each optional.
+
+   1. `ip route` -> default gateway, per adapter. Stable and NOT
+      localised output, unlike Windows' `ipconfig`.
+   2. `resolvectl status` -> DNS and search domain when systemd-resolved
+      is in place (the case on Pi OS Trixie). Falls back to
+      /etc/resolv.conf otherwise -- a universal file, but one that on a
+      systemd-resolved machine holds only 127.0.0.53, hence the order.
+   3. DHCP leases -> lease file presence, server and expiry. Locations
+      vary by client (dhcpcd on Pi OS, dhclient elsewhere): we try both.
+
+   Each layer fails independently: losing DNS must not lose the gateway. */
+
+const NET_TIMEOUT_MS = 4000;
+
+function run(cmd, args) {
+  return new Promise((resolve) => {
+    execFile(cmd, args, { timeout: NET_TIMEOUT_MS, encoding: "utf8" },
+      (err, stdout) => resolve(err && !stdout ? null : String(stdout || "")));
+  });
+}
+
+/* `ip route` : on ne retient QUE les routes par defaut. Une table de
+   routage complete contient aussi les routes de sous-reseau, qui n'ont
+   pas de passerelle a afficher.
+   `ip route`: we keep ONLY default routes. A full routing table also
+   holds subnet routes, which have no gateway to show. */
+function parseIpRoute(raw) {
+  const out = {};
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const m = line.match(/^default\s+via\s+(\S+)\s+dev\s+(\S+)/);
+    if (m) out[m[2]] = m[1];
+  }
+  return out;
+}
+
+/* `resolvectl status` : sortie par section "Link n (nom)". Les serveurs
+   peuvent tenir sur plusieurs lignes, la premiere seule serait
+   incomplete.
+   `resolvectl status`: output in "Link n (name)" sections. Servers can
+   span several lines; the first one alone would be incomplete. */
+function parseResolvectl(raw) {
+  const out = {};
+  let cur = null;
+  let collecting = false;
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const link = line.match(/^Link\s+\d+\s+\(([^)]+)\)/);
+    if (link) { cur = link[1]; out[cur] = { dns: [], domain: null }; collecting = false; continue; }
+    if (!cur) continue;
+    const dns = line.match(/^\s*(?:Current\s+)?DNS Servers?:\s*(.*)$/i);
+    if (dns) {
+      out[cur].dns.push(...dns[1].split(/\s+/).filter(Boolean));
+      collecting = true;
+      continue;
+    }
+    const dom = line.match(/^\s*DNS Domain:\s*(.*)$/i);
+    if (dom) { out[cur].domain = dom[1].trim() || null; collecting = false; continue; }
+    if (collecting && /^\s{2,}\S/.test(line) && !line.includes(":")) {
+      out[cur].dns.push(...line.trim().split(/\s+/).filter(Boolean));
+      continue;
+    }
+    collecting = false;
+  }
+  return out;
+}
+
+function parseResolvConf(raw) {
+  const dns = [];
+  let domain = null;
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const n = line.match(/^\s*nameserver\s+(\S+)/);
+    if (n) dns.push(n[1]);
+    const d = line.match(/^\s*(?:search|domain)\s+(\S+)/);
+    if (d && !domain) domain = d[1];
+  }
+  // 127.0.0.53 est le resolveur local de systemd, pas un vrai serveur :
+  // l'afficher n'apprendrait rien a personne.
+  // 127.0.0.53 is systemd's local stub, not a real server: showing it
+  // would tell nobody anything.
+  return { dns: dns.filter((x) => x !== "127.0.0.53"), domain };
+}
+
+/* Bail dhcpcd. Le format est `lease {}` facon dhclient chez dhclient, et
+   un fichier binaire chez dhcpcd : on ne lit donc que ce qui est
+   textuel, et on renvoie null sans se plaindre sinon.
+   dhcpcd lease. The format is dhclient-style `lease {}` for dhclient and
+   a binary file for dhcpcd: so we only read what is textual, and return
+   null without complaining otherwise. */
+function parseDhclientLease(raw, iface) {
+  const text = String(raw || "");
+  const blocks = text.split(/\blease\s*\{/).slice(1);
+  let best = null;
+  for (const b of blocks) {
+    if (iface && !new RegExp("interface\\s+\"" + iface + "\"").test(b)) continue;
+    const server = (b.match(/option dhcp-server-identifier\s+(\S+);/) || [])[1] || null;
+    const expire = (b.match(/expire\s+\d+\s+([^;]+);/) || [])[1] || null;
+    best = { dhcpServer: server, leaseExpires: expire ? expire.trim() : null };
+  }
+  return best;
+}
+
+async function networkDetails() {
+  const [routeRaw, resolveRaw] = await Promise.all([
+    run("ip", ["route"]),
+    run("resolvectl", ["status"])
+  ]);
+
+  const gateways = parseIpRoute(routeRaw);
+  const perLink = resolveRaw ? parseResolvectl(resolveRaw) : {};
+
+  let fallbackDns = { dns: [], domain: null };
+  if (!Object.keys(perLink).length) {
+    try { fallbackDns = parseResolvConf(fs.readFileSync("/etc/resolv.conf", "utf8")); }
+    catch (e) { /* fichier absent / file missing */ }
+  }
+
+  const names = new Set([...Object.keys(gateways), ...Object.keys(perLink)]);
+  const adapters = [];
+  for (const name of names) {
+    const link = perLink[name] || {};
+    let lease = null;
+    for (const f of ["/var/lib/dhcp/dhclient." + name + ".leases",
+                     "/var/lib/dhcp/dhclient.leases",
+                     "/var/lib/dhcpcd/" + name + ".lease"]) {
+      try { lease = parseDhclientLease(fs.readFileSync(f, "utf8"), name); if (lease) break; }
+      catch (e) { /* bail absent ou binaire / lease missing or binary */ }
+    }
+    adapters.push({
+      name,
+      gateway: gateways[name] || null,
+      // Presence d'un bail = adresse obtenue en DHCP. En l'absence de
+      // bail lisible on laisse null : affirmer "adresse fixe" sur la
+      // seule absence d'un fichier serait une deduction trop hative.
+      // A lease present = address obtained via DHCP. With no readable
+      // lease we leave null: asserting "static address" purely from a
+      // missing file would be too hasty a deduction.
+      dhcp: lease ? true : null,
+      dhcpServer: lease ? lease.dhcpServer : null,
+      leaseExpires: lease ? lease.leaseExpires : null,
+      dns: (link.dns && link.dns.length ? link.dns : fallbackDns.dns) || [],
+      domain: link.domain || fallbackDns.domain || null
+    });
+  }
+
+  return { adapters, domain: fallbackDns.domain || null };
+}
+
+/* ---------- Memoire utilisee / memory in use ----------
+
+   MEME PIEGE QUE macOS, EN PLUS DISCRET. `os.freemem()` rend ici
+   MemFree, c'est-a-dire la memoire qui n'est affectee a RIEN. Le cache
+   fichier et les tampons, eux, sont comptes comme utilises alors que le
+   noyau les rend a la premiere demande. Sur un Raspberry Pi qui tourne
+   depuis quelques jours, le cache occupe l'essentiel de ce qui reste :
+   la tuile montre donc une memoire quasi pleine alors que rien ne
+   manque. C'est le meme mensonge qu'`os.freemem()` sous macOS, en
+   moins spectaculaire -- donc plus longtemps invisible.
+
+   MemAvailable, publie par le noyau depuis Linux 3.14, est l'estimation
+   FAITE PAR LE NOYAU de ce qu'une application peut obtenir sans
+   declencher d'echange : c'est exactement la question posee. On ne la
+   recalcule pas a partir de Cached et Buffers -- cette approximation
+   repandue surestime, le noyau gardant une part du cache non
+   liberable.
+
+   SAME TRAP AS macOS, QUIETER. `os.freemem()` returns MemFree here --
+   memory assigned to NOTHING. File cache and buffers count as used
+   although the kernel hands them back on first demand. MemAvailable,
+   published since Linux 3.14, is the KERNEL'S OWN estimate of what an
+   application can obtain without swapping: exactly the question asked.
+   We do not recompute it from Cached and Buffers -- that widespread
+   approximation overestimates. */
+
+/* Fonction PURE sur le contenu de /proc/meminfo, donc testable partout,
+   y compris depuis un Mac ou un PC Windows.
+   PURE function over /proc/meminfo's contents, testable anywhere. */
+function parseMeminfo(raw) {
+  const text = String(raw || "");
+  const kb = (label) => {
+    const m = new RegExp("^" + label + ":\\s+(\\d+)\\s*kB\\s*$", "mi").exec(text);
+    return m ? Number(m[1]) * 1024 : null;
+  };
+  const totalBytes = kb("MemTotal");
+  if (!totalBytes) return null;
+  /* Repli sur MemFree pour les noyaux anterieurs a 3.14, qui ne
+     publient pas MemAvailable : on retombe alors sur le comportement
+     d'avant, jamais sur une absence d'affichage.
+     Falls back to MemFree on kernels older than 3.14, which do not
+     publish MemAvailable: the previous behaviour, never a blank. */
+  const availableBytes = kb("MemAvailable");
+  const available = availableBytes === null ? kb("MemFree") : availableBytes;
+  if (available === null) return null;
+  const usedBytes = Math.max(0, totalBytes - available);
+  if (usedBytes > totalBytes) return null;
+  const cached = kb("Cached");
+  const buffers = kb("Buffers");
+  return {
+    totalBytes,
+    usedBytes,
+    cachedBytes: cached === null ? null : cached + (buffers || 0)
+  };
+}
+
+function memoryUsage() {
+  return new Promise((resolve) => {
+    fs.readFile("/proc/meminfo", "utf8", (err, raw) => {
+      if (err || !raw) return resolve(null);
+      resolve(parseMeminfo(raw));
+    });
+  });
+}
+
+module.exports = {
+  parseMeminfo,
+  memoryUsage,
+  setDisplayPower,
+  displayPowerCommands,
+  id,
+  networkDetails,
+  parseIpRoute,
+  parseResolvectl,
+  parseResolvConf,
+  parseDhclientLease,
+  pingArgs,
+  pingSucceeded,
+  parseArp,
+  readArpEntries,
+  reverseLookup,
+  listRemovableVolumes,
+  cpuTemperature,
+  filesystemRoot,
+  exitKiosk,
+  exitToDesktop,
+  shutdown,
+  classifyShutdownFailure,
+  parseOtherUsers,
+  parseBlockers,
+  updateSupport,
+  restartServer,
+  gpuUsage,
+  parseNvidiaSmi,
+  parseGpuBusyPercent,
+  MOUNT_ROOTS,
+  ffmpegCandidates,
+  ffmpegInstallHint,
+  chromiumCandidates,
+  chromiumInstallHint,
+  vlcCandidates,
+  vlcInstallHint,
+  /* Comment l'installation se fait ici, pour que l'interface dise la
+     verite sans jamais tester le systeme elle-meme : "package" ouvre le
+     gestionnaire de paquets et demande un mot de passe, "download"
+     recupere un binaire et n'en demande aucun. Le message affiche avant
+     de cliquer differe donc, et promettre une fenetre de mot de passe
+     qui ne viendra jamais serait deroutant.
+     How installation happens here, so the interface can tell the truth
+     without ever testing the system itself. */
+  mediaInstallMode: "package",
+  mediaPackages,
+  installMediaTool
+};

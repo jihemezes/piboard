@@ -1,0 +1,218 @@
+/* PiBoard - tuile Logo / Image. Classes cloisonnees sous .pw-image.
+   PiBoard - Logo / Image tile. Classes namespaced under .pw-image. */
+.pw-image {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+.pw-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+  /* La largeur et la hauteur sont pilotees par le cadrage choisi (voir
+     applyFit dans widget.js) ; rien n'est fixe ici pour ne pas entrer en
+     conflit avec lui.
+     Width and height are driven by the chosen framing (see applyFit in
+     widget.js); nothing is fixed here so as not to conflict with it. */
+}
+.pw-image-h-left { justify-content: flex-start; }
+.pw-image-h-center { justify-content: center; }
+.pw-image-h-right { justify-content: flex-end; }
+.pw-image-v-top { align-items: flex-start; }
+.pw-image-v-middle { align-items: center; }
+.pw-image-v-bottom { align-items: flex-end; }
+.pw-image-link { cursor: pointer; }
+
+.pw-image-empty {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--faint);
+  font-size: 12.5px;
+  text-align: center;
+  padding: 8px;
+  box-sizing: border-box;
+}
+.pw-image-empty svg { width: 26px; height: 26px; opacity: 0.7; }
+.pw-image-empty .btn { pointer-events: auto; }
+
+/* Gestionnaire d'image (fenetre ouverte depuis les reglages de la tuile)
+   Image manager (window opened from the tile's settings) */
+.pw-image-manager .modal-card { width: min(560px, 96vw); }
+.pw-image-mgr-body { padding: 6px 18px 14px; }
+.pw-image-mgr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-top: 10px;
+  max-height: 46vh;
+  overflow: auto;
+}
+.pw-image-thumb {
+  position: relative;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--bg);
+  aspect-ratio: 4 / 3;
+  cursor: pointer;
+}
+.pw-image-thumb.selected { border-color: var(--accent); }
+.pw-image-thumb img { width: 100%; height: 100%; object-fit: contain; display: block; }
+.pw-image-thumb-del {
+  position: absolute;
+  top: 3px;
+  right: 3px;
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pw-image-mgr-empty { color: var(--muted); font-size: 13px; margin: 14px 0; }
+.pw-image-mgr-status { color: var(--muted); font-size: 12.5px; margin-top: 8px; }
+
+/* Le bouton de coin a ete retire : il se superposait a la poignee de
+   zoom de l'angle superieur droit. Le changement d'image passe par
+   l'appareil photo de la barre d'outils, en bas au milieu, loin des
+   quatre angles.
+   The corner button was removed: it overlapped the top-right zoom
+   handle. Changing the image goes through the toolbar's camera, at the
+   bottom centre, away from all four corners. */
+
+/* Le bouton est positionne par rapport a la tuile, pas a la page.
+   The button is positioned relative to the tile, not to the page. */
+.pw-image { position: relative; }
+
+/* ---------- Recadrage direct sur l'image / direct crop overlay ----------
+   Présent uniquement en mode edition : sur un tableau en fonctionnement,
+   des poignees par-dessus l'image n'auraient rien a faire la.
+   Only present in edit mode: on a running board, handles over the image
+   would have no business being there. */
+.pw-image-crop { display: none; }
+body.editing .pw-image-crop {
+  display: block;
+  /* LA cause du symptome signale. En mode edition, la regle globale
+     `body.editing .tile-body { pointer-events: none }` rend TOUT le
+     contenu des tuiles inerte, pour qu'une iframe, un lien ou une carte
+     n'avalent pas le pointeur et que la tuile entiere se saisisse d'un
+     geste. Cette surcouche en heritait : les poignees et la barre
+     d'outils s'affichaient mais ne recevaient aucun evenement, si bien
+     que le clic traversait jusqu'a la tuile et ouvrait la fenetre de
+     configuration. Aucune interception en JavaScript ne pouvait y
+     changer quoi que ce soit -- l'evenement n'atteignait jamais nos
+     ecouteurs.
+     Elle est donc explicitement rendue sensible au pointeur. C'est la
+     seule partie du contenu qui l'est en edition, et c'est voulu : ses
+     poignees SONT l'outil d'edition de cette tuile.
+
+     THE cause of the reported symptom. In edit mode, the global rule
+     `body.editing .tile-body { pointer-events: none }` makes ALL tile
+     content inert, so that an iframe, a link or a map does not swallow
+     the pointer and the whole tile can be grabbed anywhere. This overlay
+     inherited that: the handles and the toolbar were displayed but
+     received no event at all, so the click went through to the tile and
+     opened the settings window. No amount of JavaScript interception
+     could change anything -- the event never reached our listeners.
+     It is therefore explicitly made pointer-sensitive. It is the only
+     part of the content that is, while editing, and deliberately so: its
+     handles ARE this tile's editing tool. */
+  pointer-events: auto;
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  /* Le curseur annonce le geste possible avant meme qu'on l'essaie.
+     The cursor announces the possible gesture before it is even tried. */
+  cursor: move;
+  touch-action: none;
+}
+/* La surcouche est active pour TOUS les cadrages : le zoom et le point
+   de mire agissent partout, les poignees ont donc toujours un effet.
+   The overlay is active for EVERY framing: zoom and focal point act
+   everywhere, so the handles always have an effect. */
+
+.pw-image-handle {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  border: 2px solid #fff;
+  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.55);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.5);
+}
+.pw-image-handle-nw { top: 3px; left: 3px; cursor: nwse-resize; }
+.pw-image-handle-ne { top: 3px; right: 3px; cursor: nesw-resize; }
+.pw-image-handle-sw { bottom: 3px; left: 3px; cursor: nesw-resize; }
+.pw-image-handle-se { bottom: 3px; right: 3px; cursor: nwse-resize; }
+
+.pw-image-croptools {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  z-index: 2;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.62);
+  color: #fff;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+.pw-image-croptools button {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: #fff;
+  font-size: 13px;
+  line-height: 1;
+  cursor: pointer;
+}
+.pw-image-croptools button:hover { background: rgba(255, 255, 255, 0.18); }
+/* Miroir actif : fond enfonce en permanence, pas seulement au survol --
+   c'est le seul indice que le reglage est actuellement applique.
+   Active mirror: a permanently pressed background, not just on hover --
+   the only cue that the setting is currently applied. */
+.pw-image-croptools button.active { background: rgba(255, 255, 255, 0.4); }
+.pw-image-croptools button.active:hover { background: rgba(255, 255, 255, 0.5); }
+.pw-image-croptools span { min-width: 3.4em; text-align: center; }
+
+.pw-image-crophint {
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 60px);
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #fff;
+  font-size: 10.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+/* Sur une petite tuile, l'indication et les boutons se marcheraient
+   dessus : l'indication s'efface, les poignees suffisent.
+   On a small tile the hint and the buttons would overlap: the hint goes,
+   the handles are enough. */
+@container (max-height: 120px) {
+  .pw-image-crophint { display: none; }
+}

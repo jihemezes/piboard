@@ -1,0 +1,30 @@
+/* PiBoard widget: homeassistant */
+
+.pw-ha { position: relative; height: 100%; display: flex; flex-direction: column; padding: 4px 10px; box-sizing: border-box; overflow: hidden; }
+.pwh-rows { display: flex; flex-direction: column; gap: 0.3em; overflow-y: auto; }
+
+.pwh-row { display: grid; grid-template-columns: 1fr auto; gap: 0.6em; align-items: baseline; }
+.pwh-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); }
+.pwh-val { font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); }
+
+/* Une porte ouverte ou une fumee detectee doit sauter aux yeux depuis
+   l'autre bout de la piece ; l'etat normal reste discret.
+   An open door or detected smoke must be obvious from across the room;
+   the normal state stays discreet. */
+.pwh-alert .pwh-val { color: var(--accent); font-weight: 600; }
+.pwh-active .pwh-val { color: #E0A155; }
+.pwh-calm .pwh-val { color: var(--muted); }
+.pwh-dead .pwh-name, .pwh-dead .pwh-val { opacity: 0.45; font-style: italic; }
+
+.pwh-live {
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #3FA96B;
+  opacity: 0.75;
+}
+
+.pwh-msg { margin: auto; text-align: center; color: var(--muted); font-size: 0.88em; padding: 0 8px; }

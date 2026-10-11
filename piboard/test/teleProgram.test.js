@@ -1,0 +1,453 @@
+/* Tests unitaires de server/teleProgram.js : fonctions PURES
+   (parsing XMLTV, dates, vues). Aucune I/O reseau/disque. */
+"use strict";
+const assert = require("assert");
+const tp = require("../server/teleProgram");
+
+/* Echantillon XMLTV minimal mais representatif : 2 chaines, plusieurs
+   programmes, avec/sans <new>, <previously-shown>, <icon>, multilingue. */
+const SAMPLE = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="TF1.fr">
+    <display-name lang="fr">TF1</display-name>
+    <icon src="https://logo/tf1.png"/>
+  </channel>
+  <channel id="France2.fr">
+    <display-name>France 2</display-name>
+  </channel>
+  <programme start="20240115200000 +0100" stop="20240115210000 +0100" channel="TF1.fr">
+    <title lang="fr">Journal de 20h</title>
+    <desc lang="fr">Les titres du jour.</desc>
+    <category lang="fr">Information</category>
+    <previously-shown/>
+  </programme>
+  <programme start="20240115210000 +0100" stop="20240115230000 +0100" channel="TF1.fr">
+    <title lang="fr">Grand film inédit</title>
+    <sub-title lang="fr">Un thriller</sub-title>
+    <desc lang="en">English desc</desc>
+    <desc lang="fr">Un synopsis en français.</desc>
+    <category lang="fr">Film</category>
+    <icon src="https://img/film.jpg"/>
+    <new/>
+  </programme>
+  <programme start="20240115230000 +0100" stop="20240116003000 +0100" channel="TF1.fr">
+    <title lang="fr">Deuxième partie de soirée</title>
+    <desc lang="fr">Débat.</desc>
+  </programme>
+  <programme start="20240115204500 +0100" stop="20240115214500 +0100" channel="France2.fr">
+    <title lang="fr">Série du soir</title>
+    <category lang="fr">Série</category>
+  </programme>
+</tv>`;
+
+console.log("== parseXmltvDate ==");
+{
+  const d = tp.parseXmltvDate("20240115203000 +0100");
+  assert.strictEqual(d.toISOString(), "2024-01-15T19:30:00.000Z", "TZ +0100 -> UTC");
+  assert.strictEqual(tp.parseXmltvDate("20240115203000").getUTCFullYear(), 2024, "sans TZ = UTC");
+  assert.strictEqual(tp.parseXmltvDate(""), null);
+  assert.strictEqual(tp.parseXmltvDate("nawak"), null);
+  console.log("  OK");
+}
+
+console.log("== pickLangText : prefere le francais ==");
+{
+  const node = [{ "@_lang": "en", "#text": "English" }, { "@_lang": "fr", "#text": "Français" }];
+  assert.strictEqual(tp.pickLangText(node, "fr"), "Français");
+  assert.strictEqual(tp.pickLangText("simple"), "simple");
+  assert.strictEqual(tp.pickLangText(null), null);
+  console.log("  OK");
+}
+
+console.log("== detectNewFlag : inedit / rediffusion / inconnu ==");
+{
+  assert.strictEqual(tp.detectNewFlag({ "new": "" }), true);
+  assert.strictEqual(tp.detectNewFlag({ "previously-shown": "" }), false);
+  assert.strictEqual(tp.detectNewFlag({}), null, "aucune info -> null (cf. Q2)");
+  console.log("  OK");
+}
+
+console.log("== parseXmltv : chaines et programmes normalises ==");
+const grid = tp.parseXmltv(SAMPLE, { preferLang: "fr" });
+{
+  assert.strictEqual(grid.channels.size, 2);
+  assert.strictEqual(grid.channels.get("TF1.fr").name, "TF1");
+  assert.strictEqual(grid.channels.get("TF1.fr").icon, "https://logo/tf1.png");
+  assert.strictEqual(grid.channels.get("France2.fr").icon, null);
+  assert.strictEqual(grid.programmes.length, 4);
+
+  const film = grid.programmes.find((p) => p.title === "Grand film inédit");
+  assert.strictEqual(film.isNew, true, "inedit detecte");
+  assert.strictEqual(film.subtitle, "Un thriller");
+  assert.strictEqual(film.desc, "Un synopsis en français.", "desc FR preferee a EN");
+  assert.strictEqual(film.icon, "https://img/film.jpg");
+  assert.strictEqual(film.category, "Film");
+
+  const jt = grid.programmes.find((p) => p.title === "Journal de 20h");
+  assert.strictEqual(jt.isNew, false, "rediffusion detectee");
+
+  const debat = grid.programmes.find((p) => p.title === "Deuxième partie de soirée");
+  assert.strictEqual(debat.isNew, null, "info absente -> null");
+  console.log("  OK");
+}
+
+console.log("== programAtInstant : programme en cours ==");
+{
+  // 20h30 (heure de Paris) = 19:30 UTC -> Journal de 20h (20h-21h)
+  const at = new Date("2024-01-15T19:30:00.000Z");
+  const p = tp.programAtInstant(grid.programmes, "TF1.fr", at);
+  assert.strictEqual(p.title, "Journal de 20h");
+  // 22h00 Paris = 21:00 UTC -> Grand film (21h-23h)
+  const at2 = new Date("2024-01-15T21:00:00.000Z");
+  assert.strictEqual(tp.programAtInstant(grid.programmes, "TF1.fr", at2).title, "Grand film inédit");
+  console.log("  OK");
+}
+
+console.log("== programDurationMinutes ==");
+{
+  assert.strictEqual(tp.programDurationMinutes(grid.programmes.find((p) => p.title === "Journal de 20h")), 60);
+  assert.strictEqual(tp.programDurationMinutes(grid.programmes.find((p) => p.title === "Grand film inédit")), 120);
+  console.log("  OK");
+}
+
+console.log("== programNearHour : filtre de duree minimale ==");
+{
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="TF1.fr"><display-name lang="fr">TF1</display-name></channel>
+  <programme start="20240115210000 +0100" stop="20240115210500 +0100" channel="TF1.fr"><title lang="fr">Météo</title></programme>
+  <programme start="20240115210500 +0100" stop="20240115223500 +0100" channel="TF1.fr"><title lang="fr">Vraie émission</title></programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const target = tp.targetDateForHour(new Date("2024-01-15T19:30:00.000Z"), "21:00");
+  // Sans seuil : prend le plus proche (la meteo, pile a l'heure)
+  assert.strictEqual(tp.programNearHour(g.programmes, "TF1.fr", target, 45, 90).title, "Météo");
+  // Avec seuil 45 min : ignore la meteo (5 min), prend la vraie emission (1h30)
+  assert.strictEqual(tp.programNearHour(g.programmes, "TF1.fr", target, 45, 90, 45).title, "Vraie émission");
+  // Seuil trop eleve (aucun programme n'atteint 200 min) -> repli sur le plus proche
+  assert.strictEqual(tp.programNearHour(g.programmes, "TF1.fr", target, 45, 90, 200).title, "Météo");
+  console.log("  OK");
+}
+
+console.log("== buildView 'now' ==");
+{
+  const ref = new Date("2024-01-15T19:30:00.000Z"); // 20h30 Paris
+  const view = tp.buildView(grid.programmes, ["TF1.fr", "France2.fr"], "now", ref, {});
+  assert.strictEqual(view.length, 2);
+  assert.strictEqual(view[0].program.title, "Journal de 20h");
+  console.log("  OK:", view.map((v) => v.program && v.program.title).join(" | "));
+}
+
+console.log("== buildView 'evening' (~21h) ==");
+{
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(grid.programmes, ["TF1.fr", "France2.fr"], "evening", ref, { eveningStart: "21:00" });
+  // TF1 : le film a 21h ; France 2 : serie a 20h45 (dans la tolerance)
+  assert.strictEqual(view[0].program.title, "Grand film inédit");
+  assert.strictEqual(view[1].program.title, "Série du soir");
+  console.log("  OK:", view.map((v) => v.program && v.program.title).join(" | "));
+}
+
+console.log("== buildView 'evening' : ignore une case courte (météo) pile a l'heure cible ==");
+{
+  // TF1 : meteo de 5 min a 21h00, puis la vraie emission de 21h05 a 22h35 (1h30)
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="TF1.fr"><display-name lang="fr">TF1</display-name></channel>
+  <programme start="20240115210000 +0100" stop="20240115210500 +0100" channel="TF1.fr">
+    <title lang="fr">Météo</title>
+  </programme>
+  <programme start="20240115210500 +0100" stop="20240115223500 +0100" channel="TF1.fr">
+    <title lang="fr">Le vrai film du soir</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["TF1.fr"], "evening", ref, { eveningStart: "21:00" });
+  assert.strictEqual(view[0].program.title, "Le vrai film du soir",
+    "la meteo (5 min) doit etre ignoree au profit de l'emission qui suit (1h30)");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== buildView 'evening' : seuil de duree desactivable (minDuration=0) ==");
+{
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="TF1.fr"><display-name lang="fr">TF1</display-name></channel>
+  <programme start="20240115210000 +0100" stop="20240115210500 +0100" channel="TF1.fr"><title lang="fr">Météo</title></programme>
+  <programme start="20240115210500 +0100" stop="20240115223500 +0100" channel="TF1.fr"><title lang="fr">Le vrai film du soir</title></programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["TF1.fr"], "evening", ref, { eveningStart: "21:00", eveningMinDurationMinutes: 0 });
+  assert.strictEqual(view[0].program.title, "Météo", "seuil desactive -> reprend le plus proche, meme court");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== buildView 'evening' : chaine demarrant tot (TMC ~20h20) + intercalaire proche de 21h ==");
+{
+  // TMC : le vrai film demarre a 20h20 (100 min), suivi d'un
+  // intercalaire de 45 min (juste assez long pour passer le seuil par
+  // defaut) beaucoup plus proche de 21h -- ne doit PAS etre choisi.
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="TMC.fr"><display-name lang="fr">TMC</display-name></channel>
+  <programme start="20240115202000 +0100" stop="20240115220000 +0100" channel="TMC.fr">
+    <title lang="fr">Film du soir TMC</title>
+  </programme>
+  <programme start="20240115205000 +0100" stop="20240115213500 +0100" channel="TMC.fr">
+    <title lang="fr">Intermède publicitaire</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T18:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["TMC.fr"], "evening", ref, { eveningStart: "21:00" });
+  assert.strictEqual(view[0].program.title, "Film du soir TMC",
+    "le plus long doit l'emporter, meme si l'intercalaire demarre plus pres de 21h");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== buildView 'evening' : ne prend plus un programme de 22h, meme tres long (correctif v1.7.1) ==");
+{
+  // Reproduit le bug signale : le vrai prime time (21h05-21h50, 45 min)
+  // est plus court que le programme suivant, qui demarre a 22h00 et
+  // dure 2h -- avant le correctif, ce dernier etait choisi car "le plus
+  // long" dans la fenetre large (jusqu'a 22h30). La borne haute par
+  // defaut (21h30) doit desormais l'exclure entierement de la
+  // comparaison.
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="Chaine.fr"><display-name lang="fr">Chaine</display-name></channel>
+  <programme start="20240115210500 +0100" stop="20240115215000 +0100" channel="Chaine.fr">
+    <title lang="fr">Vrai prime time</title>
+  </programme>
+  <programme start="20240115220000 +0100" stop="20240116000000 +0100" channel="Chaine.fr">
+    <title lang="fr">Deuxieme partie de soiree (long documentaire)</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["Chaine.fr"], "evening", ref, { eveningStart: "21:00" });
+  assert.strictEqual(view[0].program.title, "Vrai prime time",
+    "le programme de 22h ne doit jamais entrer en comparaison, meme s'il dure plus longtemps");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== buildView 'evening' : borne haute resserrable via un reglage ==");
+{
+  // Meme grille que le test precedent, mais avec une borne haute
+  // resserree a 21h10 : le "vrai prime time" (21h05) reste dans la
+  // fenetre, seul le programme de 22h en est exclu -- comportement
+  // identique au reglage par defaut ici, verifie simplement que le
+  // parametre est bien pris en compte.
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="Chaine.fr"><display-name lang="fr">Chaine</display-name></channel>
+  <programme start="20240115210500 +0100" stop="20240115215000 +0100" channel="Chaine.fr">
+    <title lang="fr">Vrai prime time</title>
+  </programme>
+  <programme start="20240115220000 +0100" stop="20240116000000 +0100" channel="Chaine.fr">
+    <title lang="fr">Deuxieme partie de soiree</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["Chaine.fr"], "evening", ref, {
+    eveningStart: "21:00",
+    eveningLatestStart: "21:10"
+  });
+  assert.strictEqual(view[0].program.title, "Vrai prime time");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== buildView 'evening' : borne basse resserrable, exclut alors TMC (comportement voulu si active) ==");
+{
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="TMC.fr"><display-name lang="fr">TMC</display-name></channel>
+  <programme start="20240115202000 +0100" stop="20240115220000 +0100" channel="TMC.fr">
+    <title lang="fr">Film du soir TMC</title>
+  </programme>
+</tv>`;
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  const ref = new Date("2024-01-15T18:30:00.000Z");
+  const view = tp.buildView(g.programmes, ["TMC.fr"], "evening", ref, {
+    eveningStart: "21:00",
+    eveningEarliestStart: "20:45" // 20h20 < 20h45 -> exclu
+  });
+  assert.strictEqual(view[0].program, null,
+    "avec une borne basse resserree a 20h45, un film demarrant a 20h20 sort de la fenetre");
+  console.log("  OK : film exclu comme attendu avec la borne resserree");
+}
+
+console.log("== buildView 'late' (~22h45) ==");
+{
+  const ref = new Date("2024-01-15T19:30:00.000Z");
+  const view = tp.buildView(grid.programmes, ["TF1.fr"], "late", ref, { lateStart: "22:45" });
+  // 22h45 Paris ~ le "Deuxième partie de soirée" commence a 23h -> dans tolerance
+  assert.strictEqual(view[0].program.title, "Deuxième partie de soirée");
+  console.log("  OK:", view[0].program.title);
+}
+
+console.log("== resolveChannelId : nom lisible OU identifiant XMLTV ==");
+{
+  const gridCh = new Map([
+    ["France2.fr", { id: "France2.fr", name: "France 2" }],
+    ["TF1.fr", { id: "TF1.fr", name: "TF1" }]
+  ]);
+  assert.strictEqual(tp.resolveChannelId("France2.fr", gridCh), "France2.fr", "identifiant exact");
+  assert.strictEqual(tp.resolveChannelId("France 2", gridCh), "France2.fr", "nom lisible");
+  assert.strictEqual(tp.resolveChannelId("france2", gridCh), "France2.fr", "nom normalise");
+  assert.strictEqual(tp.resolveChannelId("Chaine inconnue", gridCh), null, "inconnue -> null");
+  console.log("  OK");
+}
+
+console.log("== parseXmltv : robustesse (XML vide/malformé) ==");
+{
+  assert.deepStrictEqual(tp.parseXmltv("", {}).programmes, []);
+  assert.deepStrictEqual(tp.parseXmltv("<tv></tv>", {}).programmes, []);
+  console.log("  OK");
+}
+
+console.log("== parseXmltv : gros guide (400+ chaines), plus de 1000 entites XML (correctif v1.7.3) ==");
+{
+  // Reproduit le bug signale : la protection anti-DoS par defaut de
+  // fast-xml-parser plafonne a 1000 le nombre total de substitutions
+  // d'entites (&amp;, &#233;...) -- un guide volumineux (multi-chaines,
+  // plusieurs jours) en contient legitimement bien davantage rien que
+  // via les caracteres accentues du francais dans les titres/synopsis.
+  // Reproduces the reported bug: fast-xml-parser's default anti-DoS
+  // protection caps the total entity substitution count at 1000 -- a
+  // large guide (many channels, several days) legitimately contains far
+  // more than that from French accented characters alone in
+  // titles/synopses.
+  let programmes = "";
+  for (let i = 0; i < 300; i++) {
+    programmes += `<programme start="2024011521${String(i % 60).padStart(2, "0")}00 +0200" stop="2024011522${String(i % 60).padStart(2, "0")}00 +0200" channel="Chaine.fr">
+      <title lang="fr">\u00c9mission ${i} : caf\u00e9, th\u00e9\u00e2tre &amp; po\u00e9sie</title>
+      <desc lang="fr">Synopsis tres accentu\u00e9 : \u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9\u00e9 &amp; &amp; &amp; &amp; &amp;</desc>
+    </programme>`;
+  }
+  const raw = `<?xml version="1.0" encoding="UTF-8"?>
+<tv>
+  <channel id="Chaine.fr"><display-name lang="fr">Chaine</display-name></channel>
+  ${programmes}
+</tv>`;
+  const entityCount = (raw.match(/&[a-zA-Z#0-9]+;/g) || []).length;
+  assert.ok(entityCount > 1000, "le document de test doit depasser l'ancienne limite par defaut (verification du test lui-meme)");
+
+  const g = tp.parseXmltv(raw, { preferLang: "fr" });
+  assert.strictEqual(g.programmes.length, 300, "les 300 programmes doivent etre parses malgre les >1000 entites");
+  assert.strictEqual(g.programmes[0].title, "Émission 0 : café, théâtre & poésie",
+    "les entites doivent etre correctement decodees (accents, esperluette)");
+  console.log("  OK :", entityCount, "entites traitees,", g.programmes.length, "programmes");
+}
+
+console.log("== loadGrid : decompression gzip locale (.gz) ==");
+{
+  const zlib = require("zlib");
+  const fs = require("fs");
+  const path = "/tmp/_tp_test_epg.xml.gz";
+  fs.writeFileSync(path, zlib.gzipSync(Buffer.from(SAMPLE)));
+  return (async () => {
+    tp.clearCache();
+    const grid = await tp.loadGrid({ source: "xmltv", xmltvUrl: path }, {});
+    assert.strictEqual(grid.programmes.length, 4, "gz decompresse et parse");
+    fs.unlinkSync(path);
+    console.log("  OK");
+
+    console.log("== getView : source xmltvfr avec fallback multi-candidats (mock) ==");
+    const zlib2 = require("zlib");
+    const gzBuf = zlib2.gzipSync(Buffer.from(SAMPLE));
+    const mockFetch = async (url) => {
+      // 1er candidat TNT indisponible -> doit passer au suivant
+      if (url.includes("xmltv_tnt")) return { ok: false, status: 404 };
+      return { ok: true, status: 200, arrayBuffer: async () => gzBuf.buffer.slice(gzBuf.byteOffset, gzBuf.byteOffset + gzBuf.byteLength) };
+    };
+    tp.clearCache();
+    const res = await tp.getView(
+      { source: "xmltvfr", view: "now", channels: ["TF1.fr"] },
+      { fetchImpl: mockFetch, now: new Date("2024-01-15T19:30:00.000Z").getTime() }
+    );
+    assert.strictEqual(res.channels[0].channelName, "TF1");
+    assert.strictEqual(res.channels[0].program.title, "Journal de 20h");
+    console.log("  OK");
+
+    console.log("== buildGridRange : chevauchement de la fenetre (pas seulement inclusion) ==");
+    {
+      const D = (s) => new Date(s);
+      const progs = [
+        { channelId: "A", start: D("2026-08-15T18:00:00Z"), stop: D("2026-08-15T19:30:00Z"), title: "Commence avant, encore a l'antenne" },
+        { channelId: "A", start: D("2026-08-15T19:30:00Z"), stop: D("2026-08-15T21:00:00Z"), title: "Entierement dedans" },
+        { channelId: "A", start: D("2026-08-15T21:00:00Z"), stop: D("2026-08-15T23:30:00Z"), title: "Deborde apres la fin" },
+        { channelId: "A", start: D("2026-08-15T15:00:00Z"), stop: D("2026-08-15T16:00:00Z"), title: "Termine avant la fenetre" },
+        { channelId: "A", start: D("2026-08-16T02:00:00Z"), stop: D("2026-08-16T03:00:00Z"), title: "Commence apres la fenetre" },
+        { channelId: "B", start: D("2026-08-15T20:00:00Z"), stop: null, title: "Sans heure de fin" },
+        { channelId: "Z", start: D("2026-08-15T20:00:00Z"), stop: D("2026-08-15T21:00:00Z"), title: "Chaine non demandee" }
+      ];
+      const rows = tp.buildGridRange(progs, ["A", "B"], D("2026-08-15T19:00:00Z"), D("2026-08-15T22:00:00Z"));
+
+      assert.strictEqual(rows.length, 2, "une ligne par chaine demandee, dans l'ordre demande");
+      assert.strictEqual(rows[0].channelId, "A");
+      assert.strictEqual(rows[1].channelId, "B");
+
+      const titlesA = rows[0].programs.map((p) => p.title);
+      assert.ok(titlesA.includes("Commence avant, encore a l'antenne"),
+        "un programme commence AVANT la fenetre mais encore en cours doit apparaitre (sinon 1re colonne vide a tort)");
+      assert.ok(titlesA.includes("Deborde apres la fin"),
+        "un programme qui deborde APRES la fin de la fenetre doit apparaitre");
+      assert.ok(!titlesA.includes("Termine avant la fenetre"), "un programme entierement anterieur est ecarte");
+      assert.ok(!titlesA.includes("Commence apres la fenetre"), "un programme entierement posterieur est ecarte");
+      assert.strictEqual(titlesA.length, 3);
+
+      // Ordre chronologique garanti : l'affichage en grille en depend
+      // directement pour poser ses blocs de gauche a droite.
+      const startsA = rows[0].programs.map((p) => p.start.getTime());
+      assert.deepStrictEqual(startsA, startsA.slice().sort((a, b) => a - b), "programmes tries par heure de debut");
+
+      assert.strictEqual(rows[1].programs.length, 1,
+        "un programme sans heure de fin est conserve (a l'affichage de lui donner une duree par defaut)");
+
+      // Une chaine demandee mais sans aucun programme dans la fenetre
+      // doit tout de meme produire une ligne (vide) : sinon la grille
+      // perdrait la chaine, plutot que d'afficher une ligne creuse.
+      const withEmpty = tp.buildGridRange(progs, ["A", "INCONNUE"], D("2026-08-15T19:00:00Z"), D("2026-08-15T22:00:00Z"));
+      assert.strictEqual(withEmpty.length, 2, "une chaine sans programme garde sa ligne");
+      assert.deepStrictEqual(withEmpty[1].programs, [], "cette ligne est simplement vide");
+      console.log("  OK");
+    }
+
+    console.log("== getGrid : fenetre avant/apres et bornage des valeurs extremes ==");
+    {
+      const zlib3 = require("zlib");
+      const gzBuf3 = zlib3.gzipSync(Buffer.from(SAMPLE));
+      const mockFetch3 = async () => ({
+        ok: true, status: 200,
+        arrayBuffer: async () => gzBuf3.buffer.slice(gzBuf3.byteOffset, gzBuf3.byteOffset + gzBuf3.byteLength)
+      });
+      const nowMs = new Date("2024-01-15T19:30:00.000Z").getTime();
+
+      tp.clearCache();
+      const res = await tp.getGrid(
+        { source: "xmltvfr", channels: ["TF1.fr"], hoursBefore: 2, hoursAfter: 4 },
+        { fetchImpl: mockFetch3, now: nowMs }
+      );
+      assert.strictEqual(new Date(res.from).getTime(), nowMs - 2 * 3600000, "borne basse = maintenant - hoursBefore");
+      assert.strictEqual(new Date(res.to).getTime(), nowMs + 4 * 3600000, "borne haute = maintenant + hoursAfter");
+      assert.ok(Array.isArray(res.channels[0].programs), "chaque chaine porte une LISTE de programmes (pas un seul)");
+
+      // Bornage : une fenetre demesuree (requete forgee) ne doit pas
+      // permettre de reclamer des jours de guide sur toutes les chaines.
+      tp.clearCache();
+      const clamped = await tp.getGrid(
+        { source: "xmltvfr", channels: ["TF1.fr"], hoursBefore: 999, hoursAfter: 999 },
+        { fetchImpl: mockFetch3, now: nowMs }
+      );
+      assert.strictEqual(new Date(clamped.from).getTime(), nowMs - 12 * 3600000, "hoursBefore borne a 12 h");
+      assert.strictEqual(new Date(clamped.to).getTime(), nowMs + 48 * 3600000, "hoursAfter borne a 48 h");
+      console.log("  OK");
+    }
+
+    console.log("\n>>> TOUS LES TESTS TELEPROGRAM PASSENT");
+  })();
+}

@@ -1,0 +1,31 @@
+# PiBoard - kiosque Chromium plein ecran via cage (Wayland)
+# Fullscreen Chromium kiosk through cage (Wayland)
+[Unit]
+Description=PiBoard kiosk (Chromium fullscreen)
+After=piboard.service systemd-user-sessions.service
+Wants=piboard.service
+
+[Service]
+User=@USER@
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+Environment=XDG_RUNTIME_DIR=/run/user/%U
+
+# Attendre que le serveur reponde / wait for the server to answer
+ExecStartPre=/bin/sh -c 'until curl -fsS http://localhost:@PORT@/api/settings >/dev/null 2>&1; do sleep 1; done'
+ExecStart=/usr/bin/cage -- /usr/bin/chromium-browser \
+  --kiosk \
+  --noerrdialogs \
+  --disable-infobars \
+  --disable-session-crashed-bubble \
+  --check-for-update-interval=31536000 \
+  --autoplay-policy=no-user-gesture-required \
+  http://localhost:@PORT@/
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target multi-user.target

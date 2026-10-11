@@ -1,0 +1,237 @@
+{
+  "id": "system",
+  "version": "0.3.0",
+  "name": {
+    "en": "System status",
+    "fr": "État système"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "CPU, GPU, RAM, disk usage, temperature, uptime and network addresses (including the public IP) of the machine hosting PiBoard.",
+    "fr": "CPU, GPU, RAM, espace disque, température, disponibilité et adresses réseau (IP publique comprise) de la machine qui héberge PiBoard."
+  },
+  "tagline": {
+    "en": "Health status of the machine hosting PiBoard.",
+    "fr": "État de santé de la machine qui héberge PiBoard."
+  },
+  "size": {
+    "w": 3,
+    "h": 3,
+    "minW": 2,
+    "minH": 1,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "refreshSeconds",
+      "type": "number",
+      "default": 5,
+      "min": 2,
+      "max": 60,
+      "step": 1,
+      "label": {
+        "en": "Refresh (seconds)",
+        "fr": "Rafraîchissement (secondes)"
+      }
+    },
+    {
+      "key": "showHostname",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show hostname",
+        "fr": "Afficher le nom de machine"
+      }
+    },
+    {
+      "key": "showNetwork",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show network adapter IP addresses",
+        "fr": "Afficher les adresses IP des cartes réseau"
+      },
+      "hint": {
+        "en": "Only real, connected adapters (WiFi and Ethernet). Click an address to open the full network configuration.",
+        "fr": "Uniquement les cartes réelles et connectées (WiFi et Ethernet). Cliquez sur une adresse pour ouvrir la configuration réseau complète."
+      }
+    },
+    {
+      "key": "showPublicIp",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show the public IP address",
+        "fr": "Afficher l'adresse IP publique"
+      },
+      "hint": {
+        "en": "The address your local network shows on the Internet (the one websites see). Looked up by the PiBoard server through an external service, refreshed every ten minutes. Off by default: it is a piece of information you may not want on a wall display.",
+        "fr": "L'adresse sous laquelle votre réseau local apparaît sur Internet (celle que voient les sites web). Obtenue par le serveur PiBoard via un service externe, rafraîchie toutes les dix minutes. Désactivé par défaut : c'est une information que l'on ne souhaite pas forcément sur un écran mural."
+      }
+    },
+    {
+      "key": "showGpu",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show GPU load",
+        "fr": "Afficher la charge du GPU"
+      },
+      "hint": {
+        "en": "A bar like CPU and RAM. Only appears if the machine exposes its GPU load: NVIDIA (nvidia-smi), AMD on Linux, or any card on Windows 10+. A Raspberry Pi does not expose it — the row then stays hidden.",
+        "fr": "Une barre comme le CPU et la RAM. N'apparaît que si la machine expose la charge de son GPU : NVIDIA (nvidia-smi), AMD sous Linux, ou n'importe quelle carte sous Windows 10+. Un Raspberry Pi ne l'expose pas — la ligne reste alors masquée."
+      }
+    },
+    {
+      "key": "gpuChart",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "GPU usage chart",
+        "fr": "Courbe d'utilisation du GPU"
+      },
+      "hint": {
+        "en": "Adds a GPU tab to the charts window and makes the GPU bar clickable. Uncheck to keep the bar without the chart.",
+        "fr": "Ajoute un onglet GPU à la fenêtre des courbes et rend la barre GPU cliquable. Décochez pour garder la barre sans la courbe."
+      }
+    },
+    {
+      "key": "showUptime",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show uptime",
+        "fr": "Afficher la disponibilité"
+      }
+    },
+    {
+      "key": "historyMinutes",
+      "type": "number",
+      "default": 120,
+      "min": 5,
+      "max": 1440,
+      "label": {
+        "en": "Chart history (minutes)",
+        "fr": "Historique des courbes (minutes)"
+      },
+      "hint": {
+        "en": "How far back the usage charts go. Sampled every minute on the server, so it survives page reloads and is shared by every screen. Up to 24 h.",
+        "fr": "Profondeur des courbes d'utilisation. Échantillonné chaque minute sur le serveur, donc conservé après un rechargement et partagé par tous les écrans. Jusqu'à 24 h."
+      }
+    },
+    {
+      "key": "thresholdWarn",
+      "type": "number",
+      "default": 65,
+      "min": 1,
+      "max": 99,
+      "step": 1,
+      "label": {
+        "en": "“High” threshold (%)",
+        "fr": "Seuil « élevé » (%)"
+      },
+      "hint": {
+        "en": "From this usage level the bar switches to the “high” color. Applies to CPU, RAM and disk.",
+        "fr": "À partir de ce niveau d'utilisation, la barre passe à la couleur « élevé ». S'applique au CPU, à la RAM et au disque."
+      },
+      "group": {
+        "en": "Colors & thresholds",
+        "fr": "Couleurs & seuils"
+      }
+    },
+    {
+      "key": "thresholdCrit",
+      "type": "number",
+      "default": 85,
+      "min": 2,
+      "max": 100,
+      "step": 1,
+      "label": {
+        "en": "“Critical” threshold (%)",
+        "fr": "Seuil « critique » (%)"
+      },
+      "hint": {
+        "en": "From this level the bar switches to the “critical” color (red by default — the only state where red is used).",
+        "fr": "À partir de ce niveau, la barre passe à la couleur « critique » (rouge par défaut — le seul état où le rouge est utilisé)."
+      },
+      "group": {
+        "en": "Colors & thresholds",
+        "fr": "Couleurs & seuils"
+      }
+    },
+    {
+      "key": "colorNormal",
+      "type": "color",
+      "default": "#3FA96B",
+      "label": {
+        "en": "Normal usage color",
+        "fr": "Couleur en usage normal"
+      },
+      "group": {
+        "en": "Colors & thresholds",
+        "fr": "Couleurs & seuils"
+      }
+    },
+    {
+      "key": "colorWarn",
+      "type": "color",
+      "default": "#E0A63C",
+      "label": {
+        "en": "High usage color",
+        "fr": "Couleur en usage élevé"
+      },
+      "group": {
+        "en": "Colors & thresholds",
+        "fr": "Couleurs & seuils"
+      }
+    },
+    {
+      "key": "colorCrit",
+      "type": "color",
+      "default": "#E0556F",
+      "label": {
+        "en": "Critical usage color",
+        "fr": "Couleur en usage critique"
+      },
+      "group": {
+        "en": "Colors & thresholds",
+        "fr": "Couleurs & seuils"
+      }
+    },
+    {
+      "key": "chartColor",
+      "type": "color",
+      "default": "#5B8DEF",
+      "label": {
+        "en": "Chart color",
+        "fr": "Couleur des courbes"
+      },
+      "hint": {
+        "en": "Line and shaded area of the usage charts.",
+        "fr": "Trait et zone ombrée des courbes d'utilisation."
+      },
+      "group": {
+        "en": "Colors & thresholds",
+        "fr": "Couleurs & seuils"
+      }
+    },
+    {
+      "key": "chartByLevel",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Chart color follows the current usage level",
+        "fr": "La couleur des courbes suit le niveau d'utilisation actuel"
+      },
+      "hint": {
+        "en": "Ignores the chart color above: the curve takes the normal / high / critical color of the latest reading.",
+        "fr": "Ignore la couleur des courbes ci-dessus : la courbe prend la couleur normal / élevé / critique du dernier relevé."
+      },
+      "group": {
+        "en": "Colors & thresholds",
+        "fr": "Couleurs & seuils"
+      }
+    }
+  ]
+}

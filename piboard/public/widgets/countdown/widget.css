@@ -1,0 +1,61 @@
+.pw-countdown {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6% 8%;
+  text-align: center;
+}
+.pw-countdown .pwd-label {
+  color: var(--muted);
+  font-size: 0.85em;
+}
+.pw-countdown .pwd-value {
+  font-family: var(--mono);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: 0.01em;
+}
+.pw-countdown .pwd-value small {
+  font-weight: 400;
+  font-size: 0.42em;
+  color: var(--muted);
+  margin-left: 0.2em;
+}
+.pw-countdown .pwd-done {
+  color: var(--accent);
+  font-weight: 700;
+}
+.pw-countdown .pwd-missing {
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.pw-countdown .pwd-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+.pw-countdown .pwd-btn {
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 5px 12px;
+  font-size: 0.75em;
+  font-family: var(--font);
+  cursor: pointer;
+}
+.pw-countdown .pwd-btn:hover { border-color: var(--accent); }
+.pw-countdown .pwd-btn.pwd-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pw-countdown .pwd-btn.pwd-stop {
+  border-color: #E0A63C;
+  color: #E0A63C;
+  animation: pwd-stop-pulse 1.4s ease-in-out infinite;
+}
+@keyframes pwd-stop-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}

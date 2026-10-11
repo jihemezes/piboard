@@ -1,0 +1,366 @@
+.pw-iptv {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.pw-iptv .pwtv-msg {
+  margin: auto;
+  padding: 14px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* ---------- Liste des chaines / channel list ---------- */
+.pwtv-bar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 6px;
+}
+.pwtv-search, .pwtv-group {
+  padding: 6px 9px;
+  border-radius: 8px;
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 12.5px;
+  min-width: 0;
+}
+.pwtv-search { flex: 1; }
+.pwtv-group { flex: 0 1 auto; max-width: 45%; }
+.pwtv-search:focus, .pwtv-group:focus { outline: none; border-color: var(--accent); }
+
+.pwtv-count {
+  flex-shrink: 0;
+  padding: 0 12px 6px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--faint);
+}
+
+.pwtv-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 4px;
+  overflow-y: auto;
+  flex: 1;
+  min-height: 0;
+}
+.pwtv-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 12px;
+  cursor: pointer;
+  touch-action: manipulation;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pwtv-item:last-child { border-bottom: none; }
+.pwtv-item:hover { background: color-mix(in srgb, var(--accent) 8%, transparent); }
+.pwtv-item:active { background: color-mix(in srgb, var(--accent) 15%, transparent); }
+
+/* Logo de chaine : taille fixe pour que la liste reste alignee meme
+   quand les logos ont des proportions tres variables (ce qui est la
+   norme dans une playlist IPTV). Channel logo: fixed size so the list
+   stays aligned even though logos come in wildly varying proportions
+   (the norm in an IPTV playlist). */
+.pwtv-logo {
+  flex-shrink: 0;
+  width: 30px;
+  height: 22px;
+  object-fit: contain;
+  border-radius: 3px;
+}
+.pwtv-logo-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  opacity: 0.5;
+}
+.pwtv-name {
+  min-width: 0;
+  font-size: 13px;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwtv-empty {
+  padding: 20px 12px;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-style: italic;
+  text-align: center;
+}
+
+/* ---------- Lecteur / player ---------- */
+.pwtv-video-wrap {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  background: #000;
+}
+.pwtv-video {
+  width: 100%;
+  height: 100%;
+  /* contain plutot que cover : une chaine en 4:3 dans une tuile large
+     ne doit pas etre rognee. contain rather than cover: a 4:3 channel
+     in a wide tile shouldn't get cropped. */
+  object-fit: contain;
+  background: #000;
+  display: block;
+}
+.pwtv-status {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.55);
+  color: #eef0f3;
+  font-size: 12.5px;
+  text-align: center;
+  pointer-events: none;
+}
+/* Statut reellement cliquable (voir setStatus() dans widget.js) --
+   typiquement l'invite "Touchez pour lancer la lecture", quand la
+   politique de lecture automatique du navigateur a bloque le demarrage
+   sans interaction prealable. Genuinely clickable status (see
+   setStatus() in widget.js) -- typically the "Tap to start playback"
+   prompt, when the browser's autoplay policy blocked starting without
+   prior interaction. */
+.pwtv-status-clickable {
+  pointer-events: auto;
+  cursor: pointer;
+  text-decoration: underline;
+  font-weight: 600;
+}
+
+.pwtv-controls {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+}
+.pwtv-current {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwtv-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwtv-btn:hover { background: var(--tile-edge); }
+/* Bouton PORTANT UN LIBELLE. La regle ci-dessus taille un carre de
+   30x30 pour une icone : un mot entier y depassait de toutes parts, ce
+   qui donnait a « Programmer » son allure d'ovale traverse par du texte
+   (1.115.7). Un bouton texte se dimensionne sur son contenu.
+   Button CARRYING A LABEL: the rule above sizes a 30x30 square for an
+   icon, and a whole word overflowed it in every direction. */
+.pwtv-btn-text {
+  width: auto;
+  height: auto;
+  min-height: 28px;
+  padding: 5px 12px;
+  font-size: 12.5px;
+  font-weight: 600;
+}
+/* Curseur de volume : largeur fixe modeste, la barre de controle etant
+   deja chargee (retour, precedent, pause, suivant, muet, volume, plein
+   ecran). Volume slider: modest fixed width, the control bar already
+   being busy (back, previous, pause, next, mute, volume, fullscreen). */
+.pwtv-volume {
+  width: 60px;
+  accent-color: var(--accent, #4a9eff);
+  flex-shrink: 0;
+}
+/* Piste audio absente (voir checkAudioTrack() dans widget.js) --
+   typiquement un flux encode en AC3/DTS, qu'aucun navigateur ne sait
+   decoder. Missing audio track (see checkAudioTrack() in widget.js) --
+   typically a stream encoded in AC3/DTS, which no browser can decode. */
+.pwtv-audio-warn {
+  flex-shrink: 0;
+  color: #E0A030;
+  font-size: 14px;
+  cursor: help;
+}
+
+/* ---------- Navigation Xtream (sources -> categories -> flux) ----------
+   Barre commune a toutes les vues de navigation, avec bouton retour
+   facultatif -- voir navHeaderHtml() dans widget.js.
+   Common bar for every navigation view, with an optional back button --
+   see navHeaderHtml() in widget.js. */
+.pwtv-navback {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwtv-navback:hover { background: var(--tile-edge); }
+.pwtv-title {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pwtv-searchbar { flex-shrink: 0; padding: 0 10px 6px; }
+.pwtv-searchbar .pwtv-search { width: 100%; }
+
+/* 1er niveau : Direct / Films / Series, chacun avec son compte de
+   categories. First level: Live / Movies / Series, each with its
+   category count. */
+.pwtv-sources-list { padding: 4px 10px; }
+.pwtv-source {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  background: var(--field-bg);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwtv-source:hover { background: color-mix(in srgb, var(--accent) 10%, var(--field-bg)); }
+.pwtv-source:active { background: color-mix(in srgb, var(--accent) 18%, var(--field-bg)); }
+.pwtv-source-icon { flex-shrink: 0; font-size: 22px; }
+.pwtv-source-name { flex: 1; font-size: 14px; font-weight: 600; color: var(--text); }
+.pwtv-source-count { flex-shrink: 0; font-family: var(--mono); font-size: 11px; color: var(--faint); }
+
+/* Series : regroupees par saison, chacune avec son propre sous-titre.
+   Series: grouped by season, each with its own sub-heading. */
+.pwtv-episodes-view { overflow-y: auto; }
+.pwtv-season-title {
+  padding: 8px 12px 4px;
+  font-size: 11.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+.pwtv-season .pwtv-list { overflow: visible; }
+
+/* Avertissement de format non lisible nativement par le navigateur
+   (Matroska/.mkv en tete) -- voir BROWSER_FRIENDLY_EXT dans widget.js.
+   Warning for a format the browser can't read natively (Matroska/.mkv
+   chief among them) -- see BROWSER_FRIENDLY_EXT in widget.js. */
+.pwtv-format-warn {
+  flex-shrink: 0;
+  color: #E0A030;
+  font-size: 13px;
+  cursor: help;
+}
+.pwtv-format-banner {
+  flex-shrink: 0;
+  padding: 6px 12px;
+  background: rgba(224, 160, 48, 0.15);
+  border-top: 1px solid #E0A030;
+  color: var(--text);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+/* Enregistrement (1.113.0) : pastille rouge clignotante pendant
+   l'enregistrement, duree et taille a cote.
+   Recording: blinking red dot while recording, duration and size next
+   to it. */
+.pw-iptv .pwtv-record.pwtv-recording {
+  color: #fff;
+  background: var(--danger);
+  border-color: var(--danger);
+  animation: pwtv-rec-blink 1.6s ease-in-out infinite;
+}
+@keyframes pwtv-rec-blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-iptv .pwtv-record.pwtv-recording { animation: none; }
+}
+.pw-iptv .pwtv-rec-info {
+  font-size: 11px;
+  color: var(--danger);
+  white-space: nowrap;
+}
+
+/* Liste des enregistrements, dans le lecteur (1.113.1).
+   Recordings list, inside the player. */
+.pw-iptv .pwtv-reclist-body { padding: 6px 8px; overflow-y: auto; font-size: 13px; }
+.pw-iptv .pwtv-recmsg { margin: 2px 0 6px; color: var(--muted); font-size: 11px; word-break: break-all; }
+.pw-iptv .pwtv-recerr { color: var(--danger); }
+.pw-iptv .pwtv-reclist-items { list-style: none; margin: 0; padding: 0; }
+.pw-iptv .pwtv-recrow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.pw-iptv .pwtv-recname { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-iptv .pwtv-recsize { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.pw-iptv .pwtv-recdel:hover { border-color: var(--danger); color: var(--danger); }
+
+/* Programmation d'un enregistrement, dans la tuile (1.113.2).
+   Scheduling a recording, inside the tile. */
+.pw-iptv .pwtv-sched { padding: 8px; overflow-y: auto; font-size: 13px; }
+.pw-iptv .pwtv-sched-chan { margin: 0 0 8px; font-weight: 600; }
+.pw-iptv .pwtv-sched-form { display: flex; flex-wrap: wrap; gap: 8px; }
+.pw-iptv .pwtv-sched-form label { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); }
+.pw-iptv .pwtv-sched-form input {
+  padding: 4px 6px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 6px;
+  background: var(--field-bg);
+  color: var(--text);
+  font: inherit;
+}
+.pw-iptv .pwtv-sched-hint { margin: 6px 0; color: var(--muted); font-size: 11px; }
+.pw-iptv .pwtv-sched-actions { margin: 6px 0; }
+.pw-iptv .pwtv-sched-msg { margin: 4px 0; font-size: 12px; color: var(--muted); }
+.pw-iptv .pwtv-sched-err { color: var(--danger); }
+.pw-iptv .pwtv-sched-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.pw-iptv .pwtv-sched-list li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  border-top: 1px solid var(--tile-edge);
+}
+.pw-iptv .pwtv-sched-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pw-iptv .pwtv-sched-when { color: var(--muted); font-size: 11px; white-space: nowrap; }
+.pw-iptv .pwtv-sched-empty { color: var(--muted); font-size: 12px; }

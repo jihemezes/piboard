@@ -1,0 +1,96 @@
+.pw-airquality {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6%;
+  text-align: center;
+}
+.pw-airquality .paq-badge {
+  border-radius: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.25);
+  flex-shrink: 0;
+}
+.pw-airquality .paq-value {
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.pw-airquality .paq-badge .paq-level {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  opacity: 0.92;
+}
+.pw-airquality .paq-city { color: var(--muted); font-size: 12px; }
+.pw-airquality .paq-dominant,
+.pw-airquality .paq-pollen { color: var(--faint); font-size: 11px; }
+.pw-airquality .paq-credit { font-size: 9px; color: var(--faint); opacity: 0.6; margin-top: 2px; }
+.pw-airquality .paq-err { color: var(--muted); font-size: 14px; margin: auto; }
+
+/* Mode detaille : en-tete badge + niveau/ville, puis grille de puces
+   pour chaque polluant et, en option, chaque pollen en saison.
+   Detailed mode: header with badge + level/city, then a chip grid for
+   each pollutant and, optionally, each in-season pollen. */
+.pw-airquality.paq-detailed {
+  align-items: stretch;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 8px;
+}
+.pw-airquality .paq-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.pw-airquality .paq-headtext {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.pw-airquality .paq-headtext .paq-level {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: normal;
+}
+.pw-airquality .paq-headtext .paq-city {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pw-airquality .paq-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pw-airquality .paq-chip {
+  --chip: #8A98B2;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--chip) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--chip) 45%, transparent);
+  font-size: 11px;
+  min-width: 62px;
+}
+.pw-airquality .paq-chip-label { font-weight: 600; color: var(--text); }
+.pw-airquality .paq-chip-value { color: var(--muted); font-variant-numeric: tabular-nums; }
+.pw-airquality .paq-section-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.pw-airquality .paq-outofseason { font-size: 11px; color: var(--faint); font-style: italic; }

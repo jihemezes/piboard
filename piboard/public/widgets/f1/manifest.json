@@ -1,0 +1,226 @@
+{
+  "_comment_fr": "POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes.",
+  "_comment_en": "TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests.",
+  "id": "f1",
+  "version": "1.5.0",
+  "name": {
+    "en": "Formula 1",
+    "fr": "Formule 1"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "A Formula 1 dashboard as cards you show or hide: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings and the last race's results. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every card.",
+    "fr": "Tableau de bord Formule 1 en cartes que l'on affiche ou non : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs et résultats de la dernière course. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente toutes les cartes."
+  },
+  "tagline": {
+    "en": "The F1 weekend, card by card.",
+    "fr": "Le week-end de F1, carte par carte."
+  },
+  "size": {
+    "w": 4,
+    "h": 4,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "season",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Season",
+        "fr": "Saison"
+      },
+      "hint": {
+        "en": "Empty = current season. A year (2024, 2025…) to look at a past season: the API covers the championship since 1950.",
+        "fr": "Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée : l'API couvre tout le championnat depuis 1950."
+      }
+    },
+    {
+      "key": "showNext",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Next race\" card",
+        "fr": "Carte « Prochaine course »"
+      },
+      "hint": {
+        "en": "The upcoming Grand Prix, its circuit, its country, and a countdown to the second. During the weekend the countdown targets the next SESSION rather than the race. TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests.",
+        "fr": "Le Grand Prix à venir, son circuit, son pays, et un compte à rebours à la seconde jusqu'au départ. Pendant le week-end, le compte à rebours vise la prochaine SÉANCE et non la course : savoir que les qualifications commencent dans vingt minutes est plus utile qu'un compte à rebours de deux jours. POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes."
+      }
+    },
+    {
+      "key": "showSchedule",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Weekend timetable\" card",
+        "fr": "Carte « Programme du week-end »"
+      },
+      "hint": {
+        "en": "Every session — practice, sprint, qualifying, race — with its day and time IN YOUR OWN TIME ZONE. The live session is highlighted, past ones dimmed.",
+        "fr": "Toutes les séances — essais libres, sprint, qualifications, course — avec leur jour et leur heure DANS VOTRE FUSEAU. Un Grand Prix en Malaisie se court à 7 h UTC, soit 9 h chez vous : l'heure brute de l'API n'est pas celle qui vous concerne. La séance en cours est mise en avant, les séances passées estompées."
+      }
+    },
+    {
+      "key": "showDrivers",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Driver standings\" card",
+        "fr": "Carte « Classement pilotes »"
+      }
+    },
+    {
+      "key": "showConstructors",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Constructor standings\" card",
+        "fr": "Carte « Classement constructeurs »"
+      }
+    },
+    {
+      "key": "showResults",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Last race results\" card",
+        "fr": "Carte « Résultats de la dernière course »"
+      },
+      "hint": {
+        "en": "The finishing order of the last race run, with the gap to the winner and the points scored. Retirements are shown as such rather than as a last place: finishing twentieth and not finishing are not the same story.",
+        "fr": "Le classement d'arrivée de la dernière course disputée, avec l'écart au vainqueur et les points marqués. Les abandons sont indiqués comme tels, et non comme une dernière place : terminer vingtième et ne pas terminer ne sont pas la même histoire."
+      }
+    },
+    {
+      "key": "showWeather",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Circuit weather\" card",
+        "fr": "Carte « Météo du circuit »"
+      },
+      "hint": {
+        "en": "The forecast AT EACH SESSION'S HOUR, not the weather right now: what one comes for is whether it will rain during qualifying, not what the sky looks like over the circuit on a Tuesday. One row per session, with the condition, the temperature and the chance of rain -- the only figure highlighted, because in Formula 1 it is the one that changes a race. The forecast reaches seven days, so a session further out keeps its row with a dash rather than being hidden. Source: Open-Meteo, free and without a key, the same as the Weather tile.",
+        "fr": "La prévision À L'HEURE DE CHAQUE SÉANCE, et non la météo de l'instant : ce qu'on vient chercher, c'est s'il pleuvra pendant les qualifications, pas le temps qu'il fait sur le circuit un mardi. Une ligne par séance, avec le temps, la température et la probabilité de pluie — le seul chiffre mis en avant, parce qu'en Formule 1 c'est celui qui change une course. La prévision porte à sept jours : une séance plus lointaine garde sa ligne avec un tiret plutôt que d'être masquée. Source : Open-Meteo, gratuit et sans clé, comme la tuile Météo."
+      }
+    },
+    {
+      "key": "driverRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 24,
+      "label": {
+        "en": "Drivers shown",
+        "fr": "Pilotes affichés"
+      },
+      "hint": {
+        "en": "Twenty-two rows make the table unreadable on a medium tile. Ten covers everything actually at stake.",
+        "fr": "Vingt-deux lignes rendent le classement illisible sur une tuile moyenne. Dix couvre tout ce qui se joue vraiment."
+      }
+    },
+    {
+      "key": "constructorRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 12,
+      "label": {
+        "en": "Teams shown",
+        "fr": "Écuries affichées"
+      }
+    },
+    {
+      "key": "resultRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 24,
+      "label": {
+        "en": "Results shown",
+        "fr": "Résultats affichés"
+      }
+    },
+    {
+      "key": "showTeamColors",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Team colours",
+        "fr": "Couleurs d'écurie"
+      },
+      "hint": {
+        "en": "A chip in the team's colour before each driver. Official logos and photos are registered trademarks, so PiBoard does not embed them; the colour does the same job of instant recognition.",
+        "fr": "Une pastille de la couleur de l'écurie devant chaque pilote. Les logos et les photos officiels sont des marques déposées : PiBoard ne les embarque pas, et la couleur fait le même travail de reconnaissance immédiate."
+      }
+    },
+    {
+      "key": "cardStyle",
+      "type": "select",
+      "label": {
+        "en": "Card style",
+        "fr": "Style des cartes"
+      },
+      "default": "theme",
+      "options": [
+        {
+          "value": "theme",
+          "label": {
+            "en": "Page theme",
+            "fr": "Thème de la page"
+          }
+        },
+        {
+          "value": "dark",
+          "label": {
+            "en": "Dark track",
+            "fr": "Piste sombre"
+          }
+        },
+        {
+          "value": "custom",
+          "label": {
+            "en": "Chosen colour",
+            "fr": "Couleur choisie"
+          }
+        }
+      ],
+      "hint": {
+        "en": "\"Page theme\" keeps the cards consistent with the rest of the board. \"Dark track\" gives them the paddock's deep black with a red edge -- a racing look that owes nothing to any logo, livery or licensed typeface. \"Chosen colour\" uses the colour below instead; the text colour is then left to the browser, which alone knows whether the colour entered is light or dark. The setting affects THIS tile only.",
+        "fr": "« Thème de la page » garde les cartes cohérentes avec le reste du tableau. « Piste sombre » leur donne le noir profond du paddock et un liseré rouge — un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « Couleur choisie » utilise la couleur ci-dessous ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur saisie est claire ou foncée. Le réglage ne concerne QUE cette tuile."
+      }
+    },
+    {
+      "key": "cardColor",
+      "type": "color",
+      "label": {
+        "en": "Card colour",
+        "fr": "Couleur des cartes"
+      },
+      "default": "#12151c",
+      "hint": {
+        "en": "Used only when the style above is \"Chosen colour\".",
+        "fr": "Utilisée seulement si le style ci-dessus est « Couleur choisie »."
+      }
+    },
+    {
+      "key": "refreshMinutes",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 360,
+      "label": {
+        "en": "Refresh every (minutes)",
+        "fr": "Rafraîchir toutes les (minutes)"
+      },
+      "hint": {
+        "en": "Standings only move after a race. The countdown ticks every second without asking the network for anything.",
+        "fr": "Un classement ne bouge qu'après une course. Le compte à rebours, lui, s'égrène à la seconde sans rien demander au réseau."
+      }
+    }
+  ]
+}

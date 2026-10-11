@@ -1,0 +1,88 @@
+/* PiBoard widget: tempo / couleur du jour Tempo.
+   Le bandeau occupe TOUTE la tuile : c'est ce qui rend la couleur
+   identifiable a l'autre bout d'une piece, sans avoir a lire le texte.
+   The band fills the WHOLE tile: that is what makes the colour
+   identifiable from across a room, without reading the text. */
+
+.pw-tempo {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25em;
+  box-sizing: border-box;
+  padding: 0.3em 0.5em;
+  overflow: hidden;
+  border-radius: inherit;
+}
+
+/* Couleurs officielles Tempo. Le texte est fixe en dur (et non en
+   var(--text)) car il doit contraster avec le FOND DU BANDEAU, pas avec
+   le theme de PiBoard : un texte clair du theme nuit serait illisible
+   sur le bandeau blanc.
+   Official Tempo colours. The text colour is hard-coded (not
+   var(--text)) because it must contrast with the BAND's background, not
+   with PiBoard's theme: the night theme's light text would be unreadable
+   on the white band. */
+.pw-tempo.pwt-blue   { background: #1B5FC1; color: #FFFFFF; }
+.pw-tempo.pwt-white  { background: #F2F2F2; color: #1A1A1A; }
+.pw-tempo.pwt-red    { background: #C62222; color: #FFFFFF; }
+.pw-tempo.pwt-unknown { background: var(--tile-edge); color: var(--muted); }
+
+.pwt-main {
+  font-size: 1.7em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.pwt-sub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15em;
+  font-size: 0.68em;
+  opacity: 0.9;
+  text-align: center;
+}
+
+.pwt-tomorrow { white-space: nowrap; }
+
+.pwt-dot {
+  display: inline-block;
+  width: 0.62em;
+  height: 0.62em;
+  border-radius: 50%;
+  margin-right: 0.35em;
+  vertical-align: baseline;
+  border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.pwt-dot-blue { background: #1B5FC1; }
+.pwt-dot-white { background: #F2F2F2; }
+.pwt-dot-red { background: #C62222; }
+.pwt-dot-unknown { background: transparent; border-style: dashed; }
+
+.pwt-remaining { display: flex; gap: 0.4em; }
+
+/* Compteurs de jours restants : pastilles teintees, lisibles sans
+   legende. Bordure claire pour rester visibles aussi bien sur le
+   bandeau bleu que sur le blanc.
+   Remaining-day counters: tinted pills, readable without a legend. Light
+   border so they stay visible on the blue band as well as the white. */
+.pwt-rem {
+  min-width: 1.5em;
+  padding: 0.05em 0.35em;
+  border-radius: 999px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  border: 1px solid rgba(128, 128, 128, 0.45);
+}
+.pwt-rem-blue { background: #1B5FC1; color: #FFFFFF; }
+.pwt-rem-white { background: #F2F2F2; color: #1A1A1A; }
+.pwt-rem-red { background: #C62222; color: #FFFFFF; }
+
+.pwt-msg { font-size: 0.85em; text-align: center; }

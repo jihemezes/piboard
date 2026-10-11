@@ -1,0 +1,453 @@
+{
+  "id": "commute",
+  "version": "0.5.0",
+  "name": {
+    "en": "Commute time",
+    "fr": "Trajet domicile-travail"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "Live driving times between two addresses via TomTom's Routing API (same key as the Traffic tile), with real traffic conditions, a comparison against the usual time for that day and hour, a colored alert for heavy delays, and a suggested departure time when a desired arrival time is set. Plus up to 5 extra trips to named destinations, each with the same treatment. Address fields offer clickable suggestions as you type, so you can confirm the right address was understood before saving.",
+    "fr": "Temps de trajet en voiture en direct entre deux adresses via l'API Routing de TomTom (même clé que la tuile Trafic), avec trafic réel, comparaison au temps habituel pour ce jour et cette heure, alerte colorée en cas de fort retard, et heure de départ conseillée quand une heure d'arrivée souhaitée est renseignée. Plus jusqu'à 5 trajets supplémentaires vers des destinations nommées, avec le même traitement. Les champs d'adresse proposent des suggestions cliquables pendant la saisie, pour confirmer que la bonne adresse a été comprise avant d'enregistrer."
+  },
+  "tagline": {
+    "en": "Live travel time between two addresses, with real traffic.",
+    "fr": "Temps de trajet en direct entre deux adresses, avec trafic réel."
+  },
+  "size": {
+    "w": 3,
+    "h": 2,
+    "minW": 1,
+    "minH": 1,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "home",
+      "type": "address",
+      "default": "",
+      "label": {
+        "en": "Address A (e.g. home)",
+        "fr": "Adresse A (ex. domicile)"
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "work",
+      "type": "address",
+      "default": "",
+      "label": {
+        "en": "Address B (e.g. work)",
+        "fr": "Adresse B (ex. travail)"
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "apiKey",
+      "type": "password",
+      "default": "",
+      "label": {
+        "en": "TomTom API key",
+        "fr": "Clé API TomTom"
+      },
+      "hint": {
+        "en": "Same free key as the Traffic tile (developer.tomtom.com, 2500 requests/day). This tile has its own daily counter (shown on the tile) — if you also use the Traffic tile, both draw from the same account quota. Nature: <b>service key</b> — it identifies PiBoard to a provider, not you. A clone can carry it with no personal risk.",
+        "fr": "Même clé gratuite que la tuile Trafic (developer.tomtom.com, 2500 requêtes/jour). Cette tuile a son propre compteur quotidien (affiché sur la tuile) — si vous utilisez aussi la tuile Trafic, les deux puisent dans le même quota de compte. Nature : <b>clé de service</b> — elle identifie PiBoard auprès d'un fournisseur, pas vous. Un clone peut l'emporter sans risque personnel."
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      },
+      "sensitivity": "service"
+    },
+    {
+      "key": "direction",
+      "type": "select",
+      "default": "toWork",
+      "label": {
+        "en": "Direction",
+        "fr": "Sens"
+      },
+      "options": [
+        {
+          "value": "toWork",
+          "label": {
+            "en": "A → B",
+            "fr": "A → B"
+          }
+        },
+        {
+          "value": "toHome",
+          "label": {
+            "en": "B → A",
+            "fr": "B → A"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "Both, side by side",
+            "fr": "Les deux, côte à côte"
+          }
+        }
+      ],
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "arriveWorkBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Desired arrival time, A → B",
+        "fr": "Heure d'arrivée souhaitée, A → B"
+      },
+      "hint": {
+        "en": "Optional. When set, shows a suggested departure time based on predicted traffic for that arrival. Leave empty to just show the live travel time for right now.",
+        "fr": "Optionnel. Une fois renseignée, affiche une heure de départ conseillée d'après le trafic prévu pour cette arrivée. Laissez vide pour afficher simplement le temps de trajet en direct, maintenant."
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "arriveHomeBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Desired arrival time, B → A",
+        "fr": "Heure d'arrivée souhaitée, B → A"
+      },
+      "hint": {
+        "en": "Optional. When set, shows a suggested departure time based on predicted traffic for that arrival. Leave empty to just show the live travel time for right now.",
+        "fr": "Optionnel. Une fois renseignée, affiche une heure de départ conseillée d'après le trafic prévu pour cette arrivée. Laissez vide pour afficher simplement le temps de trajet en direct, maintenant."
+      },
+      "group": {
+        "en": "Main route",
+        "fr": "Trajet principal"
+      }
+    },
+    {
+      "key": "layout",
+      "type": "select",
+      "default": "columns",
+      "label": {
+        "en": "Trip arrangement",
+        "fr": "Disposition des trajets"
+      },
+      "hint": {
+        "en": "Side by side suits wide tiles; stacked suits tall or narrow tiles, especially with several trips.",
+        "fr": "Côte à côte convient aux tuiles larges ; empilés convient aux tuiles hautes ou étroites, surtout avec plusieurs trajets."
+      },
+      "options": [
+        {
+          "value": "columns",
+          "label": {
+            "en": "Side by side",
+            "fr": "Côte à côte"
+          }
+        },
+        {
+          "value": "rows",
+          "label": {
+            "en": "Stacked",
+            "fr": "Empilés"
+          }
+        }
+      ],
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "trip1Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 1 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 1 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip1Address",
+      "type": "address",
+      "default": "",
+      "label": {
+        "en": "Extra trip 1 — destination address",
+        "fr": "Trajet supplémentaire 1 — adresse de destination"
+      },
+      "hint": {
+        "en": "Each extra trip is computed from address A (e.g. home) to its destination. Leave name and address empty to disable a slot. Up to 5 extra trips.",
+        "fr": "Chaque trajet supplémentaire est calculé depuis l'adresse A (ex. domicile) vers sa destination. Laissez nom et adresse vides pour désactiver un emplacement. Jusqu'à 5 trajets supplémentaires."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip1ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 1 — desired arrival time",
+        "fr": "Trajet supplémentaire 1 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip2Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 2 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 2 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip2Address",
+      "type": "address",
+      "default": "",
+      "label": {
+        "en": "Extra trip 2 — destination address",
+        "fr": "Trajet supplémentaire 2 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip2ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 2 — desired arrival time",
+        "fr": "Trajet supplémentaire 2 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip3Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 3 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 3 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip3Address",
+      "type": "address",
+      "default": "",
+      "label": {
+        "en": "Extra trip 3 — destination address",
+        "fr": "Trajet supplémentaire 3 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip3ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 3 — desired arrival time",
+        "fr": "Trajet supplémentaire 3 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip4Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 4 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 4 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip4Address",
+      "type": "address",
+      "default": "",
+      "label": {
+        "en": "Extra trip 4 — destination address",
+        "fr": "Trajet supplémentaire 4 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip4ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 4 — desired arrival time",
+        "fr": "Trajet supplémentaire 4 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip5Label",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Extra trip 5 — name (e.g. Mom)",
+        "fr": "Trajet supplémentaire 5 — nom (ex. Maman)"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip5Address",
+      "type": "address",
+      "default": "",
+      "label": {
+        "en": "Extra trip 5 — destination address",
+        "fr": "Trajet supplémentaire 5 — adresse de destination"
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "trip5ArriveBy",
+      "type": "time",
+      "default": "",
+      "label": {
+        "en": "Extra trip 5 — desired arrival time",
+        "fr": "Trajet supplémentaire 5 — heure d'arrivée souhaitée"
+      },
+      "hint": {
+        "en": "Optional. Shows a suggested departure time for this trip.",
+        "fr": "Optionnel. Affiche une heure de départ conseillée pour ce trajet."
+      },
+      "group": {
+        "en": "Extra trips",
+        "fr": "Trajets supplémentaires"
+      }
+    },
+    {
+      "key": "alertModerate",
+      "type": "number",
+      "default": 10,
+      "min": 1,
+      "max": 120,
+      "step": 1,
+      "label": {
+        "en": "Moderate delay threshold (minutes)",
+        "fr": "Seuil de retard modéré (minutes)"
+      },
+      "hint": {
+        "en": "Delay versus the usual time, beyond which the duration turns orange.",
+        "fr": "Retard par rapport au temps habituel, au-delà duquel la durée passe à l'orange."
+      },
+      "group": {
+        "en": "Alert thresholds",
+        "fr": "Seuils d'alerte"
+      }
+    },
+    {
+      "key": "alertHeavy",
+      "type": "number",
+      "default": 20,
+      "min": 2,
+      "max": 180,
+      "step": 1,
+      "label": {
+        "en": "Heavy delay threshold (minutes)",
+        "fr": "Seuil de retard fort (minutes)"
+      },
+      "hint": {
+        "en": "Delay versus the usual time, beyond which the duration turns red.",
+        "fr": "Retard par rapport au temps habituel, au-delà duquel la durée passe au rouge."
+      },
+      "group": {
+        "en": "Alert thresholds",
+        "fr": "Seuils d'alerte"
+      }
+    },
+    {
+      "key": "refresh",
+      "type": "number",
+      "default": 15,
+      "min": 10,
+      "max": 60,
+      "step": 5,
+      "label": {
+        "en": "Refresh (minutes)",
+        "fr": "Rafraîchissement (minutes)"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      },
+      "hint": {
+        "en": "Each refresh can trigger several TomTom requests (one per active route). This tile shares the same daily quota as the Traffic tile.",
+        "fr": "Chaque rafraîchissement peut déclencher plusieurs requêtes TomTom (une par trajet actif). Cette tuile partage le même quota quotidien que la tuile Trafic."
+      }
+    }
+  ]
+}
