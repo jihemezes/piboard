@@ -341,12 +341,6 @@ jobs:
     needs: release
     if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
     runs-on: macos-latest
-    env:
-      # Pas de certificat Apple : on le dit a electron-builder plutot que
-      # de le laisser chercher (et parfois echouer) sur la machine.
-      # No Apple certificate: tell electron-builder rather than letting
-      # it search (and sometimes fail) on the machine.
-      CSC_IDENTITY_AUTO_DISCOVERY: "false"
     steps:
       - uses: actions/checkout@v5
 
@@ -355,9 +349,67 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Build (and publish on tag)
+      # L'API de notarisation d'Apple (@electron/notarize, utilise par
+      # electron-builder) exige un CHEMIN de fichier pour la cle .p8,
+      # pas son contenu : le secret GitHub (texte brut du fichier) est
+      # donc ecrit sur le disque du runner avant la construction, puis
+      # efface juste apres (succes ou echec, voir plus bas). Le
+      # certificat de signature, lui, n'a pas besoin de ce detour :
+      # CSC_LINK accepte directement une chaine base64, lue en memoire
+      # par electron-builder.
+      # Apple's notarization API (@electron/notarize, used by
+      # electron-builder) requires a file PATH for the .p8 key, not its
+      # content: the GitHub secret (the file's raw text) is therefore
+      # written to the runner's disk before the build, then removed
+      # right after (success or failure, see below). The signing
+      # certificate needs no such detour: CSC_LINK directly accepts a
+      # base64 string, read in memory by electron-builder.
+      # GARDE-FOU (1.139.6) : echouer BRUYAMMENT plutot que publier un
+      # paquet non signe. Un secret absent ou mal nomme est evalue en
+      # chaine VIDE par GitHub, et electron-builder saute alors la
+      # signature sans erreur : c'est exactement ce qui a produit une
+      # release macOS « endommagee » en 1.139.3 (workflow jamais
+      # arrive dans le depot, mais le meme piege guette un secret
+      # renomme). On verifie donc les six secrets avant de construire.
+      # SAFEGUARD (1.139.6): fail LOUDLY rather than publish an unsigned
+      # package. A missing or misnamed secret evaluates to an EMPTY
+      # string, and electron-builder then skips signing without error.
+      # So the six secrets are checked before building.
+      - name: Check that the signing secrets are present
+        if: github.repository == 'jihemezes/piboard'
+        env:
+          S1: ${{ secrets.APPLE_CERTIFICATE }}
+          S2: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          S3: ${{ secrets.APPLE_TEAM_ID }}
+          S4: ${{ secrets.APPLE_API_KEY }}
+          S5: ${{ secrets.APPLE_API_KEY_ID }}
+          S6: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          bad=0
+          for n in 1 2 3 4 5 6; do
+            v="S$n"
+            if [ -z "${!v}" ]; then bad=1; fi
+          done
+          [ -z "$S1" ] && echo "SECRET VIDE / EMPTY: APPLE_CERTIFICATE"
+          [ -z "$S2" ] && echo "SECRET VIDE / EMPTY: APPLE_CERTIFICATE_PASSWORD"
+          [ -z "$S3" ] && echo "SECRET VIDE / EMPTY: APPLE_TEAM_ID"
+          [ -z "$S4" ] && echo "SECRET VIDE / EMPTY: APPLE_API_KEY"
+          [ -z "$S5" ] && echo "SECRET VIDE / EMPTY: APPLE_API_KEY_ID"
+          [ -z "$S6" ] && echo "SECRET VIDE / EMPTY: APPLE_API_ISSUER_ID"
+          exit $bad
+
+      - name: Write the notarization API key to a file
+        run: echo "${{ secrets.APPLE_API_KEY }}" > "${{ runner.temp }}/apple_api_key.p8"
+
+      - name: Build, sign, notarize (and publish on tag)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.APPLE_CERTIFICATE }}
+          CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY: ${{ runner.temp }}/apple_api_key.p8
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER_ID }}
         run: |
           set -o pipefail
           if [ "${{ github.event_name }}" = "push" ]; then
@@ -365,6 +417,27 @@ jobs:
           else
             npm run dist:mac 2>&1 | tee build-mac.log
           fi
+
+      # Verification APRES construction : la signature est-elle bien la,
+      # et acceptee par Gatekeeper ? Sans cela, un paquet non signe
+      # passerait pour un succes.
+      # Post-build check: is the signature really there, and accepted by
+      # Gatekeeper? Without it an unsigned package would pass as a success.
+      - name: Check that the apps are signed and notarized
+        if: github.repository == 'jihemezes/piboard'
+        run: |
+          fail=0
+          for app in dist/mac*/PiBoard.app; do
+            echo "== $app"
+            codesign --verify --deep --strict --verbose=2 "$app" || fail=1
+            codesign -dv "$app" 2>&1 | grep -E "Authority|TeamIdentifier" || true
+            spctl --assess --type execute -vv "$app" || fail=1
+          done
+          exit $fail
+
+      - name: Remove the notarization API key file
+        if: always()
+        run: rm -f "${{ runner.temp }}/apple_api_key.p8"
 
       - name: Keep the build log on failure
         if: failure()

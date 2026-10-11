@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.139.6
+
+- **Correctif : le paquet macOS publie en 1.139.3 a 1.139.5 n'etait PAS
+  signe, d'ou le message « PiBoard est endommage ».** Verification faite
+  sur le zip publie de la 1.139.3 : il ne contient aucun dossier
+  `_CodeSignature`, donc aucune signature du tout. Cause : le fichier
+  `.github/workflows/release.yml` modifie en 1.139.3 (secrets de
+  signature, cle de notarisation) n'est jamais arrive dans le depot --
+  le job `mac` executait toujours l'ancienne version, qui desactive
+  explicitement la signature (`CSC_IDENTITY_AUTO_DISCOVERY: "false"`).
+  La 1.139.5, elle, avait recu le job `windows` mais pas ce correctif.
+  Cette version reunit les deux : job `mac` avec signature et
+  notarisation, job `windows`.
+- **Garde-fous pour que cela ne se reproduise pas en silence** : le job
+  `mac` verifie desormais, avant de construire, que les six secrets
+  Apple sont bien presents (un secret absent est lu comme une chaine
+  vide et electron-builder saute alors la signature sans erreur), puis,
+  apres la construction, que chaque application est signee et acceptee
+  par Gatekeeper (`codesign --verify`, `spctl --assess`). Un paquet non
+  signe fait desormais echouer le workflow au lieu de passer pour un
+  succes.
+
 ## 1.139.5
 
 - **Correctif de livraison de la 1.139.4 : le nouveau workflow n'avait
