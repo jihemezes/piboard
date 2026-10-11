@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.139.7
+
+- **Correctif : la signature macOS echouait a l'import du certificat**
+  (`security set-key-partition-list ... SecKeychainUnlock: The user name
+  or passphrase you entered is not correct`). electron-builder cree un
+  trousseau temporaire au mot de passe aleatoire, puis passe le mot de
+  passe du CERTIFICAT a cette commande -- une confusion que le runner
+  macOS 26 ne tolere plus. Le workflow importe desormais lui-meme le
+  certificat dans son propre trousseau (`security create-keychain` /
+  `import` / `set-key-partition-list` avec le bon mot de passe), et
+  electron-builder y trouve l'identite via `CSC_KEYCHAIN` ; `CSC_LINK`
+  et `CSC_KEY_PASSWORD` ne sont plus utilises. Les secrets passent par
+  des variables d'environnement et non plus interpoles dans les
+  scripts. Le trousseau et la cle de notarisation sont supprimes en fin
+  de job, succes ou echec. Les six secrets restent inchanges.
+
 ## 1.139.6
 
 - **Correctif : le paquet macOS publie en 1.139.3 a 1.139.5 n'etait PAS

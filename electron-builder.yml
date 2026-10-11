@@ -411,8 +411,16 @@ deb:
 # absentes (une construction locale ou un fork sans compte developpeur,
 # par exemple), exactement le comportement d'avant la 1.139.3 dans ce
 # cas-la.
+# NOTE 1.139.7 : le certificat n'est plus passe par CSC_LINK mais importe
+# par le workflow dans un trousseau temporaire (CSC_KEYCHAIN) -- voir
+# release.yml pour la raison. electron-builder y decouvre l'identite de
+# la meme facon ; le reste de ce commentaire reste valable.
 #
 # macOS: Monterey (12) and later, Intel and Apple Silicon
+# NOTE 1.139.7: the certificate is no longer passed through CSC_LINK but
+# imported by the workflow into a temporary keychain (CSC_KEYCHAIN) -- see
+# release.yml for why. electron-builder discovers the identity there the
+# same way; the rest of this comment still applies.
 # The minimum macOS version is dictated by Electron, hence by Chromium:
 # Electron 43 (package.json's) requires macOS 12; the 44 series will
 # require macOS 13. Bumping Electron in package.json therefore
