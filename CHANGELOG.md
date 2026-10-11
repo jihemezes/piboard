@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.140.2
+
+- **Correctif macOS : le bouton « Installer » de ffmpeg ne pouvait pas
+  fonctionner -- le fichier qu'il telecharge n'avait jamais ete
+  publie.** La vraie cause, etablie par la mesure : l'adresse appelee
+  (`releases/download/ffmpeg-macos-v8.1.2/ffmpeg-piboard-macos-arm64.zip`)
+  repond 404, alors que celle de Windows (`ffmpeg-win64-v8.1.2`) repond
+  200 par le meme chemin. La release macOS, annoncee comme « dependance
+  a satisfaire » des la 1.124.0, n'a jamais ete creee. Le diagnostic de
+  la 1.140.1 (signature Apple Silicon) visait juste sur un point reel
+  mais pas sur la panne observee : le binaire n'etait meme pas
+  telecharge.
+- **Pourquoi aucun message ne s'affichait.** Le serveur repondait bien
+  « pas encore publie », mais l'interface ecrivait ce message A LA
+  PLACE du texte d'aide, au meme endroit et dans le meme style gris :
+  il passait inapercu. L'erreur s'affiche desormais dans un encadre
+  dedie, en couleur d'alerte, sous les boutons -- et un « ok » du
+  serveur ne suffit plus : si l'outil reste introuvable apres coup,
+  c'est un echec, et il est dit.
+- **Nouveau workflow `.github/workflows/ffmpeg-macos.yml`**, declenche
+  par le tag `ffmpeg-macos-v8.1.2` (ou a la main) : il recupere le
+  build autonome de Martin Riedl pour arm64 et x64, verifie
+  l'architecture (lipo), la signature de l'auteur (Team ID
+  KU3N25YGLU), l'absence de dependance hors systeme (otool) et le
+  lancement reel sur un runner Apple Silicon, puis publie en
+  pre-release, jamais « latest » (le canal stable lit
+  /releases/latest).
+- La signature ad hoc ajoutee en 1.140.1 n'est plus appliquee que si
+  la signature existante manque ou est invalide : ecraser celle de
+  l'auteur n'apportait rien.
+- Le serveur ecrit enfin les echecs d'installation dans son journal --
+  les messages y renvoyaient, mais rien n'y etait ecrit.
+- Message « pas publie » rendu actionnable : il propose
+  `brew install ffmpeg` en secours (PiBoard trouve ce ffmpeg seul).
+- Aide (fiche IPTV), docs/LINUX-MACOS.md et WHATSNEW.md (entree 1.140.0
+  manquante) mis a jour.
+
+---
+
+- **macOS fix: the ffmpeg "Install" button could not work -- the file
+  it downloads had never been published.** The macOS release URL
+  answers 404 while the Windows one answers 200. The error message was
+  written in place of the grey hint text and went unnoticed; it now
+  shows in a dedicated red box. New `ffmpeg-macos.yml` workflow fetches,
+  verifies and publishes the binaries as a pre-release. Ad hoc signing
+  now only when the existing signature is missing or invalid. Install
+  failures are now logged server-side.
+
 ## 1.140.1
 
 - **Correctif macOS : le bouton « Installer » de ffmpeg (Réglages →

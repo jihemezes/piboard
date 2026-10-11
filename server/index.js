@@ -1617,6 +1617,13 @@ app.post("/api/system/media-tools/install", async (req, res) => {
     return res.status(400).json({ ok: false, reason: "unknown-tool" });
   }
   const result = await platform.installMediaTool(tool);
+  /* Les messages d'erreur renvoient au « journal de PiBoard » : encore
+     faut-il y ecrire quelque chose (absent avant la 1.140.2).
+     Error messages point to "PiBoard's log": something must be written
+     there (missing before 1.140.2). */
+  if (!result.ok) {
+    console.warn("[piboard] installation " + tool + " echouee / failed:", result.reason || "?", result.detail || "");
+  }
   /* La recherche de l'outil est mise en cache au premier appel : sans
      cet oubli, l'interface continuerait d'afficher "absent" jusqu'au
      redemarrage.

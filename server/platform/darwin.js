@@ -371,43 +371,24 @@ function installMediaTool(tool) {
            avoids a "present but unusable" file. */
         try { fs.chmodSync(binary, 0o755); } catch (e) { /* non bloquant / non blocking */ }
 
-        /* SIGNATURE AD HOC OBLIGATOIRE SUR APPLE SILICON. Sans rapport
-           avec la quarantaine (voir plus haut) : depuis macOS sur puce
-           Apple, le noyau REFUSE D'EXECUTER tout binaire Mach-O qui n'a
-           pas au moins une signature ad hoc -- une regle d'integrite du
-           systeme (AMFI), separee de Gatekeeper/LaunchServices, qui
-           s'applique meme a un fichier sans aucun attribut de
-           quarantine. Un ffmpeg reheberge puis recompresse peut tres
-           bien arriver sans signature valide. On la repose donc nous-
-           memes, sans condition : inoffensif si elle existait deja,
-           indispensable si elle n'existait pas. C'est ce qui causait le
-           bouton "Installer" donnant l'impression de reussir
-           (telechargement et extraction corrects) tout en laissant
-           ffmpeg inutilisable, sans le moindre message d'erreur.
-           MANDATORY AD HOC SIGNATURE ON APPLE SILICON. Unrelated to
-           quarantine (see above): on Apple Silicon Macs, the kernel
-           REFUSES TO RUN any Mach-O binary without at least an ad hoc
-           signature -- a system-integrity rule (AMFI), separate from
-           Gatekeeper/LaunchServices, that applies even to a file
-           carrying no quarantine attribute at all. A re-hosted and
-           re-zipped ffmpeg binary can easily arrive without a valid
-           signature. We reapply it unconditionally here: harmless if
-           one already existed, essential if it did not. This is what
-           made the "Install" button look like it succeeded (download
-           and extraction both genuinely worked) while leaving ffmpeg
-           unusable, with no error message at all. */
-        execFile("/usr/bin/codesign", ["--force", "--sign", "-", binary], { timeout: 30 * 1000 }, () => {
-          /* On ignore volontairement l'echec de codesign lui-meme : sur
-             certaines configurations le binaire est deja signe
-             correctement et il peut renvoyer un statut non nul sans que
-             cela pose probleme. C'est la VERIFICATION REELLE ci-dessous,
-             en executant effectivement le binaire, qui decide seule du
-             succes -- jamais une simple presence de fichier.
-             codesign's own failure is deliberately ignored: on some
-             setups the binary is already correctly signed and it can
-             return non-zero without that being an issue. The REAL CHECK
-             below -- actually running the binary -- is what alone
-             decides success, never mere file presence. */
+        /* SIGNATURE ET VERIFICATION REELLE (1.140.1, affine en 1.140.2).
+           Sur Apple Silicon, le noyau REFUSE D'EXECUTER tout binaire
+           Mach-O sans au moins une signature ad hoc -- regle d'integrite
+           (AMFI) distincte de Gatekeeper et de la quarantaine. On verifie
+           donc la signature existante et on n'en pose une ad hoc QUE si
+           elle manque ou est invalide : le binaire publie par le
+           workflow ffmpeg-macos.yml est signe par son auteur, et rien ne
+           justifie d'ecraser une signature valide.
+           Puis on LANCE le binaire (`-version`) : seul ce test decide du
+           succes. Avant la 1.140.1, un fichier simplement present
+           suffisait a repondre « installe ».
+           SIGNATURE AND REAL CHECK. On Apple Silicon the kernel REFUSES
+           TO RUN any Mach-O binary lacking at least an ad hoc signature
+           (AMFI, separate from Gatekeeper and quarantine). The existing
+           signature is checked, and an ad hoc one applied ONLY when it is
+           missing or invalid. Then the binary is actually RUN: only that
+           decides success. */
+        const runCheck = () => {
           execFile(binary, ["-version"], { timeout: 5000 }, (verifyErr) => {
             if (verifyErr) {
               return resolve({
@@ -418,6 +399,13 @@ function installMediaTool(tool) {
             }
             resolve({ ok: true, packages: mediaPackages(tool), path: binary });
           });
+        };
+        execFile("/usr/bin/codesign", ["--verify", "--strict", binary], { timeout: 30 * 1000 }, (vErr) => {
+          if (!vErr) return runCheck();
+          /* Echec de la re-signature ignore : c'est le test d'execution
+             qui tranche, jamais la presence du fichier.
+             A failed re-sign is ignored: the run test decides. */
+          execFile("/usr/bin/codesign", ["--force", "--sign", "-", binary], { timeout: 30 * 1000 }, () => runCheck());
         });
       });
     });

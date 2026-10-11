@@ -248,6 +248,22 @@ Construire localement, pour tester : `npm run dist:linux` sur une
 machine Linux (produit les quatre fichiers, x64 **et** arm64, sans
 émulation), `npm run dist:mac` sur un Mac.
 
+### ffmpeg pour macOS — la release dédiée
+
+Le bouton « Installer » (Réglages → Outils multimédias) télécharge
+`ffmpeg-piboard-macos-arm64.zip` ou `-x64.zip` depuis la release
+`ffmpeg-macos-v8.1.2` du dépôt. Cette release n'est PAS produite par
+`release.yml` : elle l'est par `.github/workflows/ffmpeg-macos.yml`,
+déclenché en poussant le tag `ffmpeg-macos-v8.1.2` (ou à la main,
+« Run workflow », pour republier). Le workflow récupère le build de
+Martin Riedl (autonome, signé par son auteur), vérifie architecture,
+signature, dépendances et lancement réel, puis publie en
+**pre-release, jamais « latest »** — sans quoi le canal stable des
+mises à jour la prendrait pour la dernière version de PiBoard.
+
+Jusqu'à la 1.140.1 cette release n'existait pas : le bouton échouait
+sur une 404 à chaque clic.
+
 ### Ce qui a été vérifié, et ce qui ne l'a pas été
 
 Vérifié sur une machine Linux x64 : construction des quatre paquets
@@ -502,6 +518,22 @@ configuration change still builds before tagging.
 Building locally, to test: `npm run dist:linux` on a Linux machine
 (produces all four files, x64 **and** arm64, no emulation),
 `npm run dist:mac` on a Mac.
+
+### ffmpeg for macOS — the dedicated release
+
+The "Install" button (Settings → Media tools) downloads
+`ffmpeg-piboard-macos-arm64.zip` or `-x64.zip` from the repository's
+`ffmpeg-macos-v8.1.2` release. That release is NOT produced by
+`release.yml` but by `.github/workflows/ffmpeg-macos.yml`, started by
+pushing the `ffmpeg-macos-v8.1.2` tag (or by hand, "Run workflow", to
+republish). The workflow fetches Martin Riedl's build (standalone,
+signed by its author), checks architecture, signature, dependencies and
+an actual launch, then publishes as a **pre-release, never "latest"** —
+otherwise the stable update channel would mistake it for PiBoard's
+newest version.
+
+Until 1.140.1 that release did not exist: the button failed on a 404
+at every click.
 
 ### What was verified, and what was not
 

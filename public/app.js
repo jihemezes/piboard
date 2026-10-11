@@ -4721,6 +4721,8 @@
       if (!anyMissing) {
         hint.textContent = "";
         hint.hidden = true;
+        const errorBox = $("mediaToolsError");
+        if (errorBox) { errorBox.hidden = true; errorBox.textContent = ""; }
       } else if (mediaTools.canInstall) {
         /* Deux installations tres differentes derriere le meme bouton :
            un gestionnaire de paquets qui demande un mot de passe, ou un
@@ -4751,6 +4753,8 @@
 
   async function installMediaTool(tool, button) {
     const label = button.textContent;
+    const errorBox = $("mediaToolsError");
+    if (errorBox) { errorBox.hidden = true; errorBox.textContent = ""; }
     button.disabled = true;
     button.textContent = i18n.t("settings.media.installing");
     let result = null;
@@ -4768,16 +4772,21 @@
     button.textContent = label;
     await refreshMediaTools();
     fillMediaToolsForm();
-    if (result && result.ok) return;
+    /* « ok » seul ne suffit plus (1.140.2) : si le serveur dit avoir
+       installe mais que l'outil reste introuvable, c'est un echec, et il
+       se dit -- c'est exactement ce silence qui masquait la panne.
+       "ok" alone no longer suffices: installed-but-still-missing is a
+       failure, and is reported as such. */
+    if (result && result.ok && result.installed !== false) return;
+    if (result && result.ok) result = { ok: false, reason: "still-missing" };
     /* Une annulation de la fenetre de mot de passe n'est pas une panne :
        on ne montre alors aucun message d'erreur, l'etat inchange suffit.
        Cancelling the password window is not a failure: no error message
        is shown then, the unchanged state says enough. */
     const reason = result && result.reason;
     if (reason === "cancelled") return;
-    const hint = $("mediaToolsHint");
-    if (hint) {
-      hint.hidden = false;
+    if (errorBox) {
+      errorBox.hidden = false;
       /* Chaque motif appelle une conduite DIFFERENTE, et les confondre
          enverrait l'utilisateur sur une fausse piste : « pas encore
          publie » ne se corrige pas de son cote et ne doit pas lui faire
@@ -4791,7 +4800,11 @@
         "extract-failed": "settings.media.error.extract",
         "verify-failed": "settings.media.error.verify"
       };
-      hint.textContent = i18n.t(messages[reason] || "settings.media.error");
+      errorBox.textContent = i18n.t(messages[reason] || "settings.media.error");
+      /* Le detail technique (sortie de curl, de ditto...) reste dans la
+         console et le journal du serveur, pas dans le message.
+         Technical detail stays in the console and server log. */
+      if (result && result.detail) console.warn("[piboard] media install", tool, reason, result.detail);
     }
   }
 

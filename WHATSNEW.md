@@ -33,6 +33,29 @@
 # Nouveautes / What's new
 
 
+## 1.140.0
+
+**Retourner et faire pivoter les images**
+
+Un fond de page, une tuile Logo/Image ou un diaporama peuvent desormais
+afficher leur image en miroir (horizontal ou vertical) et la faire
+pivoter d'un quart de tour, d'un demi-tour ou de trois quarts. Le
+fichier lui-meme n'est jamais modifie : la meme image peut etre
+retournee a un endroit et intacte a un autre. Pour la tuile Logo/Image,
+trois boutons (↔, ↕, ⟳) sont aussi a portee de main dans la barre de
+recadrage du mode edition.
+
+---
+
+**Flip and rotate images**
+
+A page background, a Logo/Image tile or a slideshow can now show their
+image mirrored (horizontally or vertically) and rotated by a quarter,
+half or three-quarter turn. The file itself is never changed: the same
+image can be flipped in one place and untouched in another. For the
+Logo/Image tile, three buttons (↔, ↕, ⟳) are also at hand in the crop
+toolbar in edit mode.
+
 ## 1.139.0
 
 **Une tuile « Plan du circuit », et une base de 47 circuits**

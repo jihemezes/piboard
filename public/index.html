@@ -729,6 +729,13 @@
           <button type="button" class="btn small" id="mediaInstallVlc" hidden data-i18n="settings.media.install">Install</button>
         </div>
         <small class="field-hint" id="mediaToolsHint"></small>
+        <!-- Erreur d'installation : element DEDIE, en couleur d'alerte. Avant
+             la 1.140.2 le message remplacait le texte d'aide, au meme endroit
+             et dans le meme style gris : il passait inapercu.
+             Install error: a DEDICATED element in the alert colour. Before
+             1.140.2 the message replaced the hint text, in the same place
+             and grey style, and went unnoticed. -->
+        <p class="media-tools-error" id="mediaToolsError" role="alert" hidden></p>
 
       </fieldset>
 
