@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.139.5
+
+- **Correctif de livraison de la 1.139.4 : le nouveau workflow n'avait
+  pas ete pousse.** Le fichier `.github/workflows/release.yml` (job
+  `windows`) n'etait pas arrive dans le depot : il vit dans un dossier
+  cache (`.github`), que le Finder de macOS n'affiche pas et ne copie
+  pas lors d'un glisser-deposer. Le tag v1.139.4 a donc declenche
+  l'ancien workflow (Linux + macOS seulement), d'ou une release sans
+  installeur Windows. Aucun changement de code par rapport a la
+  1.139.4 : cette version ne fait que livrer le bon workflow, et
+  constitue de fait sa premiere execution reelle avec les trois
+  plateformes.
+
 ## 1.139.4
 
 - **Windows rejoint le workflow GitHub Actions : les trois plateformes

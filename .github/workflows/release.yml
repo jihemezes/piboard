@@ -1,61 +1,88 @@
 # ============================================================
 # PiBoard - .github/workflows/release.yml
-# Construction et publication des paquets Linux et macOS de
-# l'application de bureau, a chaque tag `v*` pousse sur GitHub.
+# Construction et publication des TROIS paquets de l'application de
+# bureau (Windows, Linux, macOS), a chaque tag `v*` pousse sur GitHub.
 #
-# POURQUOI ICI ET PAS SUR LE PC : electron-builder ne sait produire ni
-# .deb / AppImage depuis Windows, ni DMG hors de macOS. GitHub Actions
-# prete des machines Linux et macOS, gratuitement pour un depot public.
-# L'installeur Windows, lui, continue d'etre construit et publie
-# depuis le PC de developpement par `npm run publish` -- ce workflow ne
-# le touche pas.
+# HISTORIQUE (jusqu'a la 1.139.3 incluse) : ce workflow ne construisait
+# que Linux et macOS. L'installeur Windows etait construit et publie a
+# part, a la main, depuis le PC de developpement, par `npm run
+# publish` -- parce que ce PC a longtemps ete la seule machine
+# disponible pour le faire. Depuis la 1.139.4, le poste de
+# developpement est passe sous macOS : il n'y a donc plus de machine
+# Windows a demeure pour executer cette etape a la main, et il n'y a de
+# toute facon aucune raison technique de la garder separee -- GitHub
+# Actions sait tout aussi bien construire l'installeur NSIS qu'il sait
+# deja construire le DMG et l'AppImage, voir le job `windows`
+# ci-dessous.
 #
-# COMMENT CA S'ARTICULE avec la publication Windows : les deux
-# ecrivent dans la MEME release GitHub, celle du tag. Celui qui arrive
-# en premier la cree, le suivant y ajoute ses fichiers. Aucune
-# collision possible : chaque plateforme a ses propres noms de
-# fichiers ET son propre fichier de version pour electron-updater
-# (latest.yml pour Windows, latest-linux.yml / latest-linux-arm64.yml
-# pour Linux, latest-mac.yml pour macOS).
+# QUI CONSTRUIT QUOI, ET OU : les trois jobs (windows, linux, mac)
+# tournent chacun sur le type de machine que leur plateforme exige --
+# electron-builder ne sait produire ni .exe hors Windows, ni .deb /
+# AppImage depuis Windows, ni DMG hors de macOS. GitHub Actions prete
+# les trois, gratuitement pour un depot public.
 #
-# ORDRE CONSEILLE (celui du bloc de commandes de livraison) :
-#   git push origin vX.Y.Z   -> demarre ce workflow (Linux + macOS)
-#   npm run publish          -> publie Windows dans la meme release
+# COMMENT CA S'ARTICULE : les trois jobs ecrivent dans la MEME release
+# GitHub, celle du tag -- cree une seule fois par le job `release` ci-
+# dessous, avant les trois constructions. Aucune collision possible :
+# chaque plateforme a ses propres noms de fichiers ET son propre
+# fichier de version pour electron-updater (latest.yml pour Windows,
+# latest-linux.yml / latest-linux-arm64.yml pour Linux, latest-mac.yml
+# pour macOS).
 #
-# LATEST OU PRE-RELEASE : le statut de la release n'est decide ni ici ni
-# sur le PC, mais par le NUMERO DE VERSION de package.json, lu par
-# scripts/publish.js des deux cotes (suffixe semver -beta.1, -rc.2...
-# = pre-release ; numero nu = latest). Les deux publications decident
-# donc forcement pareil, quel que soit l'ordre d'arrivee.
+# UN SEUL GESTE SUFFIT DESORMAIS : `git push origin vX.Y.Z` demarre ce
+# workflow et construit les trois plateformes -- plus besoin d'un
+# second geste (`npm run publish`) sur une machine Windows.
+# `npm run publish` / `npm run dist` restent neanmoins disponibles
+# telles quelles pour qui voudrait construire un .exe localement (test
+# ponctuel, machine Windows sous la main) : voir docs/WINDOWS.md.
 #
-# Build and publication of the desktop application's Linux and macOS
-# packages, on every `v*` tag pushed to GitHub.
+# LATEST OU PRE-RELEASE : le statut de la release n'est decide ici par
+# aucun job en particulier, mais par le NUMERO DE VERSION de
+# package.json, lu par scripts/publish.js (suffixe semver -beta.1,
+# -rc.2... = pre-release ; numero nu = latest). Les trois constructions
+# lisent le meme fichier et decident donc forcement pareil, quel que
+# soit l'ordre d'arrivee.
 #
-# WHY HERE AND NOT ON THE PC: electron-builder can produce neither
-# .deb / AppImage from Windows, nor DMG outside macOS. GitHub Actions
-# lends Linux and macOS machines, free of charge for a public
-# repository. The Windows installer keeps being built and published
-# from the development PC by `npm run publish` -- this workflow leaves
-# it alone.
+# Build and publication of the desktop application's THREE packages
+# (Windows, Linux, macOS), on every `v*` tag pushed to GitHub.
 #
-# HOW IT FITS with the Windows publication: both write into the SAME
-# GitHub release, the tag's one. Whichever comes first creates it, the
-# next one adds its files. No collision possible: each platform has its
+# HISTORY (up to and including 1.139.3): this workflow only built Linux
+# and macOS. The Windows installer was built and published separately,
+# by hand, from the development PC, through `npm run publish` --
+# because that PC used to be the only machine available to do it.
+# Since 1.139.4 the development machine has moved to macOS: there is no
+# longer a standing Windows machine to run that step by hand, and there
+# was never a technical reason to keep it separate anyway -- GitHub
+# Actions builds the NSIS installer just as well as it already builds
+# the DMG and the AppImage, see the `windows` job below.
+#
+# WHO BUILDS WHAT, AND WHERE: the three jobs (windows, linux, mac) each
+# run on the machine type their platform requires -- electron-builder
+# can produce neither a .exe outside Windows, nor a .deb / AppImage
+# from Windows, nor a DMG outside macOS. GitHub Actions lends all
+# three, free of charge for a public repository.
+#
+# HOW IT FITS TOGETHER: all three jobs write into the SAME GitHub
+# release, the tag's one -- created once by the `release` job below,
+# before the three builds. No collision possible: each platform has its
 # own file names AND its own version file for electron-updater
 # (latest.yml for Windows, latest-linux.yml / latest-linux-arm64.yml
 # for Linux, latest-mac.yml for macOS).
 #
-# RECOMMENDED ORDER (the delivery command block's):
-#   git push origin vX.Y.Z   -> starts this workflow (Linux + macOS)
-#   npm run publish          -> publishes Windows into the same release
+# A SINGLE STEP NOW SUFFICES: `git push origin vX.Y.Z` starts this
+# workflow and builds all three platforms -- no more second step
+# (`npm run publish`) needed on a Windows machine. `npm run publish` /
+# `npm run dist` still work as is for anyone who wants to build a .exe
+# locally (a one-off test, a Windows machine at hand): see
+# docs/WINDOWS.md.
 #
-# LATEST OR PRE-RELEASE: the release's status is decided neither here nor
-# on the PC, but by package.json's VERSION NUMBER, read by
-# scripts/publish.js on both sides (semver suffix -beta.1, -rc.2... =
-# pre-release; bare number = latest). Both publications therefore
-# necessarily decide alike, whatever the order of arrival.
+# LATEST OR PRE-RELEASE: the release's status is decided here by no
+# particular job, but by package.json's VERSION NUMBER, read by
+# scripts/publish.js (semver suffix -beta.1, -rc.2... = pre-release;
+# bare number = latest). All three builds read the same file and
+# therefore necessarily decide alike, whatever the order of arrival.
 # ============================================================
-name: Desktop packages (Linux + macOS)
+name: Desktop packages (Windows + Linux + macOS)
 
 on:
   push:
@@ -126,6 +153,97 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: node scripts/publish.js --ensure-only
+
+  windows:
+    name: Windows (installeur NSIS)
+    needs: release
+    # `always()` + test du resultat : en lancement manuel, le job
+    # `release` est saute, et un `needs` saute bloquerait tout.
+    # `always()` + result check: on a manual run the `release` job is
+    # skipped, and a skipped `needs` would block everything.
+    if: always() && (needs.release.result == 'success' || needs.release.result == 'skipped')
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # `shell: bash` est necessaire ici : le shell par defaut sur un
+      # runner Windows est PowerShell, qui ne comprend ni `set -o
+      # pipefail` ni le `if [ ... ]` POSIX utilises ci-dessous. Git pour
+      # Windows (preinstalle sur ces runners) fournit un bash.exe que
+      # `shell: bash` sait trouver automatiquement -- aucune installation
+      # supplementaire requise. Memes raisons de `tee`/`pipefail` que les
+      # jobs Linux et macOS : recuperer le journal complet en cas
+      # d'echec, sans se laisser tromper par le code de retour de `tee`.
+      # `shell: bash` is required here: the default shell on a Windows
+      # runner is PowerShell, which understands neither `set -o
+      # pipefail` nor the POSIX `if [ ... ]` used below. Git for Windows
+      # (preinstalled on these runners) ships a bash.exe that `shell:
+      # bash` finds automatically -- no extra install needed. Same
+      # `tee`/`pipefail` reasoning as the Linux and macOS jobs: keep the
+      # full log on failure, without being fooled by `tee`'s own exit
+      # code.
+      - name: Build (and publish on tag)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          if [ "${{ github.event_name }}" = "push" ]; then
+            npm run publish:win 2>&1 | tee build-win.log
+          else
+            npm run dist:win 2>&1 | tee build-win.log
+          fi
+
+      # Meme principe de verification explicite que pour Linux (voir son
+      # commentaire) : on exige l'installeur ET le fichier de version
+      # qu'electron-updater lit sur Windows, avant de considerer la
+      # publication reussie. Le nom exact de l'installeur n'est pas fige
+      # dans electron-builder.yml (pas d'`artifactName` personnalise pour
+      # `win:`, a la difference de `linux:`/`mac:`) : il suit le defaut
+      # d'electron-builder, "<productName> Setup <version>.exe" -- d'ou
+      # un motif large plutot qu'un nom exact.
+      # Same explicit-check principle as Linux (see its comment): the
+      # installer AND the version file electron-updater reads on Windows
+      # are both required before the publication counts as successful.
+      # The installer's exact name is not pinned in electron-builder.yml
+      # (no custom `artifactName` for `win:`, unlike `linux:`/`mac:`): it
+      # follows electron-builder's default, "<productName> Setup
+      # <version>.exe" -- hence a loose pattern rather than an exact name.
+      - name: Check that the installer and the version file were produced
+        shell: bash
+        run: |
+          missing=0
+          for pattern in "dist/*.exe" "dist/latest.yml"; do
+            if ! ls $pattern >/dev/null 2>&1; then
+              echo "MANQUANT / MISSING: $pattern"
+              missing=1
+            fi
+          done
+          ls -la dist || true
+          exit $missing
+
+      - name: Keep the build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: piboard-windows-build-log
+          path: build-win.log
+          retention-days: 14
+
+      - name: Keep the installer as an artifact (manual run only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v7
+        with:
+          name: piboard-windows
+          path: |
+            dist/*.exe
+            dist/latest.yml
+          retention-days: 7
 
   linux:
     name: Linux (AppImage + deb, x64 + arm64)
