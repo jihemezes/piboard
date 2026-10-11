@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.140.1
+
+- **Correctif macOS : le bouton « Installer » de ffmpeg (Réglages →
+  Outils multimédias) pouvait donner l'impression de réussir sans
+  jamais installer quoi que ce soit.** Le téléchargement et
+  l'extraction se déroulaient bien, mais sur un Mac Apple Silicon, le
+  système refuse d'exécuter tout binaire téléchargé qui n'a pas une
+  signature au moins ad hoc — une règle d'intégrité du noyau, sans
+  rapport avec la quarantaine déjà écartée par PiBoard. Le binaire
+  réhébergé ne l'avait pas forcément, et PiBoard ne le vérifiait pas :
+  le bouton se grisait deux secondes puis revenait à son état initial,
+  sans aucun message, pendant que la lecture vidéo restait cassée.
+  - PiBoard signe désormais lui-même le binaire téléchargé (signature
+    ad hoc) juste après l'extraction, puis **vérifie réellement qu'il
+    démarre** avant de déclarer l'installation réussie.
+  - Si le binaire reste malgré tout inutilisable, un message d'erreur
+    clair s'affiche maintenant (au lieu du silence précédent), avec le
+    conseil d'essayer `brew install ffmpeg` en secours.
+  - Aide mise à jour (fiche de la tuile IPTV, section « Installer
+    ffmpeg selon votre système ») pour refléter ce correctif.
+
 ## 1.140.0
 
 - **Miroir horizontal/vertical et rotation pour les images.** Trois

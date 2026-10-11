@@ -4788,7 +4788,8 @@
         "no-auth-agent": "settings.media.error.noauth",
         "not-published": "settings.media.error.notPublished",
         "download-failed": "settings.media.error.download",
-        "extract-failed": "settings.media.error.extract"
+        "extract-failed": "settings.media.error.extract",
+        "verify-failed": "settings.media.error.verify"
       };
       hint.textContent = i18n.t(messages[reason] || "settings.media.error");
     }
