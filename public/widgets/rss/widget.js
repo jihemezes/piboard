@@ -131,6 +131,49 @@
     });
   }
 
+  /* ---------- Abonnements presse / press subscriptions (1.141.0) ----------
+     Les sites pour lesquels une session existe (voir
+     server/pressAccess.js), relus a chaque rafraichissement du flux --
+     une requete legere, sans reseau externe.
+     Et la memoire des articles RESERVES qui n'ont pas pu etre lus en
+     entier : apprise a l'ouverture (jamais en interrogeant les sites en
+     masse), gardee dans ce navigateur pour que le 🔒 survive a un
+     rechargement. Plafonnee : un flux d'actualite se renouvelle vite.
+     Sites with a session, re-read at each feed refresh (a light, local
+     request). And the memory of RESTRICTED articles that could not be
+     read in full: learned when opened (never by querying sites in bulk),
+     kept in this browser so the lock survives a reload. Capped. */
+  const LOCK_KEY = "piboard.rss.locked";
+  const LOCK_MAX = 300;
+  let lockedLinks = null;
+
+  function loadLocked() {
+    if (lockedLinks) return lockedLinks;
+    lockedLinks = new Map();
+    try {
+      const raw = JSON.parse(localStorage.getItem(LOCK_KEY) || "[]");
+      if (Array.isArray(raw)) raw.forEach((l) => lockedLinks.set(String(l), true));
+    } catch (e) { /* stockage indisponible / storage unavailable */ }
+    return lockedLinks;
+  }
+
+  function setLocked(link, locked) {
+    const m = loadLocked();
+    if (locked) m.set(link, true); else m.delete(link);
+    while (m.size > LOCK_MAX) m.delete(m.keys().next().value);
+    try { localStorage.setItem(LOCK_KEY, JSON.stringify([...m.keys()])); } catch (e) { /* idem */ }
+  }
+
+  function isLocked(link) {
+    return !!(link && loadLocked().has(link));
+  }
+
+  function subscribedAccount(accounts, link) {
+    let host;
+    try { host = new URL(link).hostname.toLowerCase(); } catch (e) { return null; }
+    return (accounts || []).find((a) => host === a.domain || host.endsWith("." + a.domain)) || null;
+  }
+
   class RssWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -140,6 +183,7 @@
       this.cursor = 0;
       this.currentItems = []; // items effectivement rendus (sous-ensemble ou rotation) / actually rendered items (subset or rotation)
       this.modal = null;
+      this.press = { supported: false, accounts: [] }; // abonnements presse / press subscriptions
       this.openToken = 0; // ignore une extraction qui repond apres qu'un autre article a ete ouvert / ignores an extraction that answers after another article was opened
     }
 
@@ -191,7 +235,10 @@
         this.render();
         return;
       }
-      const results = await Promise.allSettled(slots.map((slot) => this.fetchOneFeed(slot)));
+      const [results] = await Promise.all([
+        Promise.allSettled(slots.map((slot) => this.fetchOneFeed(slot))),
+        this.refreshPress()
+      ]);
       const ok = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
 
       if (!ok.length) {
@@ -237,6 +284,46 @@
         { url: s.url2, label: s.label2 },
         { url: s.url3, label: s.label3 }
       ].filter((slot) => slot.url);
+    }
+
+    async refreshPress() {
+      try {
+        const r = await fetch("/api/press", { cache: "no-store" });
+        if (!r.ok) return;
+        const data = await r.json();
+        this.press = { supported: !!data.supported, accounts: Array.isArray(data.accounts) ? data.accounts : [] };
+      } catch (e) { /* serveur plus ancien : aucun indicateur / older server: no indicator */ }
+    }
+
+    /* ✓ : article d'un site auquel vous etes abonne (sauf si la derniere
+       lecture n'a donne que l'apercu : session a renouveler). 🔒 : article
+       reserve deja ouvert sans avoir pu etre lu en entier.
+       ✓: article from a subscribed site (unless the last read only gave
+       the preview). 🔒: restricted article already opened but not read
+       in full. */
+    badgeHtml(it) {
+      const t = (k) => this.ctx.i18n.t(k);
+      if (!it.link) return "";
+      if (isLocked(it.link)) {
+        return `<span class="pwr-badge pwr-badge-lock" title="${escapeAttr(t("rss.badge.locked"))}">🔒</span>`;
+      }
+      const acc = subscribedAccount(this.press.accounts, it.link);
+      if (acc && !(acc.lastRead && acc.lastRead.full === false)) {
+        return `<span class="pwr-badge pwr-badge-sub" title="${escapeAttr(t("rss.badge.subscribed").replace("{name}", acc.name))}">✓</span>`;
+      }
+      return "";
+    }
+
+    refreshBadges() {
+      this.ctx.el.querySelectorAll(".pwr-item").forEach((li) => {
+        const it = this.currentItems[Number(li.dataset.idx)];
+        const title = li.querySelector(".pwr-title");
+        if (!it || !title) return;
+        const old = title.querySelector(".pwr-badge");
+        if (old) old.remove();
+        const html = this.badgeHtml(it);
+        if (html) title.insertAdjacentHTML("afterbegin", html);
+      });
     }
 
     async fetchOneFeed(slot) {
@@ -296,7 +383,7 @@
           <ul>
             ${items.map((it, idx) => `
               <li class="pwr-item ${it.link ? "pwr-clickable" : ""}" data-idx="${idx}" data-link="${it.link ? "1" : ""}">
-                <div class="pwr-title">${showTags && it.sourceLabel ? `<span class="pwr-tag">${escapeHtml(it.sourceLabel)}</span>` : ""}${it.title}</div>
+                <div class="pwr-title">${this.badgeHtml(it)}${showTags && it.sourceLabel ? `<span class="pwr-tag">${escapeHtml(it.sourceLabel)}</span>` : ""}${it.title}</div>
                 <div class="pwr-meta">${niceDate(it.date, lang)}</div>
               </li>`).join("")}
           </ul>
@@ -397,6 +484,7 @@
       let extraMeta = "";
       let isPaywall = false;
       let isPartialPreview = false;
+      let subNote = ""; // note d'abonnement / subscription note
       try {
         const res = await fetch("/api/article-extract?url=" + encodeURIComponent(it.link));
         if (res.ok) {
@@ -417,6 +505,18 @@
             // -- stated clearly rather than implying the full text (see
             // server/articleExtract.js).
             isPartialPreview = !!article.partial;
+            const t = (k) => i18n.t(k);
+            if (article.sessionExpired) {
+              subNote = `<p class="pwr-modal-thin-note pwr-modal-sub-warn">${escapeHtml(t("rss.sub.expired").replace("{name}", article.subscription || ""))}</p>`;
+            } else if (article.viaSubscription && article.premium === true && !article.partial) {
+              subNote = `<p class="pwr-modal-sub-ok">${escapeHtml(t("rss.sub.read").replace("{name}", article.subscription || ""))}</p>`;
+            } else if (article.premium === true && article.partial && !article.viaSubscription && this.press.supported) {
+              subNote = `<p class="pwr-modal-thin-note">${escapeHtml(t("rss.sub.hint"))}</p>`;
+            }
+            // Memoire du 🔒 : seul un article DECLARE payant et non lu en
+            // entier est verrouille ; un article lu en entier est libere.
+            // Lock memory: only a DECLARED paid article not read in full.
+            if (article.premium === true) setLocked(it.link, !!article.partial);
           }
         } else {
           // Statut 401/402 signale sans ambiguite un acces reserve aux
@@ -469,8 +569,15 @@
       } else if (extraMeta) {
         metaEl.textContent = [it.sourceLabel || (this.feed && this.feed.source), extraMeta, niceDate(it.date, lang)].filter(Boolean).join(" · ");
       }
-      const previewNote = isPartialPreview ? `<p class="pwr-modal-thin-note">${i18n.t("rss.freePreviewOnly")}</p>` : "";
-      bodyEl.innerHTML = figureHtml + previewNote + html;
+      const previewNote = isPartialPreview && !subNote.includes("pwr-modal-sub-warn")
+        ? `<p class="pwr-modal-thin-note">${i18n.t("rss.freePreviewOnly")}</p>` : "";
+      bodyEl.innerHTML = figureHtml + subNote + previewNote + html;
+      // L'indicateur de la liste suit ce qui vient d'etre appris -- mis a
+      // jour SUR PLACE : un re-rendu complet remplacerait les elements de
+      // la liste sous le doigt de l'utilisateur.
+      // The list's indicator follows what was just learned -- updated IN
+      // PLACE: a full re-render would replace the list's elements.
+      this.refreshBadges();
     }
 
     destroy() {

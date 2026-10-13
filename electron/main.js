@@ -430,6 +430,15 @@ function registerController() {
       });
       return { ok: true };
     },
+    /* Abonnements presse (1.141.0) : voir electron/pressSession.js et
+       server/pressAccess.js. La session vit ici, dans le processus
+       Electron, seul a posseder un vrai navigateur.
+       Press subscriptions: the session lives here, in the Electron
+       process, the only one with a real browser. */
+    pressLogin: (url) => require("./pressSession").login(url, mainWindow),
+    pressStatus: (domains) => require("./pressSession").status(domains),
+    pressLogout: (domain) => require("./pressSession").logout(domain),
+    pressFetch: (url) => require("./pressSession").fetchHtml(url),
     /* Affichage immersif : plein ecran veritable. Sous Windows,
        setFullScreen(true) masque d'un coup la barre de titre ET la barre
        des taches -- c'est la seule facon d'obtenir les deux, une fenetre

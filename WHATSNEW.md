@@ -33,6 +33,29 @@
 # Nouveautes / What's new
 
 
+## 1.141.0
+
+**Vos abonnements presse dans la tuile Flux RSS**
+
+Abonne au Monde, au Figaro ou a un autre journal ? Dans Reglages ->
+Abonnements presse, connectez-vous une fois sur le site lui-meme : les
+articles payants s'ouvrent ensuite en entier dans la tuile Flux RSS,
+pour tous les flux de ce journal. PiBoard ne voit jamais votre mot de
+passe. Dans la liste, un ✓ signale les articles de vos journaux, un 🔒
+ceux qui restent reserves aux abonnes. (Application de bureau Mac,
+Windows et Linux.)
+
+---
+
+**Your press subscriptions in the RSS tile**
+
+Subscribe to Le Monde, Le Figaro or another newspaper? In Settings ->
+Press subscriptions, log in once on the site itself: paid articles then
+open in full in the RSS tile, for all that newspaper's feeds. PiBoard
+never sees your password. In the list, a ✓ marks your newspapers'
+articles, a 🔒 those that remain subscribers-only. (Mac, Windows and
+Linux desktop application.)
+
 ## 1.140.3
 
 **VLC s'installe en un clic sur Mac**

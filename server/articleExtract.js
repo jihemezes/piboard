@@ -53,8 +53,21 @@
    already chooses to make visible is shown. If the received body is too
    short to be worth it (under 200 useful characters), extraction fails
    cleanly and the widget falls back to the feed's summary.
+
+   ABONNEMENTS (1.141.0). La regle « pas de connexion » ci-dessus vaut
+   toujours pour le chemin ordinaire. Seule exception, voulue par
+   l'utilisateur : un site pour lequel IL a ouvert sa propre session
+   d'abonne (Reglages -> Abonnements presse, application de bureau) est
+   lu avec cette session -- ce que le site montre a l'abonne, ni plus ni
+   moins. Voir server/pressAccess.js et extractWithSession() ci-dessous.
+   SUBSCRIPTIONS (1.141.0). The "no login" rule above still holds for
+   the ordinary path. Sole exception, chosen by the user: a site THEY
+   opened their own subscriber session for is read with that session --
+   what the site shows the subscriber, no more, no less.
    ============================================================ */
 "use strict";
+
+const { premiumFromHtml, looksLikePaywallPreview } = require("./pressAccess");
 
 // jsdom et Readability sont volontairement charges A LA DEMANDE (voir
 // readabilityParse ci-dessous), pas ici en haut de fichier -- mesure en
@@ -253,7 +266,57 @@ function readabilityParse(html, url) {
   }
 }
 
-async function extractArticle(url) {
+/* Forme commune de la reponse / common response shape. */
+function shapeArticle(article, extra) {
+  return Object.assign({
+    title: article.title || null,
+    byline: article.byline || null,
+    siteName: article.siteName || null,
+    excerpt: article.excerpt || null,
+    content: article.content || null // HTML deja nettoye par Readability / HTML already cleaned up by Readability
+  }, extra);
+}
+
+/* LECTURE AVEC UN ABONNEMENT (1.141.0). Quand l'adresse releve d'un
+   site pour lequel l'utilisateur a ouvert une session (voir
+   server/pressAccess.js), `opts.sessionFetch` rend le HTML tel que le
+   navigateur integre de l'application de bureau le recoit, cookies de
+   l'abonne compris -- et protections anti-robot passees, puisque c'est
+   un vrai navigateur. En cas d'echec, on retombe sur le chemin
+   ordinaire ci-dessous : l'abonnement n'est jamais un point de panne.
+   READING WITH A SUBSCRIPTION. When the address belongs to a site the
+   user opened a session for, `opts.sessionFetch` returns the HTML as the
+   desktop app's built-in browser receives it, subscriber cookies
+   included. On failure, the ordinary path below takes over. */
+async function extractWithSession(url, sessionFetch) {
+  let html;
+  try {
+    html = await sessionFetch(url);
+  } catch (e) {
+    console.warn("[piboard] article-extract: lecture avec abonnement impossible / subscriber read failed:", url, "->", e.message || e);
+    return null;
+  }
+  if (!html) return null;
+  if (html.length > MAX_HTML_CHARS) html = html.slice(0, MAX_HTML_CHARS);
+  const article = readabilityParse(html, url);
+  const text = article && article.textContent ? article.textContent.trim() : "";
+  if (text.length < MIN_TEXT_LENGTH || looksLikeBotBlockPage(text)) return null;
+  const premium = premiumFromHtml(html);
+  const preview = looksLikePaywallPreview(text);
+  return shapeArticle(article, {
+    premium,
+    viaSubscription: true,
+    partial: preview,
+    // Article payant, lu avec la session, mais seul l'apercu est venu :
+    // la session a vraisemblablement expire.
+    // Paid article, read with the session, yet only the preview came:
+    // the session has most likely expired.
+    sessionExpired: !!(premium && preview)
+  });
+}
+
+async function extractArticle(url, opts) {
+  opts = opts || {};
   let parsed;
   try {
     parsed = new URL(url);
@@ -264,7 +327,13 @@ async function extractArticle(url) {
     throw new Error("unsupported protocol");
   }
 
+  if (typeof opts.sessionFetch === "function") {
+    const viaSession = await extractWithSession(url, opts.sessionFetch);
+    if (viaSession) return viaSession;
+  }
+
   let article = null;
+  let premium = null;
   let sawPaywallStatus = false;
   let lastError = null;
   for (let i = 0; i < USER_AGENTS.length; i++) {
@@ -275,6 +344,8 @@ async function extractArticle(url) {
       // fallback one sends a browser's full header set.
       const { html, status, paywallStatus } = await fetchHtml(url, USER_AGENTS[i], i > 0);
       if (paywallStatus) sawPaywallStatus = true;
+      const declared = premiumFromHtml(html);
+      if (declared !== null) premium = declared;
       // Tente l'extraction sur CE QUI A ETE RECU, meme si le statut
       // n'etait pas 2xx -- voir fetchHtml(). Un statut d'echec avec un
       // corps vide (blocage pur, sans page) donne simplement un texte
@@ -319,27 +390,24 @@ async function extractArticle(url) {
 
   if (!article) {
     const err = lastError || new Error("no readable content");
-    if (sawPaywallStatus) err.paywall = true;
+    if (sawPaywallStatus || premium === true) err.paywall = true;
     throw err;
   }
 
-  return {
-    title: article.title || null,
-    byline: article.byline || null,
-    siteName: article.siteName || null,
-    excerpt: article.excerpt || null,
-    content: article.content || null, // HTML deja nettoye par Readability / HTML already cleaned up by Readability
-    // Un texte a tout de meme ete extrait, mais le statut HTTP sous-
-    // jacent signalait un acces restreint (401/402, paywall ou
-    // anti-robot) : ce qui est affiche n'est probablement qu'un apercu
-    // partiel, pas l'article complet -- l'indiquer honnetement plutot
-    // que de laisser croire au texte integral. Text was still extracted,
-    // but the underlying HTTP status signaled restricted access (401/402,
-    // paywall or anti-bot): what's shown is probably only a partial
-    // preview, not the full article -- stated honestly rather than
-    // implying the full text.
-    partial: sawPaywallStatus
-  };
+  const text = article.textContent ? article.textContent.trim() : "";
+  return shapeArticle(article, {
+    premium,
+    viaSubscription: false,
+    // Un texte a tout de meme ete extrait, mais l'acces etait restreint :
+    // statut 401/402, ou article declare payant par l'editeur
+    // (isAccessibleForFree: false) lu SANS abonnement, ou phrase de fin
+    // d'apercu dans le texte. Ce qui est affiche n'est alors que l'apercu
+    // gratuit -- le dire plutot que de laisser croire au texte integral.
+    // Restricted access: 401/402, a publisher-declared paid article read
+    // WITHOUT a subscription, or an end-of-preview phrase. Only the free
+    // preview is shown -- said so.
+    partial: sawPaywallStatus || premium === true || looksLikePaywallPreview(text)
+  });
 }
 
-module.exports = { extractArticle, USER_AGENTS, BROWSER_HEADERS };
+module.exports = { extractArticle, extractWithSession, USER_AGENTS, BROWSER_HEADERS };

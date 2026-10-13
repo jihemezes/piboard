@@ -1296,7 +1296,14 @@
           <div class="help-opt"><span class="help-opt-name">Nombre max d'articles</span><span class="help-opt-desc">Combien de titres afficher au maximum.</span></div>
           <div class="help-opt"><span class="help-opt-name">Rotation automatique</span><span class="help-opt-desc">Alterne un article à la fois plutôt que d'afficher toute la liste.</span></div>
           <div class="help-opt"><span class="help-opt-name">Afficher la source</span><span class="help-opt-desc">Avec un seul flux : son nom en en-tête. Avec plusieurs flux combinés : une étiquette à côté de chaque article à la place.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux relectures du flux.</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">Intervalle en minutes entre deux relectures du flux.</span></div>
+          <h4>Articles réservés aux abonnés</h4>
+          <p>Sans abonnement, PiBoard affiche ce que le site laisse voir à tout le monde : souvent un <b>aperçu</b>, signalé comme tel. Un article déclaré payant par son éditeur et ouvert sans accès complet est ensuite marqué d'un <b>🔒</b> dans la liste.</p>
+          <p><b>Si vous êtes abonné</b> (application de bureau Mac, Windows ou Linux uniquement) : Réglages → <b>Abonnements presse</b>, choisissez le journal (Le Monde, Le Figaro, Libération, Mediapart, La Dépêche, L'Équipe, ou « Autre site… »), puis <b>Se connecter</b>. Une fenêtre s'ouvre sur le site : connectez-vous normalement, captcha et double authentification compris, puis fermez-la. <b>PiBoard ne voit jamais votre mot de passe</b> : il garde seulement la session, comme un navigateur, dans un profil à part.</p>
+          <p>Ensuite, les articles de ce site sont lus par ce même navigateur intégré, de façon invisible, et passent par le mode lecture habituel : <b>texte complet</b>, avec la mention « Article abonné, lu avec votre abonnement ». Les articles de ce site portent un <b>✓</b> dans la liste.</p>
+          <p><b>Un réglage par site, pas par flux</b> : une connexion au Monde vaut pour tous ses flux (Une, International, Économie…) et toutes vos tuiles Flux RSS.</p>
+          <p>Les sessions expirent au bout de quelques semaines ou mois. Si un article payant ne donne plus que l'aperçu, la popup le dit et les réglages affichent « session sans doute expirée » : cliquez sur <b>Se reconnecter</b>. <b>Se déconnecter</b> efface la session de ce site, et seulement de lui ; <b>Retirer</b> efface le site et sa session.</p>
+          <p>Sur le Raspberry Pi en kiosque et dans un navigateur distant, il n'y a pas de navigateur intégré : la section n'apparaît pas et les articles restent en aperçu.</p>`,
         en: `
           <span class="help-size">Size: 4×3 by default, from 2×2 to 12×8</span>
           <h4>Goal</h4>
@@ -1311,7 +1318,14 @@
           <div class="help-opt"><span class="help-opt-name">Max items</span><span class="help-opt-desc">How many headlines to show at most.</span></div>
           <div class="help-opt"><span class="help-opt-name">Auto-rotate</span><span class="help-opt-desc">Alternates one article at a time rather than showing the whole list.</span></div>
           <div class="help-opt"><span class="help-opt-name">Show source</span><span class="help-opt-desc">With a single feed: its name as a header. With several feeds combined: a tag next to each article instead.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two feed reads.</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">Interval in minutes between two feed reads.</span></div>
+          <h4>Subscriber-only articles</h4>
+          <p>Without a subscription, PiBoard shows what the site lets everyone see: often a <b>preview</b>, flagged as such. An article its publisher declares as paid and opened without full access is then marked with a <b>🔒</b> in the list.</p>
+          <p><b>If you subscribe</b> (Mac, Windows or Linux desktop application only): Settings → <b>Press subscriptions</b>, pick the newspaper (Le Monde, Le Figaro, Libération, Mediapart, La Dépêche, L'Équipe, or “Other site…”), then <b>Log in</b>. A window opens on the site: log in as usual, captcha and two-factor included, then close it. <b>PiBoard never sees your password</b>: it only keeps the session, like a browser, in a separate profile.</p>
+          <p>From then on, that site's articles are read by the same built-in browser, invisibly, and go through the usual reader mode: <b>full text</b>, with the note “Subscriber article, read with your subscription”. That site's articles carry a <b>✓</b> in the list.</p>
+          <p><b>One setting per site, not per feed</b>: logging in to Le Monde covers all its feeds (front page, international, economy…) and all your RSS tiles.</p>
+          <p>Sessions expire after a few weeks or months. When a paid article only gives the preview again, the popup says so and the settings show “session has probably expired”: click <b>Log in again</b>. <b>Log out</b> clears that site's session, and only that one; <b>Remove</b> clears the site and its session.</p>
+          <p>On the Raspberry Pi in kiosk mode and in a remote browser there is no built-in browser: the section does not appear and articles stay as previews.</p>`
       }
     },
 

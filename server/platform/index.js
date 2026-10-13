@@ -277,6 +277,23 @@ function openLog() {
   return { ok: false, reason: "no-kiosk-controller" };
 }
 
+/* Abonnements presse (1.141.0) : relais vers la session de navigateur
+   du processus Electron (electron/pressSession.js). Sans Electron
+   (Raspberry Pi en kiosque, navigateur distant), la fonction n'existe
+   pas : pressSupported() vaut false et l'interface masque la section.
+   Press subscriptions: relays to the Electron process's browser
+   session. Without Electron, pressSupported() is false. */
+function pressSupported() {
+  return !!(kioskController && typeof kioskController.pressFetch === "function");
+}
+
+async function pressCall(name, arg) {
+  if (!kioskController || typeof kioskController[name] !== "function") {
+    throw new Error("no-press-session");
+  }
+  return kioskController[name](arg);
+}
+
 function canOpenLog() {
   return !!(kioskController && typeof kioskController.openLog === "function");
 }
@@ -406,6 +423,8 @@ module.exports = {
   minimizeWindow,
   openLog,
   canOpenLog,
+  pressSupported,
+  pressCall,
   isDesktopApp,
   getAutoStart,
   setAutoStart,

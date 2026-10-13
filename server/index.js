@@ -50,6 +50,7 @@ const webdav = require("./webdav");
 const tileConfigs = require("./tileConfigs");
 const teleProgram = require("./teleProgram");
 const articleExtract = require("./articleExtract");
+const pressAccess = require("./pressAccess");
 const webviewProxy = require("./webviewProxy");
 const webviewShot = require("./webviewShot");
 const crypto = require("./crypto");
@@ -1955,7 +1956,21 @@ app.get("/api/proxy", async (req, res) => {
 app.get("/api/article-extract", async (req, res) => {
   const target = String(req.query.url || "");
   try {
-    const article = await articleExtract.extractArticle(target);
+    // Article d'un site auquel l'utilisateur est abonne : lu par la
+    // session de navigateur de l'application de bureau (1.141.0).
+    // Article from a subscribed site: read through the desktop app's
+    // browser session.
+    const account = platform.pressSupported()
+      ? pressAccess.accountForUrl(pressAccess.readAccounts(store), target)
+      : null;
+    const opts = account ? { sessionFetch: (u) => platform.pressCall("pressFetch", u) } : {};
+    const article = await articleExtract.extractArticle(target, opts);
+    if (account) {
+      article.subscription = account.name;
+      if (article.viaSubscription && article.premium === true) {
+        pressAccess.recordRead(store, account.domain, !article.partial);
+      }
+    }
     res.json(article);
   } catch (e) {
     // Journalise systematiquement : sans ca, un echec d'extraction est
@@ -1971,6 +1986,95 @@ app.get("/api/article-extract", async (req, res) => {
     console.warn("[piboard] article-extract echec pour", target, "->", e.message || e);
     res.status(502).json({ error: String(e.message || e), paywall: !!e.paywall });
   }
+});
+
+/* ---------- Abonnements presse / press subscriptions (1.141.0) ----------
+   Voir server/pressAccess.js et electron/pressSession.js. La liste des
+   sites se consulte de partout ; la modifier, ouvrir une fenetre de
+   connexion ou effacer une session n'est permis que depuis le poste de
+   l'application de bureau -- c'est la que la fenetre s'ouvre.
+   The site list can be read from anywhere; changing it, opening a login
+   window or clearing a session is only allowed from the desktop app's
+   own machine -- that's where the window opens. */
+async function pressStatusFor(accounts) {
+  if (!platform.pressSupported() || !accounts.length) return { loginOpen: false, sites: {} };
+  try {
+    return await platform.pressCall("pressStatus", accounts.map((a) => a.domain));
+  } catch (e) {
+    console.warn("[piboard] abonnements presse : etat illisible / unreadable status:", e.message || e);
+    return { loginOpen: false, sites: {} };
+  }
+}
+
+app.get("/api/press", async (req, res) => {
+  const accounts = pressAccess.readAccounts(store);
+  const status = await pressStatusFor(accounts);
+  const supported = platform.pressSupported();
+  res.json({
+    supported,
+    canManage: supported && isLocalRequest(req),
+    loginOpen: !!status.loginOpen,
+    presets: pressAccess.PRESETS,
+    accounts: accounts.map((a) => Object.assign({}, a, (status.sites || {})[a.domain] || { cookies: 0, expires: null }))
+  });
+});
+
+function pressGuard(req, res) {
+  if (!platform.pressSupported()) {
+    res.status(400).json({ ok: false, reason: "unsupported" });
+    return false;
+  }
+  if (!isLocalRequest(req)) {
+    res.status(403).json({ ok: false, reason: "not-local" });
+    return false;
+  }
+  return true;
+}
+
+function pressAccountOr404(req, res) {
+  const domain = pressAccess.normalizeDomain(req.params.domain);
+  const account = pressAccess.readAccounts(store).find((a) => a.domain === domain);
+  if (!account) res.status(404).json({ ok: false, reason: "unknown-site" });
+  return account || null;
+}
+
+app.post("/api/press", (req, res) => {
+  if (!pressGuard(req, res)) return;
+  const result = pressAccess.addAccount(store, req.body || {});
+  res.status(result.ok ? 200 : 400).json(result);
+});
+
+app.post("/api/press/:domain/login", async (req, res) => {
+  if (!pressGuard(req, res)) return;
+  const account = pressAccountOr404(req, res);
+  if (!account) return;
+  try {
+    res.json(await platform.pressCall("pressLogin", account.loginUrl));
+  } catch (e) {
+    res.status(500).json({ ok: false, reason: String(e.message || e) });
+  }
+});
+
+app.post("/api/press/:domain/logout", async (req, res) => {
+  if (!pressGuard(req, res)) return;
+  const account = pressAccountOr404(req, res);
+  if (!account) return;
+  try {
+    res.json(await platform.pressCall("pressLogout", account.domain));
+  } catch (e) {
+    res.status(500).json({ ok: false, reason: String(e.message || e) });
+  }
+});
+
+// Retirer un site efface aussi sa session : rien ne doit survivre
+// d'un abonnement que l'utilisateur a enleve.
+// Removing a site also clears its session.
+app.delete("/api/press/:domain", async (req, res) => {
+  if (!pressGuard(req, res)) return;
+  const account = pressAccountOr404(req, res);
+  if (!account) return;
+  try { await platform.pressCall("pressLogout", account.domain); } catch (e) { /* session deja absente / already gone */ }
+  res.json({ ok: true, accounts: pressAccess.removeAccount(store, account.domain) });
 });
 
 /* ---------- Secrets de tuile / tile secrets ----------

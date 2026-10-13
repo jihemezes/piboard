@@ -1245,7 +1245,8 @@ const dom = new JSDOM(html, {
         return json({
           title: "Article apercu paywall",
           content: `<p>Voici l'apercu gratuit de l'article, visible avant que le paywall ne masque la suite reservee aux abonnes du site.</p>`,
-          partial: true
+          partial: true,
+          premium: true // article declare payant par l'editeur (1.141.0) / publisher-declared paid article
         });
       }
       if (u.includes("/api/proxy") && u.includes("feed.test")) {
@@ -2636,6 +2637,15 @@ function catalogItemFor(catalog, document, widgetId) {
     (previewBody?.textContent || "").includes("apercu gratuit de l'article"));
   assert("popup : banniere 'apercu gratuit uniquement' affichee (honnete : ce n'est pas l'article complet)",
     !!previewBody?.querySelector(".pwr-modal-thin-note") && (previewBody.querySelector(".pwr-modal-thin-note").textContent || "").includes("Aperçu partiel"));
+
+  /* 1.141.0 : un article DECLARE payant, ouvert sans acces complet, est
+     marque 🔒 dans la liste -- mis a jour sur place, sans re-rendu.
+     1.141.0: a DECLARED paid article opened without full access gets a
+     lock in the list -- updated in place, without a re-render. */
+  assert("liste : article payant non lu en entier marque d'un cadenas",
+    !!previewItem.querySelector(".pwr-badge-lock") && previewItem.isConnected);
+  assert("liste : un article libre ne porte aucun indicateur",
+    !rssItems.find((li) => li.textContent.includes("Article avec lien"))?.querySelector(".pwr-badge"));
   document.querySelector(".pwr-modal-card")?.closest(".modal")?.querySelector(".modal-close[data-close]")
     ?.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(20);

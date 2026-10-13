@@ -4817,6 +4817,165 @@
     }
   }
 
+  /* ---------- Abonnements presse / press subscriptions (1.141.0) ----------
+     Voir server/pressAccess.js. La section n'apparait que dans
+     l'application de bureau, seule a posseder un navigateur integre ;
+     depuis un autre appareil, la liste se lit mais ne se modifie pas.
+     Pendant qu'une fenetre de connexion est ouverte, l'etat est relu
+     toutes les 3 s : l'utilisateur voit la session apparaitre des qu'il
+     s'est connecte, sans rouvrir les reglages.
+     See server/pressAccess.js. Desktop app only; from another device the
+     list is read-only. While a login window is open, the state is
+     re-read every 3 s. */
+  let pressData = null;
+  let pressPoll = null;
+
+  async function refreshPress() {
+    try {
+      const r = await fetch("/api/press", { cache: "no-store" });
+      if (!r.ok) return;
+      pressData = await r.json();
+    } catch (e) { /* serveur plus ancien / older server */ }
+  }
+
+  function pressDate(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return "";
+    return d.toLocaleDateString(settings.lang === "fr" ? "fr-FR" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
+  }
+
+  function pressStateText(a) {
+    if (a.lastRead && a.lastRead.full === true) {
+      return { cls: "ok", text: i18n.t("press.state.confirmed").replace("{date}", pressDate(a.lastRead.at)) };
+    }
+    if (a.lastRead && a.lastRead.full === false && a.cookies) {
+      return { cls: "warn", text: i18n.t("press.state.expired") };
+    }
+    if (a.cookies) {
+      return { cls: "", text: i18n.t("press.state.saved") + (a.expires ? " " + i18n.t("press.state.until").replace("{date}", pressDate(a.expires)) : "") };
+    }
+    return { cls: "", text: i18n.t("press.state.none") };
+  }
+
+  function fillPressForm() {
+    const section = $("secPress");
+    if (!section) return;
+    if (!pressData || !pressData.supported) {
+      section.hidden = true;
+      return;
+    }
+    section.hidden = false;
+    const manage = !!pressData.canManage;
+    const list = $("pressList");
+    list.innerHTML = "";
+    (pressData.accounts || []).forEach((a) => {
+      const row = document.createElement("div");
+      row.className = "press-row";
+      const st = pressStateText(a);
+      row.innerHTML = '<span class="press-name"></span><span class="press-domain"></span>' +
+        '<span class="press-state"></span><span class="press-actions"></span>';
+      row.querySelector(".press-name").textContent = a.name;
+      row.querySelector(".press-domain").textContent = a.domain;
+      const stateEl = row.querySelector(".press-state");
+      stateEl.textContent = st.text;
+      if (st.cls) stateEl.classList.add(st.cls);
+      if (manage) {
+        const actions = row.querySelector(".press-actions");
+        const mk = (key, act) => {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "btn small";
+          b.textContent = i18n.t(key);
+          b.addEventListener("click", () => pressAction(a.domain, act));
+          actions.appendChild(b);
+        };
+        mk(a.cookies ? "press.relogin" : "press.login", "login");
+        if (a.cookies) mk("press.logout", "logout");
+        mk("press.remove", "remove");
+      }
+      list.appendChild(row);
+    });
+    if (!(pressData.accounts || []).length) {
+      const empty = document.createElement("small");
+      empty.className = "field-hint";
+      empty.textContent = i18n.t("press.empty");
+      list.appendChild(empty);
+    }
+    $("pressAddRow").hidden = !manage;
+    $("pressRemoteHint").hidden = manage;
+    if (manage) {
+      const sel = $("pressPreset");
+      const current = sel.value;
+      const taken = new Set((pressData.accounts || []).map((a) => a.domain));
+      sel.innerHTML = "";
+      (pressData.presets || []).filter((p) => !taken.has(p.domain)).forEach((p) => {
+        const o = document.createElement("option");
+        o.value = p.domain;
+        o.textContent = p.name + " (" + p.domain + ")";
+        sel.appendChild(o);
+      });
+      const other = document.createElement("option");
+      other.value = "__other";
+      other.textContent = i18n.t("press.other");
+      sel.appendChild(other);
+      if ([...sel.options].some((o) => o.value === current)) sel.value = current;
+      $("pressCustom").hidden = sel.value !== "__other";
+    }
+    // Relecture tant qu'une fenetre de connexion est ouverte, et tant
+    // que les reglages sont affiches. Re-read while a login window is
+    // open and the settings are shown.
+    clearTimeout(pressPoll);
+    if (pressData.loginOpen && !$("settingsModal").hidden) {
+      pressPoll = setTimeout(() => refreshPress().then(fillPressForm), 3000);
+    }
+  }
+
+  function pressError(key) {
+    const el = $("pressError");
+    if (!el) return;
+    el.hidden = !key;
+    el.textContent = key ? i18n.t(key) : "";
+  }
+
+  async function pressAction(domain, act) {
+    pressError(null);
+    const enc = encodeURIComponent(domain);
+    const req = act === "remove"
+      ? { url: "/api/press/" + enc, method: "DELETE" }
+      : { url: "/api/press/" + enc + "/" + act, method: "POST" };
+    try {
+      const r = await fetch(req.url, { method: req.method });
+      if (!r.ok) pressError("press.error");
+    } catch (e) {
+      pressError("press.error");
+    }
+    await refreshPress();
+    fillPressForm();
+  }
+
+  async function pressAdd() {
+    pressError(null);
+    const sel = $("pressPreset");
+    const domain = sel.value === "__other" ? $("pressCustom").value : sel.value;
+    try {
+      const r = await fetch("/api/press", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ domain })
+      });
+      const body = await r.json().catch(() => ({}));
+      if (!r.ok || !body.ok) {
+        pressError(body && body.reason === "invalid-domain" ? "press.error.domain" : "press.error");
+        return;
+      }
+      $("pressCustom").value = "";
+    } catch (e) {
+      pressError("press.error");
+    }
+    await refreshPress();
+    fillPressForm();
+  }
+
   /* ---------- Affichage immersif / immersive display ----------
      Plein ecran veritable de l'application de bureau : ni barre de
      titre, ni barre des taches Windows. La fenetre elle-meme ne peut
@@ -7354,6 +7513,8 @@
        window shows without waiting for the answer, which only refreshes
        two lines. */
     refreshMediaTools().then(fillMediaToolsForm);
+    fillPressForm();
+    refreshPress().then(fillPressForm);
     fillUpdatesForm();
     $("settingsModal").hidden = false;
     requestAnimationFrame(() => layoutFormColumns(document.querySelector("#settingsModal .form"), { preferMax: true }));
@@ -9820,6 +9981,10 @@
     initCitySearch();
     $("mediaInstallFfmpeg").addEventListener("click", (e) => installMediaTool("ffmpeg", e.currentTarget));
     $("mediaInstallVlc").addEventListener("click", (e) => installMediaTool("vlc", e.currentTarget));
+    $("pressAdd").addEventListener("click", pressAdd);
+    $("pressPreset").addEventListener("change", (e) => {
+      $("pressCustom").hidden = e.target.value !== "__other";
+    });
     $("mediaOpenLog").addEventListener("click", () => {
       fetch("/api/system/open-log", { method: "POST" }).catch(() => { /* rien a afficher / nothing to show */ });
     });

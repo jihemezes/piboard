@@ -743,6 +743,24 @@
 
       </fieldset>
 
+      <!-- Abonnements presse (1.141.0) : session de navigateur par site,
+           pour lire en entier les articles payants dans la tuile Flux RSS.
+           Application de bureau uniquement (voir server/pressAccess.js).
+           Press subscriptions: a browser session per site, to read paid
+           articles in full in the RSS tile. Desktop app only. -->
+      <fieldset class="form-section" id="secPress" hidden>
+        <legend data-i18n="press.section">Press subscriptions</legend>
+        <small class="field-hint" data-i18n="press.intro">Read paid articles in full in the RSS tile, for the sites you subscribe to. Log in once on the site itself, in a PiBoard window: PiBoard never sees your password, it only keeps the session, like a browser.</small>
+        <div id="pressList" class="press-list"></div>
+        <div class="field press-add" id="pressAddRow">
+          <select id="pressPreset"></select>
+          <input type="text" id="pressCustom" placeholder="exemple.fr" hidden>
+          <button type="button" class="btn small" id="pressAdd" data-i18n="press.add">Add</button>
+        </div>
+        <small class="field-hint" id="pressRemoteHint" hidden data-i18n="press.remote">Subscriptions are managed from the desktop application, on the computer where it runs.</small>
+        <p class="media-tools-error" id="pressError" role="alert" hidden></p>
+      </fieldset>
+
       <!-- Mise a jour automatique du serveur (Raspberry Pi / Linux) :
            section masquee tant que le serveur ne la declare pas
            supportee (Windows passe par electron-updater, voir

@@ -1,5 +1,58 @@
 # Changelog
 
+## 1.141.0
+
+- **Flux RSS : lire en entier les articles des journaux auxquels on est
+  abonne.** Nouvelle section Reglages -> **Abonnements presse**
+  (application de bureau uniquement) : on choisit un journal (Le Monde,
+  Le Figaro, Liberation, Mediapart, La Depeche, L'Equipe, ou « Autre
+  site »), on clique sur « Se connecter », et on se connecte sur le
+  site lui-meme dans une fenetre de PiBoard.
+- **Generique, par site et non par flux.** Pas d'identifiant ni de mot
+  de passe saisi dans PiBoard : chaque media a son propre parcours de
+  connexion (captcha, double authentification, Google/Apple) et
+  plusieurs bloquent toute requete automatisee -- Le Monde repond 402 «
+  trafic identifie comme automatise » au mode lecture serveur, verifie
+  le 13 oct. 2026. On reutilise donc une session de navigateur, dans
+  une partition dediee et persistante (`persist:piboard-press`) :
+  PiBoard ne voit jamais le mot de passe. Une session couvre tous les
+  flux du site et toutes les tuiles.
+- **Lecture** : l'article d'un site abonne est charge par une fenetre
+  invisible du meme navigateur (`electron/pressSession.js`), puis passe
+  par le mode lecture habituel. Echec de la session = retour au chemin
+  ordinaire, jamais de panne.
+- **Article payant detecte de facon generique** : donnee schema.org
+  `isAccessibleForFree` posee par les editeurs (verifiee sur Le Figaro,
+  Mediapart, La Depeche), plus les phrases de fin d'apercu (« Il vous
+  reste 78 % de cet article ») cherchees en FIN de texte seulement. Un
+  article payant lu sans abonnement est desormais annonce comme apercu
+  meme quand le site repond 200.
+- **Indicateurs dans la liste** : ✓ pour un article d'un site abonne,
+  🔒 pour un article payant deja ouvert sans acces complet (appris a
+  l'ouverture, jamais en interrogeant les sites en masse ; memorise
+  dans le navigateur, 300 liens au plus). Mise a jour sur place, sans
+  re-rendu de la liste.
+- **Etat de la session dans les reglages** : « session enregistree »,
+  puis « accès abonné confirmé (date) » apres le premier article payant
+  lu en entier, ou « session sans doute expirée » quand il ne donne plus
+  que l'apercu. Se deconnecter efface les cookies du site seul ; Retirer
+  efface le site et sa session.
+- Nouvelles routes `/api/press` (lecture partout, modification depuis
+  le poste de l'application seulement). Nouveau module
+  `server/pressAccess.js`, nouveaux tests `test/pressAccess.test.js` et
+  test DOM du cadenas. Aide (fiche Flux RSS) mise a jour.
+
+---
+
+- **RSS: read subscriber articles in full.** New Settings -> Press
+  subscriptions (desktop app): log in once on the site itself in a
+  PiBoard window; PiBoard keeps the browser session (dedicated
+  persistent partition), never the password. One session per site,
+  covering all its feeds. Subscribed articles are loaded by a hidden
+  window of the same browser, then reader mode. Paid articles detected
+  generically (schema.org `isAccessibleForFree`, end-of-preview
+  phrases). ✓ / 🔒 indicators in the list.
+
 ## 1.140.3
 
 - **macOS : le bouton « Installer » de VLC fonctionne.** Il s'affichait
