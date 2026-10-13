@@ -1,0 +1,199 @@
+# ============================================================
+# PiBoard - .github/workflows/ffmpeg-macos.yml
+# Publie la release DEDIEE qui heberge ffmpeg pour macOS, celle que le
+# bouton « Installer » des Reglages -> Outils multimedias telecharge
+# (voir MEDIA_DOWNLOADS dans server/platform/darwin.js).
+#
+# POURQUOI CE WORKFLOW EXISTE. Depuis la 1.124.0, le code de PiBoard
+# pointait vers la release `ffmpeg-macos-v8.1.2`... qui n'a JAMAIS ete
+# publiee : seule celle de Windows (`ffmpeg-win64-v8.1.2`) l'avait ete,
+# a la main. Le bouton echouait donc a chaque clic sur une 404 -- et le
+# message correspondant, ecrit a la place du texte d'aide, passait
+# inapercu (corrige en 1.140.2). Publier ces fichiers a la main depuis
+# un Mac est faisable, mais c'est exactement le genre de geste qu'on
+# oublie : ce workflow le rend reproductible et verifie.
+#
+# D'OU VIENT LE BINAIRE. Des builds de Martin Riedl
+# (https://ffmpeg.martin-riedl.de), la source de reference pour un
+# ffmpeg macOS AUTONOME (aucune dependance Homebrew) en arm64 ET en
+# x86_64, SIGNE et notarise par son auteur (Team ID KU3N25YGLU, verifie
+# ci-dessous). Le binaire est rehéberge tel quel, sans modification,
+# dans la release de PiBoard : le code de l'application ne depend
+# ainsi jamais d'un site tiers au moment ou l'utilisateur clique.
+#
+# CE QUI EST VERIFIE AVANT PUBLICATION (le job echoue sinon) :
+#   - les deux archives se telechargent et contiennent bien `ffmpeg` ;
+#   - chaque binaire est de la BONNE architecture (lipo) ;
+#   - la signature est valide et emane de l'equipe attendue ;
+#   - il ne depend d'aucune bibliotheque hors systeme (otool -L) --
+#     un ffmpeg Homebrew, lui, echouerait sur un Mac sans Homebrew ;
+#   - le binaire arm64 DEMARRE reellement (`ffmpeg -version`) sur le
+#     runner, qui est un Mac Apple Silicon.
+#
+# PRE-RELEASE, JAMAIS « LATEST ». Le canal stable de mise a jour lit
+# /releases/latest : une release d'outil marquee « latest » y
+# masquerait la vraie derniere version de PiBoard. D'ou
+# `--prerelease --latest=false`, comme pour la release Windows.
+#
+# DECLENCHEMENT : en poussant le tag `ffmpeg-macos-v8.1.2` (le nom
+# attendu par l'application), ou a la main depuis l'onglet Actions
+# (« Run workflow ») -- utile pour republier si besoin. Ce tag ne
+# commence pas par `v` : il ne declenche donc PAS release.yml.
+#
+# Publishes the DEDICATED release hosting ffmpeg for macOS, the one the
+# Settings -> Media tools "Install" button downloads (see
+# MEDIA_DOWNLOADS in server/platform/darwin.js).
+#
+# WHY THIS WORKFLOW EXISTS. Since 1.124.0, PiBoard's code pointed to the
+# `ffmpeg-macos-v8.1.2` release... which was NEVER published: only the
+# Windows one had been, by hand. The button thus failed on a 404 at
+# every click -- and the matching message, written in place of the
+# hint text, went unnoticed (fixed in 1.140.2). This workflow makes the
+# publication reproducible and verified.
+#
+# WHERE THE BINARY COMES FROM: Martin Riedl's builds, the reference
+# source for a STANDALONE macOS ffmpeg (no Homebrew dependency) for
+# both arm64 and x86_64, SIGNED and notarized by their author (Team ID
+# KU3N25YGLU, checked below). Re-hosted unmodified.
+#
+# PRE-RELEASE, NEVER "LATEST": the stable update channel reads
+# /releases/latest, which a tool release must never shadow.
+#
+# TRIGGER: pushing the `ffmpeg-macos-v8.1.2` tag, or manually from the
+# Actions tab. That tag does not start with `v`, so it does NOT start
+# release.yml.
+# ============================================================
+name: ffmpeg macOS (release dediee)
+
+on:
+  push:
+    tags:
+      - "ffmpeg-macos-v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag de la release a (re)publier / release tag to (re)publish"
+        required: true
+        default: "ffmpeg-macos-v8.1.2"
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    name: Telecharger, verifier et publier ffmpeg macOS
+    # Runner Apple Silicon : le binaire arm64 y est EXECUTE pour de vrai.
+    # Apple Silicon runner: the arm64 binary is actually RUN there.
+    runs-on: macos-14
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      EXPECTED_TEAM: KU3N25YGLU
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Telecharger les deux architectures / download both architectures
+        run: |
+          set -euo pipefail
+          mkdir -p work out
+          # Le site nomme « amd64 » ce que macOS appelle x86_64, et que
+          # PiBoard nomme « x64 » (process.arch). Trois noms, un seul CPU.
+          # The site says "amd64", macOS says x86_64, PiBoard says x64.
+          for pair in "arm64:arm64" "amd64:x64"; do
+            src="${pair%%:*}"; dst="${pair##*:}"
+            url="https://ffmpeg.martin-riedl.de/redirect/latest/macos/${src}/release/ffmpeg.zip"
+            echo "== ${dst} <- ${url}"
+            curl -L --fail --silent --show-error --retry 3 -o "work/${dst}.zip" "$url"
+            mkdir -p "work/${dst}"
+            ditto -x -k "work/${dst}.zip" "work/${dst}"
+            # L'archive amont peut ranger ffmpeg dans un sous-dossier :
+            # on le cherche, puis on le place a la RACINE de notre zip,
+            # la ou darwin.js l'attend.
+            # The upstream archive may nest ffmpeg in a subfolder: find
+            # it, then put it at the ROOT of our zip, where darwin.js
+            # expects it.
+            bin="$(find "work/${dst}" -type f -name ffmpeg | head -n 1)"
+            test -n "$bin" || { echo "ffmpeg absent de l'archive ${src}"; exit 1; }
+            mkdir -p "pkg/${dst}"
+            cp "$bin" "pkg/${dst}/ffmpeg"
+            chmod 755 "pkg/${dst}/ffmpeg"
+          done
+
+      - name: Verifier architecture, signature et dependances / verify
+        run: |
+          set -euo pipefail
+          for pair in "arm64:arm64" "x64:x86_64"; do
+            dst="${pair%%:*}"; arch="${pair##*:}"
+            bin="pkg/${dst}/ffmpeg"
+            echo "== ${bin}"
+            archs="$(lipo -archs "$bin")"
+            echo "architectures: ${archs}"
+            echo "$archs" | grep -qw "$arch" || { echo "mauvaise architecture"; exit 1; }
+            codesign --verify --strict --verbose=2 "$bin"
+            team="$(codesign -dv "$bin" 2>&1 | sed -n 's/^TeamIdentifier=//p')"
+            echo "TeamIdentifier: ${team}"
+            test "$team" = "$EXPECTED_TEAM" || { echo "signature inattendue"; exit 1; }
+            # Seules les bibliotheques du systeme sont admises.
+            # Only system libraries are allowed.
+            if otool -L "$bin" | tail -n +2 | grep -vE '^[[:space:]]+(/usr/lib/|/System/Library/)'; then
+              echo "dependance hors systeme detectee"; exit 1
+            fi
+          done
+          ./pkg/arm64/ffmpeg -hide_banner -version | head -n 1 | tee ffmpeg-version.txt
+
+      - name: Empaqueter / package
+        run: |
+          set -euo pipefail
+          version="$(cat ffmpeg-version.txt)"
+          for dst in arm64 x64; do
+            cat > "pkg/${dst}/ATTRIBUTION.txt" <<EOF
+          Ce binaire ffmpeg N'EST PAS un composant de PiBoard.
+          This ffmpeg binary is NOT a component of PiBoard.
+
+          ${version} - macOS ${dst}
+          Build : Martin Riedl, https://ffmpeg.martin-riedl.de (signe / signed, Team ID ${EXPECTED_TEAM})
+          Licence : GPL (voir / see https://ffmpeg.org/legal.html)
+          Sources : https://ffmpeg.org/download.html
+
+          PiBoard le lance comme un processus separe, jamais lie a son
+          propre code : la licence GPL ne s'applique qu'a ce fichier.
+          PiBoard launches it as a separate process, never linked into
+          its own code: the GPL applies to this file only.
+          EOF
+            # ditto -c -k : zip produit par l'outil d'Apple, qui conserve
+            # la signature et les attributs ; c'est aussi ditto qui le
+            # decompresse cote PiBoard.
+            # Apple's own zip, keeping signature and attributes.
+            ( cd "pkg/${dst}" && ditto -c -k --sequesterRsrc . "../../out/ffmpeg-piboard-macos-${dst}.zip" )
+          done
+          ls -la out
+
+      - name: Publier la release (pre-release) / publish the release
+        run: |
+          set -euo pipefail
+          version="$(cat ffmpeg-version.txt)"
+          notes="ffmpeg pour macOS (arm64 et x64), telecharge par le bouton « Installer » de PiBoard (Reglages -> Outils multimedias).
+
+          Ce binaire N'EST PAS un composant de PiBoard : copie non modifiee du build de Martin Riedl (https://ffmpeg.martin-riedl.de), signe par son auteur (Team ID ${EXPECTED_TEAM}), sous licence GPL. Version : ${version}.
+
+          macOS ffmpeg (arm64 and x64) downloaded by PiBoard's Install button. NOT a PiBoard component: unmodified copy of Martin Riedl's build, signed by its author, GPL-licensed."
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" out/*.zip --clobber
+            gh release edit "$TAG" --prerelease --latest=false --notes "$notes"
+          else
+            gh release create "$TAG" out/*.zip \
+              --title "FFmpeg pour macOS (arm64 / x64)" \
+              --notes "$notes" \
+              --prerelease --latest=false \
+              --target "${GITHUB_SHA}"
+          fi
+
+      - name: "Controle final, URL telechargeable / final check"
+        run: |
+          set -euo pipefail
+          for dst in arm64 x64; do
+            url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${TAG}/ffmpeg-piboard-macos-${dst}.zip"
+            code="$(curl -sSL -o /dev/null -w '%{http_code}' "$url")"
+            echo "${code} ${url}"
+            test "$code" = "200"
+          done
