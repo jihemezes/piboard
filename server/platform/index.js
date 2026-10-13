@@ -261,6 +261,26 @@ function setImmersive(enabled) {
   return { supported: false, enabled: false, reason: "no-kiosk-controller" };
 }
 
+/* Ouvre le journal de l'application de bureau (piboard.log) avec
+   l'application associee du systeme. Sans Electron (Raspberry Pi en
+   kiosque, navigateur distant), il n'y a pas de fichier a ouvrir.
+   Opens the desktop application's log (piboard.log) with the system's
+   associated app. Without Electron there is no file to open. */
+function openLog() {
+  if (kioskController && typeof kioskController.openLog === "function") {
+    try {
+      return kioskController.openLog() || { ok: true };
+    } catch (e) {
+      return { ok: false, reason: String(e.message || e) };
+    }
+  }
+  return { ok: false, reason: "no-kiosk-controller" };
+}
+
+function canOpenLog() {
+  return !!(kioskController && typeof kioskController.openLog === "function");
+}
+
 function minimizeWindow() {
   if (kioskController && typeof kioskController.minimize === "function") {
     try {
@@ -384,6 +404,8 @@ module.exports = {
   setImmersive,
   setDisplayPower,
   minimizeWindow,
+  openLog,
+  canOpenLog,
   isDesktopApp,
   getAutoStart,
   setAutoStart,

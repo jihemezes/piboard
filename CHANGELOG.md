@@ -1,5 +1,43 @@
 # Changelog
 
+## 1.140.3
+
+- **macOS : le bouton « Installer » de VLC fonctionne.** Il s'affichait
+  deja mais ne pouvait qu'echouer : la couche macOS ne savait
+  telecharger que ffmpeg et repondait « outil inconnu » pour VLC, d'ou
+  le message generique « L'installation a echoue ».
+- **Comment VLC s'installe** : l'image disque OFFICIELLE de VideoLAN
+  (3.0.24, `vlc-3.0.24-arm64.dmg` ou `-intel64.dmg`) est telechargee,
+  son empreinte SHA-256 comparee a celle figee dans
+  `server/platform/darwin.js` (publiee par VideoLAN, et verifiee sur le
+  fichier reel), puis montee (`hdiutil`, sans fenetre Finder). La
+  signature de VLC.app doit etre valide ET emise par VideoLAN (Team ID
+  75GAHG3SZQ, releve sur le certificat de la 3.0.24). VLC.app est
+  ensuite copie par `ditto` dans /Applications -- ou dans
+  ~/Applications si /Applications n'est pas inscriptible (compte
+  standard), sans mot de passe. L'image est toujours demontee et
+  supprimee.
+- Pas de release PiBoard dediee pour VLC, contrairement a ffmpeg :
+  VideoLAN conserve chaque version indefiniment, et l'empreinte figee
+  apporte la meme stabilite (un fichier modifie en amont est refuse).
+- Quatre nouveaux motifs d'echec, chacun avec son message :
+  empreinte, montage, signature, copie.
+- `vlcCandidates()` cherche aussi ~/Applications/VLC.app.
+- **Bouton « Ouvrir le journal »** sous le message d'erreur des Outils
+  multimedias (application de bureau, poste local) : nouvelle route
+  `POST /api/system/open-log`, relayee au processus Electron par le
+  controleur de kiosque (`openLog`).
+- Aide (fiche IPTV : « VLC sur macOS », « Le journal de PiBoard »),
+  docs/LINUX-MACOS.md, WHATSNEW.md et test plateforme mis a jour.
+
+---
+
+- **macOS: the VLC "Install" button works.** It used to answer "unknown
+  tool". It now downloads VideoLAN's official 3.0.24 disk image, checks
+  its pinned SHA-256 and VideoLAN's signature (Team ID 75GAHG3SZQ), and
+  copies VLC.app into /Applications (or ~/Applications for a standard
+  account). New "Open log" button under the media tools error message.
+
 ## 1.140.2
 
 - **Correctif macOS : le bouton « Installer » de ffmpeg ne pouvait pas

@@ -264,6 +264,17 @@ mises à jour la prendrait pour la dernière version de PiBoard.
 Jusqu'à la 1.140.1 cette release n'existait pas : le bouton échouait
 sur une 404 à chaque clic.
 
+### VLC pour macOS
+
+Le même bouton installe VLC depuis la 1.140.3, sans release dédiée :
+l'image disque officielle de VideoLAN (`get.videolan.org`, version
+figée `VLC_VERSION` dans `server/platform/darwin.js`) est vérifiée par
+son empreinte SHA-256 figée et par l'éditeur de sa signature (Team ID
+75GAHG3SZQ), puis VLC.app est copié dans /Applications, ou
+~/Applications pour un compte standard. **Changer de version de VLC**
+= modifier `VLC_VERSION` et les deux empreintes (fichiers `.sha256`
+publiés par VideoLAN à côté de chaque image).
+
 ### Ce qui a été vérifié, et ce qui ne l'a pas été
 
 Vérifié sur une machine Linux x64 : construction des quatre paquets
@@ -534,6 +545,16 @@ newest version.
 
 Until 1.140.1 that release did not exist: the button failed on a 404
 at every click.
+
+### VLC for macOS
+
+The same button installs VLC since 1.140.3, with no dedicated release:
+VideoLAN's official disk image (`get.videolan.org`, pinned
+`VLC_VERSION` in `server/platform/darwin.js`) is checked against its
+pinned SHA-256 and its signing publisher (Team ID 75GAHG3SZQ), then
+VLC.app is copied into /Applications, or ~/Applications for a standard
+account. **Changing the VLC version** = update `VLC_VERSION` and both
+hashes (the `.sha256` files VideoLAN publishes next to each image).
 
 ### What was verified, and what was not
 

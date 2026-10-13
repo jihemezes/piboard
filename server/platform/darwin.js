@@ -283,21 +283,63 @@ function ffmpegInstallHint() {
    fetched by PiBoard over HTTP carries none. The binary is re-hosted in
    a dedicated PiBoard release, as on Windows. */
 
-/* Une entree par outil et par architecture. VLC est volontairement
-   absent : il se distribue en .app de plusieurs centaines de mega-
-   octets, que deposer dans un dossier de donnees n'aurait aucun sens --
-   sur macOS il s'installe normalement, et la chaine affichee suffit.
-   One entry per tool and architecture. VLC is deliberately absent: it
-   ships as a several-hundred-megabyte .app. */
+/* Une entree par outil et par architecture.
+   One entry per tool and architecture.
+
+   VLC (1.140.3). Il etait volontairement absent : une .app de pres de
+   100 Mo n'a rien a faire dans un dossier de donnees. Il s'installe
+   donc comme on le ferait a la main -- l'image disque OFFICIELLE de
+   VideoLAN, montee, son VLC.app copie dans Applications -- mais par
+   PiBoard, apres trois controles :
+     1. l'empreinte SHA-256 de l'image, FIGEE ICI pour une version
+        precise (celle publiee par VideoLAN a cote du fichier) ;
+     2. la signature de VLC.app, valide et emise par VideoLAN
+        (Team ID 75GAHG3SZQ, releve sur le certificat de la 3.0.24) ;
+     3. la presence effective du binaire une fois copie.
+   Pas de rehebergement dans une release PiBoard, contrairement a
+   ffmpeg : VideoLAN conserve indefiniment chaque version sur
+   get.videolan.org, et l'empreinte figee garantit la meme stabilite --
+   un fichier modifie en amont serait refuse, jamais installe. Les
+   miroirs vers lesquels get.videolan.org redirige sont donc sans
+   consequence sur ce qui est installe.
+
+   VLC (1.140.3). It used to be deliberately absent; it now installs as
+   one would by hand -- VideoLAN's OFFICIAL disk image, mounted, its
+   VLC.app copied into Applications -- after three checks: the image's
+   SHA-256 PINNED HERE for an exact version, VLC.app's signature (valid,
+   issued to VideoLAN, Team ID 75GAHG3SZQ), and the binary's presence
+   once copied. Not re-hosted like ffmpeg: VideoLAN keeps every version
+   on get.videolan.org indefinitely, and the pinned hash gives the same
+   stability -- a file changed upstream is refused, never installed. */
+const VLC_VERSION = "3.0.24";
+const VLC_TEAM_ID = "75GAHG3SZQ";
 const MEDIA_DOWNLOADS = {
   ffmpeg: {
     arm64: {
+      kind: "zip",
       url: "https://github.com/jihemezes/piboard/releases/download/ffmpeg-macos-v8.1.2/ffmpeg-piboard-macos-arm64.zip",
       binary: "ffmpeg"
     },
     x64: {
+      kind: "zip",
       url: "https://github.com/jihemezes/piboard/releases/download/ffmpeg-macos-v8.1.2/ffmpeg-piboard-macos-x64.zip",
       binary: "ffmpeg"
+    }
+  },
+  vlc: {
+    arm64: {
+      kind: "dmg",
+      url: "https://get.videolan.org/vlc/" + VLC_VERSION + "/macosx/vlc-" + VLC_VERSION + "-arm64.dmg",
+      sha256: "64a89d93cdd30b0e97131743e246373db82d6826ea882d265d46d74b136da2b7",
+      app: "VLC.app",
+      teamId: VLC_TEAM_ID
+    },
+    x64: {
+      kind: "dmg",
+      url: "https://get.videolan.org/vlc/" + VLC_VERSION + "/macosx/vlc-" + VLC_VERSION + "-intel64.dmg",
+      sha256: "1ef6c903e2dc026d4e58ddf7b2a9ed0eb6f8caf80a9a9f46f96490340b962707",
+      app: "VLC.app",
+      teamId: VLC_TEAM_ID
     }
   }
 };
@@ -319,7 +361,11 @@ function mediaPackages(tool) {
 function installMediaTool(tool) {
   const dl = mediaDownloadFor(tool);
   if (!dl) return Promise.resolve({ ok: false, reason: "unknown-tool" });
+  if (dl.kind === "dmg") return installAppFromDmg(tool, dl);
+  return installBinaryFromZip(tool, dl);
+}
 
+function installBinaryFromZip(tool, dl) {
   const fs = require("fs");
   const path = require("path");
   const os = require("os");
@@ -412,6 +458,137 @@ function installMediaTool(tool) {
   });
 }
 
+/* ---------- Installation d'une application depuis une image disque ----------
+   ---------- installing an application from a disk image ----------
+
+   Etapes et motifs d'echec, chacun avec son message dans l'interface :
+     telechargement (curl)          -> "download-failed" / "not-published"
+     empreinte SHA-256              -> "checksum-failed"
+     montage (hdiutil attach)       -> "mount-failed"
+     signature de l'application     -> "signature-failed"
+     copie dans Applications        -> "copy-failed"
+   L'image est TOUJOURS demontee et supprimee, succes ou echec.
+
+   OU VA L'APPLICATION. Dans /Applications quand il est inscriptible --
+   le cas de tout compte administrateur, sans mot de passe. Sinon dans
+   ~/Applications, le dossier Applications PERSONNEL que macOS reconnait
+   comme tel (Launchpad, Spotlight) : un compte standard obtient ainsi
+   VLC sans aucune elevation de privileges. vlcCandidates() cherche aux
+   deux endroits.
+
+   Steps and failure reasons, each with its own interface message. The
+   image is ALWAYS detached and deleted. The app goes to /Applications
+   when writable (any admin account, no password), otherwise to
+   ~/Applications, the PERSONAL Applications folder macOS recognises. */
+function runCmd(cmd, args, timeoutMs, input) {
+  return new Promise((resolve) => {
+    const child = execFile(cmd, args, { timeout: timeoutMs, maxBuffer: 8 * 1024 * 1024 },
+      (err, stdout, stderr) => resolve({ err, stdout: String(stdout || ""), stderr: String(stderr || "") }));
+    // Une image avec contrat de licence attend une reponse : on accepte
+    // d'office plutot que de rester bloque jusqu'au delai.
+    // An image with a licence agreement waits for an answer.
+    if (child.stdin) child.stdin.end(input || "");
+  });
+}
+
+function sha256File(file) {
+  return new Promise((resolve) => {
+    const hash = require("crypto").createHash("sha256");
+    fs.createReadStream(file)
+      .on("data", (d) => hash.update(d))
+      .on("end", () => resolve(hash.digest("hex")))
+      .on("error", () => resolve(null));
+  });
+}
+
+async function installAppFromDmg(tool, dl) {
+  const os = require("os");
+  const stamp = tool + "-" + process.pid + "-" + Date.now();
+  const image = path.join(os.tmpdir(), "piboard-" + stamp + ".dmg");
+  const mount = path.join(os.tmpdir(), "piboard-mnt-" + stamp);
+  let mounted = false;
+  const fail = (reason, detail) => ({ ok: false, reason, detail: String(detail || "").slice(-500) });
+
+  try {
+    const got = await runCmd("/usr/bin/curl", ["-L", "--fail", "--silent", "--show-error",
+      "--connect-timeout", "30", "--retry", "2", "-o", image, dl.url], 20 * 60 * 1000);
+    if (got.err) {
+      const text = got.stderr || got.err.message;
+      return fail(/404|not found/i.test(text) ? "not-published" : "download-failed", text);
+    }
+
+    const sum = await sha256File(image);
+    if (sum !== dl.sha256) {
+      return fail("checksum-failed", "attendu / expected " + dl.sha256 + ", obtenu / got " + sum);
+    }
+
+    fs.mkdirSync(mount, { recursive: true });
+    const att = await runCmd("/usr/bin/hdiutil", ["attach", image, "-nobrowse", "-readonly",
+      "-noautoopen", "-mountpoint", mount], 5 * 60 * 1000, "Y\n");
+    if (att.err) return fail("mount-failed", att.stderr || att.err.message);
+    mounted = true;
+
+    const source = path.join(mount, dl.app);
+    if (!fs.existsSync(source)) return fail("mount-failed", dl.app + " absent de l'image / missing from the image");
+
+    /* Signature : valide ET emise par l'editeur attendu. Une signature
+       valide d'un autre editeur ne suffit pas -- c'est precisement ce
+       que ferait une image substituee.
+       Signature: valid AND issued to the expected publisher. */
+    const ver = await runCmd("/usr/bin/codesign", ["--verify", "--strict", source], 3 * 60 * 1000);
+    if (ver.err) return fail("signature-failed", ver.stderr || ver.err.message);
+    const info = await runCmd("/usr/bin/codesign", ["-dv", source], 60 * 1000);
+    const team = ((info.stderr + info.stdout).match(/TeamIdentifier=(\S+)/) || [])[1];
+    if (team !== dl.teamId) return fail("signature-failed", "TeamIdentifier=" + team);
+
+    let targetDir = "/Applications";
+    try { fs.accessSync(targetDir, fs.constants.W_OK); } catch (e) {
+      targetDir = path.join(os.homedir(), "Applications");
+    }
+    const copyTo = async (dir) => {
+      fs.mkdirSync(dir, { recursive: true });
+      const target = path.join(dir, dl.app);
+      const staging = path.join(dir, "." + dl.app + ".piboard-" + stamp);
+      // ditto preserve signature, attributs et liens du paquet.
+      // ditto preserves the bundle's signature, attributes and links.
+      const cp = await runCmd("/usr/bin/ditto", [source, staging], 10 * 60 * 1000);
+      if (cp.err) {
+        try { fs.rmSync(staging, { recursive: true, force: true }); } catch (e) { /* rien / nothing */ }
+        return { ok: false, detail: cp.stderr || cp.err.message };
+      }
+      try {
+        // Une copie existante est forcement inutilisable (sinon le
+        // bouton n'aurait pas ete propose) : on la remplace.
+        // An existing copy is necessarily unusable: replace it.
+        if (fs.existsSync(target)) fs.rmSync(target, { recursive: true, force: true });
+        fs.renameSync(staging, target);
+      } catch (e) {
+        try { fs.rmSync(staging, { recursive: true, force: true }); } catch (e2) { /* rien / nothing */ }
+        return { ok: false, detail: e.message };
+      }
+      return { ok: true, target };
+    };
+    let copied = await copyTo(targetDir);
+    if (!copied.ok && targetDir === "/Applications") {
+      copied = await copyTo(path.join(os.homedir(), "Applications"));
+    }
+    if (!copied.ok) return fail("copy-failed", copied.detail);
+
+    const binary = path.join(copied.target, "Contents", "MacOS", "VLC");
+    if (!fs.existsSync(binary)) return fail("copy-failed", "binaire absent apres copie / binary missing after copy");
+    return { ok: true, packages: mediaPackages(tool), path: copied.target };
+  } catch (e) {
+    return fail("download-failed", e.message);
+  } finally {
+    if (mounted) await runCmd("/usr/bin/hdiutil", ["detach", mount, "-force"], 60 * 1000);
+    // rmdir, jamais recursif : si le demontage a echoue, on ne touche
+    // surtout pas au contenu du volume. Never recursive: if detaching
+    // failed, the volume content must not be touched.
+    try { fs.rmdirSync(mount); } catch (e) { /* rien / nothing */ }
+    try { fs.unlinkSync(image); } catch (e) { /* rien / nothing */ }
+  }
+}
+
 /* Le binaire VLC reel se trouve a l'interieur du bundle .app, pas de
    cvlc distinct sur macOS non plus (meme situation que Windows) : le
    code appelant doit passer --intf dummy explicitement. Necessaire
@@ -432,7 +609,14 @@ function vlcCandidates() {
   // existence), bare name last (fallback, checked via execution -- less
   // hang risk on macOS, but consistency across platforms remains
   // preferable).
-  return ["/Applications/VLC.app/Contents/MacOS/VLC", "/opt/homebrew/bin/vlc", "vlc"];
+  // ~/Applications : la ou PiBoard pose VLC pour un compte standard.
+  // ~/Applications: where PiBoard puts VLC for a standard account.
+  return [
+    "/Applications/VLC.app/Contents/MacOS/VLC",
+    path.join(require("os").homedir(), "Applications", "VLC.app", "Contents", "MacOS", "VLC"),
+    "/opt/homebrew/bin/vlc",
+    "vlc"
+  ];
 }
 
 function vlcInstallHint() {
@@ -651,6 +835,8 @@ module.exports = {
   mediaInstallMode: "download",
   mediaToolDir,
   mediaDownloadFor,
+  // Expose pour les tests uniquement. Exposed for tests only.
+  __mediaDownloads: MEDIA_DOWNLOADS,
   mediaPackages,
   installMediaTool,
   chromiumCandidates,

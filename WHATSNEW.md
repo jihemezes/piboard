@@ -33,6 +33,26 @@
 # Nouveautes / What's new
 
 
+## 1.140.3
+
+**VLC s'installe en un clic sur Mac**
+
+Comme ffmpeg, VLC s'installe maintenant depuis Reglages -> Outils
+multimedias sur un Mac : PiBoard recupere la version officielle de
+VideoLAN, verifie qu'elle n'a pas ete modifiee et qu'elle est bien
+signee par son editeur, puis la range dans Applications. Et si une
+installation echoue, un bouton « Ouvrir le journal » montre directement
+pourquoi.
+
+---
+
+**VLC installs in one click on a Mac**
+
+Like ffmpeg, VLC now installs from Settings -> Media tools on a Mac:
+PiBoard fetches VideoLAN's official release, checks it was not altered
+and is signed by its publisher, then puts it in Applications. And when
+an installation fails, an "Open log" button shows why right away.
+
 ## 1.140.0
 
 **Retourner et faire pivoter les images**

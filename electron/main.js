@@ -419,6 +419,17 @@ function registerController() {
       checkForUpdatesManually(mainWindow);
       return { ok: true };
     },
+    /* "Ouvrir le journal" depuis Reglages -> Outils multimedias (1.140.3),
+       a cote d'un message d'erreur qui renvoie au journal : le meme
+       fichier que le menu Aide, sans avoir a savoir ou il se trouve.
+       "Open log" from Settings -> Media tools, next to an error message
+       pointing to the log: the same file as the Help menu. */
+    openLog: () => {
+      shell.openPath(LOG_FILE).then((err) => {
+        if (err) console.warn("[piboard] ouverture du journal impossible / could not open the log:", err);
+      });
+      return { ok: true };
+    },
     /* Affichage immersif : plein ecran veritable. Sous Windows,
        setFullScreen(true) masque d'un coup la barre de titre ET la barre
        des taches -- c'est la seule facon d'obtenir les deux, une fenetre

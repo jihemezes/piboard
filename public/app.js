@@ -4723,6 +4723,8 @@
         hint.hidden = true;
         const errorBox = $("mediaToolsError");
         if (errorBox) { errorBox.hidden = true; errorBox.textContent = ""; }
+        const openLogBtn = $("mediaOpenLog");
+        if (openLogBtn) openLogBtn.hidden = true;
       } else if (mediaTools.canInstall) {
         /* Deux installations tres differentes derriere le meme bouton :
            un gestionnaire de paquets qui demande un mot de passe, ou un
@@ -4755,6 +4757,8 @@
     const label = button.textContent;
     const errorBox = $("mediaToolsError");
     if (errorBox) { errorBox.hidden = true; errorBox.textContent = ""; }
+    const openLogBtn = $("mediaOpenLog");
+    if (openLogBtn) openLogBtn.hidden = true;
     button.disabled = true;
     button.textContent = i18n.t("settings.media.installing");
     let result = null;
@@ -4798,9 +4802,14 @@
         "not-published": "settings.media.error.notPublished",
         "download-failed": "settings.media.error.download",
         "extract-failed": "settings.media.error.extract",
-        "verify-failed": "settings.media.error.verify"
+        "verify-failed": "settings.media.error.verify",
+        "checksum-failed": "settings.media.error.checksum",
+        "mount-failed": "settings.media.error.mount",
+        "signature-failed": "settings.media.error.signature",
+        "copy-failed": "settings.media.error.copy"
       };
       errorBox.textContent = i18n.t(messages[reason] || "settings.media.error");
+      if (openLogBtn) openLogBtn.hidden = !(mediaTools && mediaTools.canOpenLog);
       /* Le detail technique (sortie de curl, de ditto...) reste dans la
          console et le journal du serveur, pas dans le message.
          Technical detail stays in the console and server log. */
@@ -9811,6 +9820,9 @@
     initCitySearch();
     $("mediaInstallFfmpeg").addEventListener("click", (e) => installMediaTool("ffmpeg", e.currentTarget));
     $("mediaInstallVlc").addEventListener("click", (e) => installMediaTool("vlc", e.currentTarget));
+    $("mediaOpenLog").addEventListener("click", () => {
+      fetch("/api/system/open-log", { method: "POST" }).catch(() => { /* rien a afficher / nothing to show */ });
+    });
 
     $("colorsReset").addEventListener("click", () => {
       $("setDarkBg").value = DEFAULT_COLORS.dark.bg;

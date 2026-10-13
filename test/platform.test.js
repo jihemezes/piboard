@@ -563,10 +563,32 @@ console.log("Tests plateforme : memoire OK");
   assert.ok(/arm64|x64/.test(dl.url), "l'archive doit etre propre a l'architecture");
   assert.strictEqual(dl.binary, "ffmpeg");
 
-  /* VLC n'est pas telechargeable ainsi : refus NET plutot qu'un bouton
-     qui echouerait. A clear refusal rather than a failing button. */
-  assert.strictEqual(darwin.mediaPackages("vlc"), null,
-    "VLC ne se pose pas dans un dossier de donnees : aucun paquet annonce");
+  /* VLC (1.140.3) : image disque OFFICIELLE de VideoLAN, version figee,
+     empreinte SHA-256 et editeur de la signature imposes. Une entree
+     sans empreinte installerait n'importe quoi ; une URL hors VideoLAN
+     ferait d'un tiers la source de l'application.
+     VLC: VideoLAN's OFFICIAL disk image, pinned version, SHA-256 and
+     signing publisher enforced. */
+  for (const arch of ["arm64", "x64"]) {
+    const v = darwin.__mediaDownloads.vlc[arch];
+    assert.strictEqual(v.kind, "dmg", "VLC s'installe depuis une image disque");
+    assert.ok(/^https:\/\/get\.videolan\.org\/vlc\/\d+\.\d+\.\d+\//.test(v.url),
+      "VLC vient de VideoLAN, en version precise (" + arch + ")");
+    assert.ok(/^[0-9a-f]{64}$/.test(v.sha256), "empreinte SHA-256 figee (" + arch + ")");
+    assert.strictEqual(v.teamId, "75GAHG3SZQ", "signature attendue : VideoLAN");
+    assert.strictEqual(v.app, "VLC.app");
+  }
+  assert.ok(/arm64\.dmg$/.test(darwin.__mediaDownloads.vlc.arm64.url), "image arm64 pour Apple Silicon");
+  assert.ok(/intel64\.dmg$/.test(darwin.__mediaDownloads.vlc.x64.url), "image intel64 pour Mac Intel");
+  assert.ok(Array.isArray(darwin.mediaPackages("vlc")), "VLC est desormais propose a l'installation");
+  /* Un compte standard recoit VLC dans ~/Applications : il doit y etre
+     cherche, sinon l'installation reussie resterait « non installe ».
+     A standard account gets VLC in ~/Applications: it must be looked
+     for there. */
+  const vlcPaths = darwin.vlcCandidates();
+  assert.strictEqual(vlcPaths[0], "/Applications/VLC.app/Contents/MacOS/VLC");
+  assert.ok(vlcPaths.includes(require("path").join(require("os").homedir(), "Applications", "VLC.app", "Contents", "MacOS", "VLC")),
+    "~/Applications/VLC.app doit etre cherche");
   console.log("  OK trois voies distinctes, chemins absolus, deux architectures");
 }
 

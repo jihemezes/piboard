@@ -1584,6 +1584,9 @@ app.get("/api/system/media-tools", async (req, res) => {
        How the installation will happen, stated by the platform layer
        rather than guessed here. */
     installMode: platform.mediaInstallMode || null,
+    // Bouton « Ouvrir le journal » (application de bureau, poste local).
+    // "Open log" button (desktop application, local machine).
+    canOpenLog: !!(platform.canOpenLog && platform.canOpenLog() && isLocalRequest(req)),
     tools: {
       ffmpeg: {
         installed: await iptvAudio.checkFfmpeg(),
@@ -1678,6 +1681,13 @@ app.post("/api/system/display-power", async (req, res) => {
     return res.status(403).json({ ok: false, reason: "not-local" });
   }
   res.json(await platform.setDisplayPower(!!(req.body || {}).on));
+});
+
+app.post("/api/system/open-log", (req, res) => {
+  if (!isLocalRequest(req)) {
+    return res.status(403).json({ ok: false, reason: "not-local" });
+  }
+  res.json(platform.openLog());
 });
 
 app.post("/api/system/minimize", (req, res) => {
