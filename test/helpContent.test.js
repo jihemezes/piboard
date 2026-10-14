@@ -408,3 +408,13 @@ console.log("== macOS : la mise a jour suit le meme chemin que Windows/Linux (1.
 console.log("  OK");
 
 console.log("Tous les tests d'aide sont passes.");
+
+console.log("== Aide en page pleine : le theme de l'aide est documente (1.142.0) ==");
+{
+  const drawer = entryById("drawer");
+  assert.ok(/Thème de l’aide|Thème de l'aide/.test(drawer.html.fr), "fr : option « Thème de l'aide » documentée");
+  assert.ok(/Help theme/.test(drawer.html.en), "en : option « Help theme » documentée");
+  assert.ok(/page pleine|full page/.test(drawer.html.fr) && /full page/.test(drawer.html.en),
+    "la fiche Barre d'outils decrit l'aide en page pleine dans les deux langues");
+}
+console.log("  OK");

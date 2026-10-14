@@ -3760,7 +3760,7 @@ function catalogItemFor(catalog, document, widgetId) {
     const searchInput = document.getElementById("helpNavSearch");
     assert("champ de recherche present en tete du sommaire", !!searchInput);
     assert("aucune entree cachee avant toute recherche",
-      !nav.querySelector('.help-nav-item[hidden]'));
+      !nav.querySelector('.help-theme[hidden]'));
 
     searchInput.value = "agend";
     searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
@@ -3776,24 +3776,60 @@ function catalogItemFor(catalog, document, widgetId) {
     searchInput.value = "météo"; // avec accent, doit fonctionner aussi / with accent, should also work
     searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
     assert("recherche 'météo' (avec accent) trouve aussi l'entree Météo", weatherBtn && weatherBtn.hidden === false);
-    assert("recherche : au moins un en-tete de groupe reste visible (celui du resultat)",
-      !!nav.querySelector('.help-nav-group:not([hidden])'));
+    assert("recherche : au moins une famille reste visible (celle du resultat)",
+      !!nav.querySelector('.help-family:not([hidden])'));
     assert("message 'aucun resultat' cache tant qu'il y a au moins un resultat",
       document.getElementById("helpNavEmpty").hidden === true);
 
     searchInput.value = "xyznexistepas";
     searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
     assert("recherche sans resultat : toutes les entrees cachees",
-      [...nav.querySelectorAll(".help-nav-item")].every((b) => b.hidden === true));
-    assert("recherche sans resultat : tous les en-tetes de groupe caches",
-      [...nav.querySelectorAll(".help-nav-group")].every((g) => g.hidden === true));
+      [...nav.querySelectorAll(".help-theme")].every((b) => b.hidden === true));
+    assert("recherche sans resultat : toutes les familles cachees",
+      [...nav.querySelectorAll(".help-family")].every((g) => g.hidden === true));
     assert("recherche sans resultat : message 'aucun resultat' affiche",
       document.getElementById("helpNavEmpty").hidden === false);
 
     searchInput.value = "";
     searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
     assert("recherche effacee : toutes les entrees redeviennent visibles",
-      [...nav.querySelectorAll(".help-nav-item")].every((b) => b.hidden === false));
+      [...nav.querySelectorAll(".help-theme")].every((b) => b.hidden === false));
+
+    console.log("== Aide en page pleine : familles, rubriques, fil d'Ariane, precedent / suivant (1.142.0) ==");
+    {
+      const idx = document.getElementById("helpNav");
+      searchInput.value = "";
+      searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+      const famCount = idx.querySelectorAll(".help-family").length;
+      assert("accueil : une carte par famille (au moins dix familles)", famCount >= 10);
+      const shown = [...idx.querySelectorAll(".help-theme")].map((b) => b.dataset.helpId);
+      const ids = (window.PIBOARD_HELP || []).map((s) => s.id);
+      assert("accueil : chaque rubrique de l'aide figure exactement une fois",
+        ids.length === shown.length && ids.every((id) => shown.filter((x) => x === id).length === 1));
+      assert("accueil visible tant qu'aucune rubrique n'est ouverte",
+        document.getElementById("helpTopic").hidden === true && idx.hidden === false);
+
+      const fam = [...idx.querySelectorAll(".help-family")].find((f) => f.querySelectorAll(".help-theme").length >= 2);
+      assert("une famille a au moins deux rubriques (pour tester precedent / suivant)", !!fam);
+      fam.querySelectorAll(".help-theme")[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      assert("rubrique ouverte : la vue rubrique remplace l'accueil",
+        document.getElementById("helpTopic").hidden === false && idx.hidden === true);
+      assert("fil d'Ariane visible sur une rubrique", document.getElementById("helpCrumbs").hidden === false);
+      assert("bouton Retour visible sur une rubrique", document.getElementById("helpBack").hidden === false);
+      assert("rubrique : precedent / suivant limites a la famille (suivant present)",
+        !!document.querySelector("#helpPager [data-help-go].help-pager-next"));
+      assert("rubrique : le premier thème n'a pas de precedent",
+        !document.querySelector("#helpPager [data-help-go].help-pager-prev"));
+      document.querySelector("#helpPager [data-help-go].help-pager-next").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      assert("precedent / suivant : la rubrique suivante s'ouvre dans la meme famille",
+        document.querySelector("#helpCrumbs .help-crumb-here") && document.querySelector("#helpPager [data-help-go].help-pager-prev"));
+      document.getElementById("helpBack").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(30);
+      assert("Retour : revient a l'accueil des familles",
+        idx.hidden === false && document.getElementById("helpTopic").hidden === true);
+    }
 
     document.getElementById("helpModal").hidden = true;
   }

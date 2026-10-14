@@ -33,6 +33,37 @@
 # Nouveautes / What's new
 
 
+## 1.142.0
+
+**Une aide en page pleine, par famille**
+
+L'aide s'ouvre maintenant comme une page dédiée : une carte par famille
+de tuiles, et dans chaque carte, les thèmes à cliquer. Un thème s'ouvre
+avec un fil d'Ariane et des boutons Précédent / Suivant pour parcourir sa
+famille. La recherche en haut retrouve familles et thèmes, sans accents.
+
+**Un thème pour l'aide**
+
+Par défaut, l'aide reprend le thème de votre tableau de bord, jour et
+nuit compris. Dans Réglages généraux → Thème de l'aide, choisissez un
+thème à part si vous préférez une aide plus lisible. Le mode tactile
+agrandit aussi les boutons de l'aide.
+
+---
+
+**A full-page help, by family**
+
+The help now opens as a dedicated page: one card per tile family, with
+the topics to click inside each card. A topic opens with a breadcrumb
+and Previous / Next buttons to browse its family. The search at the top
+finds families and topics, accent-free.
+
+**A theme for the help**
+
+By default the help follows your dashboard's theme, day and night
+included. In General settings → Help theme, pick a separate theme if you
+prefer a more readable help. Touch mode also enlarges the help's buttons.
+
 ## 1.141.0
 
 **Vos abonnements presse dans la tuile Flux RSS**

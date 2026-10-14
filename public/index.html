@@ -621,6 +621,18 @@
           </div>
           <small class="field-hint" data-i18n="theme.board.hint">Applies to the whole board. Each page (dashboard mode) and each drawer (classic mode) can have its own theme.</small>
         </div>
+        <label class="field">
+          <span data-i18n="help.themeMode">Help theme</span>
+          <select id="setHelpTheme">
+            <option value="follow" data-i18n="help.themeMode.follow">Follow PiBoard's theme (day / night included)</option>
+            <option value="dedicated" data-i18n="help.themeMode.dedicated">Dedicated help theme</option>
+          </select>
+          <small class="field-hint" data-i18n="help.themeMode.hint">Touch layout follows the touch mode setting below, whichever theme is used.</small>
+        </label>
+        <label class="field" id="setHelpThemeRow" hidden>
+          <span data-i18n="help.themeChoose">Help colour theme</span>
+          <select id="setHelpThemeId"></select>
+        </label>
         <label class="field city-box">
           <span data-i18n="settings.city">City (sunrise / sunset for the auto theme)</span>
           <input type="text" id="setCity" autocomplete="off" data-i18n-placeholder="settings.city.placeholder" placeholder="Type a city name…">
@@ -1157,23 +1169,32 @@
   </div>
 </div>
 
-<!-- Aide du tableau de bord : sommaire (gauche, etroit) + contenu (droite,
-     large). Largeur fixe = celle deja definie pour les fenetres de
-     configuration a 3 colonnes (voir --help-width en CSS). Le contenu est
-     rempli dynamiquement par help-content.js + app.js (renderHelp()).
-     Dashboard help: table of contents (left, narrow) + content (right,
-     wide). Fixed width = the one already defined for 3-column config
-     windows (see --help-width in CSS). Content is filled dynamically by
-     help-content.js + app.js (renderHelp()). -->
-<div class="modal" id="helpModal" hidden>
-  <div class="modal-card help-card">
-    <header class="modal-head">
-      <h2 data-i18n="help.title">Help</h2>
+<!-- Aide du tableau de bord, en PAGE PLEINE (1.142.0) : une carte par
+     famille (widget), chaque carte listant ses thèmes cliquables ; un thème
+     ouvre sa rubrique avec fil d'Ariane et navigation precedent / suivant.
+     Le contenu est rempli par help-content.js + app.js (openHelp() et
+     showHelpSection()). Theme : celui du tableau (par defaut) ou un theme
+     dedie (reglage helpTheme), voir applyHelpTheme() dans app.js.
+     Dashboard help, as a FULL PAGE (1.142.0): one card per family (widget),
+     each listing its clickable themes; a theme opens its topic with a
+     breadcrumb and previous / next navigation. Filled by help-content.js +
+     app.js (openHelp() and showHelpSection()). Theme: the board's (default)
+     or a dedicated one (helpTheme setting), see applyHelpTheme() in app.js. -->
+<div class="modal help-page-modal" id="helpModal" hidden>
+  <div class="help-page" id="helpPage">
+    <header class="help-page-head">
+      <button type="button" class="btn small help-page-back" id="helpBack" hidden data-i18n="help.back.index">All families</button>
+      <h2 class="help-page-title" data-i18n="help.title">Help</h2>
+      <input type="search" id="helpNavSearch" class="help-page-search" autocomplete="off" data-i18n-placeholder="help.search" placeholder="Search help topics…">
       <button class="modal-close" data-close aria-label="Close">&times;</button>
     </header>
-    <div class="help-body">
-      <nav class="help-nav" id="helpNav"></nav>
-      <div class="help-content" id="helpContent"></div>
+    <nav class="help-crumbs" id="helpCrumbs" aria-label="Breadcrumb" hidden></nav>
+    <div class="help-page-body">
+      <div class="help-index" id="helpNav"></div>
+      <div class="help-topic" id="helpTopic" hidden>
+        <div class="help-content" id="helpContent"></div>
+        <div class="help-pager" id="helpPager"></div>
+      </div>
     </div>
   </div>
 </div>

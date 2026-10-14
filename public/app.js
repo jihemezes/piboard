@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.119.0
+   Version 1.142.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -869,6 +869,7 @@
     for (const rec of tiles.values()) {
       if (rec.conf && rec.conf.settings && rec.conf.settings._transparent) applyTileColor(rec);
     }
+    applyHelpTheme();
     window.dispatchEvent(new CustomEvent("piboard:theme"));
     clearTimeout(themeTimer);
     if (settings.theme === "auto") themeTimer = setTimeout(applyTheme, 60000);
@@ -7469,6 +7470,7 @@
   function openSettings() {
     $("setLang").value = settings.lang;
     $("setTheme").value = settings.theme;
+    fillHelpThemeSettings();
     $("setRows").value = settings.gridRows;
     $("setKeyboard").checked = !!settings.keyboardEnabled;
     $("setTouch").checked = !!settings.touchMode;
@@ -7525,6 +7527,8 @@
     const body = {
       lang: $("setLang").value,
       theme: $("setTheme").value,
+      helpTheme: $("setHelpTheme").value === "dedicated" ? "dedicated" : "follow",
+      helpThemeId: $("setHelpThemeId").value || "piboard",
       gridRows: Math.max(4, Math.min(16, Number($("setRows").value) || 8)),
       keyboardEnabled: $("setKeyboard").checked,
       touchMode: $("setTouch").checked,
@@ -8505,122 +8509,220 @@
     });
   }
 
+  /* ---------- Aide en page pleine / full-page help (1.142.0) ----------
+     Une carte par FAMILLE, chaque carte listant ses rubriques cliquables.
+     Les familles des tuiles reprennent celles du catalogue d'ajout
+     (CATALOG_FAMILIES) : une seule classification a apprendre. Les autres
+     groupes (Presentation, Tiroir, Plateformes, Remerciements) gardent
+     leur nom. Une rubrique n'appartient qu'a une famille : elle est donc
+     toujours trouvable, et une fiche ajoutee dans help-content.js apparait
+     automatiquement dans la bonne carte.
+     One card per FAMILY, each listing its clickable topics. Tile families
+     follow the catalogue's (CATALOG_FAMILIES): one classification to learn.
+     The other groups keep their names. A topic belongs to exactly one
+     family, so it is always findable, and a page added in help-content.js
+     shows up in the right card automatically. */
+  function helpFamilyKeyOf(sec) {
+    if (sec.group !== "tiles") return sec.group;
+    const fam = CATALOG_FAMILIES.find((f) => f.ids.includes(sec.id));
+    return "family:" + (fam ? fam.key : "misc");
+  }
+
+  function helpFamilyLabel(key) {
+    if (key.indexOf("family:") === 0) return i18n.t("catalog.family." + key.slice(7));
+    return i18n.t("help.group." + key);
+  }
+
+  function helpFamilies(sections) {
+    const order = ["presentation", "drawer"]
+      .concat(CATALOG_FAMILIES.map((f) => "family:" + f.key), ["family:misc", "platform", "credits"]);
+    const byKey = new Map();
+    for (const sec of sections) {
+      const key = helpFamilyKeyOf(sec);
+      if (!byKey.has(key)) byKey.set(key, []);
+      byKey.get(key).push(sec);
+    }
+    // Une cle inattendue n'est jamais omise : elle ferme la liste.
+    // An unexpected key is never dropped: it closes the list.
+    // Un Set : une famille presente dans l'ordre ET dans les donnees ne
+    // s'affiche qu'une seule fois. / A Set: a family both in the order and
+    // in the data is shown only once.
+    const keys = [...new Set(order.concat([...byKey.keys()]))];
+    return keys.filter((k) => byKey.has(k)).map((key) => ({
+      key, label: helpFamilyLabel(key), sections: byKey.get(key)
+    }));
+  }
+
+  function helpCountLabel(n) {
+    return n === 1 ? i18n.t("help.family.count.one") : i18n.t("help.family.count.many").replace("{n}", n);
+  }
+
+  /* Accueil : la liste des familles, une carte chacune. Reconstruite a
+     chaque ouverture (langue ou contenu a pu changer). / Home: one card per
+     family, rebuilt on every opening (language or content may have changed). */
+  function renderHelpIndex() {
+    const families = helpFamilies(window.PIBOARD_HELP || []);
+    $("helpNav").innerHTML =
+      `<p class="help-index-intro">${escapeHtml(i18n.t("help.home.intro"))}</p>` +
+      `<div class="help-families">` +
+      families.map((fam) =>
+        `<section class="help-family" data-help-group="${fam.key}">` +
+          `<div class="help-family-head">` +
+            `<h3 class="help-family-title" data-help-family-title="${escapeHtml(normalizeSearch(fam.label))}">${escapeHtml(fam.label)}</h3>` +
+            `<span class="help-family-count">${escapeHtml(helpCountLabel(fam.sections.length))}</span>` +
+          `</div>` +
+          `<div class="help-family-themes">` +
+            fam.sections.map((sec) =>
+              `<button type="button" class="help-theme" data-help-id="${escapeHtml(sec.id)}" data-help-search="${escapeHtml(normalizeSearch(i18n.fromManifest(sec.title)))}">${escapeHtml(i18n.fromManifest(sec.title))}</button>`
+            ).join("") +
+          `</div>` +
+        `</section>`).join("") +
+      `</div>` +
+      `<div class="help-nav-empty" id="helpNavEmpty" hidden>${escapeHtml(i18n.t("help.searchEmpty"))}</div>`;
+    $("helpNav").querySelectorAll("[data-help-id]").forEach((btn) => {
+      onActivate(btn, () => showHelpSection(btn.dataset.helpId));
+    });
+  }
+
+  /* Filtre l'accueil. Une famille dont le NOM correspond montre toutes ses
+     rubriques ; sinon seules les rubriques qui correspondent restent. Une
+     famille sans rubrique visible est masquee. / Filters the home page. A
+     family whose NAME matches shows all its topics; otherwise only matching
+     topics remain. A family with no visible topic is hidden. */
+  function filterHelpIndex() {
+    const q = normalizeSearch(($("helpNavSearch").value || "").trim());
+    let anyVisible = false;
+    $("helpNav").querySelectorAll(".help-family").forEach((fam) => {
+      const title = fam.querySelector(".help-family-title").getAttribute("data-help-family-title");
+      const famMatch = !!q && title.includes(q);
+      let visible = 0;
+      fam.querySelectorAll(".help-theme").forEach((btn) => {
+        const show = !q || famMatch || btn.dataset.helpSearch.includes(q);
+        btn.hidden = !show;
+        if (show) visible++;
+      });
+      fam.hidden = visible === 0;
+      if (visible) anyVisible = true;
+    });
+    $("helpNavEmpty").hidden = anyVisible;
+  }
+
+  /* Deux vues dans la meme page : l'accueil (familles) ou une rubrique. /
+     Two views in the same page: the home (families) or one topic. */
+  function helpShowView(view) {
+    const topic = view === "topic";
+    $("helpNav").hidden = topic;
+    $("helpTopic").hidden = !topic;
+    $("helpBack").hidden = !topic;
+    $("helpCrumbs").hidden = !topic;
+  }
+
+  function helpGoIndex(familyKey) {
+    helpActiveId = null;
+    helpShowView("index");
+    if (familyKey) {
+      const card = $("helpNav").querySelector(`[data-help-group="${familyKey}"]`);
+      if (card) card.scrollIntoView({ block: "start" });
+    }
+  }
+
+  function helpFamilyOfSection(sec) {
+    return helpFamilies(window.PIBOARD_HELP || []).find((f) => f.sections.some((s) => s.id === sec.id)) || null;
+  }
+
+  /* Fil d'Ariane : Aide / famille / rubrique. / Breadcrumb: Help / family / topic. */
+  function renderHelpCrumbs(sec) {
+    const fam = helpFamilyOfSection(sec);
+    const crumbs = $("helpCrumbs");
+    crumbs.innerHTML =
+      `<button type="button" data-help-crumb="home">${escapeHtml(i18n.t("help.title"))}</button>` +
+      (fam ? `<span class="help-crumb-sep">/</span><button type="button" data-help-crumb="family" data-help-family="${fam.key}">${escapeHtml(fam.label)}</button>` : "") +
+      `<span class="help-crumb-sep">/</span><span class="help-crumb-here">${escapeHtml(i18n.fromManifest(sec.title))}</span>`;
+    crumbs.querySelectorAll("[data-help-crumb]").forEach((b) => {
+      b.addEventListener("click", () => helpGoIndex(b.dataset.helpCrumb === "family" ? b.dataset.helpFamily : null));
+    });
+  }
+
+  /* Precedent / suivant, limites a la famille de la rubrique ouverte. /
+     Previous / next, limited to the open topic's family. */
+  function renderHelpPager(sec) {
+    const fam = helpFamilyOfSection(sec);
+    const list = fam ? fam.sections : [];
+    const i = list.findIndex((s) => s.id === sec.id);
+    const prev = i > 0 ? list[i - 1] : null;
+    const next = i >= 0 && i < list.length - 1 ? list[i + 1] : null;
+    const card = (s, label, cls) =>
+      `<button type="button" class="${cls}" data-help-go="${escapeHtml(s.id)}">` +
+      `<span class="help-pager-label">${escapeHtml(label)}</span>` +
+      `<span class="help-pager-title">${escapeHtml(i18n.fromManifest(s.title))}</span></button>`;
+    const pager = $("helpPager");
+    pager.innerHTML =
+      (prev ? card(prev, i18n.t("help.pager.prev"), "help-pager-prev") : "<span></span>") +
+      (next ? card(next, i18n.t("help.pager.next"), "help-pager-next") : "<span></span>");
+    pager.querySelectorAll("[data-help-go]").forEach((b) => onActivate(b, () => showHelpSection(b.dataset.helpGo)));
+  }
+
+  /* Theme de l'aide (1.142.0). Par defaut « follow » : rien a poser, la page
+     herite des variables de body, donc du theme du tableau, jour/nuit compris.
+     « dedicated » : le theme choisi est pose sur #helpPage, comme le fait
+     setThemeVars() pour une page ou un volet. / Help theme (1.142.0). Default
+     "follow": nothing to set, the page inherits body's variables, hence the
+     board's theme, day/night included. "dedicated": the chosen theme is set on
+     #helpPage, as setThemeVars() does for a page or a drawer. */
+  function applyHelpTheme() {
+    const el = $("helpPage");
+    if (!el) return;
+    if (settings.helpTheme !== "dedicated") { clearThemeVars(el); return; }
+    const theme = themeById(settings.helpThemeId || "piboard") || TH.piboardTheme(settings.colors);
+    setThemeVars(el, theme, resolvedMode());
+    el.dataset.themeId = theme.id;
+    el.classList.add("pb-themed");
+  }
+
+  /* Reglage « Theme de l'aide » de la fenetre des reglages generaux. / The
+     "Help theme" field of the general settings window. */
+  function syncHelpThemeRow() {
+    $("setHelpThemeRow").hidden = $("setHelpTheme").value !== "dedicated";
+  }
+
+  function fillHelpThemeSettings() {
+    const sel = $("setHelpThemeId");
+    sel.innerHTML = allThemes().map((t) => `<option value="${escapeHtml(t.id)}">${escapeHtml(themeName(t))}</option>`).join("");
+    sel.value = settings.helpThemeId || "piboard";
+    $("setHelpTheme").value = settings.helpTheme === "dedicated" ? "dedicated" : "follow";
+    $("setHelpTheme").onchange = syncHelpThemeRow;
+    syncHelpThemeRow();
+  }
+
+  let helpWired = false;
+
+  function wireHelpPage() {
+    if (helpWired) return;
+    helpWired = true;
+    $("helpBack").addEventListener("click", () => helpGoIndex(null));
+    // Taper dans la recherche ramene a l'accueil filtre ; l'effacer rend
+    // toutes les rubriques. / Typing returns to the filtered home; clearing
+    // it shows every topic again.
+    $("helpNavSearch").addEventListener("input", () => {
+      if (($("helpNavSearch").value || "").trim()) helpShowView("index");
+      filterHelpIndex();
+    });
+    // Le theme dedie suit le jour/nuit et les changements de theme. / The
+    // dedicated theme follows day/night and theme changes.
+    window.addEventListener("piboard:theme", () => {
+      if (!$("helpModal").hidden) applyHelpTheme();
+    });
+  }
+
   function openHelp() {
     const sections = window.PIBOARD_HELP || [];
     if (!sections.length) return;
-
-    const groupLabels = {
-      presentation: i18n.t("help.group.presentation"),
-      drawer: i18n.t("help.group.drawer"),
-      tiles: i18n.t("help.group.tiles"),
-      platform: i18n.t("help.group.platform"),
-      credits: i18n.t("help.group.credits")
-    };
-
-    /* ---------- Sommaire : les tuiles reprennent les familles du catalogue
-       La section "Tuiles" comptait une trentaine d'entrees a la file, dans
-       un ordre qui n'etait celui d'aucune autre partie de l'application :
-       on cherchait la fiche d'une tuile en parcourant toute la liste.
-       Elle est desormais decoupee selon les MEMES familles que le
-       catalogue d'ajout de tuiles (CATALOG_FAMILIES) -- une seule
-       classification a apprendre, et la fiche se trouve la ou l'on avait
-       trouve la tuile.
-       ---------- Sidebar: tiles follow the catalog's families
-       The "Tiles" section listed some thirty entries in a row, in an
-       order matching no other part of the application: finding a tile's
-       page meant scanning the whole list. It is now split along the SAME
-       families as the tile-adding catalog (CATALOG_FAMILIES) -- one
-       single classification to learn, and the page is found where the
-       tile was found. */
-    const familyOfTile = new Map();
-    for (const fam of CATALOG_FAMILIES) for (const id of fam.ids) familyOfTile.set(id, fam.key);
-    // Les fiches de tuile portent l'identifiant du widget comme id de
-    // section : c'est ce qui permet ce rapprochement sans table
-    // supplementaire a tenir a jour.
-    // Tile pages carry the widget id as their section id: that is what
-    // makes this matching possible with no extra table to maintain.
-    const tileFamilyOrder = CATALOG_FAMILIES.map((f) => f.key).concat(["misc"]);
-    const sortedSections = sections.slice().sort((a, b) => {
-      if (a.group !== "tiles" || b.group !== "tiles") return 0;
-      const fa = tileFamilyOrder.indexOf(familyOfTile.get(a.id) || "misc");
-      const fb = tileFamilyOrder.indexOf(familyOfTile.get(b.id) || "misc");
-      return fa - fb;
-    });
-
-    const nav = $("helpNav");
-    let lastHeading = null;
-    const itemsHtml = sortedSections.map((sec) => {
-      /* Dans la section des tuiles, l'intitule affiche est celui de la
-         FAMILLE ; ailleurs, celui du groupe d'aide. Une tuile absente de
-         toute famille retombe sur "Divers", comme dans le catalogue --
-         jamais omise. In the tiles section the displayed heading is the
-         FAMILY's; elsewhere, the help group's. A tile missing from every
-         family falls back to "Miscellaneous", as in the catalog -- never
-         dropped. */
-      const isTile = sec.group === "tiles";
-      const key = isTile ? ("family:" + (familyOfTile.get(sec.id) || "misc")) : sec.group;
-      const label = isTile
-        ? i18n.t("catalog.family." + (familyOfTile.get(sec.id) || "misc"))
-        : (groupLabels[sec.group] || sec.group);
-      const groupHtml = key !== lastHeading
-        ? `<div class="help-nav-group${isTile ? " help-nav-family" : ""}" data-help-group="${key}">${label}</div>` : "";
-      lastHeading = key;
-      return groupHtml +
-        `<button type="button" class="help-nav-item" data-help-id="${sec.id}" data-help-search="${normalizeSearch(i18n.fromManifest(sec.title))}">${i18n.fromManifest(sec.title)}</button>`;
-    }).join("");
-    // Recherche en tete du sommaire : utile des que la liste des tuiles
-    // s'allonge (plus de 20 desormais) pour retrouver une entree sans
-    // faire defiler. Filtre les boutons par leur titre normalise, et
-    // masque un en-tete de groupe devenu entierement vide plutot que de
-    // laisser un titre de section sans rien dessous.
-    // Search box at the top of the sidebar: useful once the tile list
-    // grows long (20+ now) to find an entry without scrolling. Filters
-    // buttons by their normalized title, and hides a group header that
-    // became entirely empty rather than leaving a section title with
-    // nothing underneath it.
-    nav.innerHTML =
-      `<div class="help-nav-search">
-        <input type="search" id="helpNavSearch" placeholder="${i18n.t("help.search")}" autocomplete="off">
-      </div>
-      <div class="help-nav-list" id="helpNavList">${itemsHtml}</div>
-      <div class="help-nav-empty" id="helpNavEmpty" hidden>${i18n.t("help.searchEmpty")}</div>`;
-
-    const searchInput = $("helpNavSearch");
-    const listEl = $("helpNavList");
-    const emptyEl = $("helpNavEmpty");
-    searchInput.addEventListener("input", () => {
-      const q = normalizeSearch(searchInput.value.trim());
-      listEl.querySelectorAll(".help-nav-item").forEach((btn) => {
-        btn.hidden = !(!q || btn.dataset.helpSearch.includes(q));
-      });
-      // Un groupe reste visible tant qu'au moins un de ses boutons l'est
-      // -- reparcourt dans l'ordre du DOM plutot que par cle, chaque
-      // en-tete de groupe n'etant suivi que par les boutons lui
-      // appartenant jusqu'au prochain en-tete.
-      // A group stays visible as long as at least one of its buttons
-      // does -- walked in DOM order rather than by key, since each group
-      // header is only followed by the buttons belonging to it, up to
-      // the next header.
-      let currentGroupHeader = null, groupHasVisible = false;
-      listEl.querySelectorAll(".help-nav-group, .help-nav-item").forEach((el) => {
-        if (el.classList.contains("help-nav-group")) {
-          if (currentGroupHeader) currentGroupHeader.hidden = !groupHasVisible;
-          currentGroupHeader = el;
-          groupHasVisible = false;
-        } else if (!el.hidden) {
-          groupHasVisible = true;
-        }
-      });
-      if (currentGroupHeader) currentGroupHeader.hidden = !groupHasVisible;
-      emptyEl.hidden = !!listEl.querySelector(".help-nav-item:not([hidden])");
-    });
-
-    listEl.querySelectorAll("[data-help-id]").forEach((btn) => {
-      onActivate(btn, () => showHelpSection(btn.dataset.helpId));
-    });
-
-    showHelpSection(helpActiveId && sections.some((s) => s.id === helpActiveId)
-      ? helpActiveId : sections[0].id);
+    wireHelpPage();
+    $("helpNavSearch").value = "";
+    renderHelpIndex();
+    filterHelpIndex();
+    helpShowView("index");
+    applyHelpTheme();
     $("helpModal").hidden = false;
   }
 
@@ -8776,6 +8878,9 @@
     $("helpNav").querySelectorAll("[data-help-id]").forEach((btn) => {
       btn.classList.toggle("active", btn.dataset.helpId === id);
     });
+    helpShowView("topic");
+    renderHelpCrumbs(sec);
+    renderHelpPager(sec);
 
     const content = $("helpContent");
     // Capture d'ecran optionnelle (voir help-content.js, champ
@@ -8795,6 +8900,7 @@
       screenshotHtml +
       i18n.fromManifest(sec.html);
     content.scrollTop = 0;
+    $("helpTopic").scrollTop = 0;
 
     // La rubrique "Demarrage rapide" de l'aide n'a pas de contenu propre :
     // elle reutilise le MEME texte que la fenetre de lancement (source

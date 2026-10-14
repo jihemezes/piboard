@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.142.0
+
+- **Aide en page pleine, par famille.** L'aide n'est plus une fenêtre à
+  deux colonnes mais une page dédiée : une carte par famille de tuiles
+  (ou par groupe : Présentation, Tiroir, Plateformes, Remerciements), chaque
+  carte listant ses rubriques cliquables. Une rubrique s'ouvre avec un fil
+  d'Ariane (Aide / famille / rubrique) et des boutons Précédent / Suivant
+  limités à la famille. La recherche filtre les familles et les rubriques,
+  sans accents.
+- **Thème de l'aide** (Réglages généraux → Thème de l'aide) : par défaut
+  l'aide reprend le thème du tableau de bord, jour et nuit compris ; le
+  réglage « Thème dédié à l'aide » lui donne un thème à part, choisi dans
+  le catalogue. Nouveaux réglages `helpTheme` et `helpThemeId` (défauts
+  `follow` et `piboard`, aucune migration).
+- **Mise en page tactile** : l'aide suit le réglage « Mode tactile » des
+  réglages généraux (cibles agrandies, lecture plus confortable).
+- **Aide** : fiche « Barre d'outils & réglages » mise à jour pour la
+  nouvelle page et le nouveau réglage, en français et en anglais.
+- Code : `openHelp()`, `showHelpSection()`, `applyHelpTheme()` et la
+  section `#helpPage` dans index.html ; la famille d'une rubrique est
+  déduite de CATALOG_FAMILIES, sans table à tenir à jour.
+- Tests : `dom-smoke.js` vérifie l'accueil par familles, la présence de
+  chaque rubrique, le fil d'Ariane, Précédent / Suivant et Retour ;
+  `helpContent.test.js` vérifie la documentation du thème de l'aide dans
+  les deux langues.
+
+---
+
+- **Full-page help, by family.** The help is no longer a two-column window
+  but a dedicated page: one card per tile family (or per group: Presentation,
+  Drawer, Platforms, Credits), each listing its clickable topics. A topic
+  opens with a breadcrumb (Help / family / topic) and Previous / Next buttons
+  limited to its family. The search filters families and topics, accent-free.
+- **Help theme** (General settings → Help theme): by default the help follows
+  the dashboard's theme, day and night included; "Dedicated help theme" gives
+  it its own theme, picked from the catalogue. New settings `helpTheme` and
+  `helpThemeId` (defaults `follow` and `piboard`, no migration).
+- **Touch layout**: the help follows the "Touch mode" setting (larger targets,
+  more comfortable reading).
+- **Help**: the "Toolbar & settings" topic updated for the new page and the new
+  setting, in French and English.
+- Code: `openHelp()`, `showHelpSection()`, `applyHelpTheme()` and the
+  `#helpPage` section in index.html; a topic's family is derived from
+  CATALOG_FAMILIES, with no table to maintain.
+- Tests: `dom-smoke.js` checks the family home, every topic's presence,
+  the breadcrumb, Previous / Next and Back; `helpContent.test.js` checks the
+  help-theme documentation in both languages.
+
 ## 1.141.1
 
 - **Correctif : la section « Nouveautes » de l'aide affichait « status

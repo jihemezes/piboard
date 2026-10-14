@@ -3486,3 +3486,163 @@ body.touch .qr-image, body.touch-mode .qr-image { width: min(320px, 80vw); }
 
 .clone-todo { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; }
 .clone-todo li { margin: 4px 0; }
+
+/* ---------- Aide en page pleine (1.142.0) / Full-page help (1.142.0) ----------
+   Une page, pas une fenetre : une carte par famille de tuiles (le widget
+   de cette page d'accueil), chaque carte listant ses themes cliquables.
+   Le theme vient de body (suit le tableau, jour/nuit compris) ; un theme
+   dedie est pose directement sur .help-page (applyHelpTheme() dans app.js).
+   Le tactile (body.touch-mode, reglage « Mode tactile ») agrandit les cibles.
+   A page, not a window: one card per tile family (the widget of this home
+   page), each listing its clickable themes. The theme comes from body
+   (follows the board, day/night included); a dedicated theme is set
+   directly on .help-page (applyHelpTheme() in app.js). Touch
+   (body.touch-mode, the "Touch mode" setting) enlarges the targets. */
+.help-page-modal { background: var(--bg); align-items: stretch; justify-content: stretch; }
+.help-page {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--text);
+  overflow: hidden;
+}
+.help-page-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.help-page-title { margin: 0; font-size: 19px; font-weight: 600; white-space: nowrap; }
+.help-page-back { white-space: nowrap; }
+.help-page-search {
+  flex: 1 1 260px;
+  max-width: 420px;
+  margin-left: auto;
+  padding: 9px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 14px;
+}
+.help-page-search:focus { outline: none; border-color: var(--accent); }
+.help-crumbs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-size: 13px;
+  color: var(--muted);
+  border-bottom: 1px solid var(--tile-edge);
+}
+.help-crumbs button {
+  border: none;
+  background: none;
+  padding: 2px 0;
+  font: inherit;
+  color: var(--accent);
+  cursor: pointer;
+}
+.help-crumbs button:hover { text-decoration: underline; }
+.help-crumbs .help-crumb-here { color: var(--text); font-weight: 600; }
+.help-crumbs .help-crumb-sep { opacity: 0.4; }
+.help-page-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
+
+/* Accueil : grille de familles / home: grid of families */
+.help-index { padding: 22px 24px 40px; display: flex; flex-direction: column; gap: 18px; }
+.help-index-intro { margin: 0; color: var(--muted); font-size: 14px; }
+.help-families {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+.help-family {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+  padding: 16px 18px;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius);
+}
+.help-family-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.help-family-title { margin: 0; font-size: 16px; font-weight: 600; }
+.help-family-count { font-size: 12px; color: var(--faint); white-space: nowrap; }
+.help-family-themes { display: flex; flex-wrap: wrap; gap: 8px; }
+.help-theme {
+  border: 1px solid var(--tile-edge);
+  background: var(--field-bg);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font: inherit;
+  font-size: 13.5px;
+  text-align: left;
+  cursor: pointer;
+}
+.help-theme:hover { border-color: var(--accent); color: var(--accent); }
+.help-theme.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.help-index .help-nav-empty { padding: 24px 8px; text-align: center; color: var(--muted); font-size: 14px; font-style: italic; }
+
+/* Rubrique ouverte / open topic */
+.help-topic {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 980px;
+  margin: 0 auto;
+  padding: 24px 32px 40px;
+  box-sizing: border-box;
+  overflow-y: auto;
+}
+.help-topic .help-content { padding: 0; overflow: visible; }
+.help-pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+.help-pager button {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 18px;
+  background: var(--tile);
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.help-pager button:hover { border-color: var(--accent); }
+.help-pager .help-pager-next { text-align: right; align-items: flex-end; }
+.help-pager-label { font-size: 12px; opacity: 0.6; }
+.help-pager-title { font-size: 15px; font-weight: 600; }
+
+/* Petit ecran / small screens */
+@media (max-width: 720px) {
+  .help-page-head { padding: 12px 14px; }
+  .help-page-title { font-size: 16px; }
+  .help-page-search { order: 3; flex-basis: 100%; max-width: none; margin-left: 0; }
+  .help-families { grid-template-columns: 1fr; }
+  .help-index, .help-topic { padding-left: 14px; padding-right: 14px; }
+  .help-pager { grid-template-columns: 1fr; }
+}
+
+/* Mode tactile : cibles plus grandes, lecture plus confortable.
+   Touch mode: larger targets, more comfortable reading. */
+body.touch-mode .help-page-title { font-size: 22px; }
+body.touch-mode .help-page-search { min-height: 52px; font-size: 17px; }
+body.touch-mode .help-page-head .btn,
+body.touch-mode .help-crumbs button { min-height: 52px; padding: 10px 16px; font-size: 16px; }
+body.touch-mode .help-page .modal-close { min-width: 52px; min-height: 52px; font-size: 30px; }
+body.touch-mode .help-families { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 22px; }
+body.touch-mode .help-family { gap: 16px; padding: 22px 24px; }
+body.touch-mode .help-family-title { font-size: 19px; }
+body.touch-mode .help-theme { min-height: 52px; padding: 12px 20px; font-size: 16px; }
+body.touch-mode .help-topic { font-size: 17px; }
+body.touch-mode .help-pager button { min-height: 84px; padding: 20px 24px; }
+body.touch-mode .help-pager-title { font-size: 17px; }

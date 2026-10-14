@@ -107,6 +107,12 @@ const DEFAULT_SETTINGS = {
   longitude: 2.35,
   gridRows: 8,           // hauteur logique de l'ecran en lignes / logical screen height in rows
   touchMode: false,      // interface tactile : cibles agrandies / touch UI: enlarged targets
+  /* Theme de l'aide (1.142.0). "follow" = celui du tableau de bord, jour/nuit compris ;
+     "dedicated" = le theme choisi dans helpThemeId (un theme du catalogue ou perso).
+     Help theme (1.142.0). "follow" = the board's theme, day/night included;
+     "dedicated" = the theme picked in helpThemeId (a catalogue or custom theme). */
+  helpTheme: "follow",
+  helpThemeId: "piboard",
   multiColumnForms: true, // fenetres de reglages en plusieurs colonnes / settings windows in multiple columns
   /* Guide de demarrage rapide affiche au lancement. Vaut true au premier
      demarrage (DEFAULT_SETTINGS s'applique tant que rien n'est
