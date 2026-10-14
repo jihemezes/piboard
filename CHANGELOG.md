@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.141.1
+
+- **Correctif : la section « Nouveautes » de l'aide affichait « status
+  404 » dans l'application de bureau.** `WHATSNEW.md`, servi par
+  `GET /api/whatsnew` depuis la 1.119.0, tombait sous l'exclusion
+  generale `!**/*.md` d'electron-builder.yml -- exactement la panne deja
+  corrigee pour CHANGELOG.md. Le Raspberry Pi, non empaquete,
+  l'affichait ; Mac, Windows et Linux renvoyaient 404. Le fichier est
+  inclus explicitement, et `test/whatsnew.test.js` verifie desormais que
+  TOUT fichier .md lu par le serveur figure dans le paquet (le test
+  echoue bien sans le correctif).
+- **Aide remise a niveau** :
+  - fiche « Barre d'outils & reglages » : sections Application de
+    bureau (demarrage avec la session, affichage immersif), Outils
+    multimedias, **Abonnements presse** (boutons, etats affiches), Mode
+    d'affichage, Mises a jour, Contribuer, Sauvegardes -- jusqu'ici
+    absentes ;
+  - nouvelle fiche **Application de bureau Linux** (.deb ou AppImage,
+    architectures, menu cache, mises a jour, demarrage, donnees) ;
+  - fiche **Application de bureau macOS** : menu PiBoard, mises a jour
+    automatiques, emplacement des donnees et du journal ;
+  - nouvelle fiche de tuile **Enregistrements TV**, qui n'en avait pas ;
+  - section Options ajoutee aux fiches Quotas IA, Home Assistant, Bourse
+    et Couleur Tempo, qui n'en avaient aucune ;
+  - correction : le journal s'ouvre par le menu **PiBoard** -> Ouvrir le
+    journal, pas par un menu « Aide » (indication erronee en 1.140.3).
+- Les textes « Lancer PiBoard au demarrage » et « Affichage immersif »
+  ne parlent plus seulement de Windows : ils valent pour Mac et Linux.
+
+---
+
+- **Fix: the help's "What's new" section showed "status 404" in the
+  desktop app** -- WHATSNEW.md was excluded from the package (same
+  failure as CHANGELOG.md earlier). Included explicitly, and a test now
+  checks every .md read by the server is packaged.
+- **Help brought up to date**: all general settings sections (including
+  Press subscriptions), new Linux desktop app and TV recordings sheets,
+  macOS app menu/updates/data, missing Options sections.
+
 ## 1.141.0
 
 - **Flux RSS : lire en entier les articles des journaux auxquels on est

@@ -151,5 +151,28 @@ function parse(raw) {
     "le seuil de repli de app.js ne correspond plus a celui de ce test (" + FOLD + ")");
   console.log("  OK");
 
+  /* 1.141.1 : la route marchait sur le Pi et renvoyait 404 dans TOUTES
+     les applications de bureau -- le fichier etait exclu du paquet par
+     le motif general « !**\/*.md » d'electron-builder.yml. Meme panne que
+     CHANGELOG.md auparavant. Tout fichier .md que le serveur lit a la
+     racine doit donc figurer, en inclusion explicite, APRES ce motif.
+     1.141.1: the route worked on the Pi and answered 404 in EVERY desktop
+     application -- the file was excluded from the package. Every .md the
+     server reads at the root must be explicitly included AFTER that
+     pattern. */
+  console.log("== Les fichiers .md lus par le serveur sont inclus dans le paquet de bureau ==");
+  const builder = fs.readFileSync(path.join(__dirname, "..", "electron-builder.yml"), "utf8");
+  const filesBlock = builder.slice(builder.indexOf("\nfiles:"), builder.indexOf("\n", builder.indexOf("\nfiles:") + 1) + 4000);
+  const lines = filesBlock.split("\n").map((l) => l.trim()).filter((l) => l.startsWith("- "));
+  const excludeAt = lines.findIndex((l) => l.replace(/["']/g, "") === "- !**/*.md");
+  assert.ok(excludeAt >= 0, "motif d'exclusion des .md introuvable (le test doit etre revu)");
+  const readMd = [...new Set([...server.matchAll(/readFileSync\(path\.join\(__dirname, "\.\.", "([A-Z0-9_-]+\.md)"\)/g)].map((m) => m[1]))];
+  assert.ok(readMd.includes("WHATSNEW.md") && readMd.includes("CHANGELOG.md"), "lecture des .md non detectee : " + readMd.join(", "));
+  for (const md of readMd) {
+    const at = lines.findIndex((l) => l.replace(/["']/g, "") === "- " + md);
+    assert.ok(at > excludeAt, md + " est lu par le serveur mais exclu du paquet de bureau (404 dans l'application)");
+  }
+  console.log("  OK (" + readMd.join(", ") + ")");
+
   console.log("\n>>> TOUS LES TESTS WHATSNEW PASSENT");
 })();

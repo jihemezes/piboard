@@ -171,7 +171,27 @@
           <p>Jusqu'à 5 plages horaires, chacune avec une heure de début, une heure de fin, et un mode : <b>Noir</b> (l'écran devient entièrement noir) ou <b>Diaporama</b> (l'écran se transforme en cadre photo dynamique, avec sa propre source de photos indépendante de toute tuile Diaporama éventuellement présente sur le tableau). Une plage peut traverser minuit (par exemple 22:00 → 06:00 pour la nuit). Un clic, un tap tactile, ou n'importe quelle touche réveille l'écran instantanément ; une fois réveillée manuellement, la même plage ne se rouvre pas toute seule — il faut attendre la suivante (le lendemain, pour une plage quotidienne).</p>
           <p>Les modes « Noir » et « Diaporama » n'éteignent <b>jamais</b> physiquement l'écran : ce sont des calques logiciels plein écran, qui économisent déjà un peu d'énergie (le tableau cesse d'être activement rendu et rafraîchi) mais laissent la dalle allumée. Un troisième mode, <b>« Éteindre l'écran »</b>, coupe réellement l'alimentation de la sortie vidéo — nettement plus économe, sur Raspberry Pi uniquement. Il reste un choix explicite et non le défaut, à cause du risque qu'un écran réellement éteint ne se rallume pas correctement : un problème documenté sur certains systèmes Linux. Trois précautions l'entourent. Le calque noir est posé malgré tout, si bien qu'une commande qui échoue fait retomber exactement sur l'ancien comportement au lieu de laisser le tableau allumé toute la nuit. Quatre méthodes sont essayées dans l'ordre (wlopm, wlr-randr, xset, vcgencmd), de la plus moderne à la plus ancienne, la pile graphique de Pi OS ayant changé deux fois. Et un bouton <b>Test</b> éteint l'écran cinq secondes puis le rallume seul, en indiquant quelle méthode a fonctionné — de quoi vérifier avant de compter dessus pour la nuit. Le réveil est le même que pour les autres modes : un toucher, une touche ou un mouvement de souris. Écran éteint, la dalle tactile et le clavier continuent d'émettre leurs événements, que le compositeur transmet toujours à la page.</p>
           <div class="help-opt"><span class="help-opt-name">Source des photos (diaporama)</span><span class="help-opt-desc">Téléversement dédié à la veille (géré directement dans cette fenêtre), dossier local, partage WebDAV, ou liste d'URLs — mêmes options que le widget Diaporama.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Changer toutes les</span><span class="help-opt-desc">Intervalle en secondes entre deux photos, pour les plages en mode Diaporama.</span></div>`,
+          <div class="help-opt"><span class="help-opt-name">Changer toutes les</span><span class="help-opt-desc">Intervalle en secondes entre deux photos, pour les plages en mode Diaporama.</span></div>
+          <p><u>Section Application de bureau</u> (application Mac, Windows ou Linux uniquement)</p>
+          <div class="help-opt"><span class="help-opt-name">Lancer PiBoard au démarrage de la session</span><span class="help-opt-desc">Ouvre le tableau de bord à l'ouverture de votre session : élément d'ouverture sous Windows et macOS, fichier de démarrage automatique (<code>~/.config/autostart</code>) sous Linux.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Affichage immersif</span><span class="help-opt-desc">En mode tableau de bord, la fenêtre passe en plein écran : ni barre de titre, ni barre des tâches ou Dock. Amenez la souris tout en haut de l'écran, ou appuyez sur F9, pour faire apparaître une fine barre Réduire / Fenêtre / Quitter ; F11 quitte aussi le plein écran.</span></div>
+          <p><u>Section Outils multimédias</u></p>
+          <p>ffmpeg et VLC, utilisés uniquement par la tuile Chaînes TV (son AC3/DTS inaudible, chaînes récalcitrantes, enregistrement). La section dit s'ils sont présents et, selon le système, propose un bouton <b>Installer</b> (Linux, macOS) ou la commande à taper. Sur Mac, ffmpeg est téléchargé dans le dossier de PiBoard et VLC copié dans Applications, après vérification de son empreinte et de sa signature. En cas d'échec, un message rouge dit pourquoi, avec un bouton <b>Ouvrir le journal</b>. Détails : fiche <i>Chaînes TV</i>.</p>
+          <p><u>Section Abonnements presse</u> (application de bureau uniquement)</p>
+          <p>Pour lire en entier, dans la tuile Flux RSS, les articles payants des journaux auxquels vous êtes abonné. Choisissez le journal, <b>Ajouter</b>, puis <b>Se connecter</b> : connectez-vous sur le site lui-même, dans la fenêtre qui s'ouvre. PiBoard ne voit jamais votre mot de passe, il garde seulement la session. Un réglage par site, valable pour tous ses flux.</p>
+          <div class="help-opt"><span class="help-opt-name">Se connecter / Se reconnecter</span><span class="help-opt-desc">Ouvre la page de connexion du site dans une fenêtre de PiBoard.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Se déconnecter</span><span class="help-opt-desc">Efface la session de ce site, et seulement de lui.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Retirer</span><span class="help-opt-desc">Enlève le site de la liste et efface sa session.</span></div>
+          <div class="help-opt"><span class="help-opt-name">État affiché</span><span class="help-opt-desc">« Non connecté » ; « Session enregistrée » (un site dépose des cookies même sans connexion, ce n'est donc pas encore une preuve) ; « Accès abonné confirmé » dès qu'un article payant a été lu en entier ; « Session sans doute expirée » quand un article payant ne donne plus que l'aperçu.</span></div>
+          <p>Détails et indicateurs ✓ / 🔒 de la liste : fiche <i>Flux RSS</i>.</p>
+          <p><u>Section Mode d'affichage</u></p>
+          <p>Classique (un tableau et ses tiroirs) ou Tableau de bord (des pages qui défilent), défilement automatique et liste des pages. Tout est détaillé dans la fiche <i>Mode tableau de bord (pages)</i>.</p>
+          <p><u>Section Mises à jour</u></p>
+          <p>Le niveau de mise à jour : versions stables seulement, ou aussi les pré-versions (plus récentes, moins éprouvées). Le même choix vaut pour le Raspberry Pi et pour l'application de bureau, qui vérifie elle-même au démarrage. Voir les fiches <i>Mises à jour sur Raspberry Pi / Linux</i> et celles des applications de bureau.</p>
+          <p><u>Section Contribuer</u></p>
+          <p>Signaler un bug ou proposer une idée en quelques clics : voir la fiche <i>Signaler un bug, proposer une idée</i>.</p>
+          <p><u>Sauvegardes, page du tableau de bord, clone complet</u></p>
+          <p>Sauvegarder et restaurer la configuration, reproduire une seule page sur une autre machine, ou cloner toute l'installation : voir la fiche <i>Sauvegarde et restauration</i>.</p>`,
         en: `
           <h4>The toolbar</h4>
           <p>It's hidden by default so it doesn't clutter the display. Tap the small tab centered at the bottom of the screen to reveal it; it closes automatically after 20 seconds of inactivity (except in edit mode, where it stays open). Seven buttons:</p>
@@ -214,7 +234,27 @@
           <p>Up to 5 time slots, each with a start time, an end time, and a mode: <b>Black</b> (the screen turns fully black) or <b>Slideshow</b> (the screen becomes a dynamic photo frame, with its own photo source independent from any Slideshow tile that might exist on the board). A slot can cross midnight (e.g. 22:00 → 06:00 for the night). A click, a touch tap, or any key wakes the screen up instantly; once manually woken, the same slot won't reopen on its own — you have to wait for the next one (the next day, for a daily slot).</p>
           <p>The "Black" and "Slideshow" modes never physically turn the screen off: they are full-screen software overlays, which already save some energy (the board stops being actively rendered and refreshed) but leave the panel lit. A third mode, <b>"Turn the display off"</b>, really cuts the video output's power — far more economical, on Raspberry Pi only. It stays an explicit choice rather than the default, because of the risk of a truly powered-off screen failing to come back: a documented issue on some Linux systems. Three precautions surround it. The black overlay is laid down anyway, so a failing command falls back exactly on the old behaviour instead of leaving the board lit all night. Four methods are tried in order (wlopm, wlr-randr, xset, vcgencmd), newest to oldest, Pi OS having changed graphics stack twice. And a <b>Test</b> button turns the display off for five seconds then back on by itself, reporting which method worked — enough to check before relying on it overnight. Waking is the same as for the other modes: a touch, a key or a mouse move. With the display off, the touch panel and keyboard keep emitting their events, which the compositor still delivers to the page.</p>
           <div class="help-opt"><span class="help-opt-name">Photo source (slideshow)</span><span class="help-opt-desc">Upload dedicated to the screensaver (managed directly in this window), local folder, WebDAV share, or a list of URLs — same options as the Slideshow widget.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Change every</span><span class="help-opt-desc">Interval in seconds between two photos, for slots in Slideshow mode.</span></div>`
+          <div class="help-opt"><span class="help-opt-name">Change every</span><span class="help-opt-desc">Interval in seconds between two photos, for slots in Slideshow mode.</span></div>
+          <p><u>Desktop application section</u> (Mac, Windows or Linux application only)</p>
+          <div class="help-opt"><span class="help-opt-name">Launch PiBoard when the session starts</span><span class="help-opt-desc">Opens the dashboard when you log in: a login item on Windows and macOS, an autostart file (<code>~/.config/autostart</code>) on Linux.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Immersive display</span><span class="help-opt-desc">In dashboard mode, the window goes full screen: no title bar, no taskbar or Dock. Bring the mouse to the very top of the screen, or press F9, to reveal a thin Minimise / Windowed / Quit bar; F11 also leaves full screen.</span></div>
+          <p><u>Media tools section</u></p>
+          <p>ffmpeg and VLC, used only by the TV channels tile (inaudible AC3/DTS sound, stubborn channels, recording). The section says whether they are present and, depending on the system, offers an <b>Install</b> button (Linux, macOS) or the command to type. On a Mac, ffmpeg is downloaded into PiBoard's folder and VLC copied into Applications, after checking its fingerprint and signature. On failure, a red message says why, with an <b>Open log</b> button. Details: <i>TV channels</i> sheet.</p>
+          <p><u>Press subscriptions section</u> (desktop application only)</p>
+          <p>To read in full, in the RSS tile, the paid articles of the newspapers you subscribe to. Pick the newspaper, <b>Add</b>, then <b>Log in</b>: log in on the site itself, in the window that opens. PiBoard never sees your password, it only keeps the session. One setting per site, valid for all its feeds.</p>
+          <div class="help-opt"><span class="help-opt-name">Log in / Log in again</span><span class="help-opt-desc">Opens the site's login page in a PiBoard window.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Log out</span><span class="help-opt-desc">Clears this site's session, and only this one.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Remove</span><span class="help-opt-desc">Removes the site from the list and clears its session.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Status shown</span><span class="help-opt-desc">“Not logged in”; “Session saved” (a site sets cookies even without a login, so this is not proof yet); “Subscriber access confirmed” once a paid article was read in full; “Session has probably expired” when a paid article only gives the preview again.</span></div>
+          <p>Details and the list's ✓ / 🔒 indicators: <i>RSS feed</i> sheet.</p>
+          <p><u>Display mode section</u></p>
+          <p>Classic (one board and its drawers) or Dashboard (sliding pages), automatic cycling and the list of pages. All detailed in the <i>Dashboard mode (pages)</i> sheet.</p>
+          <p><u>Updates section</u></p>
+          <p>The update level: stable versions only, or pre-releases too (newer, less tested). The same choice applies to the Raspberry Pi and to the desktop application, which checks by itself on startup. See the <i>Updates on Raspberry Pi / Linux</i> sheet and the desktop application sheets.</p>
+          <p><u>Contributing section</u></p>
+          <p>Report a bug or suggest an idea in a few clicks: see the <i>Report a bug, suggest an idea</i> sheet.</p>
+          <p><u>Backups, dashboard page, full clone</u></p>
+          <p>Back up and restore the configuration, reproduce a single page on another machine, or clone the whole installation: see the <i>Backup &amp; restore</i> sheet.</p>`
       }
     },
 
@@ -391,7 +431,7 @@
           <h5>VLC sur macOS</h5>
           <p>VLC sert à relayer les chaînes en direct qui refusent ffmpeg. Depuis la 1.140.3, le bouton « Installer » de Réglages → Outils multimédias l'installe aussi sur Mac, comme vous le feriez à la main : il télécharge l'<b>image disque officielle de VideoLAN</b> (60 à 100 Mo selon le processeur), puis vérifie son <b>empreinte</b> (une version précise, figée dans PiBoard) et la <b>signature de VideoLAN</b> avant de copier VLC dans le dossier <b>Applications</b>. Si ce dossier n'est pas accessible en écriture (compte standard), VLC va dans votre dossier Applications <b>personnel</b> (<code>~/Applications</code>), sans mot de passe. Un fichier modifié à la source ou mal signé est refusé, jamais installé. VLC installé par vous-même (site de VideoLAN, Homebrew) est trouvé tout seul.</p>
           <h5>Le journal de PiBoard</h5>
-          <p>Quand une installation échoue, un bouton <b>« Ouvrir le journal »</b> apparaît sous le message d'erreur (application de bureau uniquement). Le journal est aussi accessible par le menu Aide → « Ouvrir le journal » ; sur Mac, le fichier est <code>~/Library/Application Support/PiBoard/logs/piboard.log</code>. Il est vidé à chaque lancement : consultez-le avant de redémarrer PiBoard.</p>
+          <p>Quand une installation échoue, un bouton <b>« Ouvrir le journal »</b> apparaît sous le message d'erreur (application de bureau uniquement). Le journal est aussi accessible par le menu <b>PiBoard → Ouvrir le journal</b> de l'application ; sur Mac, le fichier est <code>~/Library/Application Support/PiBoard/logs/piboard.log</code>. Il est vidé à chaque lancement : consultez-le avant de redémarrer PiBoard.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Adresse de la playlist</span><span class="help-opt-desc">L'URL du fichier .m3u.</span></div>
           <div class="help-opt"><span class="help-opt-name">Catégorie affichée à l'ouverture</span><span class="help-opt-desc">Facultatif. Évite de faire défiler une longue liste à chaque fois.</span></div>
@@ -450,7 +490,7 @@
           <h5>VLC on macOS</h5>
           <p>VLC relays the live channels that refuse ffmpeg. Since 1.140.3, the “Install” button under Settings → Media tools installs it on a Mac too, as you would by hand: it downloads <b>VideoLAN's official disk image</b> (60 to 100 MB depending on the processor), checks its <b>fingerprint</b> (an exact version, pinned in PiBoard) and <b>VideoLAN's signature</b>, then copies VLC into the <b>Applications</b> folder. If that folder is not writable (standard account), VLC goes to your <b>personal</b> Applications folder (<code>~/Applications</code>), with no password. A file changed at the source or wrongly signed is refused, never installed. A VLC you installed yourself (VideoLAN's site, Homebrew) is found automatically.</p>
           <h5>PiBoard's log</h5>
-          <p>When an installation fails, an <b>“Open log”</b> button appears under the error message (desktop application only). The log is also reachable through the Help menu → “Open log”; on a Mac, the file is <code>~/Library/Application Support/PiBoard/logs/piboard.log</code>. It is cleared at every launch: read it before restarting PiBoard.</p>
+          <p>When an installation fails, an <b>“Open log”</b> button appears under the error message (desktop application only). The log is also reachable through the application's <b>PiBoard → Open log</b> menu; on a Mac, the file is <code>~/Library/Application Support/PiBoard/logs/piboard.log</code>. It is cleared at every launch: read it before restarting PiBoard.</p>
           <h4>Options</h4>
           <div class="help-opt"><span class="help-opt-name">Playlist address</span><span class="help-opt-desc">The .m3u file's URL.</span></div>
           <div class="help-opt"><span class="help-opt-name">Category shown on opening</span><span class="help-opt-desc">Optional. Avoids scrolling a long list every time.</span></div>
@@ -462,6 +502,42 @@
           <div class="help-opt"><span class="help-opt-name">Stop below (MB free)</span><span class="help-opt-desc">Rather than filling the disk. 0 removes the guard.</span></div>
           <div class="help-opt"><span class="help-opt-name">Start X minutes early / End X minutes late</span><span class="help-opt-desc">Margins added to scheduled recordings. 2 and 10 minutes by default.</span></div>
           <div class="help-opt"><span class="help-opt-name">List the recordings in the tile</span><span class="help-opt-desc">Adds the ⏺ button in the channel list.</span></div>`
+      }
+    },
+
+    {
+      id: "iptvrec",
+      group: "tiles",
+      title: { fr: "Enregistrements TV", en: "TV recordings" },
+      sub: {
+        fr: "Ce que la tuile Chaînes TV enregistre en ce moment, l'espace libre, et les enregistrements déjà faits.",
+        en: "What the TV channels tile is recording right now, free space, and the recordings already made."
+      },
+      html: {
+        fr: `
+          <span class="help-size">Taille : 3×3 par défaut, de 2×2 à 12×16</span>
+          <h4>Objectif</h4>
+          <p>Surveiller les enregistrements sans garder le lecteur sous les yeux : la tuile continue de fonctionner quand la tuile Chaînes TV est fermée ou sur une autre page.</p>
+          <h4>Ce qu'elle montre</h4>
+          <p>L'enregistrement en cours (chaîne, durée écoulée, taille du fichier), l'espace libre restant dans le dossier d'enregistrement, et la liste des enregistrements terminés. Chacun peut être <b>converti en .mp4</b> (sans réencodage) ou <b>supprimé</b> d'ici.</p>
+          <p>Les enregistrements se <b>lancent</b> depuis la tuile Chaînes TV, avec son bouton ⏺ ou une programmation 🕒 : voir la fiche <i>Chaînes TV</i>. ffmpeg est nécessaire (Réglages → Outils multimédias).</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Lister les enregistrements déjà réalisés</span><span class="help-opt-desc">Décochez pour ne garder que l'enregistrement en cours et l'espace libre.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Combien en lister</span><span class="help-opt-desc">De 1 à 100 (10 par défaut), les plus récents d'abord.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher l'espace libre</span><span class="help-opt-desc">L'espace restant dans le dossier d'enregistrement.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">De 3 à 300 secondes (10 par défaut).</span></div>`,
+        en: `
+          <span class="help-size">Size: 3×3 by default, from 2×2 to 12×16</span>
+          <h4>Goal</h4>
+          <p>Keep an eye on recordings without keeping the player in view: the tile keeps working when the TV channels tile is closed or on another page.</p>
+          <h4>What it shows</h4>
+          <p>The recording in progress (channel, elapsed time, file size), the free space left in the recording folder, and the list of finished recordings. Each can be <b>converted to .mp4</b> (no re-encoding) or <b>deleted</b> from here.</p>
+          <p>Recordings are <b>started</b> from the TV channels tile, with its ⏺ button or a 🕒 schedule: see the <i>TV channels</i> sheet. ffmpeg is required (Settings → Media tools).</p>
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">List the recordings already made</span><span class="help-opt-desc">Untick to keep only the recording in progress and the free space.</span></div>
+          <div class="help-opt"><span class="help-opt-name">How many to list</span><span class="help-opt-desc">1 to 100 (10 by default), most recent first.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show free space</span><span class="help-opt-desc">The space left in the recording folder.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">3 to 300 seconds (10 by default).</span></div>`
       }
     },
 
@@ -796,7 +872,13 @@
 
           <h4>Et MQTT ?</h4>
           <p>Si vous utilisez Home Assistant, MQTT fait doublon : HA agrège déjà vos appareils MQTT et les expose comme entités. Un accès MQTT direct n'aurait d'intérêt que sans Home Assistant.</p>
-        `,
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Adresse de Home Assistant</span><span class="help-opt-desc">Port compris, en général 8123. Adresse locale, aucun passage par le cloud.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Jeton d'accès de longue durée</span><span class="help-opt-desc">Créé dans Home Assistant (profil, bas de page). Conservé chiffré, jamais renvoyé au navigateur.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Entités à afficher</span><span class="help-opt-desc">Nom, domaine, puis entité, choisis dans des listes remplies depuis votre Home Assistant — enregistrez d'abord l'adresse et le jeton, puis rouvrez les réglages.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher les entités indisponibles</span><span class="help-opt-desc">Une entité éteinte, injoignable ou supprimée reste visible avec son état au lieu de disparaître.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement de secours</span><span class="help-opt-desc">Utilisé seulement si la connexion directe est coupée (5 minutes par défaut).</span></div>`,
         en: `
           <div class="help-warn"><b>Read only.</b> This tile displays, it does not command. It calls no Home Assistant service and therefore cannot switch on, open or unlock anything. Control will come in a later version, with the protections it demands — a wall-mounted touchscreen is within everyone's reach, children and visitors included.</div>
 
@@ -821,7 +903,13 @@
 
           <h4>What about MQTT?</h4>
           <p>If you use Home Assistant, MQTT is redundant: HA already aggregates your MQTT devices and exposes them as entities. Direct MQTT access would only be of interest without Home Assistant.</p>
-        `
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Home Assistant address</span><span class="help-opt-desc">Port included, usually 8123. Local address, nothing goes through the cloud.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Long-lived access token</span><span class="help-opt-desc">Created in Home Assistant (profile, bottom of the page). Stored encrypted, never sent back to the browser.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Entities to display</span><span class="help-opt-desc">Name, domain, then entity, picked from lists filled from your Home Assistant — save the address and token first, then reopen the settings.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show unavailable entities</span><span class="help-opt-desc">An entity that is off, unreachable or deleted stays visible with its state instead of disappearing.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fallback refresh</span><span class="help-opt-desc">Only used when the direct connection is down (5 minutes by default).</span></div>`
       }
     },
 
@@ -867,7 +955,13 @@
 
           <h4>Sources</h4>
           <p>Stooq en principal pour les cours, Yahoo Finance en secours — même principe que la tuile Cryptos avec Binance et CoinGecko. Aucune clé ni compte. Si les deux échouent, la ligne conserve sa dernière valeur connue en s'estompant légèrement, plutôt que de disparaître.</p>
-        `,
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Lignes à afficher</span><span class="help-opt-desc">Nom, place, puis instrument ; « Autre… » pour un symbole saisi à la main (voir plus haut).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Séparer les indices des valeurs individuelles</span><span class="help-opt-desc">Indices en tête, puis un trait avant actions, devises et matières premières.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher la variation du jour</span><span class="help-opt-desc">La variation de la séance, à côté du cours.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">De 1 à 120 minutes (15 par défaut).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fond du graphique / Couleur de la courbe</span><span class="help-opt-desc">Les couleurs des courbes.</span></div>`,
         en: `
           <h4>Goal</h4>
           <p>Follow a handful of instruments you care about, one line each, with the day's change. Clicking a line opens a chart from 1 month to 5 years. By default the tile shows the CAC 40, S&P 500, Nasdaq, DAX and EUR/USD.</p>
@@ -901,7 +995,13 @@
 
           <h4>Sources</h4>
           <p>Stooq first for quotes, Yahoo Finance as backup — the same principle as the Crypto tile with Binance and CoinGecko. No key or account. If both fail, the line keeps its last known value and dims slightly, rather than disappearing.</p>
-        `
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Lines to display</span><span class="help-opt-desc">Name, exchange, then instrument; “Other…” for a hand-typed symbol (see above).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Separate indices from individual securities</span><span class="help-opt-desc">Indices first, then a line before stocks, currencies and commodities.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show the day's change</span><span class="help-opt-desc">The session's change, next to the price.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">1 to 120 minutes (15 by default).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Chart background / Curve colour</span><span class="help-opt-desc">The curves' colours.</span></div>`
       }
     },
 
@@ -931,7 +1031,12 @@
 
           <h4>Source</h4>
           <p>L'API publique <code>api-couleur-tempo.fr</code>, gratuite et sans authentification, qui relaie les données officielles de RTE. PiBoard passe par son propre relais et ne l'interroge qu'une fois toutes les 30 minutes, quel que soit le nombre de tuiles ou d'écrans : cette API est hébergée bénévolement, il serait malvenu de la marteler.</p>
-        `,
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Afficher la couleur de demain</span><span class="help-opt-desc">Dès que RTE l'a publiée, vers 11 h (voir plus haut).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Afficher les jours restants par couleur</span><span class="help-opt-desc">Quand l'API les fournit.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Utiliser la couleur réellement applicable</span><span class="help-opt-desc">Une journée Tempo va de 6 h à 6 h : avant 6 h, c'est encore la couleur de la veille qui s'applique (voir plus haut).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">De 5 à 240 minutes (30 par défaut).</span></div>`,
         en: `
           <div class="help-warn">This tile is only of interest if your electricity contract is <b>EDF's Tempo option</b>. On any other tariff, the colour shown has no bearing on your bill.</div>
 
@@ -949,7 +1054,12 @@
 
           <h4>Source</h4>
           <p>The public <code>api-couleur-tempo.fr</code> API, free and without authentication, relaying RTE's official data. PiBoard goes through its own relay and queries it only once every 30 minutes, however many tiles or screens you have: this API is hosted out of goodwill, and hammering it would be poor form.</p>
-        `
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Show tomorrow's colour</span><span class="help-opt-desc">As soon as RTE has published it, around 11am (see above).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Show remaining days per colour</span><span class="help-opt-desc">When the API provides them.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Use the currently applicable colour</span><span class="help-opt-desc">A Tempo day runs from 6am to 6am: before 6am, the previous day's colour still applies (see above).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">5 to 240 minutes (30 by default).</span></div>`
       }
     },
 
@@ -979,7 +1089,12 @@
           <p>La tuile est bâtie autour d'un système de fournisseurs : le widget lui-même ne connaît aucun service, il affiche des fenêtres. Ajouter ChatGPT, Gemini ou Copilot plus tard ne demandera donc pas de refaire la tuile.</p>
 
           <div class="help-warn"><b>Point d'entrée non officiel.</b> Le service d'usage utilisé n'est pas une API publique documentée : c'est celle qu'emploie le client officiel. Elle peut changer sans préavis. Le jour où cela arrivera, la tuile affichera « Quotas indisponibles » au lieu de se figer ou de faire tomber PiBoard — mais il faudra une mise à jour pour la remettre en service.</div>
-        `,
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Fournisseur</span><span class="help-opt-desc">Le service dont les quotas sont suivis (Claude, Anthropic).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Fenêtres affichées</span><span class="help-opt-desc">5 heures, 7 jours, et la fenêtre Opus hebdomadaire quand le fournisseur en renvoie une — chacune peut être masquée.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Orange / Rouge au-dessus de</span><span class="help-opt-desc">Seuils de couleur des jauges, en pourcentage (75 % et 90 % par défaut).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rafraîchissement</span><span class="help-opt-desc">De 1 à 60 minutes (5 par défaut).</span></div>`,
         en: `
           <h4>Goal</h4>
           <p>See at a glance how much quota is left on your AI account, without opening the service's usage page. One bar per window, with the time left before it resets.</p>
@@ -997,7 +1112,12 @@
           <p>The tile is built around a provider system: the widget itself knows no service, it displays windows. Adding ChatGPT, Gemini or Copilot later will therefore not require rebuilding the tile.</p>
 
           <div class="help-warn"><b>Unofficial endpoint.</b> The usage service used is not a documented public API: it is the one the official client uses. It may change without notice. When that happens the tile will show "Usage unavailable" rather than freezing or bringing PiBoard down — but an update will be needed to restore it.</div>
-        `
+        
+          <h4>Options</h4>
+          <div class="help-opt"><span class="help-opt-name">Provider</span><span class="help-opt-desc">The service whose quotas are tracked (Claude, Anthropic).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Windows shown</span><span class="help-opt-desc">5 hours, 7 days, and the weekly Opus window when the provider reports one — each can be hidden.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Amber / Red above</span><span class="help-opt-desc">Gauge colour thresholds, in percent (75% and 90% by default).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Refresh</span><span class="help-opt-desc">1 to 60 minutes (5 by default).</span></div>`
       }
     },
 
@@ -2759,7 +2879,19 @@
           <p>Cette commande agit sur <b>cette copie précise</b> et rien d'autre : aucune protection de macOS n'est désactivée. Sur une version officielle signée (1.139.3 et suivantes, téléchargée depuis les releases GitHub), elle n'a jamais besoin d'être lancée.</p>
 
           <h4>Versions et architectures</h4>
-          <p>macOS 12 (Monterey) et suivants. Deux fichiers sont publiés à chaque version : <code>mac-arm64</code> pour les Mac Apple Silicon (M1, M2, M3, M4…) et <code>mac-x64</code> pour les Mac Intel. Prendre le mauvais fichier fonctionne quand même, par émulation Rosetta, mais consomme plus de mémoire et de batterie — autant prendre le bon.</p>`,
+          <p>macOS 12 (Monterey) et suivants. Deux fichiers sont publiés à chaque version : <code>mac-arm64</code> pour les Mac Apple Silicon (M1, M2, M3, M4…) et <code>mac-x64</code> pour les Mac Intel. Prendre le mauvais fichier fonctionne quand même, par émulation Rosetta, mais consomme plus de mémoire et de batterie — autant prendre le bon.</p>
+          <h4>Le menu PiBoard</h4>
+          <p>Sur Mac, la barre de menus en haut de l'écran porte deux menus : <b>PiBoard</b> et <b>Édition</b> (indispensable pour copier-coller une clé API avec Cmd+C / Cmd+V).</p>
+          <div class="help-opt"><span class="help-opt-name">Recharger</span><span class="help-opt-desc">Recharge le tableau de bord. Raccourci : Cmd+R.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Plein écran</span><span class="help-opt-desc">F11.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Zoom +/-/100 %</span><span class="help-opt-desc">Agrandit ou réduit toute l'interface.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Ouvrir le journal</span><span class="help-opt-desc">Ouvre le fichier des messages techniques de PiBoard — utile quand un message d'erreur y renvoie. Il est vidé à chaque lancement.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rechercher une mise à jour</span><span class="help-opt-desc">Vérifie tout de suite s'il existe une nouvelle version.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Quitter</span><span class="help-opt-desc">Cmd+Q.</span></div>
+          <h4>Mises à jour automatiques</h4>
+          <p>Depuis la 1.139.3, l'application vérifie quelques secondes après chaque démarrage, télécharge la nouvelle version en arrière-plan et propose de l'installer — comme sous Windows. Le niveau (stables seulement, ou aussi les pré-versions) se choisit dans Réglages → Mises à jour.</p>
+          <h4>Emplacement des données</h4>
+          <p>Réglages, tuiles, clés et photos : <code>~/Library/Application Support/PiBoard/data</code>. Journal : <code>~/Library/Application Support/PiBoard/logs/piboard.log</code>. ffmpeg, s'il a été installé par PiBoard, se trouve dans <code>data/ffmpeg</code> ; VLC, dans Applications (ou <code>~/Applications</code> pour un compte standard). Ce dossier est conservé lors d'une mise à jour.</p>`,
         en: `
           <h4>Since 1.139.3: signed and notarized by Apple</h4>
           <p>PiBoard now carries a <b>Developer ID Application</b> certificate and is <b>notarized</b> by Apple on every official release. In practice: no more Gatekeeper block on first launch, no more <code>xattr</code> command to retype after each update, and <b>automatic updating</b> works exactly as on Windows and Linux — PiBoard downloads the new version and installs it when the application closes.</p>
@@ -2772,7 +2904,19 @@
           <p>That command acts on <b>that one copy</b> and nothing else: no macOS protection is turned off. On an official signed version (1.139.3 and later, downloaded from the GitHub releases), it is never needed.</p>
 
           <h4>Versions and architectures</h4>
-          <p>macOS 12 (Monterey) and later. Two files are published with every release: <code>mac-arm64</code> for Apple Silicon Macs (M1, M2, M3, M4…) and <code>mac-x64</code> for Intel Macs. Picking the wrong one still works, through Rosetta emulation, but uses more memory and battery — better to pick the right one.</p>`
+          <p>macOS 12 (Monterey) and later. Two files are published with every release: <code>mac-arm64</code> for Apple Silicon Macs (M1, M2, M3, M4…) and <code>mac-x64</code> for Intel Macs. Picking the wrong one still works, through Rosetta emulation, but uses more memory and battery — better to pick the right one.</p>
+          <h4>The PiBoard menu</h4>
+          <p>On a Mac, the menu bar at the top of the screen holds two menus: <b>PiBoard</b> and <b>Edit</b> (essential to copy-paste an API key with Cmd+C / Cmd+V).</p>
+          <div class="help-opt"><span class="help-opt-name">Reload</span><span class="help-opt-desc">Reloads the dashboard. Shortcut: Cmd+R.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Full screen</span><span class="help-opt-desc">F11.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Zoom +/-/100 %</span><span class="help-opt-desc">Enlarges or shrinks the whole interface.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Open log</span><span class="help-opt-desc">Opens PiBoard's technical message file — handy when an error message points to it. It is cleared at every launch.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Check for updates</span><span class="help-opt-desc">Checks right away for a new version.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Quit</span><span class="help-opt-desc">Cmd+Q.</span></div>
+          <h4>Automatic updates</h4>
+          <p>Since 1.139.3, the application checks a few seconds after each start, downloads the new version in the background and offers to install it — as on Windows. The level (stable only, or pre-releases too) is chosen in Settings → Updates.</p>
+          <h4>Data location</h4>
+          <p>Settings, tiles, keys and photos: <code>~/Library/Application Support/PiBoard/data</code>. Log: <code>~/Library/Application Support/PiBoard/logs/piboard.log</code>. ffmpeg, when installed by PiBoard, lives in <code>data/ffmpeg</code>; VLC in Applications (or <code>~/Applications</code> for a standard account). This folder is kept across updates.</p>`
       }
     },
 
@@ -2826,6 +2970,44 @@
 
           <h4>Data location</h4>
           <p>Settings, tile layout, API keys and uploaded photos are stored in <code>%APPDATA%\\PiBoard</code>. This folder is kept across an update or an uninstall — a reinstall finds everything back as it was.</p>`
+      }
+    },
+
+    {
+      id: "linux-app",
+      group: "platform",
+      title: { fr: "Application de bureau Linux", en: "Linux desktop app" },
+      sub: {
+        fr: "Paquet .deb ou AppImage, x64 et arm64 : installation, mises à jour, données.",
+        en: ".deb package or AppImage, x64 and arm64: installation, updates, data."
+      },
+      html: {
+        fr: `
+          <h4>Pour qui</h4>
+          <p>Un PC Linux avec un bureau (GNOME, KDE, XFCE…) qui affiche PiBoard dans une fenêtre, comme sous Windows ou macOS. Pour un Raspberry Pi en kiosque (serveur + Chromium plein écran), voir plutôt <i>Mises à jour sur Raspberry Pi / Linux</i>.</p>
+          <h4>Quel fichier choisir</h4>
+          <div class="help-opt"><span class="help-opt-name">.deb</span><span class="help-opt-desc">Pour Debian, Ubuntu, Raspberry Pi OS, Mint… S'installe comme tout paquet ; la mise à jour demande le mot de passe administrateur.</span></div>
+          <div class="help-opt"><span class="help-opt-name">AppImage</span><span class="help-opt-desc">Un seul fichier exécutable, sans installation ni droits particuliers ; la mise à jour le remplace sur place.</span></div>
+          <div class="help-opt"><span class="help-opt-name">x86_64 / amd64 ou arm64</span><span class="help-opt-desc">x86_64 (amd64) pour un PC classique, arm64 pour un Raspberry Pi 4/5 ou une machine ARM.</span></div>
+          <h4>Le menu caché</h4>
+          <p>Comme sous Windows : la barre de menus est masquée, la touche <b>Alt</b> la fait apparaître (Recharger, Plein écran, Zoom, Ouvrir le journal, Rechercher une mise à jour, Quitter).</p>
+          <h4>Mises à jour automatiques</h4>
+          <p>Vérification quelques secondes après chaque démarrage, téléchargement en arrière-plan, installation proposée. Le niveau (stables ou pré-versions) se règle dans Réglages → Mises à jour.</p>
+          <h4>Démarrage et données</h4>
+          <p>« Lancer PiBoard au démarrage de la session » (Réglages → Application de bureau) crée un fichier dans <code>~/.config/autostart</code>. Données : <code>~/.config/PiBoard/data</code> ; journal : <code>~/.config/PiBoard/logs/piboard.log</code>.</p>`,
+        en: `
+          <h4>Who it is for</h4>
+          <p>A Linux PC with a desktop (GNOME, KDE, XFCE…) showing PiBoard in a window, as on Windows or macOS. For a Raspberry Pi in kiosk mode (server + full-screen Chromium), see <i>Updates on Raspberry Pi / Linux</i> instead.</p>
+          <h4>Which file to pick</h4>
+          <div class="help-opt"><span class="help-opt-name">.deb</span><span class="help-opt-desc">For Debian, Ubuntu, Raspberry Pi OS, Mint… Installs like any package; updating asks for the administrator password.</span></div>
+          <div class="help-opt"><span class="help-opt-name">AppImage</span><span class="help-opt-desc">A single executable file, no installation or special rights; updating replaces it in place.</span></div>
+          <div class="help-opt"><span class="help-opt-name">x86_64 / amd64 or arm64</span><span class="help-opt-desc">x86_64 (amd64) for a regular PC, arm64 for a Raspberry Pi 4/5 or an ARM machine.</span></div>
+          <h4>The hidden menu</h4>
+          <p>As on Windows: the menu bar is hidden and the <b>Alt</b> key reveals it (Reload, Full screen, Zoom, Open log, Check for updates, Quit).</p>
+          <h4>Automatic updates</h4>
+          <p>Checked a few seconds after each start, downloaded in the background, installation offered. The level (stable or pre-releases) is set in Settings → Updates.</p>
+          <h4>Startup and data</h4>
+          <p>“Launch PiBoard when the session starts” (Settings → Desktop application) creates a file in <code>~/.config/autostart</code>. Data: <code>~/.config/PiBoard/data</code>; log: <code>~/.config/PiBoard/logs/piboard.log</code>.</p>`
       }
     },
 

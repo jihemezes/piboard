@@ -92,6 +92,18 @@ files:
   # .gitignore): this more specific pattern, placed after the general
   # exclusion, overrides it for this one file.
   - "CHANGELOG.md"
+  # WHATSNEW.md : MEME CAS, MEME PANNE (corrige en 1.141.1). Servi par
+  # GET /api/whatsnew (section « Nouveautes » de l'aide depuis la
+  # 1.119.0), il tombait sous l'exclusion generale ci-dessus : 404 dans
+  # toutes les applications de bureau, alors que le Raspberry Pi, qui
+  # n'est pas empaquete, l'affichait. test/whatsnew.test.js verifie
+  # desormais que tout fichier .md lu par le serveur est bien inclus.
+  # WHATSNEW.md: SAME CASE, SAME FAILURE (fixed in 1.141.1). Served by
+  # GET /api/whatsnew, it fell under the general exclusion above: 404 in
+  # every desktop application, while the unpackaged Raspberry Pi showed
+  # it. test/whatsnew.test.js now checks every .md read by the server is
+  # included.
+  - "WHATSNEW.md"
 
 # ARCHIVE ASAR REACTIVEE, DE FACON CIBLEE.
 # Desactivee jusqu'ici (voir historique), avec une reserve explicite :
