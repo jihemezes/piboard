@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.142.0
+   Version 1.143.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -8509,19 +8509,25 @@
     });
   }
 
-  /* ---------- Aide en page pleine / full-page help (1.142.0) ----------
-     Une carte par FAMILLE, chaque carte listant ses rubriques cliquables.
-     Les familles des tuiles reprennent celles du catalogue d'ajout
-     (CATALOG_FAMILIES) : une seule classification a apprendre. Les autres
-     groupes (Presentation, Tiroir, Plateformes, Remerciements) gardent
-     leur nom. Une rubrique n'appartient qu'a une famille : elle est donc
-     toujours trouvable, et une fiche ajoutee dans help-content.js apparait
-     automatiquement dans la bonne carte.
-     One card per FAMILY, each listing its clickable topics. Tile families
-     follow the catalogue's (CATALOG_FAMILIES): one classification to learn.
-     The other groups keep their names. A topic belongs to exactly one
-     family, so it is always findable, and a page added in help-content.js
-     shows up in the right card automatically. */
+  /* ---------- Aide en page pleine : famille -> fiche -> rubrique (1.143.0) ----------
+     Trois niveaux, comme le design « Help Center » :
+       famille  = une famille du catalogue d'ajout (CATALOG_FAMILIES) ou un
+                  groupe (Presentation, Tiroir, Plateformes, Remerciements) ;
+       fiche    = une section de PIBOARD_HELP (une tuile, une fonction) ;
+       rubrique = un decoupage de la fiche sur ses titres <h4> : l'aide
+                  actuelle n'est PAS reecrite, seulement presentee par morceaux
+                  cliquables. Les fiches a contenu dynamique (demarrage rapide,
+                  a propos, nouveautes) restent d'un seul tenant.
+     Three levels, like the "Help Center" design: family (a catalogue family
+     or a group), page (a PIBOARD_HELP section), section (a split of the page
+     on its <h4> headings: the current help is NOT rewritten, only presented
+     in clickable pieces). Pages with dynamic content (quick start, about,
+     what's new) stay in one piece. */
+  let helpActiveRub = null;               // index de la rubrique ouverte / open section index
+  const helpOpenFamilies = new Set();     // familles depliees dans l'arbre / families unfolded in the tree
+  const helpRubCache = new Map();
+  const HELP_WHOLE = ["quickstart", "about", "changelog"];
+
   function helpFamilyKeyOf(sec) {
     if (sec.group !== "tiles") return sec.group;
     const fam = CATALOG_FAMILIES.find((f) => f.ids.includes(sec.id));
@@ -8542,53 +8548,128 @@
       if (!byKey.has(key)) byKey.set(key, []);
       byKey.get(key).push(sec);
     }
-    // Une cle inattendue n'est jamais omise : elle ferme la liste.
-    // An unexpected key is never dropped: it closes the list.
     // Un Set : une famille presente dans l'ordre ET dans les donnees ne
-    // s'affiche qu'une seule fois. / A Set: a family both in the order and
-    // in the data is shown only once.
+    // s'affiche qu'une fois. / A Set: a family both in the order and in the
+    // data is shown only once.
     const keys = [...new Set(order.concat([...byKey.keys()]))];
     return keys.filter((k) => byKey.has(k)).map((key) => ({
       key, label: helpFamilyLabel(key), sections: byKey.get(key)
     }));
   }
 
-  function helpCountLabel(n) {
-    return n === 1 ? i18n.t("help.family.count.one") : i18n.t("help.family.count.many").replace("{n}", n);
+  function helpFamilyOfSection(sec) {
+    return helpFamilies(window.PIBOARD_HELP || []).find((f) => f.sections.some((s) => s.id === sec.id)) || null;
   }
 
-  /* Accueil : la liste des familles, une carte chacune. Reconstruite a
-     chaque ouverture (langue ou contenu a pu changer). / Home: one card per
-     family, rebuilt on every opening (language or content may have changed). */
-  function renderHelpIndex() {
+  function helpCount(oneKey, manyKey, n) {
+    return n === 1 ? i18n.t(oneKey) : i18n.t(manyKey).replace("{n}", n);
+  }
+
+  /* Decoupe une fiche en rubriques. Le paragraphe « Taille : ... » en tete
+     des fiches de tuile devient une etiquette. Du texte d'introduction
+     avant le premier <h4> devient la rubrique « En bref ». Resultat mis en
+     cache par langue. / Splits a page into sections. The "Size: ..."
+     paragraph heading tile pages becomes a tag. Introductory text before
+     the first <h4> becomes the "At a glance" section. Cached per language. */
+  function helpRubriques(sec) {
+    const ck = sec.id + "|" + i18n.lang;
+    if (helpRubCache.has(ck)) return helpRubCache.get(ck);
+    const title = i18n.fromManifest(sec.title);
+    const html = i18n.fromManifest(sec.html) || "";
+    let out;
+    if (HELP_WHOLE.indexOf(sec.id) >= 0 || !html.trim()) {
+      out = { size: "", rubs: [{ title, html, whole: true }] };
+    } else {
+      const tpl = document.createElement("template");
+      tpl.innerHTML = html;
+      const asHtml = (nodes) => {
+        const box = document.createElement("div");
+        nodes.forEach((n) => box.appendChild(n.cloneNode(true)));
+        return box.innerHTML;
+      };
+      const rubs = [], lead = [];
+      let cur = null, size = "";
+      Array.from(tpl.content.childNodes).forEach((n) => {
+        if (n.nodeType === 1 && n.tagName === "H4") { cur = { title: n.textContent.trim(), nodes: [] }; rubs.push(cur); }
+        else if (cur) cur.nodes.push(n);
+        else if (n.nodeType === 1 && n.classList.contains("help-size")) size = size || n.textContent.trim();
+        else lead.push(n);
+      });
+      if (!rubs.length) {
+        out = { size: "", rubs: [{ title, html }] };
+      } else {
+        const list = rubs.map((r) => ({ title: r.title, html: asHtml(r.nodes) }));
+        if (lead.map((n) => n.textContent).join("").trim().length > 60) list.unshift({ title: i18n.t("help.rub.lead"), html: asHtml(lead) });
+        out = { size, rubs: list };
+      }
+    }
+    helpRubCache.set(ck, out);
+    return out;
+  }
+
+  function helpReadLabel(html) {
+    const box = document.createElement("div");
+    box.innerHTML = html;
+    const words = (box.textContent || "").trim().split(/\s+/).length;
+    return i18n.t("help.readtime").replace("{n}", Math.max(1, Math.round(words / 180)));
+  }
+
+  /* Arbre de gauche : familles repliables, fiches dessous. Les fiches
+     portent data-help-id ; leur texte de recherche reprend aussi les titres
+     de leurs rubriques. / Left tree: foldable families, pages below. Pages
+     carry data-help-id; their search text also holds their section titles. */
+  function renderHelpTree() {
     const families = helpFamilies(window.PIBOARD_HELP || []);
-    $("helpNav").innerHTML =
-      `<p class="help-index-intro">${escapeHtml(i18n.t("help.home.intro"))}</p>` +
-      `<div class="help-families">` +
-      families.map((fam) =>
-        `<section class="help-family" data-help-group="${fam.key}">` +
-          `<div class="help-family-head">` +
-            `<h3 class="help-family-title" data-help-family-title="${escapeHtml(normalizeSearch(fam.label))}">${escapeHtml(fam.label)}</h3>` +
-            `<span class="help-family-count">${escapeHtml(helpCountLabel(fam.sections.length))}</span>` +
-          `</div>` +
-          `<div class="help-family-themes">` +
-            fam.sections.map((sec) =>
-              `<button type="button" class="help-theme" data-help-id="${escapeHtml(sec.id)}" data-help-search="${escapeHtml(normalizeSearch(i18n.fromManifest(sec.title)))}">${escapeHtml(i18n.fromManifest(sec.title))}</button>`
-            ).join("") +
-          `</div>` +
-        `</section>`).join("") +
-      `</div>` +
+    $("helpNav").innerHTML = families.map((fam) =>
+      `<div class="help-family" data-help-group="${fam.key}">` +
+        `<button type="button" class="help-family-head" data-help-toggle="${fam.key}" aria-expanded="false">` +
+          `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>` +
+          `<span class="help-family-title" data-help-family-title="${escapeHtml(normalizeSearch(fam.label))}">${escapeHtml(fam.label)}</span>` +
+          `<span class="help-family-count">${fam.sections.length}</span>` +
+        `</button>` +
+        `<div class="help-family-themes" hidden>` +
+          fam.sections.map((sec) => {
+            const rubTitles = helpRubriques(sec).rubs.map((r) => r.title).join(" ");
+            return `<button type="button" class="help-theme" data-help-id="${escapeHtml(sec.id)}" data-help-search="${escapeHtml(normalizeSearch(i18n.fromManifest(sec.title) + " " + rubTitles))}">${escapeHtml(i18n.fromManifest(sec.title))}</button>`;
+          }).join("") +
+        `</div>` +
+      `</div>`).join("") +
       `<div class="help-nav-empty" id="helpNavEmpty" hidden>${escapeHtml(i18n.t("help.searchEmpty"))}</div>`;
     $("helpNav").querySelectorAll("[data-help-id]").forEach((btn) => {
       onActivate(btn, () => showHelpSection(btn.dataset.helpId));
     });
+    $("helpNav").querySelectorAll("[data-help-toggle]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const k = btn.dataset.helpToggle;
+        if (helpOpenFamilies.has(k)) helpOpenFamilies.delete(k); else helpOpenFamilies.add(k);
+        syncHelpTree();
+      });
+    });
   }
 
-  /* Filtre l'accueil. Une famille dont le NOM correspond montre toutes ses
-     rubriques ; sinon seules les rubriques qui correspondent restent. Une
-     famille sans rubrique visible est masquee. / Filters the home page. A
-     family whose NAME matches shows all its topics; otherwise only matching
-     topics remain. A family with no visible topic is hidden. */
+  /* Deplie/replie les familles et marque la fiche ouverte. Pendant une
+     recherche, toute famille qui a un resultat est depliee. / Unfolds/folds
+     families and marks the open page. During a search, every family that
+     has a result is unfolded. */
+  function syncHelpTree() {
+    const searching = !!normalizeSearch(($("helpNavSearch").value || "").trim());
+    $("helpNav").querySelectorAll(".help-family").forEach((fam) => {
+      const open = searching ? !fam.hidden : helpOpenFamilies.has(fam.dataset.helpGroup);
+      const head = fam.querySelector(".help-family-head");
+      fam.querySelector(".help-family-themes").hidden = !open;
+      head.classList.toggle("open", open);
+      head.setAttribute("aria-expanded", open ? "true" : "false");
+    });
+    $("helpNav").querySelectorAll(".help-theme").forEach((b) => {
+      b.classList.toggle("active", b.dataset.helpId === helpActiveId);
+    });
+  }
+
+  /* Filtre l'arbre. Une famille dont le NOM correspond montre toutes ses
+     fiches ; sinon seules les fiches (ou rubriques) qui correspondent
+     restent. Une famille sans fiche visible est masquee. / Filters the tree.
+     A family whose NAME matches shows all its pages; otherwise only matching
+     pages (or sections) remain. A family with no visible page is hidden. */
   function filterHelpIndex() {
     const q = normalizeSearch(($("helpNavSearch").value || "").trim());
     let anyVisible = false;
@@ -8605,61 +8686,169 @@
       if (visible) anyVisible = true;
     });
     $("helpNavEmpty").hidden = anyVisible;
+    syncHelpTree();
   }
 
-  /* Deux vues dans la meme page : l'accueil (familles) ou une rubrique. /
-     Two views in the same page: the home (families) or one topic. */
+  /* Accueil : une carte par famille, ses fiches en pastilles. / Home: one
+     card per family, its pages as chips. */
+  function renderHelpHome() {
+    const families = helpFamilies(window.PIBOARD_HELP || []);
+    $("helpHome").innerHTML =
+      `<div class="help-hero"><h1>${escapeHtml(i18n.t("help.home.title"))}</h1>` +
+      `<p class="help-hero-sub">${escapeHtml(i18n.t("help.home.intro"))}</p></div>` +
+      `<div class="help-cards">` + families.map((fam) =>
+        `<section class="help-card" data-help-card="${fam.key}">` +
+          `<div class="help-card-head"><h3>${escapeHtml(fam.label)}</h3>` +
+          `<span>${escapeHtml(helpCount("help.family.count.one", "help.family.count.many", fam.sections.length))}</span></div>` +
+          `<div class="help-card-themes">` + fam.sections.map((sec) =>
+            `<button type="button" class="help-card-theme" data-help-open="${escapeHtml(sec.id)}">${escapeHtml(i18n.fromManifest(sec.title))}</button>`
+          ).join("") + `</div>` +
+        `</section>`).join("") + `</div>`;
+    $("helpHome").querySelectorAll("[data-help-open]").forEach((b) => {
+      onActivate(b, () => showHelpSection(b.dataset.helpOpen));
+    });
+  }
+
+  /* Une seule vue a la fois dans la zone centrale. / One view at a time in
+     the central area. */
   function helpShowView(view) {
-    const topic = view === "topic";
-    $("helpNav").hidden = topic;
-    $("helpTopic").hidden = !topic;
-    $("helpBack").hidden = !topic;
-    $("helpCrumbs").hidden = !topic;
+    $("helpHome").hidden = view !== "home";
+    $("helpFiche").hidden = view !== "fiche";
+    $("helpTopic").hidden = view !== "topic";
+    $("helpCrumbs").hidden = view === "home";
+    $("helpMain").scrollTop = 0;
   }
 
-  function helpGoIndex(familyKey) {
+  function helpGoHome(familyKey) {
     helpActiveId = null;
-    helpShowView("index");
+    helpActiveRub = null;
+    if (familyKey) helpOpenFamilies.add(familyKey);
+    helpShowView("home");
+    renderHelpRail(null, null, null, null);
+    syncHelpTree();
     if (familyKey) {
-      const card = $("helpNav").querySelector(`[data-help-group="${familyKey}"]`);
+      const card = $("helpHome").querySelector(`[data-help-card="${familyKey}"]`);
       if (card) card.scrollIntoView({ block: "start" });
     }
   }
 
-  function helpFamilyOfSection(sec) {
-    return helpFamilies(window.PIBOARD_HELP || []).find((f) => f.sections.some((s) => s.id === sec.id)) || null;
-  }
-
-  /* Fil d'Ariane : Aide / famille / rubrique. / Breadcrumb: Help / family / topic. */
-  function renderHelpCrumbs(sec) {
-    const fam = helpFamilyOfSection(sec);
-    const crumbs = $("helpCrumbs");
-    crumbs.innerHTML =
-      `<button type="button" data-help-crumb="home">${escapeHtml(i18n.t("help.title"))}</button>` +
-      (fam ? `<span class="help-crumb-sep">/</span><button type="button" data-help-crumb="family" data-help-family="${fam.key}">${escapeHtml(fam.label)}</button>` : "") +
-      `<span class="help-crumb-sep">/</span><span class="help-crumb-here">${escapeHtml(i18n.fromManifest(sec.title))}</span>`;
-    crumbs.querySelectorAll("[data-help-crumb]").forEach((b) => {
-      b.addEventListener("click", () => helpGoIndex(b.dataset.helpCrumb === "family" ? b.dataset.helpFamily : null));
+  /* Fil d'Ariane : Aide / famille / fiche / rubrique. / Breadcrumb. */
+  function renderHelpCrumbs(sec, fam, rubTitle) {
+    const sep = `<span class="help-crumb-sep">/</span>`;
+    const secTitle = escapeHtml(i18n.fromManifest(sec.title));
+    $("helpCrumbs").innerHTML =
+      `<button type="button" data-crumb="home">${escapeHtml(i18n.t("help.title"))}</button>` +
+      (fam ? sep + `<button type="button" data-crumb="family" data-family="${fam.key}">${escapeHtml(fam.label)}</button>` : "") +
+      (rubTitle
+        ? sep + `<button type="button" data-crumb="fiche">${secTitle}</button>` + sep + `<span class="help-crumb-here">${escapeHtml(rubTitle)}</span>`
+        : sep + `<span class="help-crumb-here">${secTitle}</span>`);
+    $("helpCrumbs").querySelectorAll("[data-crumb]").forEach((b) => {
+      b.addEventListener("click", () => {
+        if (b.dataset.crumb === "fiche") showHelpSection(sec.id);
+        else helpGoHome(b.dataset.crumb === "family" ? b.dataset.family : null);
+      });
     });
   }
 
-  /* Precedent / suivant, limites a la famille de la rubrique ouverte. /
-     Previous / next, limited to the open topic's family. */
-  function renderHelpPager(sec) {
-    const fam = helpFamilyOfSection(sec);
-    const list = fam ? fam.sections : [];
-    const i = list.findIndex((s) => s.id === sec.id);
-    const prev = i > 0 ? list[i - 1] : null;
-    const next = i >= 0 && i < list.length - 1 ? list[i + 1] : null;
-    const card = (s, label, cls) =>
-      `<button type="button" class="${cls}" data-help-go="${escapeHtml(s.id)}">` +
-      `<span class="help-pager-label">${escapeHtml(label)}</span>` +
-      `<span class="help-pager-title">${escapeHtml(i18n.fromManifest(s.title))}</span></button>`;
+  /* Colonne de droite : les rubriques de la fiche (ou les autres fiches de
+     la famille), puis l'encart « Un bug, une idee ? ». / Right column: the
+     page's sections (or the family's other pages), then the bug box. */
+  function renderHelpRail(sec, info, fam, idx) {
+    let top = "";
+    if (sec && info && info.rubs.length > 1 && idx != null) {
+      top = `<div class="help-rail-block"><span class="help-rail-label">${escapeHtml(i18n.t("help.rail.in"))}</span><div class="help-rail-items">` +
+        info.rubs.map((r, i) => `<button type="button" class="help-rail-item${i === idx ? " active" : ""}" data-rubrique="${i}">${escapeHtml(r.title)}</button>`).join("") +
+        `</div></div>`;
+    } else if (sec && fam && fam.sections.length > 1) {
+      top = `<div class="help-rail-block"><span class="help-rail-label">${escapeHtml(i18n.t("help.rail.also").replace("{f}", fam.label))}</span><div class="help-rail-chips">` +
+        fam.sections.filter((s) => s.id !== sec.id).map((s) => `<button type="button" class="help-rail-chip" data-help-open="${escapeHtml(s.id)}">${escapeHtml(i18n.fromManifest(s.title))}</button>`).join("") +
+        `</div></div>`;
+    }
+    $("helpRail").innerHTML = top +
+      `<div class="help-rail-card"><div class="help-rail-card-title">${escapeHtml(i18n.t("help.rail.card.title"))}</div>` +
+      `<p>${escapeHtml(i18n.t("help.rail.card.text"))}</p>` +
+      `<button type="button" class="btn" id="helpRailBug">${escapeHtml(i18n.t("help.rail.card.btn"))}</button></div>`;
+    $("helpRail").querySelectorAll("[data-rubrique]").forEach((b) => {
+      onActivate(b, () => showHelpSection(sec.id, Number(b.dataset.rubrique)));
+    });
+    $("helpRail").querySelectorAll("[data-help-open]").forEach((b) => {
+      onActivate(b, () => showHelpSection(b.dataset.helpOpen));
+    });
+    $("helpRailBug").addEventListener("click", () => showHelpSection("contribute"));
+  }
+
+  /* Vue « fiche » : titre, sous-titre, puis les rubriques cliquables. /
+     "Page" view: title, subtitle, then the clickable sections. */
+  function renderHelpFiche(sec, info, fam) {
+    const n = info.rubs.length;
+    const shot = sec.screenshot
+      ? `<img class="help-screenshot" src="${sec.screenshot}" alt="${escapeHtml(i18n.fromManifest(sec.title))}" loading="lazy">` : "";
+    $("helpFiche").innerHTML =
+      `<div class="help-hero"><h1>${escapeHtml(i18n.fromManifest(sec.title))}</h1>` +
+      (sec.sub ? `<p class="help-hero-sub">${i18n.fromManifest(sec.sub)}</p>` : "") +
+      `<div class="help-hero-meta">` +
+        (fam ? `<span class="help-tag help-tag-accent">${escapeHtml(fam.label)}</span>` : "") +
+        (info.size ? `<span class="help-tag">${escapeHtml(info.size)}</span>` : "") +
+        `<span>${escapeHtml(helpCount("help.rub.count.one", "help.rub.count.many", n))}</span></div></div>` +
+      shot +
+      `<div class="help-rubs">` + info.rubs.map((r, i) =>
+        `<button type="button" class="help-rub" data-rubrique="${i}">` +
+          `<span class="help-rub-num">${i + 1}</span>` +
+          `<span class="help-rub-text"><span class="help-rub-title">${escapeHtml(r.title)}</span>` +
+          `<span class="help-rub-meta">${escapeHtml(helpReadLabel(r.html))}</span></span>` +
+          `<svg class="help-rub-chev" viewBox="0 0 24 24" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>` +
+        `</button>`).join("") + `</div>`;
+    $("helpFiche").querySelectorAll("[data-rubrique]").forEach((b) => {
+      onActivate(b, () => showHelpSection(sec.id, Number(b.dataset.rubrique)));
+    });
+    helpShowView("fiche");
+    renderHelpCrumbs(sec, fam, null);
+    renderHelpRail(sec, info, fam, null);
+  }
+
+  /* Vue « article » : une rubrique, avec precedent / suivant. Une fiche a
+     une seule rubrique s'ouvre directement ici. / "Article" view: one
+     section, with previous / next. A single-section page opens straight
+     here. */
+  function renderHelpArticle(sec, info, idx, fam) {
+    const r = info.rubs[idx];
+    const multi = info.rubs.length > 1;
+    $("helpContent").innerHTML = r.html;
+    $("helpArticleHead").hidden = !!r.whole;
+    $("helpArticleTitle").textContent = r.title;
+    $("helpArticleTags").innerHTML =
+      (fam ? `<span class="help-tag help-tag-accent">${escapeHtml(fam.label)}</span>` : "") +
+      (info.size ? `<span class="help-tag">${escapeHtml(info.size)}</span>` : "") +
+      `<span>${escapeHtml(helpReadLabel(r.html))}</span>`;
+    const back = $("helpBack");
+    back.hidden = !multi;
+    back.textContent = "← " + i18n.t("help.rub.back").replace("{t}", i18n.fromManifest(sec.title));
+    back.onclick = () => showHelpSection(sec.id);
+
+    // Precedent / suivant : entre rubriques, ou entre fiches de la famille
+    // quand la fiche n'a qu'une rubrique. / Previous / next: between
+    // sections, or between the family's pages when the page has one section.
+    let prev = null, next = null;
+    if (multi) {
+      if (idx > 0) prev = { t: info.rubs[idx - 1].title, go: () => showHelpSection(sec.id, idx - 1) };
+      if (idx < info.rubs.length - 1) next = { t: info.rubs[idx + 1].title, go: () => showHelpSection(sec.id, idx + 1) };
+    } else if (fam) {
+      const i = fam.sections.findIndex((s) => s.id === sec.id);
+      if (i > 0) { const p = fam.sections[i - 1]; prev = { t: i18n.fromManifest(p.title), go: () => showHelpSection(p.id) }; }
+      if (i >= 0 && i < fam.sections.length - 1) { const nx = fam.sections[i + 1]; next = { t: i18n.fromManifest(nx.title), go: () => showHelpSection(nx.id) }; }
+    }
     const pager = $("helpPager");
+    const card = (o, label, cls) => `<button type="button" class="${cls}"><span class="help-pager-label">${escapeHtml(label)}</span><span class="help-pager-title">${escapeHtml(o.t)}</span></button>`;
     pager.innerHTML =
       (prev ? card(prev, i18n.t("help.pager.prev"), "help-pager-prev") : "<span></span>") +
       (next ? card(next, i18n.t("help.pager.next"), "help-pager-next") : "<span></span>");
-    pager.querySelectorAll("[data-help-go]").forEach((b) => onActivate(b, () => showHelpSection(b.dataset.helpGo)));
+    const bp = pager.querySelector(".help-pager-prev"), bn = pager.querySelector(".help-pager-next");
+    if (bp) onActivate(bp, prev.go);
+    if (bn) onActivate(bn, next.go);
+
+    helpShowView("topic");
+    renderHelpCrumbs(sec, fam, multi ? r.title : null);
+    renderHelpRail(sec, info, fam, idx);
   }
 
   /* Theme de l'aide (1.142.0). Par defaut « follow » : rien a poser, la page
@@ -8699,14 +8888,8 @@
   function wireHelpPage() {
     if (helpWired) return;
     helpWired = true;
-    $("helpBack").addEventListener("click", () => helpGoIndex(null));
-    // Taper dans la recherche ramene a l'accueil filtre ; l'effacer rend
-    // toutes les rubriques. / Typing returns to the filtered home; clearing
-    // it shows every topic again.
-    $("helpNavSearch").addEventListener("input", () => {
-      if (($("helpNavSearch").value || "").trim()) helpShowView("index");
-      filterHelpIndex();
-    });
+    $("helpNavSearch").addEventListener("input", filterHelpIndex);
+    $("helpBug").addEventListener("click", () => showHelpSection("contribute"));
     // Le theme dedie suit le jour/nuit et les changements de theme. / The
     // dedicated theme follows day/night and theme changes.
     window.addEventListener("piboard:theme", () => {
@@ -8718,10 +8901,14 @@
     const sections = window.PIBOARD_HELP || [];
     if (!sections.length) return;
     wireHelpPage();
+    helpActiveId = null;
+    helpActiveRub = null;
     $("helpNavSearch").value = "";
-    renderHelpIndex();
+    renderHelpTree();
+    renderHelpHome();
     filterHelpIndex();
-    helpShowView("index");
+    helpShowView("home");
+    renderHelpRail(null, null, null, null);
     applyHelpTheme();
     $("helpModal").hidden = false;
   }
@@ -8869,38 +9056,28 @@
     $("widgetHelpModal").hidden = true;
   }
 
-  function showHelpSection(id) {
+  function showHelpSection(id, rub) {
     const sections = window.PIBOARD_HELP || [];
     const sec = sections.find((s) => s.id === id);
     if (!sec) return;
     helpActiveId = id;
+    const info = helpRubriques(sec);
+    const fam = helpFamilyOfSection(sec);
+    if (fam) helpOpenFamilies.add(fam.key);
+    syncHelpTree();
 
-    $("helpNav").querySelectorAll("[data-help-id]").forEach((btn) => {
-      btn.classList.toggle("active", btn.dataset.helpId === id);
-    });
-    helpShowView("topic");
-    renderHelpCrumbs(sec);
-    renderHelpPager(sec);
-
+    // Une fiche a plusieurs rubriques s'ouvre sur la liste de ses rubriques ;
+    // une fiche d'une seule rubrique (ou un index precis) ouvre l'article.
+    // A multi-section page opens on its section list; a single-section page
+    // (or an explicit index) opens the article.
+    if (rub == null && info.rubs.length > 1) {
+      helpActiveRub = null;
+      renderHelpFiche(sec, info, fam);
+      return;
+    }
+    helpActiveRub = Math.max(0, Math.min(info.rubs.length - 1, Number(rub) || 0));
+    renderHelpArticle(sec, info, helpActiveRub, fam);
     const content = $("helpContent");
-    // Capture d'ecran optionnelle (voir help-content.js, champ
-    // "screenshot" d'une section) : simple chemin d'image relatif a
-    // public/, affichee au-dessus du texte si present, sans rien changer
-    // pour les nombreuses sections qui n'en ont pas encore.
-    // Optional screenshot (see help-content.js, a section's "screenshot"
-    // field): a plain image path relative to public/, shown above the
-    // text if present, with no change for the many sections that don't
-    // have one yet.
-    const screenshotHtml = sec.screenshot
-      ? `<img class="help-screenshot" src="${sec.screenshot}" alt="${i18n.fromManifest(sec.title)}" loading="lazy">`
-      : "";
-    content.innerHTML =
-      `<h3>${i18n.fromManifest(sec.title)}</h3>` +
-      (sec.sub ? `<p class="help-sub">${i18n.fromManifest(sec.sub)}</p>` : "") +
-      screenshotHtml +
-      i18n.fromManifest(sec.html);
-    content.scrollTop = 0;
-    $("helpTopic").scrollTop = 0;
 
     // La rubrique "Demarrage rapide" de l'aide n'a pas de contenu propre :
     // elle reutilise le MEME texte que la fenetre de lancement (source

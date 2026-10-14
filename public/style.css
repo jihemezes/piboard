@@ -3487,17 +3487,21 @@ body.touch .qr-image, body.touch-mode .qr-image { width: min(320px, 80vw); }
 .clone-todo { margin: 6px 0 0; padding-left: 18px; font-size: 12.5px; }
 .clone-todo li { margin: 4px 0; }
 
-/* ---------- Aide en page pleine (1.142.0) / Full-page help (1.142.0) ----------
-   Une page, pas une fenetre : une carte par famille de tuiles (le widget
-   de cette page d'accueil), chaque carte listant ses themes cliquables.
-   Le theme vient de body (suit le tableau, jour/nuit compris) ; un theme
-   dedie est pose directement sur .help-page (applyHelpTheme() dans app.js).
-   Le tactile (body.touch-mode, reglage « Mode tactile ») agrandit les cibles.
-   A page, not a window: one card per tile family (the widget of this home
-   page), each listing its clickable themes. The theme comes from body
-   (follows the board, day/night included); a dedicated theme is set
-   directly on .help-page (applyHelpTheme() in app.js). Touch
-   (body.touch-mode, the "Touch mode" setting) enlarges the targets. */
+/* ---------- Aide en page pleine (1.143.0) / Full-page help (1.143.0) ----------
+   Trois colonnes, d'apres le design « Help Center » : l'arbre famille ->
+   fiche a gauche, le contenu au centre (accueil, fiche et ses rubriques,
+   ou article), « Dans cette fiche » a droite. Le GROS bouton de retour a
+   PiBoard reste en haut, toujours visible. Le theme vient de body (suit le
+   tableau, jour/nuit compris) ; un theme dedie est pose directement sur
+   .help-page (applyHelpTheme() dans app.js). Le tactile (body.touch-mode,
+   reglage « Mode tactile ») agrandit les cibles.
+   Three columns, from the "Help Center" design: the family -> page tree on
+   the left, the content in the centre (home, page with its sections, or
+   article), "On this page" on the right. The BIG button back to PiBoard
+   stays on top, always visible. The theme comes from body (follows the
+   board, day/night included); a dedicated theme is set directly on
+   .help-page (applyHelpTheme() in app.js). Touch (body.touch-mode, the
+   "Touch mode" setting) enlarges the targets. */
 .help-page-modal { background: var(--bg); align-items: stretch; justify-content: stretch; }
 .help-page {
   flex: 1;
@@ -3509,101 +3513,201 @@ body.touch .qr-image, body.touch-mode .qr-image { width: min(320px, 80vw); }
   overflow: hidden;
 }
 .help-page-head {
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 14px 24px;
+  gap: 18px;
+  padding: 12px 24px;
   border-bottom: 1px solid var(--tile-edge);
 }
-.help-page-title { margin: 0; font-size: 19px; font-weight: 600; white-space: nowrap; }
-.help-page-back { white-space: nowrap; }
+.help-page-title { margin: 0; font-size: 21px; font-weight: 700; white-space: nowrap; }
+.help-page-title small { font-size: 15px; font-weight: 500; color: var(--accent); }
 .help-page-search {
   flex: 1 1 260px;
-  max-width: 420px;
+  max-width: 440px;
   margin-left: auto;
-  padding: 9px 16px;
+  padding: 11px 18px;
   border-radius: 999px;
   border: 1px solid var(--tile-edge);
   background: var(--field-bg);
   color: var(--text);
-  font-size: 14px;
+  font-size: 14.5px;
 }
 .help-page-search:focus { outline: none; border-color: var(--accent); }
-.help-crumbs {
-  display: flex;
-  flex-wrap: wrap;
+
+/* Le GROS bouton de retour a PiBoard. Les enfants ne captent pas le clic :
+   la fermeture generique des fenetres lit l'attribut data-close sur la
+   cible meme du clic. / The BIG button back to PiBoard. Children do not
+   capture the click: the generic window closing reads the data-close
+   attribute on the click's very target. */
+.help-return {
+  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 24px;
-  font-size: 13px;
-  color: var(--muted);
-  border-bottom: 1px solid var(--tile-edge);
-}
-.help-crumbs button {
+  gap: 12px;
+  min-height: 56px;
+  padding: 0 28px 0 18px;
   border: none;
-  background: none;
-  padding: 2px 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent, #fff);
   font: inherit;
-  color: var(--accent);
+  font-size: 18px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.28);
+}
+.help-return > * { pointer-events: none; }
+.help-return svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; }
+.help-return:hover { filter: brightness(1.1); }
+.help-return:focus-visible { outline: 3px solid var(--text); outline-offset: 3px; }
+
+.help-layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr) 280px;
+}
+.help-side { overflow-y: auto; padding: 16px 14px 32px; border-right: 1px solid var(--tile-edge); }
+.help-main { overflow-y: auto; min-width: 0; padding: 24px 40px 56px; display: flex; flex-direction: column; gap: 22px; }
+.help-rail { overflow-y: auto; padding: 28px 22px 32px; display: flex; flex-direction: column; gap: 22px; border-left: 1px solid var(--tile-edge); }
+
+/* Arbre : familles repliables, fiches dessous / tree: foldable families, pages below */
+.help-family { display: flex; flex-direction: column; }
+.help-family-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 600;
+  text-align: left;
   cursor: pointer;
 }
+.help-family-head:hover { background: var(--field-bg); }
+.help-family-head svg { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; transition: transform 0.15s; }
+.help-family-head.open svg { transform: rotate(90deg); }
+.help-family-title { flex: 1; }
+.help-family-count { font-size: 12px; font-weight: 400; color: var(--faint); }
+.help-family-themes {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 2px 0 8px 22px;
+  padding-left: 12px;
+  border-left: 2px solid var(--tile-edge);
+}
+.help-theme {
+  padding: 7px 12px;
+  border: none;
+  border-radius: 999px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 14px;
+  text-align: left;
+  cursor: pointer;
+}
+.help-theme:hover { background: var(--field-bg); }
+.help-theme.active { background: var(--accent); color: var(--on-accent, #fff); font-weight: 600; }
+.help-index .help-nav-empty { padding: 20px 8px; text-align: center; color: var(--muted); font-size: 14px; font-style: italic; }
+
+/* Fil d'Ariane / breadcrumb */
+.help-crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.help-crumbs button { border: none; background: none; padding: 2px 0; font: inherit; color: var(--accent); cursor: pointer; }
 .help-crumbs button:hover { text-decoration: underline; }
 .help-crumbs .help-crumb-here { color: var(--text); font-weight: 600; }
 .help-crumbs .help-crumb-sep { opacity: 0.4; }
-.help-page-body { flex: 1; min-height: 0; display: flex; flex-direction: column; overflow-y: auto; }
 
-/* Accueil : grille de familles / home: grid of families */
-.help-index { padding: 22px 24px 40px; display: flex; flex-direction: column; gap: 18px; }
-.help-index-intro { margin: 0; color: var(--muted); font-size: 14px; }
-.help-families {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-  align-items: start;
+/* Titres et rubriques / headings and sections */
+.help-hero { display: flex; flex-direction: column; gap: 10px; max-width: 760px; margin-bottom: 18px; }
+.help-hero h1, .help-article-head h1 { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 700; text-wrap: balance; }
+.help-hero-sub { margin: 0; font-size: 16px; line-height: 1.5; color: var(--muted); }
+.help-hero-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.help-tag {
+  display: inline-block;
+  padding: 3px 11px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 999px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 12.5px;
 }
-.help-family {
+.help-tag.help-tag-accent { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.help-rubs {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  min-width: 0;
-  padding: 16px 18px;
+  max-width: 760px;
+  padding: 8px;
   background: var(--tile);
   border: 1px solid var(--tile-edge);
   border-radius: var(--radius);
 }
-.help-family-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
-.help-family-title { margin: 0; font-size: 16px; font-weight: 600; }
-.help-family-count { font-size: 12px; color: var(--faint); white-space: nowrap; }
-.help-family-themes { display: flex; flex-wrap: wrap; gap: 8px; }
-.help-theme {
+.help-rub {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 16px;
+  border: none;
+  border-radius: 12px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.help-rub:hover { background: var(--field-bg); }
+.help-rub-num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--field-bg);
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+}
+.help-rub-text { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.help-rub-title { font-size: 16px; font-weight: 600; }
+.help-rub-meta { font-size: 13px; color: var(--muted); }
+.help-rub-chev { width: 18px; height: 18px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.75; stroke-linecap: round; stroke-linejoin: round; opacity: 0.5; }
+
+/* Accueil : une carte par famille / home: one card per family */
+.help-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap: 16px; align-items: start; }
+.help-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 16px 18px; background: var(--tile); border: 1px solid var(--tile-edge); border-radius: var(--radius); }
+.help-card-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.help-card-head h3 { margin: 0; font-size: 16px; font-weight: 600; }
+.help-card-head span { font-size: 12px; color: var(--faint); white-space: nowrap; }
+.help-card-themes { display: flex; flex-wrap: wrap; gap: 8px; }
+.help-card-theme {
+  padding: 7px 14px;
   border: 1px solid var(--tile-edge);
+  border-radius: 999px;
   background: var(--field-bg);
   color: var(--text);
-  border-radius: 999px;
-  padding: 7px 14px;
   font: inherit;
   font-size: 13.5px;
   text-align: left;
   cursor: pointer;
 }
-.help-theme:hover { border-color: var(--accent); color: var(--accent); }
-.help-theme.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
-.help-index .help-nav-empty { padding: 24px 8px; text-align: center; color: var(--muted); font-size: 14px; font-style: italic; }
+.help-card-theme:hover { border-color: var(--accent); color: var(--accent); }
 
-/* Rubrique ouverte / open topic */
-.help-topic {
-  flex: 1;
-  min-height: 0;
-  width: 100%;
-  max-width: 980px;
-  margin: 0 auto;
-  padding: 24px 32px 40px;
-  box-sizing: border-box;
-  overflow-y: auto;
-}
-.help-topic .help-content { padding: 0; overflow: visible; }
-.help-pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 28px; }
+/* Article / article */
+.help-topic { display: flex; flex-direction: column; gap: 22px; max-width: 760px; }
+.help-topic .help-content { padding: 0; overflow: visible; font-size: 15.5px; }
+.help-back { align-self: flex-start; }
+.help-article-head { display: flex; flex-direction: column; gap: 14px; }
+.help-tags { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+.help-pager { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 8px; }
 .help-pager button {
   display: flex;
   flex-direction: column;
@@ -3622,27 +3726,52 @@ body.touch .qr-image, body.touch-mode .qr-image { width: min(320px, 80vw); }
 .help-pager-label { font-size: 12px; opacity: 0.6; }
 .help-pager-title { font-size: 15px; font-weight: 600; }
 
-/* Petit ecran / small screens */
-@media (max-width: 720px) {
-  .help-page-head { padding: 12px 14px; }
-  .help-page-title { font-size: 16px; }
+/* Colonne de droite / right column */
+.help-rail-label { font-family: var(--mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+.help-rail-block { display: flex; flex-direction: column; gap: 10px; }
+.help-rail-items { display: flex; flex-direction: column; gap: 2px; }
+.help-rail-item { padding: 7px 12px; border: none; border-radius: 999px; background: none; color: var(--text); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.help-rail-item:hover { background: var(--field-bg); }
+.help-rail-item.active { background: var(--accent); color: var(--on-accent, #fff); font-weight: 600; }
+.help-rail-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.help-rail-chip { padding: 6px 12px; border: 1px solid var(--tile-edge); border-radius: 999px; background: var(--field-bg); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.help-rail-chip:hover { border-color: var(--accent); color: var(--accent); }
+.help-rail-card { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 22px; background: var(--tile); border: 1px solid var(--tile-edge); border-radius: var(--radius); }
+.help-rail-card-title { font-size: 18px; font-weight: 700; line-height: 1.2; }
+.help-rail-card p { margin: 0; font-size: 14px; line-height: 1.45; color: var(--muted); }
+
+/* Ecrans moyens et petits / medium and small screens */
+@media (max-width: 1180px) {
+  .help-layout { grid-template-columns: 260px minmax(0, 1fr); }
+  .help-rail { display: none; }
+}
+@media (max-width: 820px) {
+  .help-page-head { padding: 10px 14px; gap: 12px; }
+  .help-page-title { display: none; }
   .help-page-search { order: 3; flex-basis: 100%; max-width: none; margin-left: 0; }
-  .help-families { grid-template-columns: 1fr; }
-  .help-index, .help-topic { padding-left: 14px; padding-right: 14px; }
+  .help-layout { grid-template-columns: 1fr; grid-template-rows: minmax(0, 36%) minmax(0, 1fr); }
+  .help-side { border-right: none; border-bottom: 1px solid var(--tile-edge); }
+  .help-main { padding: 18px 16px 40px; }
+  .help-hero h1, .help-article-head h1 { font-size: 30px; }
   .help-pager { grid-template-columns: 1fr; }
 }
 
 /* Mode tactile : cibles plus grandes, lecture plus confortable.
    Touch mode: larger targets, more comfortable reading. */
-body.touch-mode .help-page-title { font-size: 22px; }
-body.touch-mode .help-page-search { min-height: 52px; font-size: 17px; }
-body.touch-mode .help-page-head .btn,
-body.touch-mode .help-crumbs button { min-height: 52px; padding: 10px 16px; font-size: 16px; }
-body.touch-mode .help-page .modal-close { min-width: 52px; min-height: 52px; font-size: 30px; }
-body.touch-mode .help-families { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 22px; }
-body.touch-mode .help-family { gap: 16px; padding: 22px 24px; }
-body.touch-mode .help-family-title { font-size: 19px; }
-body.touch-mode .help-theme { min-height: 52px; padding: 12px 20px; font-size: 16px; }
-body.touch-mode .help-topic { font-size: 17px; }
+body.touch-mode .help-return { min-height: 76px; padding: 0 36px 0 24px; font-size: 24px; gap: 16px; }
+body.touch-mode .help-return svg { width: 34px; height: 34px; }
+body.touch-mode .help-page-title { font-size: 24px; }
+body.touch-mode .help-page-search { min-height: 56px; font-size: 18px; }
+body.touch-mode .help-bug, body.touch-mode .help-back { min-height: 56px; padding: 10px 22px; font-size: 17px; }
+body.touch-mode .help-family-head { min-height: 56px; font-size: 17px; }
+body.touch-mode .help-theme { min-height: 52px; padding: 12px 16px; font-size: 16px; }
+body.touch-mode .help-crumbs button { min-height: 48px; padding: 8px 6px; font-size: 16px; }
+body.touch-mode .help-rub { min-height: 76px; }
+body.touch-mode .help-rub-title { font-size: 18px; }
+body.touch-mode .help-cards { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 22px; }
+body.touch-mode .help-card { gap: 16px; padding: 22px 24px; }
+body.touch-mode .help-card-theme { min-height: 52px; padding: 12px 20px; font-size: 16px; }
+body.touch-mode .help-rail-item { min-height: 48px; font-size: 16px; }
+body.touch-mode .help-topic .help-content { font-size: 17px; }
 body.touch-mode .help-pager button { min-height: 84px; padding: 20px 24px; }
 body.touch-mode .help-pager-title { font-size: 17px; }

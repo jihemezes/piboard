@@ -614,7 +614,7 @@ class LocalLoader extends ResourceLoader {
 }
 
 const vc = new VirtualConsole();
-vc.on("error", (m) => console.log("  [console.error]", String(m).slice(0, 200)));
+vc.on("error", (m, ...rest) => console.log("  [console.error]", String(m).slice(0, 200), rest.map((x) => (x && x.stack) ? String(x.stack).slice(0, 700) : String(x)).join(" ")));
 vc.on("warn", () => {});
 vc.on("log", () => {});
 vc.on("jsdomError", (e) => console.log("  [jsdomError]", String(e.message || e).slice(0, 200)));
@@ -3707,7 +3707,15 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("entree 'Application de bureau Windows' presente dans le sommaire", !!winItem);
     winItem.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
-    const content = document.getElementById("helpContent").textContent;
+    // Depuis 1.143.0 une fiche s'ouvre sur la liste de ses rubriques : on
+    // les ouvre toutes pour relire le texte complet. / Since 1.143.0 a page
+    // opens on its section list: open them all to read the full text.
+    let content = "";
+    for (const r of [...document.querySelectorAll("#helpFiche .help-rub")]) {
+      r.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(20);
+      content += document.getElementById("helpContent").textContent;
+    }
     assert("contenu mentionne la touche Alt pour reveler le menu", content.includes("Alt"));
     assert("contenu mentionne 'Rechercher une mise a jour'", content.includes("Rechercher une mise à jour"));
 
@@ -3795,40 +3803,98 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("recherche effacee : toutes les entrees redeviennent visibles",
       [...nav.querySelectorAll(".help-theme")].every((b) => b.hidden === false));
 
-    console.log("== Aide en page pleine : familles, rubriques, fil d'Ariane, precedent / suivant (1.142.0) ==");
+    console.log("== Aide en page pleine : arbre famille -> fiche -> rubrique, design Help Center (1.143.0) ==");
     {
-      const idx = document.getElementById("helpNav");
+      const $id = (x) => document.getElementById(x);
+      const click = async (el) => { el.dispatchEvent(new window.MouseEvent("click", { bubbles: true })); await sleep(30); };
+      const strip = (h) => { const d = document.createElement("div"); d.innerHTML = h; return d.textContent.replace(/\s+/g, ""); };
       searchInput.value = "";
       searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
-      const famCount = idx.querySelectorAll(".help-family").length;
-      assert("accueil : une carte par famille (au moins dix familles)", famCount >= 10);
-      const shown = [...idx.querySelectorAll(".help-theme")].map((b) => b.dataset.helpId);
-      const ids = (window.PIBOARD_HELP || []).map((s) => s.id);
-      assert("accueil : chaque rubrique de l'aide figure exactement une fois",
-        ids.length === shown.length && ids.every((id) => shown.filter((x) => x === id).length === 1));
-      assert("accueil visible tant qu'aucune rubrique n'est ouverte",
-        document.getElementById("helpTopic").hidden === true && idx.hidden === false);
+      await click($id("helpCrumbs").querySelector('[data-crumb="home"]'));
 
-      const fam = [...idx.querySelectorAll(".help-family")].find((f) => f.querySelectorAll(".help-theme").length >= 2);
-      assert("une famille a au moins deux rubriques (pour tester precedent / suivant)", !!fam);
-      fam.querySelectorAll(".help-theme")[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-      await sleep(30);
-      assert("rubrique ouverte : la vue rubrique remplace l'accueil",
-        document.getElementById("helpTopic").hidden === false && idx.hidden === true);
-      assert("fil d'Ariane visible sur une rubrique", document.getElementById("helpCrumbs").hidden === false);
-      assert("bouton Retour visible sur une rubrique", document.getElementById("helpBack").hidden === false);
-      assert("rubrique : precedent / suivant limites a la famille (suivant present)",
-        !!document.querySelector("#helpPager [data-help-go].help-pager-next"));
-      assert("rubrique : le premier thème n'a pas de precedent",
-        !document.querySelector("#helpPager [data-help-go].help-pager-prev"));
-      document.querySelector("#helpPager [data-help-go].help-pager-next").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-      await sleep(30);
-      assert("precedent / suivant : la rubrique suivante s'ouvre dans la meme famille",
-        document.querySelector("#helpCrumbs .help-crumb-here") && document.querySelector("#helpPager [data-help-go].help-pager-prev"));
-      document.getElementById("helpBack").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
-      await sleep(30);
-      assert("Retour : revient a l'accueil des familles",
-        idx.hidden === false && document.getElementById("helpTopic").hidden === true);
+      const tree = $id("helpNav");
+      assert("arbre : au moins dix familles", tree.querySelectorAll(".help-family").length >= 10);
+      const shown = [...tree.querySelectorAll(".help-theme")].map((b) => b.dataset.helpId);
+      const ids = (window.PIBOARD_HELP || []).map((x) => x.id);
+      assert("arbre : chaque fiche de l'aide figure exactement une fois",
+        ids.length === shown.length && ids.every((id) => shown.filter((x) => x === id).length === 1));
+      assert("accueil : une carte par famille",
+        $id("helpHome").querySelectorAll(".help-card").length === tree.querySelectorAll(".help-family").length);
+      assert("accueil visible, fiche et article masques",
+        $id("helpHome").hidden === false && $id("helpFiche").hidden === true && $id("helpTopic").hidden === true);
+
+      const head = tree.querySelector(".help-family-head");
+      const themes = head.parentElement.querySelector(".help-family-themes");
+      const was = themes.hidden;
+      await click(head);
+      assert("arbre : un clic sur une famille la replie / deplie", themes.hidden !== was);
+
+      const bigBtn = $id("helpReturn");
+      assert("gros bouton de retour a PiBoard present, branche sur la fermeture generique",
+        !!bigBtn && bigBtn.hasAttribute("data-close") && /PiBoard/.test(bigBtn.textContent));
+
+      await click($id("helpHome").querySelector('[data-help-open="clock"]'));
+      assert("fiche : la vue fiche remplace l'accueil",
+        $id("helpFiche").hidden === false && $id("helpHome").hidden === true && $id("helpTopic").hidden === true);
+      assert("fiche : la fiche ouverte est marquee dans l'arbre",
+        !!tree.querySelector('.help-theme.active[data-help-id="clock"]'));
+      const clock = window.PIBOARD_HELP.find((x) => x.id === "clock");
+      const h4s = (clock.html.fr.match(/<h4>/g) || []).length;
+      const rubs = [...$id("helpFiche").querySelectorAll(".help-rub")];
+      assert("fiche : decoupee en rubriques cliquables, une par titre h4",
+        h4s >= 3 && rubs.length >= h4s && rubs.length <= h4s + 1);
+      assert("fiche : chaque rubrique indique son temps de lecture", rubs.every((r) => /min/.test(r.textContent)));
+      assert("fiche : fil d'Ariane visible", $id("helpCrumbs").hidden === false);
+      const rubTitles = rubs.map((r) => r.querySelector(".help-rub-title").textContent);
+
+      // Aucune perte : titres + contenus des rubriques = texte d'origine,
+      // a la ligne « Taille » pres. / No loss: section titles + contents =
+      // the original text, but for the "Size" line.
+      let rebuilt = "";
+      for (let i = 0; i < rubs.length; i++) {
+        await click($id("helpFiche").querySelectorAll(".help-rub")[i]);
+        const body = $id("helpContent").textContent;
+        assert(`rubrique ${i + 1} (${rubTitles[i]}) : contenu non vide`, body.trim().length > 0);
+        rebuilt += $id("helpArticleTitle").textContent + body;
+      }
+      const lost = strip(clock.html.fr).length - strip(rebuilt).length;
+      assert("decoupage sans perte de texte (ecart limite a la ligne Taille)", lost >= 0 && lost <= 80);
+
+      assert("article : precedent present, suivant absent sur la derniere rubrique",
+        !!$id("helpPager").querySelector(".help-pager-prev") && !$id("helpPager").querySelector(".help-pager-next"));
+      await click($id("helpRail").querySelector('.help-rail-item[data-rubrique="0"]'));
+      assert("colonne de droite : « Dans cette fiche » ouvre la premiere rubrique",
+        $id("helpArticleTitle").textContent === rubTitles[0]);
+      assert("colonne de droite : la rubrique ouverte est marquee",
+        $id("helpRail").querySelectorAll(".help-rail-item").length === rubs.length
+        && !!$id("helpRail").querySelector('.help-rail-item.active[data-rubrique="0"]'));
+      await click($id("helpPager").querySelector(".help-pager-next"));
+      assert("suivant : ouvre la rubrique suivante de la meme fiche", $id("helpArticleTitle").textContent === rubTitles[1]);
+      assert("article : etiquette de temps de lecture et titre dans le fil d'Ariane",
+        /min/.test($id("helpArticleTags").textContent)
+        && $id("helpCrumbs").querySelector(".help-crumb-here").textContent === rubTitles[1]);
+      assert("article : le bouton Retour est visible", $id("helpBack").hidden === false);
+      await click($id("helpBack"));
+      assert("Retour : revient a la liste des rubriques de la fiche",
+        $id("helpFiche").hidden === false && $id("helpTopic").hidden === true);
+      await click($id("helpFiche").querySelector(".help-rub"));
+      await click($id("helpCrumbs").querySelector('[data-crumb="family"]'));
+      assert("fil d'Ariane : la famille ramene a l'accueil",
+        $id("helpHome").hidden === false && $id("helpTopic").hidden === true);
+
+      searchInput.value = rubTitles[1];
+      searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+      assert("recherche : un titre de RUBRIQUE retrouve sa fiche",
+        tree.querySelector('.help-theme[data-help-id="clock"]').hidden === false);
+      searchInput.value = "";
+      searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
+
+      await click(tree.querySelector('[data-help-id="about"]'));
+      assert("fiche a contenu dynamique (A propos) : d'un seul tenant, sans titre d'article ni Retour",
+        $id("helpTopic").hidden === false && $id("helpArticleHead").hidden === true && $id("helpBack").hidden === true);
+
+      await click(bigBtn);
+      assert("gros bouton : ferme l'aide et rend la main a PiBoard", $id("helpModal").hidden === true);
     }
 
     document.getElementById("helpModal").hidden = true;

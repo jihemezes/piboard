@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.143.0
+
+- **Aide : le design « Help Center » est repris, avec le thème de PiBoard.**
+  Page à trois colonnes : l'arbre des familles et des fiches à gauche (familles
+  repliables, avec compteur) ; au centre l'accueil, une fiche ou un article ;
+  à droite « Dans cette fiche » (ou « Aussi dans la famille ») et un encart
+  pour signaler un bug.
+- **Chaque fiche est découpée en rubriques cliquables**, d'après ses titres
+  `<h4>` : le texte de l'aide n'est pas réécrit, il est présenté par morceaux
+  (titre, temps de lecture, précédent / suivant). Le paragraphe « Taille » des
+  fiches de tuile devient une étiquette ; un texte d'introduction devient la
+  rubrique « En bref ». Les fiches à contenu dynamique (Démarrage rapide, À
+  propos, Nouveautés) restent d'un seul tenant.
+- **Gros bouton « Retour à PiBoard »** en haut à gauche, toujours visible
+  (76 px de haut en mode tactile) ; il remplace la petite croix.
+- La recherche filtre aussi sur les titres de rubriques ; elle déplie les
+  familles qui ont un résultat.
+- Code : `helpRubriques()` (découpage mis en cache par langue),
+  `renderHelpTree/Home/Fiche/Article/Rail()`, `showHelpSection(id, rubrique)`.
+  Le thème de l'aide (1.142.0) et le mode tactile restent inchangés.
+- Tests : `dom-smoke.js` vérifie le découpage **sans perte de texte** (titres +
+  rubriques = texte d'origine), le fil d'Ariane, la colonne de droite, précédent
+  / suivant, Retour, la recherche par titre de rubrique et le gros bouton.
+- Aide : fiche « Barre d'outils & réglages » mise à jour (FR et EN).
+
+---
+
+- **Help: the "Help Center" design is adopted, with PiBoard's theme.** Three
+  columns: the tree of families and pages on the left (foldable families, with
+  a counter); the home, a page or an article in the centre; on the right "On
+  this page" (or "Also in the family") and a bug-report box.
+- **Every page is split into clickable sections**, from its `<h4>` headings: the
+  help text is not rewritten, only presented in pieces (title, reading time,
+  previous / next). The tile pages' "Size" paragraph becomes a tag; introductory
+  text becomes the "At a glance" section. Pages with dynamic content (Quick
+  start, About, What's new) stay in one piece.
+- **Big "Back to PiBoard" button** at the top left, always visible (76 px tall
+  in touch mode); it replaces the small cross.
+- The search also matches section titles and unfolds the families that have a
+  result.
+- Code: `helpRubriques()` (split cached per language),
+  `renderHelpTree/Home/Fiche/Article/Rail()`, `showHelpSection(id, section)`.
+  The help theme (1.142.0) and touch mode are unchanged.
+- Tests: `dom-smoke.js` checks the split **loses no text** (titles + sections =
+  original text), the breadcrumb, the right column, previous / next, Back,
+  search by section title and the big button.
+- Help: "Toolbar & settings" topic updated (FR and EN).
+
 ## 1.142.0
 
 - **Aide en page pleine, par famille.** L'aide n'est plus une fenêtre à

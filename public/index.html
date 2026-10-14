@@ -1169,32 +1169,48 @@
   </div>
 </div>
 
-<!-- Aide du tableau de bord, en PAGE PLEINE (1.142.0) : une carte par
-     famille (widget), chaque carte listant ses thèmes cliquables ; un thème
-     ouvre sa rubrique avec fil d'Ariane et navigation precedent / suivant.
-     Le contenu est rempli par help-content.js + app.js (openHelp() et
+<!-- Aide du tableau de bord, en PAGE PLEINE, arbre famille -> fiche ->
+     rubrique -> article (1.143.0, d'apres le design « Help Center »).
+     Gauche : l'arbre des familles et des fiches. Centre : l'accueil (une
+     carte par famille), une fiche (ses rubriques cliquables) ou un article.
+     Droite : « Dans cette fiche » / « Aussi dans la famille » et un encart
+     pour signaler un bug. En haut : le GROS bouton de retour a PiBoard.
+     Contenu rempli par help-content.js + app.js (openHelp(),
      showHelpSection()). Theme : celui du tableau (par defaut) ou un theme
      dedie (reglage helpTheme), voir applyHelpTheme() dans app.js.
-     Dashboard help, as a FULL PAGE (1.142.0): one card per family (widget),
-     each listing its clickable themes; a theme opens its topic with a
-     breadcrumb and previous / next navigation. Filled by help-content.js +
-     app.js (openHelp() and showHelpSection()). Theme: the board's (default)
-     or a dedicated one (helpTheme setting), see applyHelpTheme() in app.js. -->
+     Dashboard help as a FULL PAGE, tree family -> page -> section ->
+     article (1.143.0, from the "Help Center" design). Left: the tree of
+     families and pages. Centre: the home (one card per family), a page
+     (its clickable sections) or an article. Right: "On this page" /
+     "Also in the family" and a bug-report box. On top: the BIG button
+     back to PiBoard. Filled by help-content.js + app.js (openHelp(),
+     showHelpSection()). Theme: the board's (default) or a dedicated one
+     (helpTheme setting), see applyHelpTheme() in app.js. -->
 <div class="modal help-page-modal" id="helpModal" hidden>
   <div class="help-page" id="helpPage">
     <header class="help-page-head">
-      <button type="button" class="btn small help-page-back" id="helpBack" hidden data-i18n="help.back.index">All families</button>
-      <h2 class="help-page-title" data-i18n="help.title">Help</h2>
+      <button type="button" class="help-return" id="helpReturn" data-close aria-label="Back to PiBoard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span data-i18n="help.return">Back to PiBoard</span></button>
+      <h2 class="help-page-title">PiBoard <small data-i18n="help.title">Help</small></h2>
       <input type="search" id="helpNavSearch" class="help-page-search" autocomplete="off" data-i18n-placeholder="help.search" placeholder="Search help topics…">
-      <button class="modal-close" data-close aria-label="Close">&times;</button>
+      <button type="button" class="btn help-bug" id="helpBug" data-i18n="help.bug">Report a bug</button>
     </header>
-    <nav class="help-crumbs" id="helpCrumbs" aria-label="Breadcrumb" hidden></nav>
-    <div class="help-page-body">
-      <div class="help-index" id="helpNav"></div>
-      <div class="help-topic" id="helpTopic" hidden>
-        <div class="help-content" id="helpContent"></div>
-        <div class="help-pager" id="helpPager"></div>
-      </div>
+    <div class="help-layout">
+      <aside class="help-side"><div class="help-index" id="helpNav"></div></aside>
+      <main class="help-main" id="helpMain">
+        <nav class="help-crumbs" id="helpCrumbs" aria-label="Breadcrumb" hidden></nav>
+        <section id="helpHome"></section>
+        <section id="helpFiche" hidden></section>
+        <article class="help-topic" id="helpTopic" hidden>
+          <button type="button" class="btn help-back" id="helpBack" hidden></button>
+          <header class="help-article-head" id="helpArticleHead">
+            <h1 id="helpArticleTitle"></h1>
+            <div class="help-tags" id="helpArticleTags"></div>
+          </header>
+          <div class="help-content" id="helpContent"></div>
+          <div class="help-pager" id="helpPager"></div>
+        </article>
+      </main>
+      <aside class="help-rail" id="helpRail"></aside>
     </div>
   </div>
 </div>

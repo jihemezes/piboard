@@ -33,6 +33,35 @@
 # Nouveautes / What's new
 
 
+## 1.143.0
+
+**Une aide plus facile à parcourir**
+
+L'aide reprend un nouveau design : à gauche, l'arbre des familles et des
+fiches ; au centre, la fiche choisie découpée en rubriques à cliquer, avec le
+temps de lecture de chacune ; à droite, la liste des rubriques de la fiche
+pour passer de l'une à l'autre. La recherche retrouve aussi les titres de
+rubriques.
+
+**Un gros bouton pour revenir à PiBoard**
+
+En haut à gauche, un grand bouton « Retour à PiBoard » referme l'aide, facile
+à toucher sur l'écran mural.
+
+---
+
+**A help that is easier to browse**
+
+The help has a new design: on the left, the tree of families and pages; in
+the centre, the chosen page split into clickable sections, each with its
+reading time; on the right, the page's section list to move between them. The
+search also finds section titles.
+
+**A big button to get back to PiBoard**
+
+At the top left, a large "Back to PiBoard" button closes the help, easy to
+touch on the wall screen.
+
 ## 1.142.0
 
 **Une aide en page pleine, par famille**
