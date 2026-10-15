@@ -188,6 +188,7 @@
     return events;
   }
 
+  const SportScoreWidgetState = { rangeBroken: false };
   class SportScoreWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -278,13 +279,27 @@
         // reapparaitre les matchs a venir (date et heure).
         // ESPN sometimes returns an EMPTY list for a date range while
         // single days answer: fall back to day-by-day requests.
-        let data = await getDay(this.engine.dateWindow(now, 2, 10));
-        if (!(data.events || []).length) {
+        // ESPN repond maintenant « 400 Failed to get events endpoint » a
+        // toute plage de dates (constate le 15/10/2026), alors que chaque
+        // jour pris seul repond. La plage est donc tentee UNE fois ; au
+        // moindre echec ou liste vide, on passe jour par jour, et on s'en
+        // souvient pour ne plus la redemander.
+        // ESPN now answers 400 to any date range while single days work:
+        // try the range once, then go day by day and remember it.
+        let data = null;
+        if (!SportScoreWidgetState.rangeBroken) {
+          try {
+            data = await getDay(this.engine.dateWindow(now, 2, 10));
+            if (!(data.events || []).length) { data = null; SportScoreWidgetState.rangeBroken = true; }
+          } catch (e) { data = null; SportScoreWidgetState.rangeBroken = true; }
+        }
+        if (!data) {
           const days = this.engine.dayList(now, 2, 10);
-          const parts = await Promise.all(days.map((d) => getDay(d).catch(() => ({ events: [] }))));
+          const parts = await Promise.all(days.map((d) => getDay(d).catch(() => null)));
+          if (parts.every((x) => x === null)) throw new Error("espn : aucune journee lisible");
           const seen = new Set();
           data = { events: [] };
-          parts.forEach((part) => (part.events || []).forEach((ev) => {
+          parts.forEach((part) => ((part && part.events) || []).forEach((ev) => {
             if (ev && !seen.has(ev.id)) { seen.add(ev.id); data.events.push(ev); }
           }));
         }

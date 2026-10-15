@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.148.0
+   Version 1.148.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1159,7 +1159,7 @@
     body.style.zoom = scale === 1 ? "" : String(scale);
   }
 
-  /* RELIEF 3D (1.148.0). Le niveau effectif d'une tuile est celui de ses
+  /* RELIEF 3D (1.148.1). Le niveau effectif d'une tuile est celui de ses
      reglages (_depth) s'il en a un, sinon le reglage general. Le CSS ne
      lit que deux attributs de la tuile (data-depth, data-glass) et trois
      du corps de page (direction de la lumiere, soulevement) : aucune

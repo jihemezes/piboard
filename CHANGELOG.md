@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.148.1
+
+- **Tuile Scores sportifs : les matchs à venir s'affichent enfin pour Ligue 1,
+  Ligue des champions, etc.** Cause réelle, constatée le 15/10/2026 : ESPN
+  répond désormais « 400 Failed to get events endpoint » à toute requête avec
+  une plage de dates (`dates=AAAAMMJJ-AAAAMMJJ`), alors que chaque jour pris
+  seul répond. Le repli de la 1.147.0 ne se déclenchait que sur une réponse
+  vide, pas sur cette erreur. La plage est maintenant tentée une seule fois ;
+  au moindre échec la tuile interroge les jours un à un (deux jours passés,
+  dix à venir) et ne redemande plus la plage. Top 14 / Pro D2 (LNR) inchangés.
+- Test `dom-smoke.js` : plage refusée en 400, match à venir affiché, plage
+  non redemandée.
+
 ## 1.148.0
 
 - **Relief 3D des tuiles (option).** Nouvelle section « Relief des tuiles (3D) »

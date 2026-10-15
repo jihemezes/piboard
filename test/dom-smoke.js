@@ -7903,6 +7903,55 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("scores : chaque rafraichissement interroge de nouveau la source", asked.length === before + 1);
     assert("scores : et jamais avec la meme URL", asked[before].url !== asked[before - 1].url);
 
+    /* 1.147.2 : ESPN repond « 400 » a toute plage de dates mais repond
+       jour par jour. La tuile doit alors afficher les matchs a venir,
+       sans erreur, en interrogeant les jours un a un. */
+    {
+      const upcomingDay = new Date(Date.now() + 2 * 86400000);
+      const ymd = String(upcomingDay.getFullYear()) + String(upcomingDay.getMonth() + 1).padStart(2, "0")
+        + String(upcomingDay.getDate()).padStart(2, "0");
+      const asked400 = [];
+      window.fetch = (url, opts) => {
+        const u = decodeURIComponent(String(url));
+        if (u.indexOf("/api/proxy") !== 0) return realFetch(url, opts);
+        const m = u.match(/[?&]dates=([\d-]+)/);
+        asked400.push(m ? m[1] : "");
+        if (m && m[1].includes("-")) return Promise.resolve({ ok: false, status: 400, json: async () => ({ code: 400 }) });
+        if (m && m[1] === ymd) {
+          return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [
+            { id: "L1", date: upcomingDay.toISOString(), status: { type: { state: "pre" } },
+              competitions: [{ competitors: [
+                { homeAway: "home", score: "0", team: { displayName: "PSG" } },
+                { homeAway: "away", score: "0", team: { displayName: "Lille" } }
+              ] }] }
+          ] }) });
+        }
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({ events: [] }) });
+      };
+      const host2 = document.createElement("div");
+      host2.style.width = "400px"; host2.style.height = "240px";
+      document.body.appendChild(host2);
+      const w2 = new SportClass({
+        el: host2, instanceId: "s-test-400", manifest: sManifest,
+        settings: Object.assign({}, defaults, { league: "soccer:fra.1", refresh: 2 }),
+        i18n: { lang: "fr", t: (k) => k },
+        api: { proxyUrl: (u) => "/api/proxy?url=" + encodeURIComponent(u) },
+        updateSettings() {},
+        assetUrl(file) { return "widgets/sportscore/" + file + "?v=9.9.9"; }
+      });
+      await w2.init();
+      await sleep(120);
+      assert("scores : ESPN refuse la plage, la tuile passe jour par jour",
+        asked400.some((d) => d.includes("-")) && asked400.filter((d) => !d.includes("-")).length >= 10);
+      const rows2 = host2.querySelectorAll("li");
+      assert("scores : le match a venir s'affiche malgre le refus de la plage",
+        rows2.length === 1 && /PSG/.test(rows2[0].textContent) && !host2.querySelector(".pws-err"));
+      const nb = asked400.length;
+      await w2.refresh();
+      assert("scores : la plage refusee n'est plus redemandee",
+        asked400.slice(nb).every((d) => !d.includes("-")));
+    }
+
 
     /* ---- Rugby francais : la source est la LNR, pas ESPN ----
        Meme tuile, meme rendu, mais la page reelle de la LNR (fixture
