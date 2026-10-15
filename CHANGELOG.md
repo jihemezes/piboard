@@ -1,17 +1,5 @@
 # Changelog
 
-## 1.147.1
-
-- **Tuile Formule 1 : les tableaux ne débordent plus de leur carte.** La cellule
-  « pilote / écurie » était en `display:flex`, ce qui la sortait du calcul des
-  colonnes : le tableau dépassait de la carte, les en-têtes PTS / VICT. / ÉCART
-  se chevauchaient. La cellule redevient une cellule (le contenu est rangé dans
-  un conteneur interne) et le nom se tronque proprement.
-- Chaque carte est désormais son propre conteneur : les réglages « tuile
-  étroite » (météo sans la date, classement sans le numéro ni les victoires)
-  suivent la largeur de la carte, et non de la tuile entière. La météo du
-  circuit ne tronque plus les noms de séances.
-
 ## 1.147.0
 
 - **Tuile Scores sportifs : matchs à venir (date et heure) pour toutes les
