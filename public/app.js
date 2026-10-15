@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.143.0
+   Version 1.143.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -8696,12 +8696,12 @@
     $("helpHome").innerHTML =
       `<div class="help-hero"><h1>${escapeHtml(i18n.t("help.home.title"))}</h1>` +
       `<p class="help-hero-sub">${escapeHtml(i18n.t("help.home.intro"))}</p></div>` +
-      `<div class="help-cards">` + families.map((fam) =>
-        `<section class="help-card" data-help-card="${fam.key}">` +
-          `<div class="help-card-head"><h3>${escapeHtml(fam.label)}</h3>` +
+      `<div class="help-famcards">` + families.map((fam) =>
+        `<section class="help-famcard" data-help-card="${fam.key}">` +
+          `<div class="help-famcard-head"><h3>${escapeHtml(fam.label)}</h3>` +
           `<span>${escapeHtml(helpCount("help.family.count.one", "help.family.count.many", fam.sections.length))}</span></div>` +
-          `<div class="help-card-themes">` + fam.sections.map((sec) =>
-            `<button type="button" class="help-card-theme" data-help-open="${escapeHtml(sec.id)}">${escapeHtml(i18n.fromManifest(sec.title))}</button>`
+          `<div class="help-famcard-themes">` + fam.sections.map((sec) =>
+            `<button type="button" class="help-famcard-theme" data-help-open="${escapeHtml(sec.id)}">${escapeHtml(i18n.fromManifest(sec.title))}</button>`
           ).join("") + `</div>` +
         `</section>`).join("") + `</div>`;
     $("helpHome").querySelectorAll("[data-help-open]").forEach((b) => {
@@ -8764,17 +8764,27 @@
         fam.sections.filter((s) => s.id !== sec.id).map((s) => `<button type="button" class="help-rail-chip" data-help-open="${escapeHtml(s.id)}">${escapeHtml(i18n.fromManifest(s.title))}</button>`).join("") +
         `</div></div>`;
     }
+    /* Encart de contact : le SEUL endroit qui parle de bug (le bouton), le
+       titre n'en parle pas. Les deux boutons ouvrent directement le ticket
+       GitHub (ou son QR code en kiosque), comme Reglages -> Contribuer.
+       Contact box: the ONLY place mentioning bugs (the button); the title
+       does not. Both buttons open the GitHub issue directly (or its QR code
+       on a kiosk), like Settings -> Contribute. */
     $("helpRail").innerHTML = top +
       `<div class="help-rail-card"><div class="help-rail-card-title">${escapeHtml(i18n.t("help.rail.card.title"))}</div>` +
       `<p>${escapeHtml(i18n.t("help.rail.card.text"))}</p>` +
-      `<button type="button" class="btn" id="helpRailBug">${escapeHtml(i18n.t("help.rail.card.btn"))}</button></div>`;
+      `<button type="button" class="btn primary" id="helpRailBug">${escapeHtml(i18n.t("help.bug"))}</button>` +
+      `<button type="button" class="btn" id="helpRailWrite">${escapeHtml(i18n.t("help.rail.card.btn"))}</button>` +
+      `<button type="button" class="help-rail-howto" id="helpRailHowto">${escapeHtml(i18n.t("help.rail.howto"))}</button></div>`;
     $("helpRail").querySelectorAll("[data-rubrique]").forEach((b) => {
       onActivate(b, () => showHelpSection(sec.id, Number(b.dataset.rubrique)));
     });
     $("helpRail").querySelectorAll("[data-help-open]").forEach((b) => {
       onActivate(b, () => showHelpSection(b.dataset.helpOpen));
     });
-    $("helpRailBug").addEventListener("click", () => showHelpSection("contribute"));
+    $("helpRailBug").addEventListener("click", () => openContribute("bug"));
+    $("helpRailWrite").addEventListener("click", () => openContribute("feature"));
+    $("helpRailHowto").addEventListener("click", () => showHelpSection("contribute"));
   }
 
   /* Vue « fiche » : titre, sous-titre, puis les rubriques cliquables. /
@@ -8889,7 +8899,6 @@
     if (helpWired) return;
     helpWired = true;
     $("helpNavSearch").addEventListener("input", filterHelpIndex);
-    $("helpBug").addEventListener("click", () => showHelpSection("contribute"));
     // Le theme dedie suit le jour/nuit et les changements de theme. / The
     // dedicated theme follows day/night and theme changes.
     window.addEventListener("piboard:theme", () => {

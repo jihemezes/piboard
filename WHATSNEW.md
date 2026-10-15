@@ -33,6 +33,25 @@
 # Nouveautes / What's new
 
 
+## 1.143.1
+
+**Une aide plus lisible, et le contact à portée de main**
+
+L'aide se pose maintenant sur un panneau de la couleur des tuiles, encadré
+par le fond du tableau : le texte reste lisible quel que soit le thème. À
+droite, « Signaler un bug » et « Écrire au projet » ouvrent directement un
+message pour le projet (ou son QR code sur l'écran mural). La recherche
+affiche une loupe.
+
+---
+
+**A more readable help, with contact at hand**
+
+The help now sits on a panel in the tile colour, framed by the board's
+background: text stays readable whatever the theme. On the right, "Report a
+bug" and "Write to the project" open a message to the project directly (or
+its QR code on the wall screen). The search shows a magnifier.
+
 ## 1.143.0
 
 **Une aide plus facile à parcourir**

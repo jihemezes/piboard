@@ -1173,8 +1173,8 @@
      rubrique -> article (1.143.0, d'apres le design « Help Center »).
      Gauche : l'arbre des familles et des fiches. Centre : l'accueil (une
      carte par famille), une fiche (ses rubriques cliquables) ou un article.
-     Droite : « Dans cette fiche » / « Aussi dans la famille » et un encart
-     pour signaler un bug. En haut : le GROS bouton de retour a PiBoard.
+     Droite : « Dans cette fiche » / « Aussi dans la famille » et l'encart
+     de contact (signaler un bug, ecrire au projet). En haut : le GROS bouton de retour a PiBoard.
      Contenu rempli par help-content.js + app.js (openHelp(),
      showHelpSection()). Theme : celui du tableau (par defaut) ou un theme
      dedie (reglage helpTheme), voir applyHelpTheme() dans app.js.
@@ -1191,8 +1191,11 @@
     <header class="help-page-head">
       <button type="button" class="help-return" id="helpReturn" data-close aria-label="Back to PiBoard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span data-i18n="help.return">Back to PiBoard</span></button>
       <h2 class="help-page-title">PiBoard <small data-i18n="help.title">Help</small></h2>
-      <input type="search" id="helpNavSearch" class="help-page-search" autocomplete="off" data-i18n-placeholder="help.search" placeholder="Search help topics…">
-      <button type="button" class="btn help-bug" id="helpBug" data-i18n="help.bug">Report a bug</button>
+      <label class="help-search" for="helpNavSearch">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <span class="help-search-label" data-i18n="help.searchLabel">Search</span>
+        <input type="search" id="helpNavSearch" class="help-page-search" autocomplete="off" data-i18n-placeholder="help.search" placeholder="page, section, keyword…">
+      </label>
     </header>
     <div class="help-layout">
       <aside class="help-side"><div class="help-index" id="helpNav"></div></aside>

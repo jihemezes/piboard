@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.143.1
+
+**Aide : corrections après les premiers retours sur la 1.143.0.**
+
+- lisibilité : le fond du tableau sert désormais de **cadre**, et tout le
+  texte est posé sur la couleur des tuiles, la seule dont l'éditeur de
+  thèmes garantit le contraste (un fond gris foncé avec des tuiles claires
+  rendait l'arbre illisible) ;
+- cartes de l'accueil qui se chevauchaient et débordaient à droite : une
+  ancienne règle `.help-card` (fenêtre d'aide d'avant la 1.142.0) forçait
+  1600 px de large ; les règles obsolètes sont supprimées et les cartes
+  passent en colonnes « mosaïque » ;
+- recherche : icône loupe et mot « Rechercher » devant le champ ;
+- « Signaler un bug » quitte l'en-tête pour l'encart de contact, à côté de
+  « Écrire au projet » ; les deux ouvrent directement le ticket GitHub (ou
+  son QR code), et le titre de l'encart ne répète plus « bug » ;
+- écrans moyens : l'encart de contact passe sous l'arbre au lieu de
+  disparaître.
+
+---
+
+- **Help: fixes after first feedback on 1.143.0**: the board background is now a frame and all
+  text sits on the tile colour (readability); home cards no longer overlap (an
+  old `.help-card` rule forced 1600 px; obsolete rules removed, masonry
+  columns); search shows a magnifier and the word "Search"; "Report a bug"
+  moves from the header to the contact box next to "Write to the project", both
+  opening the GitHub issue directly; on medium screens the contact box sits
+  under the tree.
+
 ## 1.143.0
 
 - **Aide : le design « Help Center » est repris, avec le thème de PiBoard.**

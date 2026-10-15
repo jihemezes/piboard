@@ -3819,7 +3819,22 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("arbre : chaque fiche de l'aide figure exactement une fois",
         ids.length === shown.length && ids.every((id) => shown.filter((x) => x === id).length === 1));
       assert("accueil : une carte par famille",
-        $id("helpHome").querySelectorAll(".help-card").length === tree.querySelectorAll(".help-family").length);
+        $id("helpHome").querySelectorAll(".help-famcard").length === tree.querySelectorAll(".help-family").length);
+
+      // Retours du 15 oct. 2026 sur la 1.143.0 / feedback on 1.143.0
+      const helpCss = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+      assert("styles : plus de regle .help-card (l'ancienne forcait 1600px et faisait deborder les cartes)",
+        !/\.help-card\s*\{/.test(helpCss));
+      assert("styles : le texte de l'aide est pose sur la couleur des tuiles, le fond du tableau ne sert que de cadre",
+        /\.help-page \{[^}]*background: var\(--tile\)/.test(helpCss) && /\.help-page-modal \{[^}]*background: var\(--bg\)/.test(helpCss));
+      assert("recherche : icone et mot « Rechercher » devant le champ",
+        !!document.querySelector(".help-search svg") && /Rechercher/.test(document.querySelector(".help-search-label").textContent));
+      assert("en-tete : plus de bouton « Signaler un bug » (deplace dans l'encart de contact)", !document.getElementById("helpBug"));
+      const contact = $id("helpRail").querySelector(".help-rail-card");
+      assert("encart de contact : boutons « Signaler un bug » et « Ecrire au projet »",
+        !!contact && !!$id("helpRailBug") && !!$id("helpRailWrite"));
+      assert("encart de contact : le mot « bug » n'apparait qu'une fois (sur le bouton)",
+        (contact.textContent.match(/bug/gi) || []).length === 1);
       assert("accueil visible, fiche et article masques",
         $id("helpHome").hidden === false && $id("helpFiche").hidden === true && $id("helpTopic").hidden === true);
 
