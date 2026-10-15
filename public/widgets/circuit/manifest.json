@@ -5,14 +5,14 @@
     "fr": "Plan du circuit"
   },
   "description": {
-    "en": "The vector outline of a Formula 1 circuit, drawn from OpenStreetMap: the weekend's circuit, or any circuit pinned from the base. Racing direction, pit lane, corner names and numbers where they exist, spec sheet and the next session's weather.",
-    "fr": "Le tracé vectoriel d'un circuit de Formule 1, dessiné à partir d'OpenStreetMap : celui du week-end, ou n'importe quel circuit épinglé depuis la base. Sens de la course, voie des stands, noms et numéros de virages là où ils existent, fiche technique et météo de la prochaine séance."
+    "en": "The vector outline of a Formula 1 or MotoGP circuit, drawn from OpenStreetMap: the weekend's circuit of the calendar you follow, or any circuit pinned from the base. Racing direction, pit lane, corner names and numbers where they exist, spec sheet and the next session's weather.",
+    "fr": "Le tracé vectoriel d'un circuit de Formule 1 ou de MotoGP, dessiné à partir d'OpenStreetMap : celui du week-end du calendrier que vous suivez, ou n'importe quel circuit épinglé depuis la base. Sens de la course, voie des stands, noms et numéros de virages là où ils existent, fiche technique et météo de la prochaine séance."
   },
   "tagline": {
     "en": "A circuit's outline, drawn to scale.",
     "fr": "Le tracé d'un circuit, dessiné à l'échelle."
   },
-  "version": "1.0.2",
+  "version": "1.1.0",
   "size": {
     "w": 4,
     "h": 4,
@@ -37,9 +37,18 @@
         "fr": "Circuit"
       },
       "hint": {
-        "en": "Left on \"Follow the Formula 1 calendar\", the tile shows the circuit of the Grand Prix under way, and switches by itself from one weekend to the next. Pick a circuit to pin it instead -- useful out of season, or to keep a favourite on the board all year. A pinned circuit costs no call to the racing API at all. The list is loaded from the circuit base, so a circuit added there appears here without updating PiBoard.",
-        "fr": "Laissé sur « Suivre le calendrier de Formule 1 », la tuile affiche le circuit du Grand Prix en cours et change d'elle-même d'un week-end à l'autre. Choisissez un circuit pour l'épingler — utile hors saison, ou pour garder un favori toute l'année sur le tableau. Un circuit épinglé ne coûte aucun appel à l'API des courses. La liste vient de la base des circuits : un circuit ajouté là-bas apparaît ici sans mettre PiBoard à jour."
-      }
+        "en": "Left on \"Follow the Formula 1 calendar\", the tile shows the circuit of the Grand Prix under way, and switches by itself from one weekend to the next. \"Follow the MotoGP calendar\" does the same with the MotoGP season (calendar and session times from motogp.com, the same feed as the Motorsport tile). Pick a circuit to pin it instead -- useful out of season, or to keep a favourite on the board all year. A pinned circuit costs no call to a racing API at all. The list is loaded from the circuit base, so a circuit added there appears here without updating PiBoard.",
+        "fr": "Laissé sur « Suivre le calendrier de Formule 1 », la tuile affiche le circuit du Grand Prix en cours et change d'elle-même d'un week-end à l'autre. « Suivre le calendrier de MotoGP » fait de même avec la saison MotoGP (calendrier et horaires des séances venant de motogp.com, le flux de la tuile Motorsport). Choisissez un circuit pour l'épingler — utile hors saison, ou pour garder un favori toute l'année sur le tableau. Un circuit épinglé ne coûte aucun appel à une API de courses. La liste vient de la base des circuits : un circuit ajouté là-bas apparaît ici sans mettre PiBoard à jour."
+      },
+      "extraOptions": [
+        {
+          "value": "follow:motogp",
+          "label": {
+            "en": "Follow the MotoGP calendar",
+            "fr": "Suivre le calendrier de MotoGP"
+          }
+        }
+      ]
     },
     {
       "key": "showSpecs",
@@ -50,8 +59,8 @@
         "fr": "Fiche technique"
       },
       "hint": {
-        "en": "Length, number of corners, race laps, race distance and lap record. These are facts OpenStreetMap does not carry: they come from the circuit base. A circuit whose outline is known but whose specs have not been entered shows nothing here rather than a row of dashes -- an empty row suggests lost data, when it was simply never filled in.",
-        "fr": "Longueur, nombre de virages, nombre de tours, distance de course et record du tour. Ce sont des faits qu'OpenStreetMap ne porte pas : ils viennent de la base des circuits. Un circuit dont le tracé est connu mais dont la fiche n'a pas été saisie n'affiche rien ici, plutôt qu'une rangée de tirets — une ligne vide fait croire à une donnée perdue, alors qu'elle n'a simplement jamais été renseignée."
+        "en": "Length, number of corners, race laps, race distance and lap record. These are facts OpenStreetMap does not carry: they come from the circuit base. A circuit whose outline is known but whose specs have not been entered shows nothing here rather than a row of dashes -- an empty row suggests lost data, when it was simply never filled in. Following MotoGP (or on a circuit that hosts no Formula 1), the sheet uses the official MotoGP figures: length of the MotoGP layout, left and right corners, longest straight.",
+        "fr": "Longueur, nombre de virages, nombre de tours, distance de course et record du tour. Ce sont des faits qu'OpenStreetMap ne porte pas : ils viennent de la base des circuits. Un circuit dont le tracé est connu mais dont la fiche n'a pas été saisie n'affiche rien ici, plutôt qu'une rangée de tirets — une ligne vide fait croire à une donnée perdue, alors qu'elle n'a simplement jamais été renseignée. En suivant le MotoGP (ou sur un circuit qui n'accueille pas la Formule 1), la fiche reprend les chiffres officiels du MotoGP : longueur du tracé MotoGP, virages à gauche et à droite, plus longue ligne droite."
       }
     },
     {
@@ -89,8 +98,8 @@
         "fr": "Météo de la prochaine séance"
       },
       "hint": {
-        "en": "One compact line under the outline: the next session, its time in your own zone, and the forecast for that hour -- condition, temperature and chance of rain. One line only, deliberately: the Formula 1 tile carries the full session-by-session table, and repeating it here would eat the room the outline needs. Only shown when the tile follows the calendar, since a pinned circuit has no session to forecast. Source: Open-Meteo, free and keyless.",
-        "fr": "Une ligne compacte sous le tracé : la prochaine séance, son heure dans votre fuseau, et la prévision à cette heure-là — temps, température et probabilité de pluie. Une seule ligne, délibérément : la tuile Formule 1 porte le tableau complet séance par séance, et le répéter ici mangerait la place du tracé. Affichée seulement quand la tuile suit le calendrier, un circuit épinglé n'ayant aucune séance à prévoir. Source : Open-Meteo, gratuit et sans clé."
+        "en": "One compact line under the outline: the next session, its time in your own zone, and the forecast for that hour -- condition, temperature and chance of rain. One line only, deliberately: the Formula 1 and Motorsport tiles carry the full session-by-session table, and repeating it here would eat the room the outline needs. Only shown when the tile follows the calendar, since a pinned circuit has no session to forecast. Source: Open-Meteo, free and keyless.",
+        "fr": "Une ligne compacte sous le tracé : la prochaine séance, son heure dans votre fuseau, et la prévision à cette heure-là — temps, température et probabilité de pluie. Une seule ligne, délibérément : les tuiles Formule 1 et Motorsport portent le tableau complet séance par séance, et le répéter ici mangerait la place du tracé. Affichée seulement quand la tuile suit le calendrier, un circuit épinglé n'ayant aucune séance à prévoir. Source : Open-Meteo, gratuit et sans clé."
       }
     },
     {

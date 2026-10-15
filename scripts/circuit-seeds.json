@@ -26,7 +26,14 @@
    "series": [
     "motogp",
     "wec"
-   ]
+   ],
+   "motogp": {
+    "feedId": "b980a310-9440-48ce-bd19-5f398c179726",
+    "lengthM": 4592,
+    "left": 6,
+    "right": 9,
+    "straightM": 970
+   }
   }
  },
  {
@@ -43,12 +50,19 @@
     "f1",
     "motogp",
     "wec"
-   ]
+   ],
+   "motogp": {
+    "feedId": "a39e1baa-2b1e-4818-95d0-b9b6b7acd881",
+    "lengthM": 5513,
+    "left": 11,
+    "right": 9,
+    "straightM": 1200
+   }
   }
  },
  {
   "id": "aragon",
-  "name": "MotorLand Aragón",
+  "name": "MotorLand Arag\u00f3n",
   "lat": 41.07968,
   "lon": -0.18724,
   "specs": {
@@ -57,7 +71,14 @@
    "openedYear": 2009,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "1fe3401e-aad9-4b68-bfae-079caad4b9da",
+    "lengthM": 5077,
+    "left": 10,
+    "right": 7,
+    "straightM": 968
+   }
   }
  },
  {
@@ -69,7 +90,16 @@
    "country": "Pays-Bas",
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "82ac933f-bfc6-4a48-b0c4-b3b84313bdee",
+    "lengthM": 4542,
+    "left": 6,
+    "right": 12,
+    "straightM": 487
+   },
+   "lengthM": 4542,
+   "openedYear": 1955
   }
  },
  {
@@ -79,7 +109,7 @@
   "lon": 50.51056,
   "specs": {
    "lengthM": 5412,
-   "country": "Bahreïn",
+   "country": "Bahre\u00efn",
    "series": [
     "f1",
     "wec"
@@ -110,26 +140,41 @@
    "openedYear": 2023,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "7eea1369-6fbc-43b0-ba65-644dcbb9489e",
+    "lengthM": 4075,
+    "left": 10,
+    "right": 7,
+    "straightM": 665
+   },
+   "lengthM": 4075
   }
  },
  {
   "id": "brno",
-  "name": "Brno — Masaryk",
+  "name": "Brno \u2014 Masaryk",
   "lat": 49.20472,
   "lon": 16.45056,
   "specs": {
    "lengthM": 5403,
-   "country": "Tchéquie",
+   "country": "Tch\u00e9quie",
    "openedYear": 1930,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "e48e53a2-cdd9-4fd2-b7a0-c8045dd55c18",
+    "lengthM": 5403,
+    "left": 6,
+    "right": 8,
+    "straightM": 636
+   }
   }
  },
  {
   "id": "bugatti",
-  "name": "Le Mans — Bugatti",
+  "name": "Le Mans \u2014 Bugatti",
   "lat": 47.95372,
   "lon": 0.21078,
   "specs": {
@@ -137,7 +182,15 @@
    "openedYear": 1966,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "76811715-9014-461b-8eeb-687a7d585179",
+    "lengthM": 4185,
+    "left": 5,
+    "right": 9,
+    "straightM": 674
+   },
+   "lengthM": 4185
   },
   "radius": 9000
  },
@@ -148,11 +201,18 @@
   "lon": 103.085,
   "specs": {
    "lengthM": 4554,
-   "country": "Thaïlande",
+   "country": "Tha\u00eflande",
    "openedYear": 2014,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "3df492f2-b8e0-4c2b-b6e9-86a153127965",
+    "lengthM": 4554,
+    "left": 5,
+    "right": 7,
+    "straightM": 1000
+   }
   }
  },
  {
@@ -168,7 +228,14 @@
    "series": [
     "f1",
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "cbbe87ac-472a-405e-b0ed-5b9e0743c80a",
+    "lengthM": 4657,
+    "left": 6,
+    "right": 8,
+    "straightM": 1047
+   }
   }
  },
  {
@@ -177,7 +244,7 @@
   "lat": 29.18556,
   "lon": -81.06944,
   "specs": {
-   "country": "États-Unis",
+   "country": "\u00c9tats-Unis",
    "openedYear": 1959,
    "series": [
     "wec"
@@ -200,15 +267,23 @@
  },
  {
   "id": "goiania",
-  "name": "Autódromo Internacional Ayrton Senna",
+  "name": "Aut\u00f3dromo Internacional Ayrton Senna",
   "lat": -16.71839,
   "lon": -49.19422,
   "specs": {
-   "country": "Brésil",
+   "country": "Br\u00e9sil",
    "openedYear": 1974,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "206ca7d6-e857-4a4d-be01-addd9090173d",
+    "lengthM": 3835,
+    "left": 5,
+    "right": 9,
+    "straightM": 994
+   },
+   "lengthM": 3835
   }
  },
  {
@@ -249,7 +324,7 @@
   "specs": {
    "lengthM": 4309,
    "country": "Brazil",
-   "locality": "São Paulo",
+   "locality": "S\u00e3o Paulo",
    "openedYear": 1940,
    "series": [
     "f1",
@@ -272,7 +347,7 @@
  },
  {
   "id": "jerez",
-  "name": "Jerez — Ángel Nieto",
+  "name": "Jerez \u2014 \u00c1ngel Nieto",
   "lat": 36.70833,
   "lon": -6.03417,
   "specs": {
@@ -280,12 +355,20 @@
    "openedYear": 1985,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "3e9b0470-2340-401f-9a0c-04293d85248f",
+    "lengthM": 4423,
+    "left": 5,
+    "right": 8,
+    "straightM": 607
+   },
+   "lengthM": 4423
   }
  },
  {
   "id": "lemans",
-  "name": "Le Mans — Circuit de la Sarthe",
+  "name": "Le Mans \u2014 Circuit de la Sarthe",
   "lat": 47.94986,
   "lon": 0.20753,
   "specs": {
@@ -309,7 +392,15 @@
     "f1",
     "motogp",
     "wec"
-   ]
+   ],
+   "motogp": {
+    "feedId": "e203e31d-24d3-49e9-8163-d2b8d0355fea",
+    "lengthM": 5380,
+    "left": 6,
+    "right": 10,
+    "straightM": 1068
+   },
+   "lengthM": 5380
   }
  },
  {
@@ -331,11 +422,19 @@
   "lat": -8.89542,
   "lon": 116.30418,
   "specs": {
-   "country": "Indonésie",
+   "country": "Indon\u00e9sie",
    "openedYear": 2021,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "2622df05-51ed-4a5e-a350-7949694bd7cd",
+    "lengthM": 4301,
+    "left": 6,
+    "right": 11,
+    "straightM": 723
+   },
+   "lengthM": 4301
   }
  },
  {
@@ -368,7 +467,7 @@
  },
  {
   "id": "misano",
-  "name": "Misano — Marco Simoncelli",
+  "name": "Misano \u2014 Marco Simoncelli",
   "lat": 43.96137,
   "lon": 12.68596,
   "specs": {
@@ -377,7 +476,14 @@
    "openedYear": 1972,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "1a6556bb-eec6-4fee-bd0b-337dfd098373",
+    "lengthM": 4226,
+    "left": 6,
+    "right": 10,
+    "straightM": 530
+   }
   }
  },
  {
@@ -419,7 +525,15 @@
    "openedYear": 1997,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "8bf0e0e7-6eb6-43b6-bab3-2aa21abad3ae",
+    "lengthM": 4801,
+    "left": 6,
+    "right": 8,
+    "straightM": 762
+   },
+   "lengthM": 4801
   }
  },
  {
@@ -433,12 +547,19 @@
    "openedYear": 1974,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "9580e398-61a6-4852-8020-adb5d4c0cb2b",
+    "lengthM": 5245,
+    "left": 6,
+    "right": 9,
+    "straightM": 1141
+   }
   }
  },
  {
   "id": "nordschleife",
-  "name": "Nürburgring Nordschleife",
+  "name": "N\u00fcrburgring Nordschleife",
   "lat": 50.3461,
   "lon": 6.96611,
   "specs": {
@@ -459,7 +580,15 @@
    "openedYear": 1952,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "669a9a68-a181-45a6-9973-9a1cf73bd79e",
+    "lengthM": 4448,
+    "left": 7,
+    "right": 5,
+    "straightM": 900
+   },
+   "lengthM": 4448
   }
  },
  {
@@ -475,7 +604,14 @@
    "series": [
     "f1",
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "649d99cb-fbbd-4e16-b674-faaf1a4e47a1",
+    "lengthM": 4348,
+    "left": 3,
+    "right": 8,
+    "straightM": 810
+   }
   }
  },
  {
@@ -489,12 +625,19 @@
    "openedYear": 1999,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "c5e48a7a-42d3-4e5d-8a40-2efc77eb36b6",
+    "lengthM": 4005,
+    "left": 9,
+    "right": 5,
+    "straightM": 876
+   }
   }
  },
  {
   "id": "rodriguez",
-  "name": "Autódromo Hermanos Rodríguez",
+  "name": "Aut\u00f3dromo Hermanos Rodr\u00edguez",
   "lat": 19.4042,
   "lon": -99.0907,
   "specs": {
@@ -517,7 +660,15 @@
    "openedYear": 1927,
    "series": [
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "29557159-9464-4c2c-81c7-40c2af39171d",
+    "lengthM": 3671,
+    "left": 10,
+    "right": 3,
+    "straightM": 700
+   },
+   "lengthM": 3671
   }
  },
  {
@@ -526,7 +677,7 @@
   "lat": 27.4547,
   "lon": -81.3483,
   "specs": {
-   "country": "États-Unis",
+   "country": "\u00c9tats-Unis",
    "series": [
     "wec"
    ]
@@ -545,7 +696,14 @@
    "series": [
     "f1",
     "motogp"
-   ]
+   ],
+   "motogp": {
+    "feedId": "6c1390e6-d9dd-4a5b-bef1-eb6b33b4e3d6",
+    "lengthM": 5543,
+    "left": 5,
+    "right": 10,
+    "straightM": 920
+   }
   }
  },
  {
@@ -577,7 +735,14 @@
     "f1",
     "motogp",
     "wec"
-   ]
+   ],
+   "motogp": {
+    "feedId": "f718f757-19a9-44d0-979f-8e9381b15bf9",
+    "lengthM": 5900,
+    "left": 8,
+    "right": 10,
+    "straightM": 770
+   }
   }
  },
  {

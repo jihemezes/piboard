@@ -276,6 +276,7 @@ function motogpBroadcast(shortname, name, ms, acronym, categoryName) {
     category: { acronym, name: categoryName }
   };
 }
+const MOTOGP_CIRCUIT_FEED = { body: null };
 const MOTOGP_SEASON_FIXTURE = [
   {
     sponsored_name: "Grand Prix Moto de Test", sequence: 4,
@@ -512,6 +513,7 @@ const layout = {
       extraZone1Label: "Tokyo", extraZone1Tz: "Asia/Tokyo",
       showNextEvent: true, nextEventIcsUrl: "https://exemple.test/clock-agenda.ics", nextEventDaysAhead: 14
     } },
+    { id: "t-circ", widget: "circuit", x: 3, y: 23, w: 4, h: 4, settings: { circuit: "follow:motogp", showWeather: false } },
     { id: "t-s", widget: "rss", x: 8, y: 19, w: 4, h: 3, settings: {
       url: "https://feed.test/rss.xml", label1: "Flux Un", url2: "https://feed2.test/rss.xml", label2: "",
       maxItems: 10, showSource: true
@@ -674,6 +676,7 @@ const IH = { runs: [] };
    Log of Formula 1 API calls: used to check that an unticked card no
    longer sends its request. */
 const FETCHES = [];
+const PROXIED_RACING = [];
 const CIRCUIT_CATALOG_CALLS = [];
 const CATALOG_ROUTE = { down: false, calls: [], fileCalls: [], body: () => CATALOG_FIXTURE };
 const SVC_DETECT_CALLS = [];
@@ -780,6 +783,16 @@ const dom = new JSDOM(html, {
          answered here. */
       const F1_DIRECT = u.includes("jolpi.ca") && !u.includes("/api/proxy");
       if (F1_DIRECT) FETCHES.push(u);
+      /* Les appels aux API de courses PASSES PAR LE RELAIS : ceux de la
+         tuile Circuits. Les compter est la seule facon de prouver
+         qu'une option n'interroge pas l'autre discipline.
+         Racing-API calls made THROUGH THE RELAY, as the Circuits tile
+         does: counting them is the only way to prove one option does not
+         ask the other discipline. */
+      if (u.includes("/api/proxy")) {
+        const target = decodeURIComponent(u);
+        if (/jolpi\.ca|pulselive/.test(target)) PROXIED_RACING.push(target);
+      }
       if (F1_DIRECT && u.includes("driverStandings")) {
         return json({ MRData: { StandingsTable: { StandingsLists: [{ DriverStandings: [
           { position: "1", points: "302", wins: "8", Driver: { code: "ANT", givenName: "Andrea Kimi", familyName: "Antonelli", nationality: "Italian", permanentNumber: "12" }, Constructors: [{ constructorId: "mercedes", name: "Mercedes" }] },
@@ -1204,6 +1217,11 @@ const dom = new JSDOM(html, {
         });
       }
       if (u.includes("/api/proxy") && u.includes("motogp.pulselive.com")) {
+        /* Le calendrier de la tuile Circuits (option MotoGP) : un corps
+           propre au test, pose et retire autour de lui.
+           The Circuits tile's calendar (MotoGP option): a body specific
+           to the test, set and cleared around it. */
+        if (MOTOGP_CIRCUIT_FEED.body) return json(MOTOGP_CIRCUIT_FEED.body);
         return json(MOTOGP_SEASON_FIXTURE);
       }
       if (u.includes("/api/proxy") && u.includes("nominatim.openstreetmap.org")) {
@@ -1392,7 +1410,7 @@ function catalogItemFor(catalog, document, widgetId) {
   while (document.querySelectorAll(".grid-stack-item").length < 21 && tries++ < 60) await sleep(100);
 
   console.log("== Boot ==");
-  assert("22 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 22);
+  assert("23 tuiles montees", document.querySelectorAll(".grid-stack-item").length === 23);
   assert("horloge affichee (heure presente)", /\d{2}:\d{2}/.test(document.querySelector(".pwc-time")?.textContent || ""));
   assert("bloc-notes charge depuis le serveur", (document.querySelector(".pw-notes .pwn-view")?.textContent || "").includes("note de test"));
   assert("webview en iframe", !!document.querySelector(".pw-webview iframe"));
@@ -2947,7 +2965,7 @@ function catalogItemFor(catalog, document, widgetId) {
 
   document.querySelector("#catalogList .catalog-item").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   await sleep(200);
-  assert("tuile ajoutee (23 au total)", document.querySelectorAll(".grid-stack-item").length === 23);
+  assert("tuile ajoutee (24 au total)", document.querySelectorAll(".grid-stack-item").length === 24);
 
   console.log("== Tiroirs (gauche existant, haut, droite) : presence, ouverture, un seul a la fois ==");
   {
@@ -9625,6 +9643,7 @@ function catalogItemFor(catalog, document, widgetId) {
       const host = document.createElement("div");
       document.body.appendChild(host);
       const before = FETCHES.filter((u) => /jolpi/.test(u)).length;
+      const racingBefore = PROXIED_RACING.length;
       const w = new Klass({ el: host, settings: { circuit: "sepang", showWeather: false }, i18n, api });
       w.init();
       await sleep(200);
@@ -9634,7 +9653,7 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("le trace vient de la base, sans passer par Overpass",
         !FETCHES.some((u) => /overpass/.test(u)) && !!host.querySelector(".pwcir-track"));
       assert("un circuit epingle n'interroge pas le calendrier des courses",
-        FETCHES.filter((u) => /jolpi/.test(u)).length === before);
+        FETCHES.filter((u) => /jolpi/.test(u)).length === before && PROXIED_RACING.length === racingBefore);
       assert("la voie des stands est distinguee de la piste",
         !!host.querySelector(".pwcir-pit"));
       assert("le sens de la course est indique", !!host.querySelector(".pwcir-dir"));
@@ -9701,6 +9720,122 @@ function catalogItemFor(catalog, document, widgetId) {
         FETCHES.filter((u) => /overpass/.test(u)).length === before);
       w.destroy();
       host.remove();
+    }
+
+    /* « SUIVRE LE CALENDRIER DE MOTOGP » (1.145.0). Le Grand Prix du
+       moment vient du flux motogp.com, le circuit est retrouve dans la
+       base par l'identifiant que le flux lui donne, et la Formule 1 n'est
+       pas interrogee du tout.
+       "FOLLOW THE MOTOGP CALENDAR": the current Grand Prix comes from the
+       motogp.com feed, the circuit is found in the base through the id
+       the feed gives it, and Formula 1 is not asked at all. */
+    {
+      const base = JSON.parse(fs.readFileSync(path.join(PUB, "data/circuit-catalog.json"), "utf8"));
+      const jerezFeedId = base.circuits.jerez.specs.motogp.feedId;
+      MOTOGP_CIRCUIT_FEED.body = [
+        { kind: "TEST", name: "JEREZ TEST", sequence: 0, country: "ES", circuit: { id: "x-test", name: "Test", lat: "1", lng: "1" }, broadcasts: [] },
+        {
+          kind: "GP", name: "GRAND PRIX OF SPAIN", additional_name: "SPAIN", sequence: 4, country: "ES",
+          date_end: new Date(MS_NOW + 2 * 86400000).toISOString(),
+          circuit: { id: jerezFeedId, name: "Circuito de Jerez - Angel Nieto", country: "Spain", city: "Jerez", lat: "36.71", lng: "-6.03" },
+          broadcasts: [
+            motogpBroadcast("FP1", "Free Practice Nr. 1", MS_NOW + 3600000, "MGP", "MotoGP"),
+            motogpBroadcast("SPR", "Sprint", MS_NOW + 86400000, "MGP", "MotoGP"),
+            motogpBroadcast("RAC", "Grand Prix", MS_NOW + 2 * 86400000, "MGP", "MotoGP"),
+            motogpBroadcast("FP1", "Free Practice Nr. 1", MS_NOW + 7200000, "MT3", "Moto3")
+          ]
+        }
+      ];
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const jolpiBefore = PROXIED_RACING.filter((u) => /jolpi/.test(u)).length;
+      const feedBefore = PROXIED_RACING.filter((u) => /pulselive/.test(u)).length;
+      const w = new Klass({ el: host, settings: { circuit: "follow:motogp", showWeather: true }, i18n, api });
+      w.init();
+      await sleep(300);
+      assert("le calendrier MotoGP est lu sur motogp.com",
+        PROXIED_RACING.filter((u) => /pulselive/.test(u)).length > feedBefore);
+      assert("la Formule 1 n'est pas interrogee",
+        PROXIED_RACING.filter((u) => /jolpi/.test(u)).length === jolpiBefore);
+      assert("le circuit du Grand Prix est retrouve dans la base et dessine",
+        !!host.querySelector(".pwcir-track") && host.querySelectorAll(".pwcir-track").length >= 5);
+      assert("sans repli sur Overpass", !FETCHES.some((u) => /overpass/.test(u) && /36\.7|-6\.0/.test(u)));
+      assert("le nom du Grand Prix suit le nom du circuit",
+        /Jerez/.test((host.querySelector(".pwcir-name") || {}).textContent || "")
+        && /circuit\.mgp\.gp/.test((host.querySelector(".pwcir-name") || {}).textContent || ""));
+      const specs = host.querySelector(".pwcir-specs");
+      assert("la fiche MotoGP donne la plus longue ligne droite",
+        !!specs && /circuit\.spec\.straight/.test(specs.textContent) && /4\.423 km|4\.42 km/.test(specs.textContent));
+      assert("et les virages a gauche et a droite", !!specs && /circuit\.spec\.leftright/.test(specs.textContent));
+      assert("la source MotoGP est creditee", /circuit\.credit\.motogp/.test((host.querySelector(".pwcir-src") || {}).textContent || ""));
+      const wx = host.querySelector(".pwcir-wx-sess");
+      assert("la meteo annonce la prochaine seance MotoGP, pas Moto3",
+        !wx || /circuit\.mgp\.session\.fp1/.test(wx.textContent));
+
+      /* Repasser sur la Formule 1 : le calendrier de l'autre discipline
+         ne doit pas rester en memoire. */
+      w.onSettingsChanged({ circuit: "", showWeather: false });
+      await sleep(300);
+      assert("revenir a la Formule 1 interroge bien la Formule 1",
+        PROXIED_RACING.filter((u) => /jolpi/.test(u)).length > jolpiBefore);
+      w.destroy();
+      host.remove();
+      MOTOGP_CIRCUIT_FEED.body = null;
+    }
+
+    /* LA FENETRE DE REGLAGES PROPOSE L'OPTION. La liste « Circuit » est
+       remplie depuis la base ; les entrees fixes du manifeste (suivre la
+       F1, suivre le MotoGP) doivent la preceder, rester selectionnees
+       sans doublon, et survivre au chargement de la liste.
+       THE SETTINGS WINDOW OFFERS THE OPTION: fixed manifest entries come
+       first, stay selected without a duplicate, and survive the list
+       loading. */
+    {
+      /* jsdom n'a pas CSS.escape, que app.js emploie pour retrouver une
+         option par sa valeur : on le fournit, comme le ferait tout
+         navigateur reel.
+         jsdom lacks CSS.escape, which app.js uses to find an option by
+         value: provided here, as any real browser has it. */
+      if (!window.CSS) window.CSS = {};
+      if (!window.CSS.escape) window.CSS.escape = (x) => String(x).replace(/["\\]/g, "\\$&");
+      const tile = document.querySelector('[data-tile-id="t-circ"]');
+      assert("la tuile Circuits est posee", !!tile);
+      tile.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(400);
+      const sel = document.querySelector('#tileForm select[data-key="circuit"]');
+      assert("la liste Circuit existe", !!sel);
+      const vals = [...sel.options].map((o) => o.value);
+      assert("« Suivre la Formule 1 » est la premiere entree", vals[0] === "");
+      assert("« Suivre le MotoGP » est la deuxieme", vals[1] === "follow:motogp");
+      assert("suivies des circuits de la base", vals.length > 40 && vals.includes("monza"));
+      assert("l'option enregistree est selectionnee", sel.value === "follow:motogp");
+      assert("sans doublon : aucune entree n'est apparue deux fois", new Set(vals).size === vals.length);
+      assert("le libelle de l'option est lisible", /MotoGP/.test(sel.options[1].textContent) && sel.options[1].textContent !== "follow:motogp");
+      const cancel = document.getElementById("tileCancel") || document.querySelector("#tileModal [data-close]");
+      if (cancel) cancel.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(80);
+    }
+
+    /* UN CIRCUIT MOTOGP SANS TRACE (Le Mans-Bugatti) GARDE SA FICHE. */
+    {
+      const base = JSON.parse(fs.readFileSync(path.join(PUB, "data/circuit-catalog.json"), "utf8"));
+      MOTOGP_CIRCUIT_FEED.body = [{
+        kind: "GP", name: "GRAND PRIX OF FRANCE", additional_name: "FRANCE ", sequence: 5, country: "FR",
+        date_end: new Date(MS_NOW + 2 * 86400000).toISOString(),
+        circuit: { id: base.circuits.bugatti.specs.motogp.feedId, name: "Le Mans", country: "France", city: "Le Mans", lat: "48.00611", lng: "0.199556" },
+        broadcasts: [motogpBroadcast("RAC", "Grand Prix", MS_NOW + 2 * 86400000, "MGP", "MotoGP")]
+      }];
+      const host = document.createElement("div");
+      document.body.appendChild(host);
+      const w = new Klass({ el: host, settings: { circuit: "follow:motogp", showWeather: false }, i18n, api });
+      w.init();
+      await sleep(300);
+      assert("Le Mans : aucun trace, et la tuile le dit", !host.querySelector(".pwcir-track")
+        && (host.querySelector(".pwcir-msg") || {}).textContent === "circuit.absent");
+      assert("mais la fiche MotoGP reste affichee", /4\.185 km/.test((host.querySelector(".pwcir-specs") || {}).textContent || ""));
+      w.destroy();
+      host.remove();
+      MOTOGP_CIRCUIT_FEED.body = null;
     }
 
     /* LA BASE EST BIEN CELLE DU CALENDRIER. Un identifiant de circuit

@@ -43,7 +43,12 @@
 const fs = require("fs");
 const path = require("path");
 
-const OVERPASS = "https://overpass-api.de/api/interpreter";
+/* Serveur Overpass : le public par defaut, un miroir au choix via la
+   variable OVERPASS_URL (ex. https://overpass.private.coffee/api/interpreter)
+   quand le premier est sature ou injoignable depuis votre reseau.
+   Overpass server: the public one by default, any mirror through the
+   OVERPASS_URL variable when the first is saturated or unreachable. */
+const OVERPASS = process.env.OVERPASS_URL || "https://overpass-api.de/api/interpreter";
 const OUT = path.join(__dirname, "..", "public", "data", "circuit-catalog.json");
 
 /* Les circuits a relever, avec le point autour duquel chercher. Les
@@ -147,6 +152,21 @@ const CORNER_NUM_RE = /^\s*\d{1,2}[a-z]?\s*$/i;
    185 % : le dessin etait joli et n'etait pas le circuit.
    What carries `highway=raceway` without being the Grand Prix. */
 const OTHER_SPORT_RE = /(karting|motocross|quadcross|rallycross|autocross|cyclo|bmx|speedway|drag)/i;
+
+/* « speedway » SEUL est un ovale ; « motor;speedway » est un circuit
+   que le contributeur a double-etiquete. Goiania, circuit du MotoGP
+   2026, est ainsi tagge : sans cette nuance, ses quatre troncons et sa
+   voie des stands etaient ecartes et le circuit sortait « sans trace ».
+   "speedway" ALONE is an oval; "motor;speedway" is a circuit its
+   contributor double-tagged. Goiania, a 2026 MotoGP venue, is tagged
+   that way: without this nuance its four segments and pit lane were
+   dropped and the circuit came out "without an outline". */
+function isOtherSport(sport) {
+  const s = String(sport || "");
+  if (!OTHER_SPORT_RE.test(s)) return false;
+  const tokens = s.toLowerCase().split(/\s*;\s*/);
+  return !(tokens.includes("motor") && tokens.every((t) => t === "motor" || t === "speedway"));
+}
 const LOOSE_SURFACE_RE = /(unpaved|dirt|ground|gravel|sand|grass|earth|compacted)/i;
 const SECONDARY_RE = /(short course|short track|junior|inner circuit|outer circuit|endurance circuit|drag strip|paddock layout|flat oval|anello alta velocit|sopraelevata|ex circuito|rettilineo anello|nascar short|\btondo\b|runoff|north circuit|south circuit|handling)/i;
 
@@ -156,7 +176,7 @@ function parseOverpass(json) {
   for (const e of elements) {
     if (!e || e.type !== "way" || !Array.isArray(e.geometry) || e.geometry.length < 2) continue;
     const tags = e.tags || {};
-    if (OTHER_SPORT_RE.test(tags.sport || "")) continue;
+    if (isOtherSport(tags.sport)) continue;
     if (LOOSE_SURFACE_RE.test(tags.surface || "")) continue;
     const name = tags.name || tags["name:en"] || "";
     if (SECONDARY_RE.test(name)) continue;
@@ -188,7 +208,7 @@ async function overpass(lat, lon, radius) {
   for (let attempt = 0; attempt < 4; attempt++) {
     try {
       const res = await fetch(OVERPASS + "?data=" + encodeURIComponent(q), {
-        headers: { "Accept": "application/json", "User-Agent": "PiBoard/circuit-catalog" }
+        headers: { "Accept": "application/json", "User-Agent": "PiBoard/circuit-catalog (https://github.com/jihemezes/piboard)" }
       });
       if (!res.ok) { await wait(8000); continue; }
       return await res.json();
@@ -216,7 +236,18 @@ async function main() {
     if (only && !only.has(seed.id)) {
       /* Un releve partiel ne doit pas effacer le reste de la base.
          A partial run must not wipe the rest of the base. */
-      if (previous.circuits[seed.id]) circuits[seed.id] = previous.circuits[seed.id];
+      /* La FICHE, elle, est toujours reprise des seeds : elle ne coute
+         aucun appel reseau, et une donnee ajoutee aux seeds (le bloc
+         MotoGP, par exemple) doit atteindre tous les circuits, pas
+         seulement ceux qu'on re-releve.
+         The SPEC SHEET is always taken from the seeds: it costs no
+         network call, and data added to the seeds must reach every
+         circuit, not only the ones surveyed again. */
+      if (previous.circuits[seed.id]) {
+        circuits[seed.id] = Object.assign({}, previous.circuits[seed.id], {
+          specs: Object.assign({}, seed.specs, { lat: seed.lat, lon: seed.lon })
+        });
+      }
       continue;
     }
 
@@ -228,7 +259,11 @@ async function main() {
       console.log("ECHEC (" + e.message + ")");
     }
 
-    const entry = { name: seed.name, specs: Object.assign({}, seed.specs) };
+    /* Les coordonnees voyagent avec la fiche : la tuile s'en sert pour
+       rattacher un Grand Prix (F1 comme MotoGP) au circuit de la base.
+       The coordinates travel with the spec sheet: the tile uses them to
+       match a Grand Prix (F1 or MotoGP) to a circuit of the base. */
+    const entry = { name: seed.name, specs: Object.assign({}, seed.specs, { lat: seed.lat, lon: seed.lon }) };
     const real = seed.specs && seed.specs.lengthM;
     const measured = ways.length ? drawnLength(ways) : 0;
     const ratio = real ? measured / real : 0;
@@ -277,4 +312,4 @@ if (require.main === module) {
   main().catch((e) => { console.error(e); process.exit(1); });
 }
 
-module.exports = { parseOverpass, mainLoop, simplify, segmentLength, drawnLength };
+module.exports = { isOtherSport, parseOverpass, mainLoop, simplify, segmentLength, drawnLength };

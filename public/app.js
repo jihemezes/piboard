@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.144.0
+   Version 1.145.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2947,9 +2947,19 @@
          not be loaded -- the menu then shows that one known value rather
          than silently falling back to "automatic". */
       case "remoteselect": {
-        const first = f.emptyLabel
-          ? `<option value="">${i18n.fromManifest(f.emptyLabel)}</option>`
-          : "";
+        /* `extraOptions` : des entrees fixes du manifeste, posees APRES
+           l'entree vide et AVANT la liste distante (tuile Circuits :
+           « Suivre le calendrier de MotoGP »). Marquees data-fixed pour
+           survivre au chargement de la liste.
+           `extraOptions`: fixed manifest entries, placed AFTER the empty
+           entry and BEFORE the remote list. Marked data-fixed so they
+           survive the list loading. */
+        const extras = (Array.isArray(f.extraOptions) ? f.extraOptions : [])
+          .map((o) => `<option value="${escapeHtmlAttr(String(o.value))}" data-fixed="1">${i18n.fromManifest(o.label)}</option>`)
+          .join("");
+        const first = (f.emptyLabel
+          ? `<option value="" data-fixed="1">${i18n.fromManifest(f.emptyLabel)}</option>`
+          : "") + extras;
         return `<label class="field"><span>${label}</span>`
           + `<select data-key="${f.key}" data-remote-src="${escapeHtmlAttr(f.source || "")}"`
           + ` data-remote-path="${escapeHtmlAttr(f.path || "")}" data-remote-value="${escapeHtmlAttr(String(v == null ? "" : v))}">`
@@ -3597,10 +3607,13 @@
     if (!list.length) return;
 
     const current = el.value;
-    const head = el.querySelector('option[value=""]');
+    const heads = Array.from(el.querySelectorAll("option[data-fixed]"));
+    const head = heads.length ? null : el.querySelector('option[value=""]');
     el.innerHTML = "";
+    heads.forEach((h) => el.appendChild(h));
     if (head) el.appendChild(head);
     for (const o of list) {
+      if (heads.some((h) => h.value === o.value)) continue;
       const opt = document.createElement("option");
       opt.value = o.value;
       opt.textContent = o.label;
@@ -3613,7 +3626,7 @@
        If the stored value is no longer in the list -- a circuit dropped
        from the base -- it is kept and shown as is. Making it vanish
        would change the person's setting without telling them. */
-    if (current && !list.some((o) => o.value === current)) {
+    if (current && !list.some((o) => o.value === current) && !heads.some((h) => h.value === current)) {
       const keep = document.createElement("option");
       keep.value = current;
       keep.textContent = current;

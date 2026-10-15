@@ -1,5 +1,90 @@
 # Changelog
 
+## 1.145.0
+
+- **Tuile Plan du circuit : option « Suivre le calendrier de MotoGP »**, en
+  deuxième entrée de la liste « Circuit » (après « Suivre le calendrier de
+  Formule 1 », qui reste le défaut : rien ne change pour l'existant). La tuile
+  affiche le circuit du Grand Prix MotoGP en cours et passe seule au suivant,
+  trois heures après le départ de la course ; saison finie, le dernier circuit
+  reste, et l'année suivante est essayée dès que le flux la publie. Calendrier
+  et horaires viennent de motogp.com (le flux de la tuile Sports mécaniques) :
+  tests, présentations et conférences de presse sont écartés, ainsi que
+  Moto2/Moto3.
+- **Météo de la prochaine séance MotoGP** : essais libres, essais, Q1/Q2,
+  Sprint, warm-up, course, avec leur libellé en français et en anglais.
+- **Les 22 circuits du calendrier MotoGP 2026 sont dans la base**, chacun avec
+  les chiffres officiels du flux : longueur du tracé MotoGP, virages à gauche
+  et à droite, plus longue ligne droite (rangés à part de ceux de la F1 :
+  `specs.motogp`). **9 tracés qui manquaient ont été relevés** : Assen,
+  Balaton Park, Goiânia, Jerez, Lusail, Mandalika, Motegi, Phillip Island,
+  Sachsenring — 21 circuits sur 22 ont maintenant leur dessin. Seul
+  Le Mans-Bugatti reste sans tracé : OpenStreetMap l'enchevêtre avec le circuit
+  des 24 Heures, et son relevé exige un travail à la main.
+- **Pourquoi ces tracés manquaient** : leur fiche n'avait aucune longueur de
+  référence, donc le contrôle de longueur du relevé (85 à 160 %) ne pouvait
+  rien valider. Le flux MotoGP fournit la longueur. Goiânia, de plus, est
+  étiqueté `sport=motor;speedway` dans OpenStreetMap, ce que le relevé prenait
+  pour un ovale : « motor;speedway » est maintenant reconnu comme un circuit.
+- Le rattachement d'un Grand Prix au circuit de la base se fait par
+  l'identifiant du circuit dans le flux (écrit dans la base), jamais d'abord
+  par les coordonnées : le flux place Le Mans à 6 km du circuit Bugatti et
+  Mandalika à 25 km du sien.
+- Outils : `scripts/circuit-motogp.js` complète les seeds depuis le flux ;
+  `scripts/circuit-catalog.js` accepte `OVERPASS_URL` (miroir Overpass),
+  reprend la fiche depuis les seeds même pour les circuits qu'il ne relève
+  pas, et écrit les coordonnées dans la fiche.
+- Interface : les manifestes peuvent déclarer `extraOptions` sur une liste
+  distante (entrées fixes placées avant la liste).
+- Aide : fiche « Plan du circuit » mise à jour (Objectif, choix du circuit,
+  couverture MotoGP, options).
+- Tests : `circuitMotoGp.test.js` (filtrage du flux, rattachement, 22
+  circuits, fiche MotoGP à part, script) ; `dom-smoke.js` couvre le mode
+  MotoGP de bout en bout (aucun appel à la F1, retour à la F1, Le Mans sans
+  tracé) et vérifie enfin qu'un circuit épinglé n'appelle aucun calendrier,
+  même via le relais.
+
+---
+
+- **Circuit map tile: "Follow the MotoGP calendar" option**, as the second
+  entry of the "Circuit" list (after "Follow the Formula 1 calendar", which
+  stays the default: nothing changes for existing tiles). The tile shows the
+  circuit of the MotoGP Grand Prix under way and moves on by itself three
+  hours after the race start; once the season is over the last circuit stays,
+  and next year is tried as soon as the feed publishes it. Calendar and times
+  come from motogp.com (the Motorsport tile's feed): tests, launches and press
+  conferences are dropped, as are Moto2/Moto3.
+- **Weather for the next MotoGP session**: free practice, practice, Q1/Q2,
+  Sprint, warm-up, race, labelled in French and English.
+- **All 22 circuits of the 2026 MotoGP calendar are in the base**, each with
+  the feed's official figures: MotoGP layout length, left and right corners,
+  longest straight (kept apart from F1's: `specs.motogp`). **9 missing
+  outlines were surveyed**: Assen, Balaton Park, Goiânia, Jerez, Lusail,
+  Mandalika, Motegi, Phillip Island, Sachsenring — 21 circuits out of 22 now
+  have their drawing. Only Le Mans-Bugatti remains without an outline:
+  OpenStreetMap tangles it with the 24 Hours circuit, and surveying it needs
+  hand work.
+- **Why those outlines were missing**: their spec sheet had no reference
+  length, so the survey's length check (85 to 160 %) could validate nothing.
+  The MotoGP feed provides the length. Goiânia is also tagged
+  `sport=motor;speedway` in OpenStreetMap, which the survey took for an oval:
+  "motor;speedway" is now recognised as a circuit.
+- A Grand Prix is matched to a circuit of the base through the circuit id in
+  the feed (written into the base), never by coordinates first: the feed puts
+  Le Mans 6 km from the Bugatti circuit and Mandalika 25 km from its own.
+- Tools: `scripts/circuit-motogp.js` completes the seeds from the feed;
+  `scripts/circuit-catalog.js` accepts `OVERPASS_URL` (Overpass mirror), takes
+  the spec sheet from the seeds even for circuits it does not survey, and
+  writes the coordinates into the sheet.
+- UI: manifests can declare `extraOptions` on a remote list (fixed entries
+  placed before the list).
+- Help: "Circuit map" page updated (Goal, choosing the circuit, MotoGP
+  coverage, options).
+- Tests: `circuitMotoGp.test.js` (feed filtering, matching, 22 circuits,
+  separate MotoGP sheet, script); `dom-smoke.js` covers the MotoGP mode end
+  to end (no F1 call, switching back to F1, Le Mans without outline) and
+  finally checks that a pinned circuit calls no calendar, relay included.
+
 ## 1.144.0
 
 - **Aide : entrée « Accueil »** en tête de l'arbre de gauche, pour revenir à

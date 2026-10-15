@@ -46,6 +46,25 @@
   const API = "https://api.jolpi.ca/ergast/f1";
   const CATALOG_URL = "api/circuit-catalog";
 
+  /* LE CALENDRIER SUIVI SE CHOISIT DANS LA LISTE DES CIRCUITS. Trois
+     valeurs possibles pour le reglage `circuit` : vide = suivre la
+     Formule 1 (le comportement d'origine, inchange), « follow:motogp » =
+     suivre le MotoGP, et n'importe quel autre identifiant = circuit
+     epingle. Une seule liste, une seule cle : un second reglage aurait
+     permis des combinaisons absurdes (calendrier MotoGP + circuit
+     epingle).
+     THE FOLLOWED CALENDAR IS CHOSEN IN THE CIRCUIT LIST. Three values
+     for the `circuit` setting: empty = follow Formula 1 (the original
+     behaviour, unchanged), "follow:motogp" = follow MotoGP, anything
+     else = a pinned circuit. */
+  const FOLLOW_MOTOGP = "follow:motogp";
+  const MOTOGP_FEED = "https://api.motogp.pulselive.com/motogp/v1/events?seasonYear=";
+
+  function followMode(circuitSetting) {
+    const v = String(circuitSetting || "").trim();
+    return v === FOLLOW_MOTOGP ? "motogp" : (v ? "pinned" : "f1");
+  }
+
   function esc(s) {
     return String(s == null ? "" : s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -132,6 +151,130 @@
     return race.sessions.find((s) => s.at > now) || null;
   }
 
+  /* ---------- Calendrier MotoGP ----------
+     Meme flux que la tuile Motorsport : le site officiel motogp.com. On
+     n'en lit que ce dont cette tuile a besoin -- le circuit, ou il est,
+     et l'heure des seances de la classe reine. Les tests, presentations
+     et rendez-vous presse du flux sont ecartes (`kind` different de GP).
+     Same feed as the Motorsport tile: the official motogp.com site. Only
+     what this tile needs is read -- the circuit, where it is, and the
+     premier class's session times. Tests, launches and press events are
+     dropped (`kind` other than GP). */
+
+  /* Un horaire comme « 2026-02-27T09:00:00+0700 » : le decalage sans
+     deux-points n'est pas garanti par la specification, on le corrige
+     avant d'analyser plutot que de compter sur la tolerance du
+     navigateur.
+     An offset without a colon is not guaranteed by the spec; fixed
+     before parsing rather than relying on browser leniency. */
+  function parseIsoOffset(str) {
+    if (!str) return null;
+    const t = Date.parse(String(str).replace(/([+-]\d{2})(\d{2})$/, "$1:$2"));
+    return Number.isFinite(t) ? t : null;
+  }
+
+  /* Le code de seance du flux -> une famille. RAC2 existe (course
+     reportee ou reprise) : toute seance dont le code commence par RAC
+     est une course.
+     The feed's session code -> a kind. RAC2 exists (a restarted race):
+     any code starting with RAC is a race. */
+  function motogpKind(code) {
+    const c = String(code || "").toUpperCase();
+    if (c.startsWith("RAC")) return "race";
+    return { FP1: "fp1", FP2: "fp2", PR: "practice", Q1: "q1", Q2: "q2", SPR: "sprint", WUP: "warmup" }[c] || "";
+  }
+
+  function parseMotoGpCalendar(events) {
+    if (!Array.isArray(events)) return null;
+    const races = [];
+    for (const ev of events) {
+      if (!ev || ev.kind !== "GP" || !ev.circuit) continue;
+      const c = ev.circuit;
+      const sessions = (Array.isArray(ev.broadcasts) ? ev.broadcasts : [])
+        .filter((b) => b && String(b.type || "").toUpperCase() === "SESSION"
+          && String((b.category && b.category.acronym) || "").toUpperCase() === "MGP")
+        .map((b) => ({ kind: motogpKind(b.shortname), at: parseIsoOffset(b.date_start), series: "motogp" }))
+        .filter((x) => x.kind && x.at != null)
+        .sort((a, b) => a.at - b.at);
+      /* La course du dimanche est la DERNIERE seance de type course. */
+      const raceSessions = sessions.filter((x) => x.kind === "race");
+      const at = raceSessions.length ? raceSessions[raceSessions.length - 1].at
+        : parseIsoOffset(ev.date_end);
+      if (at == null) continue;
+      races.push({
+        round: Number(ev.sequence) || races.length + 1,
+        name: "",
+        series: "motogp",
+        place: String(ev.additional_name || "").trim(),
+        iso: String(ev.country || "").toUpperCase(),
+        feedId: c.id || "",
+        circuitId: "",
+        circuitName: c.name || "",
+        country: c.country || "",
+        locality: c.city || "",
+        lat: Number(c.lat),
+        lon: Number(c.lng),
+        at,
+        sessions
+      });
+    }
+    return races.sort((a, b) => a.at - b.at);
+  }
+
+  /* Rattache un Grand Prix MotoGP a un circuit de la base. Dans l'ordre :
+     (1) l'identifiant du circuit dans le flux, ecrit dans la base par
+     scripts/circuit-motogp.js -- exact et stable ; (2) a defaut, le
+     circuit de la base le plus proche, a moins de 4 km. On ne s'appuie
+     PAS d'abord sur les coordonnees : le flux place Le Mans a 6 km du
+     circuit Bugatti et Mandalika a 25 km du sien.
+     Matches a MotoGP Grand Prix to a circuit of the base: (1) the feed's
+     circuit id, written into the base by scripts/circuit-motogp.js --
+     exact and stable; (2) failing that, the nearest circuit of the base
+     within 4 km. Coordinates do NOT come first: the feed puts Le Mans
+     6 km from the Bugatti circuit and Mandalika 25 km from its own. */
+  function matchMotoGpCircuit(catalog, race) {
+    const circuits = (catalog && catalog.circuits) || {};
+    const ids = Object.keys(circuits);
+    if (race.feedId) {
+      const hit = ids.find((id) => circuits[id] && circuits[id].specs
+        && circuits[id].specs.motogp && circuits[id].specs.motogp.feedId === race.feedId);
+      if (hit) return hit;
+    }
+    let best = null;
+    for (const id of ids) {
+      const sp = circuits[id] && circuits[id].specs;
+      if (!sp || !Number.isFinite(sp.lat) || !Number.isFinite(sp.lon)) continue;
+      const dx = (race.lon - sp.lon) * Math.cos(race.lat * Math.PI / 180);
+      const dy = race.lat - sp.lat;
+      const km = Math.hypot(dx, dy) * 111.2;
+      const motogp = Array.isArray(sp.series) && sp.series.includes("motogp") ? 0 : 1;
+      if (km <= 4 && (!best || motogp < best.motogp || (motogp === best.motogp && km < best.km))) best = { id, km, motogp };
+    }
+    return best ? best.id : "";
+  }
+
+  /* Le nom du Grand Prix, dans la langue de la tuile. Le flux donne un
+     « additional_name » en anglais majuscule (« THAILAND », « CATALONIA »,
+     « ARAGON »). Quand c'est le nom du pays du circuit, on le traduit ;
+     sinon (Catalogne, Aragon, Valence : trois Grands Prix d'un meme pays)
+     on garde le nom du flux, en casse normale.
+     The Grand Prix's name in the tile's language. When the feed's name is
+     the circuit's country, it is translated; otherwise (Catalonia, Aragon,
+     Valencia) the feed's own name is kept, in normal case. */
+  function motogpRaceName(race, lang) {
+    const raw = race.place;
+    if (!raw) return "";
+    let out = raw.toLowerCase().replace(/(^|[\s-])(\p{L})/gu, (m, a, b) => a + b.toUpperCase());
+    try {
+      const en = new Intl.DisplayNames(["en"], { type: "region" }).of(race.iso);
+      const norm = (x) => String(x).toUpperCase().replace(/^THE /, "").replace(/\s+/g, " ").trim();
+      const alias = { USA: "UNITED STATES", "GREAT BRITAIN": "UNITED KINGDOM" };
+      const key = alias[norm(raw)] || norm(raw);
+      if (en && norm(en) === key) out = new Intl.DisplayNames([lang || "en"], { type: "region" }).of(race.iso) || out;
+    } catch (e) { /* Intl.DisplayNames absent : on garde le nom du flux */ }
+    return out;
+  }
+
   /* ---------- La carte du circuit ----------
      D'OU VIENT LE TRACE. Les plans officiels de la Formule 1 sont des
      visuels sous droits : on ne les embarque pas. Le tracé est donc
@@ -185,6 +328,15 @@
      observed in Overpass's real answer around Sepang: two karting
      segments and a dirt motocross/quadcross track. */
   const OTHER_SPORT_RE = /(karting|motocross|quadcross|rallycross|autocross|cyclo|bmx|speedway)/i;
+  /* « motor;speedway » est un circuit double-etiquete (Goiania), pas un
+     ovale : voir isOtherSport() dans scripts/circuit-catalog.js.
+     "motor;speedway" is a double-tagged circuit, not an oval. */
+  function isOtherSport(sport) {
+    const str = String(sport || "");
+    if (!OTHER_SPORT_RE.test(str)) return false;
+    const tokens = str.toLowerCase().split(/\s*;\s*/);
+    return !(tokens.includes("motor") && tokens.every((t) => t === "motor" || t === "speedway"));
+  }
   const LOOSE_SURFACE_RE = /(unpaved|dirt|ground|gravel|sand|grass|earth|compacted)/i;
 
   function overpassUrl(lat, lon) {
@@ -211,7 +363,7 @@
       /* Le karting voisin porte le meme `highway=raceway` : l'inclure
          collerait une seconde piste au milieu du Grand Prix.
          The neighbouring karting track carries the same tag. */
-      if (OTHER_SPORT_RE.test(tags.sport || "")) continue;
+      if (isOtherSport(tags.sport)) continue;
       /* Un Grand Prix ne se court pas sur de la terre : la surface suffit
          a ecarter ce que le `sport` n'a pas dit.
          A Grand Prix is not run on dirt. */
@@ -511,7 +663,16 @@
     onSettingsChanged(settings) {
       const before = String(this.ctx.settings.circuit || "");
       this.ctx.settings = settings || this.ctx.settings;
-      if (String(this.ctx.settings.circuit || "") !== before) this.circuit = null;
+      if (String(this.ctx.settings.circuit || "") !== before) {
+        this.circuit = null;
+        /* Le calendrier en memoire est celui de l'AUTRE discipline si on
+           vient de passer de la F1 au MotoGP : le garder ferait suivre
+           le mauvais championnat jusqu'au prochain releve.
+           The calendar in memory belongs to the OTHER discipline after a
+           switch from F1 to MotoGP: keeping it would follow the wrong
+           championship until the next refresh. */
+        if (followMode(before) !== followMode(this.ctx.settings.circuit)) { this.calendar = null; this.weather = null; }
+      }
       this.render();
       this.refresh();
       this.arm();
@@ -572,8 +733,9 @@
        asked for. Pinning Spa all year must cost no call to the racing
        API. */
     async wantedId() {
-      const pinned = String(this.ctx.settings.circuit || "").trim();
-      if (pinned) return { id: pinned, race: null };
+      const mode = followMode(this.ctx.settings.circuit);
+      if (mode === "pinned") return { id: String(this.ctx.settings.circuit).trim(), race: null };
+      if (mode === "motogp") return this.wantedMotoGp();
 
       if (!this.calendar) {
         try {
@@ -584,6 +746,46 @@
       }
       const race = currentRace(this.calendar || [], Date.now());
       return race ? { id: race.circuitId, race } : { id: "", race: null };
+    }
+
+    /* MODE MOTOGP. Le calendrier de l'annee vient du flux motogp.com ;
+       si l'annee est finie (tous les Grands Prix sont courus), celui de
+       l'annee suivante est essaye -- il n'est publie que quelques mois
+       avant -- et, a defaut, on garde le dernier circuit visite, comme
+       en Formule 1.
+       MOTOGP MODE. The year's calendar comes from the motogp.com feed;
+       if the year is over, next year's is tried -- it is only published
+       a few months ahead -- and failing that the last circuit visited is
+       kept, as in Formula 1. */
+    async wantedMotoGp() {
+      const now = Date.now();
+      if (!this.calendar) {
+        const year = new Date(now).getFullYear();
+        let races = null;
+        try { races = parseMotoGpCalendar(await this.fetchJson(MOTOGP_FEED + year)); } catch (e) { races = null; }
+        const over = !races || !races.length || races.every((r) => r.at + RACE_LENGTH_MS <= now);
+        if (over) {
+          let next = null;
+          try { next = parseMotoGpCalendar(await this.fetchJson(MOTOGP_FEED + (year + 1))); } catch (e) { next = null; }
+          if (next && next.length) races = next;
+        }
+        this.calendar = races;
+      }
+      const race = currentRace(this.calendar || [], now);
+      if (!race) return { id: "", race: null };
+      const id = matchMotoGpCircuit(this.catalog, race);
+      const entry = id && this.catalog.circuits[id];
+      /* Les coordonnees de la BASE priment sur celles du flux, qui place
+         Le Mans et Mandalika a des kilometres de leur circuit : c'est
+         elles qui servent a la meteo.
+         The BASE's coordinates win over the feed's, which puts Le Mans
+         and Mandalika kilometres from their circuits: the weather uses
+         them. */
+      const sp = entry && entry.specs;
+      const located = sp && Number.isFinite(sp.lat) && Number.isFinite(sp.lon)
+        ? { lat: sp.lat, lon: sp.lon } : { lat: race.lat, lon: race.lon };
+      const out = Object.assign({}, race, located, { circuitId: id });
+      return { id: id || ("motogp-" + race.round), race: out };
     }
 
     async resolveCircuit() {
@@ -750,7 +952,16 @@
          Prix a afficher, et en inventer un serait faux.
          The circuit's name, and the Grand Prix only when following the
          calendar. */
-      if (!this.ctx.settings.circuit && race && race.name) return c.name + " · " + race.name;
+      if (race && race.series === "motogp") {
+        /* Le nom du Grand Prix est calcule ICI, a l'affichage, et non a
+           la lecture du flux : un changement de langue doit le suivre
+           sans recharger le calendrier.
+           Computed HERE, at display time, not when the feed is read: a
+           language change must follow without reloading the calendar. */
+        const place = motogpRaceName(race, this.ctx.i18n.lang);
+        return place ? c.name + " · " + this.ctx.i18n.t("circuit.mgp.gp").replace("{place}", place) : (c.name || "");
+      }
+      if (race && race.name) return c.name + " · " + race.name;
       return c.name || "";
     }
 
@@ -859,6 +1070,7 @@
     credit() {
       const i18n = this.ctx.i18n;
       const parts = [i18n.t("circuit.credit.osm")];
+      if (followMode(this.ctx.settings.circuit) === "motogp") parts.push(i18n.t("circuit.credit.motogp"));
       if (this.ctx.settings.showWeather !== false) parts.push(i18n.t("circuit.credit.meteo"));
       return parts.join(" · ");
     }
@@ -868,8 +1080,26 @@
       if (!s) return "";
       const i18n = this.ctx.i18n;
       const items = [];
-      if (Number.isFinite(s.lengthM)) items.push([i18n.t("circuit.spec.length"), (s.lengthM / 1000).toFixed(3).replace(/0$/, "") + " km"]);
-      if (Number.isFinite(s.turns)) items.push([i18n.t("circuit.spec.turns"), String(s.turns)]);
+      /* LES CHIFFRES MOTOGP SONT A PART. Un meme circuit n'a pas toujours
+         le meme trace en F1 et en MotoGP (Red Bull Ring : 4 318 m contre
+         4 348 m depuis 2022 ; Catalunya : variante sans chicane). Le bloc
+         `specs.motogp` vient du flux officiel ; on s'en sert quand on suit
+         le MotoGP, et pour un circuit qui n'accueille PAS la F1 -- ou
+         c'est le seul jeu de chiffres qui existe.
+         THE MOTOGP FIGURES ARE SEPARATE. The same circuit does not always
+         have the same layout in F1 and MotoGP. The `specs.motogp` block
+         comes from the official feed; it is used when following MotoGP,
+         and for a circuit that does NOT host F1, where it is the only
+         set of figures that exists. */
+      const mg = s.motogp && typeof s.motogp === "object" ? s.motogp : null;
+      const noF1 = !(Array.isArray(s.series) && s.series.includes("f1"));
+      const useMg = !!mg && (followMode(this.ctx.settings.circuit) === "motogp" || noF1);
+      const lengthM = useMg && Number.isFinite(mg.lengthM) ? mg.lengthM : s.lengthM;
+      if (Number.isFinite(lengthM)) items.push([i18n.t("circuit.spec.length"), (lengthM / 1000).toFixed(3).replace(/0$/, "") + " km"]);
+      if (useMg && Number.isFinite(mg.left) && Number.isFinite(mg.right)) {
+        items.push([i18n.t("circuit.spec.turns"), (mg.left + mg.right) + " (" + i18n.t("circuit.spec.leftright").replace("{l}", mg.left).replace("{r}", mg.right) + ")"]);
+      } else if (Number.isFinite(s.turns)) items.push([i18n.t("circuit.spec.turns"), String(s.turns)]);
+      if (useMg && Number.isFinite(mg.straightM)) items.push([i18n.t("circuit.spec.straight"), mg.straightM + " m"]);
       if (Number.isFinite(s.laps)) items.push([i18n.t("circuit.spec.laps"), String(s.laps)]);
       if (Number.isFinite(s.raceKm)) items.push([i18n.t("circuit.spec.distance"), s.raceKm.toFixed(1) + " km"]);
       /* LE LIEU ET L'ANNEE viennent de Wikidata et de l'API des courses,
@@ -917,7 +1147,7 @@
       const cond = describeWeather(w.code);
       const rain = w.rain != null ? Math.round(w.rain) : null;
       return `<div class="pwcir-wx">
-        <span class="pwcir-wx-sess">${esc(i18n.t("f1.session." + sess.kind))}</span>
+        <span class="pwcir-wx-sess">${esc(i18n.t((sess.series === "motogp" ? "circuit.mgp.session." : "f1.session.") + sess.kind))}</span>
         <span class="pwcir-wx-when">${esc(dayTime(sess.at, this.locale()))}</span>
         <span class="pwcir-wx-cond">${cond ? cond.icon : "–"}</span>
         <span class="pwcir-wx-temp">${w.temp != null ? esc(Math.round(w.temp) + "°") : "–"}</span>
@@ -934,6 +1164,7 @@
      Exposed for tests: the pure helpers. */
   window.PiBoardCircuitHelpers = {
     parseCalendar, currentRace, nextSession, whenOf,
+    parseMotoGpCalendar, matchMotoGpCircuit, motogpRaceName, motogpKind, followMode, FOLLOW_MOTOGP,
     parseCircuit, projectCircuit, directionArrow, toPath, overpassUrl,
     parseWeather, weatherAt, weatherUrl, describeWeather,
     CORNER_RE, CORNER_NUM_RE, PIT_RE, RACE_LENGTH_MS

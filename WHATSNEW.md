@@ -33,6 +33,30 @@
 # Nouveautes / What's new
 
 
+## 1.145.0
+
+**Suivre le MotoGP dans la tuile Plan du circuit**
+
+Dans les réglages de la tuile, la liste « Circuit » propose maintenant
+« Suivre le calendrier de MotoGP » : la tuile affiche le circuit du Grand Prix
+du week-end, change seule de circuit d'une course à l'autre, et donne la météo
+de la prochaine séance (essais, qualifications, sprint, course). Les 22
+circuits du calendrier 2026 sont dans la base, avec leur longueur, leurs
+virages à gauche et à droite et leur plus longue ligne droite ; 21 ont leur
+tracé dessiné (Le Mans-Bugatti n'a que sa fiche).
+
+---
+
+**Follow MotoGP in the Circuit map tile**
+
+In the tile's settings, the "Circuit" list now offers "Follow the MotoGP
+calendar": the tile shows the weekend's Grand Prix circuit, switches circuit
+by itself from one race to the next, and gives the weather for the next
+session (practice, qualifying, sprint, race). All 22 circuits of the 2026
+calendar are in the base, with their length, left and right corners and
+longest straight; 21 have their outline drawn (Le Mans-Bugatti only has its
+spec sheet).
+
 ## 1.144.0
 
 **Une aide plus complète pour chaque tuile**
