@@ -418,3 +418,40 @@ console.log("== Aide en page pleine : le theme de l'aide est documente (1.142.0)
     "la fiche Barre d'outils decrit l'aide en page pleine dans les deux langues");
 }
 console.log("  OK");
+
+console.log("== Fiches de tuiles : un Objectif complet et TOUS les reglages documentes (1.144.0) ==");
+{
+  /* Chaque reglage d'un manifeste doit figurer dans la fiche de sa tuile,
+     sous son libelle exact (numeros mis a part : « Alarme 1–5 » couvre
+     Alarme 1 a 5), dans les deux langues. Une option ajoutee a une tuile
+     sans mise a jour de l'aide fait desormais echouer ce test.
+     Every manifest setting must appear in its tile's page under its exact
+     label (numbers aside), in both languages. */
+  const decode = (h) => String(h).replace(/<[^>]+>/g, " ").replace(/&nbsp;/g, " ").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, "&");
+  const norm = (s) => " " + decode(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[0-9]+/g, " ").replace(/[^a-z]+/g, " ").replace(/\s+/g, " ").trim() + " ";
+  let tiles = 0, settingsChecked = 0;
+  for (const e of entries.filter((x) => x.group === "tiles")) {
+    const mf = path.join(__dirname, "..", "public", "widgets", e.id, "manifest.json");
+    if (!fs.existsSync(mf)) continue;
+    tiles++;
+    assert.ok(/<h4>Objectif<\/h4>\s*<p>[\s\S]*?<ul>/.test(e.html.fr), `fr : Objectif avec la liste des possibilites manquant : ${e.id}`);
+    assert.ok(/<h4>(Goal|Purpose)<\/h4>\s*<p>[\s\S]*?<ul>/.test(e.html.en), `en : Goal with the list of capabilities missing: ${e.id}`);
+    const manifest = JSON.parse(fs.readFileSync(mf, "utf8"));
+    for (const lang of ["fr", "en"]) {
+      const text = norm(e.html[lang]);
+      for (const st of manifest.settings || []) {
+        if (!st.label) continue;
+        const label = typeof st.label === "object" ? st.label[lang] : st.label;
+        const n = norm(label);
+        if (n.trim()) {
+          settingsChecked++;
+          assert.ok(text.includes(n), `${lang} : reglage non documente dans la fiche « ${e.id} » : ${label} (${st.key})`);
+        }
+      }
+    }
+  }
+  assert.ok(tiles >= 30, "au moins trente fiches de tuiles verifiees");
+  console.log(`  OK   ${tiles} fiches, ${settingsChecked} libelles de reglages retrouves (FR + EN)`);
+}

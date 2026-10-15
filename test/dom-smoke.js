@@ -3904,6 +3904,15 @@ function catalogItemFor(catalog, document, widgetId) {
       searchInput.value = "";
       searchInput.dispatchEvent(new window.Event("input", { bubbles: true }));
 
+      await click(tree.querySelector('[data-help-id="clock"]'));
+      const homeLink = $id("helpHomeLink");
+      assert("arbre : entree « Accueil » en tete, avant les familles",
+        !!homeLink && tree.firstElementChild === homeLink && /Accueil/.test(homeLink.textContent));
+      assert("Accueil : pas actif quand une fiche est ouverte", !homeLink.classList.contains("active"));
+      await click(homeLink);
+      assert("Accueil : ramene a l'accueil et devient actif",
+        $id("helpHome").hidden === false && $id("helpFiche").hidden === true && homeLink.classList.contains("active"));
+
       await click(tree.querySelector('[data-help-id="about"]'));
       assert("fiche a contenu dynamique (A propos) : d'un seul tenant, sans titre d'article ni Retour",
         $id("helpTopic").hidden === false && $id("helpArticleHead").hidden === true && $id("helpBack").hidden === true);

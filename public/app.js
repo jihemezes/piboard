@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.143.1
+   Version 1.144.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -8620,7 +8620,14 @@
      carry data-help-id; their search text also holds their section titles. */
   function renderHelpTree() {
     const families = helpFamilies(window.PIBOARD_HELP || []);
-    $("helpNav").innerHTML = families.map((fam) =>
+    // Entree « Accueil » en tete de l'arbre : revenir a l'accueil d'un geste,
+    // ou que l'on soit. / "Home" entry at the top of the tree: back to the
+    // home page in one gesture, wherever you are.
+    $("helpNav").innerHTML =
+      `<button type="button" class="help-home-link" id="helpHomeLink">` +
+        `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>` +
+        `<span>${escapeHtml(i18n.t("help.home"))}</span></button>` +
+      families.map((fam) =>
       `<div class="help-family" data-help-group="${fam.key}">` +
         `<button type="button" class="help-family-head" data-help-toggle="${fam.key}" aria-expanded="false">` +
           `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>` +
@@ -8638,6 +8645,7 @@
     $("helpNav").querySelectorAll("[data-help-id]").forEach((btn) => {
       onActivate(btn, () => showHelpSection(btn.dataset.helpId));
     });
+    $("helpHomeLink").addEventListener("click", () => helpGoHome(null));
     $("helpNav").querySelectorAll("[data-help-toggle]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const k = btn.dataset.helpToggle;
@@ -8663,6 +8671,8 @@
     $("helpNav").querySelectorAll(".help-theme").forEach((b) => {
       b.classList.toggle("active", b.dataset.helpId === helpActiveId);
     });
+    const home = $("helpHomeLink");
+    if (home) home.classList.toggle("active", !helpActiveId);
   }
 
   /* Filtre l'arbre. Une famille dont le NOM correspond montre toutes ses

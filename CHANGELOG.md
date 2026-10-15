@@ -1,5 +1,52 @@
 # Changelog
 
+## 1.144.0
+
+- **Aide : entrée « Accueil »** en tête de l'arbre de gauche, pour revenir à
+  l'accueil d'un geste (mise en avant quand on y est).
+- **Rubrique « Objectif » réécrite pour les 38 fiches de tuiles** : une phrase
+  d'usage, puis la liste de TOUT ce que la tuile sait faire. Exemple :
+  l'Horloge cite désormais les fuseaux horaires, le lever et le coucher du
+  soleil (absents de l'aide jusqu'ici), le numéro de semaine, les alarmes et
+  le prochain événement. Texte, Logo/Image, YouTube et Veille réseau, qui
+  n'avaient pas d'Objectif, en ont un.
+- **Rubriques « Options » complètes** : chaque réglage y figure sous son
+  libellé exact, dans l'ordre et avec les groupes de la fenêtre de réglages,
+  avec ses choix et sa valeur par défaut. Le texte rédigé existant est repris
+  quand il correspond ; les explications des manifestes complètent le reste ;
+  les champs texte sans explication (webhooks, numéro de série Bambu, dossiers
+  du Diaporama) ont reçu une description. Environ 290 réglages manquaient ou
+  n'étaient pas reconnaissables.
+- **Correctif d'affichage** : les chemins Windows des fiches Chaînes TV et
+  Sauvegardes perdaient leurs antislashs (« D:VideosPiBoard ») — ils
+  s'affichent de nouveau correctement.
+- Tests : `helpContent.test.js` vérifie que chaque fiche de tuile a un
+  Objectif avec sa liste et que **chaque réglage de chaque manifeste** est
+  documenté dans sa fiche, en français et en anglais (le test échoue sur
+  l'aide précédente) ; `dom-smoke.js` vérifie l'entrée « Accueil ».
+
+---
+
+- **Help: "Home" entry** at the top of the left tree, back to the home page in
+  one gesture (highlighted when there).
+- **"Goal" section rewritten for all 38 tile pages**: one usage sentence, then
+  the list of EVERYTHING the tile can do. Example: the Clock now mentions time
+  zones, sunrise and sunset (missing from the help so far), week number,
+  alarms and next event. Text, Logo/Image, YouTube and Host watch, which had
+  no Goal, now have one.
+- **Complete "Options" sections**: every setting appears under its exact
+  label, in the order and groups of the settings window, with its choices and
+  default. Existing written text is kept where it matches; manifest hints fill
+  the rest; text fields without explanation (webhooks, Bambu serial number,
+  slideshow folders) got a description. About 290 settings were missing or
+  unrecognisable.
+- **Display fix**: Windows paths in the TV channels and Backups pages lost
+  their backslashes ("D:VideosPiBoard") — they display correctly again.
+- Tests: `helpContent.test.js` checks every tile page has a Goal with its list
+  and that **every setting of every manifest** is documented in its page, in
+  French and English (the test fails on the previous help); `dom-smoke.js`
+  checks the "Home" entry.
+
 ## 1.143.1
 
 **Aide : corrections après les premiers retours sur la 1.143.0.**

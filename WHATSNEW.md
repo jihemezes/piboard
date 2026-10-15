@@ -33,6 +33,24 @@
 # Nouveautes / What's new
 
 
+## 1.144.0
+
+**Une aide plus complète pour chaque tuile**
+
+Chaque fiche de tuile commence maintenant par la liste de tout ce que la
+tuile sait faire, et sa rubrique « Options » reprend tous les réglages, avec
+les mêmes libellés et dans le même ordre que la fenêtre de réglages. Une
+entrée « Accueil » en haut à gauche ramène à l'accueil de l'aide.
+
+---
+
+**More complete help for every tile**
+
+Every tile page now starts with the list of everything the tile can do, and
+its "Options" section covers all settings, with the same labels and in the
+same order as the settings window. A "Home" entry at the top left takes you
+back to the help's home page.
+
 ## 1.143.1
 
 **Une aide plus lisible, et le contact à portée de main**
