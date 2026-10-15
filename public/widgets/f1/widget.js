@@ -702,13 +702,13 @@
         const flag = flagFor(FLAG, d.nationality);
         return `<tr>
           <td class="pwf1-pos">${esc(x.position)}</td>
-          <td class="pwf1-who">
+          <td class="pwf1-who"><div class="pwf1-who-in">
             ${colors ? `<span class="pwf1-team" style="--pwf1-team:${colorFor(c.constructorId)}"></span>` : ""}
             ${flag ? `<span class="pwf1-flag">${flag}</span>` : ""}
             <span class="pwf1-code">${esc(d.code || "")}</span>
             <span class="pwf1-name">${esc(((d.givenName || "") + " " + (d.familyName || "")).trim())}</span>
             ${d.permanentNumber ? `<span class="pwf1-num">#${esc(d.permanentNumber)}</span>` : ""}
-          </td>
+          </div></td>
           <td class="pwf1-pts">${esc(x.points)}</td>
           <td class="pwf1-wins">${esc(x.wins)}</td>
         </tr>`;
@@ -732,10 +732,10 @@
         const c = x.Constructor || {};
         return `<tr>
           <td class="pwf1-pos">${esc(x.position)}</td>
-          <td class="pwf1-who">
+          <td class="pwf1-who"><div class="pwf1-who-in">
             ${colors ? `<span class="pwf1-team" style="--pwf1-team:${colorFor(c.constructorId)}"></span>` : ""}
             <span class="pwf1-name">${esc(c.name || "")}</span>
-          </td>
+          </div></td>
           <td class="pwf1-pts">${esc(x.points)}</td>
           <td class="pwf1-wins">${esc(x.wins)}</td>
         </tr>`;
@@ -822,13 +822,13 @@
         const right = r.finished && r.gap ? r.gap : (r.finished ? "" : r.status);
         return `<tr class="${r.finished ? "" : "pwf1-dnf"}">
           <td class="pwf1-pos">${r.finished ? esc(r.position) : "—"}</td>
-          <td class="pwf1-who">
+          <td class="pwf1-who"><div class="pwf1-who-in">
             ${colors ? `<span class="pwf1-team" style="--pwf1-team:${colorFor(r.constructorId)}"></span>` : ""}
             ${flag ? `<span class="pwf1-flag">${flag}</span>` : ""}
             <span class="pwf1-code">${esc(r.code)}</span>
             <span class="pwf1-name">${esc(r.name)}</span>
             ${r.fastest ? `<span class="pwf1-fast" title="${esc(i18n.t("f1.fastestLap"))}">⏱</span>` : ""}
-          </td>
+          </div></td>
           <td class="pwf1-gap">${esc(right)}</td>
           <td class="pwf1-pts">${esc(r.points)}</td>
         </tr>`;

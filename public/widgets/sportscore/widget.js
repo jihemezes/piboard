@@ -260,21 +260,34 @@
         // publie. On demande donc explicitement les jours autour
         // d'aujourd'hui (1.113.4).
         // Without a date window ESPN returns only its OWN single day.
-        const win = this.engine.dateWindow(now, 2, 7);
-        const url = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=${win}`;
+        const base = `https://site.api.espn.com/apis/site/v2/sports/${sport}/${league}/scoreboard?dates=`;
         // « no-store » + horodatage : l'URL etant identique d'un
         // rafraichissement a l'autre, le cache du kiosque pouvait servir
-        // la reponse de la veille -- l'heure de coup d'envoi restait
-        // alors affichee bien apres la fin du match (1.113.4).
-        // no-store + timestamp: the URL being identical between
-        // refreshes, the kiosk cache could serve yesterday's answer.
-        const data = await fetch(this.ctx.api.proxyUrl(url) + "&_=" + Date.now(), {
+        // la reponse de la veille (1.113.4).
+        // no-store + timestamp against stale kiosk cache.
+        const getDay = (dates) => fetch(this.ctx.api.proxyUrl(base + dates) + "&_=" + Date.now(), {
           cache: "no-store",
           headers: { "Cache-Control": "no-cache" }
         }).then((r) => {
           if (!r.ok) throw new Error("status " + r.status);
           return r.json();
         });
+        // 1.147.0 : ESPN renvoie parfois une liste VIDE pour une plage de
+        // dates (Ligue 1, Ligue des champions...) alors que chaque jour
+        // pris seul repond : on bascule alors jour par jour, ce qui fait
+        // reapparaitre les matchs a venir (date et heure).
+        // ESPN sometimes returns an EMPTY list for a date range while
+        // single days answer: fall back to day-by-day requests.
+        let data = await getDay(this.engine.dateWindow(now, 2, 10));
+        if (!(data.events || []).length) {
+          const days = this.engine.dayList(now, 2, 10);
+          const parts = await Promise.all(days.map((d) => getDay(d).catch(() => ({ events: [] }))));
+          const seen = new Set();
+          data = { events: [] };
+          parts.forEach((part) => (part.events || []).forEach((ev) => {
+            if (ev && !seen.has(ev.id)) { seen.add(ev.id); data.events.push(ev); }
+          }));
+        }
 
         const events = this.engine.pick(data.events || [], {
           now,

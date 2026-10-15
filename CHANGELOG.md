@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.147.1
+
+- **Tuile Formule 1 : les tableaux ne débordent plus de leur carte.** La cellule
+  « pilote / écurie » était en `display:flex`, ce qui la sortait du calcul des
+  colonnes : le tableau dépassait de la carte, les en-têtes PTS / VICT. / ÉCART
+  se chevauchaient. La cellule redevient une cellule (le contenu est rangé dans
+  un conteneur interne) et le nom se tronque proprement.
+- Chaque carte est désormais son propre conteneur : les réglages « tuile
+  étroite » (météo sans la date, classement sans le numéro ni les victoires)
+  suivent la largeur de la carte, et non de la tuile entière. La météo du
+  circuit ne tronque plus les noms de séances.
+
+## 1.147.0
+
+- **Tuile Scores sportifs : matchs à venir (date et heure) pour toutes les
+  compétitions.** ESPN renvoie parfois une liste vide pour une plage de dates
+  (Ligue 1, Ligue des champions…) alors que chaque jour pris seul répond : la
+  tuile bascule alors automatiquement sur des requêtes jour par jour. Fenêtre
+  à venir portée de 7 à 10 jours. Le chemin TOP 14 / PRO D2 (LNR) n'est pas
+  touché.
+- **Deux compétitions ajoutées** : Coupe d'Europe de rugby (Champions Cup, ESPN
+  271937) et Tournoi des 6 Nations (ESPN 180659).
+- Aide de la tuile mise à jour (FR/EN) ; test du repli jour par jour.
+
 ## 1.146.0
 
 - **Tuile Plan du circuit : un dessin plus professionnel.** Le tracé était

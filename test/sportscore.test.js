@@ -36,6 +36,13 @@ test("fenetre : un match joue hier soir reste demande aujourd'hui", () => {
   assert.ok(win.split("-")[0] <= "20260919" && "20260919" <= win.split("-")[1]);
 });
 
+test("repli jour par jour : liste de jours contigus", () => {
+  const d = E.dayList(new Date(2026, 9, 15, 12, 0), 2, 10);
+  assert.strictEqual(d.length, 13);
+  assert.strictEqual(d[0], "20261013");
+  assert.strictEqual(d[12], "20261025");
+});
+
 test("fenetre : changement de mois et d'annee", () => {
   assert.strictEqual(E.dateWindow(new Date(2027, 0, 1, 12, 0), 2, 7), "20261230-20270108");
 });

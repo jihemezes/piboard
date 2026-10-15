@@ -32,6 +32,22 @@
 
 # Nouveautes / What's new
 
+## 1.147.0
+
+**Scores sportifs : matchs à venir partout, et du rugby européen**
+
+Les matchs à venir (date et heure) s'affichent désormais aussi pour la Ligue 1,
+la Ligue des champions et les autres compétitions, comme pour le TOP 14. La Coupe
+d'Europe de rugby et le Tournoi des 6 Nations rejoignent la liste.
+
+---
+
+**Live scores: upcoming matches everywhere, plus European rugby**
+
+Upcoming matches (date and time) now also show for Ligue 1, the Champions League
+and other competitions, like for the TOP 14. The European Rugby Champions Cup and
+the Six Nations join the list.
+
 
 ## 1.146.0
 

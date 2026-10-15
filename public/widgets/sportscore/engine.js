@@ -54,6 +54,16 @@
       + "-" + yyyymmdd(new Date(now.getTime() + fwd * DAY));
   }
 
+  /* Liste de jours « AAAAMMJJ » (repli quand ESPN ignore une plage).
+     List of single days, used when ESPN returns nothing for a range. */
+  function dayList(now, pastDays, futureDays) {
+    const out = [];
+    for (let i = -Math.max(0, pastDays || 0); i <= Math.max(0, futureDays || 0); i++) {
+      out.push(yyyymmdd(new Date(now.getTime() + i * DAY)));
+    }
+    return out;
+  }
+
   /* Le club qui recoit et celui qui se deplace. ESPN marque « home » et
      « away » ; si l'information manque (competition sur terrain neutre,
      donnee incomplete), on n'invente pas : le premier reste le premier.
@@ -122,5 +132,5 @@
     return rank(kept, o.now, o.freshHours).slice(0, max);
   }
 
-  return { yyyymmdd, dateWindow, orderCompetitors, rank, bucket, matchesFilter, pick, stateOf };
+  return { yyyymmdd, dateWindow, dayList, orderCompetitors, rank, bucket, matchesFilter, pick, stateOf };
 });

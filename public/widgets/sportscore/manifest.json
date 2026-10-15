@@ -82,6 +82,20 @@
           }
         },
         {
+          "value": "rugby:271937",
+          "label": {
+            "en": "🏉 European Rugby Champions Cup",
+            "fr": "🏉 Coupe d'Europe de rugby (Champions Cup)"
+          }
+        },
+        {
+          "value": "rugby:180659",
+          "label": {
+            "en": "🏉 Six Nations",
+            "fr": "🏉 Tournoi des 6 Nations"
+          }
+        },
+        {
           "value": "rugby:lnr.top14",
           "label": {
             "en": "🏉 TOP 14 (Rugby, France — LNR)",
