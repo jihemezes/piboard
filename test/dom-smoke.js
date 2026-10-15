@@ -3228,6 +3228,12 @@ function catalogItemFor(catalog, document, widgetId) {
     document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(50);
     assert("parametres generaux ouverts", document.getElementById("settingsModal").hidden === false);
+    // Relief 3D (1.148.0) : reglage general, champs de tuile et attributs.
+    assert("relief 3D : les quatre controles generaux existent",
+      ["setTileDepth", "setTileLight", "setTileLift", "setTileGlass"].every((id) => !!document.getElementById(id)));
+    assert("relief 3D : a plat par defaut (une mise a jour ne change pas l'aspect)",
+      document.getElementById("setTileDepth").value === "off"
+      && !document.querySelector(".grid-stack-item-content[data-depth]"));
     assert("case 'multi-colonnes' cochee par defaut (independamment du mode tactile)",
       document.getElementById("setMultiColumnForms").checked === true);
     assert("mise en colonnes active meme sans mode tactile (correctif v1.7.2) : data-cols pose sur le modal",

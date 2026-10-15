@@ -646,6 +646,42 @@
         </label>
       </fieldset>
 
+      <fieldset class="form-section" id="secDepth">
+        <legend data-i18n="settings.section.depth">Tile relief (3D)</legend>
+        <label class="field">
+          <span data-i18n="settings.depth">Relief level</span>
+          <select id="setTileDepth">
+            <option value="off" data-i18n="depth.off">None (flat)</option>
+            <option value="light" data-i18n="depth.light">Light</option>
+            <option value="medium" data-i18n="depth.medium">Medium</option>
+            <option value="strong" data-i18n="depth.strong">Strong</option>
+          </select>
+        </label>
+        <small class="field-hint" data-i18n="settings.depth.hint">Gives the tiles depth: layered cast shadows, a lit top edge and a subtle sheen. Can be overridden tile by tile in each tile's Appearance section.</small>
+        <label class="field">
+          <span data-i18n="settings.depthLight">Light direction</span>
+          <select id="setTileLight">
+            <option value="tl" data-i18n="depth.light.tl">From the top left</option>
+            <option value="t" data-i18n="depth.light.t">From above</option>
+            <option value="tr" data-i18n="depth.light.tr">From the top right</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="settings.depthLift">Lift effect</span>
+          <select id="setTileLift">
+            <option value="both" data-i18n="depth.lift.both">On hover and on touch</option>
+            <option value="hover" data-i18n="depth.lift.hover">On mouse hover only</option>
+            <option value="touch" data-i18n="depth.lift.touch">On touch / press only</option>
+            <option value="off" data-i18n="depth.lift.off">None</option>
+          </select>
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="setTileGlass">
+          <span data-i18n="settings.depthGlass">Frosted glass tiles</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.depthGlass.hint">Translucent, blurred tile background. Best over a photo or a colourful page background. Heavier to draw: on a Raspberry Pi, keep it off if the display gets sluggish.</small>
+      </fieldset>
+
       <fieldset class="form-section" id="secDrawers">
         <legend data-i18n="settings.section.drawers">Tile drawers</legend>
         <!-- Note d'inactivite : la section reste a sa place et reste

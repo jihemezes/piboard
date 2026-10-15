@@ -164,12 +164,31 @@
 .pw-f1 .pwf1-pts { font-weight: 650; }
 .pw-f1 .pwf1-wins, .pw-f1 .pwf1-gap { color: var(--muted); }
 
-.pw-f1 .pwf1-who {
+/* 1.147.1 : une cellule de tableau ne doit JAMAIS etre `display:flex` --
+   elle sort alors du calcul des colonnes, le tableau deborde de sa carte
+   et les en-tetes se chevauchent. La cellule reste une cellule, prend
+   toute la place restante (`width:100%; max-width:0` : elle ne dicte
+   plus sa largeur) et c'est un conteneur interne qui range le contenu.
+   A table cell must never be `display:flex`: the table then overflows
+   its card. The cell stays a cell, takes the remaining room, and an
+   inner box lays the content out. */
+.pw-f1 .pwf1-table td.pwf1-who { width: 100%; max-width: 0; overflow: hidden; }
+.pw-f1 .pwf1-who-in {
   display: flex;
   align-items: center;
   gap: 5px;
   min-width: 0;
+  overflow: hidden;
 }
+.pw-f1 .pwf1-table th:nth-child(3),
+.pw-f1 .pwf1-table th:nth-child(4) { padding-left: 8px; white-space: nowrap; }
+/* Chaque CARTE est son propre conteneur : les regles de tuile etroite
+   se declenchent selon la largeur de la carte, et non de la tuile
+   entiere (quatre cartes cote a cote dans une grande tuile restaient
+   « larges » et debordaient).
+   Each CARD is its own container: narrow rules follow the card's width. */
+.pw-f1 .pwf1-card { container-type: inline-size; }
+
 /* Le nom cede la place avant tout le reste : un nom tronque reste
    identifiable grace au code a trois lettres juste a cote, alors qu'un
    nombre de points tronque ne veut plus rien dire.

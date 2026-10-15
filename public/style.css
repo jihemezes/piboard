@@ -161,6 +161,112 @@ body.touch .board.has-overflow::-webkit-scrollbar { width: 12px; }
   transition: background 0.6s ease, border-color 0.6s ease;
 }
 
+/* ============================================================
+   RELIEF 3D DES TUILES (1.148.0)
+
+   Aucun JavaScript ne dessine quoi que ce soit : l'application pose
+   `data-depth` (light | medium | strong) et `data-glass` sur la tuile,
+   `data-tile-light` et `data-tile-lift` sur le corps de page, et tout
+   le reste est du CSS. Les ombres sont EMPILEES -- une serree pour le
+   contact, une moyenne, une large et diffuse -- parce qu'une ombre
+   unique donne un effet « autocollant » et non de la profondeur. Le
+   bord haut est eclaire (`inset`), le bas legerement assombri, et un
+   voile degrade tres leger donne le reflet. La direction de la lumiere
+   decide du sens des ombres : jamais d'ombre du cote de la lumiere.
+   Les tuiles transparentes n'ont pas de relief (rien a elever), sauf
+   si le verre depoli est actif.
+   3D TILE RELIEF. No JS draws anything: only data attributes are set;
+   shadows are stacked (contact / medium / wide) for real depth.
+   ============================================================ */
+body { --ldx: 1; --ldy: 1; }
+body[data-tile-light="t"] { --ldx: 0; --ldy: 1; }
+body[data-tile-light="tr"] { --ldx: -1; --ldy: 1; }
+
+.grid-stack-item-content[data-depth] {
+  --dk: 1;
+  --ds1: rgba(0, 0, 0, .34);
+  --ds2: rgba(0, 0, 0, .26);
+  --ds3: rgba(0, 0, 0, .22);
+  --dhi: rgba(255, 255, 255, .16);
+  --dlo: rgba(0, 0, 0, .28);
+  --dsheen: rgba(255, 255, 255, .07);
+}
+:is(body[data-theme="light"], [data-tone="light"]) .grid-stack-item-content[data-depth] {
+  --ds1: rgba(40, 50, 80, .22);
+  --ds2: rgba(40, 50, 80, .16);
+  --ds3: rgba(40, 50, 80, .14);
+  --dhi: rgba(255, 255, 255, .85);
+  --dlo: rgba(40, 50, 80, .10);
+  --dsheen: rgba(255, 255, 255, .35);
+}
+.grid-stack-item-content[data-depth="light"] { --dk: .55; }
+.grid-stack-item-content[data-depth="medium"] { --dk: 1; }
+.grid-stack-item-content[data-depth="strong"] { --dk: 1.7; }
+
+.grid-stack-item-content[data-depth]:not(.tile-transparent) {
+  box-shadow:
+    inset 0 1px 0 var(--dhi),
+    inset 0 -1px 0 var(--dlo),
+    calc(var(--ldx) * var(--dk) * 1px) calc(var(--ldy) * var(--dk) * 1px) calc(var(--dk) * 2px) var(--ds1),
+    calc(var(--ldx) * var(--dk) * 3px) calc(var(--ldy) * var(--dk) * 4px) calc(var(--dk) * 9px) var(--ds2),
+    calc(var(--ldx) * var(--dk) * 8px) calc(var(--ldy) * var(--dk) * 12px) calc(var(--dk) * 26px) var(--ds3);
+  background-image: linear-gradient(160deg, var(--dsheen), transparent 38%);
+  transition: background 0.6s ease, border-color 0.6s ease, box-shadow .18s ease, translate .18s ease;
+}
+
+/* Le contenu qui deborde ne doit pas couper l'ombre : l'ombre est
+   dessinee EN DEHORS de la tuile, la grille et la page ne doivent pas
+   la rogner. / The shadow is drawn OUTSIDE the tile. */
+.grid-stack-item:has(> .grid-stack-item-content[data-depth]) { overflow: visible; }
+
+/* SOULEVEMENT. Au survol (souris) et a l'appui (doigt) : la tuile monte
+   de quelques pixels et son ombre s'allonge. Jamais en mode edition --
+   la tuile y est deplacee par la grille et ne doit pas se soulever sous
+   le curseur. `translate` plutot que `transform` : il n'ecrase pas les
+   transformations de la grille.
+   LIFT: on hover and on press. Never in edit mode. */
+@media (hover: hover) {
+  body[data-tile-lift="both"]:not(.editing) .grid-stack-item-content[data-depth]:not(.tile-transparent):hover,
+  body[data-tile-lift="hover"]:not(.editing) .grid-stack-item-content[data-depth]:not(.tile-transparent):hover {
+    translate: 0 -3px;
+    box-shadow:
+      inset 0 1px 0 var(--dhi),
+      inset 0 -1px 0 var(--dlo),
+      calc(var(--ldx) * var(--dk) * 2px) calc(var(--ldy) * var(--dk) * 2px) calc(var(--dk) * 3px) var(--ds1),
+      calc(var(--ldx) * var(--dk) * 5px) calc(var(--ldy) * var(--dk) * 8px) calc(var(--dk) * 14px) var(--ds2),
+      calc(var(--ldx) * var(--dk) * 12px) calc(var(--ldy) * var(--dk) * 20px) calc(var(--dk) * 38px) var(--ds3);
+  }
+}
+body[data-tile-lift="both"]:not(.editing) .grid-stack-item-content[data-depth]:not(.tile-transparent):active,
+body[data-tile-lift="touch"]:not(.editing) .grid-stack-item-content[data-depth]:not(.tile-transparent):active {
+  translate: 0 -2px;
+  box-shadow:
+    inset 0 1px 0 var(--dhi),
+    inset 0 -1px 0 var(--dlo),
+    calc(var(--ldx) * var(--dk) * 2px) calc(var(--ldy) * var(--dk) * 2px) calc(var(--dk) * 3px) var(--ds1),
+    calc(var(--ldx) * var(--dk) * 6px) calc(var(--ldy) * var(--dk) * 9px) calc(var(--dk) * 16px) var(--ds2),
+    calc(var(--ldx) * var(--dk) * 14px) calc(var(--ldy) * var(--dk) * 22px) calc(var(--dk) * 40px) var(--ds3);
+}
+
+/* VERRE DEPOLI. Fond translucide teinte de la couleur de la tuile, flou
+   et leger renforcement des couleurs derriere. `!important` : la couleur
+   personnalisee d'une tuile est ecrite en style en ligne, et sans cela
+   le verre ne pourrait jamais la rendre translucide (sa teinte est
+   transmise par --glass-base). Cout eleve sur Raspberry Pi : desactive
+   par defaut, et jamais en mode edition pour ne pas ralentir le
+   deplacement des tuiles.
+   FROSTED GLASS: translucent tinted background plus blur. */
+.grid-stack-item-content[data-glass="on"] {
+  background-color: color-mix(in srgb, var(--glass-base, var(--tile)) 52%, transparent) !important;
+  -webkit-backdrop-filter: blur(14px) saturate(1.3);
+  backdrop-filter: blur(14px) saturate(1.3);
+  border-color: color-mix(in srgb, var(--text, #fff) 18%, transparent);
+}
+body.editing .grid-stack-item-content[data-glass="on"] {
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
 .tile-head {
   display: none;
   align-items: center;

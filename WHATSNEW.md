@@ -32,6 +32,23 @@
 
 # Nouveautes / What's new
 
+## 1.148.0
+
+**Du relief pour vos tuiles**
+
+Une nouvelle option donne de la profondeur au tableau : ombres en couches, bord
+éclairé, lumière réglable, tuiles qui se soulèvent au survol ou au toucher, et
+verre dépoli en option. Réglage général (désactivé par défaut) et réglage par
+tuile dans la section Apparence.
+
+---
+
+**Relief for your tiles**
+
+A new option gives the board depth: layered shadows, a lit edge, adjustable
+light, tiles that lift on hover or touch, and optional frosted glass. A general
+setting (off by default) plus a per-tile setting in the Appearance section.
+
 ## 1.147.0
 
 **Scores sportifs : matchs à venir partout, et du rugby européen**

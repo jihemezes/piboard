@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.148.0
+
+- **Relief 3D des tuiles (option).** Nouvelle section « Relief des tuiles (3D) »
+  dans les réglages généraux : niveau (aucun par défaut, léger, moyen, fort),
+  direction de la lumière (haut gauche, haut, haut droit), effet de
+  soulèvement (au survol, au toucher, les deux ou aucun) et tuiles en verre
+  dépoli. Ombres empilées (contact, moyenne, diffuse), bord haut éclairé,
+  léger reflet, adaptées au thème clair ou sombre (page par page comprise).
+  Section Apparence de chaque tuile : « Relief (3D) » et « Verre dépoli »
+  peuvent suivre le réglage général ou le remplacer. Pas de relief sur les
+  tuiles transparentes ; soulèvement et flou coupés en mode édition.
+- Tout est en CSS : l'application ne pose que des attributs `data-depth` /
+  `data-glass` sur la tuile et `data-tile-light` / `data-tile-lift` sur la page.
+- Aide mise à jour (FR/EN) ; test `tileDepth.test.js` et contrôles dans
+  `dom-smoke.js`.
+
+## 1.147.1
+
+- **Tuile Formule 1 : les tableaux ne débordent plus de leur carte.** La cellule
+  « pilote / écurie » était en `display:flex`, ce qui la sortait du calcul des
+  colonnes : le tableau dépassait de la carte, les en-têtes PTS / VICT. / ÉCART
+  se chevauchaient. La cellule redevient une cellule (le contenu est rangé dans
+  un conteneur interne) et le nom se tronque proprement.
+- Chaque carte est désormais son propre conteneur : les réglages « tuile
+  étroite » (météo sans la date, classement sans le numéro ni les victoires)
+  suivent la largeur de la carte, et non de la tuile entière. La météo du
+  circuit ne tronque plus les noms de séances.
+
 ## 1.147.0
 
 - **Tuile Scores sportifs : matchs à venir (date et heure) pour toutes les

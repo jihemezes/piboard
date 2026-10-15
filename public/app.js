@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.147.0
+   Version 1.148.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1159,6 +1159,37 @@
     body.style.zoom = scale === 1 ? "" : String(scale);
   }
 
+  /* RELIEF 3D (1.148.0). Le niveau effectif d'une tuile est celui de ses
+     reglages (_depth) s'il en a un, sinon le reglage general. Le CSS ne
+     lit que deux attributs de la tuile (data-depth, data-glass) et trois
+     du corps de page (direction de la lumiere, soulevement) : aucune
+     valeur n'est calculee ici, ce qui laisse le navigateur tout animer.
+     La teinte de fond d'une tuile a couleur personnalisee est transmise
+     au verre depoli, qui doit pouvoir la rendre translucide.
+     3D RELIEF: a tile's effective level is its own _depth if set, else
+     the general setting. CSS reads only data attributes. */
+  const DEPTH_LEVELS = ["off", "light", "medium", "strong"];
+  function applyTileDepth(rec) {
+    const content = rec && rec.el && rec.el.querySelector(".grid-stack-item-content");
+    if (!content) return;
+    const s = rec.conf.settings || {};
+    const general = DEPTH_LEVELS.includes(settings.tileDepth) ? settings.tileDepth : "off";
+    const own = DEPTH_LEVELS.includes(s._depth) ? s._depth : "";
+    const level = own || general;
+    if (level === "off") delete content.dataset.depth; else content.dataset.depth = level;
+    const glass = s._glass === "on" ? true : s._glass === "off" ? false : !!settings.tileGlass;
+    if (glass) content.dataset.glass = "on"; else delete content.dataset.glass;
+    if (glass && s._customColor && s._bgColor) content.style.setProperty("--glass-base", s._bgColor);
+    else content.style.removeProperty("--glass-base");
+  }
+
+  function applyDepthSettings() {
+    const b = document.body;
+    b.dataset.tileLight = ["tl", "t", "tr"].includes(settings.tileLight) ? settings.tileLight : "tl";
+    b.dataset.tileLift = ["both", "hover", "touch", "off"].includes(settings.tileLift) ? settings.tileLift : "both";
+    tiles.forEach((rec) => applyTileDepth(rec));
+  }
+
   /* Couleur hexadecimale actuelle d'une tuile (pour pre-remplir le selecteur)
      Current hex color of a tile (to pre-fill the color picker) */
   function currentTileColorHex(rec) {
@@ -1980,6 +2011,7 @@
     applyTitleBar(record);
     applyTileColor(record);
     applyTextScale(record);
+    applyTileDepth(record);
 
     onActivate(el.querySelector(".tile-gear"), (e) => {
       e.stopPropagation();
@@ -3325,6 +3357,7 @@
     applyTitleBar(rec);
     applyTileColor(rec);
     applyTextScale(rec);
+    applyTileDepth(rec);
     if (rec.instance && typeof rec.instance.onSettingsChanged === "function") {
       try { rec.instance.onSettingsChanged(defaults); } catch (e) { console.warn("[piboard] reset", e); }
     }
@@ -3368,6 +3401,25 @@
         </select>
         <small class="field-hint">${i18n.t("tile.textScale.hint")}</small>
       </label>`;
+    const depthNow = String(s._depth || "inherit");
+    const glassNow = String(s._glass || "inherit");
+    const depthOpts = [["inherit", i18n.t("tile.depth.inherit")], ["off", i18n.t("depth.off")], ["light", i18n.t("depth.light")],
+      ["medium", i18n.t("depth.medium")], ["strong", i18n.t("depth.strong")]];
+    const glassOpts = [["inherit", i18n.t("tile.depth.inherit")], ["on", i18n.t("tile.glass.on")], ["off", i18n.t("tile.glass.off")]];
+    const depthFields = `
+        <label class="field">
+          <span>${i18n.t("tile.depth")}</span>
+          <select data-key="_depth">
+            ${depthOpts.map(([v, l]) => `<option value="${v}" ${depthNow === v ? "selected" : ""}>${l}</option>`).join("")}
+          </select>
+          <small class="field-hint">${i18n.t("tile.depth.hint")}</small>
+        </label>
+        <label class="field">
+          <span>${i18n.t("tile.glass")}</span>
+          <select data-key="_glass">
+            ${glassOpts.map(([v, l]) => `<option value="${v}" ${glassNow === v ? "selected" : ""}>${l}</option>`).join("")}
+          </select>
+        </label>`;
     const universal = `
       <fieldset class="form-section">
         <legend>${i18n.t("tile.appearance")}</legend>
@@ -3394,6 +3446,7 @@
           <span>${i18n.t("tile.color")}</span>
           <input type="color" data-key="_bgColor" value="${currentTileColorHex(rec)}">
         </label>
+        ${depthFields}
       </fieldset>
       <fieldset class="form-section">
         <legend>${i18n.t("tile.schedule")}</legend>
@@ -4151,6 +4204,7 @@
     applyTitleBar(rec);
     applyTileColor(rec);
     applyTextScale(rec);
+    applyTileDepth(rec);
     scheduleSave();
 
     // La planification a pu changer : une tuile peut devoir passer en
@@ -7488,6 +7542,10 @@
     $("setKeyboard").checked = !!settings.keyboardEnabled;
     $("setTouch").checked = !!settings.touchMode;
     $("setTouchScroll").value = settings.touchScroll || "both";
+    $("setTileDepth").value = DEPTH_LEVELS.includes(settings.tileDepth) ? settings.tileDepth : "off";
+    $("setTileLight").value = ["tl", "t", "tr"].includes(settings.tileLight) ? settings.tileLight : "tl";
+    $("setTileLift").value = ["both", "hover", "touch", "off"].includes(settings.tileLift) ? settings.tileLift : "both";
+    $("setTileGlass").checked = !!settings.tileGlass;
     $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
     $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
     $("setCartoKey").value = settings.cartoKey || "";
@@ -7546,6 +7604,10 @@
       keyboardEnabled: $("setKeyboard").checked,
       touchMode: $("setTouch").checked,
       touchScroll: $("setTouchScroll").value,
+      tileDepth: $("setTileDepth").value,
+      tileLight: $("setTileLight").value,
+      tileLift: $("setTileLift").value,
+      tileGlass: $("setTileGlass").checked,
       multiColumnForms: $("setMultiColumnForms").checked,
       quickStartOnLaunch: $("setQuickStart").checked,
       cartoKey: $("setCartoKey").value.trim(),
@@ -9538,6 +9600,7 @@
     // source, mirrored under the name the bar's CSS expects.
     document.body.classList.toggle("touch-mode", !!settings.touchMode);
     applyTouchScroll();
+    applyDepthSettings();
     applyDisplayMode();
     vkb.setLang(settings.lang);
     vkb.setEnabled(!!settings.keyboardEnabled);
@@ -9830,6 +9893,7 @@
     // source, mirrored under the name the bar's CSS expects.
     document.body.classList.toggle("touch-mode", !!settings.touchMode);
     applyTouchScroll();
+    applyDepthSettings();
     applyDisplayMode();
 
     catalog = await apiGet("/api/widgets");

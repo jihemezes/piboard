@@ -194,6 +194,15 @@ const DEFAULT_SETTINGS = {
      "both" (defaut), "bars", "drag" ou "off". Voir applyTouchScroll()
      cote client. Touch scrolling of tile content, in touch mode. */
   touchScroll: "both",
+  /* Relief des tuiles (1.148.0) : "off" (defaut, une mise a jour ne
+     change pas l'aspect d'une installation existante), "light", "medium"
+     ou "strong". Direction de la lumiere ("tl", "t", "tr"), soulevement
+     ("both", "hover", "touch", "off") et verre depoli. Peut etre force
+     tuile par tuile (_depth, _glass). Tile relief: off by default. */
+  tileDepth: "off",
+  tileLight: "tl",
+  tileLift: "both",
+  tileGlass: false,
   /* Cle CARTO des fonds de carte (tuiles Trafic, Radar, Avions).
      Vide par defaut, et il ne peut pas en etre autrement : CARTO
      delivre des cles PAR CLIENT, a ne pas partager entre projets sans
