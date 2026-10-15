@@ -1,5 +1,44 @@
 # Changelog
 
+## 1.146.0
+
+- **Tuile Plan du circuit : un dessin plus professionnel.** Le tracé était
+  dessiné dans la couleur d'accent du thème, sur le fond de la tuile : selon le
+  thème, la piste se confondait avec son cadre. Il devient un **ruban
+  d'asphalte** fait de couches dont les couleurs ne dépendent plus du thème :
+  vibreurs blancs et rouges, bitume sombre, ombre portée ; seul un fin filet
+  central reprend la couleur d'accent. Lisible sur fond clair comme sombre.
+- **Numéros de virages en pastilles** posées à côté de la piste, du côté
+  extérieur du circuit, au lieu d'un chiffre posé sur le trait ; noms de
+  virages avec un liseré de la couleur de la tuile.
+- **Flèche de sens** : pointe rouge dans un disque clair. **Voie des stands** :
+  pointillé fin et clair. **Fond de plan** : panneau discret teinté par la
+  couleur du texte du thème, avec un quadrillage très léger.
+- Aide : rubrique Objectif de la fiche « Plan du circuit » mise à jour (FR/EN).
+- Tests : `dom-smoke.js` vérifie les quatre couches par tronçon, leur
+  regroupement couche par couche, que bitume et vibreurs ne lisent aucune
+  variable de thème, que seul le filet prend l'accent, et l'identifiant unique
+  du quadrillage par tuile.
+
+---
+
+- **Circuit map tile: a more professional drawing.** The outline was drawn in
+  the theme's accent colour over the tile background, so depending on the theme
+  the track blended into its frame. It becomes an **asphalt ribbon** built of
+  layers whose colours no longer depend on the theme: white and red kerbs, dark
+  tarmac, drop shadow; only a thin centre line takes the accent colour.
+  Readable on light and dark backgrounds.
+- **Corner numbers as badges** set beside the track, on the outside of the
+  circuit, instead of a digit on the line; corner names get an outline in the
+  tile colour.
+- **Direction arrow**: red arrowhead in a light disc. **Pit lane**: thin light
+  dotted line. **Map ground**: a discreet panel tinted by the theme's text
+  colour, with a very light grid.
+- Help: "Goal" of the "Circuit map" page updated (FR/EN).
+- Tests: `dom-smoke.js` checks the four layers per segment, their layer-by-layer
+  grouping, that tarmac and kerbs read no theme variable, that only the centre
+  line takes the accent, and the grid's per-tile unique id.
+
 ## 1.145.0
 
 - **Tuile Plan du circuit : option « Suivre le calendrier de MotoGP »**, en

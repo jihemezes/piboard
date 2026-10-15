@@ -30,6 +30,15 @@
   flex: 1 1 auto;
   min-height: 0;
   display: flex;
+  /* Un panneau discret : le dessin se pose sur un fond de plan, teinte
+     du texte du theme (donc jamais de la couleur du trait).
+     A discreet panel: the drawing sits on a plan-like ground, tinted by
+     the theme's text colour. */
+  border-radius: 12px;
+  border: 1px solid var(--tile-edge, transparent);
+  background: color-mix(in srgb, var(--fg, #888) 5%, transparent);
+  color: var(--fg, currentColor);
+  overflow: hidden;
 }
 .pw-circuit .pwcir-map svg {
   width: 100%;
@@ -37,10 +46,22 @@
   display: block;
 }
 
-.pw-circuit .pwcir-track {
+/* LE TRACE EST UN RUBAN DE COUCHES, dont les couleurs ne dependent PAS
+   du theme : c'est ce qui le garde lisible sur fond clair comme sombre.
+   Seul le filet central prend l'accent. Les couleurs de la piste sont
+   des couleurs de MATIERE (bitume, vibreurs), pas des couleurs
+   d'interface.
+   THE TRACK IS A RIBBON OF LAYERS whose colours do NOT depend on the
+   theme, which keeps it readable on light and dark. Only the centre
+   line takes the accent. */
+.pw-circuit .pwcir-ribbon {
+  filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .38));
+}
+.pw-circuit .pwcir-kerb,
+.pw-circuit .pwcir-kerb2,
+.pw-circuit .pwcir-track,
+.pw-circuit .pwcir-centre {
   fill: none;
-  stroke: var(--accent, #e8213b);
-  stroke-width: 9;
   /* Les tronçons sont traces separement : des bouts ARRONDIS raccordent
      deux tronçons voisins sans laisser d'encoche a la jonction.
      Segments are drawn separately: ROUND caps join them without a
@@ -48,31 +69,65 @@
   stroke-linecap: round;
   stroke-linejoin: round;
 }
+/* Vibreurs : une couche blanche, puis des tirets rouges par-dessus. */
+.pw-circuit .pwcir-kerb { stroke: #f4f6fa; stroke-width: 16; }
+.pw-circuit .pwcir-kerb2 { stroke: #d92b3f; stroke-width: 16; stroke-linecap: butt; stroke-dasharray: 9 9; }
+/* Bitume. */
+.pw-circuit .pwcir-track { stroke: #2a2f3a; stroke-width: 11; }
+/* Filet central : la couleur d'accent du theme, fin, pour la liaison
+   avec le reste du tableau.
+   Centre line: the theme's accent, thin, tying the tile to the board. */
+.pw-circuit .pwcir-centre { stroke: var(--accent, #e8213b); stroke-width: 2; opacity: .95; stroke-dasharray: 11 9; stroke-linecap: butt; }
 
-/* La voie des stands en pointilles : c'est du bitume, mais ce n'est pas
-   la piste, et les confondre fausse la lecture du trace.
-   The pit lane dashed: tarmac, but not the track. */
+/* Fond de plan. */
+.pw-circuit .pwcir-gridline { fill: none; stroke: currentColor; stroke-width: 1; opacity: .07; }
+
+/* La voie des stands : un pointille fin et clair, nettement distinct de
+   la piste -- c'est du bitume, mais ce n'est pas la piste, et les
+   confondre fausse la lecture du trace.
+   The pit lane: a thin, light dotted line, clearly apart from the
+   track. */
 .pw-circuit .pwcir-pit {
   fill: none;
-  stroke: var(--muted);
-  stroke-width: 4;
-  stroke-dasharray: 9 7;
+  stroke: #8b94a5;
+  stroke-width: 3.2;
+  stroke-dasharray: 2 7;
   stroke-linecap: round;
+  opacity: .9;
 }
 
-.pw-circuit .pwcir-dir { fill: var(--fg, currentColor); opacity: .85; }
+/* La fleche de sens : une pointe rouge dans un disque clair. */
+.pw-circuit .pwcir-dir circle { fill: #f4f6fa; stroke: #2a2f3a; stroke-width: 2.5; }
+.pw-circuit .pwcir-dir path {
+  fill: #d92b3f;
+  stroke: #d92b3f;
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
 
-/* Les etiquettes portent un LISERE de la couleur du fond : c'est ce qui
-   les garde lisibles quand elles tombent sur le trace, sans boite opaque
-   qui masquerait la piste.
-   Labels carry a background-coloured OUTLINE, readable over the outline
-   without an opaque box hiding the track. */
+/* Pastilles de virages : numero blanc sur disque sombre, bordure claire
+   -- lisible partout, quel que soit le fond.
+   Corner badges: white number on a dark disc with a light rim. */
+.pw-circuit .pwcir-badge circle { fill: #2a2f3a; stroke: #f4f6fa; stroke-width: 2; }
+.pw-circuit .pwcir-badge-n {
+  fill: #f4f6fa;
+  font-size: 17px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Les noms de virages portent un LISERE de la couleur du fond : c'est
+   ce qui les garde lisibles quand ils tombent pres du trace, sans boite
+   opaque.
+   Corner names carry a background-coloured OUTLINE. */
 .pw-circuit .pwcir-label {
-  font-size: 22px;
+  font-size: 18px;
+  font-weight: 600;
   fill: currentColor;
   paint-order: stroke;
-  stroke: var(--tile-bg, #0e1117);
-  stroke-width: 5;
+  stroke: var(--tile, #fff);
+  stroke-width: 4.5;
+  stroke-linejoin: round;
   dominant-baseline: middle;
 }
 

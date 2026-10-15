@@ -9656,6 +9656,30 @@ function catalogItemFor(catalog, document, widgetId) {
         FETCHES.filter((u) => /jolpi/.test(u)).length === before && PROXIED_RACING.length === racingBefore);
       assert("la voie des stands est distinguee de la piste",
         !!host.querySelector(".pwcir-pit"));
+      /* LE TRACE EST UN RUBAN DONT LES COULEURS NE DEPENDENT PAS DU
+         THEME (1.146.0). Il tenait dans la couleur d'accent, sur le fond
+         de la tuile : selon le theme, la piste se confondait avec son
+         cadre. Chaque troncon porte donc quatre couches (vibreurs
+         blancs, vibreurs rouges, bitume, filet), et seul le filet lit
+         une variable de theme.
+         THE TRACK IS A RIBBON WHOSE COLOURS DO NOT DEPEND ON THE THEME. */
+      {
+        const n = host.querySelectorAll(".pwcir-track").length;
+        assert("chaque troncon a ses quatre couches",
+          n > 0 && ["pwcir-kerb", "pwcir-kerb2", "pwcir-centre"].every((c) => host.querySelectorAll("." + c).length === n));
+        assert("les couches sont groupees, couche par couche",
+          !!host.querySelector(".pwcir-ribbon") && host.querySelector(".pwcir-ribbon").children.length === 4 * n);
+        const css = fs.readFileSync(path.join(PUB, "widgets/circuit/widget.css"), "utf8");
+        /* La DERNIERE regle qui nomme le selecteur : la premiere est le
+           groupe commun (bouts arrondis), qui se termine par le meme nom.
+           The LAST rule naming the selector: the first is the shared
+           group (round caps), which ends with the same name. */
+        const rule = (sel) => { const m = [...css.matchAll(new RegExp("\\.pw-circuit " + sel + " \\{[^}]*\\}", "g"))]; return m.length ? m[m.length - 1][0] : ""; };
+        assert("le bitume et les vibreurs ne lisent aucune variable de theme",
+          ["\\.pwcir-track", "\\.pwcir-kerb", "\\.pwcir-kerb2"].every((s) => rule(s) && !/var\(/.test(rule(s))));
+        assert("seul le filet central prend l'accent", /var\(--accent/.test(rule("\\.pwcir-centre")));
+        assert("un quadrillage a identifiant unique par tuile", /pwcir-grid-\d+/.test(host.innerHTML));
+      }
       assert("le sens de la course est indique", !!host.querySelector(".pwcir-dir"));
       /* LE RECORD DU TOUR N'EST PAS VERIFIE ICI, et ce n'est pas un
          oubli : la base livree n'en porte aucun. La tuile sait

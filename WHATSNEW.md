@@ -33,6 +33,24 @@
 # Nouveautes / What's new
 
 
+## 1.146.0
+
+**Un plan de circuit plus soigné**
+
+Le tracé des circuits devient un ruban d'asphalte, avec vibreurs rouges et
+blancs et ombre portée : il se lit aussi bien sur fond clair que sombre, quel
+que soit le thème. Les numéros de virages sont des pastilles posées à côté de
+la piste, la flèche de sens est plus nette et la voie des stands plus discrète.
+
+---
+
+**A sharper circuit map**
+
+Circuit outlines become an asphalt ribbon, with red and white kerbs and a drop
+shadow: they read equally well on light and dark backgrounds, whatever the
+theme. Corner numbers are badges beside the track, the direction arrow is
+crisper and the pit lane more discreet.
+
 ## 1.145.0
 
 **Suivre le MotoGP dans la tuile Plan du circuit**

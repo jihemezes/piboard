@@ -636,6 +636,8 @@
     return null;
   }
 
+  let gridCounter = 0;
+
   class CircuitWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -978,31 +980,91 @@
       const pit = ways.filter((w) => w.pit);
       const arrow = this.ctx.settings.showDirection !== false ? directionArrow(ways) : null;
 
-      const corners = [];
+      /* UN RUBAN D'ASPHALTE, PAS UN TRAIT DE COULEUR. Le trace etait
+         dessine dans la couleur d'accent du theme, sur le fond de la
+         tuile : selon le theme, la piste se confondait avec son cadre.
+         Il est maintenant fait de COUCHES dont les couleurs ne
+         dependent PAS du theme -- vibreurs rouge et blanc, bitume
+         sombre -- donc lisible sur fond clair comme sombre ; seul le
+         filet central reprend l'accent, pour garder le lien avec le
+         reste du tableau. Les couches sont tracees TOUTES ensemble,
+         couche par couche : dessiner chaque troncon avec ses trois
+         traits ferait passer le vibreur d'un troncon par-dessus le
+         bitume du voisin, et laisserait une encoche a chaque jonction.
+         AN ASPHALT RIBBON, NOT A COLOURED LINE. The outline used to be
+         drawn in the theme's accent colour over the tile background, so
+         depending on the theme the track blended into its frame. It is
+         now built of LAYERS whose colours do NOT depend on the theme --
+         red and white kerbs, dark tarmac -- readable on light and dark;
+         only the centre line takes the accent. Layers are drawn all
+         together, layer by layer: drawing each segment with its three
+         strokes would put one segment's kerb over its neighbour's
+         tarmac. */
+      const d = track.map((w) => toPath(w.xy));
+      const layer = (cls) => d.map((x) => `<path class="${cls}" d="${x}"/>`).join("");
+
+      /* Les numeros de virage sont des PASTILLES posees a cote de la
+         piste, du cote exterieur du circuit : un chiffre pose sur le
+         trait se lit mal et masque le trace. Le cote exterieur se
+         trouve sans rien savoir du virage : c'est la direction qui
+         s'eloigne du centre du dessin.
+         Corner numbers are BADGES set beside the track, on the outside
+         of the circuit: found without knowing anything about the
+         corner -- it is the direction away from the drawing's centre. */
+      let cx = 0, cy = 0, n = 0;
+      for (const w of track) for (const p of w.xy) { cx += p[0]; cy += p[1]; n++; }
+      cx /= n || 1; cy /= n || 1;
+      const beside = (x, y, gap) => {
+        const dx = x - cx, dy = y - cy, len = Math.hypot(dx, dy) || 1;
+        return [x + dx / len * gap, y + dy / len * gap];
+      };
+      const marks = [];
       const seen = new Set();
       for (const w of ways) {
         if (!withLabels || !w.corner || w.pit || !w.name || seen.has(w.name)) continue;
         seen.add(w.name);
         const mid = w.xy[Math.floor(w.xy.length / 2)];
-        corners.push({
-          name: w.name.replace(/\s*(corner|turn)\s*$/i, ""),
-          x: Math.min(W - 6, Math.max(6, mid[0])),
-          y: Math.min(H - 8, Math.max(16, mid[1])),
-          anchor: mid[0] < 150 ? "start" : (mid[0] > W - 150 ? "end" : "middle")
-        });
+        const numeric = CORNER_NUM_RE.test(w.name);
+        const [x, y] = beside(mid[0], mid[1], numeric ? 26 : 30);
+        const px = Math.min(W - 18, Math.max(18, x)), py = Math.min(H - 18, Math.max(18, y));
+        if (numeric) {
+          marks.push(`<g class="pwcir-badge" transform="translate(${px.toFixed(1)} ${py.toFixed(1)})"><circle r="15"/><text class="pwcir-badge-n" text-anchor="middle" dominant-baseline="central">${esc(w.name.trim())}</text></g>`);
+        } else {
+          const name = w.name.replace(/\s*(corner|turn)\s*$/i, "");
+          const anchor = px < 150 ? "start" : (px > W - 150 ? "end" : "middle");
+          marks.push(`<text class="pwcir-label" text-anchor="${anchor}" x="${px.toFixed(1)}" y="${py.toFixed(1)}">${esc(name)}</text>`);
+        }
       }
 
+      /* La fleche de sens : une pointe de fleche dans un disque clair, lisible sur
+         le bitume comme a cote.
+         The direction arrow: an arrowhead in a light disc. */
       const dir = arrow
         ? `<g class="pwcir-dir" transform="translate(${arrow.x.toFixed(1)} ${arrow.y.toFixed(1)}) rotate(${arrow.angle.toFixed(1)})">
-             <path d="M -13 -11 L 15 0 L -13 11 Z"/></g>`
+             <circle r="17"/><path d="M -7 -9 L 9 0 L -7 9 Z"/></g>`
         : "";
+
+      /* Un quadrillage tres discret derriere le trace : il donne a la
+         carte un fond de plan, sans concurrencer le dessin. L'identifiant
+         est unique par tuile -- plusieurs tuiles Circuits cote a cote
+         partagent la meme page, donc le meme espace d'identifiants.
+         A very discreet grid behind the track. The id is unique per
+         tile: several Circuit tiles share one page. */
+      const gid = "pwcir-grid-" + (++gridCounter);
 
       return `<div class="pwcir-map">
         <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${esc(c.name || "")}">
+          <defs><pattern id="${gid}" width="50" height="50" patternUnits="userSpaceOnUse"><path class="pwcir-gridline" d="M 50 0 L 0 0 0 50"/></pattern></defs>
+          <rect class="pwcir-grid" x="0" y="0" width="${W}" height="${H}" fill="url(#${gid})"/>
           ${pit.map((w) => `<path class="pwcir-pit" d="${toPath(w.xy)}"/>`).join("")}
-          ${track.map((w) => `<path class="pwcir-track" d="${toPath(w.xy)}"/>`).join("")}
+          <g class="pwcir-ribbon">
+            ${layer("pwcir-kerb")}
+            ${layer("pwcir-kerb2")}
+            ${layer("pwcir-track")}
+            ${layer("pwcir-centre")}
+          </g>
           ${dir}
-          ${corners.map((k) => `<text class="pwcir-label" text-anchor="${k.anchor}" x="${k.x.toFixed(1)}" y="${k.y.toFixed(1)}">${esc(k.name)}</text>`).join("")}
+          ${marks.join("")}
         </svg>
       </div>`;
     }

@@ -2554,7 +2554,7 @@ Franceinfo".</span></div>
 <p>Afficher le tracé d'un circuit de Formule 1 ou de MotoGP : celui du Grand Prix du week-end dans le calendrier que vous suivez, ou celui que vous choisissez.</p>
 <p><b>Ce que la tuile sait faire :</b></p>
 <ul>
-  <li><b>Tracé vectoriel</b> net à toute taille, aux couleurs du thème, dessiné à partir d'OpenStreetMap.</li>
+  <li><b>Tracé vectoriel</b> net à toute taille, dessiné à partir d'OpenStreetMap en <b>ruban d'asphalte</b> (bitume sombre, vibreurs rouge et blanc, filet central à la couleur d'accent du thème) : lisible sur fond clair comme sombre. Les numéros de virages sont des pastilles posées à côté de la piste.</li>
   <li><b>Sens de la course</b>, <b>voie des stands</b> en pointillés, et <b>noms et numéros des virages</b> quand ils sont connus.</li>
   <li><b>Circuit du week-end</b> automatiquement, au choix selon le <b>calendrier de Formule 1</b> ou celui du <b>MotoGP</b>, ou n'importe quel circuit épinglé depuis la base.</li>
   <li><b>Fiche technique</b> (en MotoGP : virages à gauche et à droite, plus longue ligne droite) et <b>météo de la prochaine séance</b>, séances MotoGP comprises.</li>
@@ -2597,7 +2597,7 @@ Franceinfo".</span></div>
 <p>Show a Formula 1 or MotoGP circuit layout: this weekend's Grand Prix in the calendar you follow, or the one you choose.</p>
 <p><b>What the tile can do:</b></p>
 <ul>
-  <li><b>Vector layout</b>, sharp at any size, in theme colours, drawn from OpenStreetMap.</li>
+  <li><b>Vector layout</b>, sharp at any size, drawn from OpenStreetMap as an <b>asphalt ribbon</b> (dark tarmac, red and white kerbs, a centre line in the theme's accent colour): readable on light and dark backgrounds. Corner numbers are badges set beside the track.</li>
   <li><b>Race direction</b>, dotted <b>pit lane</b>, and <b>corner names and numbers</b> where known.</li>
   <li><b>This weekend's circuit</b> automatically, following either the <b>Formula 1</b> or the <b>MotoGP</b> calendar, or any circuit pinned from the database.</li>
   <li><b>Technical sheet</b> (for MotoGP: left and right corners, longest straight) and <b>weather for the next session</b>, MotoGP sessions included.</li>
