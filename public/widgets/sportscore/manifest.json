@@ -133,8 +133,12 @@
       "type": "text",
       "default": "",
       "label": {
-        "en": "Filter by team (optional, e.g. \"Toulouse\")",
-        "fr": "Filtrer par équipe (optionnel, ex. « Toulouse »)"
+        "en": "Filter by team (optional, e.g. \"Toulouse; Racing\")",
+        "fr": "Filtrer par équipe (optionnel, ex. « Toulouse ; Racing »)"
+      },
+      "hint": {
+        "en": "Several names allowed, separated by commas or semicolons: matches involving any of them are shown.",
+        "fr": "Plusieurs noms possibles, séparés par des virgules ou des points-virgules : les matchs impliquant l'un d'eux sont affichés."
       }
     },
     {

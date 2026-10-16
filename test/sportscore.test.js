@@ -110,6 +110,16 @@ test("filtre : le nom, l'abreviation ou la ville suffisent", () => {
   assert.strictEqual(E.matchesFilter(e, "Bayonne"), false);
 });
 
+test("filtre : plusieurs noms separes par virgules ou points-virgules", () => {
+  const e1 = ev({ date: "2026-09-19T18:55:00Z", state: "post", home: "RC Vannes", away: "Stade Toulousain", homeScore: "13", awayScore: "31" });
+  const e2 = ev({ date: "2026-09-19T18:55:00Z", state: "post", home: "Racing 92", away: "Bayonne", homeScore: "10", awayScore: "12" });
+  const e3 = ev({ date: "2026-09-19T18:55:00Z", state: "post", home: "Pau", away: "Perpignan", homeScore: "1", awayScore: "2" });
+  assert.ok(E.matchesFilter(e1, "toulous ; racing") && E.matchesFilter(e2, "toulous ; racing"));
+  assert.ok(!E.matchesFilter(e3, "toulous, racing"));
+  assert.ok(E.matchesFilter(e3, " ; ,"), "separateurs seuls = pas de filtre");
+  assert.strictEqual(E.pick([e1, e2, e3], { now: new Date("2026-09-20T10:00:00Z"), filter: "Toulous,Racing", max: 5 }).length, 2);
+});
+
 test("choix : filtre, ordre et nombre maximum ensemble", () => {
   const now = new Date("2026-09-20T09:00:00Z");
   const list = [

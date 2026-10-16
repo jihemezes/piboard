@@ -711,7 +711,12 @@
         else if (!custom && raw.startsWith("motogp:")) groups = await loadMotoGp(this.ctx, raw.slice(7), i18n);
         else groups = await loadEspn(this.ctx, raw, s.columns === "full" ? "full" : "essential");
 
-        const filter = (s.highlightTeam || "").trim().toLowerCase();
+        /* Plusieurs equipes ou sportifs : noms separes par des virgules
+           ou des points-virgules (1.148.2). La ligne est mise en valeur
+           des qu'UN des noms correspond.
+           Several teams or athletes, separated by commas or semicolons. */
+        const terms = String(s.highlightTeam || "").split(/[;,\n]/)
+          .map((x) => x.trim().toLowerCase()).filter(Boolean);
         const maxRows = Math.max(3, Number(s.maxRows) || 10);
 
         const blocks = groups.filter((g) => g.rows && g.rows.length).map((g) => {
@@ -731,7 +736,7 @@
             g.cols.map((c) => `<th class="pws-stat">${escapeHtml(labels[c] || c)}</th>`).join("")
           }</tr>`;
           const body = rows.map((r) => {
-            const isHi = filter && String(r.team).toLowerCase().includes(filter);
+            const isHi = terms.length > 0 && terms.some((t) => String(r.team).toLowerCase().includes(t));
             const sub = r.sub ? `<span class="pws-sub">${escapeHtml(r.sub)}</span>` : "";
             return `
               <tr class="${isHi ? "pws-highlight" : ""}">

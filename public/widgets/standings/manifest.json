@@ -184,8 +184,12 @@
       "type": "text",
       "default": "",
       "label": {
-        "en": "Highlight a team (optional, e.g. \"Toulouse\")",
-        "fr": "Mettre en valeur une équipe (optionnel, ex. « Toulouse »)"
+        "en": "Highlight teams or athletes (optional, e.g. \"Toulouse; Racing\")",
+        "fr": "Mettre en valeur des équipes ou sportifs (optionnel, ex. « Toulouse ; Racing »)"
+      },
+      "hint": {
+        "en": "Several names allowed, separated by commas or semicolons. A row is highlighted as soon as one of the names matches.",
+        "fr": "Plusieurs noms possibles, séparés par des virgules ou des points-virgules. Une ligne est mise en valeur dès qu'un des noms correspond."
       }
     },
     {

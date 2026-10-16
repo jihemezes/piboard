@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.148.2
+
+- **Tuile Classement : plusieurs équipes ou sportifs mis en valeur.** Le champ
+  devient « Mettre en valeur des équipes ou sportifs » : on peut saisir
+  plusieurs noms séparés par des virgules ou des points-virgules
+  (« Toulouse ; Racing »). Une ligne est mise en valeur dès qu'un des noms
+  correspond. Un seul nom fonctionne comme avant.
+- **Même principe pour le filtre de la tuile Scores sportifs** (« Filtrer par
+  équipe ») : les matchs impliquant l'un des noms saisis sont affichés. Le
+  chemin Top 14 / Pro D2 n'est pas modifié, hors ce filtre.
+- Aide (FR/EN) et indications des deux champs mises à jour ; test du filtre
+  multiple.
+
 ## 1.148.1
 
 - **Tuile Scores sportifs : les matchs à venir s'affichent enfin pour Ligue 1,

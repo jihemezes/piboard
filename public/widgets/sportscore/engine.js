@@ -112,13 +112,16 @@
   }
 
   function matchesFilter(ev, filter) {
-    const f = String(filter || "").trim().toLowerCase();
-    if (!f) return true;
+    /* Plusieurs noms separes par des virgules ou des points-virgules
+       (1.148.2) : un match est garde des qu'un nom correspond.
+       Several names split on commas/semicolons: any match keeps it. */
+    const terms = String(filter || "").split(/[;,\n]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+    if (!terms.length) return true;
     const comp = (ev.competitions && ev.competitions[0]) || {};
     return (comp.competitors || []).some((c) => {
       const t = (c && c.team) || {};
       return [t.displayName, t.shortDisplayName, t.name, t.abbreviation, t.location]
-        .some((v) => String(v || "").toLowerCase().includes(f));
+        .some((v) => terms.some((f) => String(v || "").toLowerCase().includes(f)));
     });
   }
 

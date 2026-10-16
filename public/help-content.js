@@ -2521,7 +2521,7 @@ Franceinfo".</span></div>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <div class="help-opt"><span class="help-opt-name">Compétition</span><span class="help-opt-desc">Liste des compétitions courantes préconfigurées : football, TOP 14 et PRO D2 (lus chez la LNR), Coupe d'Europe de rugby et Tournoi des 6 Nations (ESPN), ainsi que les championnats F1 et MotoGP (pilotes et équipes).</span></div>
 <div class="help-opt"><span class="help-opt-name">Code ESPN personnalisé (sport:ligue) — prend le pas sur la liste ci-dessus</span><span class="help-opt-desc">Prend le pas sur la liste ci-dessus pour cibler n'importe quelle compétition couverte par ESPN (format <code>sport:ligue</code>, ex. <code>football:nfl</code>).</span></div>
-<div class="help-opt"><span class="help-opt-name">Filtrer par équipe (optionnel, ex. « Toulouse »)</span><span class="help-opt-desc">N'affiche que les matchs impliquant le nom saisi (ex. « Toulouse »).</span></div>
+<div class="help-opt"><span class="help-opt-name">Filtrer par équipe (optionnel, ex. « Toulouse ; Racing »)</span><span class="help-opt-desc">N'affiche que les matchs impliquant le nom saisi (ex. « Toulouse »). Plusieurs noms sont possibles, séparés par des virgules ou des points-virgules : les matchs impliquant l'un d'eux sont affichés.</span></div>
 <div class="help-opt"><span class="help-opt-name">Nombre de matchs affichés</span><span class="help-opt-desc">Combien de rencontres afficher au maximum.</span></div>
 <div class="help-opt"><span class="help-opt-name">Rafraîchissement (minutes)</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour des scores.</span></div>
 `,
@@ -2546,7 +2546,7 @@ Franceinfo".</span></div>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <div class="help-opt"><span class="help-opt-name">Competition</span><span class="help-opt-desc">List of preconfigured common competitions: football, TOP 14 and PRO D2 (read from the LNR), plus the F1 and MotoGP championships (drivers and teams).</span></div>
 <div class="help-opt"><span class="help-opt-name">Custom ESPN code (sport:league) — overrides the list above</span><span class="help-opt-desc">Takes precedence over the list above to target any ESPN-covered competition (format <code>sport:league</code>, e.g. <code>football:nfl</code>).</span></div>
-<div class="help-opt"><span class="help-opt-name">Filter by team (optional, e.g. "Toulouse")</span><span class="help-opt-desc">Only shows matches involving the entered name (e.g. "Toulouse").</span></div>
+<div class="help-opt"><span class="help-opt-name">Filter by team (optional, e.g. "Toulouse; Racing")</span><span class="help-opt-desc">Only shows matches involving the entered name (e.g. "Toulouse"). Several names are allowed, separated by commas or semicolons: matches involving any of them are shown.</span></div>
 <div class="help-opt"><span class="help-opt-name">Matches shown</span><span class="help-opt-desc">How many matches to show at most.</span></div>
 <div class="help-opt"><span class="help-opt-name">Refresh (minutes)</span><span class="help-opt-desc">Interval in minutes between two score updates.</span></div>
 `
@@ -2908,7 +2908,7 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Code ESPN personnalisé (sport:ligue) — prend le pas sur la liste ci-dessus</span><span class="help-opt-desc">Prend le pas sur la liste ci-dessus, y compris sur les championnats F1 et MotoGP : laissez ce champ vide pour les utiliser. Voir la méthode de recherche ci-dessus.</span></div>
 <div class="help-opt"><span class="help-opt-name">Colonnes</span><span class="help-opt-desc">Essentiel (G, N, P, Pts) ou complet (tout ce que publie la source).</span></div>
 <div class="help-opt"><span class="help-opt-name">Équipes affichées par groupe</span><span class="help-opt-desc">Combien de lignes du classement afficher.</span></div>
-<div class="help-opt"><span class="help-opt-name">Mettre en valeur une équipe (optionnel, ex. « Toulouse »)</span><span class="help-opt-desc">Fait ressortir visuellement la ligne de l'équipe nommée.</span></div>
+<div class="help-opt"><span class="help-opt-name">Mettre en valeur des équipes ou sportifs (optionnel, ex. « Toulouse ; Racing »)</span><span class="help-opt-desc">Fait ressortir visuellement la ligne des équipes ou sportifs nommés. Plusieurs noms sont possibles, séparés par des virgules ou des points-virgules (« Toulouse ; Racing ») : une ligne est mise en valeur dès qu'un des noms correspond.</span></div>
 <div class="help-opt"><span class="help-opt-name">Rafraîchissement (minutes)</span><span class="help-opt-desc">Intervalle en minutes entre deux mises à jour du classement.</span></div>
 `,
         en: `
@@ -2946,7 +2946,7 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Custom ESPN code (sport:league) — overrides the list above</span><span class="help-opt-desc">Takes precedence over the list above, including over the F1 and MotoGP championships: leave this field empty to use them. See the lookup method above.</span></div>
 <div class="help-opt"><span class="help-opt-name">Columns</span><span class="help-opt-desc">Essential (W, D, L, Pts) or full (everything the source publishes).</span></div>
 <div class="help-opt"><span class="help-opt-name">Teams shown per group</span><span class="help-opt-desc">How many standings rows to show.</span></div>
-<div class="help-opt"><span class="help-opt-name">Highlight a team (optional, e.g. "Toulouse")</span><span class="help-opt-desc">Visually highlights the named team's row.</span></div>
+<div class="help-opt"><span class="help-opt-name">Highlight teams or athletes (optional, e.g. "Toulouse; Racing")</span><span class="help-opt-desc">Visually highlights the row of the named teams or athletes. Several names are allowed, separated by commas or semicolons ("Toulouse; Racing"): a row is highlighted as soon as one name matches.</span></div>
 <div class="help-opt"><span class="help-opt-name">Refresh (minutes)</span><span class="help-opt-desc">Interval in minutes between two standings updates.</span></div>
 `
       }

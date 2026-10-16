@@ -32,6 +32,21 @@
 
 # Nouveautes / What's new
 
+## 1.148.2
+
+**Plusieurs équipes en valeur dans les classements**
+
+Dans la tuile Classement, on peut maintenant mettre en valeur plusieurs équipes ou
+sportifs en les séparant par des virgules ou des points-virgules. Le filtre de la
+tuile Scores sportifs accepte aussi plusieurs noms.
+
+---
+
+**Highlight several teams in standings**
+
+In the Standings tile you can now highlight several teams or athletes, separated by
+commas or semicolons. The Live scores tile's team filter also accepts several names.
+
 ## 1.148.0
 
 **Du relief pour vos tuiles**
