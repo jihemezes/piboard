@@ -196,7 +196,7 @@
           <div class="help-opt"><span class="help-opt-name">État affiché</span><span class="help-opt-desc">« Non connecté » ; « Session enregistrée » (un site dépose des cookies même sans connexion, ce n'est donc pas encore une preuve) ; « Accès abonné confirmé » dès qu'un article payant a été lu en entier ; « Session sans doute expirée » quand un article payant ne donne plus que l'aperçu.</span></div>
           <p>Détails et indicateurs ✓ / 🔒 de la liste : fiche <i>Flux RSS</i>.</p>
           <p><u>Section Mode d'affichage</u></p>
-          <p>Classique (un tableau et ses tiroirs) ou Tableau de bord (des pages qui défilent), défilement automatique et liste des pages. Tout est détaillé dans la fiche <i>Mode tableau de bord (pages)</i>.</p>
+          <p>Classique (un tableau et ses tiroirs) ou Tableau de bord (des pages qui défilent), changement de page à la souris ou au trackpad (activable, avec choix du sens du geste), défilement automatique et liste des pages. Tout est détaillé dans la fiche <i>Mode tableau de bord (pages)</i>.</p>
           <p><u>Section Mises à jour</u></p>
           <p>Le niveau de mise à jour : versions stables seulement, ou aussi les pré-versions (plus récentes, moins éprouvées). Le même choix vaut pour le Raspberry Pi et pour l'application de bureau, qui vérifie elle-même au démarrage. Voir les fiches <i>Mises à jour sur Raspberry Pi / Linux</i> et celles des applications de bureau.</p>
           <p><u>Section Contribuer</u></p>
@@ -266,7 +266,7 @@
           <div class="help-opt"><span class="help-opt-name">Status shown</span><span class="help-opt-desc">“Not logged in”; “Session saved” (a site sets cookies even without a login, so this is not proof yet); “Subscriber access confirmed” once a paid article was read in full; “Session has probably expired” when a paid article only gives the preview again.</span></div>
           <p>Details and the list's ✓ / 🔒 indicators: <i>RSS feed</i> sheet.</p>
           <p><u>Display mode section</u></p>
-          <p>Classic (one board and its drawers) or Dashboard (sliding pages), automatic cycling and the list of pages. All detailed in the <i>Dashboard mode (pages)</i> sheet.</p>
+          <p>Classic (one board and its drawers) or Dashboard (sliding pages), changing page with the mouse or trackpad (can be turned off, with a choice of gesture direction), automatic cycling and the list of pages. All detailed in the <i>Dashboard mode (pages)</i> sheet.</p>
           <p><u>Updates section</u></p>
           <p>The update level: stable versions only, or pre-releases too (newer, less tested). The same choice applies to the Raspberry Pi and to the desktop application, which checks by itself on startup. See the <i>Updates on Raspberry Pi / Linux</i> sheet and the desktop application sheets.</p>
           <p><u>Contributing section</u></p>
@@ -4614,7 +4614,7 @@ Somfy = https://www.somfy.fr".</span></div>
           <p>Il contient le repérage des pages (cliquez un numéro pour y aller), les flèches page précédente / suivante, et l'accès à l'ajout de tuile, au mode édition, aux réglages généraux et à cette aide. Une zone y est <b>réservée pour l'avenir</b> : elle accueillera des informations défilantes venues de vos tuiles — les titres de vos flux RSS, à la manière des chaînes d'info en continu.</p>
 
           <h4>Naviguer entre les pages</h4>
-          <p>Trois moyens, selon le matériel : les numéros et les flèches du bandeau, un <b>glissement du doigt</b> horizontal sur l'écran tactile, et les <b>flèches gauche/droite du clavier</b> (utile avec une télécommande de présentation ou un clavier sans fil posé près d'un écran mural). Depuis la dernière page, « suivant » revient à la première.</p>
+          <p>Trois moyens, selon le matériel : les numéros et les flèches du bandeau, un <b>glissement du doigt</b> horizontal sur l'écran tactile, le <b>défilement latéral</b> du trackpad, de la Magic Mouse ou d'une molette inclinable (ou Maj + molette) et les <b>boutons latéraux</b> de la souris (Précédent / Suivant), et les <b>flèches gauche/droite du clavier</b> (utile avec une télécommande de présentation ou un clavier sans fil posé près d'un écran mural). Depuis la dernière page, « suivant » revient à la première.</p>
 
           <h4>Créer et régler les pages</h4>
           <p>Le nombre de pages n'est pas limité. Chaque page se règle dans les réglages généraux :</p>
@@ -4658,7 +4658,7 @@ Somfy = https://www.somfy.fr".</span></div>
           <p>It holds the page markers (click a number to go there), the previous/next page arrows, and access to adding a tile, edit mode, the general settings and this help. A zone in it is <b>reserved for the future</b>: it will carry scrolling information coming from your tiles — your RSS feed headlines, in the manner of rolling news channels.</p>
 
           <h4>Moving between pages</h4>
-          <p>Three ways, depending on the hardware: the bar's numbers and arrows, a horizontal <b>finger swipe</b> on a touchscreen, and the <b>left/right keyboard arrows</b> (useful with a presentation remote or a wireless keyboard next to a wall screen). From the last page, "next" returns to the first.</p>
+          <p>Three ways, depending on the hardware: the bar's numbers and arrows, a horizontal <b>finger swipe</b> on a touchscreen, <b>sideways scrolling</b> on a trackpad, Magic Mouse or tilt wheel (or Shift + wheel) and the mouse's <b>side buttons</b> (Back / Forward), and the <b>left/right keyboard arrows</b> (useful with a presentation remote or a wireless keyboard next to a wall screen). From the last page, "next" returns to the first.</p>
 
           <h4>Creating and setting up pages</h4>
           <p>The number of pages is not limited. Each page is set up in the general settings:</p>

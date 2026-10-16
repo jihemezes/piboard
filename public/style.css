@@ -182,6 +182,10 @@ body { --ldx: 1; --ldy: 1; }
 body[data-tile-light="t"] { --ldx: 0; --ldy: 1; }
 body[data-tile-light="tr"] { --ldx: -1; --ldy: 1; }
 
+/* Le geste a deux doigts (trackpad, Magic Mouse) ne doit pas faire reculer
+   l'historique du navigateur : il sert a changer de page (1.149.0). */
+html, body { overscroll-behavior-x: none; }
+
 .grid-stack-item-content[data-depth] {
   --dk: 1;
   --ds1: rgba(0, 0, 0, .34);

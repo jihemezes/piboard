@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.148.2
+   Version 1.149.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1159,7 +1159,7 @@
     body.style.zoom = scale === 1 ? "" : String(scale);
   }
 
-  /* RELIEF 3D (1.148.2). Le niveau effectif d'une tuile est celui de ses
+  /* RELIEF 3D (1.149.0). Le niveau effectif d'une tuile est celui de ses
      reglages (_depth) s'il en a un, sinon le reglage general. Le CSS ne
      lit que deux attributs de la tuile (data-depth, data-glass) et trois
      du corps de page (direction de la lumiere, soulevement) : aucune
@@ -7553,6 +7553,8 @@
     $("setDisplayMode").value = settings.displayMode === "dashboard" ? "dashboard" : "classic";
     $("setPageAuto").checked = !!settings.pageAutoAdvance;
     $("setPageAutoSeconds").value = settings.pageAutoSeconds || 30;
+    $("setPageGestures").checked = settings.pageGestures !== false;
+    $("setPageGestureDir").value = settings.pageGestureDir === "inverted" ? "inverted" : "natural";
     renderPagesEditor();
     // Couverture des tiroirs : lue depuis leur etat reel (persiste via
     // le layout, pas les reglages generaux -- voir le commentaire sur
@@ -7616,6 +7618,8 @@
       immersive: $("setImmersive").checked,
       pageAutoAdvance: $("setPageAuto").checked,
       pageAutoSeconds: Math.max(3, Math.min(3600, Number($("setPageAutoSeconds").value) || 30)),
+      pageGestures: $("setPageGestures").checked,
+      pageGestureDir: $("setPageGestureDir").value === "inverted" ? "inverted" : "natural",
       /* Les quatre pastilles retouchent le theme PiBoard : on fusionne,
          pour ne pas effacer ce que l'editeur de themes y a regle.
          The four swatches tweak the PiBoard theme: merge, so as not to
@@ -10035,6 +10039,77 @@
       if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 1.5) return;
       goToPage(activePageIndex + (dx < 0 ? 1 : -1), { backwards: dx > 0 });
     }, { passive: true });
+
+    /* GESTES DE SOURIS ET DE TRACKPAD (1.149.0).
+       Defilement lateral -- trackpad a deux doigts, Magic Mouse, molette
+       inclinable, ou Maj + molette -- et boutons lateraux de la souris
+       (Precedent / Suivant) : ils changent de page.
+
+       UN GESTE = UNE PAGE. Un trackpad Mac continue d'emettre des
+       evenements `wheel` plusieurs centaines de millisecondes apres que
+       les doigts ont quitte la surface (l'inertie) : sans verrou, un seul
+       geste ferait defiler cinq pages. Le deplacement s'accumule jusqu'a
+       un seuil, la page change, puis plus rien ne compte tant que le flux
+       n'a pas cesse pendant 250 ms.
+
+       Un contenu qui defile lui-meme lateralement (un tableau large dans
+       une tuile) garde le geste tant qu'il a de la place pour bouger.
+       Les boutons lateraux sont aussi pris, pour que « Precedent » ne
+       fasse pas reculer l'historique du navigateur.
+       Mouse/trackpad gestures. One gesture = one page: the accumulated
+       delta must pass a threshold, then input is ignored until the stream
+       has been quiet for 250 ms (trackpad inertia). */
+    const gesturesOn = () => dashboardMode() && !editing && settings && settings.pageGestures !== false
+      && !document.querySelector(".modal:not([hidden])");
+    const gestureSign = () => (settings && settings.pageGestureDir === "inverted" ? -1 : 1);
+    function canScrollSideways(node, dir) {
+      for (let el = node; el && el !== document.body; el = el.parentElement) {
+        if (!(el instanceof Element)) continue;
+        const ox = getComputedStyle(el).overflowX;
+        if ((ox === "auto" || ox === "scroll") && el.scrollWidth > el.clientWidth + 1) {
+          if (dir > 0 && el.scrollLeft + el.clientWidth < el.scrollWidth - 1) return true;
+          if (dir < 0 && el.scrollLeft > 0) return true;
+        }
+      }
+      return false;
+    }
+    let wheelAcc = 0, wheelLocked = false, wheelTimer = null;
+    document.addEventListener("wheel", (e) => {
+      if (!gesturesOn()) return;
+      const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? 400 : 1;
+      let dx = e.deltaX * unit;
+      const dy = e.deltaY * unit;
+      if (Math.abs(dx) < Math.abs(dy)) {
+        // Maj + molette verticale d'une souris classique = lateral.
+        if (e.shiftKey && Math.abs(dy) > 0) dx = dy; else return;
+      }
+      if (!dx) return;
+      if (canScrollSideways(e.target, dx)) return;
+      // Le defilement lateral ne doit pas non plus faire reculer
+      // l'historique du navigateur (geste a deux doigts sur Mac).
+      e.preventDefault();
+      clearTimeout(wheelTimer);
+      wheelTimer = setTimeout(() => { wheelLocked = false; wheelAcc = 0; }, 250);
+      if (wheelLocked) return;
+      if (wheelAcc && Math.sign(wheelAcc) !== Math.sign(dx)) wheelAcc = 0;
+      wheelAcc += dx;
+      if (Math.abs(wheelAcc) < 60) return;
+      const dir = Math.sign(wheelAcc) * gestureSign();
+      wheelLocked = true;
+      wheelAcc = 0;
+      goToPage(activePageIndex + dir, { backwards: dir < 0 });
+    }, { passive: false });
+
+    // Boutons lateraux : 3 = Precedent, 4 = Suivant.
+    const sideButton = (e) => {
+      if (e.button !== 3 && e.button !== 4) return;
+      if (!gesturesOn()) return;
+      e.preventDefault();
+      if (e.type === "mouseup") goToPage(activePageIndex + (e.button === 4 ? 1 : -1), { backwards: e.button === 3 });
+    };
+    document.addEventListener("mousedown", sideButton);
+    document.addEventListener("mouseup", sideButton);
+    document.addEventListener("auxclick", (e) => { if ((e.button === 3 || e.button === 4) && gesturesOn()) e.preventDefault(); });
 
     /* Fleches du clavier : indispensable pour une telecommande de
        presentation ou un clavier sans fil pose a cote d'un ecran mural.

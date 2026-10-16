@@ -32,6 +32,23 @@
 
 # Nouveautes / What's new
 
+## 1.149.0
+
+**Changer de page d'un geste de la souris ou du trackpad**
+
+En mode tableau de bord, un glissement latéral du trackpad ou de la Magic Mouse, la
+molette inclinable, ou les boutons latéraux de la souris font passer à la page
+précédente ou suivante. Un geste change d'une page, dans le sens naturel du tactile
+(inversable dans les réglages).
+
+---
+
+**Change page with a mouse or trackpad gesture**
+
+In dashboard mode, a sideways swipe on the trackpad or Magic Mouse, the tilt wheel, or
+the mouse's side buttons move to the previous or next page. One gesture changes one
+page, in the natural touchscreen direction (reversible in settings).
+
 ## 1.148.2
 
 **Plusieurs équipes en valeur dans les classements**

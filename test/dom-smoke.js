@@ -6341,6 +6341,54 @@ function catalogItemFor(catalog, document, widgetId) {
       dots.querySelector(".dash-page-dot").classList.contains("active"));
     assert("la page 1 est de nouveau affichee", document.getElementById("board").hidden === false);
 
+    // Gestes souris / trackpad (1.149.0) : un geste = une page.
+    {
+      const activeDot = () => Array.from(dots.querySelectorAll(".dash-page-dot")).findIndex((d) => d.classList.contains("active"));
+      const wheel = (dx, extra) => document.body.dispatchEvent(new window.WheelEvent("wheel",
+        Object.assign({ deltaX: dx, deltaY: 0, bubbles: true, cancelable: true }, extra || {})));
+      // Les gestes sont sans effet en mode edition ou sous une fenetre :
+      // on se place donc dans l'etat « tableau de bord au repos ».
+      const wasEditing = document.body.classList.contains("editing");
+      const qs = document.getElementById("quickStartModal");
+      const qsWasOpen = qs && !qs.hidden;
+      if (qs) qs.hidden = true;
+      if (wasEditing) { document.getElementById("dashEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true })); await sleep(150); }
+      await sleep(300);
+      wheel(80);
+      await sleep(120);
+      assert("defilement lateral vers la gauche (deltaX > 0) : page suivante", activeDot() === 1);
+      wheel(90); wheel(90); wheel(90);
+      await sleep(120);
+      assert("l'inertie du trackpad ne saute pas plusieurs pages", activeDot() === 1);
+      await sleep(320);
+      wheel(-80);
+      await sleep(120);
+      assert("defilement inverse : page precedente", activeDot() === 0);
+      await sleep(320);
+      wheel(20); wheel(20);
+      await sleep(80);
+      assert("un petit mouvement sous le seuil ne change rien", activeDot() === 0);
+      await sleep(320);
+      wheel(0, { deltaY: 90, shiftKey: true });
+      await sleep(120);
+      assert("Maj + molette verticale = lateral : page suivante", activeDot() === 1);
+      await sleep(320);
+      const evt = new window.MouseEvent("mouseup", { button: 4, bubbles: true, cancelable: true });
+      document.body.dispatchEvent(evt);
+      await sleep(120);
+      assert("bouton lateral Suivant : page suivante, historique du navigateur epargne",
+        activeDot() === 2 && evt.defaultPrevented === true);
+      document.body.dispatchEvent(new window.MouseEvent("mouseup", { button: 3, bubbles: true, cancelable: true }));
+      await sleep(120);
+      assert("bouton lateral Precedent : page precedente", activeDot() === 1);
+      await sleep(320);
+      wheel(-80);
+      await sleep(120);
+      assert("retour a la page 1 (etat attendu par la suite)", activeDot() === 0);
+      if (qs && qsWasOpen) qs.hidden = false;
+      if (wasEditing) { document.getElementById("dashEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true })); await sleep(150); }
+    }
+
     // Le bandeau s'ouvre au survol et se referme au depart de la souris.
     document.getElementById("dashHotzone").dispatchEvent(new window.MouseEvent("mouseenter", { bubbles: true }));
     assert("le bandeau sort au survol de la bande du bas", document.body.classList.contains("dash-open"));

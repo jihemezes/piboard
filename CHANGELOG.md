@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.149.0
+
+- **Mode tableau de bord : changer de page à la souris ou au trackpad.**
+  Défilement latéral (trackpad à deux doigts, Magic Mouse, molette inclinable,
+  ou Maj + molette) et boutons latéraux de la souris (Précédent / Suivant).
+  **Un geste = une page** : le mouvement s'accumule jusqu'à un seuil, la page
+  change, puis le flux est ignoré jusqu'à 250 ms de calme (inertie du trackpad
+  Mac). Un contenu qui défile lui-même latéralement garde le geste tant qu'il
+  peut bouger. Le geste ne fait plus reculer l'historique du navigateur.
+- Réglages (section Mode d'affichage) : « Changer de page à la souris ou au
+  trackpad » (activé par défaut) et « Sens du geste » (naturel, comme le
+  tactile, ou inversé).
+- Aide mise à jour (FR/EN) ; test `pageGestures.test.js` et scénario dans
+  `dom-smoke.js` (geste, inertie, seuil, Maj + molette, boutons latéraux, sens).
+
 ## 1.148.2
 
 - **Tuile Classement : plusieurs équipes ou sportifs mis en valeur.** Le champ

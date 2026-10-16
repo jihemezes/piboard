@@ -170,6 +170,13 @@ const DEFAULT_SETTINGS = {
      layout.pages[].dwellSeconds). */
   pageAutoAdvance: false,
   pageAutoSeconds: 30,
+  /* Gestes de souris et de trackpad pour changer de page en mode tableau
+     de bord (1.149.0) : defilement lateral (trackpad, Magic Mouse,
+     molette inclinable) et boutons lateraux de la souris. Sens :
+     "natural" (comme le tactile) ou "inverted". Mouse/trackpad page
+     gestures in dashboard mode. */
+  pageGestures: true,
+  pageGestureDir: "natural",
   /* Affichage immersif du mode tableau de bord (application de bureau
      Windows uniquement). Quand il est actif, la fenetre passe en plein
      ecran veritable : plus de barre de titre, plus de barre des taches,

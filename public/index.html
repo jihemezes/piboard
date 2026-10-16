@@ -843,6 +843,18 @@
         <p class="section-note" data-i18n="settings.pages.inactive" hidden>Pages only come into play in dashboard mode: what you set here is kept and will apply as soon as you switch to it.</p>
         <div id="pagesEditor">
           <label class="field checkbox">
+            <input type="checkbox" id="setPageGestures">
+            <span data-i18n="settings.pageGestures">Change page with the mouse or trackpad</span>
+          </label>
+          <small class="field-hint" data-i18n="settings.pageGestures.hint">Sideways scrolling (trackpad, Magic Mouse, tilt wheel, or Shift + wheel) and the mouse's side buttons (Back / Forward) move to the previous or next page. One gesture changes one page.</small>
+          <label class="field">
+            <span data-i18n="settings.pageGestureDir">Gesture direction</span>
+            <select id="setPageGestureDir">
+              <option value="natural" data-i18n="settings.pageGestureDir.natural">Natural, like a touchscreen (slide left = next page)</option>
+              <option value="inverted" data-i18n="settings.pageGestureDir.inverted">Inverted (slide left = previous page)</option>
+            </select>
+          </label>
+          <label class="field checkbox">
             <input type="checkbox" id="setPageAuto">
             <span data-i18n="settings.pageAuto">Move to the next page automatically</span>
           </label>
