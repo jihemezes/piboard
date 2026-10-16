@@ -216,3 +216,62 @@ body.editing .pw-image-crop {
 @container (max-height: 120px) {
   .pw-image-crophint { display: none; }
 }
+
+/* ============================================================
+   ANIMATIONS DE L'IMAGE (1.150.0)
+   Le bloc `.pw-image-wrap` porte l'animation ; l'image reste intacte.
+   Duree, sens et perspective viennent de variables posees par
+   widget.js sur `.pw-image`. Respecte « reduire les animations ».
+   IMAGE ANIMATIONS: the wrap carries the animation, the image itself
+   stays untouched. Honours prefers-reduced-motion.
+   ============================================================ */
+.pw-image-wrap { position: relative; display: block; max-width: 100%; max-height: 100%; }
+.pw-image-wrap > img { width: 100%; height: 100%; }
+.pw-image-wrap > img[style*="width: auto"] { width: auto; height: auto; }
+
+.pw-image-anim-spinY .pw-image-wrap { animation: pwimg-spiny var(--pwi-dur, 8s) linear infinite var(--pwi-dir, normal); }
+.pw-image-anim-spinX .pw-image-wrap { animation: pwimg-spinx var(--pwi-dur, 8s) linear infinite var(--pwi-dir, normal); }
+.pw-image-anim-breathe .pw-image-wrap { animation: pwimg-breathe var(--pwi-dur, 8s) ease-in-out infinite var(--pwi-alt, alternate); }
+.pw-image-anim-float .pw-image-wrap { animation: pwimg-float var(--pwi-dur, 8s) ease-in-out infinite var(--pwi-alt, alternate); }
+.pw-image-anim-glow .pw-image-wrap { animation: pwimg-glow var(--pwi-dur, 8s) ease-in-out infinite var(--pwi-alt, alternate); }
+.pw-image-anim-shine .pw-image-shine {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(105deg, transparent 38%, rgba(255, 255, 255, .9) 50%, transparent 62%);
+  background-size: 250% 100%;
+  background-repeat: no-repeat;
+  animation: pwimg-shine var(--pwi-dur, 8s) ease-in-out infinite var(--pwi-dir, normal);
+}
+.pw-image-pausable:hover .pw-image-wrap,
+.pw-image-pausable:active .pw-image-wrap,
+.pw-image-pausable:hover .pw-image-shine,
+.pw-image-pausable:active .pw-image-shine { animation-play-state: paused; }
+
+@keyframes pwimg-spiny {
+  from { transform: var(--pwi-persp, scale(1)) rotateY(0deg) scale(var(--pwi-fit, 1)); }
+  to { transform: var(--pwi-persp, scale(1)) rotateY(360deg) scale(var(--pwi-fit, 1)); }
+}
+@keyframes pwimg-spinx {
+  from { transform: var(--pwi-persp, scale(1)) rotateX(0deg) scale(var(--pwi-fit, 1)); }
+  to { transform: var(--pwi-persp, scale(1)) rotateX(360deg) scale(var(--pwi-fit, 1)); }
+}
+@keyframes pwimg-breathe {
+  from { transform: scale(.94); }
+  to { transform: scale(1.04); }
+}
+@keyframes pwimg-float {
+  from { transform: translateY(2%); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .18)); }
+  to { transform: translateY(-4%); filter: drop-shadow(0 14px 10px rgba(0, 0, 0, .10)); }
+}
+@keyframes pwimg-glow {
+  from { filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0)) drop-shadow(0 0 0 rgba(0, 0, 0, 0)); }
+  to { filter: drop-shadow(0 0 14px var(--accent, #ffb703)) drop-shadow(0 0 4px var(--accent, #ffb703)); }
+}
+@keyframes pwimg-shine {
+  0% { background-position: 160% 0; }
+  35%, 100% { background-position: -60% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pw-image-wrap, .pw-image-shine { animation: none !important; }
+}

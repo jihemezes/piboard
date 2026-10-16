@@ -32,6 +32,22 @@
 
 # Nouveautes / What's new
 
+## 1.150.0
+
+**Des logos qui s'animent**
+
+La tuile Logo / Image peut animer son image : rotation autour d'un axe central
+(comme une pièce de monnaie), respiration, flottement, brillance qui traverse ou
+pulsation lumineuse. Durée, sens, perspective 3D et pause au survol sont réglables.
+
+---
+
+**Logos that move**
+
+The Logo / Image tile can animate its image: rotation around a central axis (like a
+coin), breathing, floating, a sweeping glint or a pulsing glow. Duration, direction,
+3D perspective and pause on hover are adjustable.
+
 ## 1.149.0
 
 **Changer de page d'un geste de la souris ou du trackpad**

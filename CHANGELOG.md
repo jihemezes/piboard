@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.150.0
+
+- **Tuile Logo / Image : animations.** Nouveau réglage « Animation » :
+  rotation autour de l'axe vertical (comme une pièce de monnaie) ou horizontal,
+  respiration, flottement, brillance qui traverse (limitée aux zones opaques de
+  l'image) et pulsation lumineuse. Réglages associés : durée par cycle (1 à
+  120 s), sens, perspective 3D des rotations (aucune, légère, moyenne, forte,
+  proportionnelle à la largeur de la tuile) et pause au survol ou au toucher.
+- Seule l'image bouge, pas la tuile : l'animation est portée par un bloc qui
+  enveloppe l'image, dont le zoom, le miroir, la rotation et le point de mire
+  restent intacts, et l'axe de rotation passe par le centre de l'image. Rien ne
+  change tant que « Animation » reste sur « Aucune » (défaut). Les animations
+  sont coupées si le système demande de réduire les animations.
+- Aide (Objectif et Options de la fiche Logo / Image, FR/EN) ; test
+  `imageAnim.test.js`.
+
 ## 1.149.1
 
 - **Tuile Scores sportifs : ascenseur vertical.** Quand il y avait plus de

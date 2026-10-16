@@ -169,10 +169,34 @@
         "fr": "Rotation"
       },
       "options": [
-        { "value": "0", "label": { "en": "None", "fr": "Aucune" } },
-        { "value": "90", "label": { "en": "90° clockwise", "fr": "90° à droite" } },
-        { "value": "180", "label": { "en": "180°", "fr": "180°" } },
-        { "value": "270", "label": { "en": "90° counter-clockwise", "fr": "90° à gauche" } }
+        {
+          "value": "0",
+          "label": {
+            "en": "None",
+            "fr": "Aucune"
+          }
+        },
+        {
+          "value": "90",
+          "label": {
+            "en": "90° clockwise",
+            "fr": "90° à droite"
+          }
+        },
+        {
+          "value": "180",
+          "label": {
+            "en": "180°",
+            "fr": "180°"
+          }
+        },
+        {
+          "value": "270",
+          "label": {
+            "en": "90° counter-clockwise",
+            "fr": "90° à gauche"
+          }
+        }
       ],
       "hint": {
         "en": "Useful for a photo taken in the wrong orientation. Applied after the mirror settings above, so the mirror always matches what you currently see on screen.",
@@ -277,6 +301,159 @@
       "label": {
         "en": "Opacity (%)",
         "fr": "Opacité (%)"
+      }
+    },
+    {
+      "key": "anim",
+      "type": "select",
+      "default": "none",
+      "label": {
+        "en": "Animation",
+        "fr": "Animation"
+      },
+      "options": [
+        {
+          "value": "none",
+          "label": {
+            "en": "None",
+            "fr": "Aucune"
+          }
+        },
+        {
+          "value": "spinY",
+          "label": {
+            "en": "Turn around the vertical axis",
+            "fr": "Rotation autour de l'axe vertical"
+          }
+        },
+        {
+          "value": "spinX",
+          "label": {
+            "en": "Turn around the horizontal axis",
+            "fr": "Rotation autour de l'axe horizontal"
+          }
+        },
+        {
+          "value": "breathe",
+          "label": {
+            "en": "Breathing (slow zoom in and out)",
+            "fr": "Respiration (zoom lent)"
+          }
+        },
+        {
+          "value": "float",
+          "label": {
+            "en": "Floating (rises and falls)",
+            "fr": "Flottement (monte et descend)"
+          }
+        },
+        {
+          "value": "shine",
+          "label": {
+            "en": "Light sweeping across",
+            "fr": "Brillance qui traverse"
+          }
+        },
+        {
+          "value": "glow",
+          "label": {
+            "en": "Pulsing glow",
+            "fr": "Pulsation lumineuse"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Animates the image only, not the tile. Turned off automatically if the computer asks to reduce motion.",
+        "fr": "Anime l'image seulement, pas la tuile. Coupée automatiquement si l'ordinateur demande de réduire les animations."
+      }
+    },
+    {
+      "key": "animSeconds",
+      "type": "number",
+      "default": 8,
+      "min": 1,
+      "max": 120,
+      "step": 1,
+      "label": {
+        "en": "Animation duration (seconds per cycle)",
+        "fr": "Durée de l'animation (secondes par cycle)"
+      },
+      "hint": {
+        "en": "One full turn, one breath, one sweep… Lower is faster.",
+        "fr": "Un tour complet, une respiration, un balayage… Plus petit = plus rapide."
+      }
+    },
+    {
+      "key": "animDir",
+      "type": "select",
+      "default": "forward",
+      "label": {
+        "en": "Animation direction",
+        "fr": "Sens de l'animation"
+      },
+      "options": [
+        {
+          "value": "forward",
+          "label": {
+            "en": "Normal",
+            "fr": "Normal"
+          }
+        },
+        {
+          "value": "reverse",
+          "label": {
+            "en": "Reversed",
+            "fr": "Inversé"
+          }
+        }
+      ]
+    },
+    {
+      "key": "animPersp",
+      "type": "select",
+      "default": "medium",
+      "label": {
+        "en": "3D perspective (rotations)",
+        "fr": "Perspective 3D (rotations)"
+      },
+      "options": [
+        {
+          "value": "off",
+          "label": {
+            "en": "None (flat)",
+            "fr": "Aucune (à plat)"
+          }
+        },
+        {
+          "value": "light",
+          "label": {
+            "en": "Light",
+            "fr": "Légère"
+          }
+        },
+        {
+          "value": "medium",
+          "label": {
+            "en": "Medium",
+            "fr": "Moyenne"
+          }
+        },
+        {
+          "value": "strong",
+          "label": {
+            "en": "Strong",
+            "fr": "Forte"
+          }
+        }
+      ]
+    },
+    {
+      "key": "animPause",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Pause the animation on hover or touch",
+        "fr": "Mettre l'animation en pause au survol ou au toucher"
       }
     },
     {

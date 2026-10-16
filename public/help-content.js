@@ -1980,6 +1980,7 @@ Franceinfo".</span></div>
   <li><b>Cinq cadrages</b> : image entière, recadrer, remplir la tuile, étirer ou taille d'origine, avec <b>zoom</b> et <b>recadrage direct</b> sur l'image aux doigts ou à la souris.</li>
   <li><b>Miroir</b> horizontal ou vertical et <b>rotation</b> par quart de tour.</li>
   <li><b>Position</b>, marge intérieure, <b>arrondi</b> des coins et <b>opacité</b>.</li>
+  <li><b>Animations</b> de l'image : rotation autour de l'axe central (vertical ou horizontal, avec perspective 3D), respiration, flottement, brillance qui traverse, pulsation lumineuse ; durée, sens et pause au survol réglables.</li>
   <li><b>Lien</b> optionnel ouvert d'un toucher sur l'image.</li>
   <li>Aucune adresse externe : rien n'est récupéré sur Internet.</li>
 </ul>
@@ -2027,6 +2028,11 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Marge intérieure (px)</span><span class="help-opt-desc">De 0 à 80, par défaut 0.</span></div>
 <div class="help-opt"><span class="help-opt-name">Arrondi des coins (px)</span><span class="help-opt-desc">De 0 à 50, par défaut 0.</span></div>
 <div class="help-opt"><span class="help-opt-name">Opacité (%)</span><span class="help-opt-desc">De 10 à 100, par défaut 100.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation</span><span class="help-opt-desc">Aucune (par défaut), rotation autour de l'axe vertical (comme une pièce de monnaie) ou horizontal, respiration (zoom lent), flottement (l'image monte et descend avec une ombre), brillance qui traverse (un reflet balaie l'image, seulement là où elle est opaque) ou pulsation lumineuse (halo de la couleur d'accent). Seule l'image est animée, pas la tuile ; l'axe de rotation passe par le centre de l'image. L'animation est coupée si l'ordinateur demande de réduire les animations.</span></div>
+<div class="help-opt"><span class="help-opt-name">Durée de l'animation (secondes par cycle)</span><span class="help-opt-desc">Un tour complet, une respiration, un balayage… De 1 à 120 secondes ; plus petit = plus rapide.</span></div>
+<div class="help-opt"><span class="help-opt-name">Sens de l'animation</span><span class="help-opt-desc">Normal ou inversé (sens de la rotation, du balayage, de l'oscillation).</span></div>
+<div class="help-opt"><span class="help-opt-name">Perspective 3D (rotations)</span><span class="help-opt-desc">Aucune (à plat), légère, moyenne ou forte, pour les deux rotations. L'image est légèrement réduite quand la perspective est forte pour que son bord le plus proche reste dans la tuile.</span></div>
+<div class="help-opt"><span class="help-opt-name">Mettre l'animation en pause au survol ou au toucher</span><span class="help-opt-desc">L'animation s'arrête tant que la souris survole la tuile ou qu'un doigt la touche.</span></div>
 <div class="help-opt"><span class="help-opt-name">Lien ouvert au clic</span><span class="help-opt-desc">Facultatif. Une adresse complète (https://…). Laissé vide, l'image n'est pas cliquable.</span></div>
 `,
         en: `
@@ -2040,6 +2046,7 @@ Franceinfo".</span></div>
   <li><b>Five framings</b>: whole image, crop, fill the tile, stretch or original size, with <b>zoom</b> and <b>direct cropping</b> on the image by finger or mouse.</li>
   <li>Horizontal or vertical <b>mirror</b> and quarter-turn <b>rotation</b>.</li>
   <li><b>Position</b>, inner margin, corner <b>rounding</b> and <b>opacity</b>.</li>
+  <li><b>Animations</b> of the image: rotation around the central axis (vertical or horizontal, with 3D perspective), breathing, floating, sweeping light, pulsing glow; adjustable duration, direction and pause on hover.</li>
   <li>Optional <b>link</b> opened with a touch on the image.</li>
   <li>No external address: nothing is fetched from the Internet.</li>
 </ul>
@@ -2087,6 +2094,11 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Inner margin (px)</span><span class="help-opt-desc">From 0 to 80, default 0.</span></div>
 <div class="help-opt"><span class="help-opt-name">Corner rounding (px)</span><span class="help-opt-desc">From 0 to 50, default 0.</span></div>
 <div class="help-opt"><span class="help-opt-name">Opacity (%)</span><span class="help-opt-desc">From 10 to 100, default 100.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation</span><span class="help-opt-desc">None (the default), rotation around the vertical axis (like a coin) or the horizontal one, breathing (slow zoom), floating (the image rises and falls with a shadow), light sweeping across (a glint crosses the image, only where it is opaque) or pulsing glow (accent-coloured halo). Only the image is animated, not the tile; the rotation axis goes through the image's centre. The animation is switched off if the computer asks to reduce motion.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation duration (seconds per cycle)</span><span class="help-opt-desc">One full turn, one breath, one sweep… From 1 to 120 seconds; lower is faster.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation direction</span><span class="help-opt-desc">Normal or reversed (direction of the rotation, sweep or oscillation).</span></div>
+<div class="help-opt"><span class="help-opt-name">3D perspective (rotations)</span><span class="help-opt-desc">None (flat), light, medium or strong, for both rotations. The image is slightly reduced when the perspective is strong so its nearest edge stays inside the tile.</span></div>
+<div class="help-opt"><span class="help-opt-name">Pause the animation on hover or touch</span><span class="help-opt-desc">The animation stops while the mouse is over the tile or a finger is touching it.</span></div>
 <div class="help-opt"><span class="help-opt-name">Link opened on click</span><span class="help-opt-desc">Optional. A full address (https://…). Left empty, the image is not clickable.</span></div>
 `
       }

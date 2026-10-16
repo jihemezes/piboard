@@ -125,6 +125,21 @@
         return;
       }
 
+      /* Animation (1.150.0). Le conteneur porte les variables que lit le
+         CSS : duree, sens, perspective. Aucune animation sans choix
+         explicite : le defaut reste une image immobile.
+         Animation: the container carries the variables the CSS reads. */
+      const animKind = ANIMS.has(s.anim) && s.anim !== "none" ? s.anim : "none";
+      this.root.classList.toggle("pw-image-anim", animKind !== "none");
+      if (animKind !== "none") {
+        this.root.classList.add("pw-image-anim-" + animKind);
+        if (s.animPause) this.root.classList.add("pw-image-pausable");
+      }
+      this.root.style.setProperty("--pwi-dur", Math.max(1, Math.min(120, Number(s.animSeconds) || 8)) + "s");
+      this.root.style.setProperty("--pwi-dir", s.animDir === "reverse" ? "reverse" : "normal");
+      this.root.style.setProperty("--pwi-alt", s.animDir === "reverse" ? "alternate-reverse" : "alternate");
+      this.applyPerspective(s);
+
       const link = safeLink(s.link);
       const img = document.createElement("img");
       img.src = this.fileUrl(name);
@@ -156,16 +171,36 @@
 
       this.root.innerHTML = "";
       this.root.appendChild(this.buildCropOverlay());
+      const shown = animKind === "none" ? img : buildAnimWrap(img, s, animKind);
       if (link) {
         const a = document.createElement("a");
         a.href = link;
         a.className = "pw-image-link";
         a.target = "_blank";
         a.rel = "noopener noreferrer";
-        a.appendChild(img);
+        a.appendChild(shown);
         this.root.appendChild(a);
       } else {
-        this.root.appendChild(img);
+        this.root.appendChild(shown);
+      }
+    }
+
+    /* Perspective des rotations 3D. Elle est proportionnelle a la
+       LARGEUR de la tuile : une perspective fixe en pixels serait
+       violente sur une petite tuile et invisible sur une grande. Plus
+       elle est forte (distance courte), plus l'image est reduite pour
+       que le bord le plus proche ne sorte pas de la tuile.
+       Perspective of the 3D rotations, proportional to the tile's width. */
+    applyPerspective(s) {
+      const level = ["off", "light", "medium", "strong"].includes(s.animPersp) ? s.animPersp : "medium";
+      const factor = { light: 6, medium: 3, strong: 1.8 }[level];
+      const fit = { off: 1, light: 0.95, medium: 0.88, strong: 0.78 }[level];
+      const w = Math.max(120, (this.root && this.root.clientWidth) || 400);
+      this.root.style.setProperty("--pwi-persp", level === "off" ? "scale(1)" : "perspective(" + Math.round(w * factor) + "px)");
+      this.root.style.setProperty("--pwi-fit", String(fit));
+      if (!this.perspObserver && typeof ResizeObserver === "function") {
+        this.perspObserver = new ResizeObserver(() => this.applyPerspective(this.ctx.settings || {}));
+        this.perspObserver.observe(this.root);
       }
     }
 
@@ -746,6 +781,41 @@
     img.style.transform = transformCss(s, zoom);
   }
 
+  const ANIMS = new Set(["none", "spinY", "spinX", "breathe", "float", "shine", "glow"]);
+
+  /* L'image est enveloppee dans un bloc qui porte l'animation : le
+     `transform` de l'image elle-meme (zoom, miroir, rotation) et son
+     point d'origine (le point de mire) ne doivent pas etre touches, et
+     l'axe de rotation doit passer par le CENTRE de l'image, pas par son
+     point de mire. Le bloc reprend la taille de l'image.
+     « Brillance » ajoute une calque qui reprend la meme transformation
+     que l'image et n'est visible que la ou l'image est opaque.
+     The image is wrapped in a block that carries the animation, so the
+     image's own transform and origin stay untouched and the rotation
+     axis goes through the CENTRE. */
+  const MASK_SIZE = { contain: "contain", crop: "cover", cover: "cover", fill: "100% 100%", none: "auto" };
+  function buildAnimWrap(img, s, kind) {
+    const wrap = document.createElement("div");
+    wrap.className = "pw-image-wrap";
+    wrap.style.width = img.style.width;
+    wrap.style.height = img.style.height;
+    wrap.appendChild(img);
+    if (kind === "shine") {
+      const shine = document.createElement("div");
+      shine.className = "pw-image-shine";
+      const mode = FITS.has(s.fit) ? s.fit : "contain";
+      shine.style.transform = img.style.transform;
+      shine.style.transformOrigin = img.style.transformOrigin;
+      shine.style.borderRadius = img.style.borderRadius;
+      const src = String(img.src || "").replace(/"/g, "%22");
+      const mask = 'url("' + src + '") ' + img.style.objectPosition + " / " + MASK_SIZE[mode] + " no-repeat";
+      shine.style.webkitMask = mask;
+      shine.style.mask = mask;
+      wrap.appendChild(shine);
+    }
+    return wrap;
+  }
+
   const ROTATIONS = new Set([0, 90, 180, 270]);
 
   function clampRotate(v) {
@@ -792,6 +862,7 @@
     return parts.join(" ");
   }
 
+  ImageWidget._buildAnimWrap = buildAnimWrap;
   ImageWidget._safeLink = safeLink;
   ImageWidget._applyFit = applyFit;
   ImageWidget._pct = pct;
