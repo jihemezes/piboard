@@ -2508,7 +2508,7 @@ Franceinfo".</span></div>
 <p><b>Ce que la tuile sait faire :</b></p>
 <ul>
   <li><b>Matchs en direct, terminés et à venir (date et heure)</b> : football (Ligue 1, Ligue des champions…), rugby (TOP 14 et PRO D2 données LNR, Coupe d'Europe, Tournoi des 6 Nations) ou toute compétition ESPN via son code.</li>
-  <li>Équipe qui reçoit en haut, celle qui se déplace en bas ; les matchs qui viennent de finir passent devant les suivants, avec leur score.</li>
+  <li>Équipe qui reçoit en haut, celle qui se déplace en bas ; les matchs qui viennent de finir passent devant les suivants, avec leur score. S'il y a plus de matchs que la hauteur de la tuile n'en montre, la liste <b>défile verticalement</b>.</li>
   <li><b>Filtre sur votre équipe</b> et nombre de matchs affichés réglable.</li>
 </ul>
 
@@ -2533,7 +2533,7 @@ Franceinfo".</span></div>
 <p><b>What the tile can do:</b></p>
 <ul>
   <li><b>Live, finished and upcoming matches (date and time)</b>: football (Ligue 1, Champions League…), rugby (TOP 14 and PRO D2 LNR data, Champions Cup, Six Nations) or any ESPN competition via its code.</li>
-  <li>Home team on top, away team below; matches that just ended come before the next ones, with their score.</li>
+  <li>Home team on top, away team below; matches that just ended come before the next ones, with their score. If there are more matches than the tile's height can show, the list <b>scrolls vertically</b>.</li>
   <li><b>Filter on your team</b> and adjustable number of matches shown.</li>
 </ul>
 

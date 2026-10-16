@@ -5,8 +5,14 @@
   padding: 10px 14px;
   overflow: hidden;
 }
-.pw-sport ul { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow: hidden; }
+/* 1.149.1 : la liste defile verticalement quand il y a plus de matchs que
+   la tuile n'en peut montrer -- avant, le bas etait simplement coupe et
+   inaccessible. Le defilement reste a l'interieur de la liste.
+   The list scrolls vertically when there are more matches than the tile
+   can show; before, the bottom was just clipped and unreachable. */
+.pw-sport ul { list-style: none; margin: 0; padding: 0; flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; }
 .pw-sport li {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 8px;

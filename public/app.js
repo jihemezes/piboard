@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.149.0
+   Version 1.149.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1159,7 +1159,7 @@
     body.style.zoom = scale === 1 ? "" : String(scale);
   }
 
-  /* RELIEF 3D (1.149.0). Le niveau effectif d'une tuile est celui de ses
+  /* RELIEF 3D (1.149.1). Le niveau effectif d'une tuile est celui de ses
      reglages (_depth) s'il en a un, sinon le reglage general. Le CSS ne
      lit que deux attributs de la tuile (data-depth, data-glass) et trois
      du corps de page (direction de la lumiere, soulevement) : aucune
@@ -10040,7 +10040,7 @@
       goToPage(activePageIndex + (dx < 0 ? 1 : -1), { backwards: dx > 0 });
     }, { passive: true });
 
-    /* GESTES DE SOURIS ET DE TRACKPAD (1.149.0).
+    /* GESTES DE SOURIS ET DE TRACKPAD (1.149.1).
        Defilement lateral -- trackpad a deux doigts, Magic Mouse, molette
        inclinable, ou Maj + molette -- et boutons lateraux de la souris
        (Precedent / Suivant) : ils changent de page.

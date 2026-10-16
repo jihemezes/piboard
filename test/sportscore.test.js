@@ -120,6 +120,13 @@ test("filtre : plusieurs noms separes par virgules ou points-virgules", () => {
   assert.strictEqual(E.pick([e1, e2, e3], { now: new Date("2026-09-20T10:00:00Z"), filter: "Toulous,Racing", max: 5 }).length, 2);
 });
 
+test("la liste defile verticalement (le bas n'est plus coupe)", () => {
+  const css = require("fs").readFileSync(require("path").join(__dirname, "../public/widgets/sportscore/widget.css"), "utf8");
+  const rule = css.match(/\.pw-sport ul \{[^}]*\}/)[0];
+  assert.ok(/overflow-y:\s*auto/.test(rule) && /overflow-x:\s*hidden/.test(rule), rule);
+  assert.ok(/\.pw-sport li \{[^}]*flex-shrink:\s*0/.test(css));
+});
+
 test("choix : filtre, ordre et nombre maximum ensemble", () => {
   const now = new Date("2026-09-20T09:00:00Z");
   const list = [

@@ -386,7 +386,13 @@
             </li>`;
         }).join("");
 
+        // Le rafraichissement reconstruit la liste : on garde la position
+        // de defilement, sinon elle revenait en haut toutes les 2 minutes.
+        // Refresh rebuilds the list: keep the scroll position.
+        const oldList = el.querySelector(".pw-sport ul");
+        const keepScroll = oldList ? oldList.scrollTop : 0;
         el.innerHTML = `<div class="pw-sport"><ul>${rows}</ul></div>`;
+        if (keepScroll) { const nl = el.querySelector(".pw-sport ul"); if (nl) nl.scrollTop = keepScroll; }
     }
 
     toggleDateBlink() {

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.149.1
+
+- **Tuile Scores sportifs : ascenseur vertical.** Quand il y avait plus de
+  matchs que la hauteur de la tuile n'en pouvait montrer, le bas de la liste
+  était simplement coupé, sans moyen de le voir. La liste défile maintenant
+  verticalement (molette, trackpad, doigt en mode tactile) et garde sa
+  position au rafraîchissement. Sources et Top 14 inchangés.
+
 ## 1.149.0
 
 - **Mode tableau de bord : changer de page à la souris ou au trackpad.**
