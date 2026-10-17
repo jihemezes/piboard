@@ -32,6 +32,22 @@
 
 # Nouveautes / What's new
 
+## 1.152.0
+
+**Un thème rien que pour la tuile Formule 1 ou MotoGP**
+
+Ces deux tuiles peuvent prendre n'importe quel thème de PiBoard, indépendamment de la
+page : cadre, barre de titre et contenu, avec la bascule jour/nuit quand le thème la
+propose. Le style des cartes reste disponible par-dessus.
+
+---
+
+**A theme just for the Formula 1 or MotoGP tile**
+
+These two tiles can take any PiBoard theme, independently of the page: frame, title
+bar and content, with the day/night switch when the theme offers it. The card style
+remains available on top.
+
 ## 1.151.0
 
 **Disposez vous-même les tableaux de la tuile Formule 1**

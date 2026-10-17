@@ -2,13 +2,14 @@
   "_comment_fr": "DISPOSER LES CARTES : en mode édition, chaque carte est un bloc de la grille interne de la tuile. On le déplace par sa barre de titre, on le redimensionne par son coin, on le masque par sa croix, et la barre d'outils de la tuile rajoute un bloc masqué, applique une disposition prédéfinie, revient à celle par défaut, ou copie la disposition vers une autre tuile Formule 1. La disposition est enregistrée dans les réglages de CETTE tuile.",
   "_comment_en": "ARRANGING THE CARDS: in edit mode each card is a block of the tile's inner grid. Move it by its title bar, resize it by its corner, hide it with its cross; the tile's toolbar adds a hidden block back, applies a preset layout, returns to the default one, or copies the layout to another Formula 1 tile. The layout is saved in THIS tile's settings.",
   "id": "f1",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
   },
   "titleBar": true,
   "editTapOpensSettings": false,
+  "tileTheme": true,
   "description": {
     "en": "A Formula 1 dashboard as blocks you arrange yourself: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings, the last race's results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every block.",
     "fr": "Tableau de bord Formule 1 en blocs que l'on dispose soi-même : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs, résultats de la dernière course, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente tous les blocs."
@@ -199,6 +200,23 @@
       }
     },
     {
+      "key": "tileTheme",
+      "type": "themeselect",
+      "default": "",
+      "label": {
+        "en": "Tile theme",
+        "fr": "Thème de la tuile"
+      },
+      "emptyLabel": {
+        "en": "Same as the page",
+        "fr": "Comme la page"
+      },
+      "hint": {
+        "en": "Gives this tile one of PiBoard's themes -- built-in, or created in the theme editor -- independently of the page it sits on. The theme covers the whole tile: frame, title bar and content. A theme with day and night variants follows the board's day/night switch. The card style below is applied on top. A custom tile colour (universal settings) still wins over the theme's background.",
+        "fr": "Donne à cette tuile l'un des thèmes de PiBoard — intégré, ou créé dans l'éditeur de thèmes — indépendamment de la page où elle se trouve. Le thème couvre toute la tuile : cadre, barre de titre et contenu. Un thème qui a une variante jour et une variante nuit suit la bascule jour/nuit du tableau. Le style des cartes ci-dessous s'applique par-dessus. Une couleur de tuile personnalisée (réglages universels) l'emporte toujours sur le fond du thème."
+      }
+    },
+    {
       "key": "cardStyle",
       "type": "select",
       "label": {
@@ -210,8 +228,8 @@
         {
           "value": "theme",
           "label": {
-            "en": "Page theme",
-            "fr": "Thème de la page"
+            "en": "Theme (tile's or page's)",
+            "fr": "Thème (de la tuile ou de la page)"
           }
         },
         {
@@ -230,8 +248,8 @@
         }
       ],
       "hint": {
-        "en": "\"Page theme\" keeps the cards consistent with the rest of the board. \"Dark track\" gives them the paddock's deep black with a red edge -- a racing look that owes nothing to any logo, livery or licensed typeface. \"Chosen colour\" uses the colour below instead; the text colour is then left to the browser, which alone knows whether the colour entered is light or dark. The setting affects THIS tile only.",
-        "fr": "« Thème de la page » garde les cartes cohérentes avec le reste du tableau. « Piste sombre » leur donne le noir profond du paddock et un liseré rouge — un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « Couleur choisie » utilise la couleur ci-dessous ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur saisie est claire ou foncée. Le réglage ne concerne QUE cette tuile."
+        "en": "\"Theme (tile's or page's)\" dresses the cards in the tile theme when one is chosen, otherwise in the page's. \"Dark track\" gives them the paddock's deep black with a red edge -- a racing look that owes nothing to any logo, livery or licensed typeface. \"Chosen colour\" uses the colour below instead; the text colour is then left to the browser, which alone knows whether the colour entered is light or dark. The setting affects THIS tile only.",
+        "fr": "« Thème (de la tuile ou de la page) » habille les cartes avec le thème de la tuile s'il est choisi, sinon avec celui de la page. « Piste sombre » leur donne le noir profond du paddock et un liseré rouge — un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « Couleur choisie » utilise la couleur ci-dessous ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur saisie est claire ou foncée. Le réglage ne concerne QUE cette tuile."
       }
     },
     {

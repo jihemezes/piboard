@@ -2689,6 +2689,7 @@ Franceinfo".</span></div>
   <li><b>Nombre de lignes</b> réglable pour les classements et les résultats ; couleurs d'écurie et couleur des cartes au choix.</li>
   <li>Un abandon est signalé comme tel, pas comme une vingtième place ; la météo est celle de l'heure de chaque séance.</li>
   <li>Données gratuites Jolpica (successeur d'Ergast), sans clé ni compte.</li>
+  <li><b>Un thème à part entière</b> pour la tuile (cadre, barre de titre et contenu), qui suit la bascule jour/nuit.</li>
 </ul>
 
 <h4>Les sept blocs</h4>
@@ -2739,6 +2740,10 @@ Franceinfo".</span></div>
           <p>L'API <b>Jolpica</b>, successeur communautaire d'Ergast (fermé fin 2024), sans clé ni compte. C'est la même source que les intégrations Formule 1 de Home Assistant, et celle que lit déjà la tuile <i>Sports mécaniques</i>. L'historique couvre le championnat depuis 1950 : le réglage <b>Saison</b> accepte n'importe quelle année. Un bloc masqué n'est <b>pas demandé du tout</b> à l'API — elle est gratuite et partagée par tous, autant être poli.</p>
           <p>Les tracés viennent de la base des circuits de la tuile Plan du circuit (relevés d'<b>OpenStreetMap</b>, licence ODbL). Les prévisions viennent d'<b>Open-Meteo</b>, gratuit et sans clé.</p>
 
+<h4>Un thème à part entière pour la tuile</h4>
+          <p>Le réglage <b>Thème de la tuile</b> donne à cette tuile l'un des thèmes de PiBoard — un thème intégré, ou un thème créé dans l'éditeur de thèmes — <b>indépendamment de la page</b> où elle se trouve. Il habille <b>toute la tuile</b> : le cadre, la barre de titre et le contenu, plan du circuit compris. La liste indique « ☀︎/☾ » pour les thèmes qui ont une variante jour et une variante nuit : la tuile <b>bascule alors avec le tableau</b>. « Comme la page » revient au comportement habituel.</p>
+          <p>Le <b>Style des cartes</b> s'applique <b>par-dessus</b> le thème : « Thème (de la tuile ou de la page) » laisse les cartes dans le thème, « Piste sombre » et « Couleur choisie » les repeignent sans toucher au cadre. Une couleur de tuile personnalisée, dans les réglages universels, l'emporte toujours sur le fond du thème.</p>
+
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée : l'API couvre tout le championnat depuis 1950.</span></div>
@@ -2755,7 +2760,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Écuries affichées</span><span class="help-opt-desc">De 3 à 12, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Résultats affichés</span><span class="help-opt-desc">De 3 à 24, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Couleurs d'écurie</span><span class="help-opt-desc">Une pastille de la couleur de l'écurie devant chaque pilote. Les logos et les photos officiels sont des marques déposées : PiBoard ne les embarque pas, et la couleur fait le même travail de reconnaissance immédiate. Activé par défaut.</span></div>
-<div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème de la page » garde les cartes cohérentes avec le reste du tableau. « Piste sombre » leur donne le noir profond du paddock et un liseré rouge — un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « Couleur choisie » utilise la couleur ci-dessous ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur saisie est claire ou foncée. Le réglage ne concerne QUE cette tuile. Choix : Thème de la page, Piste sombre, Couleur choisie. Par défaut : Thème de la page.</span></div>
+<div class="help-opt"><span class="help-opt-name">Thème de la tuile</span><span class="help-opt-desc">Donne à cette tuile l'un des thèmes de PiBoard — intégré, ou créé dans l'éditeur de thèmes — indépendamment de la page où elle se trouve. Le thème couvre toute la tuile : cadre, barre de titre et contenu. Un thème qui a une variante jour et une variante nuit suit la bascule jour/nuit du tableau. Le style des cartes ci-dessous s'applique par-dessus. Une couleur de tuile personnalisée (réglages universels) l'emporte toujours sur le fond du thème.</span></div>
+<div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème (de la tuile ou de la page) » habille les cartes avec le thème de la tuile s'il est choisi, sinon avec celui de la page. « Piste sombre » leur donne le noir profond du paddock et un liseré rouge — un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « Couleur choisie » utilise la couleur ci-dessous ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur saisie est claire ou foncée. Le réglage ne concerne QUE cette tuile. Choix : Thème (de la tuile ou de la page), Piste sombre, Couleur choisie. Par défaut : Thème (de la tuile ou de la page).</span></div>
 <div class="help-opt"><span class="help-opt-name">Couleur des cartes</span><span class="help-opt-desc">Utilisée seulement si le style ci-dessus est « Couleur choisie ». Par défaut : « #12151c ».</span></div>
 <div class="help-opt"><span class="help-opt-name">Ajuster le texte à chaque bloc</span><span class="help-opt-desc">Chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Décochez pour garder partout la même taille de texte. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Disposition différente pendant les week-ends de course</span><span class="help-opt-desc">Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez. Désactivé par défaut.</span></div>
@@ -2777,6 +2783,7 @@ Franceinfo".</span></div>
   <li>Adjustable <b>number of rows</b> for standings and results; team colours and card colour of your choice.</li>
   <li>A retirement is shown as such, not as a twentieth place; the weather is for each session's hour.</li>
   <li>Free Jolpica data (Ergast's successor), no key or account.</li>
+  <li><b>A theme of its own</b> for the tile (frame, title bar and content), following the day/night switch.</li>
 </ul>
 
 <h4>The seven blocks</h4>
@@ -2827,6 +2834,10 @@ Franceinfo".</span></div>
           <p>The <b>Jolpica</b> API, the community successor to Ergast (closed at the end of 2024), with no key and no account. It is the same source as Home Assistant's Formula 1 integrations, and the one the <i>Motorsport schedule</i> tile already reads. History covers the championship since 1950: the <b>Season</b> setting accepts any year. A hidden block is <b>not requested at all</b> — the API is free and shared by all, so it pays to be polite.</p>
           <p>Outlines come from the Circuit map tile's circuit base (surveyed from <b>OpenStreetMap</b>, ODbL licence). Forecasts come from <b>Open-Meteo</b>, free and keyless.</p>
 
+<h4>A theme of its own for the tile</h4>
+          <p>The <b>Tile theme</b> setting gives this tile one of PiBoard's themes — a built-in one, or one created in the theme editor — <b>independently of the page</b> it sits on. It dresses <b>the whole tile</b>: frame, title bar and content, circuit map included. The list marks "☀︎/☾" for themes that have both a day and a night variant: the tile then <b>switches along with the board</b>. "Same as the page" returns to the usual behaviour.</p>
+          <p>The <b>Card style</b> applies <b>on top</b> of the theme: "Theme (tile's or page's)" leaves the cards in the theme, "Dark track" and "Chosen colour" repaint them without touching the frame. A custom tile colour, in the universal settings, still wins over the theme's background.</p>
+
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <div class="help-opt"><span class="help-opt-name">Season</span><span class="help-opt-desc">Empty = current season. A year (2024, 2025…) to look at a past season: the API covers the championship since 1950.</span></div>
@@ -2843,7 +2854,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Teams shown</span><span class="help-opt-desc">From 3 to 12, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Results shown</span><span class="help-opt-desc">From 3 to 24, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Team colours</span><span class="help-opt-desc">A chip in the team's colour before each driver. Official logos and photos are registered trademarks, so PiBoard does not embed them; the colour does the same job of instant recognition. On by default.</span></div>
-<div class="help-opt"><span class="help-opt-name">Card style</span><span class="help-opt-desc">"Page theme" keeps the cards consistent with the rest of the board. "Dark track" gives them the paddock's deep black with a red edge -- a racing look that owes nothing to any logo, livery or licensed typeface. "Chosen colour" uses the colour below instead; the text colour is then left to the browser, which alone knows whether the colour entered is light or dark. The setting affects THIS tile only. Choices: Page theme, Dark track, Chosen colour. Default: Page theme.</span></div>
+<div class="help-opt"><span class="help-opt-name">Tile theme</span><span class="help-opt-desc">Gives this tile one of PiBoard's themes -- built-in, or created in the theme editor -- independently of the page it sits on. The theme covers the whole tile: frame, title bar and content. A theme with day and night variants follows the board's day/night switch. The card style below is applied on top. A custom tile colour (universal settings) still wins over the theme's background.</span></div>
+<div class="help-opt"><span class="help-opt-name">Card style</span><span class="help-opt-desc">"Theme (tile's or page's)" dresses the cards in the tile theme when one is chosen, otherwise in the page's. "Dark track" gives them the paddock's deep black with a red edge -- a racing look that owes nothing to any logo, livery or licensed typeface. "Chosen colour" uses the colour below instead; the text colour is then left to the browser, which alone knows whether the colour entered is light or dark. The setting affects THIS tile only. Choices: Theme (tile's or page's), Dark track, Chosen colour. Default: Theme (tile's or page's).</span></div>
 <div class="help-opt"><span class="help-opt-name">Card colour</span><span class="help-opt-desc">Used only when the style above is "Chosen colour". Default: "#12151c".</span></div>
 <div class="help-opt"><span class="help-opt-name">Fit text to each block</span><span class="help-opt-desc">Each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls instead of shrinking further. Untick to keep the same text size everywhere. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Different layout during race weekends</span><span class="help-opt-desc">Two layouts instead of one: a "Season" layout, and a "Race weekend" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing. Off by default.</span></div>
@@ -2875,6 +2887,7 @@ Franceinfo".</span></div>
   <li>Le <b>plan du circuit</b> est celui de la tuile Plan du circuit, réglée sur le calendrier MotoGP.</li>
   <li>Un pilote tombé est indiqué « Non classé », pas comme une dernière place ; la météo est celle de l'heure de chaque séance.</li>
   <li>Données du flux public de <b>motogp.com</b>, sans clé ni compte.</li>
+  <li><b>Un thème à part entière</b> pour la tuile (cadre, barre de titre et contenu), qui suit la bascule jour/nuit.</li>
 </ul>
 
 <h4>Les sept blocs</h4>
@@ -2918,6 +2931,10 @@ Franceinfo".</span></div>
 <h4>Source</h4>
           <p>Le flux public de <b>motogp.com</b> (api.motogp.pulselive.com), déjà lu par les tuiles <i>Sports mécaniques</i>, <i>Classement</i> et <i>Plan du circuit</i>. Le calendrier et les horaires viennent de la liste des événements de la saison ; classement et résultats, de la partie « résultats » du flux, par appels successifs, comme le site lui-même. La saison et la catégorie ne sont demandées qu'une fois, et des résultats terminés ne sont relus qu'après un nouveau Grand Prix. Un bloc masqué n'est pas demandé. Météo : <b>Open-Meteo</b>.</p>
 
+<h4>Un thème à part entière pour la tuile</h4>
+          <p>Le réglage <b>Thème de la tuile</b> donne à cette tuile l'un des thèmes de PiBoard — un thème intégré, ou un thème créé dans l'éditeur de thèmes — <b>indépendamment de la page</b> où elle se trouve. Il habille <b>toute la tuile</b> : le cadre, la barre de titre et le contenu, plan du circuit compris. La liste indique « ☀︎/☾ » pour les thèmes qui ont une variante jour et une variante nuit : la tuile <b>bascule alors avec le tableau</b>. « Comme la page » revient au comportement habituel.</p>
+          <p>Le <b>Style des cartes</b> s'applique <b>par-dessus</b> le thème : « Thème (de la tuile ou de la page) » laisse les cartes dans le thème, « Piste sombre » et « Couleur choisie » les repeignent sans toucher au cadre. Une couleur de tuile personnalisée, dans les réglages universels, l'emporte toujours sur le fond du thème.</p>
+
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée.</span></div>
@@ -2935,7 +2952,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Équipes affichées</span><span class="help-opt-desc">De 3 à 12, par défaut 11.</span></div>
 <div class="help-opt"><span class="help-opt-name">Lignes de résultats</span><span class="help-opt-desc">De 3 à 30, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Couleurs des constructeurs</span><span class="help-opt-desc">Une pastille de la couleur du constructeur (Ducati, Aprilia, KTM, Yamaha, Honda) devant chaque pilote. Les logos sont des marques déposées et ne sont pas embarqués. Activé par défaut.</span></div>
-<div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème de la page » garde les cartes cohérentes avec le tableau. « Piste sombre » leur donne un noir profond et un liseré orange. « Couleur choisie » utilise la couleur ci-dessous. Le réglage ne concerne QUE cette tuile. Choix : Thème de la page, Piste sombre, Couleur choisie. Par défaut : Thème de la page.</span></div>
+<div class="help-opt"><span class="help-opt-name">Thème de la tuile</span><span class="help-opt-desc">Donne à cette tuile l'un des thèmes de PiBoard — intégré, ou créé dans l'éditeur de thèmes — indépendamment de la page où elle se trouve. Le thème couvre toute la tuile : cadre, barre de titre et contenu. Un thème qui a une variante jour et une variante nuit suit la bascule jour/nuit du tableau. Le style des cartes ci-dessous s'applique par-dessus. Une couleur de tuile personnalisée (réglages universels) l'emporte toujours sur le fond du thème.</span></div>
+<div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème (de la tuile ou de la page) » habille les cartes avec le thème de la tuile s'il est choisi, sinon avec celui de la page. « Piste sombre » leur donne un noir profond et un liseré orange. « Couleur choisie » utilise la couleur ci-dessous. Le réglage ne concerne QUE cette tuile. Choix : Thème (de la tuile ou de la page), Piste sombre, Couleur choisie. Par défaut : Thème (de la tuile ou de la page).</span></div>
 <div class="help-opt"><span class="help-opt-name">Couleur des cartes</span><span class="help-opt-desc">Utilisée seulement si le style ci-dessus est « Couleur choisie ». Par défaut : « #12151c ».</span></div>
 <div class="help-opt"><span class="help-opt-name">Ajuster le texte à chaque bloc</span><span class="help-opt-desc">Chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Décochez pour garder partout la même taille de texte. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Disposition différente pendant les week-ends de course</span><span class="help-opt-desc">Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez. Désactivé par défaut.</span></div>
@@ -2955,6 +2973,7 @@ Franceinfo".</span></div>
   <li>The <b>circuit map</b> is the Circuit map tile's, set to the MotoGP calendar.</li>
   <li>A rider who crashed is shown "Not classified", not as a last place; the weather is for each session's hour.</li>
   <li>Data from <b>motogp.com</b>'s public feed, no key or account.</li>
+  <li><b>A theme of its own</b> for the tile (frame, title bar and content), following the day/night switch.</li>
 </ul>
 
 <h4>The seven blocks</h4>
@@ -2998,6 +3017,10 @@ Franceinfo".</span></div>
 <h4>Source</h4>
           <p><b>motogp.com</b>'s public feed (api.motogp.pulselive.com), already read by the <i>Motorsport schedule</i>, <i>Standings</i> and <i>Circuit map</i> tiles. Calendar and session times come from the season's event list; standings and results from the feed's "results" part, by successive calls, as the site itself does. Season and category are asked only once, and finished results are re-read only after a new Grand Prix. A hidden block is not requested. Weather: <b>Open-Meteo</b>.</p>
 
+<h4>A theme of its own for the tile</h4>
+          <p>The <b>Tile theme</b> setting gives this tile one of PiBoard's themes — a built-in one, or one created in the theme editor — <b>independently of the page</b> it sits on. It dresses <b>the whole tile</b>: frame, title bar and content, circuit map included. The list marks "☀︎/☾" for themes that have both a day and a night variant: the tile then <b>switches along with the board</b>. "Same as the page" returns to the usual behaviour.</p>
+          <p>The <b>Card style</b> applies <b>on top</b> of the theme: "Theme (tile's or page's)" leaves the cards in the theme, "Dark track" and "Chosen colour" repaint them without touching the frame. A custom tile colour, in the universal settings, still wins over the theme's background.</p>
+
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <div class="help-opt"><span class="help-opt-name">Season</span><span class="help-opt-desc">Empty = current season. A year (2024, 2025…) to look at a past season.</span></div>
@@ -3015,7 +3038,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Teams shown</span><span class="help-opt-desc">From 3 to 12, default 11.</span></div>
 <div class="help-opt"><span class="help-opt-name">Results rows</span><span class="help-opt-desc">From 3 to 30, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Maker colours</span><span class="help-opt-desc">A chip in the maker's colour (Ducati, Aprilia, KTM, Yamaha, Honda) before each rider. Logos are registered trademarks and are not embedded. On by default.</span></div>
-<div class="help-opt"><span class="help-opt-name">Card style</span><span class="help-opt-desc">"Page theme" keeps the cards consistent with the board. "Dark track" gives them a deep black with an orange edge. "Chosen colour" uses the colour below. The setting affects THIS tile only. Choices: Page theme, Dark track, Chosen colour. Default: Page theme.</span></div>
+<div class="help-opt"><span class="help-opt-name">Tile theme</span><span class="help-opt-desc">Gives this tile one of PiBoard's themes -- built-in, or created in the theme editor -- independently of the page it sits on. The theme covers the whole tile: frame, title bar and content. A theme with day and night variants follows the board's day/night switch. The card style below is applied on top. A custom tile colour (universal settings) still wins over the theme's background.</span></div>
+<div class="help-opt"><span class="help-opt-name">Card style</span><span class="help-opt-desc">"Theme (tile's or page's)" dresses the cards in the tile theme when one is chosen, otherwise in the page's. "Dark track" gives them a deep black with an orange edge. "Chosen colour" uses the colour below. The setting affects THIS tile only. Choices: Theme (tile's or page's), Dark track, Chosen colour. Default: Theme (tile's or page's).</span></div>
 <div class="help-opt"><span class="help-opt-name">Card colour</span><span class="help-opt-desc">Used only when the style above is "Chosen colour". Default: "#12151c".</span></div>
 <div class="help-opt"><span class="help-opt-name">Fit text to each block</span><span class="help-opt-desc">Each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls instead of shrinking further. Untick to keep the same text size everywhere. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Different layout during race weekends</span><span class="help-opt-desc">Two layouts instead of one: a "Season" layout, and a "Race weekend" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing. Off by default.</span></div>

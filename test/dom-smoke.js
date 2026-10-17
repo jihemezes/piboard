@@ -2801,6 +2801,21 @@ function catalogItemFor(catalog, document, widgetId) {
       }
       assert("le tableau respecte ce choix au clic d'edition", /editTapOpensSettings === false\) return;/.test(appSrc));
     }
+    /* 1.152.0 : un theme propre a la tuile, reserve a ces deux tuiles. */
+    {
+      const appSrc = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+      for (const id of ["f1", "motogp"]) {
+        const m = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/" + id + "/manifest.json"), "utf8"));
+        const f = m.settings.find((x) => x.key === "tileTheme");
+        assert(id + " : reglage « Theme de la tuile » present, vide par defaut (comme la page)", m.tileTheme === true && !!f && f.type === "themeselect" && f.default === "");
+        assert(id + " : le style des cartes reste disponible par-dessus", m.settings.findIndex((x) => x.key === "cardStyle") > m.settings.indexOf(f));
+      }
+      const others = fs.readdirSync(path.join(PUB, "widgets")).filter((d) => !["f1", "motogp"].includes(d)
+        && fs.existsSync(path.join(PUB, "widgets", d, "manifest.json"))
+        && JSON.parse(fs.readFileSync(path.join(PUB, "widgets", d, "manifest.json"), "utf8")).tileTheme);
+      assert("le theme de tuile reste reserve a la Formule 1 et au MotoGP", others.length === 0);
+      assert("le theme suit la bascule jour/nuit (reapplique avec le theme du tableau)", /ts\._transparent \|\| ts\.tileTheme/.test(appSrc));
+    }
     window.PiBoard.__f1Probe = { f1, host };
     body1.innerHTML = keepHtml;
   }
@@ -6222,7 +6237,7 @@ function catalogItemFor(catalog, document, widgetId) {
        Switching theme changes the answer: without reapplication,
        switching to day mode left light text on a light background. */
     assert("les tuiles transparentes sont recalculees au changement de theme",
-      /_transparent\) applyTileColor\(rec\)/.test(appSrc3));
+      /_transparent \|\| ts\.tileTheme\)\) applyTileColor\(rec\)/.test(appSrc3));
   }
 
   console.log("== Reglages d'une tuile : reinitialisation ==");

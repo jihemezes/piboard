@@ -1,12 +1,13 @@
 {
   "id": "motogp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "name": {
     "en": "MotoGP",
     "fr": "MotoGP"
   },
   "titleBar": true,
   "editTapOpensSettings": false,
+  "tileTheme": true,
   "description": {
     "en": "A MotoGP dashboard as blocks you arrange yourself: next round with a countdown, the weekend timetable in your own time zone, rider standings, team standings, the last Grand Prix or sprint results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data from motogp.com's own public feed, with no key and no account.",
     "fr": "Tableau de bord MotoGP en blocs que l'on dispose soi-même : prochaine manche avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement équipes, résultats du dernier Grand Prix ou du sprint, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Données du flux public de motogp.com, sans clé ni compte."
@@ -230,6 +231,23 @@
       }
     },
     {
+      "key": "tileTheme",
+      "type": "themeselect",
+      "default": "",
+      "label": {
+        "en": "Tile theme",
+        "fr": "Thème de la tuile"
+      },
+      "emptyLabel": {
+        "en": "Same as the page",
+        "fr": "Comme la page"
+      },
+      "hint": {
+        "en": "Gives this tile one of PiBoard's themes -- built-in, or created in the theme editor -- independently of the page it sits on. The theme covers the whole tile: frame, title bar and content. A theme with day and night variants follows the board's day/night switch. The card style below is applied on top. A custom tile colour (universal settings) still wins over the theme's background.",
+        "fr": "Donne à cette tuile l'un des thèmes de PiBoard — intégré, ou créé dans l'éditeur de thèmes — indépendamment de la page où elle se trouve. Le thème couvre toute la tuile : cadre, barre de titre et contenu. Un thème qui a une variante jour et une variante nuit suit la bascule jour/nuit du tableau. Le style des cartes ci-dessous s'applique par-dessus. Une couleur de tuile personnalisée (réglages universels) l'emporte toujours sur le fond du thème."
+      }
+    },
+    {
       "key": "cardStyle",
       "type": "select",
       "default": "theme",
@@ -241,8 +259,8 @@
         {
           "value": "theme",
           "label": {
-            "en": "Page theme",
-            "fr": "Thème de la page"
+            "en": "Theme (tile's or page's)",
+            "fr": "Thème (de la tuile ou de la page)"
           }
         },
         {
@@ -261,8 +279,8 @@
         }
       ],
       "hint": {
-        "en": "\"Page theme\" keeps the cards consistent with the board. \"Dark track\" gives them a deep black with an orange edge. \"Chosen colour\" uses the colour below. The setting affects THIS tile only.",
-        "fr": "« Thème de la page » garde les cartes cohérentes avec le tableau. « Piste sombre » leur donne un noir profond et un liseré orange. « Couleur choisie » utilise la couleur ci-dessous. Le réglage ne concerne QUE cette tuile."
+        "en": "\"Theme (tile's or page's)\" dresses the cards in the tile theme when one is chosen, otherwise in the page's. \"Dark track\" gives them a deep black with an orange edge. \"Chosen colour\" uses the colour below. The setting affects THIS tile only.",
+        "fr": "« Thème (de la tuile ou de la page) » habille les cartes avec le thème de la tuile s'il est choisi, sinon avec celui de la page. « Piste sombre » leur donne un noir profond et un liseré orange. « Couleur choisie » utilise la couleur ci-dessous. Le réglage ne concerne QUE cette tuile."
       }
     },
     {

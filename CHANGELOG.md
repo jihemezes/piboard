@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.152.0
+
+- **Tuiles Formule 1 et MotoGP : un thème à part entière.** Nouveau réglage
+  « Thème de la tuile » (liste de tous les thèmes PiBoard, intégrés et créés
+  dans l'éditeur ; « Comme la page » par défaut). Le thème est posé sur le
+  conteneur de la tuile avec le mécanisme des thèmes de page et de volet :
+  il habille le cadre, la barre de titre et le contenu (plan du circuit
+  compris), et suit la bascule jour/nuit quand il a deux variantes (repère
+  « ☀︎/☾ » dans la liste). Réservé à ces deux tuiles (`tileTheme: true` dans
+  le manifeste, nouveau type de champ `themeselect`).
+- Le « Style des cartes » est conservé et s'applique par-dessus le thème ;
+  son option « Thème de la page » devient « Thème (de la tuile ou de la
+  page) ». Une couleur de tuile personnalisée l'emporte toujours.
+- Aide (FR/EN) des deux tuiles ; vérifications dans `dom-smoke.js`.
+
 ## 1.151.1
 
 - **Tuiles Formule 1 et MotoGP : la fenêtre de réglages ne se pose plus sur

@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.151.1
+   Version 1.152.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -915,7 +915,8 @@
        actually visible behind them: any theme change changes the
        answer. */
     for (const rec of tiles.values()) {
-      if (rec.conf && rec.conf.settings && rec.conf.settings._transparent) applyTileColor(rec);
+      const ts = rec.conf && rec.conf.settings;
+      if (ts && (ts._transparent || ts.tileTheme)) applyTileColor(rec);
     }
     applyHelpTheme();
     window.dispatchEvent(new CustomEvent("piboard:theme"));
@@ -1106,10 +1107,36 @@
     return document.body.dataset.theme !== "light";
   }
 
+  /* THEME PROPRE A UNE TUILE (1.152.0) -- reserve pour l'instant aux
+     tuiles qui le declarent (`tileTheme: true` dans le manifeste :
+     Formule 1, MotoGP). Le theme est pose sur le CONTENEUR de la tuile,
+     avec le meme mecanisme que pour une page ou un volet : il redefinit
+     les variables de couleur pour la tuile entiere -- cadre, barre de
+     titre et contenu --, suit la bascule jour/nuit si le theme a deux
+     variantes, et une couleur de tuile personnalisee l'emporte encore.
+     A TILE'S OWN THEME (1.152.0), reserved for tiles that declare it.
+     Laid on the tile's CONTAINER with the same mechanism as a page or
+     drawer theme: frame, title bar and content; follows day/night when
+     the theme has both variants; a custom tile colour still wins. */
+  function applyTileTheme(rec, content) {
+    const s = rec.conf.settings || {};
+    const theme = rec.manifest && rec.manifest.tileTheme && s.tileTheme ? themeById(s.tileTheme) : null;
+    if (theme) {
+      setThemeVars(content, theme, resolvedMode());
+      content.dataset.tileThemeId = theme.id;
+      content.classList.add("pb-themed", "tile-themed");
+    } else if (content.dataset.tileThemeId) {
+      clearThemeVars(content);
+      delete content.dataset.tileThemeId;
+      content.classList.remove("tile-themed");
+    }
+  }
+
   function applyTileColor(rec) {
     const content = rec.el.querySelector(".grid-stack-item-content");
     if (!content) return;
     const s = rec.conf.settings || {};
+    applyTileTheme(rec, content);
     /* Tuile transparente : elle prend le fond de la page au lieu du
        sien. Elle l'emporte sur la couleur personnalisee -- les deux sont
        contradictoires, et c'est la transparence qui a ete demandee en
@@ -3037,6 +3064,17 @@
          whole point. The STORED value is kept even when the list could
          not be loaded -- the menu then shows that one known value rather
          than silently falling back to "automatic". */
+      /* Type "themeselect" (1.152.0) : la liste des themes de PiBoard --
+         theme PiBoard, themes integres et themes crees dans l'editeur --,
+         precedee d'une entree vide « suivre la page ». La liste est lue a
+         l'ouverture des reglages : un theme cree entre-temps y figure.
+         "themeselect": PiBoard's theme list, built-in and user-made,
+         after an empty "follow the page" entry. */
+      case "themeselect": {
+        const first = `<option value="">${i18n.fromManifest(f.emptyLabel) || i18n.t("theme.inherit")}</option>`;
+        const items = allThemes().map((t) => `<option value="${escapeHtmlAttr(t.id)}" ${t.id === String(v) ? "selected" : ""}>${escapeHtmlAttr(themeName(t))}${t.dark && t.light ? " ☀︎/☾" : ""}</option>`).join("");
+        return `<label class="field"><span>${label}</span><select data-key="${f.key}">${first}${items}</select>${hint}</label>`;
+      }
       case "remoteselect": {
         /* `extraOptions` : des entrees fixes du manifeste, posees APRES
            l'entree vide et AVANT la liste distante (tuile Circuits :
