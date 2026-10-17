@@ -137,7 +137,7 @@
           <h4>La barre d'outils</h4>
           <p>Elle est masquée par défaut pour ne pas encombrer l'affichage. Touchez la petite languette centrée en bas de l'écran pour la faire apparaître ; elle se referme automatiquement après 20 secondes d'inactivité (sauf en mode édition, où elle reste ouverte). Sept boutons :</p>
           <div class="help-opt"><span class="help-opt-name">+ Ajouter une tuile</span><span class="help-opt-desc">Ouvre le catalogue des widgets disponibles. Touchez-en un pour l'ajouter au tableau (ou au tiroir de tuiles ouvert à ce moment-là) ; ses réglages s'ouvrent aussitôt pour le configurer.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Mode édition (cadenas)</span><span class="help-opt-desc">Active le déplacement et le redimensionnement des tuiles. En mode édition, un simple appui sur une tuile ouvre directement ses réglages. Repassez par ce bouton pour verrouiller à nouveau le tableau.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Mode édition (cadenas)</span><span class="help-opt-desc">Active le déplacement et le redimensionnement des tuiles. En mode édition, un simple appui sur une tuile ouvre directement ses réglages. Repassez par ce bouton pour verrouiller à nouveau le tableau. Les tuiles <b>Formule 1</b> et <b>MotoGP</b> ont en plus une grille interne : en mode édition, leurs blocs se déplacent par leur barre de titre et se redimensionnent par leur coin, à l'intérieur de la tuile (voir leurs fiches).</span></div>
           <div class="help-opt"><span class="help-opt-name">Réglages (engrenage)</span><span class="help-opt-desc">Ouvre la fenêtre des réglages généraux du tableau de bord — détaillée ci-dessous.</span></div>
           <div class="help-opt"><span class="help-opt-name">Aide (?)</span><span class="help-opt-desc">Ouvre l'aide en page pleine. À gauche, l'entrée « Accueil » puis l'arbre des familles et des fiches ; au centre, l'accueil (une carte par famille), puis la fiche choisie découpée en rubriques cliquables, puis l'article ; à droite, « Dans cette fiche » pour passer d'une rubrique à l'autre. La recherche en haut filtre les fiches et leurs rubriques. Le grand bouton « Retour à PiBoard », toujours visible en haut à gauche, referme l'aide. L'encart « Une question, une idée ? » propose « Signaler un bug » et « Écrire au projet » : chacun ouvre directement un ticket sur GitHub, ou son QR code sur un écran sans clavier.</span></div>
           <div class="help-opt"><span class="help-opt-name">Lancer le cadre photo</span><span class="help-opt-desc">Active immédiatement l'écran de veille en mode diaporama, quels que soient les plages horaires programmées ou même si l'économiseur d'écran automatique est désactivé dans les réglages — un geste explicite, indépendant du calendrier. Reprend les mêmes photos que celles configurées dans la section « Écran de veille » des réglages généraux. Un tap, un clic, ou n'importe quelle touche referme le cadre photo et revient au tableau.</span></div>
@@ -207,7 +207,7 @@
           <h4>The toolbar</h4>
           <p>It's hidden by default so it doesn't clutter the display. Tap the small tab centered at the bottom of the screen to reveal it; it closes automatically after 20 seconds of inactivity (except in edit mode, where it stays open). Seven buttons:</p>
           <div class="help-opt"><span class="help-opt-name">+ Add a tile</span><span class="help-opt-desc">Opens the catalog of available widgets. Tap one to add it to the board (or to whichever tile drawer is open at that moment); its settings open right away to configure it.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Edit mode (lock)</span><span class="help-opt-desc">Enables dragging and resizing tiles. In edit mode, simply tapping a tile opens its settings directly. Press this button again to lock the board back.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Edit mode (lock)</span><span class="help-opt-desc">Enables dragging and resizing tiles. In edit mode, simply tapping a tile opens its settings directly. Press this button again to lock the board back. The <b>Formula 1</b> and <b>MotoGP</b> tiles also have an inner grid: in edit mode their blocks move by their title bar and resize by their corner, inside the tile (see their pages).</span></div>
           <div class="help-opt"><span class="help-opt-name">Settings (gear)</span><span class="help-opt-desc">Opens the dashboard's general settings window — detailed below.</span></div>
           <div class="help-opt"><span class="help-opt-name">Help (?)</span><span class="help-opt-desc">Opens the help as a full page. On the left, the "Home" entry then the tree of families and pages; in the centre, the home (one card per family), then the chosen page split into clickable sections, then the article; on the right, "On this page" to move between sections. The search at the top filters pages and their sections. The big "Back to PiBoard" button, always visible at the top left, closes the help. The "A question, an idea?" box offers "Report a bug" and "Write to the project": each opens a GitHub issue directly, or its QR code on a screen without a keyboard.</span></div>
           <div class="help-opt"><span class="help-opt-name">Start photo frame</span><span class="help-opt-desc">Immediately turns on the screen saver in slideshow mode, regardless of the programmed time slots or even if the automatic screen saver is disabled in settings — an explicit gesture, independent from the schedule. Reuses the same photos configured in the "Screen saver" section of the general settings. A tap, a click, or any key closes the photo frame and returns to the board.</span></div>
@@ -2669,143 +2669,357 @@ Franceinfo".</span></div>
       group: "tiles",
       title: { fr: "Formule 1", en: "Formula 1" },
       sub: {
-        fr: "Le week-end de F1, carte par carte.",
-        en: "The F1 weekend, card by card."
+        fr: "Le week-end de F1, disposé à votre façon.",
+        en: "The F1 weekend, arranged your way."
       },
       html: {
         fr: `
-<span class="help-size">Taille : 4×4 par défaut, de 2×2 à 12×16</span>
+<span class="help-size">Taille : 4×4 par défaut, de 2×2 à 12×16 — une tuile de 8×8 ou plus donne toute sa mesure à la grille interne</span>
 
 <h4>Objectif</h4>
-<p>Réunir sur une tuile ce qu'un amateur de Formule 1 regarde pendant un week-end de Grand Prix.</p>
+<p>Réunir sur une tuile ce qu'un amateur de Formule 1 regarde pendant un week-end de Grand Prix, disposé comme il l'entend.</p>
 <p><b>Ce que la tuile sait faire :</b></p>
 <ul>
-  <li><b>Six cartes</b> à afficher ou masquer une à une : prochaine course avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement constructeurs, résultats de la dernière course, météo du circuit.</li>
-  <li><b>Nombre de lignes</b> réglable pour les classements et les résultats.</li>
-  <li><b>Couleurs d'écurie</b> et couleur des cartes au choix ; cartes disposées comme vous voulez.</li>
-  <li>Un abandon est signalé comme tel, pas comme une vingtième place ; la météo est celle de l'heure de la course.</li>
+  <li><b>Sept blocs</b> à afficher ou masquer un à un : prochaine course avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement constructeurs, résultats de la dernière course, météo du circuit, <b>plan du circuit</b>.</li>
+  <li><b>Une grille interne</b> : en mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt, à l'intérieur de la tuile, sur une grille aimantée.</li>
+  <li><b>Dispositions prêtes</b> (Compacte, Classements d'abord, Week-end de course, Saison), retour à la disposition par défaut, copier-coller d'une tuile à l'autre.</li>
+  <li><b>Disposition selon le moment</b> : une pour la saison, une pour le week-end de course, qui bascule d'elle-même.</li>
+  <li><b>Texte ajusté à chaque bloc</b> : un bloc agrandi lit en plus gros, un bloc réduit se resserre.</li>
+  <li>Le <b>plan du circuit</b> est celui de la tuile Plan du circuit, réutilisée telle quelle, avec le compte à rebours de la prochaine séance posé dessus.</li>
+  <li><b>Nombre de lignes</b> réglable pour les classements et les résultats ; couleurs d'écurie et couleur des cartes au choix.</li>
+  <li>Un abandon est signalé comme tel, pas comme une vingtième place ; la météo est celle de l'heure de chaque séance.</li>
   <li>Données gratuites Jolpica (successeur d'Ergast), sans clé ni compte.</li>
 </ul>
 
-<h4>Les six cartes</h4>
+<h4>Les sept blocs</h4>
           <div class="help-opt"><span class="help-opt-name">Prochaine course</span><span class="help-opt-desc">Le Grand Prix à venir, son circuit, son pays et un <b>compte à rebours à la seconde</b>. Pendant le week-end, il vise la prochaine <b>séance</b> et non la course : le samedi matin, savoir que les qualifications commencent dans vingt minutes vaut mieux qu'un compte à rebours de deux jours.</span></div>
           <div class="help-opt"><span class="help-opt-name">Programme du week-end</span><span class="help-opt-desc">Toutes les séances avec leur jour et leur heure <b>dans votre fuseau</b>. L'API donne l'heure en UTC : un Grand Prix à 7 h UTC se court à 9 h chez vous, et c'est cette heure-là qui vous concerne. La séance en cours est mise en avant, les séances passées estompées.</span></div>
           <div class="help-opt"><span class="help-opt-name">Classement pilotes</span><span class="help-opt-desc">Position, drapeau, code à trois lettres, numéro, points et victoires.</span></div>
           <div class="help-opt"><span class="help-opt-name">Classement constructeurs</span><span class="help-opt-desc">Le championnat des écuries, dans la même forme.</span></div>
           <div class="help-opt"><span class="help-opt-name">Dernière course</span><span class="help-opt-desc">L'ordre d'arrivée, l'écart au vainqueur, les points, et le meilleur tour marqué d'un chronomètre.</span></div>
           <div class="help-opt"><span class="help-opt-name">Météo du circuit</span><span class="help-opt-desc">La prévision <b>à l'heure de chaque séance</b>, une ligne par séance : le temps, la température et la <b>probabilité de pluie</b>.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Plan du circuit</span><span class="help-opt-desc">Le tracé du circuit du week-end, dessiné par la tuile <b>Plan du circuit</b> elle-même — ruban d'asphalte, vibreurs, virages numérotés, sens de la course — avec, au choix, sa fiche technique dessous et le compte à rebours de la prochaine séance posé sur le coin.</span></div>
+
+<h4>Disposer les blocs dans la tuile</h4>
+          <p>Chaque carte est un <b>bloc</b> de la grille interne de la tuile. Passez en <b>mode édition</b> (cadenas de la barre d'outils) : une barre de couleur apparaît en haut de chaque bloc, un coin en équerre en bas à droite, et une barre d'outils en haut de la tuile.</p>
+          <ul>
+            <li><b>Déplacer</b> : saisissez la barre de titre du bloc (⠿) et glissez, à la souris ou au doigt. La grille est <b>aimantée</b> : le bloc se pose sur une case, jamais entre deux.</li>
+            <li><b>Redimensionner</b> : tirez le coin en bas à droite du bloc.</li>
+            <li><b>Pas de chevauchement</b> : poser un bloc sur un autre <b>échange</b> leurs places, ou pousse l'autre vers la première place libre (en le rétrécissant si besoin). S'il n'y a de place nulle part, le geste est annulé et la tuile le dit.</li>
+            <li><b>Masquer</b> un bloc : sa croix ✕. C'est la même case que dans la fenêtre de réglages — décochée d'un côté, décochée de l'autre.</li>
+            <li><b>+ Ajouter un bloc</b> : la liste propose les blocs masqués.</li>
+            <li><b>Disposition…</b> : quatre dispositions prêtes — <i>Compacte</i> (par défaut), <i>Classements d'abord</i>, <i>Week-end de course</i> (plan et programme en grand), <i>Saison</i> (classements en grand).</li>
+            <li><b>Réinitialiser</b> revient à la disposition par défaut.</li>
+            <li><b>Copier</b> puis <b>Coller</b> recopie la disposition d'une tuile vers une autre du même genre, sur le même écran.</li>
+          </ul>
+          <p>La tuile elle-même se déplace toujours en la saisissant <b>ailleurs</b> que sur ces commandes, et un appui sur son contenu ouvre toujours ses réglages. Hors mode édition, rien ne bouge sous le doigt : un tableau mural qui se réagence quand on l'effleure serait un tableau cassé.</p>
+          <p>La grille compte <b>12 colonnes sur 12 rangées</b>, proportionnelles à la tuile : agrandir la tuile agrandit tous les blocs dans la même proportion. La disposition est enregistrée <b>dans les réglages de cette tuile</b> : deux tuiles peuvent être disposées différemment. En mode tactile, poignées et boutons grandissent pour le doigt.</p>
+          <p><b>Une seule carte cochée</b> : la tuile devient cette carte, sans cadre ni titre interne, comme avant. Pratique pour poser un classement seul à un autre endroit de la page.</p>
+
+<h4>Ajuster le texte, et changer de disposition selon le moment</h4>
+          <p>Avec <b>Ajuster le texte à chaque bloc</b>, chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Le plan du circuit n'est pas concerné : c'est un dessin, il suit déjà la taille du bloc.</p>
+          <p>Avec <b>Disposition différente pendant les week-ends de course</b>, la tuile garde deux dispositions : <i>Saison</i> le reste du temps, <i>Week-end de course</i> de douze heures avant la première séance jusqu'à trois heures après le départ de la course. Elle bascule d'elle-même. En mode édition, la première liste de la barre d'outils choisit la disposition que vous modifiez — on prépare celle du week-end un mardi.</p>
+
+<h4>Le plan du circuit vient de la tuile Plan du circuit</h4>
+          <p>Le bloc <b>Plan du circuit</b> ne recopie rien : il <b>héberge la tuile Plan du circuit</b>, réglée pour suivre le calendrier de Formule 1. Le tracé vient donc de la même <b>base de circuits</b>, avec le même style « ruban d'asphalte », les mêmes numéros de virages et la même fiche technique — et une correction du dessin profite aux deux tuiles à la fois. Le bloc suit toujours la saison <b>en cours</b>, même si le réglage Saison consulte une année passée : un tracé n'a pas de saison.</p>
+          <p>La tuile <b>Plan du circuit</b> reste disponible seule, avec tous ses réglages (circuit épinglé, suivi du MotoGP…), pour qui veut le plan ailleurs sur la page.</p>
 
 <h4>Un abandon n'est pas une vingtième place</h4>
           <p>L'API rend bien un classement final pour toutes les voitures, y compris celles parties au mur au deuxième tour. Afficher « 18<sup>e</sup> » pour une voiture qui n'a pas terminé raconte une autre course que celle qui a eu lieu : la tuile affiche donc <b>la cause de l'abandon</b> (Accident, Moteur, Boîte de vitesses…) à la place de la position, et la ligne est estompée.</p>
 
 <h4>La météo d'une course n'est pas la météo d'un lieu</h4>
-          <p>« 24 degrés, aver­ses » pour Spa ne dit rien d'utile. Ce qu'on vient chercher, c'est s'il pleuvra <b>pendant les qualifications</b>, qui durent une heure et ont lieu samedi à 16 h. La carte donne donc <b>une ligne par séance</b>, avec la prévision à l'heure de cette séance — et non la météo du moment, qui ne concerne personne un mardi.</p>
+          <p>« 24 degrés, averses » pour Spa ne dit rien d'utile. Ce qu'on vient chercher, c'est s'il pleuvra <b>pendant les qualifications</b>, qui durent une heure et ont lieu samedi à 16 h. Le bloc donne donc <b>une ligne par séance</b>, avec la prévision à l'heure de cette séance — et non la météo du moment, qui ne concerne personne un mardi.</p>
           <p>La <b>probabilité de pluie est le seul chiffre mis en couleur</b>, à partir de 30 %. C'est délibéré : en Formule 1, la température décide de la gomme et le vent gêne en courbe rapide, mais c'est la pluie qui rebat les cartes. Tout colorer reviendrait à ne rien mettre en avant.</p>
           <p>La prévision porte à <b>sept jours</b>. Une séance plus lointaine <b>garde sa ligne, avec un tiret</b> : la masquer donnerait un programme amputé où l'on croirait avoir tout vu, alors que le tiret dit « on ne sait pas encore ». Source : <b>Open-Meteo</b>, gratuit et sans clé, le même service que la tuile Météo.</p>
 
-<h4>Le plan du circuit a désormais sa propre tuile</h4>
-          <p>Le tracé des circuits n'est plus une carte de cette tuile : c'est une tuile à part entière, <b>Plan du circuit</b>, qui a sa propre fiche d'aide. Elle offre plus de réglages, affiche une fiche technique, et surtout elle lit une <b>base de circuits</b> au lieu d'interroger OpenStreetMap à chaque affichage — ce qui échouait deux fois sur trois.</p>
-
 <h4>Pas de logos, et c'est voulu</h4>
-          <p>Les logos d'écuries, les photos de pilotes et les plans de circuits officiels sont des <b>marques déposées et des visuels sous droits</b>. PiBoard est publié sous licence libre sur un dépôt public : il ne les embarque pas. À la place, chaque ligne porte la <b>couleur de l'écurie</b> et le <b>code à trois lettres</b> du pilote (ANT, HAM, VER) — on reconnaît une ligne aussi vite, et sans rien devoir à personne. Le drapeau est un émoji : sur une machine sans police émoji complète, le code reste lisible et l'information n'est pas perdue.</p>
-
-<h4>Disposer les cartes comme vous voulez</h4>
-          <p><b>Ne cochez qu'une seule carte, et posez autant de tuiles Formule 1 que de cartes voulues.</b> Une tuile à carte unique n'affiche ni cadre ni titre interne : elle <i>devient</i> cette carte, et se déplace, se redimensionne et se renomme comme n'importe quelle tuile, avec la grille de PiBoard.</p>
-          <p>C'est la bonne façon de procéder, parce que les cartes <b>ne sont pas déplaçables à l'intérieur d'une tuile</b> : rebâtir une grille dans la grille n'aurait aucun sens quand PiBoard en a déjà une. Et cela ne coûte rien : le relais partage son cache, donc cinq tuiles n'envoient pas cinq fois les mêmes requêtes.</p>
-          <p><b>Quelle taille donner à chaque tuile ?</b> La taille par défaut (4×4) est volontairement modeste : c'est la plus petite qui serve vraiment les cartes courtes, et il vaut mieux agrandir les deux tuiles qui le méritent que réduire les cinq autres. En pratique : <b>Prochaine course</b> 3×3, <b>Programme du week-end</b> 3×4, <b>Classement constructeurs</b> 3×5, <b>Classement pilotes</b> 3×7, <b>Dernière course</b> 4×7. Le réglage universel <b>Taille du texte</b> resserre encore le contenu si vous tenez à une tuile plus petite.</p>
-          <p>Le contenu s'adapte à la largeur réelle de la tuile : sur une tuile étroite, le numéro du pilote et la colonne des victoires disparaissent, parce que trois colonnes lisibles valent mieux que cinq tronquées. Et dans le programme, c'est le nom de la séance qui cède la place avant l'heure — l'heure est la seule chose qu'on vient y chercher.</p>
-          <p>Si au contraire vous voulez tout au même endroit, cochez plusieurs cartes : elles se rangent alors sur autant de colonnes que la largeur en permet, chacune à la taille de son contenu. Une carte décochée n'est <b>pas demandée du tout</b> à l'API — elle est gratuite et partagée par tous, autant être poli.</p>
+          <p>Les logos d'écuries, les photos de pilotes et les plans de circuits officiels sont des <b>marques déposées et des visuels sous droits</b>. PiBoard est publié sous licence libre sur un dépôt public : il ne les embarque pas. À la place, chaque ligne porte la <b>couleur de l'écurie</b> et le <b>code à trois lettres</b> du pilote (ANT, HAM, VER), et le tracé est dessiné à partir d'OpenStreetMap. Le drapeau est un émoji : sur une machine sans police émoji complète, le code reste lisible et l'information n'est pas perdue.</p>
 
 <h4>Source</h4>
-          <p>L'API <b>Jolpica</b>, successeur communautaire d'Ergast (fermé fin 2024), sans clé ni compte. C'est la même source que les intégrations Formule 1 de Home Assistant, et celle que lit déjà la tuile <i>Sports mécaniques</i>. L'historique couvre le championnat depuis 1950 : le réglage <b>Saison</b> accepte n'importe quelle année.</p>
-          <p>Les tracés de circuits viennent d'<b>OpenStreetMap</b>, interrogé par le service public <b>Overpass</b>, sous licence ODbL. Les prévisions viennent d'<b>Open-Meteo</b>, gratuit et sans clé.</p>
-          <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide pour la saison en cours, ou une année.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Cartes</span><span class="help-opt-desc">Six cases à cocher, une par carte. Le plan du circuit a sa propre tuile, « Plan du circuit ».</span></div>
-          <div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème de la page » garde les cartes cohérentes avec le reste du tableau, et reste le défaut — une tuile qui jure avec ses voisines est une tuile ratée. « <b>Piste sombre</b> » leur donne le noir profond du paddock et un liseré rouge : un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « <b>Couleur choisie</b> » utilise la couleur du réglage suivant ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur que vous avez saisie est claire ou foncée. Le réglage ne concerne <b>que cette tuile</b>.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Lignes affichées</span><span class="help-opt-desc">Par tableau : vingt-deux lignes sont illisibles sur une tuile moyenne, dix couvrent ce qui se joue.</span></div>
-          <div class="help-opt"><span class="help-opt-name">Rafraîchir</span><span class="help-opt-desc">30 min par défaut. Un classement ne bouge qu'après une course ; le compte à rebours, lui, s'égrène sans rien demander au réseau.</span></div>
+          <p>L'API <b>Jolpica</b>, successeur communautaire d'Ergast (fermé fin 2024), sans clé ni compte. C'est la même source que les intégrations Formule 1 de Home Assistant, et celle que lit déjà la tuile <i>Sports mécaniques</i>. L'historique couvre le championnat depuis 1950 : le réglage <b>Saison</b> accepte n'importe quelle année. Un bloc masqué n'est <b>pas demandé du tout</b> à l'API — elle est gratuite et partagée par tous, autant être poli.</p>
+          <p>Les tracés viennent de la base des circuits de la tuile Plan du circuit (relevés d'<b>OpenStreetMap</b>, licence ODbL). Les prévisions viennent d'<b>Open-Meteo</b>, gratuit et sans clé.</p>
 
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée : l'API couvre tout le championnat depuis 1950.</span></div>
-<div class="help-opt"><span class="help-opt-name">Carte « Prochaine course »</span><span class="help-opt-desc">Le Grand Prix à venir, son circuit, son pays, et un compte à rebours à la seconde jusqu'au départ. Pendant le week-end, le compte à rebours vise la prochaine SÉANCE et non la course : savoir que les qualifications commencent dans vingt minutes est plus utile qu'un compte à rebours de deux jours. POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Prochaine course »</span><span class="help-opt-desc">Le Grand Prix à venir, son circuit, son pays, et un compte à rebours à la seconde jusqu'au départ. Pendant le week-end, le compte à rebours vise la prochaine SÉANCE et non la course : savoir que les qualifications commencent dans vingt minutes est plus utile qu'un compte à rebours de deux jours. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Carte « Programme du week-end »</span><span class="help-opt-desc">Toutes les séances — essais libres, sprint, qualifications, course — avec leur jour et leur heure DANS VOTRE FUSEAU. Un Grand Prix en Malaisie se court à 7 h UTC, soit 9 h chez vous : l'heure brute de l'API n'est pas celle qui vous concerne. La séance en cours est mise en avant, les séances passées estompées. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Carte « Classement pilotes »</span><span class="help-opt-desc">Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Carte « Classement constructeurs »</span><span class="help-opt-desc">Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Carte « Résultats de la dernière course »</span><span class="help-opt-desc">Le classement d'arrivée de la dernière course disputée, avec l'écart au vainqueur et les points marqués. Les abandons sont indiqués comme tels, et non comme une dernière place : terminer vingtième et ne pas terminer ne sont pas la même histoire. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Carte « Météo du circuit »</span><span class="help-opt-desc">La prévision À L'HEURE DE CHAQUE SÉANCE, et non la météo de l'instant : ce qu'on vient chercher, c'est s'il pleuvra pendant les qualifications, pas le temps qu'il fait sur le circuit un mardi. Une ligne par séance, avec le temps, la température et la probabilité de pluie — le seul chiffre mis en avant, parce qu'en Formule 1 c'est celui qui change une course. La prévision porte à sept jours : une séance plus lointaine garde sa ligne avec un tiret plutôt que d'être masquée. Source : Open-Meteo, gratuit et sans clé, comme la tuile Météo. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Plan du circuit »</span><span class="help-opt-desc">Le tracé du circuit du week-end, dessiné par la tuile Plan du circuit elle-même et réutilisé tel quel : ruban d'asphalte, vibreurs rouge et blanc, virages numérotés, sens de la course et voie des stands. Il suit le calendrier de Formule 1 et change de lui-même d'un week-end à l'autre. Le dessin est vectoriel et suit la taille de son bloc. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Fiche technique sous le plan</span><span class="help-opt-desc">Longueur, virages, nombre de tours, distance de course et record du tour, tirés de la base des circuits — la même fiche que la tuile Plan du circuit. Décochez-la pour laisser toute la place au tracé. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Compte à rebours sur le plan</span><span class="help-opt-desc">La prochaine séance et le temps restant, posés sur le coin du plan : pendant un week-end de course, c'est le duo qu'on regarde — où, et dans combien de temps. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Pilotes affichés</span><span class="help-opt-desc">Vingt-deux lignes rendent le classement illisible sur une tuile moyenne. Dix couvre tout ce qui se joue vraiment. De 3 à 24, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Écuries affichées</span><span class="help-opt-desc">De 3 à 12, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Résultats affichés</span><span class="help-opt-desc">De 3 à 24, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Couleurs d'écurie</span><span class="help-opt-desc">Une pastille de la couleur de l'écurie devant chaque pilote. Les logos et les photos officiels sont des marques déposées : PiBoard ne les embarque pas, et la couleur fait le même travail de reconnaissance immédiate. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème de la page » garde les cartes cohérentes avec le reste du tableau. « Piste sombre » leur donne le noir profond du paddock et un liseré rouge — un air de course qui ne doit rien à un logo, une livrée ou une police sous licence. « Couleur choisie » utilise la couleur ci-dessous ; la couleur du texte est alors laissée au navigateur, seul à savoir si la couleur saisie est claire ou foncée. Le réglage ne concerne QUE cette tuile. Choix : Thème de la page, Piste sombre, Couleur choisie. Par défaut : Thème de la page.</span></div>
 <div class="help-opt"><span class="help-opt-name">Couleur des cartes</span><span class="help-opt-desc">Utilisée seulement si le style ci-dessus est « Couleur choisie ». Par défaut : « #12151c ».</span></div>
+<div class="help-opt"><span class="help-opt-name">Ajuster le texte à chaque bloc</span><span class="help-opt-desc">Chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Décochez pour garder partout la même taille de texte. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Disposition différente pendant les week-ends de course</span><span class="help-opt-desc">Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez. Désactivé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Rafraîchir toutes les (minutes)</span><span class="help-opt-desc">Un classement ne bouge qu'après une course. Le compte à rebours, lui, s'égrène à la seconde sans rien demander au réseau. De 5 à 360, par défaut 30.</span></div>
 `,
         en: `
-<span class="help-size">Size: 4×4 by default, from 2×2 to 12×16</span>
+<span class="help-size">Size: 4×4 by default, from 2×2 to 12×16 — a tile of 8×8 or more gives the inner grid its full measure</span>
 
 <h4>Purpose</h4>
-<p>Gather on one tile what a Formula 1 fan watches during a Grand Prix weekend.</p>
+<p>Gather on one tile what a Formula 1 fan watches during a Grand Prix weekend, arranged the way they like.</p>
 <p><b>What the tile can do:</b></p>
 <ul>
-  <li><b>Six cards</b> shown or hidden one by one: next race with countdown, weekend schedule in your time zone, driver standings, constructor standings, last race results, circuit weather.</li>
-  <li>Adjustable <b>number of rows</b> for standings and results.</li>
-  <li><b>Team colours</b> and card colour of your choice; cards arranged as you like.</li>
-  <li>A retirement is shown as such, not as a twentieth place; the weather is for race time.</li>
+  <li><b>Seven blocks</b> shown or hidden one by one: next race with countdown, weekend timetable in your time zone, driver standings, constructor standings, last race results, circuit weather, <b>circuit map</b>.</li>
+  <li><b>An inner grid</b>: in edit mode, each block is moved and resized with the mouse or a finger, inside the tile, on a snapping grid.</li>
+  <li><b>Ready-made layouts</b> (Compact, Standings first, Race weekend, Season), return to the default layout, copy-paste from one tile to another.</li>
+  <li><b>Layout by moment</b>: one for the season, one for the race weekend, switching by itself.</li>
+  <li><b>Text fitted to each block</b>: an enlarged block reads bigger, a reduced one tightens.</li>
+  <li>The <b>circuit map</b> is the Circuit map tile's, reused as is, with the next session's countdown laid on it.</li>
+  <li>Adjustable <b>number of rows</b> for standings and results; team colours and card colour of your choice.</li>
+  <li>A retirement is shown as such, not as a twentieth place; the weather is for each session's hour.</li>
   <li>Free Jolpica data (Ergast's successor), no key or account.</li>
 </ul>
 
-<h4>The six cards</h4>
+<h4>The seven blocks</h4>
           <div class="help-opt"><span class="help-opt-name">Next race</span><span class="help-opt-desc">The upcoming Grand Prix, its circuit, its country and a <b>countdown to the second</b>. During the weekend it targets the next <b>session</b> rather than the race: on Saturday morning, knowing qualifying starts in twenty minutes beats a two-day countdown.</span></div>
           <div class="help-opt"><span class="help-opt-name">Weekend timetable</span><span class="help-opt-desc">Every session with its day and time <b>in your own time zone</b>. The API gives UTC; that is not the hour that concerns you. The live session is highlighted, past ones dimmed.</span></div>
           <div class="help-opt"><span class="help-opt-name">Driver standings</span><span class="help-opt-desc">Position, flag, three-letter code, number, points and wins.</span></div>
           <div class="help-opt"><span class="help-opt-name">Constructor standings</span><span class="help-opt-desc">The teams' championship, in the same shape.</span></div>
           <div class="help-opt"><span class="help-opt-name">Last race</span><span class="help-opt-desc">The finishing order, the gap to the winner, the points, and the fastest lap marked with a stopwatch.</span></div>
           <div class="help-opt"><span class="help-opt-name">Circuit weather</span><span class="help-opt-desc">The forecast <b>for each session's hour</b>, one row per session: the condition, the temperature and the <b>chance of rain</b>.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Circuit map</span><span class="help-opt-desc">The weekend's circuit outline, drawn by the <b>Circuit map</b> tile itself — asphalt ribbon, kerbs, numbered corners, racing direction — with, as you choose, its spec sheet underneath and the next session's countdown on its corner.</span></div>
+
+<h4>Arranging the blocks inside the tile</h4>
+          <p>Each card is a <b>block</b> of the tile's inner grid. Switch to <b>edit mode</b> (the padlock in the toolbar): a coloured bar appears at the top of every block, a corner bracket at its bottom right, and a toolbar at the top of the tile.</p>
+          <ul>
+            <li><b>Move</b>: grab the block's title bar (⠿) and drag, with the mouse or a finger. The grid <b>snaps</b>: a block lands on a cell, never between two.</li>
+            <li><b>Resize</b>: pull the block's bottom-right corner.</li>
+            <li><b>No overlap</b>: dropping a block on another <b>swaps</b> them, or pushes the other one to the first free spot (shrinking it if needed). If there is room nowhere, the gesture is cancelled and the tile says so.</li>
+            <li><b>Hide</b> a block: its ✕ cross. It is the same box as in the settings window — unticked on one side, unticked on the other.</li>
+            <li><b>+ Add a block</b>: the list offers the hidden blocks.</li>
+            <li><b>Layout…</b>: four ready-made layouts — <i>Compact</i> (default), <i>Standings first</i>, <i>Race weekend</i> (map and timetable large), <i>Season</i> (standings large).</li>
+            <li><b>Reset</b> returns to the default layout.</li>
+            <li><b>Copy</b> then <b>Paste</b> carries the layout from one tile to another of the same kind, on the same screen.</li>
+          </ul>
+          <p>The tile itself still moves when grabbed <b>anywhere else</b> than on these controls, and a press on its content still opens its settings. Outside edit mode nothing moves under a finger: a wall board that rearranges itself when brushed would be a broken board.</p>
+          <p>The grid has <b>12 columns by 12 rows</b>, proportional to the tile: enlarging the tile enlarges every block in the same proportion. The layout is saved <b>in this tile's settings</b>: two tiles can be arranged differently. In touch mode, handles and buttons grow for the finger.</p>
+          <p><b>A single card ticked</b>: the tile becomes that card, with no frame or inner title, as before. Handy to place a standings table on its own elsewhere on the page.</p>
+
+<h4>Fitting the text, and changing layout with the moment</h4>
+          <p>With <b>Fit text to each block</b>, each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls rather than shrinking further. The circuit map is not concerned: it is a drawing and already follows the block's size.</p>
+          <p>With <b>Different layout during race weekends</b>, the tile keeps two layouts: <i>Season</i> the rest of the time, <i>Race weekend</i> from twelve hours before the first session until three hours after the race start. It switches by itself. In edit mode, the toolbar's first list chooses which layout you are editing — one prepares the weekend's on a Tuesday.</p>
+
+<h4>The circuit map comes from the Circuit map tile</h4>
+          <p>The <b>Circuit map</b> block copies nothing: it <b>hosts the Circuit map tile</b>, set to follow the Formula 1 calendar. The outline therefore comes from the same <b>circuit base</b>, with the same asphalt-ribbon style, the same corner numbers and the same spec sheet — and a fix to the drawing benefits both tiles at once. The block always follows the <b>current</b> season, even when the Season setting looks at a past year: an outline has no season.</p>
+          <p>The <b>Circuit map</b> tile remains available on its own, with all its settings (pinned circuit, MotoGP calendar…), for whoever wants the map elsewhere on the page.</p>
 
 <h4>A retirement is not a twentieth place</h4>
           <p>The API returns a final classification for every car, including those that hit the wall on lap two. Showing "18th" for a car that did not finish tells a different story from the race that took place: the tile shows <b>the cause of the retirement</b> (Accident, Engine, Gearbox…) instead of the position, and dims the row.</p>
 
 <h4>A race's weather is not a place's weather</h4>
-          <p>"24 degrees, showers" for Spa says nothing useful. What one comes for is whether it will rain <b>during qualifying</b>, which lasts an hour and happens on Saturday at 4pm. So the card gives <b>one row per session</b>, with the forecast for that session's hour — not the weather right now, which concerns nobody on a Tuesday.</p>
+          <p>"24 degrees, showers" for Spa says nothing useful. What one comes for is whether it will rain <b>during qualifying</b>, which lasts an hour and happens on Saturday at 4pm. So the block gives <b>one row per session</b>, with the forecast for that session's hour — not the weather right now, which concerns nobody on a Tuesday.</p>
           <p>The <b>chance of rain is the only figure in colour</b>, from 30% up. That is deliberate: in Formula 1 temperature decides the tyre compound and wind bites in fast corners, but rain is what rewrites the race. Colouring everything would highlight nothing.</p>
           <p>The forecast reaches <b>seven days</b>. A session further out <b>keeps its row, with a dash</b>: hiding it would give a truncated programme one would believe complete, whereas the dash says "not known yet". Source: <b>Open-Meteo</b>, free and keyless, the same service as the Weather tile.</p>
 
-<h4>The circuit map now has a tile of its own</h4>
-          <p>Circuit outlines are no longer a card of this tile: they are a tile in their own right, <b>Circuit map</b>, with its own help page. It offers more settings, shows a spec sheet, and above all it reads a <b>circuit base</b> instead of querying OpenStreetMap on every display — which failed two times out of three.</p>
-
 <h4>No logos, deliberately</h4>
-          <p>Team logos, driver photos and official circuit maps are <b>registered trademarks and copyrighted visuals</b>. PiBoard is published under a free licence on a public repository and does not embed them. Instead each row carries the <b>team colour</b> and the driver's <b>three-letter code</b> (ANT, HAM, VER) — just as quick to recognise, and owing nothing to anyone. The flag is an emoji: on a machine without a complete emoji font the code stays readable and nothing is lost.</p>
-
-<h4>Arranging the cards as you wish</h4>
-          <p><b>Tick a single card, and place as many Formula 1 tiles as you want cards.</b> A single-card tile shows neither frame nor inner title: it <i>becomes</i> that card, and moves, resizes and gets renamed like any tile, using PiBoard's own grid.</p>
-          <p>That is the right way round, because cards <b>are not draggable inside a tile</b>: rebuilding a grid inside the grid would make no sense when PiBoard already has one. And it costs nothing: the relay shares its cache, so five tiles do not send the same requests five times.</p>
-          <p><b>What size for each tile?</b> The 4×4 default is deliberately modest: it is the smallest that genuinely serves the short cards, and it is better to enlarge the two tiles that deserve it than to shrink the other five. In practice: <b>Next race</b> 3×3, <b>Weekend timetable</b> 3×4, <b>Constructor standings</b> 3×5, <b>Driver standings</b> 3×7, <b>Last race</b> 4×7. The universal <b>Text size</b> setting tightens the content further.</p>
-          <p>The content follows the tile's real width: on a narrow tile the driver's number and the wins column disappear, because three readable columns beat five truncated ones. And in the timetable the session name yields before the time — the time is the one thing one comes for.</p>
-          <p>If instead you want everything in one place, tick several cards: they flow into as many columns as the width allows, each at the size of its own content. An unticked card is <b>not requested at all</b>.</p>
+          <p>Team logos, driver photos and official circuit maps are <b>registered trademarks and copyrighted visuals</b>. PiBoard is published under a free licence on a public repository and does not embed them. Instead each row carries the <b>team colour</b> and the driver's <b>three-letter code</b> (ANT, HAM, VER), and the outline is drawn from OpenStreetMap. The flag is an emoji: on a machine without a complete emoji font the code stays readable and nothing is lost.</p>
 
 <h4>Source</h4>
-          <p>The <b>Jolpica</b> API, the community successor to Ergast (closed at the end of 2024), with no key and no account. It is the same source as Home Assistant's Formula 1 integrations, and the one the <i>Motorsport schedule</i> tile already reads. History covers the championship since 1950: the <b>Season</b> setting accepts any year.</p>
-          <p>The circuit outlines come from <b>OpenStreetMap</b> through the public <b>Overpass</b> service, under the ODbL licence. The forecasts come from <b>Open-Meteo</b>, free and keyless.</p>
-          <div class="help-opt"><span class="help-opt-name">Card style</span><span class="help-opt-desc">"Page theme" keeps the cards consistent with the rest of the board and stays the default. "<b>Dark track</b>" gives them the paddock's deep black and a red edge: a racing look that owes nothing to any logo, livery or licensed typeface. "<b>Chosen colour</b>" uses the colour from the next setting; the text colour is then left to the browser, which alone knows whether the colour you entered is light or dark. The setting affects <b>this tile only</b>.</span></div>
+          <p>The <b>Jolpica</b> API, the community successor to Ergast (closed at the end of 2024), with no key and no account. It is the same source as Home Assistant's Formula 1 integrations, and the one the <i>Motorsport schedule</i> tile already reads. History covers the championship since 1950: the <b>Season</b> setting accepts any year. A hidden block is <b>not requested at all</b> — the API is free and shared by all, so it pays to be polite.</p>
+          <p>Outlines come from the Circuit map tile's circuit base (surveyed from <b>OpenStreetMap</b>, ODbL licence). Forecasts come from <b>Open-Meteo</b>, free and keyless.</p>
 
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <div class="help-opt"><span class="help-opt-name">Season</span><span class="help-opt-desc">Empty = current season. A year (2024, 2025…) to look at a past season: the API covers the championship since 1950.</span></div>
-<div class="help-opt"><span class="help-opt-name">"Next race" card</span><span class="help-opt-desc">The upcoming Grand Prix, its circuit, its country, and a countdown to the second. During the weekend the countdown targets the next SESSION rather than the race. TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Next race" card</span><span class="help-opt-desc">The upcoming Grand Prix, its circuit, its country, and a countdown to the second. During the weekend the countdown targets the next SESSION rather than the race: knowing qualifying starts in twenty minutes beats a two-day countdown. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">"Weekend timetable" card</span><span class="help-opt-desc">Every session — practice, sprint, qualifying, race — with its day and time IN YOUR OWN TIME ZONE. The live session is highlighted, past ones dimmed. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">"Driver standings" card</span><span class="help-opt-desc">On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">"Constructor standings" card</span><span class="help-opt-desc">On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">"Last race results" card</span><span class="help-opt-desc">The finishing order of the last race run, with the gap to the winner and the points scored. Retirements are shown as such rather than as a last place: finishing twentieth and not finishing are not the same story. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">"Circuit weather" card</span><span class="help-opt-desc">The forecast AT EACH SESSION'S HOUR, not the weather right now: what one comes for is whether it will rain during qualifying, not what the sky looks like over the circuit on a Tuesday. One row per session, with the condition, the temperature and the chance of rain -- the only figure highlighted, because in Formula 1 it is the one that changes a race. The forecast reaches seven days, so a session further out keeps its row with a dash rather than being hidden. Source: Open-Meteo, free and without a key, the same as the Weather tile. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Circuit map" card</span><span class="help-opt-desc">The outline of the weekend's circuit, drawn by the Circuit map tile itself and reused as is: asphalt ribbon, red-and-white kerbs, numbered corners, racing direction and pit lane. It follows the Formula 1 calendar and switches by itself from one weekend to the next. The drawing is vector-based and follows the size of its block. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Spec sheet under the map</span><span class="help-opt-desc">Length, corners, race laps, race distance and lap record, from the circuit base -- the same sheet as the Circuit map tile. Untick it to give the outline all the room. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Countdown on the map</span><span class="help-opt-desc">The next session and the time left, laid on the corner of the map: during a race weekend it is the pair one looks at -- where, and how long until. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Drivers shown</span><span class="help-opt-desc">Twenty-two rows make the table unreadable on a medium tile. Ten covers everything actually at stake. From 3 to 24, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Teams shown</span><span class="help-opt-desc">From 3 to 12, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Results shown</span><span class="help-opt-desc">From 3 to 24, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Team colours</span><span class="help-opt-desc">A chip in the team's colour before each driver. Official logos and photos are registered trademarks, so PiBoard does not embed them; the colour does the same job of instant recognition. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Card style</span><span class="help-opt-desc">"Page theme" keeps the cards consistent with the rest of the board. "Dark track" gives them the paddock's deep black with a red edge -- a racing look that owes nothing to any logo, livery or licensed typeface. "Chosen colour" uses the colour below instead; the text colour is then left to the browser, which alone knows whether the colour entered is light or dark. The setting affects THIS tile only. Choices: Page theme, Dark track, Chosen colour. Default: Page theme.</span></div>
 <div class="help-opt"><span class="help-opt-name">Card colour</span><span class="help-opt-desc">Used only when the style above is "Chosen colour". Default: "#12151c".</span></div>
+<div class="help-opt"><span class="help-opt-name">Fit text to each block</span><span class="help-opt-desc">Each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls instead of shrinking further. Untick to keep the same text size everywhere. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Different layout during race weekends</span><span class="help-opt-desc">Two layouts instead of one: a "Season" layout, and a "Race weekend" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing. Off by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Refresh every (minutes)</span><span class="help-opt-desc">Standings only move after a race. The countdown ticks every second without asking the network for anything. From 5 to 360, default 30.</span></div>
+`
+      }
+    },
+
+    {
+      id: "motogp",
+      group: "tiles",
+      title: { fr: "MotoGP", en: "MotoGP" },
+      sub: {
+        fr: "Le week-end MotoGP, disposé à votre façon.",
+        en: "The MotoGP weekend, arranged your way."
+      },
+      html: {
+        fr: `
+<span class="help-size">Taille : 4×4 par défaut, de 2×2 à 12×16 — une tuile de 8×8 ou plus donne toute sa mesure à la grille interne</span>
+
+<h4>Objectif</h4>
+<p>Le pendant de la tuile Formule 1 pour le MotoGP : tout le week-end de Grand Prix sur une tuile, en blocs que l'on dispose soi-même.</p>
+<p><b>Ce que la tuile sait faire :</b></p>
+<ul>
+  <li><b>Sept blocs</b> à afficher ou masquer : prochaine manche avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement équipes, derniers résultats (course ou sprint), météo du circuit, <b>plan du circuit</b>.</li>
+  <li>La même <b>grille interne</b> que la tuile Formule 1 : déplacer, redimensionner, masquer les blocs en mode édition, à la souris ou au doigt.</li>
+  <li><b>Dispositions prêtes</b>, retour à la disposition par défaut, copier-coller d'une tuile MotoGP à l'autre, et <b>disposition selon le moment</b> (saison / week-end de course).</li>
+  <li><b>Texte ajusté à chaque bloc</b>.</li>
+  <li>Le <b>plan du circuit</b> est celui de la tuile Plan du circuit, réglée sur le calendrier MotoGP.</li>
+  <li>Un pilote tombé est indiqué « Non classé », pas comme une dernière place ; la météo est celle de l'heure de chaque séance.</li>
+  <li>Données du flux public de <b>motogp.com</b>, sans clé ni compte.</li>
+</ul>
+
+<h4>Les sept blocs</h4>
+          <div class="help-opt"><span class="help-opt-name">Prochaine manche</span><span class="help-opt-desc">Le Grand Prix à venir, son circuit, le nombre de tours de la course et du sprint, et un <b>compte à rebours à la seconde</b> vers la prochaine <b>séance</b> — essais, qualifications, sprint — et non vers la seule course du dimanche.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Programme du week-end</span><span class="help-opt-desc">Les séances de la <b>catégorie MotoGP</b> (essais libres 1, essais, essais libres 2, qualifications 1 et 2, sprint, warm-up, course) dans votre fuseau. Moto2 et Moto3 n'y sont pas : elles doubleraient la liste sans répondre à la question qu'on se pose devant une tuile MotoGP — la tuile <i>Sports mécaniques</i> sait, elle, afficher toutes les catégories.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Classement pilotes</span><span class="help-opt-desc">Position, couleur du constructeur, drapeau, numéro, nom, points et victoires en Grand Prix.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Classement équipes</span><span class="help-opt-desc"><b>Calculé</b> en additionnant les points des pilotes de chaque équipe, comme le fait le championnat des équipes : le flux ne publie pas ce tableau. Le bloc le dit sous le tableau.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Derniers résultats</span><span class="help-opt-desc">L'ordre d'arrivée du dernier Grand Prix couru — <b>la course ou le sprint</b>, au choix — avec le temps du vainqueur, les écarts et les points.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Météo du circuit</span><span class="help-opt-desc">La prévision <b>à l'heure de chaque séance</b> : le temps, la température et la probabilité de pluie, mise en avant dès 30 %.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Plan du circuit</span><span class="help-opt-desc">Le tracé du circuit du week-end, dessiné par la tuile <b>Plan du circuit</b> réglée sur « Suivre le calendrier de MotoGP », avec les chiffres officiels du MotoGP dans la fiche technique et le compte à rebours de la prochaine séance posé sur le coin.</span></div>
+
+<h4>Disposer les blocs dans la tuile</h4>
+          <p>Chaque carte est un <b>bloc</b> de la grille interne de la tuile. Passez en <b>mode édition</b> (cadenas de la barre d'outils) : une barre de couleur apparaît en haut de chaque bloc, un coin en équerre en bas à droite, et une barre d'outils en haut de la tuile.</p>
+          <ul>
+            <li><b>Déplacer</b> : saisissez la barre de titre du bloc (⠿) et glissez, à la souris ou au doigt. La grille est <b>aimantée</b> : le bloc se pose sur une case, jamais entre deux.</li>
+            <li><b>Redimensionner</b> : tirez le coin en bas à droite du bloc.</li>
+            <li><b>Pas de chevauchement</b> : poser un bloc sur un autre <b>échange</b> leurs places, ou pousse l'autre vers la première place libre (en le rétrécissant si besoin). S'il n'y a de place nulle part, le geste est annulé et la tuile le dit.</li>
+            <li><b>Masquer</b> un bloc : sa croix ✕. C'est la même case que dans la fenêtre de réglages — décochée d'un côté, décochée de l'autre.</li>
+            <li><b>+ Ajouter un bloc</b> : la liste propose les blocs masqués.</li>
+            <li><b>Disposition…</b> : quatre dispositions prêtes — <i>Compacte</i> (par défaut), <i>Classements d'abord</i>, <i>Week-end de course</i> (plan et programme en grand), <i>Saison</i> (classements en grand).</li>
+            <li><b>Réinitialiser</b> revient à la disposition par défaut.</li>
+            <li><b>Copier</b> puis <b>Coller</b> recopie la disposition d'une tuile vers une autre du même genre, sur le même écran.</li>
+          </ul>
+          <p>La tuile elle-même se déplace toujours en la saisissant <b>ailleurs</b> que sur ces commandes, et un appui sur son contenu ouvre toujours ses réglages. Hors mode édition, rien ne bouge sous le doigt : un tableau mural qui se réagence quand on l'effleure serait un tableau cassé.</p>
+          <p>La grille compte <b>12 colonnes sur 12 rangées</b>, proportionnelles à la tuile : agrandir la tuile agrandit tous les blocs dans la même proportion. La disposition est enregistrée <b>dans les réglages de cette tuile</b> : deux tuiles peuvent être disposées différemment. En mode tactile, poignées et boutons grandissent pour le doigt.</p>
+          <p><b>Une seule carte cochée</b> : la tuile devient cette carte, sans cadre ni titre interne, comme avant. Pratique pour poser un classement seul à un autre endroit de la page.</p>
+
+<h4>Ajuster le texte, et changer de disposition selon le moment</h4>
+          <p>Avec <b>Ajuster le texte à chaque bloc</b>, chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Le plan du circuit n'est pas concerné : c'est un dessin, il suit déjà la taille du bloc.</p>
+          <p>Avec <b>Disposition différente pendant les week-ends de course</b>, la tuile garde deux dispositions : <i>Saison</i> le reste du temps, <i>Week-end de course</i> de douze heures avant la première séance jusqu'à trois heures après le départ de la course. Elle bascule d'elle-même. En mode édition, la première liste de la barre d'outils choisit la disposition que vous modifiez — on prépare celle du week-end un mardi.</p>
+
+<h4>Pourquoi pas de classement constructeurs</h4>
+          <p>Au MotoGP, le championnat des constructeurs ne retient, à chaque course, que le <b>meilleur pilote de chaque marque</b>. Il ne se reconstitue pas à partir des totaux de la saison, et le flux ne le publie pas à l'adresse que lit la tuile : plutôt que d'afficher un chiffre faux, la tuile ne le propose pas. Le <b>classement des équipes</b>, lui, est une simple somme des points des pilotes de l'équipe — c'est ce que la tuile calcule, et elle l'indique.</p>
+
+<h4>Une chute n'est pas une dernière place</h4>
+          <p>Le flux range les pilotes non classés à part, sans position. La tuile les affiche <b>« Non classé »</b>, en fin de tableau et estompés : terminer vingtième et tomber au troisième tour ne racontent pas la même course.</p>
+
+<h4>Pas de logos, et c'est voulu</h4>
+          <p>Logos d'équipes et de constructeurs, photos de pilotes et plans officiels sont des marques et des visuels sous droits : PiBoard ne les embarque pas. La <b>couleur du constructeur</b> (Ducati, Aprilia, KTM, Yamaha, Honda), le <b>numéro</b> du pilote et son <b>drapeau</b> font le même travail de reconnaissance.</p>
+
+<h4>Source</h4>
+          <p>Le flux public de <b>motogp.com</b> (api.motogp.pulselive.com), déjà lu par les tuiles <i>Sports mécaniques</i>, <i>Classement</i> et <i>Plan du circuit</i>. Le calendrier et les horaires viennent de la liste des événements de la saison ; classement et résultats, de la partie « résultats » du flux, par appels successifs, comme le site lui-même. La saison et la catégorie ne sont demandées qu'une fois, et des résultats terminés ne sont relus qu'après un nouveau Grand Prix. Un bloc masqué n'est pas demandé. Météo : <b>Open-Meteo</b>.</p>
+
+<h4>Options</h4>
+<p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
+<div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Prochaine manche »</span><span class="help-opt-desc">Le Grand Prix à venir, son circuit, le nombre de tours de la course et du sprint, et un compte à rebours à la seconde. Pendant le week-end, il vise la prochaine SÉANCE — essais, qualifications, sprint — et non la course du dimanche. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Programme du week-end »</span><span class="help-opt-desc">Toutes les séances de la catégorie MotoGP — essais, qualifications 1 et 2, sprint, warm-up, course — avec leur jour et leur heure dans votre fuseau. La séance en cours est mise en avant, les séances passées estompées, le sprint et la course ressortent. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Classement pilotes »</span><span class="help-opt-desc">Position, couleur du constructeur, drapeau, numéro, nom, points et victoires en Grand Prix. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Classement équipes »</span><span class="help-opt-desc">CALCULÉ en additionnant les points des pilotes de chaque équipe, comme le fait le championnat des équipes — le flux ne publie pas ce tableau. Le championnat des constructeurs ne retient que le meilleur pilote de chaque marque à chaque course et ne se reconstitue pas à partir des totaux : il n'est donc pas proposé plutôt que d'être faux. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Derniers résultats »</span><span class="help-opt-desc">L'ordre d'arrivée du dernier Grand Prix couru, avec le temps du vainqueur, les écarts et les points. Un pilote tombé ou qui a abandonné est indiqué comme tel, et non comme une dernière place. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Résultats affichés</span><span class="help-opt-desc">La course du dimanche ou le sprint du samedi : depuis 2023, les deux rapportent des points. Choix : Course du Grand Prix, Sprint. Par défaut : Course du Grand Prix.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Météo du circuit »</span><span class="help-opt-desc">La prévision À L'HEURE DE CHAQUE SÉANCE, une ligne par séance : le temps, la température et la probabilité de pluie — mise en avant dès 30 %, parce qu'à moto la pluie change tout. Au-delà de sept jours, un tiret. Source : Open-Meteo, gratuit et sans clé. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Plan du circuit »</span><span class="help-opt-desc">Le tracé du circuit du week-end, dessiné par la tuile Plan du circuit elle-même, réglée pour suivre le calendrier de MotoGP : ruban d'asphalte, vibreurs, virages numérotés, sens de la course. Le Mans-Bugatti n'a pas encore de tracé dans la base ; sa fiche technique est affichée à la place. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Fiche technique sous le plan</span><span class="help-opt-desc">Les chiffres officiels du MotoGP, tirés de la base des circuits : longueur du tracé MotoGP, virages à gauche et à droite, plus longue ligne droite. Décochez-la pour laisser toute la place au tracé. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Compte à rebours sur le plan</span><span class="help-opt-desc">La prochaine séance et le temps restant, posés sur le coin du plan. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Pilotes affichés</span><span class="help-opt-desc">De 3 à 30, par défaut 10.</span></div>
+<div class="help-opt"><span class="help-opt-name">Équipes affichées</span><span class="help-opt-desc">De 3 à 12, par défaut 11.</span></div>
+<div class="help-opt"><span class="help-opt-name">Lignes de résultats</span><span class="help-opt-desc">De 3 à 30, par défaut 10.</span></div>
+<div class="help-opt"><span class="help-opt-name">Couleurs des constructeurs</span><span class="help-opt-desc">Une pastille de la couleur du constructeur (Ducati, Aprilia, KTM, Yamaha, Honda) devant chaque pilote. Les logos sont des marques déposées et ne sont pas embarqués. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Style des cartes</span><span class="help-opt-desc">« Thème de la page » garde les cartes cohérentes avec le tableau. « Piste sombre » leur donne un noir profond et un liseré orange. « Couleur choisie » utilise la couleur ci-dessous. Le réglage ne concerne QUE cette tuile. Choix : Thème de la page, Piste sombre, Couleur choisie. Par défaut : Thème de la page.</span></div>
+<div class="help-opt"><span class="help-opt-name">Couleur des cartes</span><span class="help-opt-desc">Utilisée seulement si le style ci-dessus est « Couleur choisie ». Par défaut : « #12151c ».</span></div>
+<div class="help-opt"><span class="help-opt-name">Ajuster le texte à chaque bloc</span><span class="help-opt-desc">Chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Décochez pour garder partout la même taille de texte. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Disposition différente pendant les week-ends de course</span><span class="help-opt-desc">Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez. Désactivé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Rafraîchir toutes les (minutes)</span><span class="help-opt-desc">Un classement ne bouge qu'après un Grand Prix, et des résultats terminés ne sont relus qu'une fois un nouveau Grand Prix couru. Le compte à rebours s'égrène à la seconde sans rien demander au réseau. De 5 à 360, par défaut 30.</span></div>
+`,
+        en: `
+<span class="help-size">Size: 4×4 by default, from 2×2 to 12×16 — a tile of 8×8 or more gives the inner grid its full measure</span>
+
+<h4>Purpose</h4>
+<p>The Formula 1 tile's counterpart for MotoGP: the whole Grand Prix weekend on one tile, in blocks you arrange yourself.</p>
+<p><b>What the tile can do:</b></p>
+<ul>
+  <li><b>Seven blocks</b> shown or hidden: next round with countdown, weekend timetable in your time zone, rider standings, team standings, last results (race or sprint), circuit weather, <b>circuit map</b>.</li>
+  <li>The same <b>inner grid</b> as the Formula 1 tile: move, resize and hide blocks in edit mode, with the mouse or a finger.</li>
+  <li><b>Ready-made layouts</b>, return to the default layout, copy-paste between MotoGP tiles, and <b>layout by moment</b> (season / race weekend).</li>
+  <li><b>Text fitted to each block</b>.</li>
+  <li>The <b>circuit map</b> is the Circuit map tile's, set to the MotoGP calendar.</li>
+  <li>A rider who crashed is shown "Not classified", not as a last place; the weather is for each session's hour.</li>
+  <li>Data from <b>motogp.com</b>'s public feed, no key or account.</li>
+</ul>
+
+<h4>The seven blocks</h4>
+          <div class="help-opt"><span class="help-opt-name">Next round</span><span class="help-opt-desc">The upcoming Grand Prix, its circuit, the race and sprint lap counts, and a <b>countdown to the second</b> to the next <b>session</b> — practice, qualifying, sprint — not only to Sunday's race.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Weekend timetable</span><span class="help-opt-desc">The <b>MotoGP class</b> sessions (Free Practice 1, Practice, Free Practice 2, Qualifying 1 and 2, Sprint, Warm-up, Race) in your time zone. Moto2 and Moto3 are left out: they would double the list without answering the question one asks of a MotoGP tile — the <i>Motorsport schedule</i> tile can show every class.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Rider standings</span><span class="help-opt-desc">Position, maker colour, flag, number, name, points and Grand Prix wins.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Team standings</span><span class="help-opt-desc"><b>Computed</b> by adding up each team's riders' points, as the team championship does: the feed does not publish this table. The block says so under the table.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Last results</span><span class="help-opt-desc">The finishing order of the last Grand Prix run — <b>the race or the sprint</b>, as you choose — with the winner's time, the gaps and the points.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Circuit weather</span><span class="help-opt-desc">The forecast <b>for each session's hour</b>: condition, temperature and chance of rain, highlighted from 30%.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Circuit map</span><span class="help-opt-desc">The weekend's circuit outline, drawn by the <b>Circuit map</b> tile set to "Follow the MotoGP calendar", with the official MotoGP figures in the spec sheet and the next session's countdown on its corner.</span></div>
+
+<h4>Arranging the blocks inside the tile</h4>
+          <p>Each card is a <b>block</b> of the tile's inner grid. Switch to <b>edit mode</b> (the padlock in the toolbar): a coloured bar appears at the top of every block, a corner bracket at its bottom right, and a toolbar at the top of the tile.</p>
+          <ul>
+            <li><b>Move</b>: grab the block's title bar (⠿) and drag, with the mouse or a finger. The grid <b>snaps</b>: a block lands on a cell, never between two.</li>
+            <li><b>Resize</b>: pull the block's bottom-right corner.</li>
+            <li><b>No overlap</b>: dropping a block on another <b>swaps</b> them, or pushes the other one to the first free spot (shrinking it if needed). If there is room nowhere, the gesture is cancelled and the tile says so.</li>
+            <li><b>Hide</b> a block: its ✕ cross. It is the same box as in the settings window — unticked on one side, unticked on the other.</li>
+            <li><b>+ Add a block</b>: the list offers the hidden blocks.</li>
+            <li><b>Layout…</b>: four ready-made layouts — <i>Compact</i> (default), <i>Standings first</i>, <i>Race weekend</i> (map and timetable large), <i>Season</i> (standings large).</li>
+            <li><b>Reset</b> returns to the default layout.</li>
+            <li><b>Copy</b> then <b>Paste</b> carries the layout from one tile to another of the same kind, on the same screen.</li>
+          </ul>
+          <p>The tile itself still moves when grabbed <b>anywhere else</b> than on these controls, and a press on its content still opens its settings. Outside edit mode nothing moves under a finger: a wall board that rearranges itself when brushed would be a broken board.</p>
+          <p>The grid has <b>12 columns by 12 rows</b>, proportional to the tile: enlarging the tile enlarges every block in the same proportion. The layout is saved <b>in this tile's settings</b>: two tiles can be arranged differently. In touch mode, handles and buttons grow for the finger.</p>
+          <p><b>A single card ticked</b>: the tile becomes that card, with no frame or inner title, as before. Handy to place a standings table on its own elsewhere on the page.</p>
+
+<h4>Fitting the text, and changing layout with the moment</h4>
+          <p>With <b>Fit text to each block</b>, each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls rather than shrinking further. The circuit map is not concerned: it is a drawing and already follows the block's size.</p>
+          <p>With <b>Different layout during race weekends</b>, the tile keeps two layouts: <i>Season</i> the rest of the time, <i>Race weekend</i> from twelve hours before the first session until three hours after the race start. It switches by itself. In edit mode, the toolbar's first list chooses which layout you are editing — one prepares the weekend's on a Tuesday.</p>
+
+<h4>Why no makers' standings</h4>
+          <p>In MotoGP the makers' championship only counts, at each race, <b>each brand's best rider</b>. It cannot be rebuilt from season totals, and the feed does not publish it at the address the tile reads: rather than show a wrong figure, the tile does not offer it. The <b>team standings</b>, on the other hand, are a plain sum of the team riders' points — which is what the tile computes, and says.</p>
+
+<h4>A crash is not a last place</h4>
+          <p>The feed keeps unclassified riders apart, with no position. The tile shows them <b>"Not classified"</b>, at the end of the table and dimmed: finishing twentieth and crashing on lap three are not the same race.</p>
+
+<h4>No logos, deliberately</h4>
+          <p>Team and maker logos, rider photos and official maps are trademarks and copyrighted visuals: PiBoard does not embed them. The <b>maker's colour</b> (Ducati, Aprilia, KTM, Yamaha, Honda), the rider's <b>number</b> and <b>flag</b> do the same recognition job.</p>
+
+<h4>Source</h4>
+          <p><b>motogp.com</b>'s public feed (api.motogp.pulselive.com), already read by the <i>Motorsport schedule</i>, <i>Standings</i> and <i>Circuit map</i> tiles. Calendar and session times come from the season's event list; standings and results from the feed's "results" part, by successive calls, as the site itself does. Season and category are asked only once, and finished results are re-read only after a new Grand Prix. A hidden block is not requested. Weather: <b>Open-Meteo</b>.</p>
+
+<h4>Options</h4>
+<p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
+<div class="help-opt"><span class="help-opt-name">Season</span><span class="help-opt-desc">Empty = current season. A year (2024, 2025…) to look at a past season.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Next round" card</span><span class="help-opt-desc">The upcoming Grand Prix, its circuit, its race and sprint lap counts, and a countdown to the second. During the weekend the countdown targets the next SESSION -- practice, qualifying, sprint -- rather than Sunday's race. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Weekend timetable" card</span><span class="help-opt-desc">Every MotoGP-class session -- practice, qualifying 1 and 2, sprint, warm-up, race -- with its day and time in your own time zone. The live session is highlighted, past ones dimmed, the sprint and the race stand out. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Rider standings" card</span><span class="help-opt-desc">Position, maker colour, flag, race number, name, points and Grand Prix wins. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Team standings" card</span><span class="help-opt-desc">COMPUTED by adding up each team's riders' points, as the team championship does -- the feed does not publish this table. The makers' championship counts only each brand's best rider per race and cannot be rebuilt from totals, so it is not offered rather than being wrong. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Last results" card</span><span class="help-opt-desc">The finishing order of the last Grand Prix run, with the winner's time, the gaps and the points. A rider who crashed or retired is shown as such, not as a last place. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Results shown</span><span class="help-opt-desc">Sunday's race or Saturday's sprint: since 2023 both award points. Choices: Grand Prix race, Sprint. Default: Grand Prix race.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Circuit weather" card</span><span class="help-opt-desc">The forecast AT EACH SESSION'S HOUR, one row per session: condition, temperature and chance of rain -- highlighted from 30 %, because on two wheels rain changes everything. Beyond seven days, a dash. Source: Open-Meteo, free and keyless. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Circuit map" card</span><span class="help-opt-desc">The outline of the weekend's circuit, drawn by the Circuit map tile itself, set to follow the MotoGP calendar: asphalt ribbon, kerbs, numbered corners, racing direction. Le Mans-Bugatti still has no outline in the base; its spec sheet is shown instead. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Spec sheet under the map</span><span class="help-opt-desc">Official MotoGP figures from the circuit base: length of the MotoGP layout, left and right corners, longest straight. Untick it to give the outline all the room. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Countdown on the map</span><span class="help-opt-desc">The next session and the time left, laid on the corner of the map. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Riders shown</span><span class="help-opt-desc">From 3 to 30, default 10.</span></div>
+<div class="help-opt"><span class="help-opt-name">Teams shown</span><span class="help-opt-desc">From 3 to 12, default 11.</span></div>
+<div class="help-opt"><span class="help-opt-name">Results rows</span><span class="help-opt-desc">From 3 to 30, default 10.</span></div>
+<div class="help-opt"><span class="help-opt-name">Maker colours</span><span class="help-opt-desc">A chip in the maker's colour (Ducati, Aprilia, KTM, Yamaha, Honda) before each rider. Logos are registered trademarks and are not embedded. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Card style</span><span class="help-opt-desc">"Page theme" keeps the cards consistent with the board. "Dark track" gives them a deep black with an orange edge. "Chosen colour" uses the colour below. The setting affects THIS tile only. Choices: Page theme, Dark track, Chosen colour. Default: Page theme.</span></div>
+<div class="help-opt"><span class="help-opt-name">Card colour</span><span class="help-opt-desc">Used only when the style above is "Chosen colour". Default: "#12151c".</span></div>
+<div class="help-opt"><span class="help-opt-name">Fit text to each block</span><span class="help-opt-desc">Each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls instead of shrinking further. Untick to keep the same text size everywhere. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Different layout during race weekends</span><span class="help-opt-desc">Two layouts instead of one: a "Season" layout, and a "Race weekend" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Refresh every (minutes)</span><span class="help-opt-desc">Standings only move after a Grand Prix, and finished results are not re-read until a new one has been run. The countdown ticks every second without asking the network for anything. From 5 to 360, default 30.</span></div>
 `
       }
     },

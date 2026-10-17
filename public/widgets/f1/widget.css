@@ -452,3 +452,93 @@
   .pw-f1 .pwf1-wx-when { display: none; }
   .pw-f1 .pwf1-wx { grid-template-columns: minmax(0, 1fr) auto auto auto; }
 }
+
+/* ============================================================
+   1.151.0 — LA GRILLE INTERNE
+   Plusieurs cartes cochees : chaque carte est un bloc de la grille
+   interne (innergrid.css), que l'on deplace et redimensionne en mode
+   edition. La tuile ne range donc plus ses cartes en colonnes
+   automatiques : c'est la grille qui decide, et la carte remplit son
+   bloc.
+   Several cards ticked: each one is a block of the inner grid, moved and
+   resized in edit mode. The tile no longer flows its cards into automatic
+   columns: the grid decides, and the card fills its block.
+   ============================================================ */
+.pw-f1.pwf1-grid {
+  display: block;
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+}
+.pw-f1.pwf1-grid .pwf1-card {
+  min-height: 100%;
+  box-sizing: border-box;
+}
+.pw-f1.pwf1-grid .pwf1-stale {
+  position: absolute;
+  left: 6px;
+  bottom: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--tile);
+  font-size: .8em;
+  z-index: 4;
+}
+/* En piste sombre, la gouttiere entre deux blocs reste celle de la
+   tuile : on ne repeint pas le fond entier, seulement les cartes. */
+
+/* ---------- Le bloc « Plan du circuit » ----------
+   Le plan vient de la tuile Plan du circuit, hebergee telle quelle dans
+   la carte. La carte ne fait que lui donner TOUTE la hauteur : le
+   dessin est vectoriel et suit la taille du bloc.
+   The map comes from the Circuit map tile, hosted as is. The card only
+   gives it ALL the height. */
+.pw-f1 .pwf1-circ-card {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  box-sizing: border-box;
+}
+.pw-f1 .pwf1-circ-wrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pw-f1 .pwf1-circ-slot,
+.pw-f1 .pwf1-circ-host {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.pw-f1 .pwf1-circ-host > .pw-circuit { flex: 1 1 auto; min-height: 0; }
+.pw-f1.pwf1-solo .pwf1-circ-card { height: 100%; }
+
+/* Le compte a rebours pose sur le coin du plan : un cartouche discret,
+   lisible sur le fond de plan clair comme sombre.
+   The countdown laid on the map's corner. */
+.pw-f1 .pwf1-circ-cd {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--tile, #141926) 82%, transparent);
+  border: 1px solid var(--tile-edge);
+  pointer-events: none;
+}
+.pw-f1 .pwf1-circ-cd-label {
+  font-size: .72em;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+}
+.pw-f1 .pwf1-cd.pwf1-circ-cd-time { font-size: 1.05em; }
+.pw-f1.pwf1-skin-dark .pwf1-circ-cd { background: rgba(18, 21, 28, .85); }

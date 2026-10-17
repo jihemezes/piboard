@@ -2746,6 +2746,55 @@ function catalogItemFor(catalog, document, widgetId) {
   document.querySelector("#tileModal .modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("modale refermee par la croix", document.getElementById("tileModal").hidden === true);
 
+  /* ---------- GRILLE INTERNE DANS LE VRAI TABLEAU (1.151.0) ----------
+     La tuile Formule 1 est montee DANS une vraie tuile du tableau, en
+     mode edition, par le vrai PiBoard (embedWidget, evenement d'edition,
+     Gridstack). Ce qui est verifie : les commandes des blocs ne
+     declenchent PAS les gestes de la tuile -- ouvrir ses reglages au
+     clic --, et le plan du circuit est bien la tuile Plan du circuit
+     hebergee. THE INNER GRID IN THE REAL BOARD: block controls must not
+     trigger the tile's own gestures, and the circuit map is the hosted
+     Circuit map tile. */
+  console.log("== Grille interne de la tuile Formule 1, dans le vrai tableau (1.151.0) ==");
+  {
+    assert("PiBoard sait heberger une tuile dans une tuile", typeof window.PiBoard.embedWidget === "function");
+    assert("et dit si le mode edition est actif", window.PiBoard.isEditing() === true);
+    const body1 = item1.querySelector(".tile-body");
+    const keepHtml = body1.innerHTML;
+    const host = document.createElement("div");
+    host.style.height = "100%";
+    body1.innerHTML = "";
+    body1.appendChild(host);
+    const f1 = window.PiBoard.embedWidget("f1", host, { showWeather: false });
+    assert("la tuile Formule 1 s'heberge", !!f1);
+    await sleep(400);
+    const root = host.querySelector(".pig-root");
+    assert("plusieurs cartes : la tuile monte sa grille interne", !!root && !!host.querySelector(".pw-f1.pwf1-grid"));
+    assert("la grille sait d'emblee que l'edition est en cours", root.classList.contains("pig-editing"));
+    const blocks = host.querySelectorAll(".pig-block");
+    assert("un bloc par carte cochee, plan du circuit compris", blocks.length === 6 && !!host.querySelector('.pig-block[data-block="circuit"]'));
+    assert("chaque bloc a sa barre de deplacement et son coin", host.querySelectorAll(".pig-bar").length === 6 && host.querySelectorAll(".pig-resize").length === 6);
+    assert("le plan du circuit EST la tuile Plan du circuit, hebergee", !!host.querySelector('.pig-block[data-block="circuit"] .pw-circuit'));
+    assert("le compte a rebours est pose sur le plan", !!host.querySelector(".pwf1-circ-cd [data-cd]"));
+
+    document.getElementById("tileModal").hidden = true;
+    host.querySelector(".pig-bar").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("un clic sur la barre d'un bloc n'ouvre pas les reglages de la tuile", document.getElementById("tileModal").hidden === true);
+    host.querySelector(".pig-tools .pig-reset").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("ni un clic dans la barre d'outils de la grille", document.getElementById("tileModal").hidden === true);
+
+    const before = host.querySelectorAll(".pig-block").length;
+    host.querySelector('.pig-block[data-block="constructors"] .pig-x').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    assert("la croix retire le bloc de la grille", host.querySelectorAll(".pig-block").length === before - 1
+      && !host.querySelector('.pig-block[data-block="constructors"]'));
+    assert("et le propose dans « Ajouter un bloc »", !!host.querySelector('.pig-add option[value="constructors"]'));
+    assert("le plan du circuit a survecu au nouveau rendu", !!host.querySelector('.pig-block[data-block="circuit"] .pw-circuit'));
+
+    window.PiBoard.__f1Probe = { f1, host };
+    body1.innerHTML = keepHtml;
+  }
+
   console.log("== Aide d'un widget depuis sa fenetre de configuration ==");
   {
     // Ouvre les reglages de la tuile Horloge par son engrenage.
@@ -9708,7 +9757,7 @@ function catalogItemFor(catalog, document, widgetId) {
         /\.pw-f1\.pwf1-skin-dark/.test(css) && !/^\s*body\s*\{/m.test(css));
       assert("en carte unique, le fond sombre va jusqu'au bord",
         /\.pw-f1\.pwf1-skin-dark\.pwf1-solo/.test(css));
-      assert("le plan du circuit a quitte la tuile Formule 1",
+      assert("le dessin du trace n'est pas recopie dans la tuile Formule 1 (il vient de la tuile Plan du circuit)",
         !/pwf1-circ-track|pwf1-circ-label/.test(css));
       const man = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/f1/manifest.json"), "utf8"));
       const style = man.settings.find((x) => x.key === "cardStyle");
@@ -9747,6 +9796,10 @@ function catalogItemFor(catalog, document, widgetId) {
       document.body.appendChild(host);
       const before = FETCHES.filter((u) => /jolpi/.test(u)).length;
       const racingBefore = PROXIED_RACING.length;
+      /* Compte LOCAL : d'autres tuiles (la Formule 1 qui heberge un plan,
+         plus haut) ont pu interroger Overpass avant. Local count: other
+         tiles may have queried Overpass earlier. */
+      const overpassBefore = FETCHES.filter((u) => /overpass/.test(u)).length;
       const w = new Klass({ el: host, settings: { circuit: "sepang", showWeather: false }, i18n, api });
       w.init();
       await sleep(200);
@@ -9754,7 +9807,7 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("la base est demandee au serveur, pas au depot",
         CIRCUIT_CATALOG_CALLS.length >= 1);
       assert("le trace vient de la base, sans passer par Overpass",
-        !FETCHES.some((u) => /overpass/.test(u)) && !!host.querySelector(".pwcir-track"));
+        FETCHES.filter((u) => /overpass/.test(u)).length === overpassBefore && !!host.querySelector(".pwcir-track"));
       assert("un circuit epingle n'interroge pas le calendrier des courses",
         FETCHES.filter((u) => /jolpi/.test(u)).length === before && PROXIED_RACING.length === racingBefore);
       assert("la voie des stands est distinguee de la piste",
@@ -9981,6 +10034,20 @@ function catalogItemFor(catalog, document, widgetId) {
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));
+  {
+    /* La tuile Formule 1 montee plus haut a entendu la sortie d'edition :
+       ses poignees doivent avoir disparu, sans qu'on la previenne.
+       The F1 tile mounted above heard edit mode end by itself. */
+    const probe = window.PiBoard.__f1Probe;
+    if (probe) {
+      document.body.appendChild(probe.host);
+      const root = probe.host.querySelector(".pig-root");
+      assert("hors edition, la grille interne range ses poignees d'elle-meme", !!root && !root.classList.contains("pig-editing"));
+      probe.f1.destroy();
+      assert("detruite, la tuile Formule 1 emporte sa grille", !probe.host.querySelector(".pig-root"));
+      probe.host.remove();
+    }
+  }
 
   console.log(process.exitCode ? "\n>>> ECHECS DETECTES" : "\n>>> TOUS LES TESTS PASSENT");
   window.close();

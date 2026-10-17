@@ -1,20 +1,20 @@
 {
-  "_comment_fr": "POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes.",
-  "_comment_en": "TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests.",
+  "_comment_fr": "DISPOSER LES CARTES : en mode édition, chaque carte est un bloc de la grille interne de la tuile. On le déplace par sa barre de titre, on le redimensionne par son coin, on le masque par sa croix, et la barre d'outils de la tuile rajoute un bloc masqué, applique une disposition prédéfinie, revient à celle par défaut, ou copie la disposition vers une autre tuile Formule 1. La disposition est enregistrée dans les réglages de CETTE tuile.",
+  "_comment_en": "ARRANGING THE CARDS: in edit mode each card is a block of the tile's inner grid. Move it by its title bar, resize it by its corner, hide it with its cross; the tile's toolbar adds a hidden block back, applies a preset layout, returns to the default one, or copies the layout to another Formula 1 tile. The layout is saved in THIS tile's settings.",
   "id": "f1",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
   },
   "titleBar": true,
   "description": {
-    "en": "A Formula 1 dashboard as cards you show or hide: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings and the last race's results. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every card.",
-    "fr": "Tableau de bord Formule 1 en cartes que l'on affiche ou non : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs et résultats de la dernière course. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente toutes les cartes."
+    "en": "A Formula 1 dashboard as blocks you arrange yourself: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings, the last race's results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every block.",
+    "fr": "Tableau de bord Formule 1 en blocs que l'on dispose soi-même : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs, résultats de la dernière course, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente tous les blocs."
   },
   "tagline": {
-    "en": "The F1 weekend, card by card.",
-    "fr": "Le week-end de F1, carte par carte."
+    "en": "The F1 weekend, arranged your way.",
+    "fr": "Le week-end de F1, disposé à votre façon."
   },
   "size": {
     "w": 4,
@@ -47,8 +47,8 @@
         "fr": "Carte « Prochaine course »"
       },
       "hint": {
-        "en": "The upcoming Grand Prix, its circuit, its country, and a countdown to the second. During the weekend the countdown targets the next SESSION rather than the race. TO ARRANGE THE CARDS FREELY: tick only ONE card and place as many Formula 1 tiles as you want cards. A single-card tile shows neither frame nor inner title — it becomes that card — and moves and resizes like any tile, using PiBoard's own grid. Cards are not draggable inside a tile, and rebuilding a grid inside the grid would be absurd. The relay shares its cache: five tiles do not cost five times the requests.",
-        "fr": "Le Grand Prix à venir, son circuit, son pays, et un compte à rebours à la seconde jusqu'au départ. Pendant le week-end, le compte à rebours vise la prochaine SÉANCE et non la course : savoir que les qualifications commencent dans vingt minutes est plus utile qu'un compte à rebours de deux jours. POUR DISPOSER LES CARTES LIBREMENT : ne cochez qu'UNE carte et posez autant de tuiles Formule 1 que de cartes voulues. Une tuile à carte unique n'affiche ni cadre ni titre interne — elle devient cette carte — et se déplace et se redimensionne comme n'importe quelle tuile, avec la grille de PiBoard. Les cartes ne sont pas déplaçables à l'intérieur d'une tuile, et il serait absurde de rebâtir une grille dans la grille. Le relais serveur partage son cache : cinq tuiles ne coûtent pas cinq fois plus de requêtes."
+        "en": "The upcoming Grand Prix, its circuit, its country, and a countdown to the second. During the weekend the countdown targets the next SESSION rather than the race: knowing qualifying starts in twenty minutes beats a two-day countdown.",
+        "fr": "Le Grand Prix à venir, son circuit, son pays, et un compte à rebours à la seconde jusqu'au départ. Pendant le week-end, le compte à rebours vise la prochaine SÉANCE et non la course : savoir que les qualifications commencent dans vingt minutes est plus utile qu'un compte à rebours de deux jours."
       }
     },
     {
@@ -106,6 +106,45 @@
       "hint": {
         "en": "The forecast AT EACH SESSION'S HOUR, not the weather right now: what one comes for is whether it will rain during qualifying, not what the sky looks like over the circuit on a Tuesday. One row per session, with the condition, the temperature and the chance of rain -- the only figure highlighted, because in Formula 1 it is the one that changes a race. The forecast reaches seven days, so a session further out keeps its row with a dash rather than being hidden. Source: Open-Meteo, free and without a key, the same as the Weather tile.",
         "fr": "La prévision À L'HEURE DE CHAQUE SÉANCE, et non la météo de l'instant : ce qu'on vient chercher, c'est s'il pleuvra pendant les qualifications, pas le temps qu'il fait sur le circuit un mardi. Une ligne par séance, avec le temps, la température et la probabilité de pluie — le seul chiffre mis en avant, parce qu'en Formule 1 c'est celui qui change une course. La prévision porte à sept jours : une séance plus lointaine garde sa ligne avec un tiret plutôt que d'être masquée. Source : Open-Meteo, gratuit et sans clé, comme la tuile Météo."
+      }
+    },
+    {
+      "key": "showCircuit",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Circuit map\" card",
+        "fr": "Carte « Plan du circuit »"
+      },
+      "hint": {
+        "en": "The outline of the weekend's circuit, drawn by the Circuit map tile itself and reused as is: asphalt ribbon, red-and-white kerbs, numbered corners, racing direction and pit lane. It follows the Formula 1 calendar and switches by itself from one weekend to the next. The drawing is vector-based and follows the size of its block.",
+        "fr": "Le tracé du circuit du week-end, dessiné par la tuile Plan du circuit elle-même et réutilisé tel quel : ruban d'asphalte, vibreurs rouge et blanc, virages numérotés, sens de la course et voie des stands. Il suit le calendrier de Formule 1 et change de lui-même d'un week-end à l'autre. Le dessin est vectoriel et suit la taille de son bloc."
+      }
+    },
+    {
+      "key": "circuitSpecs",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Spec sheet under the map",
+        "fr": "Fiche technique sous le plan"
+      },
+      "hint": {
+        "en": "Length, corners, race laps, race distance and lap record, from the circuit base -- the same sheet as the Circuit map tile. Untick it to give the outline all the room.",
+        "fr": "Longueur, virages, nombre de tours, distance de course et record du tour, tirés de la base des circuits — la même fiche que la tuile Plan du circuit. Décochez-la pour laisser toute la place au tracé."
+      }
+    },
+    {
+      "key": "circuitCountdown",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Countdown on the map",
+        "fr": "Compte à rebours sur le plan"
+      },
+      "hint": {
+        "en": "The next session and the time left, laid on the corner of the map: during a race weekend it is the pair one looks at -- where, and how long until.",
+        "fr": "La prochaine séance et le temps restant, posés sur le coin du plan : pendant un week-end de course, c'est le duo qu'on regarde — où, et dans combien de temps."
       }
     },
     {
@@ -205,6 +244,32 @@
       "hint": {
         "en": "Used only when the style above is \"Chosen colour\".",
         "fr": "Utilisée seulement si le style ci-dessus est « Couleur choisie »."
+      }
+    },
+    {
+      "key": "autoFit",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Fit text to each block",
+        "fr": "Ajuster le texte à chaque bloc"
+      },
+      "hint": {
+        "en": "Each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls instead of shrinking further. Untick to keep the same text size everywhere.",
+        "fr": "Chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Décochez pour garder partout la même taille de texte."
+      }
+    },
+    {
+      "key": "autoLayout",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Different layout during race weekends",
+        "fr": "Disposition différente pendant les week-ends de course"
+      },
+      "hint": {
+        "en": "Two layouts instead of one: a \"Season\" layout, and a \"Race weekend\" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing.",
+        "fr": "Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez."
       }
     },
     {

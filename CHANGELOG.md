@@ -1,5 +1,53 @@
 # Changelog
 
+## 1.151.0
+
+- **Tuile Formule 1 : une grille dans la tuile.** En mode édition, chaque carte
+  devient un bloc que l'on déplace par sa barre de titre et que l'on
+  redimensionne par son coin, à la souris ou au doigt, à l'intérieur de la
+  tuile. Grille aimantée de 12 × 12 cases proportionnelle à la tuile (agrandir
+  la tuile agrandit les blocs), sans chevauchement : poser un bloc sur un autre
+  les échange ou pousse l'autre à la première place libre, et le geste est
+  annulé s'il n'y a de place nulle part. Hors mode édition, rien ne bouge. La
+  tuile elle-même se déplace toujours en la saisissant ailleurs que sur les
+  commandes des blocs, et un appui sur son contenu ouvre toujours ses réglages.
+- Barre d'outils d'édition de la tuile : **+ Ajouter un bloc** (blocs masqués),
+  **Disposition…** (Compacte, Classements d'abord, Week-end de course,
+  Saison), **Réinitialiser**, **Copier / Coller** une disposition d'une tuile
+  à l'autre. La croix d'un bloc décoche la même case que la fenêtre de
+  réglages. La disposition est enregistrée dans les réglages de chaque tuile.
+- Nouveaux réglages : **Ajuster le texte à chaque bloc** (activé : chaque bloc
+  prend la plus grande taille de texte qui tient sans défiler, entre 0,7 et
+  1,6) et **Disposition différente pendant les week-ends de course**
+  (désactivé : deux dispositions, Saison et Week-end, bascule automatique de
+  12 h avant la première séance à 3 h après le départ ; en édition, la
+  première liste de la barre d'outils choisit celle que l'on modifie).
+- **Bloc « Plan du circuit »** : la tuile Plan du circuit est hébergée telle
+  quelle dans le bloc (base de circuits, ruban d'asphalte, virages numérotés),
+  sans rien recopier. Réglages « Carte « Plan du circuit » », « Fiche
+  technique sous le plan » et « Compte à rebours sur le plan » (prochaine
+  séance posée sur le coin du plan).
+- **Nouvelle tuile MotoGP**, bâtie sur la même grille : prochaine manche (tours
+  de la course et du sprint, compte à rebours), programme du week-end de la
+  catégorie reine, classement pilotes, classement équipes (calculé, et dit
+  comme tel ; pas de classement constructeurs, qui serait faux), derniers
+  résultats de la course ou du sprint (« Non classé » pour une chute), météo à
+  l'heure de chaque séance et plan du circuit (tuile Plan du circuit sur le
+  calendrier MotoGP). Flux public de motogp.com ; saison et catégorie lues une
+  fois, résultats relus seulement après un nouveau Grand Prix.
+- Socle commun `public/innergrid.js` / `innergrid.css` (classes `pig-`),
+  réutilisable par toute tuile à tableaux multiples. PiBoard émet l'événement
+  `piboard:editing` à chaque bascule du mode édition et expose
+  `PiBoard.embedWidget()` (une tuile dans une tuile) et `PiBoard.isEditing()`.
+  En mode tactile, poignées et boutons des blocs passent à ~40 px.
+- Aide : fiches Formule 1 et MotoGP (FR/EN), bouton Mode édition du tiroir.
+  Tests `innerGrid.test.js` (gestes réels de glisser/redimensionner, échange,
+  refus faute de place, masquer/ajouter, dispositions, copier-coller, moments,
+  ajustement du texte) et `motogp.test.js` ; scénario dans `dom-smoke.js` (la
+  tuile Formule 1 montée dans une vraie tuile en mode édition). Le test
+  `f1Circuit.test.js`, qui pointait encore l'ancien emplacement du dessin du
+  tracé et échouait depuis la 1.139.0, vise désormais la tuile Plan du circuit.
+
 ## 1.150.0
 
 - **Tuile Logo / Image : animations.** Nouveau réglage « Animation » :

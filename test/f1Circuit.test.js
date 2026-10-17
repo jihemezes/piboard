@@ -31,8 +31,14 @@ const sandbox = {
 };
 sandbox.globalThis = sandbox;
 vm.createContext(sandbox);
-vm.runInContext(fs.readFileSync(__dirname + "/../public/widgets/f1/widget.js", "utf8"), sandbox);
-const H = sandbox.window.PiBoardF1Helpers;
+/* Le dessin du trace a quitte la tuile Formule 1 en 1.139.0 pour la
+   tuile Plan du circuit, que la Formule 1 HEBERGE depuis 1.151.0 au lieu
+   de le recopier : c'est donc la que ces fonctions se testent. Le test
+   pointait encore l'ancien fichier et echouait depuis.
+   The outline drawing left the Formula 1 tile for the Circuit map tile,
+   which Formula 1 HOSTS since 1.151.0: the functions are tested there. */
+vm.runInContext(fs.readFileSync(__dirname + "/../public/widgets/circuit/widget.js", "utf8"), sandbox);
+const H = sandbox.window.PiBoardCircuitHelpers;
 assert.ok(H && H.parseCircuit, "les fonctions pures du plan doivent etre exposees");
 
 /* Reponse Overpass calquee sur le vrai service (verifie sur Sepang :

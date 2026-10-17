@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.150.0
+   Version 1.151.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -119,6 +119,54 @@
     toneOf(el) {
       const host = el && el.closest ? el.closest("[data-tone]") : null;
       return (host && host.dataset.tone) || document.body.dataset.theme || "dark";
+    },
+    /* Le mode edition est-il actif ? Les tuiles a grille interne
+       (Formule 1, MotoGP) n'autorisent le deplacement de leurs blocs
+       qu'en edition ; elles ecoutent aussi l'evenement
+       « piboard:editing » emis a chaque bascule.
+       Is edit mode on? Tiles with an inner grid only let their blocks
+       move while editing; they also listen to the "piboard:editing"
+       event fired on every toggle. */
+    isEditing() { return editing; },
+    /* UNE TUILE DANS UNE TUILE (1.151.0). La tuile Formule 1 affiche le
+       plan du circuit en REUTILISANT la tuile Plan du circuit telle
+       quelle, plutot qu'en recopiant ses mille lignes de dessin : une
+       correction du trace profite ainsi aux deux. La tuile hote fournit
+       l'element et les reglages, et doit appeler `destroy()` sur
+       l'instance rendue quand elle disparait.
+       A TILE INSIDE A TILE (1.151.0). The Formula 1 tile shows the
+       circuit map by REUSING the Circuit map tile as is, rather than
+       copying its thousand lines of drawing code: a fix to the outline
+       then benefits both. The host supplies the element and settings,
+       and must call destroy() on the returned instance when it goes. */
+    embedWidget(id, el, overrides) {
+      const Klass = widgetClasses.get(id);
+      const manifest = catalog.find((m) => m.id === id) || null;
+      if (!Klass || !el) return null;
+      const embedded = {
+        el,
+        settings: Object.assign({}, defaultsFor(manifest), overrides || {}),
+        instanceId: "embed-" + id + "-" + Math.random().toString(36).slice(2, 8),
+        manifest,
+        api: widgetApi,
+        assetUrl(file) {
+          const bust = assetVersion ? "?v=" + encodeURIComponent(assetVersion) : "";
+          return "widgets/" + (manifest ? manifest.dir : id) + "/" + String(file) + bust;
+        },
+        /* Une tuile hebergee n'a pas de reglages enregistres a elle : ce
+           sont ceux de la tuile hote qui la pilotent.
+           A hosted tile has no saved settings of its own. */
+        updateSettings(patch) { embedded.settings = Object.assign({}, embedded.settings, patch || {}); },
+        i18n
+      };
+      try {
+        const instance = new Klass(embedded);
+        Promise.resolve(instance.init()).catch((e) => console.warn("[piboard] embedded widget init failed:", id, e));
+        return instance;
+      } catch (e) {
+        console.warn("[piboard] embedded widget failed:", id, e);
+        return null;
+      }
     }
   };
 
@@ -4341,7 +4389,7 @@
        unclassified and therefore landed in "Miscellaneous", far from
        the tile it is used with. */
     { key: "entertainment", ids: ["teleprog", "iptv", "iptvrec", "youtube", "slideshow"] },
-    { key: "sport", ids: ["f1", "circuit", "motorsport", "sportscore", "standings"] },
+    { key: "sport", ids: ["f1", "motogp", "circuit", "motorsport", "sportscore", "standings"] },
     /* La tuile Quotas IA rejoint "Systeme & Reseau" : comme l'Etat
        systeme, elle surveille une consommation et un seuil, meme si la
        ressource surveillee n'est pas celle de la machine.
@@ -4661,6 +4709,14 @@
        with no message at all -- the handles simply did not respond. */
     for (const g of allGrids()) g.setStatic(!editing);
     $("btnEdit").classList.toggle("active", editing);
+    /* Les tuiles a grille interne (Formule 1, MotoGP) doivent savoir que
+       l'edition commence ou finit : elles montrent alors les poignees de
+       leurs blocs. Un evenement plutot qu'un appel a chaque tuile : une
+       tuile ajoutee demain n'aura rien a declarer ici.
+       Tiles with an inner grid must know edit mode started or ended. An
+       event rather than a call per tile: a tile added tomorrow has
+       nothing to register here. */
+    try { document.dispatchEvent(new CustomEvent("piboard:editing", { detail: { editing } })); } catch (e) { /* noop */ }
     // Barre visible en permanence pendant l'edition ; minuterie au retour
     // Toolbar stays visible while editing; timer re-armed on exit
     showDockBar(true);

@@ -32,6 +32,39 @@
 
 # Nouveautes / What's new
 
+## 1.151.0
+
+**Disposez vous-même les tableaux de la tuile Formule 1**
+
+En mode édition, chaque tableau de la tuile Formule 1 se déplace et se
+redimensionne à la souris ou au doigt, à l'intérieur de la tuile. Des dispositions
+prêtes, un bouton pour revenir à celle par défaut, le copier-coller d'une tuile à
+l'autre, et une disposition à part pour les week-ends de course. Le texte s'ajuste
+à la taille de chaque bloc, et un nouveau bloc montre le plan du circuit du
+week-end avec le compte à rebours de la prochaine séance.
+
+**Nouvelle tuile MotoGP**
+
+Le même tableau de bord pour le MotoGP : prochaine manche, programme, classements
+pilotes et équipes, derniers résultats de la course ou du sprint, météo des séances
+et plan du circuit, disposés comme vous voulez.
+
+---
+
+**Arrange the Formula 1 tile's tables yourself**
+
+In edit mode, each table of the Formula 1 tile moves and resizes with the mouse or a
+finger, inside the tile. Ready-made layouts, a button to return to the default one,
+copy-paste between tiles, and a separate layout for race weekends. Text fits the
+size of each block, and a new block shows the weekend's circuit map with the next
+session's countdown.
+
+**New MotoGP tile**
+
+The same dashboard for MotoGP: next round, timetable, rider and team standings,
+last race or sprint results, session weather and the circuit map, arranged as you
+like.
+
 ## 1.150.0
 
 **Des logos qui s'animent**

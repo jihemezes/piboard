@@ -376,6 +376,66 @@
     return null;
   }
 
+  /* ---------- Les blocs de la grille interne (1.151.0) ----------
+     Chaque carte est un BLOC de la grille interne de la tuile : on le
+     deplace, on le redimensionne, on le masque en mode edition. La cle
+     `key` est la case a cocher qui l'affiche : masquer un bloc d'un clic
+     sur sa croix decoche exactement la meme case que la fenetre de
+     reglages, et inversement -- une seule verite.
+     THE INNER-GRID BLOCKS. Each card is a BLOCK of the tile's inner grid.
+     `key` is the checkbox that shows it: hiding a block with its cross
+     unticks exactly the same box as the settings window -- one truth. */
+  const BLOCKS = [
+    { id: "next", key: "showNext", titleKey: "f1.card.next" },
+    { id: "schedule", key: "showSchedule", titleKey: "f1.card.schedule" },
+    { id: "drivers", key: "showDrivers", titleKey: "f1.card.drivers" },
+    { id: "constructors", key: "showConstructors", titleKey: "f1.card.constructors" },
+    { id: "results", key: "showResults", titleKey: "f1.card.results" },
+    { id: "weather", key: "showWeather", titleKey: "f1.card.weather" },
+    /* Le plan ne s'ajuste pas a l'echelle du texte : c'est un dessin
+       vectoriel, qui suit deja la taille du bloc.
+       The map is not text-scaled: a vector drawing already follows the
+       block's size. */
+    { id: "circuit", key: "showCircuit", titleKey: "f1.card.circuit", fit: false }
+  ];
+
+  /* Dispositions predefinies, sur la grille 12 x 12. Elles ne couvrent
+     que des blocs connus ; un bloc masque laisse simplement sa place
+     vide, que l'on reprend en deplacant ses voisins.
+     Presets on the 12 x 12 grid. A hidden block just leaves its spot
+     empty. */
+  const PRESETS = [
+    { id: "compact", labelKey: "ig.preset.compact", items: {
+      next: { x: 0, y: 0, w: 4, h: 3 }, schedule: { x: 0, y: 3, w: 4, h: 4 }, weather: { x: 0, y: 7, w: 4, h: 5 },
+      circuit: { x: 4, y: 0, w: 4, h: 5 }, drivers: { x: 4, y: 5, w: 4, h: 7 },
+      constructors: { x: 8, y: 0, w: 4, h: 5 }, results: { x: 8, y: 5, w: 4, h: 7 } } },
+    { id: "standings", labelKey: "ig.preset.standings", items: {
+      drivers: { x: 0, y: 0, w: 4, h: 12 }, constructors: { x: 4, y: 0, w: 4, h: 6 }, results: { x: 8, y: 0, w: 4, h: 6 },
+      next: { x: 4, y: 6, w: 4, h: 3 }, schedule: { x: 4, y: 9, w: 4, h: 3 },
+      circuit: { x: 8, y: 6, w: 4, h: 3 }, weather: { x: 8, y: 9, w: 4, h: 3 } } },
+    { id: "weekend", labelKey: "ig.preset.weekend", items: {
+      circuit: { x: 0, y: 0, w: 6, h: 7 }, next: { x: 6, y: 0, w: 6, h: 3 },
+      schedule: { x: 6, y: 3, w: 3, h: 4 }, weather: { x: 9, y: 3, w: 3, h: 4 },
+      results: { x: 0, y: 7, w: 4, h: 5 }, drivers: { x: 4, y: 7, w: 4, h: 5 }, constructors: { x: 8, y: 7, w: 4, h: 5 } } },
+    { id: "season", labelKey: "ig.preset.season", items: {
+      drivers: { x: 0, y: 0, w: 5, h: 12 }, constructors: { x: 5, y: 0, w: 4, h: 6 }, results: { x: 5, y: 6, w: 4, h: 6 },
+      next: { x: 9, y: 0, w: 3, h: 3 }, circuit: { x: 9, y: 3, w: 3, h: 3 },
+      schedule: { x: 9, y: 6, w: 3, h: 3 }, weather: { x: 9, y: 9, w: 3, h: 3 } } }
+  ];
+
+  /* LE WEEK-END DE COURSE commence douze heures avant la premiere seance
+     et finit trois heures apres le depart du Grand Prix : c'est la
+     fenetre ou l'on regarde le programme et le plan plutot que les
+     classements.
+     THE RACE WEEKEND starts twelve hours before the first session and
+     ends three hours after the Grand Prix start. */
+  function isRaceWeekend(races, now) {
+    const race = nextRace(races || [], now);
+    if (!race || !race.sessions || !race.sessions.length) return false;
+    const first = race.sessions[0].at;
+    return now >= first - 12 * 3600000 && now <= race.at + RACE_LENGTH_MS;
+  }
+
   class F1Widget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -384,6 +444,17 @@
       this.weather = null;
       this.timer = null;
       this.tick = null;
+      this.wrap = null;
+      this.circuitHost = null;
+      this.circuitInst = null;
+      this.circuitConf = "";
+      this.board = window.PiBoardInnerGrid ? new window.PiBoardInnerGrid.BlockBoard({
+        ctx, kind: "f1", blocks: BLOCKS, presets: PRESETS,
+        defaultPreset: "compact", seasonPreset: "season", weekendPreset: "weekend",
+        isWeekend: (now) => isRaceWeekend(this.data && this.data.races, now),
+        onRelayout: () => this.render(),
+        onShown: () => this.refresh()
+      }) : null;
     }
 
     /* Le format de date vient des traductions. S'il manque -- traduction
@@ -423,7 +494,13 @@
          position de defilement.
          The countdown ticks every second WITHOUT touching the network:
          only the chrono line is rewritten. */
-      this.tick = setInterval(() => this.paintCountdown(), 1000);
+      this.tick = setInterval(() => {
+        this.paintCountdown();
+        /* Le passage saison -> week-end se verifie a la meme cadence,
+           sans reseau : une comparaison de dates.
+           The season -> weekend switch is checked at the same pace. */
+        if (this.board && this.data && this.board.slotChanged(Date.now())) this.render();
+      }, 1000);
     }
 
     onSettingsChanged(settings) {
@@ -472,7 +549,8 @@
          it left a tile showing ONLY the circuit map loading forever --
          no error, no message, since nothing had failed: the question
          had simply never been asked. Found by the end-to-end test. */
-      const needRaces = s.showNext !== false || s.showSchedule !== false || s.showWeather !== false;
+      const needRaces = s.showNext !== false || s.showSchedule !== false || s.showWeather !== false
+        || s.showCircuit !== false || s.autoLayout === true;
       const jobs = [
         needRaces ? this.fetchJson(`${API}/${y}.json?limit=100`) : Promise.resolve(null),
         s.showDrivers !== false ? this.fetchJson(`${API}/${y}/driverStandings.json?limit=100`) : Promise.resolve(null),
@@ -526,76 +604,207 @@
       this.render();
     }
 
+    /* LE CONTENEUR DE LA TUILE EST GARDE d'un rendu a l'autre. Avant la
+       grille, chaque rendu reecrivait toute la tuile ; ce n'est plus
+       possible : la grille et le plan du circuit vivent dedans, et les
+       reconstruire chaque fois reinitialiserait un geste en cours ou
+       relancerait le dessin du trace.
+       THE TILE'S CONTAINER IS KEPT between renders: the grid and the
+       circuit map live inside it, and rebuilding them every time would
+       reset a gesture in progress or redraw the outline. */
+    ensureWrap() {
+      const el = this.ctx.el;
+      if (!this.wrap || this.wrap.parentNode !== el) {
+        el.innerHTML = "";
+        this.wrap = document.createElement("div");
+        el.appendChild(this.wrap);
+      }
+      return this.wrap;
+    }
+
+    visibleBlocks() {
+      const s = this.ctx.settings;
+      return BLOCKS.filter((b) => s[b.key] !== false);
+    }
+
     render() {
       const i18n = this.ctx.i18n;
-      const s = this.ctx.settings;
-      const el = this.ctx.el;
+      const wrap = this.ensureWrap();
+      const skin = this.skinClass();
+      const style = this.skinStyleValue();
 
       if (!this.data) {
-        el.innerHTML = `<div class="pw-f1"><div class="pwf1-msg">${esc(i18n.t(this.error ? "f1.error" : "f1.loading"))}</div></div>`;
+        if (this.board) this.board.unmount();
+        wrap.className = "pw-f1";
+        wrap.removeAttribute("style");
+        wrap.innerHTML = `<div class="pwf1-msg">${esc(i18n.t(this.error ? "f1.error" : "f1.loading"))}</div>`;
         return;
       }
 
       const now = Date.now();
-      const wanted = [
-        s.showNext !== false ? () => this.cardNext(now) : null,
-        s.showSchedule !== false ? () => this.cardSchedule(now) : null,
-        s.showDrivers !== false ? () => this.cardDrivers() : null,
-        s.showConstructors !== false ? () => this.cardConstructors() : null,
-        s.showResults !== false ? () => this.cardResults() : null,
-        s.showWeather !== false ? () => this.cardWeather(now) : null
-      ].filter(Boolean);
+      const vis = this.visibleBlocks();
+      this.syncCircuit(vis.some((b) => b.id === "circuit"));
 
-      /* UNE SEULE CARTE COCHEE : LA TUILE DEVIENT CETTE CARTE. Plus de
-         cadre interne, plus de titre interne -- la barre de titre de la
-         tuile en tient lieu, et elle se renomme dans les reglages
-         universels.
+      /* UNE SEULE CARTE COCHEE : LA TUILE DEVIENT CETTE CARTE, sans
+         cadre ni titre interne -- la barre de titre de la tuile en tient
+         lieu. C'est toujours utile depuis l'arrivee de la grille : une
+         tuile « Classement pilotes » seule n'a que faire d'une grille.
+         ONE CARD TICKED: THE TILE BECOMES THAT CARD, with no frame and
+         no inner title. Still useful with the grid: a lone "Driver
+         standings" tile has no use for a grid. */
+      this.solo = vis.length === 1;
+      const stale = this.error ? `<div class="pwf1-stale">${esc(i18n.t("f1.stale"))}</div>` : "";
+      if (style) wrap.setAttribute("style", style); else wrap.removeAttribute("style");
 
-         C'EST LA REPONSE AU VRAI BESOIN : on ne peut pas deplacer ni
-         redimensionner des cartes a l'interieur d'une tuile, et il
-         serait absurde de rebatir une grille dans la grille. PiBoard en
-         a deja une, excellente. Pour disposer les cartes librement, on
-         pose donc PLUSIEURS tuiles Formule 1 en ne cochant qu'une carte
-         dans chacune : chaque carte devient alors une vraie tuile, qui
-         se deplace et se redimensionne comme n'importe quelle autre. Le
-         relais serveur partage le cache, donc cinq tuiles ne coutent
-         pas cinq fois plus de requetes -- l'argument qui m'avait fait
-         preferer une tuile unique ne tenait pas.
+      if (!vis.length || this.solo || !this.board) {
+        if (this.board) this.board.unmount();
+        wrap.className = "pw-f1" + (this.solo ? " pwf1-solo" : "") + skin;
+        const cards = vis.map((b) => this.cardFor(b.id, now)).filter(Boolean).join("");
+        wrap.innerHTML = (cards || `<div class="pwf1-msg">${esc(i18n.t("f1.noCard"))}</div>`) + stale;
+        this.placeCircuit(wrap);
+        this.paintCountdown();
+        return;
+      }
 
-         ONE CARD TICKED: THE TILE BECOMES THAT CARD -- no inner frame,
-         no inner title, the tile's own title bar does the job. This is
-         the answer to the real need: cards cannot be moved or resized
-         inside a tile, and rebuilding a grid inside the grid would be
-         absurd when PiBoard already has an excellent one. To arrange the
-         cards freely, place SEVERAL Formula 1 tiles with a single card
-         ticked in each. The relay shares its cache, so five tiles do not
-         cost five times the requests -- the argument that made me prefer
-         a single tile did not hold. */
-      this.solo = wanted.length === 1;
-      const cards = wanted.map((fn) => fn());
-
-      const body = cards.filter(Boolean).join("");
-      el.innerHTML = `
-        <div class="pw-f1${this.solo ? " pwf1-solo" : ""}${this.skinClass()}" ${this.skinStyle()}>
-          ${body || `<div class="pwf1-msg">${esc(i18n.t("f1.noCard"))}</div>`}
-          ${this.error ? `<div class="pwf1-stale">${esc(i18n.t("f1.stale"))}</div>` : ""}
-        </div>`;
+      /* PLUSIEURS CARTES : LA GRILLE INTERNE. Chaque carte est ecrite
+         dans le corps de son bloc ; la grille, elle, n'est pas
+         reconstruite -- elle ne fait que se mettre a jour.
+         SEVERAL CARDS: THE INNER GRID. Each card is written into its
+         block's body; the grid itself is not rebuilt, only updated. */
+      wrap.className = "pw-f1 pwf1-grid" + skin;
+      for (const n of Array.from(wrap.children)) {
+        if (!n.classList.contains("pig-root")) n.remove();
+      }
+      const grid = this.board.mount(wrap);
+      for (const b of vis) {
+        const body = grid.body(b.id);
+        if (!body) continue;
+        if (b.id === "circuit") {
+          body.innerHTML = this.cardFor("circuit", now);
+          this.placeCircuit(body);
+        } else {
+          body.innerHTML = this.cardFor(b.id, now);
+        }
+      }
+      if (stale) wrap.insertAdjacentHTML("beforeend", stale);
+      grid.scheduleFit();
       this.paintCountdown();
+    }
+
+    cardFor(id, now) {
+      switch (id) {
+        case "next": return this.cardNext(now);
+        case "schedule": return this.cardSchedule(now);
+        case "drivers": return this.cardDrivers();
+        case "constructors": return this.cardConstructors();
+        case "results": return this.cardResults();
+        case "weather": return this.cardWeather(now);
+        case "circuit": return this.cardCircuit(now);
+        default: return "";
+      }
+    }
+
+    /* ---------- Le plan du circuit (1.151.0) ----------
+       LA TUILE PLAN DU CIRCUIT, REUTILISEE TELLE QUELLE. Le trace, la
+       base des circuits, le style « ruban d'asphalte », les virages
+       numerotes, la fiche technique : tout vient de la tuile Plan du
+       circuit, hebergee dans ce bloc. Rien n'est recopie -- une
+       correction du dessin profite aux deux tuiles a la fois.
+
+       L'ELEMENT QUI L'HEBERGE EST DEPLACE, JAMAIS RECREE. La tuile du
+       circuit dessine dans un element qui lui appartient ; a chaque
+       rendu de la Formule 1, cet element est simplement remis a sa
+       place. Le recreer effacerait le dessin et relancerait ses
+       requetes chaque fois qu'un classement se rafraichit.
+
+       THE CIRCUIT MAP TILE, REUSED AS IS. Outline, circuit base, asphalt
+       ribbon, corner numbers, spec sheet: all from the Circuit map tile,
+       hosted in this block. Nothing is copied. ITS HOST ELEMENT IS
+       MOVED, NEVER RECREATED: recreating it would wipe the drawing and
+       re-fetch every time a standings table refreshes. */
+    circuitSettings() {
+      const s = this.ctx.settings;
+      return {
+        circuit: "",
+        showSpecs: s.circuitSpecs !== false,
+        showCorners: true,
+        showDirection: true,
+        /* La meteo a sa propre carte dans cette tuile : la repeter sous
+           le plan mangerait la place du dessin.
+           Weather has its own card in this tile. */
+        showWeather: false
+      };
+    }
+
+    syncCircuit(wanted) {
+      if (!wanted) {
+        if (this.circuitInst) { try { this.circuitInst.destroy(); } catch (e) { /* noop */ } }
+        this.circuitInst = null;
+        this.circuitHost = null;
+        this.circuitConf = "";
+        return;
+      }
+      const conf = JSON.stringify(this.circuitSettings());
+      if (!this.circuitHost) {
+        this.circuitHost = document.createElement("div");
+        this.circuitHost.className = "pwf1-circ-host";
+      }
+      if (!this.circuitInst) {
+        const P = window.PiBoard;
+        this.circuitInst = P && typeof P.embedWidget === "function"
+          ? P.embedWidget("circuit", this.circuitHost, this.circuitSettings()) : null;
+        this.circuitConf = conf;
+        if (!this.circuitInst) {
+          this.circuitHost.innerHTML = `<div class="pwf1-msg">${esc(this.ctx.i18n.t("f1.circuit.unavailable"))}</div>`;
+        }
+      } else if (conf !== this.circuitConf) {
+        this.circuitConf = conf;
+        try { this.circuitInst.onSettingsChanged(Object.assign({}, this.circuitInst.ctx.settings, this.circuitSettings())); } catch (e) { /* noop */ }
+      }
+    }
+
+    placeCircuit(scope) {
+      if (!this.circuitHost || !scope) return;
+      const slot = scope.querySelector(".pwf1-circ-slot");
+      if (slot && this.circuitHost.parentNode !== slot) slot.appendChild(this.circuitHost);
+    }
+
+    cardCircuit(now) {
+      const i18n = this.ctx.i18n;
+      const race = nextRace(this.data.races || [], now);
+      let overlay = "";
+      /* LE COMPTE A REBOURS EN SURIMPRESSION : la prochaine seance, posee
+         sur le coin du plan. Un week-end de course, c'est le duo qu'on
+         regarde -- ou, et dans combien de temps.
+         THE COUNTDOWN OVERLAY: the next session, laid on the map's
+         corner -- where, and how long until. */
+      if (race && this.ctx.settings.circuitCountdown !== false) {
+        const sess = nextSession(race, now);
+        const target = sess ? sess.at : race.at;
+        const label = i18n.t("f1.session." + (sess ? sess.kind : "race"));
+        overlay = `<div class="pwf1-circ-cd"><span class="pwf1-circ-cd-label">${esc(label)}</span><span class="pwf1-cd pwf1-circ-cd-time" data-cd="${target}"></span></div>`;
+      }
+      return this.card(i18n.t("f1.card.circuit"),
+        `<div class="pwf1-circ-wrap">${overlay}<div class="pwf1-circ-slot"></div></div>`, "pwf1-circ-card");
     }
 
     /* Le chrono est reecrit a part, a la seconde. Il porte sa cible dans
        un attribut : si la tuile n'a pas ete redessinee depuis, le
-       chrono reste juste.
+       chrono reste juste. Il y en a deux depuis 1.151.0 (carte
+       « Prochaine course » et surimpression du plan) : tous sont
+       reecrits.
        The chrono is rewritten separately, every second; it carries its
-       target in an attribute so it stays right between renders. */
+       target in an attribute. There are two since 1.151.0: all are
+       rewritten. */
     paintCountdown() {
-      const el = this.ctx.el.querySelector("[data-cd]");
-      if (!el) return;
-      const target = Number(el.dataset.cd);
-      if (!Number.isFinite(target)) return;
-      const left = target - Date.now();
-      el.textContent = countdown(left, this.ctx.i18n);
-      el.classList.toggle("pwf1-cd-now", left <= 0);
+      const all = this.ctx.el.querySelectorAll("[data-cd]");
+      for (const el of all) {
+        const target = Number(el.dataset.cd);
+        if (!Number.isFinite(target)) continue;
+        const left = target - Date.now();
+        el.textContent = countdown(left, this.ctx.i18n);
+        el.classList.toggle("pwf1-cd-now", left <= 0);
+      }
     }
 
     /* LE STYLE « PISTE ». Deux classes seulement, et aucune couleur en
@@ -614,7 +823,7 @@
       return "";
     }
 
-    skinStyle() {
+    skinStyleValue() {
       if (String(this.ctx.settings.cardStyle || "theme") !== "custom") return "";
       /* La couleur vient d'un selecteur de couleur, donc deja au format
          `#rrggbb` -- mais elle finit dans un attribut `style`, et une
@@ -626,7 +835,7 @@
          trust. */
       const raw = String(this.ctx.settings.cardColor || "").trim();
       if (!/^#[0-9a-fA-F]{6}$/.test(raw)) return "";
-      return `style="--pwf1-skin-bg: ${raw}"`;
+      return `--pwf1-skin-bg: ${raw}`;
     }
 
     card(title, inner, extraClass) {
@@ -844,6 +1053,8 @@
     destroy() {
       clearTimeout(this.timer);
       clearInterval(this.tick);
+      this.syncCircuit(false);
+      if (this.board) this.board.unmount();
     }
   }
 
@@ -854,6 +1065,7 @@
   window.PiBoardF1Helpers = {
     parseRaces, parseStandings, parseResults, nextRace, lastRace, nextSession,
     parseWeather, weatherAt, weatherUrl, describeWeather, WMO,
-    countdown, whenOf, colorFor, flagFor, FLAG, COUNTRY_FLAG, TEAM_COLOR, RACE_LENGTH_MS
+    countdown, whenOf, colorFor, flagFor, FLAG, COUNTRY_FLAG, TEAM_COLOR, RACE_LENGTH_MS,
+    isRaceWeekend, BLOCKS, PRESETS
   };
 })();

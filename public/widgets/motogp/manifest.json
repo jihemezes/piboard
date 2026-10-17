@@ -1,0 +1,322 @@
+{
+  "id": "motogp",
+  "version": "1.0.0",
+  "name": {
+    "en": "MotoGP",
+    "fr": "MotoGP"
+  },
+  "titleBar": true,
+  "description": {
+    "en": "A MotoGP dashboard as blocks you arrange yourself: next round with a countdown, the weekend timetable in your own time zone, rider standings, team standings, the last Grand Prix or sprint results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data from motogp.com's own public feed, with no key and no account.",
+    "fr": "Tableau de bord MotoGP en blocs que l'on dispose soi-même : prochaine manche avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement équipes, résultats du dernier Grand Prix ou du sprint, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Données du flux public de motogp.com, sans clé ni compte."
+  },
+  "tagline": {
+    "en": "The MotoGP weekend, arranged your way.",
+    "fr": "Le week-end MotoGP, disposé à votre façon."
+  },
+  "size": {
+    "w": 4,
+    "h": 4,
+    "minW": 2,
+    "minH": 2,
+    "maxW": 12,
+    "maxH": 16
+  },
+  "settings": [
+    {
+      "key": "season",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Season",
+        "fr": "Saison"
+      },
+      "hint": {
+        "en": "Empty = current season. A year (2024, 2025…) to look at a past season.",
+        "fr": "Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée."
+      }
+    },
+    {
+      "key": "showNext",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Next round\" card",
+        "fr": "Carte « Prochaine manche »"
+      },
+      "hint": {
+        "en": "The upcoming Grand Prix, its circuit, its race and sprint lap counts, and a countdown to the second. During the weekend the countdown targets the next SESSION -- practice, qualifying, sprint -- rather than Sunday's race.",
+        "fr": "Le Grand Prix à venir, son circuit, le nombre de tours de la course et du sprint, et un compte à rebours à la seconde. Pendant le week-end, il vise la prochaine SÉANCE — essais, qualifications, sprint — et non la course du dimanche."
+      }
+    },
+    {
+      "key": "showSchedule",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Weekend timetable\" card",
+        "fr": "Carte « Programme du week-end »"
+      },
+      "hint": {
+        "en": "Every MotoGP-class session -- practice, qualifying 1 and 2, sprint, warm-up, race -- with its day and time in your own time zone. The live session is highlighted, past ones dimmed, the sprint and the race stand out.",
+        "fr": "Toutes les séances de la catégorie MotoGP — essais, qualifications 1 et 2, sprint, warm-up, course — avec leur jour et leur heure dans votre fuseau. La séance en cours est mise en avant, les séances passées estompées, le sprint et la course ressortent."
+      }
+    },
+    {
+      "key": "showRiders",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Rider standings\" card",
+        "fr": "Carte « Classement pilotes »"
+      },
+      "hint": {
+        "en": "Position, maker colour, flag, race number, name, points and Grand Prix wins.",
+        "fr": "Position, couleur du constructeur, drapeau, numéro, nom, points et victoires en Grand Prix."
+      }
+    },
+    {
+      "key": "showTeams",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Team standings\" card",
+        "fr": "Carte « Classement équipes »"
+      },
+      "hint": {
+        "en": "COMPUTED by adding up each team's riders' points, as the team championship does -- the feed does not publish this table. The makers' championship counts only each brand's best rider per race and cannot be rebuilt from totals, so it is not offered rather than being wrong.",
+        "fr": "CALCULÉ en additionnant les points des pilotes de chaque équipe, comme le fait le championnat des équipes — le flux ne publie pas ce tableau. Le championnat des constructeurs ne retient que le meilleur pilote de chaque marque à chaque course et ne se reconstitue pas à partir des totaux : il n'est donc pas proposé plutôt que d'être faux."
+      }
+    },
+    {
+      "key": "showResults",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Last results\" card",
+        "fr": "Carte « Derniers résultats »"
+      },
+      "hint": {
+        "en": "The finishing order of the last Grand Prix run, with the winner's time, the gaps and the points. A rider who crashed or retired is shown as such, not as a last place.",
+        "fr": "L'ordre d'arrivée du dernier Grand Prix couru, avec le temps du vainqueur, les écarts et les points. Un pilote tombé ou qui a abandonné est indiqué comme tel, et non comme une dernière place."
+      }
+    },
+    {
+      "key": "resultsSession",
+      "type": "select",
+      "default": "race",
+      "label": {
+        "en": "Results shown",
+        "fr": "Résultats affichés"
+      },
+      "options": [
+        {
+          "value": "race",
+          "label": {
+            "en": "Grand Prix race",
+            "fr": "Course du Grand Prix"
+          }
+        },
+        {
+          "value": "sprint",
+          "label": {
+            "en": "Sprint",
+            "fr": "Sprint"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Sunday's race or Saturday's sprint: since 2023 both award points.",
+        "fr": "La course du dimanche ou le sprint du samedi : depuis 2023, les deux rapportent des points."
+      }
+    },
+    {
+      "key": "showWeather",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Circuit weather\" card",
+        "fr": "Carte « Météo du circuit »"
+      },
+      "hint": {
+        "en": "The forecast AT EACH SESSION'S HOUR, one row per session: condition, temperature and chance of rain -- highlighted from 30 %, because on two wheels rain changes everything. Beyond seven days, a dash. Source: Open-Meteo, free and keyless.",
+        "fr": "La prévision À L'HEURE DE CHAQUE SÉANCE, une ligne par séance : le temps, la température et la probabilité de pluie — mise en avant dès 30 %, parce qu'à moto la pluie change tout. Au-delà de sept jours, un tiret. Source : Open-Meteo, gratuit et sans clé."
+      }
+    },
+    {
+      "key": "showCircuit",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "\"Circuit map\" card",
+        "fr": "Carte « Plan du circuit »"
+      },
+      "hint": {
+        "en": "The outline of the weekend's circuit, drawn by the Circuit map tile itself, set to follow the MotoGP calendar: asphalt ribbon, kerbs, numbered corners, racing direction. Le Mans-Bugatti still has no outline in the base; its spec sheet is shown instead.",
+        "fr": "Le tracé du circuit du week-end, dessiné par la tuile Plan du circuit elle-même, réglée pour suivre le calendrier de MotoGP : ruban d'asphalte, vibreurs, virages numérotés, sens de la course. Le Mans-Bugatti n'a pas encore de tracé dans la base ; sa fiche technique est affichée à la place."
+      }
+    },
+    {
+      "key": "circuitSpecs",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Spec sheet under the map",
+        "fr": "Fiche technique sous le plan"
+      },
+      "hint": {
+        "en": "Official MotoGP figures from the circuit base: length of the MotoGP layout, left and right corners, longest straight. Untick it to give the outline all the room.",
+        "fr": "Les chiffres officiels du MotoGP, tirés de la base des circuits : longueur du tracé MotoGP, virages à gauche et à droite, plus longue ligne droite. Décochez-la pour laisser toute la place au tracé."
+      }
+    },
+    {
+      "key": "circuitCountdown",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Countdown on the map",
+        "fr": "Compte à rebours sur le plan"
+      },
+      "hint": {
+        "en": "The next session and the time left, laid on the corner of the map.",
+        "fr": "La prochaine séance et le temps restant, posés sur le coin du plan."
+      }
+    },
+    {
+      "key": "riderRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 30,
+      "label": {
+        "en": "Riders shown",
+        "fr": "Pilotes affichés"
+      }
+    },
+    {
+      "key": "teamRows",
+      "type": "number",
+      "default": 11,
+      "min": 3,
+      "max": 12,
+      "label": {
+        "en": "Teams shown",
+        "fr": "Équipes affichées"
+      }
+    },
+    {
+      "key": "resultRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 30,
+      "label": {
+        "en": "Results rows",
+        "fr": "Lignes de résultats"
+      }
+    },
+    {
+      "key": "showTeamColors",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Maker colours",
+        "fr": "Couleurs des constructeurs"
+      },
+      "hint": {
+        "en": "A chip in the maker's colour (Ducati, Aprilia, KTM, Yamaha, Honda) before each rider. Logos are registered trademarks and are not embedded.",
+        "fr": "Une pastille de la couleur du constructeur (Ducati, Aprilia, KTM, Yamaha, Honda) devant chaque pilote. Les logos sont des marques déposées et ne sont pas embarqués."
+      }
+    },
+    {
+      "key": "cardStyle",
+      "type": "select",
+      "default": "theme",
+      "label": {
+        "en": "Card style",
+        "fr": "Style des cartes"
+      },
+      "options": [
+        {
+          "value": "theme",
+          "label": {
+            "en": "Page theme",
+            "fr": "Thème de la page"
+          }
+        },
+        {
+          "value": "dark",
+          "label": {
+            "en": "Dark track",
+            "fr": "Piste sombre"
+          }
+        },
+        {
+          "value": "custom",
+          "label": {
+            "en": "Chosen colour",
+            "fr": "Couleur choisie"
+          }
+        }
+      ],
+      "hint": {
+        "en": "\"Page theme\" keeps the cards consistent with the board. \"Dark track\" gives them a deep black with an orange edge. \"Chosen colour\" uses the colour below. The setting affects THIS tile only.",
+        "fr": "« Thème de la page » garde les cartes cohérentes avec le tableau. « Piste sombre » leur donne un noir profond et un liseré orange. « Couleur choisie » utilise la couleur ci-dessous. Le réglage ne concerne QUE cette tuile."
+      }
+    },
+    {
+      "key": "cardColor",
+      "type": "color",
+      "default": "#12151c",
+      "label": {
+        "en": "Card colour",
+        "fr": "Couleur des cartes"
+      },
+      "hint": {
+        "en": "Used only when the style above is \"Chosen colour\".",
+        "fr": "Utilisée seulement si le style ci-dessus est « Couleur choisie »."
+      }
+    },
+    {
+      "key": "autoFit",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Fit text to each block",
+        "fr": "Ajuster le texte à chaque bloc"
+      },
+      "hint": {
+        "en": "Each block looks for the largest text size at which its content fits without scrolling: an enlarged block reads its table in bigger type, a reduced one tightens it. Below a readable minimum the block scrolls instead of shrinking further. Untick to keep the same text size everywhere.",
+        "fr": "Chaque bloc cherche la plus grande taille de texte à laquelle son contenu tient sans défiler : un bloc agrandi lit son tableau en plus gros, un bloc réduit le resserre. En dessous d'un minimum lisible, le bloc défile plutôt que de rapetisser encore. Décochez pour garder partout la même taille de texte."
+      }
+    },
+    {
+      "key": "autoLayout",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Different layout during race weekends",
+        "fr": "Disposition différente pendant les week-ends de course"
+      },
+      "hint": {
+        "en": "Two layouts instead of one: a \"Season\" layout, and a \"Race weekend\" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing.",
+        "fr": "Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez."
+      }
+    },
+    {
+      "key": "refreshMinutes",
+      "type": "number",
+      "default": 30,
+      "min": 5,
+      "max": 360,
+      "label": {
+        "en": "Refresh every (minutes)",
+        "fr": "Rafraîchir toutes les (minutes)"
+      },
+      "hint": {
+        "en": "Standings only move after a Grand Prix, and finished results are not re-read until a new one has been run. The countdown ticks every second without asking the network for anything.",
+        "fr": "Un classement ne bouge qu'après un Grand Prix, et des résultats terminés ne sont relus qu'une fois un nouveau Grand Prix couru. Le compte à rebours s'égrène à la seconde sans rien demander au réseau."
+      }
+    }
+  ]
+}

@@ -1,0 +1,202 @@
+/* ============================================================
+   PiBoard - innergrid.css (1.151.0)
+   Grille interne d'une tuile (voir innergrid.js). Toutes les classes
+   sont prefixees `pig-` : cette feuille est chargee pour tout le
+   tableau, et une classe generique (« .block », « .bar ») y ecraserait
+   celle d'une tuile.
+   Inner grid of a tile. Every class is prefixed `pig-`: this sheet is
+   loaded for the whole board, and a generic class would override a
+   tile's own.
+   ============================================================ */
+
+.pig-root {
+  position: relative;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.pig-area {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+/* Chaque bloc est place en POURCENTAGES de la zone : agrandir la tuile
+   agrandit les blocs dans la meme proportion. Le retrait de 3 px fait la
+   gouttiere entre deux blocs voisins.
+   Each block is placed in PERCENTAGES of the area; the 3 px inset makes
+   the gutter between neighbours. */
+.pig-block {
+  position: absolute;
+  padding: 3px;
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+}
+
+.pig-frame {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+/* L'echelle du texte calculee par la grille (« Ajuster le texte ») ne
+   touche que la taille de police : tout le contenu des tuiles est en
+   `em`, il suit donc sans rien savoir de la grille.
+   The text scale computed by the grid only touches the font size: tile
+   content is in `em`, so it follows without knowing about the grid. */
+.pig-body {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  font-size: calc(1em * var(--pig-scale, 1));
+  box-sizing: border-box;
+}
+.pig-block.pig-nofit .pig-body { overflow: hidden; }
+
+/* ---------- Commandes d'edition, invisibles hors edition ---------- */
+.pig-bar,
+.pig-resize,
+.pig-tools { display: none; }
+
+.pig-root.pig-editing > .pig-tools:not([hidden]) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 2px 6px;
+  flex: 0 0 auto;
+}
+
+/* LA TUILE EST INERTE EN EDITION (`pointer-events: none` sur son
+   contenu) pour que toute sa surface serve de prise. Les commandes de la
+   grille sont les SEULES a reprendre la main -- le reste du bloc laisse
+   passer le geste vers la tuile, qui se deplace comme avant.
+   THE TILE IS INERT WHILE EDITING so its whole surface is a grip. The
+   grid's controls are the ONLY ones taking the pointer back; the rest of
+   the block lets the gesture through to the tile. */
+.pig-root.pig-editing .pig-ctl { pointer-events: auto; }
+.pig-root.pig-editing .pig-bar,
+.pig-root.pig-editing .pig-resize { touch-action: none; }
+
+.pig-root.pig-editing .pig-frame {
+  outline: 1px dashed var(--accent);
+  outline-offset: -1px;
+  border-radius: 8px;
+}
+
+.pig-root.pig-editing .pig-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  position: absolute;
+  left: 3px;
+  right: 3px;
+  top: 3px;
+  height: 26px;
+  padding: 0 4px 0 8px;
+  border-radius: 8px 8px 0 0;
+  background: var(--accent);
+  color: var(--on-accent, #fff);
+  font-size: 12px;
+  font-weight: 650;
+  cursor: grab;
+  z-index: 3;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.pig-root.pig-editing .pig-block.pig-moving .pig-bar { cursor: grabbing; }
+.pig-root .pig-grip { flex: 0 0 auto; opacity: .85; letter-spacing: -1px; }
+.pig-root .pig-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pig-root .pig-x {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  border: 0;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .18);
+  color: inherit;
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.pig-root .pig-x:hover { background: rgba(0, 0, 0, .32); }
+
+/* Le coin de redimensionnement reprend le dessin des poignees des
+   tuiles (equerre a la couleur d'accent) : meme geste, meme signe.
+   The resize corner mirrors the tiles' own handles: same gesture, same
+   sign. */
+.pig-root.pig-editing .pig-resize {
+  display: block;
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  width: 18px;
+  height: 18px;
+  border-right: 3px solid var(--accent);
+  border-bottom: 3px solid var(--accent);
+  border-radius: 0 0 8px 0;
+  cursor: nwse-resize;
+  z-index: 3;
+  background: transparent;
+}
+
+/* Pendant un geste : le bloc saisi passe au-dessus, ceux qu'il va
+   pousser sont signales. During a gesture the grabbed block rises;
+   those it will push are flagged. */
+.pig-root .pig-block.pig-moving,
+.pig-root .pig-block.pig-sizing { z-index: 5; opacity: .92; }
+.pig-root .pig-block.pig-moving .pig-frame,
+.pig-root .pig-block.pig-sizing .pig-frame {
+  outline: 2px solid var(--accent);
+  box-shadow: 0 6px 22px rgba(0, 0, 0, .35);
+}
+.pig-root .pig-block.pig-target .pig-frame { outline: 2px dashed var(--warn, #E0A63C); }
+.pig-root.pig-busy { cursor: grabbing; }
+
+/* ---------- Barre d'outils ---------- */
+.pig-root .pig-tools select,
+.pig-root .pig-tools .pig-btn {
+  height: 28px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 7px;
+  background: var(--field-bg, var(--tile));
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  padding: 0 8px;
+  cursor: pointer;
+  max-width: 100%;
+}
+.pig-root .pig-tools select:disabled,
+.pig-root .pig-tools .pig-btn:disabled { opacity: .45; cursor: default; }
+.pig-root .pig-tools .pig-slot { border-color: var(--accent); color: var(--accent); font-weight: 650; }
+.pig-root .pig-note { font-size: 12px; color: var(--muted); }
+
+/* ---------- Mode tactile ----------
+   Au doigt, une barre de 26 px et un coin de 18 px se ratent une fois
+   sur deux. On passe aux ~44 px recommandes, comme les poignees des
+   tuiles en mode tactile.
+   By finger, a 26 px bar and an 18 px corner are missed half the time:
+   they grow to the recommended ~44 px, like the tiles' handles. */
+body.touch-mode .pig-root.pig-editing .pig-bar,
+body.touch .pig-root.pig-editing .pig-bar { height: 40px; font-size: 14px; }
+body.touch-mode .pig-root .pig-x,
+body.touch .pig-root .pig-x { width: 34px; height: 34px; }
+body.touch-mode .pig-root.pig-editing .pig-resize,
+body.touch .pig-root.pig-editing .pig-resize { width: 34px; height: 34px; border-width: 4px; }
+body.touch-mode .pig-root .pig-tools select,
+body.touch-mode .pig-root .pig-tools .pig-btn,
+body.touch .pig-root .pig-tools select,
+body.touch .pig-root .pig-tools .pig-btn { height: 40px; font-size: 14px; padding: 0 12px; }
