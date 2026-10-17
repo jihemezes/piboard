@@ -200,3 +200,30 @@ body.touch-mode .pig-root .pig-tools select,
 body.touch-mode .pig-root .pig-tools .pig-btn,
 body.touch .pig-root .pig-tools select,
 body.touch .pig-root .pig-tools .pig-btn { height: 40px; font-size: 14px; padding: 0 12px; }
+
+/* ---------- Bloc logo (1.153.0) ----------
+   Transparent par defaut : ni cadre ni fond, le logo se pose sur le
+   fond (et donc le theme) de la tuile. Le cadre est une option.
+   Transparent by default; the frame is optional. */
+.pig-logo-card {
+  height: 100%;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+.pig-logo-card.pig-logo-framed {
+  border: 1px solid var(--tile-edge);
+  border-radius: var(--radius, 10px);
+  background: color-mix(in srgb, var(--text, #888) 4%, transparent);
+  padding: 6px;
+}
+.pig-logo-slot,
+.pig-logo-host {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  height: 100%;
+}
+.pig-logo-host > * { height: 100%; }
+.pig-logo-msg { color: var(--muted); font-size: .85em; padding: 6px; }

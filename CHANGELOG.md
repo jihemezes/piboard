@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.153.0
+
+- **Tuiles Formule 1 et MotoGP : bloc « Logo ».** Nouvelle carte optionnelle
+  (« Carte « Logo » », désactivée par défaut) pour un logo que l'on téléverse
+  soi-même — aucun logo officiel n'est fourni (marques déposées). Le bloc
+  héberge telle quelle la tuile Logo / Image : gestionnaire d'images,
+  recadrage direct en mode édition, miroir, rotation, animations. Dossier
+  d'images stable propre à la tuile hôte (`<tuile>logo`), réglages du logo
+  enregistrés dans ceux de la tuile hôte (`logo`).
+- Fond **transparent par défaut** ; réglage « Cadre autour du logo ».
+- Grille interne : un bloc ajouté à une disposition déjà pleine se taille une
+  place en rognant le plus grand bloc au lieu de se superposer.
+- `PiBoard.embedWidget()` accepte `{ instanceId, onUpdate }` pour qu'une tuile
+  hébergée garde son dossier et enregistre ses réglages.
+- Aide (FR/EN) des deux tuiles ; tests dans `innerGrid.test.js`.
+
 ## 1.152.0
 
 - **Tuiles Formule 1 et MotoGP : un thème à part entière.** Nouveau réglage

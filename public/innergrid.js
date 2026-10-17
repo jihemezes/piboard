@@ -157,7 +157,36 @@
     }
     for (const id of pending) {
       const pref = (saved && saved[id]) || (preset && preset[id]) || null;
-      const r = placeSomewhere(pref ? clampRect(pref) : null, taken);
+      let r = placeSomewhere(pref ? clampRect(pref) : null, taken);
+      if (!r) {
+        /* GRILLE PLEINE : on taille une place dans le plus grand bloc, en
+           le rognant, plutot que de poser le nouveau par-dessus. C'est le
+           cas courant d'un bloc qu'on rajoute (le logo) a une disposition
+           predefinie, qui remplit les 12 x 12 cases.
+           FULL GRID: carve a spot out of the largest block by trimming
+           it, rather than overlapping. */
+        const ids = Object.keys(out).sort((a, b) => out[b].w * out[b].h - out[a].w * out[a].h);
+        for (const big of ids) {
+          const b = out[big];
+          for (const [w, h] of [[3, 3], [3, 2], [2, 2]]) {
+            if (b.w < w || b.h < h) continue;
+            const cands = [{ x: b.x + b.w - w, y: b.y + b.h - h, w, h }, { x: b.x, y: b.y + b.h - h, w, h }];
+            for (const c of cands) {
+              const trimmed = trimAway(b, c).find((t) => !overlaps(t, c));
+              if (!trimmed) continue;
+              const others = taken.filter((t) => t !== b);
+              if (isFree(c, others) && isFree(trimmed, others)) {
+                out[big] = trimmed;
+                taken.splice(taken.indexOf(b), 1, trimmed);
+                r = c;
+                break;
+              }
+            }
+            if (r) break;
+          }
+          if (r) break;
+        }
+      }
       /* Grille pleine : le bloc est pose en haut a gauche, par-dessus.
          C'est laid, mais visible -- et un bloc visible se deplace,
          alors qu'un bloc perdu ne se retrouve pas.
@@ -720,8 +749,13 @@
     get s() { return this.cfg.ctx.settings || {}; }
 
     visible() {
-      return this.cfg.blocks.filter((b) => this.s[b.key] !== false);
+      return this.cfg.blocks.filter((b) => this.shown(b));
     }
+
+    /* `optIn` : bloc optionnel, visible seulement s'il est coche (le
+       logo) ; les autres sont visibles tant qu'ils ne sont pas decoches.
+       `optIn`: optional block, shown only when ticked. */
+    shown(b) { return b.optIn ? this.s[b.key] === true : this.s[b.key] !== false; }
 
     title(b) { return this.ctx.i18n.t(b.titleKey); }
 
@@ -774,7 +808,7 @@
       const vis = this.visible();
       const slot = this.slot();
       this.lastSlot = slot;
-      const hidden = this.cfg.blocks.filter((b) => this.s[b.key] === false)
+      const hidden = this.cfg.blocks.filter((b) => !this.shown(b))
         .map((b) => ({ id: b.id, title: this.title(b) }));
       const slots = this.s.autoLayout === true
         ? [{ id: "season", label: this.ctx.i18n.t("ig.slot.season") }, { id: "weekend", label: this.ctx.i18n.t("ig.slot.weekend") }]
@@ -827,7 +861,84 @@
     }
   }
 
+  /* ============================================================
+     LE BLOC LOGO (1.153.0) : la tuile Logo / Image, hebergee telle
+     quelle dans un bloc -- gestionnaire d'images, recadrage direct en
+     mode edition, animations. Son dossier d'images est rattache a la
+     tuile hote (identifiant « <tuile>logo ») et ses reglages sont
+     enregistres dans ceux de la tuile hote, sous `logo`. Aucun logo
+     n'est fourni : les logos officiels sont des marques deposees ; on
+     televerse le sien.
+     THE LOGO BLOCK: the Logo / Image tile hosted as is in a block --
+     image manager, direct crop in edit mode, animations. Its image folder
+     belongs to the host tile and its settings are saved in the host's,
+     under `logo`. No logo is shipped: official logos are trademarks.
+     ============================================================ */
+  class LogoSlot {
+    constructor(ctx, cls) {
+      this.ctx = ctx;
+      this.cls = cls || "pig-logo";
+      this.host = null;
+      this.inst = null;
+    }
+
+    instanceId() {
+      const id = String(this.ctx.instanceId || "");
+      const out = id + "logo";
+      return /^t-[a-z0-9]{1,40}$/i.test(out) ? out : null;
+    }
+
+    sync(wanted) {
+      if (!wanted) { this.destroy(); return; }
+      if (!this.host) {
+        this.host = document.createElement("div");
+        this.host.className = "pig-logo-host";
+      }
+      if (this.inst) return;
+      const P = window.PiBoard;
+      const iid = this.instanceId();
+      const saved = (this.ctx.settings && this.ctx.settings.logo && typeof this.ctx.settings.logo === "object") ? this.ctx.settings.logo : {};
+      this.inst = iid && P && typeof P.embedWidget === "function"
+        ? P.embedWidget("image", this.host, Object.assign({ fit: "contain" }, saved), {
+          instanceId: iid,
+          onUpdate: (patch) => {
+            const cur = (this.ctx.settings && this.ctx.settings.logo && typeof this.ctx.settings.logo === "object") ? this.ctx.settings.logo : {};
+            const next = Object.assign({}, cur, patch);
+            if (typeof this.ctx.updateSettings === "function") this.ctx.updateSettings({ logo: next });
+            this.ctx.settings = Object.assign({}, this.ctx.settings, { logo: next });
+          }
+        }) : null;
+      if (!this.inst) {
+        const t = this.ctx.i18n && this.ctx.i18n.t ? this.ctx.i18n.t("ig.logo.unavailable") : "ig.logo.unavailable";
+        this.host.innerHTML = `<div class="pig-logo-msg">${esc(t)}</div>`;
+      }
+    }
+
+    /* Le conteneur du logo est DEPLACE dans le bloc a chaque rendu, jamais
+       recree : l'image et son recadrage restent en place.
+       Moved into the block on every render, never recreated. */
+    place(scope) {
+      if (!this.host || !scope) return;
+      const slot = scope.querySelector(".pig-logo-slot");
+      if (slot && this.host.parentNode !== slot) slot.appendChild(this.host);
+    }
+
+    /* Le bloc : transparent par defaut (le logo se pose sur le fond de la
+       tuile, donc sur son theme), avec cadre en option.
+       The block: transparent by default, frame optional. */
+    markup(framed) {
+      return `<div class="pig-logo-card${framed ? " pig-logo-framed" : ""} ${this.cls}"><div class="pig-logo-slot"></div></div>`;
+    }
+
+    destroy() {
+      if (this.inst) { try { this.inst.destroy(); } catch (e) { /* noop */ } }
+      this.inst = null;
+      this.host = null;
+    }
+  }
+
   window.PiBoardInnerGrid = {
+    LogoSlot,
     InnerGrid, BlockBoard,
     clampRect, overlaps, isFree, findSpot, placeSomewhere, normalize, resolveMove, trimAway,
     clipWrite, clipRead,

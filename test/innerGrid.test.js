@@ -285,6 +285,13 @@ const rect = (grid, id) => {
     document.body.appendChild(h);
     const g = board.mount(h);
     ok("seuls les blocs coches sont dans la grille", g.els.size === 2 && !g.els.has("c"));
+    {
+      const b2 = new IG.BlockBoard({ ctx: { i18n: { t: (k) => k }, settings: {} }, kind: "t3",
+        blocks: [{ id: "a", key: "showA", titleKey: "A" }, { id: "logo", key: "showLogo", titleKey: "L", optIn: true }],
+        presets: [], defaultPreset: null });
+      ok("un bloc optionnel (logo) n'apparait pas sur une tuile qui n'a jamais coche sa case",
+        b2.visible().map((b) => b.id).join() === "a");
+    }
     ok("un bloc decoche est propose dans « Ajouter un bloc »", g.o.hidden.length === 1 && g.o.hidden[0].id === "c");
     g.commit({ a: { x: 0, y: 0, w: 4, h: 12 }, b: { x: 4, y: 0, w: 8, h: 12 } });
     ok("la disposition est enregistree DANS les reglages de la tuile",
@@ -305,6 +312,56 @@ const rect = (grid, id) => {
     const last = saved[saved.length - 1].layouts;
     ok("chaque moment garde sa propre disposition", !!last.weekend && !!last.main && last.main.b.w === 8);
     board.unmount();
+  }
+
+  console.log("== Bloc ajoute a une grille pleine : on lui taille une place (1.153.0) ==");
+  {
+    const full = {};
+    let k = 0;
+    for (let y = 0; y < 12; y += 6) for (let x = 0; x < 12; x += 4) full["b" + (k++)] = { x, y, w: 4, h: 6 };
+    const n = IG.normalize(Object.keys(full).concat("logo"), null, full);
+    const all = Object.values(n);
+    ok("le bloc ajoute trouve une place sans rien chevaucher",
+      !!n.logo && all.every((r, i) => all.every((q, j) => i === j || !IG.overlaps(r, q))));
+    ok("en rognant un voisin, qui garde une taille lisible",
+      Object.keys(full).every((id) => n[id].w >= IG.MIN_W && n[id].h >= IG.MIN_H));
+  }
+
+  console.log("== Bloc logo : la tuile Logo / Image hebergee (1.153.0) ==");
+  {
+    const calls = [];
+    window.PiBoard = {
+      embedWidget(id, el, settings, opts) {
+        calls.push({ id, settings, opts });
+        el.innerHTML = '<div class="pw-image">logo</div>';
+        return { destroy() { calls.push("destroyed"); }, ctx: { settings } };
+      }
+    };
+    const saved = [];
+    const ctx = { instanceId: "t-abc123", i18n: { t: (k) => k }, settings: { logo: { image: "f1.png", zoom: 1.4 } },
+      updateSettings(p) { saved.push(p); } };
+    const slot = new IG.LogoSlot(ctx, "x-logo");
+    slot.sync(true);
+    ok("c'est la tuile Logo / Image qui est hebergee", calls[0].id === "image");
+    ok("avec un dossier d'images STABLE, propre a la tuile hote", calls[0].opts.instanceId === "t-abc123logo");
+    ok("et le logo deja choisi, avec son cadrage", calls[0].settings.image === "f1.png" && calls[0].settings.zoom === 1.4);
+    calls[0].opts.onUpdate({ image: "motogp.svg" });
+    ok("un logo choisi est enregistre DANS les reglages de la tuile hote", saved.length === 1
+      && saved[0].logo.image === "motogp.svg" && saved[0].logo.zoom === 1.4);
+    const block = document.createElement("div");
+    block.innerHTML = slot.markup(false);
+    slot.place(block);
+    ok("transparent par defaut : sans cadre", !block.querySelector(".pig-logo-framed") && !!block.querySelector(".pw-image"));
+    block.innerHTML = slot.markup(true);
+    slot.place(block);
+    ok("le cadre est une option, et le logo survit au nouveau rendu", !!block.querySelector(".pig-logo-framed .pw-image"));
+    slot.sync(false);
+    ok("masque, le bloc libere la tuile hebergee", calls.includes("destroyed"));
+    const bad = new IG.LogoSlot({ instanceId: "embed-x", i18n: { t: (k) => k }, settings: {} });
+    bad.sync(true);
+    ok("sans identifiant de tuile valable, un message plutot qu'un dossier au hasard",
+      /ig\.logo\.unavailable/.test(bad.host.textContent));
+    delete window.PiBoard;
   }
 
   console.log(`\n>>> innerGrid : ${passed} verifications OK`);

@@ -396,7 +396,10 @@
        vectoriel, qui suit deja la taille du bloc.
        The map is not text-scaled: a vector drawing already follows the
        block's size. */
-    { id: "circuit", key: "showCircuit", titleKey: "f1.card.circuit", fit: false }
+    { id: "circuit", key: "showCircuit", titleKey: "f1.card.circuit", fit: false },
+    /* Le logo (1.153.0) : la tuile Logo / Image hebergee, en option.
+       The logo: the hosted Logo / Image tile, optional. */
+    { id: "logo", key: "showLogo", titleKey: "f1.card.logo", fit: false, optIn: true }
   ];
 
   /* Dispositions predefinies, sur la grille 12 x 12. Elles ne couvrent
@@ -448,6 +451,8 @@
       this.circuitHost = null;
       this.circuitInst = null;
       this.circuitConf = "";
+      this.logo = window.PiBoardInnerGrid && window.PiBoardInnerGrid.LogoSlot
+        ? new window.PiBoardInnerGrid.LogoSlot(ctx, "pwf1-logo") : null;
       this.board = window.PiBoardInnerGrid ? new window.PiBoardInnerGrid.BlockBoard({
         ctx, kind: "f1", blocks: BLOCKS, presets: PRESETS,
         defaultPreset: "compact", seasonPreset: "season", weekendPreset: "weekend",
@@ -624,7 +629,11 @@
 
     visibleBlocks() {
       const s = this.ctx.settings;
-      return BLOCKS.filter((b) => s[b.key] !== false);
+      /* Un bloc « optIn » (le logo) n'apparait que coche EXPLICITEMENT :
+         une tuile posee avant son arrivee n'a pas ce reglage, et ne doit
+         pas voir surgir un bloc vide. An optIn block shows only when
+         explicitly ticked. */
+      return BLOCKS.filter((b) => (b.optIn ? s[b.key] === true : s[b.key] !== false));
     }
 
     render() {
@@ -644,6 +653,7 @@
       const now = Date.now();
       const vis = this.visibleBlocks();
       this.syncCircuit(vis.some((b) => b.id === "circuit"));
+      if (this.logo) this.logo.sync(vis.some((b) => b.id === "logo"));
 
       /* UNE SEULE CARTE COCHEE : LA TUILE DEVIENT CETTE CARTE, sans
          cadre ni titre interne -- la barre de titre de la tuile en tient
@@ -662,6 +672,7 @@
         const cards = vis.map((b) => this.cardFor(b.id, now)).filter(Boolean).join("");
         wrap.innerHTML = (cards || `<div class="pwf1-msg">${esc(i18n.t("f1.noCard"))}</div>`) + stale;
         this.placeCircuit(wrap);
+        if (this.logo) this.logo.place(wrap);
         this.paintCountdown();
         return;
       }
@@ -684,6 +695,7 @@
           this.placeCircuit(body);
         } else {
           body.innerHTML = this.cardFor(b.id, now);
+          if (b.id === "logo" && this.logo) this.logo.place(body);
         }
       }
       if (stale) wrap.insertAdjacentHTML("beforeend", stale);
@@ -700,6 +712,7 @@
         case "results": return this.cardResults();
         case "weather": return this.cardWeather(now);
         case "circuit": return this.cardCircuit(now);
+        case "logo": return this.logo ? this.logo.markup(this.ctx.settings.logoFrame === true) : "";
         default: return "";
       }
     }
@@ -1054,6 +1067,7 @@
       clearTimeout(this.timer);
       clearInterval(this.tick);
       this.syncCircuit(false);
+      if (this.logo) this.logo.destroy();
       if (this.board) this.board.unmount();
     }
   }

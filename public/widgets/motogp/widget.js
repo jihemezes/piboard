@@ -379,7 +379,10 @@
     { id: "teams", key: "showTeams", titleKey: "motogp.card.teams" },
     { id: "results", key: "showResults", titleKey: "motogp.card.results" },
     { id: "weather", key: "showWeather", titleKey: "motogp.card.weather" },
-    { id: "circuit", key: "showCircuit", titleKey: "motogp.card.circuit", fit: false }
+    { id: "circuit", key: "showCircuit", titleKey: "motogp.card.circuit", fit: false },
+    /* Le logo (1.153.0) : la tuile Logo / Image hebergee, en option.
+       The logo: the hosted Logo / Image tile, optional. */
+    { id: "logo", key: "showLogo", titleKey: "motogp.card.logo", fit: false, optIn: true }
   ];
 
   const PRESETS = [
@@ -417,6 +420,8 @@
       this.circuitHost = null;
       this.circuitInst = null;
       this.circuitConf = "";
+      this.logo = window.PiBoardInnerGrid && window.PiBoardInnerGrid.LogoSlot
+        ? new window.PiBoardInnerGrid.LogoSlot(ctx, "pwmgp-logo") : null;
       this.board = window.PiBoardInnerGrid ? new window.PiBoardInnerGrid.BlockBoard({
         ctx, kind: "motogp", blocks: BLOCKS, presets: PRESETS,
         defaultPreset: "compact", seasonPreset: "season", weekendPreset: "weekend",
@@ -562,7 +567,11 @@
 
     visibleBlocks() {
       const s = this.ctx.settings;
-      return BLOCKS.filter((b) => s[b.key] !== false);
+      /* Un bloc « optIn » (le logo) n'apparait que coche EXPLICITEMENT :
+         une tuile posee avant son arrivee n'a pas ce reglage, et ne doit
+         pas voir surgir un bloc vide. An optIn block shows only when
+         explicitly ticked. */
+      return BLOCKS.filter((b) => (b.optIn ? s[b.key] === true : s[b.key] !== false));
     }
 
     skinClass() {
@@ -594,6 +603,7 @@
       const now = Date.now();
       const vis = this.visibleBlocks();
       this.syncCircuit(vis.some((b) => b.id === "circuit"));
+      if (this.logo) this.logo.sync(vis.some((b) => b.id === "logo"));
       this.solo = vis.length === 1;
       const stale = this.error ? `<div class="pwmgp-stale">${esc(i18n.t("motogp.stale"))}</div>` : "";
 
@@ -603,6 +613,7 @@
         const cards = vis.map((b) => this.cardFor(b.id, now)).join("");
         wrap.innerHTML = (cards || `<div class="pwmgp-msg">${esc(i18n.t("motogp.noCard"))}</div>`) + stale;
         this.placeCircuit(wrap);
+        if (this.logo) this.logo.place(wrap);
         this.paintCountdown();
         return;
       }
@@ -615,6 +626,7 @@
         if (!body) continue;
         body.innerHTML = this.cardFor(b.id, now);
         if (b.id === "circuit") this.placeCircuit(body);
+        if (b.id === "logo" && this.logo) this.logo.place(body);
       }
       if (stale) wrap.insertAdjacentHTML("beforeend", stale);
       grid.scheduleFit();
@@ -630,6 +642,7 @@
         case "results": return this.cardResults();
         case "weather": return this.cardWeather(now);
         case "circuit": return this.cardCircuit(now);
+        case "logo": return this.logo ? this.logo.markup(this.ctx.settings.logoFrame === true) : "";
         default: return "";
       }
     }
@@ -860,6 +873,7 @@
       clearTimeout(this.timer);
       clearInterval(this.tick);
       this.syncCircuit(false);
+      if (this.logo) this.logo.destroy();
       if (this.board) this.board.unmount();
     }
   }

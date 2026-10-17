@@ -2,7 +2,7 @@
   "_comment_fr": "DISPOSER LES CARTES : en mode édition, chaque carte est un bloc de la grille interne de la tuile. On le déplace par sa barre de titre, on le redimensionne par son coin, on le masque par sa croix, et la barre d'outils de la tuile rajoute un bloc masqué, applique une disposition prédéfinie, revient à celle par défaut, ou copie la disposition vers une autre tuile Formule 1. La disposition est enregistrée dans les réglages de CETTE tuile.",
   "_comment_en": "ARRANGING THE CARDS: in edit mode each card is a block of the tile's inner grid. Move it by its title bar, resize it by its corner, hide it with its cross; the tile's toolbar adds a hidden block back, applies a preset layout, returns to the default one, or copies the layout to another Formula 1 tile. The layout is saved in THIS tile's settings.",
   "id": "f1",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
@@ -147,6 +147,32 @@
       "hint": {
         "en": "The next session and the time left, laid on the corner of the map: during a race weekend it is the pair one looks at -- where, and how long until.",
         "fr": "La prochaine séance et le temps restant, posés sur le coin du plan : pendant un week-end de course, c'est le duo qu'on regarde — où, et dans combien de temps."
+      }
+    },
+    {
+      "key": "showLogo",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Logo\" card",
+        "fr": "Carte « Logo »"
+      },
+      "hint": {
+        "en": "A block for a logo of your own, uploaded by you: official logos are registered trademarks, so PiBoard ships none. It reuses the Logo / Image tile as is -- image manager (the \"Choose an image\" button in the block, or the camera in edit mode), direct cropping in edit mode, mirror, rotation and animations. The image is kept in this tile's own folder, and its framing in this tile's settings.",
+        "fr": "Un bloc pour un logo à vous, que vous téléversez vous-même : les logos officiels sont des marques déposées, PiBoard n'en fournit aucun. Il réutilise tel quel la tuile Logo / Image — gestionnaire d'images (bouton « Choisir une image » dans le bloc, ou appareil photo en mode édition), recadrage direct en mode édition, miroir, rotation et animations. L'image est rangée dans le dossier propre à cette tuile, et son cadrage dans les réglages de cette tuile."
+      }
+    },
+    {
+      "key": "logoFrame",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Frame around the logo",
+        "fr": "Cadre autour du logo"
+      },
+      "hint": {
+        "en": "Off by default: the logo block is transparent, with neither frame nor background, so the logo sits directly on the tile's background and theme. Tick it to give the block the same frame as the other cards.",
+        "fr": "Désactivé par défaut : le bloc du logo est transparent, sans cadre ni fond, et le logo se pose directement sur le fond et le thème de la tuile. Cochez pour lui donner le même cadre que les autres cartes."
       }
     },
     {

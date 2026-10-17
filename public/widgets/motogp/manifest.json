@@ -1,6 +1,6 @@
 {
   "id": "motogp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "name": {
     "en": "MotoGP",
     "fr": "MotoGP"
@@ -182,6 +182,32 @@
       "hint": {
         "en": "The next session and the time left, laid on the corner of the map.",
         "fr": "La prochaine séance et le temps restant, posés sur le coin du plan."
+      }
+    },
+    {
+      "key": "showLogo",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Logo\" card",
+        "fr": "Carte « Logo »"
+      },
+      "hint": {
+        "en": "A block for a logo of your own, uploaded by you: official logos are registered trademarks, so PiBoard ships none. It reuses the Logo / Image tile as is -- image manager (the \"Choose an image\" button in the block, or the camera in edit mode), direct cropping in edit mode, mirror, rotation and animations. The image is kept in this tile's own folder, and its framing in this tile's settings.",
+        "fr": "Un bloc pour un logo à vous, que vous téléversez vous-même : les logos officiels sont des marques déposées, PiBoard n'en fournit aucun. Il réutilise tel quel la tuile Logo / Image — gestionnaire d'images (bouton « Choisir une image » dans le bloc, ou appareil photo en mode édition), recadrage direct en mode édition, miroir, rotation et animations. L'image est rangée dans le dossier propre à cette tuile, et son cadrage dans les réglages de cette tuile."
+      }
+    },
+    {
+      "key": "logoFrame",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Frame around the logo",
+        "fr": "Cadre autour du logo"
+      },
+      "hint": {
+        "en": "Off by default: the logo block is transparent, with neither frame nor background, so the logo sits directly on the tile's background and theme. Tick it to give the block the same frame as the other cards.",
+        "fr": "Désactivé par défaut : le bloc du logo est transparent, sans cadre ni fond, et le logo se pose directement sur le fond et le thème de la tuile. Cochez pour lui donner le même cadre que les autres cartes."
       }
     },
     {

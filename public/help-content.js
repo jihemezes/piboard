@@ -2690,6 +2690,7 @@ Franceinfo".</span></div>
   <li>Un abandon est signalé comme tel, pas comme une vingtième place ; la météo est celle de l'heure de chaque séance.</li>
   <li>Données gratuites Jolpica (successeur d'Ergast), sans clé ni compte.</li>
   <li><b>Un thème à part entière</b> pour la tuile (cadre, barre de titre et contenu), qui suit la bascule jour/nuit.</li>
+  <li><b>Un bloc Logo</b>, en option, pour votre propre logo (tuile Logo / Image réutilisée), transparent par défaut.</li>
 </ul>
 
 <h4>Les sept blocs</h4>
@@ -2744,6 +2745,10 @@ Franceinfo".</span></div>
           <p>Le réglage <b>Thème de la tuile</b> donne à cette tuile l'un des thèmes de PiBoard — un thème intégré, ou un thème créé dans l'éditeur de thèmes — <b>indépendamment de la page</b> où elle se trouve. Il habille <b>toute la tuile</b> : le cadre, la barre de titre et le contenu, plan du circuit compris. La liste indique « ☀︎/☾ » pour les thèmes qui ont une variante jour et une variante nuit : la tuile <b>bascule alors avec le tableau</b>. « Comme la page » revient au comportement habituel.</p>
           <p>Le <b>Style des cartes</b> s'applique <b>par-dessus</b> le thème : « Thème (de la tuile ou de la page) » laisse les cartes dans le thème, « Piste sombre » et « Couleur choisie » les repeignent sans toucher au cadre. Une couleur de tuile personnalisée, dans les réglages universels, l'emporte toujours sur le fond du thème.</p>
 
+<h4>Votre logo dans la tuile</h4>
+          <p>La carte <b>Logo</b> (désactivée par défaut) ajoute un bloc pour un logo <b>que vous téléversez vous-même</b> — PiBoard n'en fournit aucun : les logos officiels sont des marques déposées. Le bloc réutilise telle quelle la tuile <b>Logo / Image</b> : bouton « Choisir une image » dans le bloc, appareil photo de sa barre en mode édition, recadrage direct sur l'image, miroir, rotation et animations. L'image est rangée dans le dossier propre à <b>cette</b> tuile, et son cadrage dans ses réglages.</p>
+          <p>Le bloc est <b>transparent par défaut</b> : ni cadre ni fond, le logo se pose directement sur le fond et le thème de la tuile. « Cadre autour du logo » lui rend le cadre des autres cartes. En mode édition, il se déplace par sa barre de titre comme tout bloc ; ajouté à une disposition déjà pleine, il se taille une place en rognant le plus grand bloc.</p>
+
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée : l'API couvre tout le championnat depuis 1950.</span></div>
@@ -2756,6 +2761,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Carte « Plan du circuit »</span><span class="help-opt-desc">Le tracé du circuit du week-end, dessiné par la tuile Plan du circuit elle-même et réutilisé tel quel : ruban d'asphalte, vibreurs rouge et blanc, virages numérotés, sens de la course et voie des stands. Il suit le calendrier de Formule 1 et change de lui-même d'un week-end à l'autre. Le dessin est vectoriel et suit la taille de son bloc. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Fiche technique sous le plan</span><span class="help-opt-desc">Longueur, virages, nombre de tours, distance de course et record du tour, tirés de la base des circuits — la même fiche que la tuile Plan du circuit. Décochez-la pour laisser toute la place au tracé. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Compte à rebours sur le plan</span><span class="help-opt-desc">La prochaine séance et le temps restant, posés sur le coin du plan : pendant un week-end de course, c'est le duo qu'on regarde — où, et dans combien de temps. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Logo »</span><span class="help-opt-desc">Un bloc pour un logo à vous, que vous téléversez vous-même : les logos officiels sont des marques déposées, PiBoard n'en fournit aucun. Il réutilise tel quel la tuile Logo / Image — gestionnaire d'images (bouton « Choisir une image » dans le bloc, ou appareil photo en mode édition), recadrage direct en mode édition, miroir, rotation et animations. L'image est rangée dans le dossier propre à cette tuile, et son cadrage dans les réglages de cette tuile. Désactivé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Cadre autour du logo</span><span class="help-opt-desc">Désactivé par défaut : le bloc du logo est transparent, sans cadre ni fond, et le logo se pose directement sur le fond et le thème de la tuile. Cochez pour lui donner le même cadre que les autres cartes. Désactivé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Pilotes affichés</span><span class="help-opt-desc">Vingt-deux lignes rendent le classement illisible sur une tuile moyenne. Dix couvre tout ce qui se joue vraiment. De 3 à 24, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Écuries affichées</span><span class="help-opt-desc">De 3 à 12, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Résultats affichés</span><span class="help-opt-desc">De 3 à 24, par défaut 10.</span></div>
@@ -2784,6 +2791,7 @@ Franceinfo".</span></div>
   <li>A retirement is shown as such, not as a twentieth place; the weather is for each session's hour.</li>
   <li>Free Jolpica data (Ergast's successor), no key or account.</li>
   <li><b>A theme of its own</b> for the tile (frame, title bar and content), following the day/night switch.</li>
+  <li><b>An optional Logo block</b> for your own logo (the Logo / Image tile reused), transparent by default.</li>
 </ul>
 
 <h4>The seven blocks</h4>
@@ -2838,6 +2846,10 @@ Franceinfo".</span></div>
           <p>The <b>Tile theme</b> setting gives this tile one of PiBoard's themes — a built-in one, or one created in the theme editor — <b>independently of the page</b> it sits on. It dresses <b>the whole tile</b>: frame, title bar and content, circuit map included. The list marks "☀︎/☾" for themes that have both a day and a night variant: the tile then <b>switches along with the board</b>. "Same as the page" returns to the usual behaviour.</p>
           <p>The <b>Card style</b> applies <b>on top</b> of the theme: "Theme (tile's or page's)" leaves the cards in the theme, "Dark track" and "Chosen colour" repaint them without touching the frame. A custom tile colour, in the universal settings, still wins over the theme's background.</p>
 
+<h4>Your logo in the tile</h4>
+          <p>The <b>Logo</b> card (off by default) adds a block for a logo <b>you upload yourself</b> — PiBoard ships none: official logos are registered trademarks. The block reuses the <b>Logo / Image</b> tile as is: "Choose an image" button in the block, its toolbar camera in edit mode, direct cropping on the image, mirror, rotation and animations. The image is kept in <b>this</b> tile's own folder, and its framing in its settings.</p>
+          <p>The block is <b>transparent by default</b>: no frame, no background, the logo sits directly on the tile's background and theme. "Frame around the logo" gives it the other cards' frame. In edit mode it moves by its title bar like any block; added to an already full layout, it carves itself a spot by trimming the largest block.</p>
+
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <div class="help-opt"><span class="help-opt-name">Season</span><span class="help-opt-desc">Empty = current season. A year (2024, 2025…) to look at a past season: the API covers the championship since 1950.</span></div>
@@ -2850,6 +2862,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">"Circuit map" card</span><span class="help-opt-desc">The outline of the weekend's circuit, drawn by the Circuit map tile itself and reused as is: asphalt ribbon, red-and-white kerbs, numbered corners, racing direction and pit lane. It follows the Formula 1 calendar and switches by itself from one weekend to the next. The drawing is vector-based and follows the size of its block. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Spec sheet under the map</span><span class="help-opt-desc">Length, corners, race laps, race distance and lap record, from the circuit base -- the same sheet as the Circuit map tile. Untick it to give the outline all the room. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Countdown on the map</span><span class="help-opt-desc">The next session and the time left, laid on the corner of the map: during a race weekend it is the pair one looks at -- where, and how long until. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Logo" card</span><span class="help-opt-desc">A block for a logo of your own, uploaded by you: official logos are registered trademarks, so PiBoard ships none. It reuses the Logo / Image tile as is -- image manager (the "Choose an image" button in the block, or the camera in edit mode), direct cropping in edit mode, mirror, rotation and animations. The image is kept in this tile's own folder, and its framing in this tile's settings. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Frame around the logo</span><span class="help-opt-desc">Off by default: the logo block is transparent, with neither frame nor background, so the logo sits directly on the tile's background and theme. Tick it to give the block the same frame as the other cards. Off by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Drivers shown</span><span class="help-opt-desc">Twenty-two rows make the table unreadable on a medium tile. Ten covers everything actually at stake. From 3 to 24, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Teams shown</span><span class="help-opt-desc">From 3 to 12, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Results shown</span><span class="help-opt-desc">From 3 to 24, default 10.</span></div>
@@ -2888,6 +2902,7 @@ Franceinfo".</span></div>
   <li>Un pilote tombé est indiqué « Non classé », pas comme une dernière place ; la météo est celle de l'heure de chaque séance.</li>
   <li>Données du flux public de <b>motogp.com</b>, sans clé ni compte.</li>
   <li><b>Un thème à part entière</b> pour la tuile (cadre, barre de titre et contenu), qui suit la bascule jour/nuit.</li>
+  <li><b>Un bloc Logo</b>, en option, pour votre propre logo (tuile Logo / Image réutilisée), transparent par défaut.</li>
 </ul>
 
 <h4>Les sept blocs</h4>
@@ -2935,6 +2950,10 @@ Franceinfo".</span></div>
           <p>Le réglage <b>Thème de la tuile</b> donne à cette tuile l'un des thèmes de PiBoard — un thème intégré, ou un thème créé dans l'éditeur de thèmes — <b>indépendamment de la page</b> où elle se trouve. Il habille <b>toute la tuile</b> : le cadre, la barre de titre et le contenu, plan du circuit compris. La liste indique « ☀︎/☾ » pour les thèmes qui ont une variante jour et une variante nuit : la tuile <b>bascule alors avec le tableau</b>. « Comme la page » revient au comportement habituel.</p>
           <p>Le <b>Style des cartes</b> s'applique <b>par-dessus</b> le thème : « Thème (de la tuile ou de la page) » laisse les cartes dans le thème, « Piste sombre » et « Couleur choisie » les repeignent sans toucher au cadre. Une couleur de tuile personnalisée, dans les réglages universels, l'emporte toujours sur le fond du thème.</p>
 
+<h4>Votre logo dans la tuile</h4>
+          <p>La carte <b>Logo</b> (désactivée par défaut) ajoute un bloc pour un logo <b>que vous téléversez vous-même</b> — PiBoard n'en fournit aucun : les logos officiels sont des marques déposées. Le bloc réutilise telle quelle la tuile <b>Logo / Image</b> : bouton « Choisir une image » dans le bloc, appareil photo de sa barre en mode édition, recadrage direct sur l'image, miroir, rotation et animations. L'image est rangée dans le dossier propre à <b>cette</b> tuile, et son cadrage dans ses réglages.</p>
+          <p>Le bloc est <b>transparent par défaut</b> : ni cadre ni fond, le logo se pose directement sur le fond et le thème de la tuile. « Cadre autour du logo » lui rend le cadre des autres cartes. En mode édition, il se déplace par sa barre de titre comme tout bloc ; ajouté à une disposition déjà pleine, il se taille une place en rognant le plus grand bloc.</p>
+
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <div class="help-opt"><span class="help-opt-name">Saison</span><span class="help-opt-desc">Vide = saison en cours. Une année (2024, 2025…) pour consulter une saison passée.</span></div>
@@ -2948,6 +2967,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Carte « Plan du circuit »</span><span class="help-opt-desc">Le tracé du circuit du week-end, dessiné par la tuile Plan du circuit elle-même, réglée pour suivre le calendrier de MotoGP : ruban d'asphalte, vibreurs, virages numérotés, sens de la course. Le Mans-Bugatti n'a pas encore de tracé dans la base ; sa fiche technique est affichée à la place. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Fiche technique sous le plan</span><span class="help-opt-desc">Les chiffres officiels du MotoGP, tirés de la base des circuits : longueur du tracé MotoGP, virages à gauche et à droite, plus longue ligne droite. Décochez-la pour laisser toute la place au tracé. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Compte à rebours sur le plan</span><span class="help-opt-desc">La prochaine séance et le temps restant, posés sur le coin du plan. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Carte « Logo »</span><span class="help-opt-desc">Un bloc pour un logo à vous, que vous téléversez vous-même : les logos officiels sont des marques déposées, PiBoard n'en fournit aucun. Il réutilise tel quel la tuile Logo / Image — gestionnaire d'images (bouton « Choisir une image » dans le bloc, ou appareil photo en mode édition), recadrage direct en mode édition, miroir, rotation et animations. L'image est rangée dans le dossier propre à cette tuile, et son cadrage dans les réglages de cette tuile. Désactivé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Cadre autour du logo</span><span class="help-opt-desc">Désactivé par défaut : le bloc du logo est transparent, sans cadre ni fond, et le logo se pose directement sur le fond et le thème de la tuile. Cochez pour lui donner le même cadre que les autres cartes. Désactivé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Pilotes affichés</span><span class="help-opt-desc">De 3 à 30, par défaut 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Équipes affichées</span><span class="help-opt-desc">De 3 à 12, par défaut 11.</span></div>
 <div class="help-opt"><span class="help-opt-name">Lignes de résultats</span><span class="help-opt-desc">De 3 à 30, par défaut 10.</span></div>
@@ -2974,6 +2995,7 @@ Franceinfo".</span></div>
   <li>A rider who crashed is shown "Not classified", not as a last place; the weather is for each session's hour.</li>
   <li>Data from <b>motogp.com</b>'s public feed, no key or account.</li>
   <li><b>A theme of its own</b> for the tile (frame, title bar and content), following the day/night switch.</li>
+  <li><b>An optional Logo block</b> for your own logo (the Logo / Image tile reused), transparent by default.</li>
 </ul>
 
 <h4>The seven blocks</h4>
@@ -3021,6 +3043,10 @@ Franceinfo".</span></div>
           <p>The <b>Tile theme</b> setting gives this tile one of PiBoard's themes — a built-in one, or one created in the theme editor — <b>independently of the page</b> it sits on. It dresses <b>the whole tile</b>: frame, title bar and content, circuit map included. The list marks "☀︎/☾" for themes that have both a day and a night variant: the tile then <b>switches along with the board</b>. "Same as the page" returns to the usual behaviour.</p>
           <p>The <b>Card style</b> applies <b>on top</b> of the theme: "Theme (tile's or page's)" leaves the cards in the theme, "Dark track" and "Chosen colour" repaint them without touching the frame. A custom tile colour, in the universal settings, still wins over the theme's background.</p>
 
+<h4>Your logo in the tile</h4>
+          <p>The <b>Logo</b> card (off by default) adds a block for a logo <b>you upload yourself</b> — PiBoard ships none: official logos are registered trademarks. The block reuses the <b>Logo / Image</b> tile as is: "Choose an image" button in the block, its toolbar camera in edit mode, direct cropping on the image, mirror, rotation and animations. The image is kept in <b>this</b> tile's own folder, and its framing in its settings.</p>
+          <p>The block is <b>transparent by default</b>: no frame, no background, the logo sits directly on the tile's background and theme. "Frame around the logo" gives it the other cards' frame. In edit mode it moves by its title bar like any block; added to an already full layout, it carves itself a spot by trimming the largest block.</p>
+
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <div class="help-opt"><span class="help-opt-name">Season</span><span class="help-opt-desc">Empty = current season. A year (2024, 2025…) to look at a past season.</span></div>
@@ -3034,6 +3060,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">"Circuit map" card</span><span class="help-opt-desc">The outline of the weekend's circuit, drawn by the Circuit map tile itself, set to follow the MotoGP calendar: asphalt ribbon, kerbs, numbered corners, racing direction. Le Mans-Bugatti still has no outline in the base; its spec sheet is shown instead. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Spec sheet under the map</span><span class="help-opt-desc">Official MotoGP figures from the circuit base: length of the MotoGP layout, left and right corners, longest straight. Untick it to give the outline all the room. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Countdown on the map</span><span class="help-opt-desc">The next session and the time left, laid on the corner of the map. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">"Logo" card</span><span class="help-opt-desc">A block for a logo of your own, uploaded by you: official logos are registered trademarks, so PiBoard ships none. It reuses the Logo / Image tile as is -- image manager (the "Choose an image" button in the block, or the camera in edit mode), direct cropping in edit mode, mirror, rotation and animations. The image is kept in this tile's own folder, and its framing in this tile's settings. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Frame around the logo</span><span class="help-opt-desc">Off by default: the logo block is transparent, with neither frame nor background, so the logo sits directly on the tile's background and theme. Tick it to give the block the same frame as the other cards. Off by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Riders shown</span><span class="help-opt-desc">From 3 to 30, default 10.</span></div>
 <div class="help-opt"><span class="help-opt-name">Teams shown</span><span class="help-opt-desc">From 3 to 12, default 11.</span></div>
 <div class="help-opt"><span class="help-opt-name">Results rows</span><span class="help-opt-desc">From 3 to 30, default 10.</span></div>

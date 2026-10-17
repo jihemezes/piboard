@@ -32,6 +32,22 @@
 
 # Nouveautes / What's new
 
+## 1.153.0
+
+**Votre logo dans les tuiles Formule 1 et MotoGP**
+
+Un bloc Logo, en option, accueille le logo que vous téléversez, avec recadrage,
+rotation et animations comme la tuile Logo / Image. Transparent par défaut, il se
+pose sur le thème de la tuile.
+
+---
+
+**Your logo in the Formula 1 and MotoGP tiles**
+
+An optional Logo block holds the logo you upload, with cropping, rotation and
+animations like the Logo / Image tile. Transparent by default, it sits on the tile's
+theme.
+
 ## 1.152.0
 
 **Un thème rien que pour la tuile Formule 1 ou MotoGP**

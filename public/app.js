@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.152.0
+   Version 1.153.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -139,14 +139,22 @@
        copying its thousand lines of drawing code: a fix to the outline
        then benefits both. The host supplies the element and settings,
        and must call destroy() on the returned instance when it goes. */
-    embedWidget(id, el, overrides) {
+    embedWidget(id, el, overrides, opts) {
+      /* `opts` (1.153.0) : { instanceId, onUpdate(patch) }. Un identifiant
+         STABLE donne a la tuile hebergee son propre dossier d'images
+         (bloc Logo), et `onUpdate` laisse la tuile hote enregistrer ses
+         reglages -- sans cela, le logo choisi serait perdu au
+         rechargement. A STABLE id gives the hosted tile its own image
+         folder; onUpdate lets the host save its settings. */
+      const o = opts || {};
       const Klass = widgetClasses.get(id);
       const manifest = catalog.find((m) => m.id === id) || null;
       if (!Klass || !el) return null;
+      const instanceRef = { inst: null };
       const embedded = {
         el,
         settings: Object.assign({}, defaultsFor(manifest), overrides || {}),
-        instanceId: "embed-" + id + "-" + Math.random().toString(36).slice(2, 8),
+        instanceId: o.instanceId || ("embed-" + id + "-" + Math.random().toString(36).slice(2, 8)),
         manifest,
         api: widgetApi,
         assetUrl(file) {
@@ -156,11 +164,16 @@
         /* Une tuile hebergee n'a pas de reglages enregistres a elle : ce
            sont ceux de la tuile hote qui la pilotent.
            A hosted tile has no saved settings of its own. */
-        updateSettings(patch) { embedded.settings = Object.assign({}, embedded.settings, patch || {}); },
+        updateSettings(patch) {
+          embedded.settings = Object.assign({}, embedded.settings, patch || {});
+          if (instanceRef.inst && instanceRef.inst.ctx) instanceRef.inst.ctx.settings = Object.assign({}, instanceRef.inst.ctx.settings, patch || {});
+          if (typeof o.onUpdate === "function") { try { o.onUpdate(Object.assign({}, patch || {})); } catch (e) { /* noop */ } }
+        },
         i18n
       };
       try {
         const instance = new Klass(embedded);
+        instanceRef.inst = instance;
         Promise.resolve(instance.init()).catch((e) => console.warn("[piboard] embedded widget init failed:", id, e));
         return instance;
       } catch (e) {
