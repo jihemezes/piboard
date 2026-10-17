@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.155.0
+   Version 1.156.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -111,6 +111,10 @@
        concerns them, and what to refresh once the image has been copied
        into their folder. */
     openLibrary(target, section, onPicked) { openLibrary(target, section, onPicked); },
+    /* Ouvre les reglages generaux sur une famille (general, look, layout,
+       input, saver, content, project) et, au choix, une section.
+       Opens the general settings on a family and, optionally, a section. */
+    openSettings(family, section) { openSettings(family, section); },
     /* Ton ("dark" / "light") de la surface ou se trouve un element :
        une page ou un volet peut avoir son propre theme. Les widgets
        l'utilisent au lieu de lire <body> directement.
@@ -8312,7 +8316,281 @@
     checkForUpdatesNow();
   }
 
-  function openSettings() {
+  /* ---------- Reglages en page pleine (1.156.0) / Settings as a full page ----------
+     Les champs n'ont pas bouge : openSettings() les remplit et saveSettings()
+     les lit exactement comme avant. Ce bloc n'ajoute que la COQUE : sept
+     familles a gauche, une famille a la fois au centre, « Dans cette
+     famille » a droite, un pied fixe Enregistrer / Annuler, une pastille
+     « modifie » par famille, la recherche et les liens vers l'aide.
+
+     « Modifie » = la valeur d'un controle differe de celle qu'il avait a
+     l'ouverture. Chaque famille garde un instantane de ses controles ; on
+     le compare a chaque saisie. Les controles marques data-live (tiroirs,
+     pages, abonnements presse, photos du diaporama) s'appliquent
+     IMMEDIATEMENT, sans passer par Enregistrer : ils n'ont donc rien a
+     signaler comme « non enregistre ».
+
+     The fields did not move: openSettings() fills them and saveSettings()
+     reads them exactly as before. This block only adds the SHELL: seven
+     families on the left, one family at a time in the centre, "In this
+     family" on the right, a fixed Save / Cancel footer, a "modified"
+     badge per family, search and links to the help. "Modified" = a
+     control's value differs from what it had at opening. Each family keeps
+     a snapshot of its controls, compared on every input. Controls marked
+     data-live apply IMMEDIATELY, outside Save, so they have nothing "unsaved"
+     to report. */
+  const SET_FAMILIES = ["general", "look", "layout", "input", "saver", "content", "project"];
+  const SET_FAMILY_STORE = "piboard.settingsFamily";
+  const setUi = { open: false, family: "general", snaps: {}, query: "", wired: false };
+
+  const setPanelOf = (fam) => $("setPanel_" + fam);
+  const setSectionsOf = (fam) => Array.from(setPanelOf(fam).children).filter((el) => el.tagName === "FIELDSET");
+  const setFamilyShown = (fam) => setSectionsOf(fam).some((s) => !s.hidden);
+  const setFamilyName = (fam) => i18n.t("setp.fam." + fam);
+  const setSectionTitle = (sec) => {
+    const lg = sec.querySelector(":scope > legend");
+    return lg ? lg.textContent.trim() : sec.id;
+  };
+  const setNorm = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+
+  function setStoredFamily() {
+    try { return localStorage.getItem(SET_FAMILY_STORE) || ""; } catch (e) { return ""; }
+  }
+
+  function setSnapshot(fam) {
+    const parts = [];
+    setPanelOf(fam).querySelectorAll("input, select, textarea").forEach((el, i) => {
+      if (el.type === "file" || el.hasAttribute("data-live") || el.closest("[data-live]")) return;
+      parts.push(i + "=" + (el.type === "checkbox" || el.type === "radio" ? (el.checked ? "1" : "0") : el.value));
+    });
+    // La ville choisie dans la liste de suggestions ne change pas le champ
+    // texte : elle vit dans pendingCity. / The city picked from the
+    // suggestions does not change the text field: it lives in pendingCity.
+    if (fam === "look" && pendingCity) parts.push("city=" + pendingCity.name);
+    return parts.join("\u0001");
+  }
+
+  function setDirtyFamilies() {
+    if (!setUi.open || $("settingsModal").hidden) return [];
+    return SET_FAMILIES.filter((f) => setUi.snaps[f] !== undefined && setSnapshot(f) !== setUi.snaps[f]);
+  }
+
+  function updateSettingsDirtyUi() {
+    const dirty = setDirtyFamilies();
+    document.querySelectorAll("#setNav .set-fam").forEach((b) => {
+      b.querySelector(".set-dirty-badge").hidden = dirty.indexOf(b.dataset.fam) < 0;
+    });
+    const state = $("setFootState");
+    state.textContent = dirty.length
+      ? i18n.t("setp.foot.dirty").replace("{names}", dirty.map(setFamilyName).join(", "))
+      : "";
+    state.classList.toggle("dirty", dirty.length > 0);
+  }
+
+  function renderSettingsNav() {
+    const nav = $("setNav");
+    nav.innerHTML = "";
+    SET_FAMILIES.forEach((fam) => {
+      if (!setFamilyShown(fam)) return;
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "set-fam";
+      b.dataset.fam = fam;
+      b.classList.toggle("active", fam === setUi.family && !setUi.query);
+      const name = document.createElement("span");
+      name.className = "set-fam-name";
+      name.textContent = setFamilyName(fam);
+      const count = document.createElement("span");
+      count.className = "set-fam-count";
+      count.hidden = true;
+      const badge = document.createElement("span");
+      badge.className = "set-dirty-badge";
+      badge.textContent = i18n.t("setp.modified");
+      badge.hidden = true;
+      b.append(name, count, badge);
+      nav.appendChild(b);
+    });
+    updateSettingsDirtyUi();
+    if (setUi.query) applySettingsSearch();
+  }
+
+  function renderSettingsRail() {
+    const searching = !!setUi.query;
+    const label = document.querySelector("#setRail .help-rail-label");
+    label.dataset.i18n = searching ? "setp.rail.results" : "setp.rail.title";
+    label.textContent = i18n.t(label.dataset.i18n);
+    const box = $("setRailItems");
+    box.innerHTML = "";
+    const secs = searching
+      ? SET_FAMILIES.flatMap((f) => setSectionsOf(f)).filter((s) => !s.hidden && !s.classList.contains("set-nomatch"))
+      : setSectionsOf(setUi.family).filter((s) => !s.hidden);
+    secs.forEach((sec) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "help-rail-item";
+      b.dataset.sec = sec.id;
+      b.textContent = setSectionTitle(sec);
+      box.appendChild(b);
+    });
+    $("setRailHelp").hidden = searching;
+  }
+
+  function showSettingsFamily(fam) {
+    if (SET_FAMILIES.indexOf(fam) < 0 || !setFamilyShown(fam)) fam = "general";
+    setUi.family = fam;
+    try { localStorage.setItem(SET_FAMILY_STORE, fam); } catch (e) { /* facultatif / optional */ }
+    SET_FAMILIES.forEach((f) => { setPanelOf(f).hidden = f !== fam; });
+    document.querySelectorAll("#setNav .set-fam").forEach((b) => b.classList.toggle("active", b.dataset.fam === fam));
+    renderSettingsRail();
+    $("setMain").scrollTop = 0;
+  }
+
+  function scrollToSettingsSection(id) {
+    const sec = $(id);
+    if (!sec) return;
+    if (sec.scrollIntoView) sec.scrollIntoView({ block: "start", behavior: "smooth" });
+    sec.classList.remove("set-flash");
+    void sec.offsetWidth;
+    sec.classList.add("set-flash");
+    setTimeout(() => sec.classList.remove("set-flash"), 1600);
+  }
+
+  /* Recherche : tous les mots doivent se trouver dans le nom de la famille
+     ou dans le texte de la section (titre, libelles, aides, options des
+     listes). Les accents et la casse ne comptent pas. Une section qui
+     n'existe pas dans ce contexte (hidden) n'est jamais proposee.
+     Search: every word must be found in the family name or in the section
+     text (title, labels, hints, list options). Accents and case do not
+     count. A section that does not exist in this context (hidden) is
+     never offered. */
+  function applySettingsSearch() {
+    const tokens = setNorm(setUi.query).split(/\s+/).filter(Boolean);
+    const main = $("setMain");
+    main.classList.toggle("set-searching", tokens.length > 0);
+    let total = 0;
+    SET_FAMILIES.forEach((fam) => {
+      const famName = setNorm(setFamilyName(fam));
+      let n = 0;
+      setSectionsOf(fam).forEach((sec) => {
+        let ok = true;
+        if (tokens.length) {
+          const hay = famName + " " + setNorm(sec.textContent);
+          ok = !sec.hidden && tokens.every((t) => hay.indexOf(t) >= 0);
+        }
+        sec.classList.toggle("set-nomatch", tokens.length > 0 && !ok);
+        if (ok && tokens.length) n++;
+      });
+      setPanelOf(fam).classList.toggle("set-nomatch", tokens.length > 0 && n === 0);
+      const b = document.querySelector('#setNav .set-fam[data-fam="' + fam + '"]');
+      if (b) {
+        const c = b.querySelector(".set-fam-count");
+        c.hidden = !tokens.length;
+        c.textContent = String(n);
+        b.classList.toggle("set-nomatch", tokens.length > 0 && n === 0);
+        b.classList.toggle("active", tokens.length === 0 && fam === setUi.family);
+      }
+      total += n;
+    });
+    $("setEmpty").hidden = !(tokens.length && total === 0);
+    // En recherche, toutes les familles sont montrees (le CSS global
+    // [hidden] est « !important » : il faut retirer l'attribut).
+    // While searching every family is shown (the global [hidden] rule is
+    // "!important": the attribute itself must go).
+    SET_FAMILIES.forEach((f) => { setPanelOf(f).hidden = tokens.length ? false : f !== setUi.family; });
+    renderSettingsRail();
+    main.scrollTop = 0;
+  }
+
+  /* Le « ? » d'une section ouvre l'aide a la bonne rubrique. Les titres de
+     rubriques sont ecrits a l'identique dans help-content.js
+     (« Reglages — <famille> »).
+     A section's "?" opens the help on the right section. Section titles are
+     written identically in help-content.js ("Settings — <family>"). */
+  function openSettingsHelp(key) {
+    const title = key === "themes"
+      ? i18n.t("setp.help.themes")
+      : i18n.t("setp.title") + " — " + setFamilyName(key);
+    openHelp();
+    const sec = (window.PIBOARD_HELP || []).find((s) => s.id === "drawer");
+    if (!sec) return;
+    const idx = helpRubriques(sec).rubs.findIndex((r) => r.title === title);
+    showHelpSection("drawer", idx >= 0 ? idx : null);
+  }
+
+  function closeSettingsPage() {
+    if (setDirtyFamilies().length && !window.confirm(i18n.t("setp.discard"))) return false;
+    $("settingsModal").hidden = true;
+    setUi.open = false;
+    vkb.hide();
+    return true;
+  }
+
+  function wireSettingsPage() {
+    if (setUi.wired) return;
+    setUi.wired = true;
+    document.querySelectorAll("#settingsPage fieldset[data-help]").forEach((sec) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "set-help";
+      b.textContent = "?";
+      b.setAttribute("data-i18n-title", "setp.helpLink");
+      b.title = i18n.t("setp.helpLink");
+      b.addEventListener("click", () => openSettingsHelp(sec.dataset.help));
+      sec.appendChild(b);
+    });
+    $("setNav").addEventListener("click", (e) => {
+      const b = e.target.closest(".set-fam");
+      if (!b) return;
+      setUi.query = "";
+      $("setSearch").value = "";
+      applySettingsSearch();
+      showSettingsFamily(b.dataset.fam);
+    });
+    $("setRailItems").addEventListener("click", (e) => {
+      const b = e.target.closest(".help-rail-item");
+      if (b) scrollToSettingsSection(b.dataset.sec);
+    });
+    $("setSearch").addEventListener("input", (e) => {
+      setUi.query = e.target.value.trim();
+      applySettingsSearch();
+      if (!setUi.query) showSettingsFamily(setUi.family);
+    });
+    $("setRailHelp").addEventListener("click", () => openSettingsHelp(setUi.family));
+    $("settingsReturn").addEventListener("click", closeSettingsPage);
+    $("settingsCancel").addEventListener("click", closeSettingsPage);
+    const page = $("settingsPage");
+    ["input", "change"].forEach((evt) => page.addEventListener(evt, updateSettingsDirtyUi));
+    // Ajout / retrait d'une plage de veille, choix d'une ville... : des
+    // clics qui modifient un controle sans evenement « change ».
+    // Adding / removing a screensaver slot, picking a city... clicks that
+    // change a control without a "change" event.
+    page.addEventListener("click", () => setTimeout(updateSettingsDirtyUi, 0));
+  }
+
+  function openSettingsPage(familyId, sectionId) {
+    wireSettingsPage();
+    setUi.open = true;
+    setUi.query = "";
+    $("setSearch").value = "";
+    $("setMain").classList.remove("set-searching");
+    document.querySelectorAll("#settingsPage .set-nomatch").forEach((el) => el.classList.remove("set-nomatch"));
+    $("setEmpty").hidden = true;
+    SET_FAMILIES.forEach((f) => { setUi.snaps[f] = setSnapshot(f); });
+    let fam = familyId;
+    if (SET_FAMILIES.indexOf(fam) < 0) fam = setStoredFamily();
+    if (SET_FAMILIES.indexOf(fam) < 0 || !setFamilyShown(fam)) fam = "general";
+    setUi.family = fam;
+    renderSettingsNav();
+    showSettingsFamily(fam);
+    if (sectionId) requestAnimationFrame(() => scrollToSettingsSection(sectionId));
+  }
+
+  /* familyId / sectionId : ouverture directe sur une famille (et une section),
+     par ex. PiBoard.openSettings("look", "secDepth"). Les gestionnaires de
+     clic passent un evenement : seule une chaine compte.
+     familyId / sectionId: open straight on a family (and section). Click
+     handlers pass an event: only a string counts. */
+  function openSettings(familyId, sectionId) {
     $("setLang").value = settings.lang;
     $("setTheme").value = settings.theme;
     fillHelpThemeSettings();
@@ -8368,10 +8646,10 @@
        two lines. */
     refreshMediaTools().then(fillMediaToolsForm);
     fillPressForm();
-    refreshPress().then(fillPressForm);
+    refreshPress().then(() => { fillPressForm(); if (setUi.open) renderSettingsNav(); });
     fillUpdatesForm();
     $("settingsModal").hidden = false;
-    requestAnimationFrame(() => layoutFormColumns(document.querySelector("#settingsModal .form"), { preferMax: true }));
+    openSettingsPage(typeof familyId === "string" ? familyId : null, typeof sectionId === "string" ? sectionId : null);
   }
 
   async function saveSettings() {
@@ -8456,6 +8734,7 @@
     onUpdateChannelSaved(previousChannel, body.updateChannel);
     scheduleAutoAdvance();
     $("settingsModal").hidden = true;
+    setUi.open = false;
     vkb.hide();
     applySettings();
     vkb.setEnabled(!!settings.keyboardEnabled);
@@ -9266,7 +9545,7 @@
   }
 
   function openBackups() {
-    $("settingsModal").hidden = true;
+    if (!closeSettingsPage()) return;
     showBackupsMessage("");
     $("backupsModal").hidden = false;
     refreshBackupsList();
@@ -9781,6 +10060,12 @@
     helpActiveId = null;
     helpActiveRub = null;
     $("helpNavSearch").value = "";
+    /* Version dans l'en-tete, donc visible partout dans l'aide (1.156.0).
+       Aucun « v » orphelin si elle est inconnue : l'element est vide et
+       masque par CSS.
+       Version in the header, hence visible everywhere in the help. No
+       orphan "v" when unknown: the element is empty and hidden by CSS. */
+    $("helpVersion").textContent = assetVersion ? "v" + assetVersion : "";
     renderHelpTree();
     renderHelpHome();
     filterHelpIndex();
@@ -11264,6 +11549,10 @@
     document.querySelectorAll(".modal").forEach((modal) => {
       modal.addEventListener("click", (e) => {
         if (e.target === modal || e.target.hasAttribute("data-close")) {
+          // Les reglages demandent confirmation s'il reste des
+          // modifications non enregistrees. / The settings ask for
+          // confirmation when unsaved changes remain.
+          if (modal.id === "settingsModal") { closeSettingsPage(); return; }
           modal.hidden = true;
           // L'aide d'un widget est une fenetre SOEUR de tileModal, pas une
           // fenetre fille : fermer la configuration ne la refermerait donc

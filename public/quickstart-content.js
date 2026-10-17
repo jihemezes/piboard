@@ -34,7 +34,7 @@ window.PIBOARD_QUICKSTART = {
     <p>Touchez le <b>+</b> : un catalogue s'ouvre, classé par familles. Choisissez un widget, et la tuile apparaît immédiatement sur le tableau, prête à être configurée. Si un tiroir latéral est ouvert à ce moment-là, la tuile y est placée plutôt que sur le tableau principal.</p>
 
     <h4>Deux façons d'afficher : classique ou tableau de bord</h4>
-    <p>PiBoard sait s'afficher de deux manières, au choix dans les <b>réglages généraux → Mode d'affichage</b> :</p>
+    <p>PiBoard sait s'afficher de deux manières, au choix dans les <b>réglages généraux → Disposition → Mode d'affichage</b> :</p>
     <div class="qs-two">
       <div><b>Classique</b> — le mode d'origine, décrit ci-dessus : un plateau, des tiroirs latéraux escamotables, la barre d'outils en bas.</div>
       <div><b>Tableau de bord</b> — une suite de pages qui se remplacent en glissant. Plus de tiroirs ni de barre d'outils : un <b>fin bandeau</b> apparaît quand vous amenez la souris au bas de l'écran (une languette permanente en mode tactile). On change de page par les numéros du bandeau, par un glissement du doigt, ou avec les flèches du clavier.</div>
@@ -90,7 +90,7 @@ window.PIBOARD_QUICKSTART = {
     <p>Tap the <b>+</b>: a catalog opens, grouped into families. Pick a widget and the tile appears on the board straight away, ready to configure. If a side drawer happens to be open at that moment, the tile goes there rather than onto the main board.</p>
 
     <h4>Two ways of displaying: classic or dashboard</h4>
-    <p>PiBoard can display itself in two ways, chosen in the <b>general settings → Display mode</b>:</p>
+    <p>PiBoard can display itself in two ways, chosen in the <b>general settings → Layout → Display mode</b>:</p>
     <div class="qs-two">
       <div><b>Classic</b> — the original mode, described above: one board, retractable side drawers, the toolbar at the bottom.</div>
       <div><b>Dashboard</b> — a series of pages replacing each other by sliding. No more drawers nor toolbar: a <b>thin bar</b> appears when you move the mouse to the bottom of the screen (a permanent tab in touch mode). You change page with the bar's numbers, a finger swipe, or the keyboard arrows.</div>

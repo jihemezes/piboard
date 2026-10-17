@@ -3359,8 +3359,11 @@ function catalogItemFor(catalog, document, widgetId) {
       && !document.querySelector(".grid-stack-item-content[data-depth]"));
     assert("case 'multi-colonnes' cochee par defaut (independamment du mode tactile)",
       document.getElementById("setMultiColumnForms").checked === true);
-    assert("mise en colonnes active meme sans mode tactile (correctif v1.7.2) : data-cols pose sur le modal",
-      !!document.querySelector("#settingsModal .modal-card").dataset.cols);
+    // 1.156.0 : les reglages sont une page pleine a familles ; la mise en
+    // colonnes ne concerne plus que les fenetres de reglages de tuile.
+    assert("reglages : page pleine a sept familles (la mise en colonnes ne vaut plus que pour les tuiles)",
+      document.querySelectorAll("#setNav .set-fam").length === 7
+      && !document.querySelector("#settingsModal .modal-card"));
     assert("body sans classe 'touch' par defaut (mode tactile non lie a la mise en colonnes)",
       !document.body.classList.contains("touch"));
     assert("case Ken Burns cochee par defaut (comportement historique)",
@@ -3444,7 +3447,7 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("valeur hors bornes ramenee au minimum utilisable (jamais 0%)",
       Math.round(parseFloat(root.style.getPropertyValue("--drawer-top-h"))) >= 10);
 
-    document.querySelector("#settingsModal .modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    document.getElementById("settingsReturn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   }
 
   console.log("== Sauvegarde et restauration ==");
@@ -6593,23 +6596,23 @@ function catalogItemFor(catalog, document, widgetId) {
     document.body.classList.remove("touch-drag-scroll");
     scroller.remove();
 
-    /* ---------- Largeur de la fenetre de configuration generale ----------
-       Les largeurs etaient des plafonds en pixels : sur un grand ecran la
-       fenetre restait plantee a 620 ou 1080 px. Un plancher relatif est
-       exige, et ces regles doivent venir APRES `body.touch .modal-card`,
-       qui fixait sinon 1000 px quelle que soit la disposition -- donc
-       precisement sur le tableau mural. jsdom ne calcule pas les unites
-       vw : c'est la feuille de style elle-meme qui est verifiee. */
+    /* ---------- Reglages en page pleine (1.156.0) ----------
+       La fenetre des reglages n'est plus une carte de largeur fixe : elle
+       reprend la coque de l'aide (page pleine a trois colonnes), dont le
+       plancher de largeur n'a plus lieu d'etre. On verifie que les anciennes
+       regles `#settingsModal .modal-card` ont disparu et que la coque est
+       bien partagee avec l'aide.
+       Settings as a full page. The window is no longer a fixed-width card:
+       it shares the help's shell, so the old width rules must be gone. */
     {
       const css = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
-      const settingsRules = css.match(/#settingsModal \.modal-card[^\n]*width:[^\n]*/g) || [];
-      assert("la fenetre de configuration a ses propres largeurs", settingsRules.length >= 4);
-      assert("chacune impose un plancher relatif d'au moins 75% de l'ecran",
-        settingsRules.every((r) => /max\(\s*\d+px,\s*(7[5-9]|8[0-9]|9[0-6])vw\s*\)/.test(r)));
-      assert("et garde un plafond qui ne touche pas les bords",
-        settingsRules.every((r) => /min\(\s*96vw/.test(r)));
-      assert("le tactile ne repasse pas devant avec sa largeur fixe",
-        css.indexOf("body.touch #settingsModal .modal-card") > css.indexOf("body.touch .modal-card { width:"));
+      assert("reglages : plus de regle de largeur sur l'ancienne carte",
+        !/^#settingsModal \.modal-card/m.test(css) && !/^body\.touch #settingsModal \.modal-card/m.test(css));
+      const html = fs.readFileSync(path.join(PUB, "index.html"), "utf8");
+      assert("reglages : meme coque que l'aide (help-page-modal / help-page / help-layout)",
+        /<div class="modal help-page-modal set-page-modal" id="settingsModal"/.test(html)
+        && /<div class="help-page set-page" id="settingsPage">/.test(html)
+        && /class="help-layout set-layout"/.test(html));
     }
 
     /* ---------- Fond d'ecran d'une page SECONDAIRE ----------
@@ -6706,7 +6709,8 @@ function catalogItemFor(catalog, document, widgetId) {
       await sleep(150);
       assert("bibliotheque (reglages) : le bouton d'acces est dans les reglages generaux",
         $l("setLibraryOpen") && $l("setLibraryOpen").closest("#settingsModal") !== null
-        && $l("setLibraryOpen").closest("fieldset").querySelector("legend").dataset.i18n === "settings.section.general");
+        && $l("setLibraryOpen").closest("fieldset").querySelector("legend").dataset.i18n === "setp.sec.library"
+        && $l("setLibraryOpen").closest(".set-panel").dataset.family === "content");
       assert("bibliotheque (reglages) : la place occupee est affichee",
         $l("setLibraryUsage").textContent.includes("Vos images : 2 (2 Ko)")
         && $l("setLibraryUsage").textContent.includes("livrées avec PiBoard : 40")
@@ -6837,7 +6841,7 @@ function catalogItemFor(catalog, document, widgetId) {
       clickL($l("libraryClose"));
       assert("bibliotheque (reglages) : la fenetre se ferme", $l("libraryModal").hidden === true);
       LIBRARY_MOCK.manage = false;
-      document.querySelector("#settingsModal .modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      document.getElementById("settingsReturn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
       await sleep(60);
     }
 
@@ -7917,7 +7921,11 @@ function catalogItemFor(catalog, document, widgetId) {
     UPDATE_STATE.reason = "electron-updater";
     UPDATE_STATE.busy = false;
     UPDATE_STATE.job = { phase: "idle", version: null, progress: null, error: null, rolledBack: false, log: [] };
-    document.getElementById("btnSettings").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    // 1.156.0 : la section des mises a jour vit dans la famille « Mises a
+    // jour et projet » ; on ouvre les reglages directement dessus.
+    // The updates section lives in the "Updates and project" family: open
+    // the settings straight on it.
+    window.PiBoard.openSettings("project");
     await sleep(100);
     // fillUpdatesForm() ne relit pas le serveur : on force un rafraichissement
     // comme le ferait le SSE. fillUpdatesForm() doesn't re-read the server:
@@ -10293,6 +10301,205 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("Annuler la ramene sur le tableau", !!back);
     assert("a sa place d'origine", !!back && back.gridstackNode && (back.gridstackNode.x + "," + back.gridstackNode.y) === pos);
     for (const d of document.querySelectorAll(".drawer.open")) d.classList.remove("open");
+  }
+
+  console.log("== Reglages en page pleine : familles, pastilles, pied fixe, recherche, aide (1.156.0) ==");
+  {
+    const $s = (id) => document.getElementById(id);
+    const clickS = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const T = window.PiBoardI18n.t;
+    const realConfirm = window.confirm;
+    let confirmAnswer = false, confirmAsked = 0;
+    window.confirm = () => { confirmAsked++; return confirmAnswer; };
+    const activeFamily = () => Array.from(document.querySelectorAll(".set-panel")).filter((p) => !p.hidden).map((p) => p.dataset.family);
+
+    /* Aucun identifiant n'a ete perdu : chaque controle que openSettings()
+       remplit et que saveSettings() lit existe, et dans la bonne famille. */
+    const where = {
+      general: ["setLang", "setQuickStart", "setAutoStart", "setImmersive"],
+      look: ["setTheme", "setCity", "setThemeChoose", "setDarkBg", "setLightTile", "setTileDepth", "setTileGlass", "setHelpTheme", "setHelpThemeId"],
+      layout: ["setRows", "setDisplayMode", "setPageAuto", "setPageGestures", "pagesList", "setDrawerLeftPct", "setDrawerRightPct"],
+      input: ["setKeyboard", "setTouch", "setTouchScroll", "setMultiColumnForms"],
+      saver: ["setSSEnabled", "setSSSource", "setSSInterval", "setSSSlot0Start", "setSSKenBurns"],
+      content: ["setLibraryOpen", "mediaInstallFfmpeg", "setCartoKey", "pressList"],
+      project: ["setUpdateChannel", "updCheckBtn", "btnReportBug", "btnRequestFeature"]
+    };
+    assert("familles : sept entrees dans l'arbre, dans l'ordre valide",
+      (() => { clickS($s("btnSettings")); return Array.from(document.querySelectorAll("#setNav .set-fam")).map((b) => b.dataset.fam).join(); })()
+        === "general,look,layout,input,saver,content,project");
+    await sleep(50);
+    for (const fam of Object.keys(where)) {
+      assert("familles : chaque controle de « " + fam + " » est dans son panneau",
+        where[fam].every((id) => { const el = $s(id); return !!el && el.closest(".set-panel").dataset.family === fam; }));
+    }
+    assert("familles : le pied fixe porte Enregistrer, Annuler et la sauvegarde",
+      !!$s("setFoot").querySelector("#settingsSave") && !!$s("setFoot").querySelector("#settingsCancel")
+      && !!$s("setFoot").querySelector("#openBackupsBtn"));
+    assert("familles : le numero de version est dans l'en-tete des reglages",
+      document.querySelector("#settingsPage .help-page-head #appVersion") !== null);
+    assert("colonne de droite : le bouton Ko-fi est present en permanence",
+      !!$s("setRail").querySelector(".set-kofi [data-kofi]"));
+
+    /* Ouverture directe sur une famille, et memoire de la derniere. */
+    clickS($s("settingsReturn"));
+    window.PiBoard.openSettings("saver");
+    await sleep(30);
+    assert("ouverture directe : la famille demandee est seule affichee", activeFamily().join() === "saver");
+    assert("ouverture directe : l'arbre la marque active",
+      document.querySelector("#setNav .set-fam.active").dataset.fam === "saver");
+    assert("colonne de droite : « Dans cette famille » liste les sections de la famille",
+      $s("setRailItems").children.length === 3 && $s("setRailItems").textContent.trim().length > 0);
+    clickS($s("settingsReturn"));
+    clickS($s("btnSettings"));
+    await sleep(30);
+    assert("derniere famille : le bouton Reglages rouvre sur la derniere consultee", activeFamily().join() === "saver");
+    window.PiBoard.openSettings("n'importe-quoi");
+    assert("famille inconnue : repli sur la derniere famille consultee", activeFamily().join() === "saver");
+    window.PiBoard.openSettings("look", "secDepth");
+    await sleep(30);
+    assert("ouverture sur une section : la famille s'ouvre", activeFamily().join() === "look");
+
+    /* Pastille « modifie » : par famille, jamais pour les champs immediats. */
+    window.PiBoard.openSettings("general");
+    await sleep(20);
+    const badge = (fam) => document.querySelector('#setNav .set-fam[data-fam="' + fam + '"] .set-dirty-badge');
+    assert("modifie : aucune pastille a l'ouverture",
+      Array.from(document.querySelectorAll("#setNav .set-dirty-badge")).every((b) => b.hidden)
+      && $s("setFootState").textContent === "");
+    const rows = $s("setRows");
+    const rowsBefore = rows.value;
+    rows.value = String(Number(rowsBefore) + 1);
+    rows.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("modifie : changer les lignes de la grille marque « Disposition » seule",
+      badge("layout").hidden === false
+      && Array.from(document.querySelectorAll("#setNav .set-dirty-badge")).filter((b) => !b.hidden).length === 1);
+    assert("modifie : le pied de fenetre nomme la famille",
+      $s("setFootState").textContent.includes(T("setp.fam.layout")) && $s("setFootState").classList.contains("dirty"));
+    rows.value = rowsBefore;
+    rows.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("modifie : revenir a la valeur d'origine retire la pastille", badge("layout").hidden === true);
+
+    const drawer = $s("setDrawerLeftPct");
+    drawer.value = "40";
+    drawer.dispatchEvent(new window.Event("change", { bubbles: true }));
+    assert("modifie : un champ immediat (tiroir) ne marque rien",
+      Array.from(document.querySelectorAll("#setNav .set-dirty-badge")).every((b) => b.hidden));
+
+    /* Quitter avec des modifications : confirmation. */
+    const touch = $s("setTouch");
+    touch.checked = !touch.checked;
+    touch.dispatchEvent(new window.Event("change", { bubbles: true }));
+    assert("modifie : une case cochee marque « Tactile et saisie »", badge("input").hidden === false);
+    confirmAsked = 0; confirmAnswer = false;
+    clickS($s("settingsCancel"));
+    assert("annuler avec modifications : confirmation demandee, fenetre conservee",
+      confirmAsked === 1 && $s("settingsModal").hidden === false);
+    clickS($s("settingsReturn"));
+    assert("retour avec modifications : meme confirmation", confirmAsked === 2 && $s("settingsModal").hidden === false);
+    $s("settingsModal").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    assert("clic sur le fond avec modifications : meme confirmation, fenetre conservee",
+      confirmAsked === 3 && $s("settingsModal").hidden === false);
+    confirmAnswer = true;
+    clickS($s("settingsCancel"));
+    assert("annuler confirme : la fenetre se ferme", $s("settingsModal").hidden === true);
+    const touchWas = touch.checked;
+    clickS($s("btnSettings"));
+    await sleep(30);
+    assert("reouverture : les valeurs abandonnees ne sont pas conservees", $s("setTouch").checked !== touchWas);
+    confirmAsked = 0;
+    clickS($s("settingsReturn"));
+    assert("retour sans modification : aucune question", confirmAsked === 0 && $s("settingsModal").hidden === true);
+
+    /* La sauvegarde ferme sans demander. */
+    window.PiBoard.openSettings("layout");
+    await sleep(20);
+    $s("setRows").value = String(Number($s("setRows").value) + 1);
+    $s("setRows").dispatchEvent(new window.Event("input", { bubbles: true }));
+    confirmAsked = 0;
+    clickS($s("settingsSave"));
+    await sleep(80);
+    assert("enregistrer : la fenetre se ferme sans confirmation", $s("settingsModal").hidden === true && confirmAsked === 0);
+
+    /* Recherche. */
+    window.PiBoard.openSettings("general");
+    await sleep(20);
+    const search = $s("setSearch");
+    search.value = "RELIEF";
+    search.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche : « relief » (casse ignoree) ne garde que la section du relief",
+      $s("secDepth").classList.contains("set-nomatch") === false
+      && $s("secTouch").classList.contains("set-nomatch") === true
+      && $s("setMain").classList.contains("set-searching"));
+    assert("recherche : le nombre de resultats est affiche sur la famille",
+      document.querySelector('#setNav .set-fam[data-fam="look"] .set-fam-count').textContent === "1"
+      && document.querySelector('#setNav .set-fam[data-fam="look"] .set-fam-count').hidden === false);
+    assert("recherche : une famille sans resultat est attenuee",
+      document.querySelector('#setNav .set-fam[data-fam="saver"]').classList.contains("set-nomatch"));
+    assert("recherche : la colonne de droite liste les sections trouvees",
+      $s("setRailItems").children.length === 1 && $s("setRailItems").children[0].dataset.sec === "secDepth");
+    search.value = "clavier";
+    search.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche : accents et mots du texte d'aide (« clavier » -> Tactile)",
+      $s("secTouch").classList.contains("set-nomatch") === false && $s("secDepth").classList.contains("set-nomatch") === true);
+    search.value = "Apparence";
+    search.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche : le nom d'une famille ramene toutes ses sections",
+      setSectionsOfTest("look").every((x) => !x.classList.contains("set-nomatch")));
+    search.value = "zzzzzz";
+    search.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche : aucun resultat -> message", $s("setEmpty").hidden === false);
+    search.value = "";
+    search.dispatchEvent(new window.Event("input", { bubbles: true }));
+    assert("recherche effacee : retour a la famille precedente",
+      $s("setEmpty").hidden === true && !$s("setMain").classList.contains("set-searching") && activeFamily().join() === "general"
+      && document.querySelectorAll(".set-nomatch").length === 0);
+    function setSectionsOfTest(fam) { return Array.from(document.getElementById("setPanel_" + fam).children).filter((e) => e.tagName === "FIELDSET" && !e.hidden); }
+
+    /* Le « ? » d'une section ouvre l'aide a la bonne rubrique. */
+    window.PiBoard.openSettings("saver");
+    await sleep(20);
+    const qm = $s("secSaver").querySelector(".set-help");
+    assert("aide : chaque section documentee porte un « ? »", !!qm && qm.title === T("setp.helpLink"));
+    clickS(qm);
+    await sleep(60);
+    assert("aide : le « ? » ouvre l'aide sur la rubrique de la famille",
+      $s("helpModal").hidden === false
+      && $s("helpArticleTitle").textContent === T("setp.title") + " \u2014 " + T("setp.fam.saver"));
+    clickS($s("helpReturn"));
+    window.PiBoard.openSettings("look");
+    await sleep(20);
+    clickS($s("secBoardTheme").querySelector(".set-help"));
+    await sleep(60);
+    assert("aide : la section du theme de couleurs ouvre la rubrique « Themes de couleurs »",
+      $s("helpArticleTitle").textContent === T("setp.help.themes"));
+    clickS($s("helpReturn"));
+    clickS($s("setRailHelp"));
+    await sleep(60);
+    assert("aide : « Aide sur cette famille » (colonne de droite) ouvre la rubrique de la famille",
+      $s("helpArticleTitle").textContent === T("setp.title") + " \u2014 " + T("setp.fam.look"));
+
+    /* Chaque famille a sa rubrique d'aide, dans les deux langues. */
+    {
+      const sec = (window.PIBOARD_HELP || []).find((x) => x.id === "drawer");
+      for (const lang of ["fr", "en"]) {
+        window.PiBoardI18n.setLang(lang);
+        const Tl = window.PiBoardI18n.t;
+        const titles = (sec.html[lang].match(/<h4>[^<]*<\/h4>/g) || []).map((x) => x.replace(/<\/?h4>/g, ""));
+        const want = ["general", "look", "layout", "input", "saver", "content", "project"].map((f) =>
+          Tl("setp.title") + " \u2014 " + Tl("setp.fam." + f));
+        assert("aide (" + lang + ") : une rubrique par famille de reglages",
+          want.every((w) => titles.includes(w)) && titles.includes(Tl("setp.help.themes")));
+      }
+      window.PiBoardI18n.setLang("fr");
+    }
+
+    /* Version dans l'en-tete de l'aide, visible quelle que soit la page. */
+    assert("aide : la version est dans l'en-tete (toujours visible), pas seulement dans une fiche",
+      !!document.querySelector("#helpPage .help-page-head #helpVersion")
+      && /^v\d/.test($s("helpVersion").textContent));
+    clickS($s("helpReturn"));
+    clickS($s("settingsReturn"));
+    window.confirm = realConfirm;
   }
 
   console.log("== Sortie du mode edition ==");

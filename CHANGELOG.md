@@ -1,5 +1,85 @@
 # Changelog
 
+## 1.156.0
+
+- **Réglages généraux en page pleine, sur le modèle de l'aide.** En-tête
+  (bouton **Retour à PiBoard**, titre avec le **numéro de version**, recherche),
+  **sept familles** à gauche — Général, Apparence, Disposition, Tactile et
+  saisie, Écran de veille, Contenus et services, Mises à jour et projet —,
+  les sections de la famille au centre, **« Dans cette famille »** à droite
+  avec, en bas et en permanence, le bouton **Ko-fi**. Les identifiants des
+  champs et la logique d'ouverture / d'enregistrement sont inchangés.
+- **Pied de fenêtre fixe** : Sauvegarde et restauration…, **Annuler**,
+  **Enregistrer**. Une pastille **« modifié »** marque chaque famille dont un
+  réglage diffère de son état d'ouverture (instantané par famille, comparé à
+  chaque saisie) et le pied de fenêtre les nomme : on change de famille sans
+  rien perdre. Annuler, le bouton de retour, le clic sur le fond et « Sauvegarde
+  et restauration » demandent confirmation s'il reste des modifications. Les
+  champs appliqués immédiatement (tiroirs, liste des pages, abonnements presse,
+  photos du diaporama, marqués `data-live`) ne comptent pas.
+- **Recherche** dans tous les réglages (accents et casse ignorés, tous les mots
+  requis, nom de famille compris) : seules les sections qui correspondent
+  restent affichées, avec le nombre de résultats par famille.
+- **« ? » sur chaque section** : ouvre l'aide à la rubrique de la famille
+  (ou « Thèmes de couleurs »). **Dernière famille mémorisée**
+  (`localStorage`). **Ouverture directe** : `PiBoard.openSettings(famille,
+  section)` (`general`, `look`, `layout`, `input`, `saver`, `content`,
+  `project`).
+- Redécoupage des sections : « Général » se répartit entre Langue et
+  démarrage, Jour et nuit (avec la ville), Thème de couleurs, Thème de
+  l'aide et Grille ; le guide de démarrage rejoint la famille Général ;
+  l'écran de veille est coupé en trois sections (plages, photos, affichage).
+  Bibliothèque d'images, outils multimédias, clé CARTO et presse : famille
+  Contenus et services.
+- **Aide** : le numéro de version figure dans l'en-tête, visible partout ;
+  une rubrique par famille de réglages (FR/EN) et une rubrique « Fenêtre des
+  réglages généraux » qui décrit la page ; renvois « réglages généraux → … »
+  mis à jour.
+- Tests : `dom-smoke.js` (familles, identifiants par famille, ouverture
+  directe, dernière famille, pastilles et champs immédiats, confirmations,
+  recherche, « ? » et aide FR/EN, version dans l'en-tête de l'aide).
+- Pas encore fait, à décider : choisir aussi le **nombre de colonnes**
+  (Gridstack ne fournit les règles CSS que pour 1 et 12 colonnes : il faudrait
+  générer les règles et remettre à l'échelle les dispositions enregistrées).
+
+---
+
+- **General settings as a full page, modelled on the help.** Header (**Back to
+  PiBoard** button, title with the **version number**, search), **seven
+  families** on the left — General, Appearance, Layout, Touch and input,
+  Screen saver, Content and services, Updates and project —, the family's
+  sections in the centre, **"In this family"** on the right with the **Ko-fi**
+  button permanently at the bottom. Field ids and the open / save logic are
+  unchanged.
+- **Fixed footer**: Backup & restore…, **Cancel**, **Save**. A **"modified"**
+  badge marks every family with a setting that differs from its state at
+  opening (one snapshot per family, compared on every input) and the footer
+  names them: switch family without losing anything. Cancel, the back button,
+  a click on the backdrop and "Backup & restore" ask for confirmation when
+  changes remain. Fields applied immediately (drawers, page list, press
+  subscriptions, slideshow photos, marked `data-live`) do not count.
+- **Search** across all settings (accents and case ignored, every word
+  required, family name included): only matching sections stay visible, with the
+  result count per family.
+- **"?" on every section**: opens the help on the family's section (or "Colour
+  themes"). **Last family remembered** (`localStorage`). **Direct opening**:
+  `PiBoard.openSettings(family, section)` (`general`, `look`, `layout`, `input`,
+  `saver`, `content`, `project`).
+- Sections regrouped: "General" is spread over Language and start-up, Day and
+  night (with the city), Colour theme, Help theme and Grid; the quick start
+  guide joins the General family; the screen saver is split in three sections
+  (slots, photos, display). Image library, media tools, CARTO key and press:
+  Content and services family.
+- **Help**: the version number is in the header, visible everywhere; one
+  section per settings family (FR/EN) and a "General settings window" section
+  describing the page; "general settings → …" cross-references updated.
+- Tests: `dom-smoke.js` (families, ids per family, direct opening, last family,
+  badges and immediate fields, confirmations, search, "?" and FR/EN help,
+  version in the help header).
+- Not done yet, to be decided: also choosing the **number of columns** (Gridstack
+  only ships CSS rules for 1 and 12 columns: the rules would have to be generated
+  and the saved layouts rescaled).
+
 ## 1.155.0
 
 - **Bibliothèque d'images : accès direct.** Nouveau bouton **« Ouvrir la

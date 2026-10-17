@@ -32,6 +32,33 @@
 
 # Nouveautes / What's new
 
+## 1.156.0
+
+**Des réglages rangés en familles, comme l'aide**
+
+La fenêtre des réglages devient une page pleine : **Général, Apparence,
+Disposition, Tactile et saisie, Écran de veille, Contenus et services, Mises à
+jour et projet**. Une recherche retrouve un réglage par un mot (« relief »,
+« clavier »…), un **?** sur chaque section ouvre l'aide qui la décrit, et le pied
+de fenêtre garde **Enregistrer** et **Annuler** sous les yeux. Une pastille
+**modifié** signale les familles dont les réglages ne sont pas enregistrés : on
+change de famille sans rien perdre. Le numéro de version s'affiche en haut des
+réglages **et de l'aide**, et le bouton Ko-fi reste à portée de main. PiBoard
+rouvre sur la dernière famille consultée.
+
+---
+
+**Settings sorted into families, like the help**
+
+The settings window becomes a full page: **General, Appearance, Layout, Touch and
+input, Screen saver, Content and services, Updates and project**. A search finds a
+setting from one word ("relief", "keyboard"…), a **?** on each section opens the
+help describing it, and the footer keeps **Save** and **Cancel** in view. A
+**modified** badge flags the families whose settings are not saved yet: switch
+family without losing anything. The version number now shows at the top of the
+settings **and of the help**, and the Ko-fi button stays within reach. PiBoard
+reopens on the last family you looked at.
+
 ## 1.155.0
 
 **Votre bibliothèque d'images, directement dans les réglages**

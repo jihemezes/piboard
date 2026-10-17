@@ -590,15 +590,46 @@
   </div>
 </div>
 
-<div class="modal" id="settingsModal" hidden>
-  <div class="modal-card">
-    <header class="modal-head">
-      <h2 data-i18n="settings.title">Settings</h2>
-      <button class="modal-close" data-close aria-label="Close">&times;</button>
+<!-- Reglages generaux en PAGE PLEINE, sur le modele de l'aide (1.156.0) :
+     en-tete (retour a PiBoard, titre + version, recherche), a gauche les
+     sept familles de reglages, au centre les sections de la famille
+     ouverte, a droite « Dans cette famille » et, en permanence en bas, le
+     bouton Ko-fi. Pied de fenetre FIXE : Enregistrer / Annuler. Les
+     identifiants des champs n'ont pas change : openSettings() et
+     saveSettings() lisent et ecrivent les memes controles qu'avant.
+     Les controles marques data-live s'appliquent immediatement (tiroirs,
+     pages, abonnements presse, photos du diaporama) : ils ne font pas
+     partie du suivi « modifie ».
+     General settings as a FULL PAGE, modelled on the help (1.156.0):
+     header (back to PiBoard, title + version, search), the seven settings
+     families on the left, the open family's sections in the centre,
+     "In this family" on the right with the Ko-fi button permanently at
+     the bottom. FIXED window footer: Save / Cancel. Field ids are
+     unchanged. Controls marked data-live apply at once and are left out
+     of the "modified" tracking. -->
+<div class="modal help-page-modal set-page-modal" id="settingsModal" hidden>
+  <div class="help-page set-page" id="settingsPage">
+    <header class="help-page-head">
+      <button type="button" class="help-return" id="settingsReturn" aria-label="Back to PiBoard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span data-i18n="help.return">Back to PiBoard</span></button>
+      <h2 class="help-page-title">PiBoard <small data-i18n="setp.title">Settings</small> <span class="help-version" id="appVersion">v1.0.0</span></h2>
+      <label class="help-search" for="setSearch">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+        <span class="help-search-label" data-i18n="help.searchLabel">Search</span>
+        <input type="search" id="setSearch" class="help-page-search" autocomplete="off" data-i18n-placeholder="setp.search" placeholder="setting, family, keyword…">
+      </label>
     </header>
-    <div class="form">
-      <fieldset class="form-section">
-        <legend data-i18n="settings.section.general">General</legend>
+    <div class="help-layout set-layout">
+      <aside class="help-side set-side"><nav class="set-nav" id="setNav" data-i18n-aria="setp.nav" aria-label="Settings families"></nav></aside>
+      <main class="help-main set-main" id="setMain">
+        <p class="set-empty" id="setEmpty" data-i18n="setp.search.none" hidden>No setting matches.</p>
+        <div class="form set-form">
+        <section class="set-panel" id="setPanel_general" data-family="general" hidden>
+          <header class="set-panel-head">
+            <h1 data-i18n="setp.fam.general">General</h1>
+            <p data-i18n="setp.fam.general.desc">Language, start-up and the desktop application.</p>
+          </header>
+      <fieldset class="form-section" id="secLangStart" data-help="general">
+        <legend data-i18n="setp.sec.langStart">Language and start-up</legend>
         <label class="field">
           <span data-i18n="settings.lang">Language</span>
           <select id="setLang">
@@ -606,6 +637,35 @@
             <option value="fr">Français</option>
           </select>
         </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="setQuickStart">
+          <span data-i18n="settings.quickStart">Show the quick start guide at every launch</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.quickStart.hint">The short guide shown on first launch. It stays available at any time from the help, under "Quick start".</small>
+      </fieldset>
+
+      <fieldset class="form-section" id="secDesktopApp" data-help="general" hidden>
+        <legend data-i18n="settings.section.desktop">Desktop application</legend>
+        <label class="field checkbox">
+          <input type="checkbox" id="setAutoStart">
+          <span data-i18n="settings.autostart">Launch PiBoard when the session starts</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.autostart.hint">Opens the dashboard automatically when you log in to Windows. This section only appears in the desktop application.</small>
+        <label class="field checkbox">
+          <input type="checkbox" id="setImmersive">
+          <span data-i18n="settings.immersive">Immersive display in dashboard mode</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.immersive.hint">In dashboard mode, the window goes full screen: no title bar, no Windows taskbar, nothing but the board. Bring the mouse to the very top of the screen, or press F9, to reveal a thin bar offering Minimise, Windowed and Quit. F11 also leaves full screen at any time.</small>
+      </fieldset>
+        </section>
+
+        <section class="set-panel" id="setPanel_look" data-family="look" hidden>
+          <header class="set-panel-head">
+            <h1 data-i18n="setp.fam.look">Appearance</h1>
+            <p data-i18n="setp.fam.look.desc">Day and night, colour themes, tile relief and the help's theme.</p>
+          </header>
+      <fieldset class="form-section" id="secDayNight" data-help="look">
+        <legend data-i18n="setp.sec.dayNight">Day and night</legend>
         <label class="field">
           <span data-i18n="settings.theme">Day / night</span>
           <select id="setTheme">
@@ -614,6 +674,17 @@
             <option value="light" data-i18n="settings.theme.light">Day</option>
           </select>
         </label>
+        <label class="field city-box">
+          <span data-i18n="settings.city">City (sunrise / sunset for the auto theme)</span>
+          <input type="text" id="setCity" autocomplete="off" data-i18n-placeholder="settings.city.placeholder" placeholder="Type a city name…">
+          <div class="city-suggest" id="citySuggest" hidden></div>
+        </label>
+        <p class="city-current" id="cityCurrent"></p>
+        <p class="hint" data-i18n="settings.city.hint">Pick a suggestion to validate the city. It is only used to compute sunrise and sunset.</p>
+      </fieldset>
+
+      <fieldset class="form-section" id="secBoardTheme" data-help="themes">
+        <legend data-i18n="setp.sec.boardTheme">Colour theme</legend>
         <div class="field">
           <span data-i18n="theme.board">Colour theme</span>
           <div class="theme-row">
@@ -622,46 +693,27 @@
           </div>
           <small class="field-hint" data-i18n="theme.board.hint">Applies to the whole board. Each page (dashboard mode) and each drawer (classic mode) can have its own theme.</small>
         </div>
-        <label class="field">
-          <span data-i18n="help.themeMode">Help theme</span>
-          <select id="setHelpTheme">
-            <option value="follow" data-i18n="help.themeMode.follow">Follow PiBoard's theme (day / night included)</option>
-            <option value="dedicated" data-i18n="help.themeMode.dedicated">Dedicated help theme</option>
-          </select>
-          <small class="field-hint" data-i18n="help.themeMode.hint">Touch layout follows the touch mode setting below, whichever theme is used.</small>
-        </label>
-        <label class="field" id="setHelpThemeRow" hidden>
-          <span data-i18n="help.themeChoose">Help colour theme</span>
-          <select id="setHelpThemeId"></select>
-        </label>
-        <label class="field city-box">
-          <span data-i18n="settings.city">City (sunrise / sunset for the auto theme)</span>
-          <input type="text" id="setCity" autocomplete="off" data-i18n-placeholder="settings.city.placeholder" placeholder="Type a city name…">
-          <div class="city-suggest" id="citySuggest" hidden></div>
-        </label>
-        <p class="city-current" id="cityCurrent"></p>
-        <p class="hint" data-i18n="settings.city.hint">Pick a suggestion to validate the city. It is only used to compute sunrise and sunset.</p>
-        <label class="field">
-          <span data-i18n="settings.rows">Grid rows on screen</span>
-          <input type="number" id="setRows" min="4" max="16" step="1">
-        </label>
-        <!-- Acces direct a la bibliotheque d'images (1.155.0) : jusque-la on
-             ne la rencontrait qu'au moment de choisir une image pour un fond,
-             un logo ou le diaporama. Ici on la gere pour elle-meme.
-             Direct access to the image library (1.155.0): until now it only
-             showed up when picking an image for a background, a logo or the
-             slideshow. Here it is managed for its own sake. -->
-        <div class="field" id="setLibraryField">
-          <span data-i18n="settings.library">Image library</span>
-          <div class="theme-row">
-            <button type="button" class="btn small" id="setLibraryOpen" data-i18n="settings.library.open">Open the library…</button>
-            <small class="field-hint" id="setLibraryUsage"></small>
+      </fieldset>
+
+      <fieldset class="form-section" id="secColors" data-help="look">
+        <legend data-i18n="settings.colors">PiBoard theme colours</legend>
+        <div class="field">
+          <div class="color-grid">
+            <span></span>
+            <span class="cg-head" data-i18n="settings.colors.bg">Background</span>
+            <span class="cg-head" data-i18n="settings.colors.tile">Tiles</span>
+            <span class="cg-row" data-i18n="settings.theme.dark">Night</span>
+            <input type="color" id="setDarkBg">
+            <input type="color" id="setDarkTile">
+            <span class="cg-row" data-i18n="settings.theme.light">Day</span>
+            <input type="color" id="setLightBg">
+            <input type="color" id="setLightTile">
           </div>
-          <small class="field-hint" data-i18n="settings.library.hint">Your own images (page backgrounds, logos, photos) are kept here, whichever page or tile ends up using them. They survive updates.</small>
+          <button class="btn small" id="colorsReset" data-i18n="settings.colors.reset">Reset default colors</button>
         </div>
       </fieldset>
 
-      <fieldset class="form-section" id="secDepth">
+      <fieldset class="form-section" id="secDepth" data-help="look">
         <legend data-i18n="settings.section.depth">Tile relief (3D)</legend>
         <label class="field">
           <span data-i18n="settings.depth">Relief level</span>
@@ -697,155 +749,39 @@
         <small class="field-hint" data-i18n="settings.depthGlass.hint">Translucent, blurred tile background. Best over a photo or a colourful page background. Heavier to draw: on a Raspberry Pi, keep it off if the display gets sluggish.</small>
       </fieldset>
 
-      <fieldset class="form-section" id="secDrawers">
-        <legend data-i18n="settings.section.drawers">Tile drawers</legend>
-        <!-- Note d'inactivite : la section reste a sa place et reste
-             modifiable, elle signale seulement qu'elle ne s'applique pas
-             au mode d'affichage courant. Faire disparaitre la section
-             changeait la disposition du panneau d'un mode a l'autre, ce
-             qui desoriente sans rien apporter.
-             Inactivity note: the section stays where it is and stays
-             editable, it merely says it does not apply to the current
-             display mode. Removing the section changed the panel's
-             layout from one mode to the other, which is disorienting
-             and gains nothing. -->
-        <p class="section-note" data-i18n="settings.drawers.inactive" hidden>Drawers do not exist in dashboard mode: these sizes are kept and will apply again in classic mode.</p>
-        <p class="hint" data-i18n="settings.drawers.hint">How much of the screen each drawer covers when open, as a percentage. Can also be adjusted by dragging its edge with the mouse or a finger, up to 96% — use these fields to go all the way to 100%, or if the edge is hard to grab.</p>
+      <fieldset class="form-section" id="secHelpTheme" data-help="look">
+        <legend data-i18n="setp.sec.helpTheme">Help theme</legend>
         <label class="field">
-          <span data-i18n="settings.drawers.left">Left drawer (width)</span>
-          <input type="number" id="setDrawerLeftPct" min="10" max="100" step="1">
+          <span data-i18n="help.themeMode">Help theme</span>
+          <select id="setHelpTheme">
+            <option value="follow" data-i18n="help.themeMode.follow">Follow PiBoard's theme (day / night included)</option>
+            <option value="dedicated" data-i18n="help.themeMode.dedicated">Dedicated help theme</option>
+          </select>
+          <small class="field-hint" data-i18n="help.themeMode.hint">Touch layout follows the touch mode setting below, whichever theme is used.</small>
         </label>
-        <div class="field drawer-theme-row">
-          <span data-i18n="theme.drawers">Drawer themes</span>
-          <div class="theme-row">
-            <span data-i18n="theme.drawer.left">Left</span>
-            <button type="button" class="btn small drawer-theme" data-drawer-theme="left">—</button>
-            <span data-i18n="theme.drawer.top">Top</span>
-            <button type="button" class="btn small drawer-theme" data-drawer-theme="top">—</button>
-            <span data-i18n="theme.drawer.right">Right</span>
-            <button type="button" class="btn small drawer-theme" data-drawer-theme="right">—</button>
-          </div>
-        </div>
+        <label class="field" id="setHelpThemeRow" hidden>
+          <span data-i18n="help.themeChoose">Help colour theme</span>
+          <select id="setHelpThemeId"></select>
+        </label>
+      </fieldset>
+        </section>
+
+        <section class="set-panel" id="setPanel_layout" data-family="layout" hidden>
+          <header class="set-panel-head">
+            <h1 data-i18n="setp.fam.layout">Layout</h1>
+            <p data-i18n="setp.fam.layout.desc">Grid, display mode, pages and drawers.</p>
+          </header>
+      <fieldset class="form-section" id="secGrid" data-help="layout">
+        <legend data-i18n="setp.sec.grid">Grid</legend>
         <label class="field">
-          <span data-i18n="settings.drawers.top">Top drawer (height)</span>
-          <input type="number" id="setDrawerTopPct" min="10" max="100" step="1">
-        </label>
-        <label class="field">
-          <span data-i18n="settings.drawers.right">Right drawer (width)</span>
-          <input type="number" id="setDrawerRightPct" min="10" max="100" step="1">
+          <span data-i18n="settings.rows">Grid rows on screen</span>
+          <input type="number" id="setRows" min="4" max="16" step="1">
         </label>
       </fieldset>
 
-      <fieldset class="form-section">
-        <legend data-i18n="settings.colors">PiBoard theme colours</legend>
-        <div class="field">
-          <div class="color-grid">
-            <span></span>
-            <span class="cg-head" data-i18n="settings.colors.bg">Background</span>
-            <span class="cg-head" data-i18n="settings.colors.tile">Tiles</span>
-            <span class="cg-row" data-i18n="settings.theme.dark">Night</span>
-            <input type="color" id="setDarkBg">
-            <input type="color" id="setDarkTile">
-            <span class="cg-row" data-i18n="settings.theme.light">Day</span>
-            <input type="color" id="setLightBg">
-            <input type="color" id="setLightTile">
-          </div>
-          <button class="btn small" id="colorsReset" data-i18n="settings.colors.reset">Reset default colors</button>
-        </div>
-      </fieldset>
-
-      <fieldset class="form-section" id="secDesktopApp" hidden>
-        <legend data-i18n="settings.section.desktop">Desktop application</legend>
-        <label class="field checkbox">
-          <input type="checkbox" id="setAutoStart">
-          <span data-i18n="settings.autostart">Launch PiBoard when the session starts</span>
-        </label>
-        <small class="field-hint" data-i18n="settings.autostart.hint">Opens the dashboard automatically when you log in to Windows. This section only appears in the desktop application.</small>
-        <label class="field checkbox">
-          <input type="checkbox" id="setImmersive">
-          <span data-i18n="settings.immersive">Immersive display in dashboard mode</span>
-        </label>
-        <small class="field-hint" data-i18n="settings.immersive.hint">In dashboard mode, the window goes full screen: no title bar, no Windows taskbar, nothing but the board. Bring the mouse to the very top of the screen, or press F9, to reveal a thin bar offering Minimise, Windowed and Quit. F11 also leaves full screen at any time.</small>
-      </fieldset>
-
-      <!-- Outils multimedias facultatifs : section TOUJOURS visible, y
-           compris sur le Raspberry Pi et dans un navigateur, car savoir
-           si ffmpeg et VLC sont presents a un interet partout. Seul le
-           BOUTON d'installation depend du systeme ; a defaut, la
-           commande a taper est affichee.
-           Optional media tools: section ALWAYS visible, on the Raspberry
-           Pi and in a browser too, since knowing whether ffmpeg and VLC
-           are present is useful everywhere. Only the install BUTTON
-           depends on the system; failing that, the command to type is
-           shown. -->
-      <fieldset class="form-section" id="secMediaTools">
-        <legend data-i18n="settings.section.media">Media tools (optional)</legend>
-        <small class="field-hint" data-i18n="settings.media.intro">Used only by the IPTV tile, to fix inaudible sound (AC3/DTS) and to relay live channels that refuse a direct connection. Everything else in PiBoard works without them, which is why they are not installed with the application.</small>
-        <div class="field" id="mediaToolFfmpeg">
-          <span class="media-tool-name">ffmpeg</span>
-          <span class="media-tool-state" id="mediaStateFfmpeg"></span>
-          <button type="button" class="btn small" id="mediaInstallFfmpeg" hidden data-i18n="settings.media.install">Install</button>
-        </div>
-        <div class="field" id="mediaToolVlc">
-          <span class="media-tool-name">VLC</span>
-          <span class="media-tool-state" id="mediaStateVlc"></span>
-          <button type="button" class="btn small" id="mediaInstallVlc" hidden data-i18n="settings.media.install">Install</button>
-        </div>
-        <small class="field-hint" id="mediaToolsHint"></small>
-        <!-- Erreur d'installation : element DEDIE, en couleur d'alerte. Avant
-             la 1.140.2 le message remplacait le texte d'aide, au meme endroit
-             et dans le meme style gris : il passait inapercu.
-             Install error: a DEDICATED element in the alert colour. Before
-             1.140.2 the message replaced the hint text, in the same place
-             and grey style, and went unnoticed. -->
-        <p class="media-tools-error" id="mediaToolsError" role="alert" hidden></p>
-        <!-- Le message d'erreur renvoie au journal : on l'ouvre d'un clic
-             (application de bureau uniquement, 1.140.3).
-             The error points to the log: open it in one click. -->
-        <button type="button" class="btn small media-open-log" id="mediaOpenLog" hidden data-i18n="settings.media.openLog">Open log</button>
-
-      </fieldset>
-
-      <!-- Abonnements presse (1.141.0) : session de navigateur par site,
-           pour lire en entier les articles payants dans la tuile Flux RSS.
-           Application de bureau uniquement (voir server/pressAccess.js).
-           Press subscriptions: a browser session per site, to read paid
-           articles in full in the RSS tile. Desktop app only. -->
-      <fieldset class="form-section" id="secPress" hidden>
-        <legend data-i18n="press.section">Press subscriptions</legend>
-        <small class="field-hint" data-i18n="press.intro">Read paid articles in full in the RSS tile, for the sites you subscribe to. Log in once on the site itself, in a PiBoard window: PiBoard never sees your password, it only keeps the session, like a browser.</small>
-        <div id="pressList" class="press-list"></div>
-        <div class="field press-add" id="pressAddRow">
-          <select id="pressPreset"></select>
-          <input type="text" id="pressCustom" placeholder="exemple.fr" hidden>
-          <button type="button" class="btn small" id="pressAdd" data-i18n="press.add">Add</button>
-        </div>
-        <small class="field-hint" id="pressRemoteHint" hidden data-i18n="press.remote">Subscriptions are managed from the desktop application, on the computer where it runs.</small>
-        <p class="media-tools-error" id="pressError" role="alert" hidden></p>
-      </fieldset>
-
-      <!-- Mise a jour automatique du serveur (Raspberry Pi / Linux) :
-           section masquee tant que le serveur ne la declare pas
-           supportee (Windows passe par electron-updater, voir
-           electron/updater.js). Server self-update (Raspberry Pi /
-           Linux): hidden until the server declares it supported (Windows
-           goes through electron-updater, see electron/updater.js). -->
-      <!-- Section TOUJOURS visible : le niveau des mises a jour est un
-           choix de l'utilisateur, valable aussi bien pour le serveur
-           (Raspberry Pi / Linux) que pour l'application de bureau
-           Windows, qui utilise electron-updater. Seuls les boutons de
-           verification et d'installation, propres au serveur, sont
-           masques quand celui-ci ne gere pas ses mises a jour lui-meme
-           (bloc #updServerControls ci-dessous).
-           ALWAYS visible section: the update level is a user choice,
-           valid both for the server (Raspberry Pi / Linux) and for the
-           Windows desktop application, which uses electron-updater. Only
-           the check and install buttons, specific to the server, are
-           hidden when it does not handle its own updates
-           (#updServerControls block below). -->
       <!-- Mode d'affichage + pages du mode tableau de bord.
            Display mode + dashboard-mode pages. -->
-      <fieldset class="form-section">
+      <fieldset class="form-section" id="secDisplay" data-help="layout">
         <legend data-i18n="settings.section.display">Display mode</legend>
         <label class="field">
           <span data-i18n="settings.displayMode">How pages are shown</span>
@@ -878,13 +814,318 @@
             <input type="number" id="setPageAutoSeconds" min="3" max="3600" step="1">
             <small class="field-hint" data-i18n="settings.pageAutoSeconds.hint">Applies to every page that does not set its own duration below. Minimum 3 seconds. Cycling pauses while you are in edit mode or while a window is open, and restarts from zero after you change page yourself.</small>
           </label>
-          <div class="pages-list" id="pagesList"></div>
+          <div class="pages-list" id="pagesList" data-live></div>
           <button type="button" class="btn small" id="pageAddBtn" data-i18n="settings.pages.add">Add a page</button>
           <small class="field-hint" data-i18n="settings.pages.hint">Each page describes how it comes in: the direction the eye travels, and the effect. Deleting a page also deletes its tiles.</small>
         </div>
       </fieldset>
 
-      <fieldset class="form-section" id="secUpdates">
+      <fieldset class="form-section" id="secDrawers" data-help="layout">
+        <legend data-i18n="settings.section.drawers">Tile drawers</legend>
+        <!-- Note d'inactivite : la section reste a sa place et reste
+             modifiable, elle signale seulement qu'elle ne s'applique pas
+             au mode d'affichage courant. Faire disparaitre la section
+             changeait la disposition du panneau d'un mode a l'autre, ce
+             qui desoriente sans rien apporter.
+             Inactivity note: the section stays where it is and stays
+             editable, it merely says it does not apply to the current
+             display mode. Removing the section changed the panel's
+             layout from one mode to the other, which is disorienting
+             and gains nothing. -->
+        <p class="section-note" data-i18n="settings.drawers.inactive" hidden>Drawers do not exist in dashboard mode: these sizes are kept and will apply again in classic mode.</p>
+        <p class="hint" data-i18n="settings.drawers.hint">How much of the screen each drawer covers when open, as a percentage. Can also be adjusted by dragging its edge with the mouse or a finger, up to 96% — use these fields to go all the way to 100%, or if the edge is hard to grab.</p>
+        <label class="field">
+          <span data-i18n="settings.drawers.left">Left drawer (width)</span>
+          <input type="number" id="setDrawerLeftPct" data-live min="10" max="100" step="1">
+        </label>
+        <div class="field drawer-theme-row">
+          <span data-i18n="theme.drawers">Drawer themes</span>
+          <div class="theme-row">
+            <span data-i18n="theme.drawer.left">Left</span>
+            <button type="button" class="btn small drawer-theme" data-drawer-theme="left">—</button>
+            <span data-i18n="theme.drawer.top">Top</span>
+            <button type="button" class="btn small drawer-theme" data-drawer-theme="top">—</button>
+            <span data-i18n="theme.drawer.right">Right</span>
+            <button type="button" class="btn small drawer-theme" data-drawer-theme="right">—</button>
+          </div>
+        </div>
+        <label class="field">
+          <span data-i18n="settings.drawers.top">Top drawer (height)</span>
+          <input type="number" id="setDrawerTopPct" data-live min="10" max="100" step="1">
+        </label>
+        <label class="field">
+          <span data-i18n="settings.drawers.right">Right drawer (width)</span>
+          <input type="number" id="setDrawerRightPct" data-live min="10" max="100" step="1">
+        </label>
+      </fieldset>
+        </section>
+
+        <section class="set-panel" id="setPanel_input" data-family="input" hidden>
+          <header class="set-panel-head">
+            <h1 data-i18n="setp.fam.input">Touch and input</h1>
+            <p data-i18n="setp.fam.input.desc">Touch mode, scrolling and on-screen keyboard.</p>
+          </header>
+      <fieldset class="form-section" id="secTouch" data-help="input">
+        <legend data-i18n="settings.section.touch">Touchscreen</legend>
+        <label class="field checkbox">
+          <input type="checkbox" id="setKeyboard">
+          <span data-i18n="settings.keyboard">Show an on-screen keyboard for text fields (touchscreens)</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.keyboard.hint">Follows the language above (French AZERTY / English QWERTY). Applies everywhere text can be typed — tile settings and the notes widget included.</small>
+        <label class="field checkbox">
+          <input type="checkbox" id="setTouch">
+          <span data-i18n="settings.touch">Touch mode: larger buttons, tabs and handles</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.touch.hint">Enlarges the toolbar buttons, the drawer and toolbar pull tabs, the tile icons and the resize handles, for fingers on a touchscreen.</small>
+        <label class="field">
+          <span data-i18n="settings.touchScroll">Scrolling tile content on a touchscreen</span>
+          <select id="setTouchScroll">
+            <option value="both" data-i18n="settings.touchScroll.both">Both — wide scrollbars and drag to scroll</option>
+            <option value="drag" data-i18n="settings.touchScroll.drag">Drag the content to scroll</option>
+            <option value="bars" data-i18n="settings.touchScroll.bars">Wide scrollbars only</option>
+            <option value="off" data-i18n="settings.touchScroll.off">Neither — leave as on a desktop</option>
+          </select>
+        </label>
+        <small class="field-hint" data-i18n="settings.touchScroll.hint">Only applies in touch mode. Default scrollbars are a few pixels wide, awkward for a finger; dragging the content, meanwhile, selects text instead of scrolling. Widening the bars, dragging to scroll, or both, fixes that.</small>
+        <label class="field checkbox">
+          <input type="checkbox" id="setMultiColumnForms">
+          <span data-i18n="settings.multiColumnForms">Multi-column settings windows</span>
+        </label>
+        <small class="field-hint" data-i18n="settings.multiColumnForms.hint">Spreads a settings window's sections across 2 or 3 columns when there's room, to shorten scrolling. On by default, independently of touch mode. Turn off to always keep a single column.</small>
+      </fieldset>
+        </section>
+
+        <section class="set-panel" id="setPanel_saver" data-family="saver" hidden>
+          <header class="set-panel-head">
+            <h1 data-i18n="setp.fam.saver">Screen saver</h1>
+            <p data-i18n="setp.fam.saver.desc">Time slots, photo slideshow and display power.</p>
+          </header>
+      <fieldset class="form-section" id="secSaver" data-help="saver">
+        <legend data-i18n="setp.sec.saverSlots">Time slots and sleep</legend>
+        <label class="field checkbox">
+          <input type="checkbox" id="setSSEnabled">
+          <span data-i18n="ss.enabled">Enable the screen saver</span>
+        </label>
+        <div class="field">
+          <button type="button" class="btn small" id="btnTestDisplayOff" data-i18n="ss.displayTest">Test: turn the display off for 5 s</button>
+          <small class="field-hint" id="ssDisplayTestResult" hidden></small>
+        </div>
+        <small class="field-hint" data-i18n="ss.displayOff.hint">The "Turn the display off" slot mode really cuts the video output's power, unlike the black overlay which leaves the panel lit. Raspberry Pi only. A touch, a key or a mouse move turns it back on. If the command fails, the black overlay takes over as before — the test button above says which method worked.</small>
+        <small class="field-hint" data-i18n="ss.enabled.hint">During the time slots below, the screen goes fully black (or shows a photo slideshow), to save energy at night or when no one is around. A click, a tap, or any key press wakes it up instantly. This never turns the physical display off — a software overlay only, which is instant and always reliable to wake up.</small>
+
+        <div id="ssSlots" style="margin-top:10px"></div>
+
+        <label class="field" style="margin-top:10px">
+          <span data-i18n="ss.inactivityTimeout">Return to sleep after inactivity</span>
+          <select id="setSSInactivityTimeout"></select>
+        </label>
+        <small class="field-hint" data-i18n="ss.inactivityTimeout.hint">If the screen is woken up with a touch/click/key while still inside a time slot above, it goes back to sleep on its own after this long without any further action.</small>
+      </fieldset>
+
+      <fieldset class="form-section" id="secSaverPhotos" data-help="saver">
+        <legend data-i18n="setp.sec.saverPhotos">Slideshow: photos</legend>
+        <p class="hint" data-i18n="ss.slideshow.intro">Photos used by any slot set to "Slideshow":</p>
+        <label class="field">
+          <span data-i18n="ss.source">Photo source</span>
+          <select id="setSSSource">
+            <option value="upload" data-i18n="ss.source.uploaded">Uploaded (managed below)</option>
+            <option value="folder" data-i18n="ss.source.folder">Local folder (NAS / rclone mount)</option>
+            <option value="usb" data-i18n="ss.source.usb">USB key (plugged into the Pi)</option>
+            <option value="webdav" data-i18n="ss.source.webdav">WebDAV share</option>
+            <option value="urls" data-i18n="ss.source.urls">Image URLs (list)</option>
+          </select>
+        </label>
+        <label class="field" id="ssFolderField">
+          <span data-i18n="ss.folderPath">Local folder path</span>
+          <input type="text" id="setSSFolderPath">
+        </label>
+        <label class="field" id="ssWebdavUrlField">
+          <span data-i18n="ss.webdavUrl">WebDAV folder URL</span>
+          <input type="text" id="setSSWebdavUrl">
+        </label>
+        <label class="field" id="ssWebdavUserField">
+          <span data-i18n="ss.webdavUser">WebDAV username</span>
+          <input type="text" id="setSSWebdavUser">
+        </label>
+        <label class="field" id="ssWebdavPassField">
+          <span data-i18n="ss.webdavPass">WebDAV password</span>
+          <div class="field-password-wrap">
+            <input type="password" id="setSSWebdavPass" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">Show</button>
+          </div>
+        </label>
+        <label class="field field-wide" id="ssImagesField">
+          <span data-i18n="ss.images">Image URLs (one per line)</span>
+          <textarea id="setSSImages" rows="3"></textarea>
+        </label>
+        <label class="field" id="ssUploadedField">
+          <span data-i18n="ss.uploaded">Uploaded photos</span>
+          <div class="ss-media-list" id="ssMediaList" data-live></div>
+          <p class="ss-media-empty" id="ssMediaEmpty" data-i18n="ss.uploaded.empty">No photos uploaded yet.</p>
+          <input type="file" id="ssFileInput" accept="image/*" multiple hidden data-live>
+          <button type="button" class="btn small" id="ssUploadBtn" data-i18n="ss.uploaded.add">Add photos…</button>
+          <button type="button" class="btn small" id="ssLibraryBtn" data-i18n="library.open">Library…</button>
+        </label>
+      </fieldset>
+
+      <fieldset class="form-section" id="secSaverShow" data-help="saver">
+        <legend data-i18n="setp.sec.saverShow">Slideshow: display</legend>
+        <label class="field">
+          <span data-i18n="ss.interval">Change every (seconds)</span>
+          <input type="number" id="setSSInterval" min="3" max="600" step="1">
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="setSSShuffle">
+          <span data-i18n="ss.shuffle">Shuffle order</span>
+        </label>
+        <label class="field checkbox">
+          <input type="checkbox" id="setSSKenBurns">
+          <span data-i18n="ss.kenBurns">Slow zoom effect (Ken Burns)</span>
+        </label>
+        <label class="field">
+          <span data-i18n="ss.fitLandscape">Landscape photos</span>
+          <select id="setSSFitLandscape">
+            <option value="cover" data-i18n="ss.fit.cover">Fill screen (cropped)</option>
+            <option value="contain" data-i18n="ss.fit.contain">Show entire photo</option>
+          </select>
+        </label>
+        <label class="field">
+          <span data-i18n="ss.fitPortrait">Portrait photos</span>
+          <select id="setSSFitPortrait">
+            <option value="cover" data-i18n="ss.fit.cover">Fill screen (cropped)</option>
+            <option value="contain" data-i18n="ss.fit.contain">Show entire photo</option>
+          </select>
+        </label>
+        <small class="field-hint" data-i18n="ss.fitPortrait.hint">This is the setting that matters most for portrait photos coming out badly cropped: "Show entire photo" guarantees nothing is ever cut off.</small>
+        <label class="field" id="ssContainBgField">
+          <span data-i18n="ss.containBackground">Border style (when a photo is shown in full)</span>
+          <select id="setSSContainBg">
+            <option value="color" data-i18n="ss.containBackground.color">Solid color</option>
+            <option value="blur" data-i18n="ss.containBackground.blur">Blurred photo (auto)</option>
+          </select>
+        </label>
+        <label class="field" id="ssContainBgColorField">
+          <span data-i18n="ss.containBackgroundColor">Border color</span>
+          <input type="color" id="setSSContainBgColor">
+        </label>
+      </fieldset>
+        </section>
+
+        <section class="set-panel" id="setPanel_content" data-family="content" hidden>
+          <header class="set-panel-head">
+            <h1 data-i18n="setp.fam.content">Content and services</h1>
+            <p data-i18n="setp.fam.content.desc">Image library, media tools, map key and press subscriptions.</p>
+          </header>
+      <fieldset class="form-section" id="secLibrary" data-help="content">
+        <legend data-i18n="setp.sec.library">Image library</legend>
+        <!-- Acces direct a la bibliotheque d'images (1.155.0) : jusque-la on
+             ne la rencontrait qu'au moment de choisir une image pour un fond,
+             un logo ou le diaporama. Ici on la gere pour elle-meme.
+             Direct access to the image library (1.155.0): until now it only
+             showed up when picking an image for a background, a logo or the
+             slideshow. Here it is managed for its own sake. -->
+        <div class="field" id="setLibraryField">
+          <span data-i18n="settings.library" hidden>Image library</span>
+          <div class="theme-row">
+            <button type="button" class="btn small" id="setLibraryOpen" data-i18n="settings.library.open">Open the library…</button>
+            <small class="field-hint" id="setLibraryUsage"></small>
+          </div>
+          <small class="field-hint" data-i18n="settings.library.hint">Your own images (page backgrounds, logos, photos) are kept here, whichever page or tile ends up using them. They survive updates.</small>
+        </div>
+      </fieldset>
+
+      <!-- Outils multimedias facultatifs : section TOUJOURS visible, y
+           compris sur le Raspberry Pi et dans un navigateur, car savoir
+           si ffmpeg et VLC sont presents a un interet partout. Seul le
+           BOUTON d'installation depend du systeme ; a defaut, la
+           commande a taper est affichee.
+           Optional media tools: section ALWAYS visible, on the Raspberry
+           Pi and in a browser too, since knowing whether ffmpeg and VLC
+           are present is useful everywhere. Only the install BUTTON
+           depends on the system; failing that, the command to type is
+           shown. -->
+      <fieldset class="form-section" id="secMediaTools" data-help="content">
+        <legend data-i18n="settings.section.media">Media tools (optional)</legend>
+        <small class="field-hint" data-i18n="settings.media.intro">Used only by the IPTV tile, to fix inaudible sound (AC3/DTS) and to relay live channels that refuse a direct connection. Everything else in PiBoard works without them, which is why they are not installed with the application.</small>
+        <div class="field" id="mediaToolFfmpeg">
+          <span class="media-tool-name">ffmpeg</span>
+          <span class="media-tool-state" id="mediaStateFfmpeg"></span>
+          <button type="button" class="btn small" id="mediaInstallFfmpeg" hidden data-i18n="settings.media.install">Install</button>
+        </div>
+        <div class="field" id="mediaToolVlc">
+          <span class="media-tool-name">VLC</span>
+          <span class="media-tool-state" id="mediaStateVlc"></span>
+          <button type="button" class="btn small" id="mediaInstallVlc" hidden data-i18n="settings.media.install">Install</button>
+        </div>
+        <small class="field-hint" id="mediaToolsHint"></small>
+        <!-- Erreur d'installation : element DEDIE, en couleur d'alerte. Avant
+             la 1.140.2 le message remplacait le texte d'aide, au meme endroit
+             et dans le meme style gris : il passait inapercu.
+             Install error: a DEDICATED element in the alert colour. Before
+             1.140.2 the message replaced the hint text, in the same place
+             and grey style, and went unnoticed. -->
+        <p class="media-tools-error" id="mediaToolsError" role="alert" hidden></p>
+        <!-- Le message d'erreur renvoie au journal : on l'ouvre d'un clic
+             (application de bureau uniquement, 1.140.3).
+             The error points to the log: open it in one click. -->
+        <button type="button" class="btn small media-open-log" id="mediaOpenLog" hidden data-i18n="settings.media.openLog">Open log</button>
+
+      </fieldset>
+
+      <fieldset class="form-section" id="secMaps" data-help="content">
+        <legend data-i18n="settings.section.maps">Maps</legend>
+        <label class="field">
+          <span data-i18n="settings.cartoKey">CARTO base map key</span>
+          <input type="text" id="setCartoKey" autocomplete="off" spellcheck="false" placeholder="">
+        </label>
+        <small class="field-hint" data-i18n="settings.cartoKey.hint">Needed by the Traffic map, Weather radar and Planes overhead tiles, which share the same base map. Free and takes two minutes: request one at carto.com/basemaps/apikey. Without it, CARTO stamps "API KEY REQUIRED" across every map tile — the maps still work, but they look broken.</small>
+        <p class="hint"><a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener" data-i18n="settings.cartoKey.link">Request a free CARTO key</a></p>
+      </fieldset>
+
+      <!-- Abonnements presse (1.141.0) : session de navigateur par site,
+           pour lire en entier les articles payants dans la tuile Flux RSS.
+           Application de bureau uniquement (voir server/pressAccess.js).
+           Press subscriptions: a browser session per site, to read paid
+           articles in full in the RSS tile. Desktop app only. -->
+      <fieldset class="form-section" id="secPress" data-help="content" hidden>
+        <legend data-i18n="press.section">Press subscriptions</legend>
+        <small class="field-hint" data-i18n="press.intro">Read paid articles in full in the RSS tile, for the sites you subscribe to. Log in once on the site itself, in a PiBoard window: PiBoard never sees your password, it only keeps the session, like a browser.</small>
+        <div id="pressList" class="press-list" data-live></div>
+        <div class="field press-add" id="pressAddRow">
+          <select id="pressPreset" data-live></select>
+          <input type="text" id="pressCustom" placeholder="exemple.fr" hidden data-live>
+          <button type="button" class="btn small" id="pressAdd" data-i18n="press.add">Add</button>
+        </div>
+        <small class="field-hint" id="pressRemoteHint" hidden data-i18n="press.remote">Subscriptions are managed from the desktop application, on the computer where it runs.</small>
+        <p class="media-tools-error" id="pressError" role="alert" hidden></p>
+      </fieldset>
+        </section>
+
+        <section class="set-panel" id="setPanel_project" data-family="project" hidden>
+          <header class="set-panel-head">
+            <h1 data-i18n="setp.fam.project">Updates and project</h1>
+            <p data-i18n="setp.fam.project.desc">Update channel, bug reports and support for PiBoard.</p>
+          </header>
+      <!-- Mise a jour automatique du serveur (Raspberry Pi / Linux) :
+           section masquee tant que le serveur ne la declare pas
+           supportee (Windows passe par electron-updater, voir
+           electron/updater.js). Server self-update (Raspberry Pi /
+           Linux): hidden until the server declares it supported (Windows
+           goes through electron-updater, see electron/updater.js). -->
+      <!-- Section TOUJOURS visible : le niveau des mises a jour est un
+           choix de l'utilisateur, valable aussi bien pour le serveur
+           (Raspberry Pi / Linux) que pour l'application de bureau
+           Windows, qui utilise electron-updater. Seuls les boutons de
+           verification et d'installation, propres au serveur, sont
+           masques quand celui-ci ne gere pas ses mises a jour lui-meme
+           (bloc #updServerControls ci-dessous).
+           ALWAYS visible section: the update level is a user choice,
+           valid both for the server (Raspberry Pi / Linux) and for the
+           Windows desktop application, which uses electron-updater. Only
+           the check and install buttons, specific to the server, are
+           hidden when it does not handle its own updates
+           (#updServerControls block below). -->
+      <fieldset class="form-section" id="secUpdates" data-help="project">
         <legend data-i18n="settings.section.updates">Updates</legend>
         <label class="field">
           <span data-i18n="settings.updateChannel">Updates to install</span>
@@ -925,7 +1166,7 @@
            Contribute: two buttons opening a pre-filled GitHub issue,
            right under the updates section where the version number
            lives -- exactly what a bug report must carry. -->
-      <fieldset class="form-section" id="secContribute">
+      <fieldset class="form-section" id="secContribute" data-help="project">
         <legend data-i18n="settings.section.contribute">Contributing</legend>
         <p class="hint" data-i18n="contribute.intro">PiBoard is an open-source personal project. A clear report is worth ten vague ones: these two buttons open a ticket already filled with your version, your platform and the right questions.</p>
         <div class="contribute-actions">
@@ -939,160 +1180,31 @@
         <small class="field-hint" data-i18n="contribute.hint">Opens github.com in a new tab. A GitHub account is needed to post — creating one is free. Nothing is sent from PiBoard: you see and edit the text before posting it yourself.</small>
         <p class="hint"><a href="https://github.com/jihemezes/piboard/issues" target="_blank" rel="noopener" data-i18n="contribute.browse">Browse existing tickets</a></p>
       </fieldset>
-
-      <fieldset class="form-section">
-        <legend data-i18n="settings.section.maps">Maps</legend>
-        <label class="field">
-          <span data-i18n="settings.cartoKey">CARTO base map key</span>
-          <input type="text" id="setCartoKey" autocomplete="off" spellcheck="false" placeholder="">
-        </label>
-        <small class="field-hint" data-i18n="settings.cartoKey.hint">Needed by the Traffic map, Weather radar and Planes overhead tiles, which share the same base map. Free and takes two minutes: request one at carto.com/basemaps/apikey. Without it, CARTO stamps "API KEY REQUIRED" across every map tile — the maps still work, but they look broken.</small>
-        <p class="hint"><a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener" data-i18n="settings.cartoKey.link">Request a free CARTO key</a></p>
-      </fieldset>
-
-      <fieldset class="form-section">
-        <legend data-i18n="settings.section.touch">Touchscreen</legend>
-        <label class="field checkbox">
-          <input type="checkbox" id="setKeyboard">
-          <span data-i18n="settings.keyboard">Show an on-screen keyboard for text fields (touchscreens)</span>
-        </label>
-        <small class="field-hint" data-i18n="settings.keyboard.hint">Follows the language above (French AZERTY / English QWERTY). Applies everywhere text can be typed — tile settings and the notes widget included.</small>
-        <label class="field checkbox">
-          <input type="checkbox" id="setTouch">
-          <span data-i18n="settings.touch">Touch mode: larger buttons, tabs and handles</span>
-        </label>
-        <small class="field-hint" data-i18n="settings.touch.hint">Enlarges the toolbar buttons, the drawer and toolbar pull tabs, the tile icons and the resize handles, for fingers on a touchscreen.</small>
-        <label class="field">
-          <span data-i18n="settings.touchScroll">Scrolling tile content on a touchscreen</span>
-          <select id="setTouchScroll">
-            <option value="both" data-i18n="settings.touchScroll.both">Both — wide scrollbars and drag to scroll</option>
-            <option value="drag" data-i18n="settings.touchScroll.drag">Drag the content to scroll</option>
-            <option value="bars" data-i18n="settings.touchScroll.bars">Wide scrollbars only</option>
-            <option value="off" data-i18n="settings.touchScroll.off">Neither — leave as on a desktop</option>
-          </select>
-        </label>
-        <small class="field-hint" data-i18n="settings.touchScroll.hint">Only applies in touch mode. Default scrollbars are a few pixels wide, awkward for a finger; dragging the content, meanwhile, selects text instead of scrolling. Widening the bars, dragging to scroll, or both, fixes that.</small>
-        <label class="field checkbox">
-          <input type="checkbox" id="setMultiColumnForms">
-          <span data-i18n="settings.multiColumnForms">Multi-column settings windows</span>
-        </label>
-        <small class="field-hint" data-i18n="settings.multiColumnForms.hint">Spreads a settings window's sections across 2 or 3 columns when there's room, to shorten scrolling. On by default, independently of touch mode. Turn off to always keep a single column.</small>
-        <label class="field checkbox">
-          <input type="checkbox" id="setQuickStart">
-          <span data-i18n="settings.quickStart">Show the quick start guide at every launch</span>
-        </label>
-        <small class="field-hint" data-i18n="settings.quickStart.hint">The short guide shown on first launch. It stays available at any time from the help, under "Quick start".</small>
-      </fieldset>
-
-      <fieldset class="form-section">
-        <legend data-i18n="settings.section.screensaver">Screen saver</legend>
-        <label class="field checkbox">
-          <input type="checkbox" id="setSSEnabled">
-          <span data-i18n="ss.enabled">Enable the screen saver</span>
-        </label>
-        <div class="field">
-          <button type="button" class="btn small" id="btnTestDisplayOff" data-i18n="ss.displayTest">Test: turn the display off for 5 s</button>
-          <small class="field-hint" id="ssDisplayTestResult" hidden></small>
+        </section>
         </div>
-        <small class="field-hint" data-i18n="ss.displayOff.hint">The "Turn the display off" slot mode really cuts the video output's power, unlike the black overlay which leaves the panel lit. Raspberry Pi only. A touch, a key or a mouse move turns it back on. If the command fails, the black overlay takes over as before — the test button above says which method worked.</small>
-        <small class="field-hint" data-i18n="ss.enabled.hint">During the time slots below, the screen goes fully black (or shows a photo slideshow), to save energy at night or when no one is around. A click, a tap, or any key press wakes it up instantly. This never turns the physical display off — a software overlay only, which is instant and always reliable to wake up.</small>
-
-        <div id="ssSlots" style="margin-top:10px"></div>
-
-        <label class="field" style="margin-top:10px">
-          <span data-i18n="ss.inactivityTimeout">Return to sleep after inactivity</span>
-          <select id="setSSInactivityTimeout"></select>
-        </label>
-        <small class="field-hint" data-i18n="ss.inactivityTimeout.hint">If the screen is woken up with a touch/click/key while still inside a time slot above, it goes back to sleep on its own after this long without any further action.</small>
-
-        <p class="hint" style="margin-top:14px" data-i18n="ss.slideshow.intro">Photos used by any slot set to "Slideshow":</p>
-        <label class="field">
-          <span data-i18n="ss.source">Photo source</span>
-          <select id="setSSSource">
-            <option value="upload" data-i18n="ss.source.uploaded">Uploaded (managed below)</option>
-            <option value="folder" data-i18n="ss.source.folder">Local folder (NAS / rclone mount)</option>
-            <option value="usb" data-i18n="ss.source.usb">USB key (plugged into the Pi)</option>
-            <option value="webdav" data-i18n="ss.source.webdav">WebDAV share</option>
-            <option value="urls" data-i18n="ss.source.urls">Image URLs (list)</option>
-          </select>
-        </label>
-        <label class="field" id="ssFolderField">
-          <span data-i18n="ss.folderPath">Local folder path</span>
-          <input type="text" id="setSSFolderPath">
-        </label>
-        <label class="field" id="ssWebdavUrlField">
-          <span data-i18n="ss.webdavUrl">WebDAV folder URL</span>
-          <input type="text" id="setSSWebdavUrl">
-        </label>
-        <label class="field" id="ssWebdavUserField">
-          <span data-i18n="ss.webdavUser">WebDAV username</span>
-          <input type="text" id="setSSWebdavUser">
-        </label>
-        <label class="field" id="ssWebdavPassField">
-          <span data-i18n="ss.webdavPass">WebDAV password</span>
-          <div class="field-password-wrap">
-            <input type="password" id="setSSWebdavPass" autocomplete="off" spellcheck="false">
-            <button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">Show</button>
-          </div>
-        </label>
-        <label class="field field-wide" id="ssImagesField">
-          <span data-i18n="ss.images">Image URLs (one per line)</span>
-          <textarea id="setSSImages" rows="3"></textarea>
-        </label>
-        <label class="field" id="ssUploadedField">
-          <span data-i18n="ss.uploaded">Uploaded photos</span>
-          <div class="ss-media-list" id="ssMediaList"></div>
-          <p class="ss-media-empty" id="ssMediaEmpty" data-i18n="ss.uploaded.empty">No photos uploaded yet.</p>
-          <input type="file" id="ssFileInput" accept="image/*" multiple hidden>
-          <button type="button" class="btn small" id="ssUploadBtn" data-i18n="ss.uploaded.add">Add photos…</button>
-          <button type="button" class="btn small" id="ssLibraryBtn" data-i18n="library.open">Library…</button>
-        </label>
-        <label class="field">
-          <span data-i18n="ss.interval">Change every (seconds)</span>
-          <input type="number" id="setSSInterval" min="3" max="600" step="1">
-        </label>
-        <label class="field checkbox">
-          <input type="checkbox" id="setSSShuffle">
-          <span data-i18n="ss.shuffle">Shuffle order</span>
-        </label>
-        <label class="field checkbox">
-          <input type="checkbox" id="setSSKenBurns">
-          <span data-i18n="ss.kenBurns">Slow zoom effect (Ken Burns)</span>
-        </label>
-        <label class="field">
-          <span data-i18n="ss.fitLandscape">Landscape photos</span>
-          <select id="setSSFitLandscape">
-            <option value="cover" data-i18n="ss.fit.cover">Fill screen (cropped)</option>
-            <option value="contain" data-i18n="ss.fit.contain">Show entire photo</option>
-          </select>
-        </label>
-        <label class="field">
-          <span data-i18n="ss.fitPortrait">Portrait photos</span>
-          <select id="setSSFitPortrait">
-            <option value="cover" data-i18n="ss.fit.cover">Fill screen (cropped)</option>
-            <option value="contain" data-i18n="ss.fit.contain">Show entire photo</option>
-          </select>
-        </label>
-        <small class="field-hint" data-i18n="ss.fitPortrait.hint">This is the setting that matters most for portrait photos coming out badly cropped: "Show entire photo" guarantees nothing is ever cut off.</small>
-        <label class="field" id="ssContainBgField">
-          <span data-i18n="ss.containBackground">Border style (when a photo is shown in full)</span>
-          <select id="setSSContainBg">
-            <option value="color" data-i18n="ss.containBackground.color">Solid color</option>
-            <option value="blur" data-i18n="ss.containBackground.blur">Blurred photo (auto)</option>
-          </select>
-        </label>
-        <label class="field" id="ssContainBgColorField">
-          <span data-i18n="ss.containBackgroundColor">Border color</span>
-          <input type="color" id="setSSContainBgColor">
-        </label>
-      </fieldset>
-
-      <div class="form-actions form-actions-split">
-        <button class="btn" id="openBackupsBtn" data-i18n="backups.open">Backup &amp; restore…</button>
-        <button class="btn primary" id="settingsSave" data-i18n="settings.save">Save</button>
-      </div>
-      <p class="about">PiBoard <span id="appVersion">v1.0.0</span> — <a href="https://github.com/jihemezes/piboard" target="_blank" rel="noopener">GitHub</a></p>
+      </main>
+      <aside class="help-rail set-rail" id="setRail">
+        <div class="help-rail-block set-rail-block">
+          <div class="help-rail-label" data-i18n="setp.rail.title">In this family</div>
+          <div class="help-rail-items" id="setRailItems"></div>
+        </div>
+        <div class="help-rail-block set-rail-block">
+          <button type="button" class="help-rail-howto" id="setRailHelp" data-i18n="setp.rail.help">Help on this family</button>
+          <p class="about set-about">PiBoard · <a href="https://github.com/jihemezes/piboard" target="_blank" rel="noopener">GitHub</a></p>
+        </div>
+        <div class="help-rail-card set-kofi" id="setKofi">
+          <div class="help-rail-card-title" data-i18n="setp.kofi.title">Support PiBoard</div>
+          <p data-i18n="setp.kofi.text">Free and open source, made on spare evenings. A coffee is always welcome, never required.</p>
+          <button type="button" class="btn kofi-btn" data-kofi data-i18n="kofi.button">☕ Buy me a coffee</button>
+        </div>
+      </aside>
     </div>
+    <footer class="set-foot" id="setFoot">
+      <button type="button" class="btn" id="openBackupsBtn" data-i18n="backups.open">Backup &amp; restore…</button>
+      <span class="set-foot-state" id="setFootState" role="status" aria-live="polite"></span>
+      <button type="button" class="btn" id="settingsCancel" data-i18n="common.cancel">Cancel</button>
+      <button type="button" class="btn primary" id="settingsSave" data-i18n="settings.save">Save</button>
+    </footer>
   </div>
 </div>
 
@@ -1253,7 +1365,7 @@
   <div class="help-page" id="helpPage">
     <header class="help-page-head">
       <button type="button" class="help-return" id="helpReturn" data-close aria-label="Back to PiBoard"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 18l-6-6 6-6"/></svg><span data-i18n="help.return">Back to PiBoard</span></button>
-      <h2 class="help-page-title">PiBoard <small data-i18n="help.title">Help</small></h2>
+      <h2 class="help-page-title">PiBoard <small data-i18n="help.title">Help</small> <span class="help-version" id="helpVersion"></span></h2>
       <label class="help-search" for="helpNavSearch">
         <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
         <span class="help-search-label" data-i18n="help.searchLabel">Search</span>
