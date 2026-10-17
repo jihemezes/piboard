@@ -742,6 +742,7 @@
         showSpecs: s.circuitSpecs !== false,
         showCorners: true,
         showDirection: true,
+        rotation: String(s.circuitRotation || "0"),
         /* La meteo a sa propre carte dans cette tuile : la repeter sous
            le plan mangerait la place du dessin.
            Weather has its own card in this tile. */

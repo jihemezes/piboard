@@ -12,7 +12,7 @@
     "en": "A circuit's outline, drawn to scale.",
     "fr": "Le tracé d'un circuit, dessiné à l'échelle."
   },
-  "version": "1.1.0",
+  "version": "1.2.0",
   "size": {
     "w": 4,
     "h": 4,
@@ -88,6 +88,42 @@
         "en": "An arrow on the longest one-way straight, where the line is straightest and an arrow reads best. It follows OpenStreetMap's `oneway` tag, so it points the way the cars actually go; the pit lane is never used to decide it, since that would show the way into the pits rather than the way round the track.",
         "fr": "Une flèche sur la plus longue ligne droite à sens unique, là où le trait est le plus droit et où une flèche se lit. Elle suit l'étiquette `oneway` d'OpenStreetMap et indique donc le sens réel ; la voie des stands n'est jamais utilisée pour la déterminer, ce qui indiquerait le sens d'entrée aux stands et non celui du tour."
       }
+    },
+    {
+      "key": "rotation",
+      "type": "select",
+      "default": "0",
+      "label": {
+        "en": "Outline rotation",
+        "fr": "Rotation du tracé"
+      },
+      "hint": {
+        "en": "Turns the outline a quarter turn clockwise. \"Normal\" by default; \"Automatic\" turns it by itself when that makes it larger in the block: a tall block fits a tall circuit better, a wide one a wide circuit. The corner names, numbers and the direction arrow always stay upright; only the outline turns. The drawing's frame follows the block's shape, so the outline uses the whole block whatever its proportions.",
+        "fr": "Fait pivoter le tracé d'un quart de tour dans le sens horaire. « Normal » par défaut ; « Automatique » le fait tourner de lui-même quand il y gagne de la place dans le bloc : un bloc haut convient mieux à un circuit en hauteur, un bloc large à un circuit en largeur. Les noms et numéros de virages et la flèche de sens restent toujours droits ; seul le tracé tourne. Le cadre du dessin épouse la forme du bloc, le tracé occupe donc tout le bloc quelles que soient ses proportions."
+      },
+      "options": [
+        {
+          "value": "0",
+          "label": {
+            "en": "Normal",
+            "fr": "Normal"
+          }
+        },
+        {
+          "value": "90",
+          "label": {
+            "en": "Turned 90° clockwise",
+            "fr": "Pivoté de 90° (sens horaire)"
+          }
+        },
+        {
+          "value": "auto",
+          "label": {
+            "en": "Automatic (best fit for the block)",
+            "fr": "Automatique (selon la forme du bloc)"
+          }
+        }
+      ]
     },
     {
       "key": "showWeather",

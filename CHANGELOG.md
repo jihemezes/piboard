@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.157.0
+
+- **Plan du circuit : rotation du tracé (tuile Plan du circuit, cartes « Plan
+  du circuit » des tuiles Formule 1 et MotoGP).** Nouveau réglage « Rotation du
+  tracé » : *Normal* (défaut, comportement inchangé), *Pivoté de 90°* (sens
+  horaire) ou *Automatique*, qui compare l'échelle obtenue dans les deux
+  orientations et pivote quand le dessin y gagne plus de 10 % (la marge évite
+  le va-et-vient sur un bloc presque carré). La rotation se fait sur les
+  coordonnées planes AVANT la mise à l'échelle (`projectCircuit(…, rotation)`),
+  non par une transformation SVG du dessin fini : le cadre est ainsi calculé
+  pour la bonne orientation. Étiquettes, pastilles de virages et flèche de sens
+  sont posées après la projection : elles restent droites, la flèche suit le
+  tracé. Pour que pivoter serve réellement, le cadre du dessin n'est plus fixe
+  (1000 × 620) : sa largeur reste 1000 et sa hauteur suit le rapport mesuré du
+  bloc (`measureFrame()`, plus un `ResizeObserver` qui redessine après un
+  redimensionnement). Un bloc haut ne laisse donc plus de bandes vides.
+  Réglage `rotation` sur la tuile ; `circuitRotation` sur les tuiles F1 et MotoGP
+  (transmis au plan hôte). Aide mise à jour (3 tuiles, FR/EN). Tests : rotation
+  0 inchangée, 90° = rotation horaire et non miroir, tracé pivoté dans son
+  cadre, flèche qui suit, choix « auto » ; vérifié dans Chromium (Monza dans une
+  tuile large et Brno dans une tuile haute pivotent seuls ; redimensionnement).
+
 ## 1.156.1
 
 - **Tuiles Formule 1 et MotoGP : le thème de tuile s'applique enfin en entier.**

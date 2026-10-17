@@ -270,4 +270,66 @@ const sa = H.directionArrow(H.projectCircuit(sepang, SW, SH, PX, PY));
 assert.ok(sa && Number.isFinite(sa.angle), "la fleche doit etre posee sur un circuit reel");
 console.log("  OK");
 
+/* ---------- Rotation du trace (1.157.0) ----------
+   Ce qu'on verifie : (1) 0 ne change rien ; (2) 90 est une vraie
+   rotation HORAIRE, pas un miroir ; (3) le dessin tourne tient toujours
+   dans son cadre, marges comprises ; (4) « auto » ne pivote que si le
+   dessin y gagne, avec une marge pour ne pas osciller.
+   Rotation (1.157.0): 0 changes nothing; 90 is a real CLOCKWISE rotation,
+   not a mirror; the turned drawing still fits its frame; "auto" turns
+   only when the drawing gains room, with a margin against flip-flopping. */
+console.log("== rotation : 0 = comme avant ==");
+const r0 = H.projectCircuit(sepang, SW, SH, PX, PY, 0);
+const rU = H.projectCircuit(sepang, SW, SH, PX, PY);
+assert.deepStrictEqual(r0.map((w) => w.xy), rU.map((w) => w.xy), "rotation 0 identique a l'absence de rotation");
+console.log("  OK");
+
+console.log("== rotation : 90 est une rotation horaire, pas un miroir ==");
+/* Un L : le coin haut-gauche, le pied en bas. Tourne de 90 degres
+   horaires, le HAUT passe a DROITE.
+   An L-shape. Turned 90 degrees clockwise, the TOP goes to the RIGHT. */
+const L = [{ name: "", pit: false, corner: false, oneway: false,
+  pts: [[0.002, 0], [0.000, 0], [0.000, 0.001]] }];
+const n0 = H.projectCircuit(L, 1000, 1000, 0, 0, 0)[0].xy;
+const n90 = H.projectCircuit(L, 1000, 1000, 0, 0, 90)[0].xy;
+/* Avant : le point 0 (le plus au nord) est EN HAUT. Apres : A DROITE. */
+assert.ok(n0[0][1] < n0[1][1], "avant rotation, le nord est en haut");
+assert.ok(n90[0][0] > n90[1][0], "apres 90 horaire, le nord (haut) est a DROITE");
+/* Et le point le plus a l'EST (dernier point) passe en BAS. */
+assert.ok(n90[2][1] > n90[1][1], "apres 90 horaire, l'est passe en BAS");
+/* Un miroir changerait le sens de parcours (le determinant), pas une rotation. */
+const cross = (a, b, c) => (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+assert.ok(Math.sign(cross(n0[0], n0[1], n0[2])) === Math.sign(cross(n90[0], n90[1], n90[2])),
+  "le sens de rotation du trace est conserve : une rotation, pas un miroir");
+console.log("  OK");
+
+console.log("== rotation : le dessin tourne reste dans son cadre ==");
+for (const [fw, fh] of [[1000, 620], [1000, 1700], [1000, 300]]) {
+  for (const w of H.projectCircuit(sepang, fw, fh, PX, PY, 90)) for (const [x, y] of w.xy) {
+    assert.ok(x >= PX - 0.01 && x <= fw - PX + 0.01, "x hors cadre " + fw + "x" + fh + " : " + x);
+    assert.ok(y >= PY - 0.01 && y <= fh - PY + 0.01, "y hors cadre " + fw + "x" + fh + " : " + y);
+  }
+}
+console.log("  OK");
+
+console.log("== rotation : la fleche de sens suit le trace pivote ==");
+const a0 = H.directionArrow(H.projectCircuit(sepang, SW, SH, PX, PY, 0));
+const a90 = H.directionArrow(H.projectCircuit(sepang, SW, SH, PX, PY, 90));
+let diff = ((a90.angle - a0.angle) % 360 + 360) % 360;
+assert.ok(Math.abs(diff - 90) < 0.5, "la fleche tourne aussi de 90 degres horaires : " + diff);
+console.log("  OK");
+
+console.log("== rotation auto : on pivote seulement quand on y gagne ==");
+const wide = [{ name: "", pit: false, corner: false, oneway: false, pts: [[0, 0], [0.001, 0.004]] }];   /* large */
+const tall = [{ name: "", pit: false, corner: false, oneway: false, pts: [[0, 0], [0.004, 0.001]] }];   /* haut */
+assert.strictEqual(H.chooseRotation(wide, 1000, 620, 26, 26), 0, "circuit large, cadre large : pas de rotation");
+assert.strictEqual(H.chooseRotation(wide, 1000, 1700, 26, 26), 90, "circuit large, cadre haut : on pivote");
+assert.strictEqual(H.chooseRotation(tall, 1000, 620, 26, 26), 90, "circuit haut, cadre large : on pivote");
+assert.strictEqual(H.chooseRotation(tall, 1000, 1700, 26, 26), 0, "circuit haut, cadre haut : pas de rotation");
+/* Presque carre : la marge de 10 % evite le va-et-vient. */
+const sq = [{ name: "", pit: false, corner: false, oneway: false, pts: [[0, 0], [0.0020, 0.0021]] }];
+assert.strictEqual(H.chooseRotation(sq, 1000, 1000, 26, 26), 0, "cadre carre, circuit carre : on ne bouge pas");
+assert.strictEqual(H.chooseRotation([], 1000, 620, 26, 26), 0, "rien a dessiner : 0");
+console.log("  OK");
+
 console.log("\nTous les tests du plan du circuit passent, donnee reelle comprise.");

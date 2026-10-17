@@ -460,7 +460,22 @@
      savant -- un circuit tient dans quelques kilometres.
      Equirectangular projection with cosine correction: without it
      Silverstone (52°N) would come out twice too wide. */
-  function projectCircuit(ways, width, height, pad, padY) {
+  /* LA ROTATION SE FAIT SUR LE PLAN, AVANT LA MISE A L'ECHELLE. Pivoter
+     le dessin fini (une transformation SVG sur le groupe) laisserait le
+     cadre calcule pour l'orientation d'origine : un circuit tout en
+     largeur, tourne de 90 degres dans une tuile haute, resterait aussi
+     petit qu'avant. On tourne donc les coordonnees planes, puis on cale le
+     resultat dans le cadre -- le dessin occupe alors toute la hauteur. Et
+     comme les etiquettes, les pastilles et la fleche sont posees APRES la
+     projection, elles restent droites : seul le trace tourne.
+     THE ROTATION IS DONE ON THE PLAN, BEFORE SCALING. Turning the finished
+     drawing (an SVG transform on the group) would leave the frame computed
+     for the original orientation: a wide circuit turned 90 degrees in a
+     tall tile would stay as small as before. So the plane coordinates are
+     turned, then fitted into the frame. Labels, badges and the arrow are
+     placed AFTER projection, hence stay upright: only the outline turns.
+     rotation: 0 or 90 (clockwise). */
+  function planeBox(ways) {
     const all = [];
     for (const w of ways) for (const p of w.pts) all.push(p);
     if (!all.length) return null;
@@ -468,20 +483,25 @@
     const lons = all.map((p) => p[1]);
     const minLat = Math.min(...lats), maxLat = Math.max(...lats);
     const minLon = Math.min(...lons), maxLon = Math.max(...lons);
-    const midLat = (minLat + maxLat) / 2;
-    const kx = Math.cos(midLat * Math.PI / 180);
+    const kx = Math.cos(((minLat + maxLat) / 2) * Math.PI / 180);
+    return { minLat, maxLat, minLon, maxLon, kx, w0: (maxLon - minLon) * kx, h0: maxLat - minLat };
+  }
 
-    const w0 = (maxLon - minLon) * kx;
-    const h0 = (maxLat - minLat);
+  function projectCircuit(ways, width, height, pad, padY, rotation) {
+    const box = planeBox(ways);
+    if (!box) return null;
+    const { maxLat, minLon, kx, w0, h0 } = box;
     if (!(w0 > 0) && !(h0 > 0)) return null;
+    const turn = Number(rotation) === 90;
+    /* Dimensions du dessin APRES rotation / drawing size after rotation. */
+    const pw = turn ? h0 : w0, ph = turn ? w0 : h0;
     const py = Number.isFinite(padY) ? padY : pad;
     const inner = { w: width - pad * 2, h: height - py * 2 };
-    const scale = Math.min(inner.w / (w0 || 1e-9), inner.h / (h0 || 1e-9));
-    const offX = pad + (inner.w - w0 * scale) / 2;
-    const offY = py + (inner.h - h0 * scale) / 2;
+    const scale = Math.min(inner.w / (pw || 1e-9), inner.h / (ph || 1e-9));
+    const offX = pad + (inner.w - pw * scale) / 2;
+    const offY = py + (inner.h - ph * scale) / 2;
 
-    const project = ([lat, lon]) => [
-      offX + (lon - minLon) * kx * scale,
+    const project = ([lat, lon]) => {
       /* La latitude croit vers le NORD, l'axe Y d'un SVG vers le BAS :
          sans cette inversion, le circuit serait dessine en miroir --
          juste assez ressemblant pour qu'on ne s'en apercoive pas tout
@@ -489,9 +509,34 @@
          Latitude grows NORTH, an SVG's Y axis grows DOWN: without this
          flip the circuit would be mirrored -- just similar enough not to
          be noticed at once, and completely wrong. */
-      offY + (maxLat - lat) * scale
-    ];
+      const x = (lon - minLon) * kx;
+      const y = maxLat - lat;
+      /* 90 degres horaires : le haut du dessin passe a droite. Meme sens
+         de rotation que les aiguilles, pas un miroir.
+         90 degrees clockwise: the top goes to the right. A rotation, not
+         a mirror. */
+      return turn
+        ? [offX + (h0 - y) * scale, offY + x * scale]
+        : [offX + x * scale, offY + y * scale];
+    };
     return ways.map((w) => Object.assign({}, w, { xy: w.pts.map(project) }));
+  }
+
+  /* « AUTO » : on pivote quand le dessin y GAGNE de la place. On compare
+     l'echelle obtenue dans les deux orientations -- celle qui agrandit le
+     plus le trace gagne -- avec une marge de 10 % : sans elle, un cadre
+     presque carre ferait basculer le dessin a chaque redimensionnement.
+     "AUTO": rotate when the drawing GAINS room. The scale obtained in the
+     two orientations is compared; a 10% margin stops a near-square frame
+     from flipping the drawing at every resize. */
+  function chooseRotation(ways, width, height, pad, padY) {
+    const box = planeBox(ways);
+    if (!box || !(box.w0 > 0) || !(box.h0 > 0)) return 0;
+    const py = Number.isFinite(padY) ? padY : pad;
+    const iw = width - pad * 2, ih = height - py * 2;
+    const straight = Math.min(iw / box.w0, ih / box.h0);
+    const turned = Math.min(iw / box.h0, ih / box.w0);
+    return turned > straight * 1.1 ? 90 : 0;
   }
 
   function toPath(xy) {
@@ -660,6 +705,38 @@
       this.render();
       this.refresh();
       this.arm();
+      /* Le cadre du dessin suit la forme du bloc : quand on redimensionne
+         la tuile, on le recalcule. Un simple SVG « meet » ne suffit plus,
+         puisque la rotation automatique depend de cette forme.
+         The drawing's frame follows the block's shape: recomputed when the
+         tile is resized (auto-rotation depends on that shape). */
+      if (typeof ResizeObserver !== "undefined" && this.ctx.el) {
+        try {
+          this.ro = new ResizeObserver(() => {
+            clearTimeout(this.roTimer);
+            this.roTimer = setTimeout(() => {
+              if (this.circuit && this.circuit.ways && this.circuit.ways.length && this.measureFrame()) this.render();
+            }, 120);
+          });
+          this.ro.observe(this.ctx.el);
+        } catch (e) { this.ro = null; }
+      }
+    }
+
+    /* Mesure le bloc du dessin et dit si la hauteur du cadre doit changer
+       (plus de 6 % d'ecart : en dessous, on ne redessine pas).
+       Measures the drawing's block and says whether the frame height must
+       change (more than 6% off; below that, no redraw). */
+    measureFrame() {
+      const m = this.ctx.el && this.ctx.el.querySelector && this.ctx.el.querySelector(".pwcir-map");
+      if (!m || !m.getBoundingClientRect) return false;
+      const r = m.getBoundingClientRect();
+      if (!(r.width > 20 && r.height > 20)) return false;
+      const h = Math.max(260, Math.min(3200, Math.round(1000 * r.height / r.width)));
+      const cur = this.mapH || 620;
+      if (Math.abs(h - cur) / cur <= 0.06) return false;
+      this.mapH = h;
+      return true;
     }
 
     onSettingsChanged(settings) {
@@ -944,6 +1021,14 @@
           <span class="pwcir-src">${esc(this.credit())}</span>
         </div>
       </div>`;
+      /* Une seule passe de recalage : la hauteur mesuree ne depend pas du
+         dessin, mais on se garde d'une boucle quand meme.
+         A single fitting pass: the measured height does not depend on the
+         drawing, but a loop is guarded against anyway. */
+      if (!this.fitting && this.measureFrame()) {
+        this.fitting = true;
+        try { this.render(); } finally { this.fitting = false; }
+      }
     }
 
     title() {
@@ -969,11 +1054,23 @@
 
     map() {
       const c = this.circuit;
-      const W = 1000, H = 620;
+      /* LE CADRE SUIT LA FORME DE LA TUILE. Le dessin etait cale dans un
+         cadre fixe de 1000 x 620 : dans une tuile haute, il restait petit
+         au milieu de bandes vides, et pivoter ne servait a rien. La
+         largeur reste 1000 (la taille des etiquettes ne bouge donc pas) ;
+         la hauteur suit le rapport mesure du bloc.
+         THE FRAME FOLLOWS THE TILE'S SHAPE. The drawing used to be fitted
+         into a fixed 1000 x 620 frame: in a tall tile it stayed small
+         amid empty bands, and rotating would have been pointless. Width
+         stays 1000; height follows the block's measured ratio. */
+      const W = 1000, H = this.mapH || 620;
       const showCorners = this.ctx.settings.showCorners !== false;
       const named = c.ways.filter((w) => w.corner && !w.pit && w.name).length;
       const withLabels = showCorners && named > 0 && named <= 16;
-      const ways = projectCircuit(c.ways, W, H, withLabels ? 96 : 26, withLabels ? 34 : 26);
+      const padX = withLabels ? 96 : 26, padYv = withLabels ? 34 : 26;
+      const setting = String(this.ctx.settings.rotation == null ? "0" : this.ctx.settings.rotation);
+      const rot = setting === "90" ? 90 : (setting === "auto" ? chooseRotation(c.ways, W, H, padX, padYv) : 0);
+      const ways = projectCircuit(c.ways, W, H, padX, padYv, rot);
       if (!ways) return `<div class="pwcir-msg">${esc(this.ctx.i18n.t("circuit.absent"))}</div>`;
 
       const track = ways.filter((w) => !w.pit);
@@ -1217,7 +1314,11 @@
       </div>`;
     }
 
-    destroy() { clearTimeout(this.timer); }
+    destroy() {
+      clearTimeout(this.timer);
+      clearTimeout(this.roTimer);
+      if (this.ro) { try { this.ro.disconnect(); } catch (e) { /* noop */ } this.ro = null; }
+    }
   }
 
   window.PiBoard.registerWidget("circuit", CircuitWidget);
@@ -1227,7 +1328,7 @@
   window.PiBoardCircuitHelpers = {
     parseCalendar, currentRace, nextSession, whenOf,
     parseMotoGpCalendar, matchMotoGpCircuit, motogpRaceName, motogpKind, followMode, FOLLOW_MOTOGP,
-    parseCircuit, projectCircuit, directionArrow, toPath, overpassUrl,
+    parseCircuit, projectCircuit, chooseRotation, directionArrow, toPath, overpassUrl,
     parseWeather, weatherAt, weatherUrl, describeWeather,
     CORNER_RE, CORNER_NUM_RE, PIT_RE, RACE_LENGTH_MS
   };

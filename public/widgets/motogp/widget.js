@@ -816,7 +816,7 @@
        "Follow the MotoGP calendar". */
     circuitSettings() {
       const s = this.ctx.settings;
-      return { circuit: "follow:motogp", showSpecs: s.circuitSpecs !== false, showCorners: true, showDirection: true, showWeather: false };
+      return { circuit: "follow:motogp", showSpecs: s.circuitSpecs !== false, showCorners: true, showDirection: true, rotation: String(s.circuitRotation || "0"), showWeather: false };
     }
 
     syncCircuit(wanted) {

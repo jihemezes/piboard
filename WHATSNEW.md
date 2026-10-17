@@ -32,6 +32,31 @@
 
 # Nouveautes / What's new
 
+## 1.157.0
+
+**Faire pivoter le tracé du circuit**
+
+Le plan du circuit propose un réglage **Rotation du tracé** : *Normal*, *Pivoté
+de 90°*, ou *Automatique*. En automatique, PiBoard choisit seul l'orientation qui
+agrandit le plus le dessin dans le bloc, et la change quand vous redimensionnez
+la tuile : un circuit tout en hauteur remplit un bloc haut, un circuit tout en
+largeur un bloc large. Le dessin épouse désormais toute la forme du bloc, sans
+bandes vides. Les noms de virages et la flèche de sens restent toujours droits.
+Le réglage est disponible sur la tuile Plan du circuit et sur la carte « Plan du
+circuit » des tuiles Formule 1 et MotoGP.
+
+---
+
+**Rotate the circuit outline**
+
+The circuit map offers an **Outline rotation** setting: *Normal*, *Turned 90°*, or
+*Automatic*. In automatic, PiBoard picks by itself the orientation that makes the
+drawing largest in the block, and changes it when you resize the tile: a tall
+circuit fills a tall block, a wide circuit a wide one. The drawing now follows
+the whole shape of the block, with no empty bands. Corner names and the direction
+arrow always stay upright. The setting is available on the Circuit map tile and on
+the "Circuit map" card of the Formula 1 and MotoGP tiles.
+
 ## 1.156.0
 
 **Des réglages rangés en familles, comme l'aide**

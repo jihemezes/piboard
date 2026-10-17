@@ -2840,6 +2840,43 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("et le propose dans « Ajouter un bloc »", !!host.querySelector('.pig-add option[value="constructors"]'));
     assert("le plan du circuit a survecu au nouveau rendu", !!host.querySelector('.pig-block[data-block="circuit"] .pw-circuit'));
 
+    /* 1.157.0 : rotation du trace du plan du circuit. */
+    {
+      const trackPath = (el) => (el.querySelector(".pwcir-track") || {}).getAttribute ? el.querySelector(".pwcir-track").getAttribute("d") : "";
+      const hostR = document.createElement("div");
+      document.body.appendChild(hostR);
+      const c0 = window.PiBoard.embedWidget("circuit", hostR, { circuit: "sepang", showWeather: false, rotation: "0" });
+      await sleep(500);
+      const d0 = trackPath(hostR);
+      assert("plan du circuit : le trace est dessine (rotation 0)", d0.length > 20);
+      c0.onSettingsChanged(Object.assign({}, c0.ctx.settings, { rotation: "90" }));
+      await sleep(300);
+      const d90 = trackPath(hostR);
+      assert("plan du circuit : « 90° » change le trace", d90.length > 20 && d90 !== d0);
+      assert("plan du circuit : les etiquettes et la fleche ne sont pas pivotees avec le trace",
+        !/rotate\(/.test(Array.from(hostR.querySelectorAll(".pwcir-badge, .pwcir-label")).map((n) => n.getAttribute("transform") || "").join(" ")));
+      c0.onSettingsChanged(Object.assign({}, c0.ctx.settings, { rotation: "auto" }));
+      await sleep(300);
+      assert("plan du circuit : « auto » dessine quand meme", trackPath(hostR).length > 20);
+      c0.onSettingsChanged(Object.assign({}, c0.ctx.settings, { rotation: "0" }));
+      await sleep(300);
+      assert("plan du circuit : retour a « normal » = dessin d'origine", trackPath(hostR) === d0);
+      try { c0.destroy(); } catch (e) { /* noop */ }
+      hostR.remove();
+
+      for (const id of ["circuit", "f1", "motogp"]) {
+        const m = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/" + id + "/manifest.json"), "utf8"));
+        const key = id === "circuit" ? "rotation" : "circuitRotation";
+        const st = (m.settings || []).find((x) => x.key === key);
+        assert(id + " : reglage de rotation du trace declare (normal / 90 / auto)", !!st && st.type === "select" && st.default === "0"
+          && st.options.map((o) => o.value).join(",") === "0,90,auto");
+      }
+      assert("la tuile Formule 1 passe sa rotation au plan hote", f1.circuitSettings().rotation === "0");
+      const fSet = Object.assign({}, f1.ctx.settings, { circuitRotation: "auto" });
+      f1.ctx.settings = fSet;
+      assert("... et la valeur choisie suit", f1.circuitSettings().rotation === "auto");
+    }
+
     /* 1.151.1 : en edition, un appui sur ces tuiles n'ouvre plus leurs
        reglages (la fenetre se posait sur les blocs qu'on touchait). */
     {

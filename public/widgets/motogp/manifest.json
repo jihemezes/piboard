@@ -1,6 +1,6 @@
 {
   "id": "motogp",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "name": {
     "en": "MotoGP",
     "fr": "MotoGP"
@@ -170,6 +170,42 @@
         "en": "Official MotoGP figures from the circuit base: length of the MotoGP layout, left and right corners, longest straight. Untick it to give the outline all the room.",
         "fr": "Les chiffres officiels du MotoGP, tirés de la base des circuits : longueur du tracé MotoGP, virages à gauche et à droite, plus longue ligne droite. Décochez-la pour laisser toute la place au tracé."
       }
+    },
+    {
+      "key": "circuitRotation",
+      "type": "select",
+      "default": "0",
+      "label": {
+        "en": "Outline rotation",
+        "fr": "Rotation du tracé"
+      },
+      "hint": {
+        "en": "Turns the outline a quarter turn clockwise. \"Normal\" by default; \"Automatic\" turns it by itself when that makes it larger in the block: a tall block fits a tall circuit better, a wide one a wide circuit. The corner names, numbers and the direction arrow always stay upright; only the outline turns. The drawing's frame follows the block's shape, so the outline uses the whole block whatever its proportions.",
+        "fr": "Fait pivoter le tracé d'un quart de tour dans le sens horaire. « Normal » par défaut ; « Automatique » le fait tourner de lui-même quand il y gagne de la place dans le bloc : un bloc haut convient mieux à un circuit en hauteur, un bloc large à un circuit en largeur. Les noms et numéros de virages et la flèche de sens restent toujours droits ; seul le tracé tourne. Le cadre du dessin épouse la forme du bloc, le tracé occupe donc tout le bloc quelles que soient ses proportions."
+      },
+      "options": [
+        {
+          "value": "0",
+          "label": {
+            "en": "Normal",
+            "fr": "Normal"
+          }
+        },
+        {
+          "value": "90",
+          "label": {
+            "en": "Turned 90° clockwise",
+            "fr": "Pivoté de 90° (sens horaire)"
+          }
+        },
+        {
+          "value": "auto",
+          "label": {
+            "en": "Automatic (best fit for the block)",
+            "fr": "Automatique (selon la forme du bloc)"
+          }
+        }
+      ]
     },
     {
       "key": "circuitCountdown",
