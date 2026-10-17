@@ -559,7 +559,11 @@ const putCalls = [];
    (server/tileConfigs.js), to replay the full remove -> reuse
    journey without a real server. */
 const tileConfigsMock = {};
-const LIBRARY_MOCK = { fail: false, picked: [] };
+const LIBRARY_MOCK = {
+  fail: false, picked: [],
+  // 1.155.0 : gestion de la bibliotheque / library management
+  manage: false, used: [], patched: [], moved: [], restored: [], deleted: [], urls: [], uploads: [], listUrls: []
+};
 const SHUTDOWN_MOCK = { answer: { ok: false } };
 const QUOTE_MOCK = { fail: false };
 const FS_MOCK = {
@@ -945,11 +949,53 @@ const dom = new JSDOM(html, {
       }
       if (/\/api\/media\/[^/?]+\/from-library/.test(u) && method === "POST") {
         const body = JSON.parse(opts.body || "{}");
-        LIBRARY_MOCK.picked.push(body.id);
         const folder = (u.match(/\/api\/media\/([^/?]+)/) || [])[1] || "";
+        // Les anciens tests comptent les choix ; la gestion a son propre
+        // compteur. The older tests count picks; management has its own.
+        if (LIBRARY_MOCK.manage) LIBRARY_MOCK.used.push({ folder, id: body.id });
+        else LIBRARY_MOCK.picked.push(body.id);
         return json({ ok: true, name: "Classy_Blue.png", url: "/media/" + folder + "/Classy_Blue.png" });
       }
+      if (u === "/api/library-usage" && method === "GET") {
+        return json({
+          maxPerSection: 500,
+          user: { count: 2, bytes: 2048, sections: { backgrounds: { count: 1, bytes: 1024 }, logos: { count: 0, bytes: 0 }, photos: { count: 1, bytes: 1024 } } },
+          builtin: { count: 40, bytes: 9000000 }, hidden: 1,
+          disk: { free: 5 * 1024 * 1024 * 1024, total: 32 * 1024 * 1024 * 1024 }
+        });
+      }
+      if (u === "/api/library-url" && method === "POST") {
+        const body = JSON.parse(opts.body || "{}");
+        LIBRARY_MOCK.urls.push(body);
+        if (/127\.0\.0\.1/.test(body.url)) {
+          return Promise.resolve({ ok: false, status: 400, json: () => Promise.resolve({ error: "address not allowed" }) });
+        }
+        return json({ ok: true, id: "user:" + body.section + ":web.png" });
+      }
+      if (/^\/api\/library\/[^?]+\/move$/.test(u) && method === "POST") {
+        const body = JSON.parse(opts.body || "{}");
+        LIBRARY_MOCK.moved.push({ u, section: body.section });
+        return json({ ok: true, id: "user:" + body.section + ":perso.png" });
+      }
+      if (/^\/api\/library\/[^?]+\/restore$/.test(u) && method === "POST") {
+        LIBRARY_MOCK.restored.push(u);
+        return json({ ok: true });
+      }
+      if (/^\/api\/library\/(?!file\/|thumb\/)[^?/]+$/.test(u) && method === "PATCH") {
+        LIBRARY_MOCK.patched.push(JSON.parse(opts.body || "{}"));
+        return json({ ok: true });
+      }
+      if (/^\/api\/library\/(?!file\/|thumb\/)[^?/]+$/.test(u) && method === "DELETE") {
+        LIBRARY_MOCK.deleted.push(u);
+        return json({ ok: true });
+      }
+      if (/^\/api\/library\/(backgrounds|logos|photos)$/.test(u) && method === "POST") {
+        const f = opts.body && opts.body.get ? opts.body.get("images") : null;
+        LIBRARY_MOCK.uploads.push({ section: u.split("/").pop(), name: f && f.name });
+        return json({ ok: true, added: ["user:x:" + (f && f.name)], rejected: [] });
+      }
       if (/\/api\/library\?/.test(u) && method === "GET") {
+        LIBRARY_MOCK.listUrls.push(u);
         if (LIBRARY_MOCK.fail) {
           return Promise.resolve({ ok: false, status: 500, json: () => Promise.resolve({ error: "disque illisible" }) });
         }
@@ -961,7 +1007,10 @@ const dom = new JSDOM(html, {
               name: "Classy Blue", category: "Classy", tone: "dark", url: "/api/library/file/x", thumb: null, width: 1920, height: 1200 },
             { id: "user:backgrounds:perso.png", origin: "user", section: "backgrounds", file: "perso.png",
               name: "<b>Perso</b> & co", category: null, tone: "light", author: "JM", url: "/api/library/file/y", thumb: null }
-          ]
+          ].concat(/hidden=1/.test(u) ? [
+            { id: "builtin:backgrounds:cache.png", origin: "builtin", section: "backgrounds", file: "cache.png", hidden: true,
+              name: "Masquee", category: null, tone: "dark", url: "/api/library/file/z", thumb: null }
+          ] : [])
         });
       }
       if (/\/api\/media\//.test(u)) {
@@ -6637,6 +6686,159 @@ function catalogItemFor(catalog, document, widgetId) {
         document.getElementById("libraryStatus").textContent.includes("disque illisible"));
       LIBRARY_MOCK.fail = false;
       document.getElementById("libraryModal").hidden = true;
+    }
+
+    /* ---------- Gestion de la bibliotheque (1.155.0) ----------
+       Parcours reel depuis les reglages generaux : la place occupee, la
+       fenetre ouverte SANS destination (un clic ouvre le detail au lieu de
+       choisir), renommer, deplacer, utiliser maintenant, elements masques,
+       ajout par adresse (succes et refus) et glisser-deposer.
+       Real journey from the general settings: space taken, the window
+       opened WITHOUT a destination (a click opens the detail instead of
+       picking), rename, move, use now, hidden items, add by address
+       (success and refusal) and drag and drop. */
+    {
+      const $l = (id) => document.getElementById(id);
+      const clickL = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      LIBRARY_MOCK.manage = true;
+
+      clickL($l("btnSettings"));
+      await sleep(150);
+      assert("bibliotheque (reglages) : le bouton d'acces est dans les reglages generaux",
+        $l("setLibraryOpen") && $l("setLibraryOpen").closest("#settingsModal") !== null
+        && $l("setLibraryOpen").closest("fieldset").querySelector("legend").dataset.i18n === "settings.section.general");
+      assert("bibliotheque (reglages) : la place occupee est affichee",
+        $l("setLibraryUsage").textContent.includes("Vos images : 2 (2 Ko)")
+        && $l("setLibraryUsage").textContent.includes("livrées avec PiBoard : 40")
+        && $l("setLibraryUsage").textContent.includes("1 masquée(s)")
+        && $l("setLibraryUsage").textContent.includes("5.00 Go libres"));
+
+      clickL($l("setLibraryOpen"));
+      await sleep(150);
+      assert("bibliotheque (reglages) : la fenetre s'ouvre", $l("libraryModal").hidden === false);
+      assert("bibliotheque (reglages) : l'option des masquees apparait", $l("libraryHiddenBox").hidden === false);
+      assert("bibliotheque (reglages) : le pied donne le compte de la section",
+        $l("libraryUsage").textContent.includes("cette section : 1/500"));
+
+      const items = $l("libraryGrid").querySelectorAll(".library-item");
+      const copiesBefore = LIBRARY_MOCK.used.length;
+      clickL(items[0]);
+      await sleep(60);
+      assert("bibliotheque (reglages) : un clic n'applique rien, il ouvre le detail",
+        LIBRARY_MOCK.used.length === copiesBefore && $l("libraryModal").hidden === false && $l("libraryDetail").hidden === false);
+      assert("bibliotheque (reglages) : un element livre ne se renomme ni ne se deplace pas",
+        !$l("libraryDetail").querySelector('[data-act="save"]') && !$l("libraryDetail").querySelector('[data-act="move"]')
+        && $l("libraryDetail").querySelector('[data-act="useBg"]') !== null);
+
+      clickL($l("libraryGrid").querySelectorAll(".library-item")[1]);
+      await sleep(60);
+      const nameInput = $l("libraryDetail").querySelector('[data-f="name"]');
+      assert("bibliotheque (reglages) : l'element personnel propose le renommage, nom non interprete",
+        nameInput && nameInput.value === "<b>Perso</b> & co" && !$l("libraryDetail").querySelector(".library-detail-title b"));
+      nameInput.value = "Mon fond";
+      $l("libraryDetail").querySelector('[data-f="category"]').value = "maison";
+      $l("libraryDetail").querySelector('[data-f="tone"]').value = "dark";
+      clickL($l("libraryDetail").querySelector('[data-act="save"]'));
+      await sleep(120);
+      assert("bibliotheque (reglages) : l'enregistrement envoie nom, categorie et ton",
+        LIBRARY_MOCK.patched.length === 1 && LIBRARY_MOCK.patched[0].name === "Mon fond"
+        && LIBRARY_MOCK.patched[0].category === "maison" && LIBRARY_MOCK.patched[0].tone === "dark");
+      assert("bibliotheque (reglages) : et le dit", $l("libraryStatus").textContent === "Enregistré.");
+
+      // Le detail reste ouvert apres l'enregistrement : pas de second clic
+      // sur la carte, il refermerait le panneau.
+      // The detail stays open after saving: no second click on the card,
+      // it would close the panel.
+      assert("bibliotheque (reglages) : le detail reste ouvert apres l'enregistrement", $l("libraryDetail").hidden === false);
+      clickL($l("libraryDetail").querySelector('[data-act="useBg"]'));
+      await sleep(120);
+      const bgUse = LIBRARY_MOCK.used[LIBRARY_MOCK.used.length - 1];
+      assert("bibliotheque (reglages) : « fond de la page affichee » copie vers le dossier de la page",
+        bgUse && /^bg-/.test(bgUse.folder) && bgUse.id === "user:backgrounds:perso.png");
+      assert("bibliotheque (reglages) : et l'annonce", /Appliquée comme fond/.test($l("libraryStatus").textContent));
+      clickL($l("libraryDetail").querySelector('[data-act="useSaver"]'));
+      await sleep(120);
+      const saverUse = LIBRARY_MOCK.used[LIBRARY_MOCK.used.length - 1];
+      assert("bibliotheque (reglages) : « ecran de veille » copie vers le dossier du diaporama de veille",
+        saverUse && saverUse.folder === "t-screensaver");
+
+      $l("libraryDetail").querySelector('[data-f="section"]').value = "photos";
+      clickL($l("libraryDetail").querySelector('[data-act="move"]'));
+      await sleep(150);
+      assert("bibliotheque (reglages) : le deplacement vise la bonne section",
+        LIBRARY_MOCK.moved.length === 1 && LIBRARY_MOCK.moved[0].section === "photos");
+      assert("bibliotheque (reglages) : la fenetre suit l'image dans sa nouvelle section",
+        $l("librarySection").value === "photos");
+
+      $l("libraryHidden").checked = true;
+      $l("libraryHidden").dispatchEvent(new window.Event("change", { bubbles: true }));
+      await sleep(120);
+      assert("bibliotheque (reglages) : « les masquees » redemande la liste avec hidden=1",
+        /hidden=1/.test(LIBRARY_MOCK.listUrls[LIBRARY_MOCK.listUrls.length - 1]));
+      const hiddenCard = $l("libraryGrid").querySelector(".library-item-hidden");
+      assert("bibliotheque (reglages) : l'element masque est signale et se retablit",
+        hiddenCard && hiddenCard.querySelector(".library-item-restore") !== null);
+      clickL(hiddenCard.querySelector(".library-item-restore"));
+      await sleep(120);
+      assert("bibliotheque (reglages) : le retablissement appelle la route de restauration",
+        LIBRARY_MOCK.restored.length === 1 && /cache\.png/.test(decodeURIComponent(LIBRARY_MOCK.restored[0])));
+      $l("libraryHidden").checked = false;
+      $l("libraryHidden").dispatchEvent(new window.Event("change", { bubbles: true }));
+      await sleep(80);
+
+      clickL($l("libraryUrlBtn"));
+      assert("bibliotheque (reglages) : la ligne d'adresse apparait", $l("libraryUrlRow").hidden === false);
+      $l("libraryUrl").value = "http://127.0.0.1:8080/secret.png";
+      clickL($l("libraryUrlGo"));
+      await sleep(120);
+      assert("bibliotheque (reglages) : une adresse interdite est refusee en clair",
+        $l("libraryStatus").classList.contains("library-status-err")
+        && $l("libraryStatus").textContent.includes("ne peut pas joindre cette adresse")
+        && $l("libraryUrlRow").hidden === false);
+      $l("libraryUrl").value = "https://exemple.test/paysage.png";
+      clickL($l("libraryUrlGo"));
+      await sleep(150);
+      assert("bibliotheque (reglages) : l'ajout par adresse cible la section affichee",
+        LIBRARY_MOCK.urls.length === 2 && LIBRARY_MOCK.urls[1].url === "https://exemple.test/paysage.png"
+        && LIBRARY_MOCK.urls[1].section === "photos");
+      assert("bibliotheque (reglages) : puis referme la ligne et le dit",
+        $l("libraryUrlRow").hidden === true && $l("libraryStatus").textContent === "Image ajoutée.");
+
+      // Glisser-deposer : seuls les fichiers declenchent le voile, et
+      // seules les images partent. Drag and drop: only files raise the
+      // veil, and only images go.
+      const dragEvent = (type, data) => {
+        const ev = new window.Event(type, { bubbles: true, cancelable: true });
+        ev.dataTransfer = data;
+        return ev;
+      };
+      $l("libraryCard").dispatchEvent(dragEvent("dragenter", { types: ["text/plain"] }));
+      assert("bibliotheque (reglages) : un texte glisse ne leve pas le voile", $l("libraryDrop").hidden === true);
+      $l("libraryCard").dispatchEvent(dragEvent("dragenter", { types: ["Files"] }));
+      assert("bibliotheque (reglages) : des fichiers glisses levent le voile, section nommee",
+        $l("libraryDrop").hidden === false && $l("libraryDrop").textContent.includes("Photos"));
+      const dropped = dragEvent("drop", {
+        types: ["Files"],
+        files: [
+          new window.File(["x"], "un.png", { type: "image/png" }),
+          new window.File(["x"], "notes.txt", { type: "text/plain" }),
+          new window.File(["x"], "deux.JPG", { type: "" })
+        ]
+      });
+      $l("libraryCard").dispatchEvent(dropped);
+      await sleep(250);
+      assert("bibliotheque (reglages) : le depot referme le voile", $l("libraryDrop").hidden === true);
+      assert("bibliotheque (reglages) : seules les images partent, une requete chacune, dans la section affichee",
+        LIBRARY_MOCK.uploads.length === 2 && LIBRARY_MOCK.uploads[0].name === "un.png"
+        && LIBRARY_MOCK.uploads[1].name === "deux.JPG" && LIBRARY_MOCK.uploads.every((x) => x.section === "photos"));
+      assert("bibliotheque (reglages) : le bilan est annonce",
+        /2 image\(s\) ajoutée\(s\) dans « Photos »/.test($l("libraryStatus").textContent));
+
+      clickL($l("libraryClose"));
+      assert("bibliotheque (reglages) : la fenetre se ferme", $l("libraryModal").hidden === true);
+      LIBRARY_MOCK.manage = false;
+      document.querySelector("#settingsModal .modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(60);
     }
 
     /* ---------- Themes de couleurs (1.111.0) ----------

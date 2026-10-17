@@ -75,6 +75,8 @@
 
 const fs = require("fs");
 const path = require("path");
+const dns = require("dns");
+const net = require("net");
 const store = require("./store");
 
 const BUILTIN_ROOT = path.join(__dirname, "..", "public", "library");
@@ -270,6 +272,55 @@ function categories(section) {
   return [...set].sort();
 }
 
+/* Index des ajouts de l'utilisateur (data/library/index.json). Une seule
+   paire de fonctions lit et ecrit ce fichier : l'ajout, la suppression, le
+   renommage et le deplacement passent tous par la, donc aucun ne peut
+   l'abimer a sa maniere.
+   Index of the user's additions (data/library/index.json). A single pair
+   of functions reads and writes this file: adding, deleting, renaming and
+   moving all go through it, so none can damage it in its own way. */
+const USER_INDEX = path.join(USER_ROOT, "index.json");
+
+function readUserIndex() {
+  const index = readJson(USER_INDEX, { items: {} });
+  if (!index || typeof index !== "object") return { items: {} };
+  if (!index.items || typeof index.items !== "object") index.items = {};
+  return index;
+}
+
+function writeUserIndex(index) {
+  fs.mkdirSync(USER_ROOT, { recursive: true });
+  fs.writeFileSync(USER_INDEX, JSON.stringify(index, null, 2));
+}
+
+/* Nom de fichier propre a partir d'un nom quelconque : accents replies,
+   caracteres hors liste remplaces, longueur bornee. Un fichier « Été à
+   la mer.JPG » devient « Ete a la mer.jpg » au lieu d'un « image-1729...
+   .jpg » anonyme ; le libelle d'origine est conserve a part (voir
+   addUserFile), c'est lui que l'utilisateur voit dans la grille.
+   Clean file name from any name: accents folded, characters outside the
+   list replaced, length bounded. A file "Été à la mer.JPG" becomes
+   "Ete a la mer.jpg" instead of an anonymous "image-1729....jpg"; the
+   original label is kept apart (see addUserFile), and that is what the
+   user sees in the grid. */
+function cleanName(original, fallbackExt) {
+  const raw = path.basename(String(original || "").replace(/\\/g, "/"));
+  const ext = (path.extname(raw) || fallbackExt || "").toLowerCase();
+  const rawBase = path.basename(raw, path.extname(raw));
+  let base = rawBase.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9 ._()-]+/g, "-")
+    .replace(/^[.\s-]+/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 80);
+  if (!base) base = "image-" + Date.now();
+  return { file: base + ext, label: rawBase.trim().slice(0, 80), changed: base !== rawBase.trim() };
+}
+
+function cleanText(v, max) {
+  return String(v == null ? "" : v).replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, max);
+}
+
 /* Ajout d'un fichier par l'utilisateur. Le nom est rendu unique plutot
    que refuse : quelqu'un qui televerse deux "fond.jpg" venus de deux
    dossiers differents ne comprendrait pas un refus.
@@ -284,8 +335,8 @@ function addUserFile(section, originalName, buffer, meta) {
     throw new Error("library full");
   }
 
-  const base = safeName(path.basename(String(originalName || "image" + ext)))
-    || ("image-" + Date.now() + ext);
+  const cleaned = cleanName(originalName || "image" + ext, ext);
+  const base = safeName(cleaned.file) || ("image-" + Date.now() + ext);
   const dir = path.join(USER_ROOT, section);
   fs.mkdirSync(dir, { recursive: true });
 
@@ -296,18 +347,22 @@ function addUserFile(section, originalName, buffer, meta) {
   }
   fs.writeFileSync(path.join(dir, file), buffer);
 
-  if (meta && typeof meta === "object") {
-    const indexFile = path.join(USER_ROOT, "index.json");
-    const index = readJson(indexFile, { items: {} });
-    if (!index.items) index.items = {};
+  // Le libelle d'origine est garde quand le nom de fichier a du etre
+  // nettoye : l'utilisateur retrouve « Ete » avec ses accents.
+  // The original label is kept when the file name had to be cleaned: the
+  // user finds their accents again.
+  const m = meta && typeof meta === "object" ? meta : null;
+  const label = (m && m.name) || (cleaned.changed ? cleaned.label : "");
+  if (m || label) {
+    const index = readUserIndex();
     index.items[idOf("user", section, file)] = {
-      name: meta.name || undefined,
-      category: meta.category || undefined,
-      tone: meta.tone || undefined,
-      author: meta.author || undefined,
-      license: meta.license || undefined
+      name: label || undefined,
+      category: (m && m.category) || undefined,
+      tone: (m && m.tone) || undefined,
+      author: (m && m.author) || undefined,
+      license: (m && m.license) || undefined
     };
-    fs.writeFileSync(indexFile, JSON.stringify(index, null, 2));
+    writeUserIndex(index);
   }
   return idOf("user", section, file);
 }
@@ -317,13 +372,121 @@ function removeUserFile(id) {
   if (!parsed || parsed.origin !== "user") throw new Error("not a user item");
   const full = path.join(USER_ROOT, parsed.section, parsed.file);
   if (fs.existsSync(full)) fs.unlinkSync(full);
-  const indexFile = path.join(USER_ROOT, "index.json");
-  const index = readJson(indexFile, null);
-  if (index && index.items && index.items[id]) {
+  const index = readUserIndex();
+  if (index.items[id]) {
     delete index.items[id];
-    fs.writeFileSync(indexFile, JSON.stringify(index, null, 2));
+    writeUserIndex(index);
   }
   return true;
+}
+
+/* Retouche des informations d'un ajout personnel : libelle, categorie,
+   dominante claire ou sombre. Le NOM DE FICHIER ne change jamais : il
+   sert d'identifiant et, copie dans une tuile, de reference. Seul le
+   libelle que voit l'utilisateur est modifie, et il n'existe que dans
+   l'index. Un element livre n'est pas modifiable (la mise a jour
+   remettrait son libelle d'origine).
+   Editing a personal addition's information: label, category, light or
+   dark cast. The FILE NAME never changes: it serves as the id and, once
+   copied into a tile, as a reference. Only the label the user sees is
+   modified, and it exists only in the index. A shipped item is not
+   editable (the update would put its original label back). */
+function updateUserMeta(id, patch) {
+  const parsed = parseId(id);
+  if (!parsed || parsed.origin !== "user") throw new Error("not a user item");
+  if (!fileOf(id)) throw new Error("unknown library item");
+  const p = patch && typeof patch === "object" ? patch : {};
+  const index = readUserIndex();
+  const entry = Object.assign({}, index.items[id]);
+  if ("name" in p) {
+    const name = cleanText(p.name, 80);
+    if (name) entry.name = name; else delete entry.name;
+  }
+  if ("category" in p) {
+    const category = cleanText(p.category, 40);
+    if (category) entry.category = category; else delete entry.category;
+  }
+  if ("tone" in p) {
+    if (p.tone === "light" || p.tone === "dark") entry.tone = p.tone; else delete entry.tone;
+  }
+  if (Object.keys(entry).length) index.items[id] = entry; else delete index.items[id];
+  writeUserIndex(index);
+  return entry;
+}
+
+/* Deplacement d'un ajout personnel vers une autre section : le fichier
+   change de dossier et son entree d'index le suit. Meme regle de nom
+   unique qu'a l'ajout. Renvoie le NOUVEL identifiant, qui contient la
+   section.
+   Moving a personal addition to another section: the file changes folder
+   and its index entry follows. Same unique-name rule as on adding.
+   Returns the NEW id, which contains the section. */
+function moveUserFile(id, toSection) {
+  const parsed = parseId(id);
+  if (!parsed || parsed.origin !== "user") throw new Error("not a user item");
+  if (!isSection(toSection)) throw new Error("unknown section");
+  const from = fileOf(id);
+  if (!from) throw new Error("unknown library item");
+  if (parsed.section === toSection) return id;
+  if (list(toSection, { includeHidden: true }).filter((i) => i.origin === "user").length >= MAX_USER_ITEMS) {
+    throw new Error("library full");
+  }
+  const dir = path.join(USER_ROOT, toSection);
+  fs.mkdirSync(dir, { recursive: true });
+  const ext = path.extname(parsed.file);
+  let file = parsed.file;
+  let n = 1;
+  while (fs.existsSync(path.join(dir, file))) {
+    file = path.basename(parsed.file, ext) + "-" + (++n) + ext;
+  }
+  fs.renameSync(from, path.join(dir, file));
+  const newId = idOf("user", toSection, file);
+  const index = readUserIndex();
+  if (index.items[id]) {
+    index.items[newId] = index.items[id];
+    delete index.items[id];
+    writeUserIndex(index);
+  }
+  return newId;
+}
+
+/* Place occupee par la bibliotheque, pour l'afficher dans les reglages.
+   Les ajouts de l'utilisateur sont comptes a part du lot livre : seuls
+   les premiers pesent sur son disque de donnees, et seuls eux se
+   suppriment. Le disque libre est un plus, pas une garantie : il
+   manque sur les anciens Node ou certains systemes de fichiers, et l'on
+   n'affiche alors rien plutot qu'un chiffre faux.
+   Space taken by the library, to show in the settings. The user's
+   additions are counted apart from the shipped lot: only the former
+   weigh on their data disk, and only they can be deleted. Free disk
+   space is a bonus, not a guarantee: it is missing on old Node versions
+   or some file systems, in which case nothing is shown rather than a
+   wrong figure. */
+function usage() {
+  const out = {
+    maxPerSection: MAX_USER_ITEMS,
+    user: { count: 0, bytes: 0, sections: {} },
+    builtin: { count: 0, bytes: 0 },
+    hidden: hiddenSet().size,
+    disk: null
+  };
+  for (const s of SECTIONS) {
+    let count = 0;
+    let bytes = 0;
+    for (const item of listOrigin("user", s)) { count++; bytes += item.bytes || 0; }
+    out.user.sections[s] = { count, bytes };
+    out.user.count += count;
+    out.user.bytes += bytes;
+    for (const item of listOrigin("builtin", s)) { out.builtin.count++; out.builtin.bytes += item.bytes || 0; }
+  }
+  try {
+    if (typeof fs.statfsSync === "function") {
+      fs.mkdirSync(USER_ROOT, { recursive: true });
+      const st = fs.statfsSync(USER_ROOT);
+      out.disk = { free: Number(st.bavail) * Number(st.bsize), total: Number(st.blocks) * Number(st.bsize) };
+    }
+  } catch (e) { /* pas de chiffre / no figure */ }
+  return out;
 }
 
 /* Chemin de la vignette d'un element, si elle existe. Le nom est
@@ -421,6 +584,159 @@ async function fetchFromCatalog(entry) {
   }
 }
 
+/* ---------- Ajout par adresse web / add from a web address ----------
+   Pour recuperer une image vue sur un site ou sur un NAS sans passer par
+   le navigateur du poste : on colle l'adresse, le serveur la telecharge.
+
+   GARDE-FOUS. Le serveur va chercher une adresse choisie par un
+   utilisateur du reseau local, il ne faut donc pas en faire un relais
+   vers ce qui n'a pas a etre atteint : seules les adresses http(s) sont
+   admises, chaque redirection est reverifiee (au plus quatre), et les
+   adresses de bouclage, de liaison locale (dont l'adresse des services de
+   metadonnees des hebergeurs) et non routables sont refusees. Les
+   adresses du reseau local (192.168.x.x...) restent permises EXPRES : un
+   NAS ou un serveur domestique est une source tout a fait normale. Le
+   contenu doit se declarer image ET tenir sous 20 Mo, lu par morceaux
+   pour ne jamais charger en memoire plus que la limite.
+
+   To grab an image seen on a site or on a NAS without going through the
+   workstation's browser: paste the address, the server downloads it.
+
+   SAFEGUARDS. The server fetches an address chosen by a local-network
+   user, so it must not become a relay to what should stay unreachable:
+   only http(s) addresses are accepted, every redirect is rechecked (four
+   at most), and loopback, link-local (including cloud metadata service
+   addresses) and non-routable addresses are refused. Local-network
+   addresses (192.168.x.x...) stay allowed ON PURPOSE: a NAS or a home
+   server is a perfectly normal source. The content must declare itself an
+   image AND fit under 20 MB, read in chunks so as never to hold more than
+   the limit in memory. */
+const URL_MAX_BYTES = 20 * 1024 * 1024;
+const URL_MAX_REDIRECTS = 4;
+const TYPE_EXT = {
+  "image/jpeg": ".jpg", "image/jpg": ".jpg", "image/pjpeg": ".jpg", "image/png": ".png",
+  "image/gif": ".gif", "image/webp": ".webp", "image/svg+xml": ".svg"
+};
+
+/* Vrai si l'adresse IP ne doit pas etre jointe. True if the IP must not
+   be reached. */
+function isBlockedIp(ip) {
+  const v = net.isIP(ip);
+  if (v === 4) {
+    const [a, b] = ip.split(".").map(Number);
+    if (a === 0 || a === 127) return true;              // inconnue, bouclage
+    if (a === 169 && b === 254) return true;            // liaison locale / metadonnees
+    if (a >= 224) return true;                          // multidiffusion, reservees
+    if (a === 100 && b >= 64 && b <= 127) return true;  // CGNAT
+    return false;
+  }
+  if (v === 6) {
+    const low = ip.toLowerCase();
+    if (low === "::" || low === "::1") return true;
+    if (/^fe[89ab]/.test(low)) return true;             // fe80::/10
+    if (/^f[cd]/.test(low)) return false;               // fc00::/7 : LAN prive, permis
+    const mapped = low.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+    if (mapped) return isBlockedIp(mapped[1]);
+    if (/^ff/.test(low)) return true;                   // multidiffusion
+    return false;
+  }
+  return true; // pas une IP : traite en amont / not an IP: handled upstream
+}
+
+async function assertReachable(hostname, lookup) {
+  const host = String(hostname || "").replace(/^\[|\]$/g, "");
+  if (!host) throw new Error("invalid address");
+  if (net.isIP(host)) {
+    if (isBlockedIp(host)) throw new Error("address not allowed");
+    return;
+  }
+  if (host.toLowerCase() === "localhost" || host.toLowerCase().endsWith(".localhost")) {
+    throw new Error("address not allowed");
+  }
+  let found;
+  try {
+    found = await lookup(host, { all: true });
+  } catch (e) {
+    throw new Error("host not found");
+  }
+  const list = Array.isArray(found) ? found : [found];
+  if (!list.length || list.some((a) => isBlockedIp(a && a.address))) throw new Error("address not allowed");
+}
+
+async function readCapped(res, max) {
+  const declared = Number(res.headers.get("content-length"));
+  if (declared && declared > max) throw new Error("file too large");
+  if (res.body && typeof res.body.getReader === "function") {
+    const reader = res.body.getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.length;
+      if (total > max) {
+        try { await reader.cancel(); } catch (e) { /* ignore */ }
+        throw new Error("file too large");
+      }
+      chunks.push(Buffer.from(value));
+    }
+    return Buffer.concat(chunks);
+  }
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.length > max) throw new Error("file too large");
+  return buf;
+}
+
+/* `opts.fetch` et `opts.lookup` : remplacables pour les tests, jamais
+   passes par la route. `opts.fetch` and `opts.lookup`: replaceable for
+   tests, never passed by the route. */
+async function addFromUrl(section, rawUrl, meta, opts) {
+  if (!isSection(section)) throw new Error("unknown section");
+  const doFetch = (opts && opts.fetch) || fetch;
+  const lookup = (opts && opts.lookup) || ((h, o) => dns.promises.lookup(h, o));
+
+  let url;
+  try { url = new URL(String(rawUrl || "").trim()); } catch (e) { throw new Error("invalid address"); }
+
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 60000);
+  try {
+    let res = null;
+    for (let hop = 0; hop <= URL_MAX_REDIRECTS; hop++) {
+      if (url.protocol !== "http:" && url.protocol !== "https:") throw new Error("invalid address");
+      if (url.username || url.password) throw new Error("invalid address");
+      await assertReachable(url.hostname, lookup);
+      res = await doFetch(url.href, { signal: ctrl.signal, redirect: "manual", headers: { "User-Agent": "PiBoard library" } });
+      if (res.status >= 300 && res.status < 400 && res.headers.get("location")) {
+        if (hop === URL_MAX_REDIRECTS) throw new Error("too many redirects");
+        url = new URL(res.headers.get("location"), url);
+        continue;
+      }
+      break;
+    }
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    const type = String(res.headers.get("content-type") || "").split(";")[0].trim().toLowerCase();
+    if (!/^image\//.test(type)) throw new Error("not an image");
+    const buf = await readCapped(res, URL_MAX_BYTES);
+    if (!buf.length) throw new Error("empty file");
+
+    // L'extension vient du nom dans l'adresse si elle est reconnue, sinon
+    // du type de contenu. The extension comes from the name in the
+    // address when recognised, else from the content type.
+    const fromPath = decodeURIComponent(path.basename(url.pathname) || "");
+    const pathExt = path.extname(fromPath).toLowerCase();
+    const ext = ALLOWED_EXT.has(pathExt) ? pathExt : (TYPE_EXT[type] || "");
+    if (!ext) throw new Error("unsupported file type");
+    const stem = ALLOWED_EXT.has(pathExt) ? fromPath : (path.basename(fromPath, path.extname(fromPath)) || "image") + ext;
+    return addUserFile(section, stem, buf, meta);
+  } catch (e) {
+    if (e && e.name === "AbortError") throw new Error("download timed out");
+    throw e;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 module.exports = {
   SECTIONS,
   catalog,
@@ -436,7 +752,13 @@ module.exports = {
   list,
   categories,
   addUserFile,
+  addFromUrl,
   removeUserFile,
+  updateUserMeta,
+  moveUserFile,
+  usage,
+  isBlockedIp,
+  cleanName,
   setHidden,
   hiddenSet
 };

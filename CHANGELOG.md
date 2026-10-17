@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.155.0
+
+- **Bibliothèque d'images : accès direct.** Nouveau bouton **« Ouvrir la
+  bibliothèque… »** dans Réglages → Général (avec la place occupée : vos
+  images, leur poids, le lot livré, les masquées, le disque libre). Jusque-là
+  on ne la rencontrait qu'au moment de choisir une image pour un fond, un logo
+  ou le diaporama. Ouverte ainsi, elle n'a pas de destination : un clic sur
+  une image **ouvre son panneau de détail** au lieu de la choisir.
+- **Panneau de détail** : renommer (libellé, catégorie, clair/sombre — le nom
+  de fichier ne change jamais, il sert de référence), **déplacer vers une
+  autre section** (la fenêtre suit l'image), **Utiliser maintenant**
+  (comme fond de la page affichée, ou ajoutée aux photos de l'écran de
+  veille : même copie que depuis une tuile), supprimer (ses ajouts) ou
+  masquer (le lot livré). Un élément livré n'a ni renommage ni déplacement : la
+  mise à jour le remettrait comme avant.
+- **Ajout groupé et glisser-déposer** : on peut déposer des fichiers sur la
+  fenêtre (voile « Déposez vos images ici — elles iront dans « Photos » »).
+  Un fichier par requête, progression « Ajout 3/12… », et un fichier refusé ne
+  fait plus perdre les autres (bilan « 10 ajoutées, 2 refusées : … »).
+- **Depuis une adresse web** : on colle l'adresse, le serveur télécharge
+  (`POST /api/library-url`). Garde-fous : http(s) seulement, pas
+  d'identifiants dans l'adresse, redirections revérifiées (4 au plus), adresses
+  de bouclage / liaison locale / réservées refusées (le réseau local reste
+  permis : NAS), contenu déclaré image, 20 Mo au plus lus par morceaux.
+- **Éléments masqués** : case « Les masquées » ; chaque élément masqué se
+  rétablit (la route de restauration existait, aucun bouton ne l'appelait).
+- Noms accentués : « Été à la mer.JPG » est rangé sous « Ete a la mer.jpg »
+  mais s'affiche « Été à la mer » (avant : nom anonyme `image-<date>`). Les
+  noms envoyés par le navigateur sont remis en UTF-8.
+- Durcissement : les fichiers de la bibliothèque sont servis avec
+  `Content-Security-Policy: sandbox`, un SVG ouvert dans un onglet ne peut
+  plus exécuter de script dans l'origine de PiBoard.
+- Nouvelles routes : `PATCH /api/library/:id`, `POST /api/library/:id/move`,
+  `POST /api/library-url`, `GET /api/library-usage` ; l'envoi groupé répond
+  `{ added, rejected }`.
+- Aide (FR/EN) : fiche Bibliothèque d'images et réglages généraux. Tests :
+  `library.test.js` (noms, renommage, déplacement, place occupée, adresses
+  interdites, ajout par URL en réseau simulé) et 29 contrôles dans
+  `dom-smoke.js`.
+
 ## 1.154.0
 
 - **Déplacer une tuile vers une autre page.** Dans la fenêtre de réglages de

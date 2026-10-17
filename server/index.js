@@ -1295,6 +1295,12 @@ app.get("/api/library", (req, res) => {
 app.get("/api/library/file/:id", (req, res) => {
   const full = library.fileOf(decodeURIComponent(req.params.id));
   if (!full) return res.status(404).end();
+  // Un SVG ouvert directement dans l'onglet ne doit pas pouvoir executer de
+  // script dans l'origine de PiBoard : meme depuis <img> rien ne change,
+  // mais ici la page est neutralisee. An SVG opened directly in a tab must
+  // not be able to run script in PiBoard's origin: nothing changes from an
+  // <img>, but here the page is neutralised.
+  res.set("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
   res.sendFile(full, { maxAge: "7d" });
 });
 
@@ -1304,26 +1310,100 @@ app.get("/api/library/thumb/:id", (req, res) => {
   res.sendFile(full, { maxAge: "7d" });
 });
 
+/* Noms de fichiers televerses : multer les decode en latin1, ce qui
+   transforme « Ete.jpg » accentue en « Ã‰te.jpg ». On retablit l'UTF-8
+   quand le resultat est valide, sinon on garde le nom tel quel.
+   Uploaded file names: multer decodes them as latin1, turning an accented
+   name into mojibake. UTF-8 is restored when the result is valid, else
+   the name is kept as is. */
+function uploadedName(name) {
+  const raw = String(name || "");
+  try {
+    const fixed = Buffer.from(raw, "latin1").toString("utf8");
+    return fixed.includes("\uFFFD") ? raw : fixed;
+  } catch (e) {
+    return raw;
+  }
+}
+
+/* Televersement groupe : chaque fichier est traite pour lui-meme. Un
+   fichier refuse (mauvais type, bibliotheque pleine) ne fait plus perdre
+   les autres ; la reponse dit lesquels sont passes et lesquels non.
+   Grouped upload: every file is handled on its own. A refused file
+   (wrong type, library full) no longer loses the others; the answer says
+   which went through and which did not. */
 app.post("/api/library/:section", (req, res) => {
   if (!library.isSection(req.params.section)) return res.status(400).json({ error: "unknown section" });
   libraryUpload.array("images", 20)(req, res, (err) => {
     if (err) return res.status(400).json({ error: String(err.message || err) });
     const added = [];
-    try {
-      for (const f of req.files || []) {
-        added.push(library.addUserFile(req.params.section, f.originalname, f.buffer, {
+    const rejected = [];
+    for (const f of req.files || []) {
+      const name = uploadedName(f.originalname);
+      try {
+        added.push(library.addUserFile(req.params.section, name, f.buffer, {
           name: req.body && req.body.name,
           category: req.body && req.body.category,
           tone: req.body && req.body.tone,
           author: req.body && req.body.author,
           license: req.body && req.body.license
         }));
+      } catch (e) {
+        rejected.push({ name, error: String(e.message || e) });
       }
-    } catch (e) {
-      return res.status(400).json({ error: String(e.message || e) });
     }
-    res.json({ ok: true, added });
+    if (!added.length && rejected.length) {
+      return res.status(400).json({ error: rejected[0].error, rejected });
+    }
+    res.json({ ok: true, added, rejected });
   });
+});
+
+/* Retoucher un ajout personnel (libelle, categorie, clair/sombre) ou le
+   deplacer vers une autre section. Les elements livres ne sont ni l'un
+   ni l'autre : le serveur repond 400 « not a user item ».
+   Edit a personal addition (label, category, light/dark) or move it to
+   another section. Shipped items are neither: the server answers 400
+   "not a user item". */
+app.patch("/api/library/:id", express.json({ limit: "4kb" }), (req, res) => {
+  try {
+    const id = decodeURIComponent(req.params.id);
+    const entry = library.updateUserMeta(id, req.body || {});
+    res.json({ ok: true, entry });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/library/:id/move", express.json({ limit: "1kb" }), (req, res) => {
+  try {
+    const id = library.moveUserFile(decodeURIComponent(req.params.id), String((req.body || {}).section || ""));
+    res.json({ ok: true, id });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+/* Ajout par adresse web, et place occupee. Web-address import, and the
+   space taken. */
+app.post("/api/library-url", express.json({ limit: "4kb" }), async (req, res) => {
+  const b = req.body || {};
+  try {
+    const id = await library.addFromUrl(String(b.section || ""), String(b.url || ""), {
+      name: b.name, category: b.category, tone: b.tone
+    });
+    res.json({ ok: true, id });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.get("/api/library-usage", (req, res) => {
+  try {
+    res.json(library.usage());
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
 });
 
 /* Suppression d'un ajout personnel, ou masquage d'un element livre :

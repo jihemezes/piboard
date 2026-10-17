@@ -3088,7 +3088,116 @@ body.editing .grid-stack-item-content.tile-transparent {
   border-top: 1px solid var(--tile-edge);
   min-height: 2em;
 }
+/* Le pied et le panneau de detail ne se laissent pas ecraser : c'est la
+   grille qui cede la place, pas l'etat de l'operation en cours.
+   The foot and the detail panel are not squeezed: the grid yields the
+   room, not the status of the operation in progress. */
+.library-foot,
+.library-toolbar,
+.library-urlrow { flex-shrink: 0; }
+.library-foot p { margin: 0; }
+.library-foot .library-usage { margin-top: 2px; opacity: .8; }
 .library-status-err { color: var(--danger); }
+
+/* ---------- Gestion de la bibliotheque (1.155.0) ----------
+   La grille et le voile de depot partagent un meme conteneur : le voile
+   recouvre exactement la zone ou l'on deposera. Library management: the
+   grid and the drop veil share a container, the veil covering exactly the
+   area where the drop will land. */
+.library-gridwrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+}
+.library-gridwrap .library-grid { flex: 1 1 auto; min-height: 0; }
+.library-drop {
+  position: absolute;
+  inset: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 16px;
+  border: 3px dashed var(--accent, #4C8DFF);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--accent, #4C8DFF) 14%, var(--tile, #1c1c1c));
+  font-size: 18px;
+  font-weight: 650;
+  pointer-events: none;
+  z-index: 4;
+}
+.library-drop[hidden] { display: none; }
+
+.library-hiddenbox { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; cursor: pointer; }
+
+.library-urlrow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--tile-edge);
+}
+.library-urlrow[hidden] { display: none; }
+.library-urlrow input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font: inherit;
+  font-size: 13px;
+  padding: 6px 10px;
+  border-radius: 7px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+
+.library-item.selected { border-color: var(--accent, #4C8DFF); box-shadow: 0 0 0 2px var(--accent, #4C8DFF); }
+.library-item-hidden img { opacity: .4; filter: grayscale(1); }
+.library-item-hidden .library-item-name { opacity: .6; }
+.library-item-restore { opacity: 1; }
+
+.library-detail {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--tile-edge);
+  padding: 10px 16px;
+  max-height: 34vh;
+  overflow-y: auto;
+}
+.library-detail[hidden] { display: none; }
+.library-detail-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.library-detail-head img {
+  width: 96px;
+  height: 54px;
+  object-fit: cover;
+  border-radius: 6px;
+  background: #1c1c1c;
+  flex: 0 0 auto;
+}
+.library-detail-title { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.library-detail-title strong,
+.library-detail-title small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.library-detail-title small { color: var(--muted); }
+.library-detail-body { display: flex; flex-direction: column; gap: 8px; }
+.library-detail-row { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; }
+.library-detail-row label { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: var(--muted); }
+.library-detail-row input,
+.library-detail-row select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+  min-width: 140px;
+}
+.library-detail-label { font-size: 12px; color: var(--muted); align-self: center; }
+.library-detail-row .btn.danger { margin-right: 0; }
+
+body.touch-mode .library-detail-row input,
+body.touch-mode .library-detail-row select,
+body.touch .library-detail-row input,
+body.touch .library-detail-row select { min-height: 40px; }
 
 /* ============================================================
    Themes de couleurs (1.111.0)

@@ -645,6 +645,20 @@
           <span data-i18n="settings.rows">Grid rows on screen</span>
           <input type="number" id="setRows" min="4" max="16" step="1">
         </label>
+        <!-- Acces direct a la bibliotheque d'images (1.155.0) : jusque-la on
+             ne la rencontrait qu'au moment de choisir une image pour un fond,
+             un logo ou le diaporama. Ici on la gere pour elle-meme.
+             Direct access to the image library (1.155.0): until now it only
+             showed up when picking an image for a background, a logo or the
+             slideshow. Here it is managed for its own sake. -->
+        <div class="field" id="setLibraryField">
+          <span data-i18n="settings.library">Image library</span>
+          <div class="theme-row">
+            <button type="button" class="btn small" id="setLibraryOpen" data-i18n="settings.library.open">Open the library…</button>
+            <small class="field-hint" id="setLibraryUsage"></small>
+          </div>
+          <small class="field-hint" data-i18n="settings.library.hint">Your own images (page backgrounds, logos, photos) are kept here, whichever page or tile ends up using them. They survive updates.</small>
+        </div>
       </fieldset>
 
       <fieldset class="form-section" id="secDepth">
@@ -1280,7 +1294,7 @@
      /api/media/:tileId/from-library), so removing an image from the
      library does not empty a page. -->
 <div class="modal modal-stacked" id="libraryModal" hidden>
-  <div class="modal-card library-card">
+  <div class="modal-card library-card" id="libraryCard">
     <header class="modal-head">
       <h2 data-i18n="library.title">Image library</h2>
       <button class="modal-close" id="libraryClose" aria-label="Close">&times;</button>
@@ -1294,14 +1308,31 @@
         <option value="dark" data-i18n="library.tone.dark">Dark</option>
       </select>
       <input type="search" id="librarySearch" data-i18n-placeholder="library.search" placeholder="Search…">
+      <label class="library-hiddenbox" id="libraryHiddenBox" hidden>
+        <input type="checkbox" id="libraryHidden">
+        <span data-i18n="library.showHidden">Hidden ones</span>
+      </label>
       <span class="library-spacer"></span>
       <button type="button" class="btn small" id="libraryAdd" data-i18n="library.add">Add my images…</button>
+      <button type="button" class="btn small" id="libraryUrlBtn" data-i18n="library.fromUrl">From a web address…</button>
       <button type="button" class="btn small" id="libraryOnline" data-i18n="library.online">More online…</button>
       <input type="file" accept="image/*" multiple hidden id="libraryFile">
     </div>
-    <div class="library-grid" id="libraryGrid"></div>
+    <div class="library-urlrow" id="libraryUrlRow" hidden>
+      <input type="url" id="libraryUrl" autocomplete="off" spellcheck="false" data-i18n-placeholder="library.urlPlaceholder" placeholder="https://…">
+      <button type="button" class="btn small primary" id="libraryUrlGo" data-i18n="library.urlAdd">Add</button>
+      <button type="button" class="btn small" id="libraryUrlCancel" data-i18n="common.cancel">Cancel</button>
+    </div>
+    <div class="library-gridwrap">
+      <div class="library-grid" id="libraryGrid"></div>
+      <div class="library-drop" id="libraryDrop" hidden>
+        <span data-i18n="library.drop">Drop your images here</span>
+      </div>
+    </div>
+    <div class="library-detail" id="libraryDetail" hidden></div>
     <footer class="library-foot">
       <p class="field-hint" id="libraryStatus"></p>
+      <p class="field-hint library-usage" id="libraryUsage"></p>
     </footer>
   </div>
 </div>

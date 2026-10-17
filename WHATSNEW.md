@@ -32,6 +32,25 @@
 
 # Nouveautes / What's new
 
+## 1.155.0
+
+**Votre bibliothèque d'images, directement dans les réglages**
+
+Réglages → Général → « Ouvrir la bibliothèque… » : ajoutez plusieurs images d'un
+coup, déposez-les sur la fenêtre, ou collez l'adresse d'une image. Renommez-les,
+rangez-les dans une autre section, utilisez-en une tout de suite comme fond de la
+page affichée ou photo de l'écran de veille, rétablissez celles que vous aviez
+masquées, et voyez la place qu'elles occupent.
+
+---
+
+**Your image library, right in the settings**
+
+Settings → General → "Open the library…": add several images at once, drop them on
+the window, or paste an image's web address. Rename them, file them under another
+section, use one right away as the displayed page's background or as a screen saver
+photo, restore the ones you had hidden, and see how much room they take.
+
 ## 1.154.0
 
 **Envoyer une tuile sur une autre page**

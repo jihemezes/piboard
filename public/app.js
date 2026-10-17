@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.154.0
+   Version 1.155.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -7557,27 +7557,61 @@
     categories: [],
     target: null,     // identifiant media de destination / destination media id
     onPicked: null,   // rappel apres copie / callback after copying
-    section: "backgrounds"
+    section: "backgrounds",
+    manage: false,    // ouverte depuis les reglages, sans destination / opened from the settings, no destination
+    selected: null,   // identifiant de l'element ouvert dans le panneau de detail / id shown in the detail panel
+    showHidden: false,
+    usage: null
   };
 
   let libraryLoadSeq = 0;
 
+  /* Remplace {nom} dans un texte traduit. Replaces {name} in a translated text. */
+  function libFmt(key, vars) {
+    return i18n.t(key).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? String(vars[k]) : m));
+  }
+
+  function librarySectionLabel(section) {
+    return i18n.t("library.section." + section);
+  }
+
   /* `opts.pickOnly` : choisir une image SANS la copier nulle part (le
      rappel recoit { id, url, file }). Sert a tirer un theme d'un fond.
+     `opts.manage` : ouverture depuis les reglages generaux (1.155.0) --
+     pas de destination, un clic sur une image ouvre son panneau de detail
+     (renommer, deplacer, utiliser...) au lieu de la choisir.
      `opts.pickOnly`: pick an image WITHOUT copying it anywhere (the
      callback receives { id, url, file }). Used to derive a theme from a
-     background. */
+     background.
+     `opts.manage`: opened from the general settings (1.155.0) -- no
+     destination, a click on an image opens its detail panel (rename,
+     move, use...) instead of picking it. */
   function openLibrary(target, section, onPicked, opts) {
     libraryState.target = target;
     libraryState.pickOnly = !!(opts && opts.pickOnly);
+    libraryState.manage = !!(opts && opts.manage);
     libraryState.onPicked = onPicked || null;
+    libraryState.selected = null;
+    libraryState.showHidden = false;
     if (section) libraryState.section = section;
+    $("libraryHidden").checked = false;
+    $("libraryHiddenBox").hidden = !libraryState.manage;
+    $("libraryUrlRow").hidden = true;
+    $("libraryDrop").hidden = true;
     $("libraryModal").hidden = false;
     refreshLibrary();
   }
 
+  function openLibraryManager() {
+    openLibrary(null, libraryState.section || "backgrounds", null, { manage: true });
+  }
+
   function closeLibrary() {
     $("libraryModal").hidden = true;
+    $("libraryDetail").hidden = true;
+    // Les reglages, derriere, affichent la place occupee : elle a pu bouger.
+    // The settings behind show the space taken: it may have changed.
+    refreshLibraryUsage();
   }
 
   function librarySetStatus(text, kind) {
@@ -7587,11 +7621,46 @@
     el.classList.toggle("library-status-err", kind === "err");
   }
 
+  /* Place occupee : une phrase pour les reglages, une pour le pied de la
+     fenetre (avec le compte de la section affichee). Un echec reste
+     silencieux -- c'est une information de confort, pas une fonction.
+     Space taken: one sentence for the settings, one for the window's foot
+     (with the displayed section's count). A failure stays silent -- it is
+     a convenience, not a feature. */
+  function libraryUsageText(u, withSection) {
+    if (!u || !u.user) return "";
+    const parts = [u.user.count
+      ? libFmt("library.usage.mine", { n: u.user.count, size: formatSize(u.user.bytes) })
+      : i18n.t("library.usage.none")];
+    if (withSection && u.user.sections && u.user.sections[libraryState.section]) {
+      parts.push(libFmt("library.usage.section", { n: u.user.sections[libraryState.section].count, max: u.maxPerSection }));
+    }
+    if (u.builtin && u.builtin.count) parts.push(libFmt("library.usage.shipped", { n: u.builtin.count }));
+    if (u.hidden) parts.push(libFmt("library.usage.hidden", { n: u.hidden }));
+    if (u.disk && u.disk.total) parts.push(libFmt("library.usage.free", { size: formatSize(u.disk.free) }));
+    return parts.join(" · ");
+  }
+
+  async function refreshLibraryUsage() {
+    try {
+      const r = await fetch("/api/library-usage");
+      if (!r.ok) throw new Error("status " + r.status);
+      libraryState.usage = await r.json();
+    } catch (e) {
+      return;
+    }
+    const inSettings = $("setLibraryUsage");
+    if (inSettings) inSettings.textContent = libraryUsageText(libraryState.usage, false);
+    const inWindow = $("libraryUsage");
+    if (inWindow) inWindow.textContent = libraryState.manage ? libraryUsageText(libraryState.usage, true) : "";
+  }
+
   async function refreshLibrary() {
     const grid = $("libraryGrid");
     if (!grid) return;
     grid.innerHTML = `<p class="field-hint">${i18n.t("library.loading")}</p>`;
     librarySetStatus("");
+    refreshLibraryUsage();
     /* Chaque appel porte un numero : si l'utilisateur change de section
        pendant un chargement, la reponse la plus ancienne ne vient pas
        ecraser la plus recente.
@@ -7600,7 +7669,8 @@
     const seq = ++libraryLoadSeq;
     let failure = null;
     try {
-      const r = await fetch("/api/library?section=" + encodeURIComponent(libraryState.section));
+      const hidden = libraryState.manage && libraryState.showHidden ? "&hidden=1" : "";
+      const r = await fetch("/api/library?section=" + encodeURIComponent(libraryState.section) + hidden);
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || ("status " + r.status));
       if (seq !== libraryLoadSeq) return;
@@ -7632,6 +7702,7 @@
       grid.innerHTML = `<p class="field-hint library-status-err">${escapeHtml(i18n.t("library.loadFailed"))}</p>`;
       librarySetStatus(String(e.message || e), "err");
     }
+    renderLibraryDetail();
   }
 
   function renderLibraryFilters() {
@@ -7670,35 +7741,230 @@
     }
 
     grid.innerHTML = items.map((it) => `
-      <div class="library-item" data-id="${escapeHtmlAttr(it.id)}">
+      <div class="library-item${it.hidden ? " library-item-hidden" : ""}${it.id === libraryState.selected ? " selected" : ""}" data-id="${escapeHtmlAttr(it.id)}">
         <img src="${escapeHtmlAttr(it.thumb || it.url)}" alt="" loading="lazy">
         <span class="library-item-name">${escapeHtml(it.name)}</span>
         <span class="library-item-meta">${escapeHtml([
+          it.hidden ? i18n.t("library.hiddenTag") : "",
           it.category || "",
-          it.width && it.height ? it.width + "\u00d7" + it.height : "",
-          it.author ? "\u00a9 " + it.author : ""
-        ].filter(Boolean).join(" \u00b7 "))}</span>
-        <button type="button" class="library-item-del" data-origin="${it.origin}"
-                title="${escapeHtmlAttr(i18n.t(it.origin === "user" ? "library.delete" : "library.hide"))}">&times;</button>
+          it.width && it.height ? it.width + "×" + it.height : "",
+          it.author ? "© " + it.author : ""
+        ].filter(Boolean).join(" · "))}</span>
+        ${it.hidden
+          ? `<button type="button" class="library-item-del library-item-restore" data-origin="${it.origin}"
+                title="${escapeHtmlAttr(i18n.t("library.restore"))}">↺</button>`
+          : `<button type="button" class="library-item-del" data-origin="${it.origin}"
+                title="${escapeHtmlAttr(i18n.t(it.origin === "user" ? "library.delete" : "library.hide"))}">&times;</button>`}
       </div>`).join("");
 
     grid.querySelectorAll(".library-item").forEach((el) => {
       onActivate(el, (e) => {
         if (e && e.target && e.target.closest(".library-item-del")) return;
+        // Depuis les reglages il n'y a pas de destination : un clic
+        // ouvre le panneau de detail au lieu de « choisir ».
+        // From the settings there is no destination: a click opens the
+        // detail panel instead of "picking".
+        if (libraryState.manage) { selectLibraryItem(el.dataset.id); return; }
         pickLibraryItem(el.dataset.id);
       });
       onActivate(el.querySelector(".library-item-del"), async (e) => {
         if (e) e.stopPropagation();
-        const isUser = el.querySelector(".library-item-del").dataset.origin === "user";
-        // Un element livre est masque, pas efface : il reviendrait a la
-        // mise a jour suivante, et l'utilisateur croirait a un bug.
-        // A shipped item is hidden, not erased: it would come back with
-        // the next update and the user would think it a bug.
-        if (!window.confirm(i18n.t(isUser ? "library.deleteConfirm" : "library.hideConfirm"))) return;
-        await fetch("/api/library/" + encodeURIComponent(el.dataset.id), { method: "DELETE" }).catch(() => null);
-        refreshLibrary();
+        const btn = el.querySelector(".library-item-del");
+        if (btn.classList.contains("library-item-restore")) { restoreLibraryItem(el.dataset.id); return; }
+        deleteLibraryItem(el.dataset.id, btn.dataset.origin === "user");
       });
     });
+  }
+
+  async function deleteLibraryItem(id, isUser) {
+    // Un element livre est masque, pas efface : il reviendrait a la
+    // mise a jour suivante, et l'utilisateur croirait a un bug.
+    // A shipped item is hidden, not erased: it would come back with
+    // the next update and the user would think it a bug.
+    if (!window.confirm(i18n.t(isUser ? "library.deleteConfirm" : "library.hideConfirm"))) return;
+    await fetch("/api/library/" + encodeURIComponent(id), { method: "DELETE" }).catch(() => null);
+    if (libraryState.selected === id && !libraryState.showHidden) libraryState.selected = null;
+    refreshLibrary();
+  }
+
+  async function restoreLibraryItem(id) {
+    await fetch("/api/library/" + encodeURIComponent(id) + "/restore", { method: "POST" }).catch(() => null);
+    refreshLibrary();
+  }
+
+  function selectLibraryItem(id) {
+    libraryState.selected = libraryState.selected === id ? null : id;
+    $("libraryGrid").querySelectorAll(".library-item").forEach((el) => {
+      el.classList.toggle("selected", el.dataset.id === libraryState.selected);
+    });
+    renderLibraryDetail();
+  }
+
+  /* Panneau de detail d'une image (fenetre ouverte depuis les reglages).
+     Il agit sur UNE image a la fois : renommer, changer de section,
+     l'utiliser tout de suite, la supprimer ou la masquer. Un element livre
+     n'a que « utiliser » et « masquer » : sa fiche et son emplacement
+     appartiennent a l'application, que la mise a jour remettrait comme
+     avant.
+     Detail panel of one image (window opened from the settings). It acts
+     on ONE image at a time: rename, change section, use it right away,
+     delete or hide it. A shipped item only has "use" and "hide": its sheet
+     and location belong to the application, which an update would put
+     back as they were. */
+  function renderLibraryDetail() {
+    const box = $("libraryDetail");
+    const it = libraryState.manage ? libraryState.items.find((x) => x.id === libraryState.selected) : null;
+    if (!it) {
+      if (libraryState.selected && libraryState.manage) libraryState.selected = null;
+      box.hidden = true;
+      box.innerHTML = "";
+      return;
+    }
+    const isUser = it.origin === "user";
+    const sectionOpts = libraryState.sections.filter((s) => s !== it.section)
+      .map((s) => `<option value="${s}">${escapeHtml(librarySectionLabel(s))}</option>`).join("");
+    const toneOpts = [["", "library.detail.toneNone"], ["light", "library.tone.light"], ["dark", "library.tone.dark"]]
+      .map(([v, k]) => `<option value="${v}" ${(it.tone || "") === v ? "selected" : ""}>${escapeHtml(i18n.t(k))}</option>`).join("");
+    const catList = libraryState.categories.map((c) => `<option value="${escapeHtmlAttr(c)}"></option>`).join("");
+
+    box.innerHTML = `
+      <div class="library-detail-head">
+        <img src="${escapeHtmlAttr(it.thumb || it.url)}" alt="">
+        <div class="library-detail-title">
+          <strong>${escapeHtml(it.name)}</strong>
+          <small>${escapeHtml([it.file, it.bytes ? formatSize(it.bytes) : "", it.width && it.height ? it.width + "×" + it.height : ""].filter(Boolean).join(" · "))}</small>
+        </div>
+        <button type="button" class="btn small" data-act="close">${escapeHtml(i18n.t("library.detail.close"))}</button>
+      </div>
+      <div class="library-detail-body">
+        ${isUser ? `
+        <div class="library-detail-row">
+          <label>${escapeHtml(i18n.t("library.detail.name"))}<input type="text" data-f="name" maxlength="80" value="${escapeHtmlAttr(it.name)}"></label>
+          <label>${escapeHtml(i18n.t("library.detail.category"))}<input type="text" data-f="category" maxlength="40" list="libraryCatList" value="${escapeHtmlAttr(it.category || "")}"><datalist id="libraryCatList">${catList}</datalist></label>
+          <label>${escapeHtml(i18n.t("library.detail.tone"))}<select data-f="tone">${toneOpts}</select></label>
+          <button type="button" class="btn small primary" data-act="save">${escapeHtml(i18n.t("library.detail.save"))}</button>
+        </div>
+        <div class="library-detail-row">
+          <label>${escapeHtml(i18n.t("library.detail.move"))}<select data-f="section">${sectionOpts}</select></label>
+          <button type="button" class="btn small" data-act="move">${escapeHtml(i18n.t("library.detail.moveGo"))}</button>
+        </div>` : `<p class="field-hint">${escapeHtml(i18n.t("library.detail.shipped"))}</p>`}
+        <div class="library-detail-row">
+          <span class="library-detail-label">${escapeHtml(i18n.t("library.detail.use"))}</span>
+          <button type="button" class="btn small" data-act="useBg">${escapeHtml(i18n.t("library.detail.useBg"))}</button>
+          <button type="button" class="btn small" data-act="useSaver">${escapeHtml(i18n.t("library.detail.useSaver"))}</button>
+          <span class="library-spacer"></span>
+          ${it.hidden
+            ? `<button type="button" class="btn small" data-act="restore">${escapeHtml(i18n.t("library.restore"))}</button>`
+            : `<button type="button" class="btn small danger" data-act="delete">${escapeHtml(i18n.t(isUser ? "library.delete" : "library.hide"))}</button>`}
+        </div>
+      </div>`;
+    box.hidden = false;
+
+    const act = (name, fn) => {
+      const b = box.querySelector(`[data-act="${name}"]`);
+      if (b) onActivate(b, fn);
+    };
+    const val = (f) => { const el = box.querySelector(`[data-f="${f}"]`); return el ? el.value : ""; };
+    act("close", () => selectLibraryItem(it.id));
+    act("save", () => saveLibraryMeta(it, { name: val("name"), category: val("category"), tone: val("tone") }));
+    act("move", () => moveLibraryItem(it, val("section")));
+    act("useBg", () => useLibraryItemAsBackground(it));
+    act("useSaver", () => useLibraryItemForScreensaver(it));
+    act("delete", () => deleteLibraryItem(it.id, isUser));
+    act("restore", () => restoreLibraryItem(it.id));
+    box.querySelectorAll("input[data-f]").forEach((input) => {
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); saveLibraryMeta(it, { name: val("name"), category: val("category"), tone: val("tone") }); }
+      });
+    });
+  }
+
+  async function saveLibraryMeta(it, patch) {
+    try {
+      const r = await fetch("/api/library/" + encodeURIComponent(it.id), {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch)
+      });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      await refreshLibrary();
+      librarySetStatus(i18n.t("library.detail.saved"));
+    } catch (e) {
+      console.warn("[piboard] bibliotheque : enregistrement", e);
+      librarySetStatus(i18n.t("library.detail.failed"), "err");
+    }
+  }
+
+  async function moveLibraryItem(it, section) {
+    if (!section) return;
+    try {
+      const r = await fetch("/api/library/" + encodeURIComponent(it.id) + "/move", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section })
+      });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      // L'image quitte la section affichee : on suit l'utilisateur la ou
+      // elle est allee, pour qu'il la retrouve plutot que de la perdre de
+      // vue. The image leaves the displayed section: we follow the user to
+      // where it went so they find it rather than lose sight of it.
+      libraryState.section = section;
+      libraryState.selected = out.id;
+      await refreshLibrary();
+      librarySetStatus(libFmt("library.detail.moved", { section: librarySectionLabel(section) }));
+    } catch (e) {
+      console.warn("[piboard] bibliotheque : deplacement", e);
+      librarySetStatus(libraryErrorText(e, "library.detail.failed"), "err");
+    }
+  }
+
+  /* « Utiliser maintenant » : meme chemin que le choix depuis une tuile
+     -- l'image est COPIEE dans le dossier media de la destination (voir
+     server/library.js pour le pourquoi) -- mais sans avoir a ouvrir la
+     fenetre du fond de page ni celle de l'ecran de veille.
+     "Use now": same path as picking from a tile -- the image is COPIED
+     into the destination's media folder (see server/library.js for why)
+     -- but without having to open the page background or screen saver
+     windows. */
+  async function copyLibraryItemTo(mediaId, id) {
+    const r = await fetch("/api/media/" + encodeURIComponent(mediaId) + "/from-library", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id })
+    });
+    const out = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(out.error || ("status " + r.status));
+    return out;
+  }
+
+  async function useLibraryItemAsBackground(it) {
+    try {
+      librarySetStatus(i18n.t("library.copying"));
+      const index = activePageIndex;
+      const out = await copyLibraryItemTo(backgroundMediaId(index), it.id);
+      pageBgIndex = index;
+      commitPageBackground({ image: out.name });
+      const p = pageAt(index);
+      const label = (p && p.name) || (i18n.t("dash.page") + " " + (index + 1));
+      librarySetStatus(libFmt("library.detail.usedBg", { page: label }));
+    } catch (e) {
+      console.warn("[piboard] bibliotheque : fond de page", e);
+      librarySetStatus(i18n.t("library.copyFailed"), "err");
+    }
+  }
+
+  async function useLibraryItemForScreensaver(it) {
+    try {
+      librarySetStatus(i18n.t("library.copying"));
+      await copyLibraryItemTo(SS_MEDIA_ID, it.id);
+      loadScreensaverMedia();
+      librarySetStatus(i18n.t("library.detail.usedSaver"));
+    } catch (e) {
+      console.warn("[piboard] bibliotheque : ecran de veille", e);
+      librarySetStatus(i18n.t("library.copyFailed"), "err");
+    }
   }
 
   async function pickLibraryItem(id) {
@@ -7711,13 +7977,7 @@
     if (!libraryState.target) return;
     librarySetStatus(i18n.t("library.copying"));
     try {
-      const r = await fetch("/api/media/" + encodeURIComponent(libraryState.target) + "/from-library", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id })
-      });
-      const out = await r.json();
-      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      const out = await copyLibraryItemTo(libraryState.target, id);
       librarySetStatus("");
       closeLibrary();
       if (libraryState.onPicked) libraryState.onPicked(out.name);
@@ -7727,21 +7987,124 @@
     }
   }
 
-  async function uploadToLibrary(files) {
-    if (!files || !files.length) return;
-    const form = new FormData();
-    for (const f of files) form.append("images", f);
-    librarySetStatus(i18n.t("library.uploading"));
-    try {
-      const r = await fetch("/api/library/" + encodeURIComponent(libraryState.section), { method: "POST", body: form });
-      const out = await r.json();
-      if (!r.ok) throw new Error(out.error || ("status " + r.status));
-      librarySetStatus("");
-      refreshLibrary();
-    } catch (e) {
-      console.warn("[piboard] ajout a la bibliotheque", e);
-      librarySetStatus(i18n.t("library.uploadFailed"), "err");
+  /* Traduit un message d'erreur du serveur en phrase lisible. Les codes
+     du serveur sont en anglais et stables ; c'est ici qu'ils deviennent du
+     texte pour l'utilisateur.
+     Turns a server error message into a readable sentence. The server's
+     codes are English and stable; this is where they become user text. */
+  function libraryErrorText(err, fallbackKey) {
+    const m = String((err && err.message) || err || "");
+    const table = [
+      [/not allowed/, "blocked"], [/invalid address/, "invalid"], [/host not found/, "notfound"],
+      [/not an image/, "notimage"], [/too large|LIMIT_FILE_SIZE/, "toolarge"], [/timed out/, "timeout"],
+      [/too many redirects/, "redirects"], [/empty file/, "empty"], [/unsupported file type/, "type"],
+      [/library full/, "full"]
+    ];
+    for (const [re, key] of table) if (re.test(m)) return i18n.t("library.err." + key);
+    const http = m.match(/^HTTP (\d+)/);
+    if (http) return libFmt("library.err.http", { code: http[1] });
+    return fallbackKey ? i18n.t(fallbackKey) : i18n.t("library.err.other");
+  }
+
+  /* Televersement groupe : un fichier par requete. Un fichier trop gros ou
+     d'un mauvais type ne fait pas perdre les autres, et la progression se
+     voit (3/12) sur un Raspberry Pi dont le disque est lent.
+     Grouped upload: one file per request. A file too big or of the wrong
+     type does not lose the others, and progress shows (3/12) on a
+     Raspberry Pi with a slow disk. */
+  async function uploadToLibrary(fileList) {
+    const files = Array.from(fileList || []);
+    if (!files.length) return;
+    const section = libraryState.section;
+    let added = 0;
+    const refused = [];
+    for (let i = 0; i < files.length; i++) {
+      librarySetStatus(libFmt("library.uploadProgress", { i: i + 1, n: files.length }));
+      const form = new FormData();
+      form.append("images", files[i]);
+      try {
+        const r = await fetch("/api/library/" + encodeURIComponent(section), { method: "POST", body: form });
+        const out = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(out.error || ("status " + r.status));
+        added += (out.added || []).length;
+        for (const rej of out.rejected || []) refused.push(rej.name);
+      } catch (e) {
+        console.warn("[piboard] ajout a la bibliotheque", files[i].name, e);
+        refused.push(files[i].name);
+      }
     }
+    await refreshLibrary();
+    if (!refused.length) {
+      librarySetStatus(libFmt("library.uploaded", { n: added, section: librarySectionLabel(section) }));
+    } else {
+      const names = refused.slice(0, 3).join(", ") + (refused.length > 3 ? "…" : "");
+      librarySetStatus(added
+        ? libFmt("library.uploadPartial", { n: added, m: refused.length, names })
+        : i18n.t("library.uploadFailed") + " " + names, "err");
+    }
+  }
+
+  async function addLibraryFromUrl() {
+    const input = $("libraryUrl");
+    const url = String(input.value || "").trim();
+    if (!url) return;
+    librarySetStatus(i18n.t("library.urlAdding"));
+    try {
+      const r = await fetch("/api/library-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ section: libraryState.section, url })
+      });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(out.error || ("status " + r.status));
+      input.value = "";
+      $("libraryUrlRow").hidden = true;
+      await refreshLibrary();
+      librarySetStatus(i18n.t("library.urlAdded"));
+    } catch (e) {
+      console.warn("[piboard] bibliotheque : ajout par adresse", e);
+      librarySetStatus(i18n.t("library.uploadFailed") + " (" + libraryErrorText(e) + ")", "err");
+    }
+  }
+
+  /* Glisser-deposer : on ne prend que les vrais fichiers (pas un texte ou
+     un lien glisse depuis la page), et un compteur d'entrees evite que le
+     voile clignote quand le curseur passe d'un element a l'autre.
+     Drag and drop: only real files are taken (not text or a link dragged
+     from the page), and an enter counter keeps the veil from flickering
+     as the cursor moves from one element to another. */
+  function wireLibraryDrop() {
+    const card = $("libraryCard");
+    const veil = $("libraryDrop");
+    if (!card || !veil) return;
+    let depth = 0;
+    const hasFiles = (e) => !!(e.dataTransfer && Array.from(e.dataTransfer.types || []).includes("Files"));
+    const hide = () => { depth = 0; veil.hidden = true; };
+    card.addEventListener("dragenter", (e) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      depth++;
+      veil.querySelector("span").textContent = libFmt("library.drop", { section: librarySectionLabel(libraryState.section) });
+      veil.hidden = false;
+    });
+    card.addEventListener("dragover", (e) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+    });
+    card.addEventListener("dragleave", (e) => {
+      if (!hasFiles(e)) return;
+      depth = Math.max(0, depth - 1);
+      if (!depth) veil.hidden = true;
+    });
+    card.addEventListener("drop", (e) => {
+      if (!hasFiles(e)) return;
+      e.preventDefault();
+      hide();
+      const files = Array.from(e.dataTransfer.files || []).filter((f) =>
+        /^image\//.test(f.type || "") || /\.(jpe?g|png|gif|webp|svg)$/i.test(f.name || ""));
+      if (files.length) uploadToLibrary(files);
+    });
   }
 
   /* Catalogue en ligne : on liste ce qui est disponible, et chaque
@@ -7954,6 +8317,7 @@
     $("setTheme").value = settings.theme;
     fillHelpThemeSettings();
     $("setRows").value = settings.gridRows;
+    refreshLibraryUsage();
     $("setKeyboard").checked = !!settings.keyboardEnabled;
     $("setTouch").checked = !!settings.touchMode;
     $("setTouchScroll").value = settings.touchScroll || "both";
@@ -10620,9 +10984,32 @@
     wireClone();
     onActivate($("libraryAdd"), () => $("libraryFile").click());
     onActivate($("libraryOnline"), showLibraryCatalog);
-    $("libraryFile").addEventListener("change", (e) => uploadToLibrary(e.target.files));
+    $("libraryFile").addEventListener("change", (e) => {
+      // Copie avant de vider : vider le champ vide aussi sa liste de fichiers.
+      // Copy before clearing: clearing the field also empties its file list.
+      const picked = Array.from(e.target.files || []);
+      e.target.value = "";
+      uploadToLibrary(picked);
+    });
+    onActivate($("setLibraryOpen"), openLibraryManager);
+    onActivate($("libraryUrlBtn"), () => {
+      const row = $("libraryUrlRow");
+      row.hidden = !row.hidden;
+      if (!row.hidden) $("libraryUrl").focus();
+    });
+    onActivate($("libraryUrlGo"), addLibraryFromUrl);
+    onActivate($("libraryUrlCancel"), () => { $("libraryUrlRow").hidden = true; });
+    $("libraryUrl").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); addLibraryFromUrl(); }
+    });
+    $("libraryHidden").addEventListener("change", (e) => {
+      libraryState.showHidden = e.target.checked;
+      refreshLibrary();
+    });
+    wireLibraryDrop();
     $("librarySection").addEventListener("change", (e) => {
       libraryState.section = e.target.value;
+      libraryState.selected = null;
       refreshLibrary();
     });
     $("libraryCategory").addEventListener("change", renderLibraryGrid);
