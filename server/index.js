@@ -1235,6 +1235,18 @@ app.post("/api/media/:tileId", (req, res) => {
   });
 });
 
+/* « Dupliquer vers… » (1.154.0) : recopie les images et les secrets d'une
+   tuile sous un nouvel identifiant (voir server/tileCopy.js).
+   "Duplicate to…": copies a tile's images and secrets under a new id. */
+app.post("/api/tiles/:tileId/duplicate", express.json({ limit: "4kb" }), (req, res) => {
+  try {
+    const report = require("./tileCopy").duplicate(req.params.tileId, String((req.body || {}).to || ""), require("./tileSecrets"));
+    res.json(Object.assign({ ok: true }, report));
+  } catch (e) {
+    res.status(400).json({ error: String((e && e.message) || e) });
+  }
+});
+
 app.delete("/api/media/:tileId/:filename", (req, res) => {
   if (!media.isValidTileId(req.params.tileId)) return res.status(400).json({ error: "invalid tile id" });
   try {

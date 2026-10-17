@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.154.0
+
+- **Déplacer une tuile vers une autre page.** Dans la fenêtre de réglages de
+  la tuile : « Cette tuile est sur : … », liste des destinations et boutons
+  **Déplacer** / **Dupliquer**, avec **+ Nouvelle page…** (crée la page et y
+  envoie la tuile). En mode édition, saisir une tuile affiche une **barre de
+  destinations** en haut de l'écran ; la lâcher sur l'une d'elles l'y envoie
+  (cibles nommées de 44 px, utilisables au doigt).
+- La tuile se pose à la **première place libre** et PiBoard **bascule sur la
+  page d'arrivée** (ou ouvre le tiroir). Bandeau « Tuile déplacée vers… —
+  **Annuler** » pendant 8 s : la tuile revient, à sa place si elle est libre.
+- **Déplacer** garde l'identifiant de la tuile : réglages, images, logo,
+  secrets et disposition interne suivent sans copie. **Dupliquer** crée un
+  nouvel identifiant ; le serveur recopie images (dossier de la tuile et de
+  son bloc logo) et secrets (`POST /api/tiles/:id/duplicate`,
+  `server/tileCopy.js`) ; annuler une duplication supprime la copie.
+- Destinations selon le mode : pages en mode tableau de bord, tableau et
+  tiroirs gauche/haut/droit en mode classique.
+- Correctif : Gridstack ne garde qu'un écouteur par événement ; les réactions
+  au début et à la fin d'un glisser sont réunies dans un seul écouteur.
+- Aide (FR/EN) : fiche Mode tableau de bord et bouton Mode édition. Tests
+  `tileCopy.test.js` et scénario dans `dom-smoke.js` (déplacement vers un
+  tiroir et annulation).
+
 ## 1.153.0
 
 - **Tuiles Formule 1 et MotoGP : bloc « Logo ».** Nouvelle carte optionnelle

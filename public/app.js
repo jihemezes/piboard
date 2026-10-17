@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.153.0
+   Version 1.154.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -237,6 +237,16 @@
       method: "PUT",
       headers: { "Content-Type": "application/json", "x-piboard-client": CLIENT_ID },
       body: JSON.stringify(body)
+    });
+    if (!r.ok) throw new Error(url + " -> " + r.status);
+    return r.json();
+  }
+
+  async function apiPost(url, body) {
+    const r = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-piboard-client": CLIENT_ID },
+      body: JSON.stringify(body || {})
     });
     if (!r.ok) throw new Error(url + " -> " + r.status);
     return r.json();
@@ -1972,10 +1982,15 @@
   let justManipulated = false;
 
   function wireEditClick(g, el) {
-    ["dragstart", "resizestart"].forEach((evt) => g.on(evt, () => { justManipulated = true; }));
-    ["dragstop", "resizestop"].forEach((evt) => g.on(evt, () => {
-      setTimeout(() => { justManipulated = false; }, 250);
-    }));
+    /* Gridstack ne garde qu'UN ecouteur par evenement (le dernier pose
+       remplace le precedent) : tout ce qui doit reagir au debut et a la
+       fin d'un glisser est donc reuni ici, dans un seul ecouteur.
+       Gridstack keeps ONE listener per event (the last one replaces the
+       previous): everything reacting to drag start/stop is gathered here. */
+    g.on("dragstart", (ev, item) => { justManipulated = true; dropBarStart(item || (ev && ev.target)); });
+    g.on("resizestart", () => { justManipulated = true; });
+    g.on("dragstop", () => { setTimeout(() => { justManipulated = false; }, 250); dropBarStop(); });
+    g.on("resizestop", () => { setTimeout(() => { justManipulated = false; }, 250); });
     if (!el) return;
     el.addEventListener("click", (e) => {
       if (!editing || justManipulated) return;
@@ -2763,6 +2778,287 @@
     scheduleSave();
   }
 
+  /* ============================================================
+     DEPLACER / DUPLIQUER UNE TUILE VERS UNE AUTRE PAGE (1.154.0)
+
+     DEPLACER garde l'IDENTIFIANT de la tuile : ses reglages, ses images
+     (et le logo des tuiles F1/MotoGP), ses mots de passe et sa
+     disposition interne la suivent sans rien copier. On la demonte de sa
+     grille et on la remonte dans l'autre, a la premiere place libre.
+
+     DUPLIQUER donne un NOUVEL identifiant, et le serveur recopie images
+     et secrets (server/tileCopy.js) : la copie et l'original sont
+     independants des la creation.
+
+     LES DESTINATIONS SUIVENT LE MODE D'AFFICHAGE : en mode tableau de
+     bord, les pages (plus « Nouvelle page… ») ; en mode classique, le
+     tableau et les trois tiroirs -- les tiroirs n'existent pas en mode
+     tableau de bord, et les pages ne s'affichent pas en mode classique.
+     Proposer une destination qu'on ne verrait pas ferait « disparaitre »
+     la tuile.
+
+     MOVE keeps the tile's ID: settings, images, secrets and inner layout
+     follow without copying. DUPLICATE gets a NEW id and the server copies
+     images and secrets. Destinations follow the display mode: pages in
+     dashboard mode, board and drawers in classic mode -- offering one the
+     user cannot see would make the tile "vanish".
+     ============================================================ */
+  function zoneLabel(zone) {
+    if (zone === "board") return dashboardMode() ? pageLabel(0) : i18n.t("move.board");
+    if (zone.startsWith("page:")) {
+      const i = pages.findIndex((p) => "page:" + p.id === zone);
+      return pageLabel(i + 1);
+    }
+    return i18n.t("move." + zone);
+  }
+
+  function pageLabel(index) {
+    const p = pageAt(index);
+    const n = i18n.t("dash.page") + " " + (index + 1);
+    return p && p.name ? n + " · " + p.name : n;
+  }
+
+  function moveDestinations(fromZone) {
+    const out = [];
+    if (dashboardMode()) {
+      for (let i = 0; i < pageCount(); i++) {
+        const z = pageAt(i).zone;
+        if (z !== fromZone) out.push({ zone: z, label: pageLabel(i) });
+      }
+      out.push({ zone: "new-page", label: i18n.t("move.newPage") });
+    } else {
+      for (const z of ["board"].concat(DRAWER_DEFS.map((d) => d.zone))) {
+        if (z !== fromZone) out.push({ zone: z, label: zoneLabel(z) });
+      }
+    }
+    return out;
+  }
+
+  /* Montre la destination : on bascule sur la page, ou on ouvre le
+     tiroir. Shows the destination: switch page, or open the drawer. */
+  function revealZone(zone) {
+    if (zone.startsWith("drawer-")) {
+      const d = drawers.get(zone.slice(7));
+      if (d && !d.el.classList.contains("open")) {
+        closeOtherDrawers(d.def.side);
+        d.el.classList.add("open");
+        bringDrawerToFront(d.def.side);
+      }
+      return;
+    }
+    if (zone === "board" && !dashboardMode()) {
+      for (const d of drawers.values()) d.el.classList.remove("open");
+      return;
+    }
+    if (dashboardMode()) {
+      const idx = zone === "board" ? 0 : pages.findIndex((p) => "page:" + p.id === zone) + 1;
+      if (idx >= 0) goToPage(idx);
+    }
+  }
+
+  function refreshEmptyStates() {
+    let boardCount = 0;
+    const counts = new Map();
+    for (const [, r] of tiles) {
+      if (r.zone === "board") boardCount++;
+      else counts.set(r.zone, (counts.get(r.zone) || 0) + 1);
+    }
+    $("boardEmpty").hidden = boardCount > 0;
+    for (const d of drawers.values()) $(d.def.emptyId).hidden = (counts.get(d.def.zone) || 0) > 0;
+    updateOverflow();
+  }
+
+  /* Coeur commun : demonter ici, remonter la-bas. `at` impose une place
+     (annulation) si elle est libre ; sinon, premiere place libre.
+     Shared core: unmount here, mount there. `at` forces a spot (undo) if
+     free; otherwise the first free spot. */
+  async function relocateTile(tileId, destZone, opts) {
+    const o = opts || {};
+    const rec = tiles.get(tileId);
+    if (!rec) return null;
+    if (destZone === "new-page") {
+      addPage();
+      destZone = "page:" + pages[pages.length - 1].id;
+    }
+    if (!o.copy && destZone === rec.zone) return null;
+    const node = rec.el && rec.el.gridstackNode;
+    const from = { zone: rec.zone, x: node ? node.x : rec.conf.x, y: node ? node.y : rec.conf.y,
+      w: node ? node.w : rec.conf.w, h: node ? node.h : rec.conf.h };
+    const target = gridForZone(destZone);
+    const size = (rec.manifest && rec.manifest.size) || {};
+    let place = null;
+    if (o.at && fitsAt(o.at.x, o.at.y, o.at.w, o.at.h, COLS, Math.max(4, settings.gridRows || 8),
+      target.engine.nodes.map((n) => ({ x: n.x, y: n.y, w: n.w, h: n.h })))) place = o.at;
+    if (!place) place = findPlacement(from.w, from.h, size.minW, size.minH, target, COLS);
+
+    const conf = JSON.parse(JSON.stringify(rec.conf));
+    Object.assign(conf, { x: place.x, y: place.y, w: place.w, h: place.h });
+    if (o.copy) {
+      conf.id = "t-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      try {
+        await apiPost("/api/tiles/" + encodeURIComponent(tileId) + "/duplicate", { to: conf.id });
+      } catch (e) {
+        /* Images ou secrets non recopies : la copie existe quand meme,
+           avec ses reglages. On le dit plutot que de renoncer.
+           Images or secrets not copied: the copy still exists with its
+           settings; we say so rather than give up. */
+        console.warn("[piboard] duplicate files failed", e);
+        showMoveToast(i18n.t("move.copyPartial"), null);
+      }
+      // La copie ne doit pas porter le meme titre enregistre par erreur.
+    } else {
+      destroyInstance(rec);
+      gridForZone(rec.zone).removeWidget(rec.el);
+      tiles.delete(tileId);
+    }
+    const mounted = await mountTile(conf, destZone);
+    refreshEmptyStates();
+    scheduleSave();
+    revealZone(destZone);
+    return { rec: mounted, from, conf };
+  }
+
+  async function moveTileTo(tileId, destZone) {
+    const res = await relocateTile(tileId, destZone);
+    if (!res) return;
+    const back = res.from;
+    showMoveToast(i18n.t("move.done").replace("{dest}", zoneLabel(res.rec ? res.rec.zone : destZone)), async () => {
+      /* ANNULER remet la tuile sur sa page d'origine, A SA PLACE si elle
+         est encore libre. UNDO puts the tile back, at its spot if free. */
+      if (!tiles.has(tileId)) return;
+      const z = back.zone === "board" || back.zone.startsWith("drawer-") || pages.some((p) => "page:" + p.id === back.zone) ? back.zone : "board";
+      await relocateTile(tileId, z, { at: { x: back.x, y: back.y, w: back.w, h: back.h } });
+    });
+  }
+
+  async function duplicateTileTo(tileId, destZone) {
+    const res = await relocateTile(tileId, destZone, { copy: true });
+    if (!res) return;
+    const copyId = res.conf.id;
+    showMoveToast(i18n.t("move.copied").replace("{dest}", zoneLabel(res.rec ? res.rec.zone : destZone)), () => {
+      /* ANNULER une copie, c'est la supprimer -- images et secrets
+         compris, comme toute tuile retiree. Undoing a copy deletes it. */
+      if (tiles.has(copyId)) removeTile(copyId);
+    });
+  }
+
+  /* Bandeau « Tuile deplacee vers… — Annuler », quelques secondes.
+     A "Tile moved to… — Undo" strip, for a few seconds. */
+  let moveToastTimer = null;
+  function showMoveToast(text, onUndo) {
+    let el = $("moveToast");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "moveToast";
+      el.className = "move-toast";
+      el.setAttribute("role", "status");
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `<span class="move-toast-text"></span>`
+      + (onUndo ? `<button type="button" class="btn small move-toast-undo">${escapeHtmlAttr(i18n.t("move.undo"))}</button>` : "");
+    el.querySelector(".move-toast-text").textContent = text;
+    el.hidden = false;
+    clearTimeout(moveToastTimer);
+    const hide = () => { el.hidden = true; };
+    if (onUndo) {
+      onActivate(el.querySelector(".move-toast-undo"), (e) => {
+        e.stopPropagation();
+        clearTimeout(moveToastTimer);
+        hide();
+        Promise.resolve(onUndo()).catch((err) => console.warn("[piboard] undo failed", err));
+      });
+    }
+    moveToastTimer = setTimeout(hide, 8000);
+  }
+
+  /* Le bloc « Emplacement » de la fenetre de reglages : une liste de
+     destinations et deux boutons. The "Location" block of the settings
+     window. */
+  function renderTileMove(rec) {
+    const box = $("tileMove");
+    if (!box) return;
+    const dests = moveDestinations(rec.zone);
+    if (!dests.length) { box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = `
+      <span class="tile-move-label">${escapeHtmlAttr(i18n.t("move.label"))} <b>${escapeHtmlAttr(zoneLabel(rec.zone))}</b></span>
+      <select id="tileMoveDest" aria-label="${escapeHtmlAttr(i18n.t("move.dest"))}">
+        ${dests.map((d) => `<option value="${escapeHtmlAttr(d.zone)}">${escapeHtmlAttr(d.label)}</option>`).join("")}
+      </select>
+      <button type="button" class="btn" id="tileMoveBtn">${escapeHtmlAttr(i18n.t("move.move"))}</button>
+      <button type="button" class="btn" id="tileCopyBtn">${escapeHtmlAttr(i18n.t("move.copy"))}</button>`;
+    const go = (copy) => {
+      const dest = $("tileMoveDest").value;
+      const id = rec.conf.id;
+      $("tileModal").hidden = true;
+      tileModalTarget = null;
+      (copy ? duplicateTileTo(id, dest) : moveTileTo(id, dest)).catch((e) => console.error("[piboard] move failed", e));
+    };
+    onActivate($("tileMoveBtn"), () => go(false));
+    onActivate($("tileCopyBtn"), () => go(true));
+  }
+
+  /* GLISSER VERS UNE AUTRE PAGE, en mode edition. Pendant qu'une tuile
+     est saisie, une barre de destinations apparait en haut de l'ecran ;
+     relacher la tuile sur l'une d'elles l'y envoie. Plutot que des bords
+     d'ecran « chauds » : une cible nommee se vise au doigt, et l'on sait
+     ou va la tuile avant de la lacher.
+     DRAG TO ANOTHER PAGE, in edit mode: while a tile is held, a bar of
+     destinations appears at the top; dropping the tile on one sends it
+     there. Named targets rather than "hot" screen edges: they can be aimed
+     at with a finger, and one knows where the tile goes before letting
+     go. */
+  const dropBar = { el: null, tileId: null, hover: null, x: 0, y: 0 };
+  function dropBarTrack(e) {
+    const t = e.touches && e.touches[0] ? e.touches[0] : e;
+    if (t && typeof t.clientX === "number") { dropBar.x = t.clientX; dropBar.y = t.clientY; }
+    if (!dropBar.el) return;
+    let hit = null;
+    for (const chip of dropBar.el.querySelectorAll(".tile-dropbar-chip")) {
+      const r = chip.getBoundingClientRect();
+      const inside = dropBar.x >= r.left && dropBar.x <= r.right && dropBar.y >= r.top && dropBar.y <= r.bottom;
+      chip.classList.toggle("hover", inside);
+      if (inside) hit = chip.dataset.zone;
+    }
+    dropBar.hover = hit;
+  }
+  function dropBarStart(el) {
+    const id = el && el.dataset && el.dataset.tileId;
+    const rec = id && tiles.get(id);
+    if (!rec || !editing) return;
+    const dests = moveDestinations(rec.zone);
+    if (!dests.length) return;
+    dropBar.tileId = id;
+    dropBar.hover = null;
+    let bar = $("tileDropBar");
+    if (!bar) {
+      bar = document.createElement("div");
+      bar.id = "tileDropBar";
+      bar.className = "tile-dropbar";
+      document.body.appendChild(bar);
+    }
+    bar.innerHTML = `<span class="tile-dropbar-hint">${escapeHtmlAttr(i18n.t("move.dropHint"))}</span>`
+      + dests.map((d) => `<span class="tile-dropbar-chip" data-zone="${escapeHtmlAttr(d.zone)}">${escapeHtmlAttr(d.label)}</span>`).join("");
+    bar.hidden = false;
+    dropBar.el = bar;
+    window.addEventListener("pointermove", dropBarTrack, true);
+    window.addEventListener("mousemove", dropBarTrack, true);
+    window.addEventListener("touchmove", dropBarTrack, true);
+  }
+  function dropBarStop() {
+    window.removeEventListener("pointermove", dropBarTrack, true);
+    window.removeEventListener("mousemove", dropBarTrack, true);
+    window.removeEventListener("touchmove", dropBarTrack, true);
+    if (dropBar.el) dropBarTrack({ clientX: dropBar.x, clientY: dropBar.y });
+    const id = dropBar.tileId, zone = dropBar.hover;
+    if (dropBar.el) dropBar.el.hidden = true;
+    dropBar.el = null; dropBar.tileId = null; dropBar.hover = null;
+    /* Apres le geste : Gridstack doit d'abord finir de reposer la tuile
+       dans sa grille d'origine. After the gesture: Gridstack must first
+       finish settling the tile in its source grid. */
+    if (id && zone) setTimeout(() => moveTileTo(id, zone).catch((e) => console.error("[piboard] move failed", e)), 0);
+  }
+
   /* ---------- Parametres d'une tuile / tile settings ---------- */
 
   let tileModalTarget = null;
@@ -3485,6 +3781,7 @@
     const rec = tiles.get(tileId);
     if (!rec || !rec.manifest) return;
     tileModalTarget = tileId;
+    renderTileMove(rec);
     const form = $("tileForm");
     const fields = rec.manifest.settings || [];
     $("tileModalTitle").textContent = i18n.fromManifest(rec.manifest.name);

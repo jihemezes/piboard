@@ -32,6 +32,25 @@
 
 # Nouveautes / What's new
 
+## 1.154.0
+
+**Envoyer une tuile sur une autre page**
+
+Depuis les réglages d'une tuile, ou en la faisant glisser en mode édition sur la
+barre de destinations qui apparaît en haut de l'écran : la tuile part sur une autre
+page (ou dans un tiroir), avec tous ses réglages, et PiBoard vous y emmène. Vous
+pouvez aussi la dupliquer, créer la page d'arrivée au passage, et annuler pendant
+quelques secondes.
+
+---
+
+**Send a tile to another page**
+
+From a tile's settings, or by dragging it in edit mode onto the bar of destinations
+that appears at the top of the screen: the tile goes to another page (or a drawer)
+with all its settings, and PiBoard takes you there. You can also duplicate it,
+create the destination page on the way, and undo for a few seconds.
+
 ## 1.153.0
 
 **Votre logo dans les tuiles Formule 1 et MotoGP**

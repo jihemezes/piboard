@@ -10056,6 +10056,43 @@ function catalogItemFor(catalog, document, widgetId) {
     }
   }
 
+  /* ---------- DEPLACER UNE TUILE VERS UN TIROIR (1.154.0) ----------
+     Par la fenetre de reglages : la tuile change de grille en GARDANT son
+     identifiant (donc ses images et ses secrets), le tiroir s'ouvre pour
+     la montrer, et « Annuler » la ramene a sa place.
+     MOVE A TILE TO A DRAWER through the settings window: it changes grid
+     KEEPING its id, the drawer opens to show it, and Undo brings it back. */
+  console.log("== Deplacer une tuile vers un tiroir, puis Annuler (1.154.0) ==");
+  {
+    const id = "t-c";
+    const before = document.querySelector(`.grid-stack-item[data-tile-id="${id}"]`);
+    assert("la tuile Notes est sur le tableau", !!before && !!before.closest("#grid"));
+    const pos = before.gridstackNode ? before.gridstackNode.x + "," + before.gridstackNode.y : "";
+    before.querySelector(".tile-gear").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(50);
+    const sel = document.getElementById("tileMoveDest");
+    const opts = sel ? Array.from(sel.options).map((o) => o.value) : [];
+    assert("la fenetre de reglages propose « Deplacer » et « Dupliquer »",
+      !!document.getElementById("tileMoveBtn") && !!document.getElementById("tileCopyBtn"));
+    assert("en mode classique : les trois tiroirs, pas la zone actuelle",
+      opts.includes("drawer-left") && opts.includes("drawer-top") && opts.includes("drawer-right") && !opts.includes("board"));
+    sel.value = "drawer-left";
+    document.getElementById("tileMoveBtn").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(300);
+    const moved = document.querySelector(`.grid-stack-item[data-tile-id="${id}"]`);
+    assert("la tuile est dans le tiroir gauche, avec le MEME identifiant", !!moved && !moved.closest("#grid") && !!moved.closest("#drawerLeft, .drawer-left, [id*=rawer]"));
+    assert("elle n'est plus sur le tableau", !document.querySelector(`#grid .grid-stack-item[data-tile-id="${id}"]`));
+    assert("la fenetre de reglages s'est fermee", document.getElementById("tileModal").hidden === true);
+    const toast = document.getElementById("moveToast");
+    assert("un bandeau dit ou elle est partie, avec « Annuler »", !!toast && !toast.hidden && !!toast.querySelector(".move-toast-undo"));
+    toast.querySelector(".move-toast-undo").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(300);
+    const back = document.querySelector(`#grid .grid-stack-item[data-tile-id="${id}"]`);
+    assert("Annuler la ramene sur le tableau", !!back);
+    assert("a sa place d'origine", !!back && back.gridstackNode && (back.gridstackNode.x + "," + back.gridstackNode.y) === pos);
+    for (const d of document.querySelectorAll(".drawer.open")) d.classList.remove("open");
+  }
+
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));
