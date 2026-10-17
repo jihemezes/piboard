@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.156.0
+   Version 1.156.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1222,6 +1222,17 @@
       content.style.backgroundColor = "";
       content.style.color = "";
       for (const prop of OVERRIDE_PROPS) content.style.removeProperty(prop);
+      /* OVERRIDE_PROPS (texte, texte attenue, bordure, fond de champ) sont
+         AUSSI des variables du theme : le nettoyage ci-dessus effacait donc
+         celles que applyTileTheme() venait de poser (1.152.0). Seuls le
+         fond et l'accent changeaient ; texte, bordures et cartes gardaient
+         les couleurs du tableau. On repose le theme apres le nettoyage.
+         OVERRIDE_PROPS (text, muted, border, field background) are ALSO
+         theme variables: the cleanup above wiped the ones applyTileTheme()
+         had just set (1.152.0). Only the background and accent changed;
+         text, borders and cards kept the board's colours. The theme is set
+         again after the cleanup. */
+      applyTileTheme(rec, content);
     }
   }
 

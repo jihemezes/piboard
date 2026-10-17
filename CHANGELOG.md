@@ -1,5 +1,41 @@
 # Changelog
 
+## 1.156.1
+
+- **Tuiles Formule 1 et MotoGP : le thème de tuile s'applique enfin en entier.**
+  Choisir un thème (« Papier », « Lin », « Vampire »…) ne changeait que le fond
+  de la tuile : texte, texte atténué, bordures des cartes et champs gardaient
+  les couleurs du tableau. Deux causes. (1) `applyTileColor()` effaçait, juste
+  après les avoir posées, les variables `--text`, `--muted`, `--faint`,
+  `--tile-edge` et `--field-bg` du thème (celles que sert aussi à surcharger une
+  couleur de tuile personnalisée) ; le thème est maintenant reposé après ce
+  nettoyage. (2) Aucune règle CSS ne donnait au conteneur le texte et la police
+  du thème : `.grid-stack-item-content.tile-themed { color: var(--text);
+  font-family: var(--font) }`. Un thème clair posé sur un tableau sombre donne
+  désormais un texte sombre lisible, et la police du thème (serif de « Papier »)
+  s'applique.
+- Vérifié dans un vrai navigateur (Papier / Lin sur tableau clair et sombre,
+  Vampire sur MotoGP) ; test de non-régression dans `dom-smoke.js`.
+- Aide : inchangée, elle décrivait déjà le comportement voulu (« le thème couvre
+  toute la tuile : cadre, barre de titre et contenu »).
+
+---
+
+- **Formula 1 and MotoGP tiles: the tile theme now applies in full.** Picking a
+  theme ("Paper", "Linen", "Vampire"…) only changed the tile's background: text,
+  muted text, card borders and fields kept the board's colours. Two causes. (1)
+  `applyTileColor()` wiped the theme's `--text`, `--muted`, `--faint`,
+  `--tile-edge` and `--field-bg` variables right after setting them (the same
+  variables a custom tile colour overrides); the theme is now set again after
+  that cleanup. (2) No CSS rule gave the container the theme's text and font:
+  `.grid-stack-item-content.tile-themed { color: var(--text); font-family:
+  var(--font) }`. A light theme on a dark board now gives readable dark text,
+  and the theme's font (the serif of "Paper") applies.
+- Checked in a real browser (Paper / Linen on light and dark boards, Vampire on
+  MotoGP); regression test in `dom-smoke.js`.
+- Help: unchanged, it already described the intended behaviour ("the theme
+  covers the whole tile: frame, title bar and content").
+
 ## 1.156.0
 
 - **Réglages généraux en page pleine, sur le modèle de l'aide.** En-tête

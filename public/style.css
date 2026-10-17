@@ -161,6 +161,20 @@ body.touch .board.has-overflow::-webkit-scrollbar { width: 12px; }
   transition: background 0.6s ease, border-color 0.6s ease;
 }
 
+/* Tuile ayant son propre theme (1.152.0, completee en 1.156.1) : elle
+   redefinit les variables de couleur mais n'avait aucune regle qui les
+   utilise pour le texte et la police -- le texte restait celui du tableau
+   (illisible sur un theme clair pose sur un tableau sombre), la police
+   aussi. Comme .board.pb-themed pour une page.
+   A tile with its own theme (1.152.0, completed in 1.156.1): it redefines
+   the colour variables but had no rule using them for text and font --
+   the text stayed the board's (unreadable with a light theme on a dark
+   board), and so did the font. Like .board.pb-themed does for a page. */
+.grid-stack-item-content.tile-themed {
+  color: var(--text);
+  font-family: var(--font);
+}
+
 /* ============================================================
    RELIEF 3D DES TUILES (1.148.0)
 

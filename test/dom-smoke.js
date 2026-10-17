@@ -2864,6 +2864,19 @@ function catalogItemFor(catalog, document, widgetId) {
         && JSON.parse(fs.readFileSync(path.join(PUB, "widgets", d, "manifest.json"), "utf8")).tileTheme);
       assert("le theme de tuile reste reserve a la Formule 1 et au MotoGP", others.length === 0);
       assert("le theme suit la bascule jour/nuit (reapplique avec le theme du tableau)", /ts\._transparent \|\| ts\.tileTheme/.test(appSrc));
+      /* 1.156.1 : le theme de tuile ne changeait que le fond. Le nettoyage des
+         couleurs de tuile (OVERRIDE_PROPS : texte, texte attenue, bordure,
+         fond de champ) effacait des variables que le theme venait de poser, et
+         aucune regle CSS n'appliquait texte et police du theme au conteneur.
+         Tile theme only changed the background: the cleanup wiped variables
+         the theme had just set, and no CSS rule applied the theme's text and
+         font to the container. */
+      const cleanup = appSrc.indexOf("for (const prop of OVERRIDE_PROPS) content.style.removeProperty(prop);");
+      assert("theme de tuile : il est repose APRES le nettoyage des couleurs (sinon texte et bordures du tableau)",
+        cleanup > 0 && /applyTileTheme\(rec, content\);/.test(appSrc.slice(cleanup, cleanup + 900)));
+      const cssT = fs.readFileSync(path.join(PUB, "style.css"), "utf8");
+      assert("theme de tuile : le conteneur applique le texte et la police du theme",
+        /\.grid-stack-item-content\.tile-themed\s*\{[^}]*color:\s*var\(--text\)[^}]*font-family:\s*var\(--font\)/.test(cssT));
     }
     window.PiBoard.__f1Probe = { f1, host };
     body1.innerHTML = keepHtml;
