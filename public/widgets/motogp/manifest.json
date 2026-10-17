@@ -6,6 +6,7 @@
     "fr": "MotoGP"
   },
   "titleBar": true,
+  "editTapOpensSettings": false,
   "description": {
     "en": "A MotoGP dashboard as blocks you arrange yourself: next round with a countdown, the weekend timetable in your own time zone, rider standings, team standings, the last Grand Prix or sprint results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data from motogp.com's own public feed, with no key and no account.",
     "fr": "Tableau de bord MotoGP en blocs que l'on dispose soi-même : prochaine manche avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement équipes, résultats du dernier Grand Prix ou du sprint, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Données du flux public de motogp.com, sans clé ni compte."

@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.151.1
+
+- **Tuiles Formule 1 et MotoGP : la fenêtre de réglages ne se pose plus sur
+  les blocs en mode édition.** Un appui sur la tuile en édition ouvrait ses
+  réglages, comme pour toute tuile — donc au premier contact avec un bloc
+  qu'on voulait réagencer. Ces deux tuiles (indicateur
+  `editTapOpensSettings: false` dans leur manifeste) ne s'ouvrent plus que
+  par leur bouton curseurs. Les autres tuiles sont inchangées. Aide mise à
+  jour (FR/EN).
+
 ## 1.151.0
 
 - **Tuile Formule 1 : une grille dans la tuile.** En mode édition, chaque carte

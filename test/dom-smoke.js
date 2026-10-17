@@ -2791,6 +2791,16 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("et le propose dans « Ajouter un bloc »", !!host.querySelector('.pig-add option[value="constructors"]'));
     assert("le plan du circuit a survecu au nouveau rendu", !!host.querySelector('.pig-block[data-block="circuit"] .pw-circuit'));
 
+    /* 1.151.1 : en edition, un appui sur ces tuiles n'ouvre plus leurs
+       reglages (la fenetre se posait sur les blocs qu'on touchait). */
+    {
+      const appSrc = fs.readFileSync(path.join(PUB, "app.js"), "utf8");
+      for (const id of ["f1", "motogp"]) {
+        const m = JSON.parse(fs.readFileSync(path.join(PUB, "widgets/" + id + "/manifest.json"), "utf8"));
+        assert(id + " : un appui en edition n'ouvre pas les reglages", m.editTapOpensSettings === false);
+      }
+      assert("le tableau respecte ce choix au clic d'edition", /editTapOpensSettings === false\) return;/.test(appSrc));
+    }
     window.PiBoard.__f1Probe = { f1, host };
     body1.innerHTML = keepHtml;
   }

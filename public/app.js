@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.151.0
+   Version 1.151.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1941,7 +1941,18 @@
       if (!editing || justManipulated) return;
       if (e.target.closest(".tile-btn")) return;
       const item = e.target.closest(".grid-stack-item");
-      if (item && item.dataset.tileId) openTileSettings(item.dataset.tileId);
+      if (!item || !item.dataset.tileId) return;
+      /* LES TUILES A GRILLE INTERNE (Formule 1, MotoGP) ne s'ouvrent PAS
+         d'un appui en edition : c'est justement le moment ou l'on touche
+         leurs blocs pour les reagencer, et la fenetre de reglages venait
+         se poser par-dessus au premier contact (signale en 1.151.0). Leurs
+         reglages s'ouvrent par le bouton curseurs de la tuile.
+         TILES WITH AN INNER GRID do NOT open on a tap while editing: that
+         is precisely when their blocks are touched; their settings open
+         from the tile's sliders button. */
+      const rec = tiles.get(item.dataset.tileId);
+      if (rec && rec.manifest && rec.manifest.editTapOpensSettings === false) return;
+      openTileSettings(item.dataset.tileId);
     });
   }
 

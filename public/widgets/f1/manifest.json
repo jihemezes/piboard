@@ -8,6 +8,7 @@
     "fr": "Formule 1"
   },
   "titleBar": true,
+  "editTapOpensSettings": false,
   "description": {
     "en": "A Formula 1 dashboard as blocks you arrange yourself: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings, the last race's results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every block.",
     "fr": "Tableau de bord Formule 1 en blocs que l'on dispose soi-même : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs, résultats de la dernière course, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente tous les blocs."
