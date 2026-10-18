@@ -1710,6 +1710,133 @@ function catalogItemFor(catalog, document, widgetId) {
     window.confirm = realConfirm;
   }
 
+  console.log("== Bloc-notes : disparition des elements coches (1.159.0) ==");
+  {
+    const noteTile = document.querySelector('[data-tile-id="t-c"]');
+    const bar = noteTile.querySelector(".pwn-bar");
+    const view = noteTile.querySelector(".pwn-view");
+    const ta = noteTile.querySelector(".pwn-edit");
+    const purge = noteTile.querySelector(".pwn-purge");
+    const sub = noteTile.querySelector(".pwn-sub");
+    const archBtn = noteTile.querySelector(".pwn-arch-btn");
+    const archive = noteTile.querySelector(".pwn-archive");
+    const press = (act) => bar.querySelector('[data-act="' + act + '"]').dispatchEvent(new window.MouseEvent("pointerdown", { bubbles: true, cancelable: true }));
+    const chip = (sel) => purge.querySelector(sel).dispatchEvent(new window.MouseEvent("pointerdown", { bubbles: true, cancelable: true }));
+    const typeText = async (t) => {
+      view.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(20);
+      ta.value = t;
+      ta.dispatchEvent(new window.Event("input", { bubbles: true }));
+      ta.dispatchEvent(new window.Event("blur", { bubbles: true }));
+      await sleep(30);
+    };
+
+    assert("sablier present dans la barre d'outils", !!bar.querySelector('[data-act="purge"]'));
+    assert("rangee de reglage fermee par defaut", purge.hidden === true);
+
+    await typeText("[ ] Lait\n[ ] Pain\n[x] Beurre");
+    assert("progression affichee : 1/3 faites", sub.hidden === false && /1\/3/.test(noteTile.querySelector(".pwn-prog").textContent));
+    assert("par defaut rien ne disparait : la ligne cochee est toujours la", view.querySelectorAll(".pwn-done").length === 1);
+    assert("pas d'archive : pastille masquee", archBtn.hidden === true);
+
+    // Ouvrir le reglage depuis la barre (en edition).
+    view.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    press("purge");
+    assert("le sablier ouvre la rangee de reglage", purge.hidden === false);
+    assert("5 modes proposes (gardes, aussitot, minuit, heures, jours)", purge.querySelectorAll("[data-mode]").length === 5);
+    assert("mode 'gardes' coche par defaut", purge.querySelector('[data-mode="off"]').classList.contains("pwn-chip-on"));
+    assert("pas de pas +/- tant qu'un delai chiffre n'est pas choisi", !purge.querySelector("[data-step]"));
+    chip('[data-mode="hours"]');
+    assert("mode heures : les boutons - et + apparaissent", purge.querySelectorAll("[data-step]").length === 2);
+    chip('[data-step="1"]'); chip('[data-step="1"]');
+    assert("le pas augmente la valeur (1 -> 3)", purge.querySelector(".pwn-step b").textContent === "3");
+    for (let i = 0; i < 5; i++) chip('[data-step="-1"]');
+    assert("la valeur ne descend pas sous 1", purge.querySelector(".pwn-step b").textContent === "1");
+    assert("le sablier s'allume quand un delai est actif", bar.querySelector(".pwn-bar-purge").classList.contains("pwn-bar-on"));
+    assert("la phrase de resume decrit le delai", /1 h/.test(purge.querySelector(".pwn-purge-sum").textContent));
+
+    // Mode 'aussitot' : la ligne cochee (deja la) part a la sortie d'edition,
+    // celles cochees ensuite partent apres le fondu.
+    chip('[data-mode="now"]');
+    ta.blur(); ta.dispatchEvent(new window.Event("blur", { bubbles: true }));
+    await sleep(2600);
+    assert("aussitot : l'element coche a disparu de la vue", !view.textContent.includes("Beurre"));
+    assert("aussitot : les autres sont intacts", view.textContent.includes("Lait") && view.textContent.includes("Pain"));
+    assert("la pastille 'Terminees (1)' apparait", archBtn.hidden === false && /1/.test(archBtn.textContent));
+
+    // Cocher un element : il disparait apres le court delai de rattrapage.
+    view.querySelector('.pwn-check[data-line="0"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(60);
+    assert("coche : la ligne est d'abord visible et barree", view.querySelectorAll(".pwn-done").length === 1);
+    assert("progression mise a jour : 1/2", /1\/2/.test(noteTile.querySelector(".pwn-prog").textContent));
+    // Se rattraper : redecocher avant l'echeance annule la disparition.
+    view.querySelector('.pwn-check[data-line="0"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(2300);
+    assert("retaper la case avant l'echeance annule la disparition", view.textContent.includes("Lait"));
+
+    view.querySelector('.pwn-check[data-line="0"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(2600);
+    assert("coche et laisse : l'element disparait", !view.textContent.includes("Lait") && view.textContent.includes("Pain"));
+    assert("l'archive compte maintenant 2 elements", /2/.test(archBtn.textContent));
+
+    // Archive : lecture, remise dans la liste.
+    archBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("la pastille ouvre l'archive a la place de la note", archive.hidden === false && view.hidden === true);
+    assert("l'archive liste les deux elements", archive.querySelectorAll(".pwn-arch-item").length === 2);
+    assert("l'archive montre leur texte", archive.textContent.includes("Beurre") && archive.textContent.includes("Lait"));
+    archive.querySelector('[data-arch="restore"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("remettre un element : il quitte l'archive", archive.querySelectorAll(".pwn-arch-item").length === 1);
+    archBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    assert("retour a la note : la vue reapparait", view.hidden === false && archive.hidden === true);
+    const restored = [...view.querySelectorAll(".pwn-task")];
+    assert("l'element remis est NON coche, en fin de liste",
+      restored.length === 2 && !restored[1].classList.contains("pwn-done") && /Beurre|Lait/.test(restored[1].textContent));
+
+    // Vider l'archive (avec confirmation).
+    archBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    const realConfirm = window.confirm;
+    window.confirm = () => false;
+    archive.querySelector('[data-arch="clear"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("vider refuse : l'archive est conservee", archive.querySelectorAll(".pwn-arch-item").length === 1);
+    window.confirm = () => true;
+    archive.querySelector('[data-arch="clear"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("vider confirme : l'archive est vide", archive.querySelectorAll(".pwn-arch-item").length === 0 && /Aucun/.test(archive.textContent));
+    window.confirm = realConfirm;
+    archBtn.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    assert("archive vide et refermee : la pastille se masque", archBtn.hidden === true);
+
+    // Reglage PAR NOTE : une seconde note n'est pas concernee.
+    view.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    press("newNote");
+    await sleep(30);
+    press("purge");
+    assert("une nouvelle note demarre en mode 'gardes'", purge.querySelector('[data-mode="off"]').classList.contains("pwn-chip-on"));
+    ta.value = "[x] Fait";
+    ta.dispatchEvent(new window.Event("input", { bubbles: true }));
+    ta.dispatchEvent(new window.Event("blur", { bubbles: true }));
+    await sleep(2400);
+    assert("autre note : l'element coche reste (reglage propre a chaque note)", view.textContent.includes("Fait"));
+
+    // Menage : on revient a une seule note vide, comme avant le bloc.
+    const realConfirm2 = window.confirm;
+    window.confirm = () => true;
+    view.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(20);
+    press("deleteNote"); await sleep(30);
+    press("deleteNote"); await sleep(30);
+    window.confirm = realConfirm2;
+    assert("menage : la note est videe", noteTile.querySelectorAll(".pwn-tab").length === 0 || noteTile.querySelector(".pwn-tabs").hidden === true);
+  }
+
   console.log("== Alerte de tableau : arret au tap n'importe ou sur l'ecran (compte a rebours, alarme horloge, rappel TV) ==");
   {
     // Cible deja passee des le montage (voir tuile t-v) : l'alerte

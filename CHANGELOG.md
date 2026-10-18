@@ -1,5 +1,72 @@
 # Changelog
 
+## 1.159.0
+
+- **Bloc-notes : disparition automatique des éléments cochés, réglable pour chaque
+  note.** Un nouveau bouton (sablier) dans la barre d'outils de la note ouvre une
+  rangée de réglage : **Gardés** (comportement actuel, par défaut), **Aussitôt**
+  (1,5 s après le cochage, le temps de se rattraper en retapant la case),
+  **Minuit** (minuit suivant : coché dans la journée, parti le lendemain), **Heures**
+  (de 1 à 168) et **Jours** (de 1 à 365, jours de 24 h). Le réglage est propre à
+  chaque onglet : une liste de courses se nettoie, un pense-bête garde tout.
+  Seules les cases à cocher (`[x]`) sont concernées, pas un texte barré à la main.
+  **Les éléments ne sont pas détruits** : ils vont dans une archive par note, avec
+  une pastille « Terminées (N) » sous la note ; le panneau d'archive liste les
+  éléments avec leur date de cochage, ↩ remet un élément dans la note (non coché,
+  en fin de liste), « Vider » efface (avec confirmation). Archive purgée après 30
+  jours. Fondu puis repli de la ligne qui disparaît (désactivé avec « réduire les
+  animations »). Deux nouveaux réglages de tuile : **progression « 5/8 faites »**
+  sous la note (activée par défaut, n'apparaît que s'il y a des cases) et
+  **estomper les cases cochées depuis plus d'une heure** (désactivé).
+  Structure : la date de cochage n'est PAS écrite dans le texte (qui reste du
+  Markdown propre) mais dans `note.doneAt`, une table clé → instant, la clé étant
+  le texte de la ligne plus son rang parmi les lignes cochées identiques ;
+  déplacer une ligne conserve sa date, reformuler une ligne la compte comme une
+  nouvelle ligne cochée. Les lignes déjà cochées à l'activation sont datées de
+  l'activation (rien ne disparaît d'un coup à la mise à jour). `note.purge`
+  `{mode, n}` et `note.archive` suivent la note ; les anciens états sont lus tels
+  quels. Rien ne disparaît pendant la saisie (les échéances manquées sont traitées
+  à la sortie d'édition) ; un seul minuteur, au plus tard toutes les minutes, plus
+  tôt si une échéance approche, arrêté à la destruction. Les écritures
+  automatiques (`persist()`) ne touchent pas l'horodatage « modifié ». Le
+  réglage utilise des boutons et non un `<select>`, pour que le focus reste dans
+  l'éditeur (même raison que la palette de couleurs). Aide FR/EN : section
+  « Faire disparaître les éléments cochés », bouton sablier, deux nouveaux
+  libellés de réglage. Tests : `test/notesPurge.test.js` (24), 34 vérifications
+  dans `dom-smoke.js`, et vérification dans Chromium (fondu, archive, rangée de
+  réglage).
+
+---
+
+- **Notes tile: automatic disappearance of checked items, set separately for each
+  note.** A new button (hourglass) in the note's toolbar opens a setting row:
+  **Keep** (current behaviour, the default), **At once** (1.5 s after checking, time
+  to recover by tapping the box again), **Midnight** (the next midnight: checked
+  during the day, gone the next morning), **Hours** (1 to 168) and **Days** (1 to
+  365, 24-hour days). The setting belongs to each tab: a shopping list tidies
+  itself, a reminder keeps everything. Only checkboxes (`[x]`) are concerned, not
+  text struck through by hand. **Items are not destroyed**: they go to a per-note
+  archive, with a "Done (N)" pill under the note; the archive panel lists the items
+  with their check date, ↩ puts an item back in the note (unchecked, at the end of
+  the list), "Empty" erases (with confirmation). The archive is purged after 30
+  days. The vanishing line fades then folds (disabled with "reduce motion"). Two new
+  tile settings: **"5/8 done" progress** under the note (on by default, only
+  shown when there are checkboxes) and **fade items checked for more than an hour**
+  (off). Structure: the check date is NOT written into the text (which stays clean
+  Markdown) but in `note.doneAt`, a key → instant table, the key being the line's
+  text plus its rank among identical checked lines; moving a line keeps its date,
+  rewording a line counts as a newly checked line. Lines already checked when the
+  setting is turned on are dated from that moment (nothing vanishes at once on
+  upgrade). `note.purge` `{mode, n}` and `note.archive` follow the note; older
+  states are read as they are. Nothing vanishes while typing (missed deadlines are
+  handled when editing ends); a single timer, at most every minute, sooner when a
+  deadline nears, stopped on destroy. Automatic writes (`persist()`) leave the
+  "updated" timestamp alone. The setting uses buttons rather than a `<select>`, so
+  focus stays in the editor (same reason as the colour palette). FR/EN help: new
+  "Making checked items disappear" section, hourglass button, two new setting
+  labels. Tests: `test/notesPurge.test.js` (24), 34 checks in `dom-smoke.js`, and a
+  Chromium check (fade, archive, setting row).
+
 ## 1.158.0
 
 - **Tuile Texte : les effets de la tuile Logo / Image, plus des effets propres au

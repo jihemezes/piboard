@@ -1840,8 +1840,8 @@ Franceinfo".</span></div>
       group: "tiles",
       title: { fr: "Bloc-notes", en: "Notes" },
       sub: {
-        fr: "Plusieurs notes en onglets, barre d'outils de mise en forme, listes à cocher interactives, couleur par note et texte auto-ajusté. Enregistré sur le serveur, partagé entre les écrans.",
-        en: "Several notes in tabs, a formatting toolbar, interactive checklists, per-note color and auto-fitting text. Saved on the server, shared by all screens."
+        fr: "Plusieurs notes en onglets, barre d'outils de mise en forme, listes à cocher interactives (avec disparition automatique facultative des éléments cochés), couleur par note et texte auto-ajusté. Enregistré sur le serveur, partagé entre les écrans.",
+        en: "Several notes in tabs, a formatting toolbar, interactive checklists (with optional automatic disappearance of checked items), per-note color and auto-fitting text. Saved on the server, shared by all screens."
       },
       html: {
         fr: `
@@ -1853,6 +1853,7 @@ Franceinfo".</span></div>
 <ul>
   <li><b>Markdown léger</b> (titres, gras, listes) avec une <b>barre d'outils</b> de mise en forme.</li>
   <li><b>Listes à cocher</b> interactives, cochables même en lecture seule.</li>
+  <li><b>Disparition automatique</b> des éléments cochés (aussitôt, à minuit, après N heures ou N jours), réglable pour chaque note, avec une archive pour les récupérer.</li>
   <li><b>Couleurs post-it</b> et <b>taille du texte</b> fixe ou ajustée automatiquement à la tuile.</li>
   <li><b>Plusieurs notes</b> dans une seule tuile.</li>
   <li>Enregistré sur le serveur et partagé entre les écrans ; horodatage et compteur de mots en option.</li>
@@ -1867,6 +1868,7 @@ Franceinfo".</span></div>
           <div class="help-opt"><span class="help-opt-name">B / I / S</span><span class="help-opt-desc">Gras, italique, barré. Sans sélection, les marqueurs sont insérés et le curseur placé entre les deux, prêt à taper.</span></div>
           <div class="help-opt"><span class="help-opt-name">Titre / Normal</span><span class="help-opt-desc">Bascule la ligne entre le style titre et le texte courant.</span></div>
           <div class="help-opt"><span class="help-opt-name">Pastille de couleur</span><span class="help-opt-desc">Ouvre une palette de teintes très pâles pour colorer la note courante (voir ci-dessous).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Sablier</span><span class="help-opt-desc">Ouvre le réglage de disparition des éléments cochés de la note courante (voir ci-dessous). Il est allumé quand un délai est actif.</span></div>
           <div class="help-opt"><span class="help-opt-name">+</span><span class="help-opt-desc">Crée une nouvelle note dans cette même tuile.</span></div>
           <div class="help-opt"><span class="help-opt-name">Corbeille</span><span class="help-opt-desc">Supprime la note courante, après confirmation. Supprimer la dernière note la vide simplement, pour que le bloc-notes reste utilisable.</span></div>
           <p>Les styles de bloc s'excluent mutuellement : transformer un titre en case à cocher lui retire son préfixe de titre. Les lignes vides ne reçoivent jamais de marqueur.</p>
@@ -1877,6 +1879,18 @@ Franceinfo".</span></div>
           <p>Le bouton de couleur affecte une <b>teinte très pâle</b> à la note courante, reportée sur son onglet : c'est ce qui permet de distinguer une note de sa voisine <i>sans avoir à l'ouvrir</i>. Cette couleur est indépendante du réglage « Couleur post-it » ci-dessous, qui teinte la tuile entière : les deux se superposent, d'où des teintes de note volontairement très légères pour que le texte reste confortable à lire sur un écran allumé en permanence.</p>
           <p>Changer d'onglet valide d'abord l'édition en cours : rien de ce qui vient d'être tapé n'est perdu.</p>
 
+<h4>Faire disparaître les éléments cochés</h4>
+          <p>Dans une liste à cocher, un élément fait reste barré et encombre peu à peu la note. Le <b>sablier</b> de la barre d'outils (visible en édition) fait disparaître tout seul les éléments cochés, <b>note par note</b> : votre liste de courses peut se nettoyer pendant qu'un pense-bête garde tout. Choisissez :</p>
+          <div class="help-opt"><span class="help-opt-name">Gardés</span><span class="help-opt-desc">Rien ne disparaît (réglage par défaut de chaque note).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Aussitôt</span><span class="help-opt-desc">L'élément disparaît une seconde et demie après qu'on l'a coché — le temps de se rattraper : retaper la case suffit à l'annuler.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Minuit</span><span class="help-opt-desc">L'élément disparaît au prochain minuit : coché dans la journée, il a disparu le lendemain matin.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Heures</span><span class="help-opt-desc">L'élément disparaît N heures après avoir été coché (de 1 à 168, avec les boutons − et +).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Jours</span><span class="help-opt-desc">L'élément disparaît N jours de 24 h après avoir été coché (de 1 à 365).</span></div>
+          <p>Seules les <b>cases à cocher</b> sont concernées : une ligne de texte simple, un titre ou un texte barré à la main avec le bouton S ne disparaissent jamais. La date de cochage est mémorisée à part, sans rien ajouter au texte de la note. Si vous reformulez une ligne cochée, elle compte comme une nouvelle ligne cochée à cet instant. Si vous activez le réglage alors que des lignes sont déjà cochées, elles sont datées du moment où vous l'activez.</p>
+          <p>Rien ne disparaît pendant que vous écrivez : les échéances passées sont traitées dès que vous quittez l'édition. Une ligne qui disparaît s'estompe d'abord en douceur (sauf si l'appareil est réglé sur « réduire les animations »).</p>
+          <p><b>Rien n'est perdu pour de bon.</b> Les éléments disparus vont dans une archive : une pastille <b>Terminées (N)</b> apparaît sous la note. Elle ouvre la liste des éléments terminés avec leur date de cochage ; la flèche ↩ remet un élément dans la note (non coché, en fin de liste) et « Vider » efface l'archive. L'archive d'une note est conservée 30 jours, puis effacée.</p>
+          <p>Sous la note, une ligne discrète affiche la <b>progression</b> (par exemple « 5/8 faites ») dès que la note contient des cases à cocher.</p>
+
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <div class="help-opt"><span class="help-opt-name">Couleur post-it</span><span class="help-opt-desc">Couleur de la tuile elle-même, ou une teinte post-it (jaune, vert, bleu, rose, orange).</span></div>
@@ -1884,6 +1898,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Taille du texte si ajustement désactivé (px)</span><span class="help-opt-desc">Utilisée si l'ajustement automatique est désactivé. De 8 à 40 pixels : les petites valeurs servent surtout sur un écran de bureau, où l'on lit à 60 cm et où une taille pensée pour être vue à travers la pièce devient énorme.</span></div>
 <div class="help-opt"><span class="help-opt-name">Lecture seule (les cases restent cochables)</span><span class="help-opt-desc">Empêche la modification du texte tout en gardant les cases à cocher interactives — pratique pour une liste préparée à l'avance que l'on ne veut faire que cocher.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher l'horodatage et le compteur de mots</span><span class="help-opt-desc">Petites informations discrètes en bas de la tuile.</span></div>
+<div class="help-opt"><span class="help-opt-name">Afficher la progression « faites / total » sous la note</span><span class="help-opt-desc">Par exemple « 5/8 faites » : une ligne discrète qui n'apparaît que si la note contient des cases à cocher.</span></div>
+<div class="help-opt"><span class="help-opt-name">Estomper les cases cochées depuis plus d'une heure</span><span class="help-opt-desc">Les éléments faits récemment restent bien lisibles, les plus anciens s'effacent peu à peu en attendant leur disparition éventuelle (voir « Faire disparaître les éléments cochés »).</span></div>
 `,
         en: `
 <span class="help-size">Size: 3×3 by default, from 2×2 to 8×8</span>
@@ -1894,6 +1910,7 @@ Franceinfo".</span></div>
 <ul>
   <li><b>Light Markdown</b> (headings, bold, lists) with a formatting <b>toolbar</b>.</li>
   <li>Interactive <b>checklists</b>, tickable even in read-only mode.</li>
+  <li><b>Automatic disappearance</b> of checked items (at once, at midnight, after N hours or N days), set separately for each note, with an archive to get them back.</li>
   <li><b>Sticky-note colours</b> and a <b>text size</b> that is fixed or fitted to the tile automatically.</li>
   <li><b>Several notes</b> in a single tile.</li>
   <li>Saved on the server and shared between screens; timestamp and word count optional.</li>
@@ -1908,6 +1925,7 @@ Franceinfo".</span></div>
           <div class="help-opt"><span class="help-opt-name">B / I / S</span><span class="help-opt-desc">Bold, italic, strikethrough. With no selection, the markers are inserted and the caret placed between them, ready to type.</span></div>
           <div class="help-opt"><span class="help-opt-name">Heading / Normal</span><span class="help-opt-desc">Toggles the line between heading style and body text.</span></div>
           <div class="help-opt"><span class="help-opt-name">Color dot</span><span class="help-opt-desc">Opens a palette of very pale tints to color the current note (see below).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Hourglass</span><span class="help-opt-desc">Opens the setting that makes checked items of the current note disappear (see below). It is lit when a delay is active.</span></div>
           <div class="help-opt"><span class="help-opt-name">+</span><span class="help-opt-desc">Creates a new note inside this same tile.</span></div>
           <div class="help-opt"><span class="help-opt-name">Bin</span><span class="help-opt-desc">Deletes the current note, after confirmation. Deleting the last note simply empties it, so the notepad stays usable.</span></div>
           <p>Block styles are mutually exclusive: turning a heading into a checkbox strips its heading prefix. Empty lines never receive a marker.</p>
@@ -1918,6 +1936,18 @@ Franceinfo".</span></div>
           <p>The color button assigns a <b>very pale tint</b> to the current note, carried onto its tab: this is what lets you tell one note from its neighbour <i>without opening it</i>. This color is independent of the "Sticky-note color" setting below, which tints the whole tile: the two layer on top of each other, hence deliberately very light note tints so text stays comfortable to read on an always-on screen.</p>
           <p>Switching tabs commits the ongoing edit first: nothing just typed is lost.</p>
 
+<h4>Making checked items disappear</h4>
+          <p>In a checklist, a finished item stays struck through and gradually clutters the note. The toolbar's <b>hourglass</b> (visible while editing) makes checked items disappear by themselves, <b>note by note</b>: your shopping list can tidy itself while a reminder keeps everything. Choose:</p>
+          <div class="help-opt"><span class="help-opt-name">Keep</span><span class="help-opt-desc">Nothing disappears (each note's default).</span></div>
+          <div class="help-opt"><span class="help-opt-name">At once</span><span class="help-opt-desc">The item disappears one and a half seconds after it is checked — time to recover from a mis-tap: tapping the box again cancels it.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Midnight</span><span class="help-opt-desc">The item disappears at the next midnight: checked during the day, it is gone the next morning.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Hours</span><span class="help-opt-desc">The item disappears N hours after being checked (1 to 168, with the − and + buttons).</span></div>
+          <div class="help-opt"><span class="help-opt-name">Days</span><span class="help-opt-desc">The item disappears N 24-hour days after being checked (1 to 365).</span></div>
+          <p>Only <b>checkboxes</b> are concerned: a plain line of text, a heading or text you struck through by hand with the S button never disappear. The check date is stored separately, without adding anything to the note's text. If you reword a checked line, it counts as a new line checked at that moment. If you turn the setting on while lines are already checked, they are dated from the moment you turn it on.</p>
+          <p>Nothing disappears while you are typing: past deadlines are handled as soon as you leave editing. A vanishing line first fades out smoothly (unless the device is set to "reduce motion").</p>
+          <p><b>Nothing is lost for good.</b> Vanished items go to an archive: a <b>Done (N)</b> pill appears under the note. It opens the list of completed items with their check date; the ↩ arrow puts an item back in the note (unchecked, at the end of the list) and "Empty" erases the archive. A note's archive is kept for 30 days, then erased.</p>
+          <p>Under the note, a discreet line shows the <b>progress</b> (for example "5/8 done") as soon as the note contains checkboxes.</p>
+
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <div class="help-opt"><span class="help-opt-name">Sticky-note color</span><span class="help-opt-desc">The tile's own color, or a sticky-note tint (yellow, green, blue, pink, orange).</span></div>
@@ -1925,6 +1955,8 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Text size when auto-fit is off (px)</span><span class="help-opt-desc">Used if auto-fit is disabled. From 8 to 40 pixels: small values are mostly for a desktop screen, where you read from 60 cm and a size meant to be seen across the room becomes enormous.</span></div>
 <div class="help-opt"><span class="help-opt-name">Read-only (checkboxes stay tappable)</span><span class="help-opt-desc">Prevents editing the text while keeping checkboxes interactive — handy for a list prepared in advance that should only be checked off.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show timestamp and word count</span><span class="help-opt-desc">Small discreet info at the bottom of the tile.</span></div>
+<div class="help-opt"><span class="help-opt-name">Show the "done / total" progress under the note</span><span class="help-opt-desc">For example "5/8 done": a discreet line that only appears when the note contains checkboxes.</span></div>
+<div class="help-opt"><span class="help-opt-name">Fade items checked for more than an hour</span><span class="help-opt-desc">Recently done items stay easy to read; older ones fade while waiting for their possible disappearance (see "Making checked items disappear").</span></div>
 `
       }
     },

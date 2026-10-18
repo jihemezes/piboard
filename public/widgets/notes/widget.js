@@ -35,12 +35,17 @@
 
   const TASK_RE = /^(?:- )?\[([ xX])\]\s?(.*)$/;
 
-  function renderLines(text) {
+  /* `old` : numeros de lignes cochees depuis longtemps, a estomper
+     (reglage « Estomper les cases cochees depuis plus d'une heure »).
+     `old`: line numbers checked a long time ago, to fade (setting "Fade
+     items checked for more than an hour"). */
+  function renderLines(text, old) {
     return text.split("\n").map((line, idx) => {
       const task = line.match(TASK_RE);
       if (task) {
         const done = task[1].toLowerCase() === "x";
-        return `<div class="pwn-line pwn-task${done ? " pwn-done" : ""}">
+        const aged = done && old && old.has(idx);
+        return `<div class="pwn-line pwn-task${done ? " pwn-done" : ""}${aged ? " pwn-old" : ""}" data-row="${idx}">
           <button type="button" class="pwn-check" data-line="${idx}" aria-checked="${done}"></button>
           <span class="pwn-task-text">${inline(task[2])}</span></div>`;
       }
@@ -56,6 +61,170 @@
   function countWords(text) {
     const words = text.trim().split(/\s+/).filter(Boolean);
     return words.length;
+  }
+
+  /* ================================================================
+     DISPARITION DES ELEMENTS COCHES (1.159.0)
+     Un element coche est une ligne « [x] texte ». Pour le faire
+     disparaitre « le lendemain », il faut savoir QUAND il a ete coche :
+     cette date n'est pas ecrite dans le texte (qui reste du Markdown
+     propre, modifiable a la main) mais dans une table a part, rangee
+     avec la note -- `doneAt`, cle = texte de la ligne + rang parmi les
+     doublons. Deplacer ou reformuler une ligne ne casse donc rien : une
+     ligne reformulee est simplement une nouvelle ligne cochee.
+     Les elements disparus ne sont pas effaces : ils vont dans
+     `archive` (30 jours), d'ou on peut les remettre en un geste.
+     AUTO-REMOVAL OF CHECKED ITEMS (1.159.0). A checked item is a
+     "[x] text" line. To make it vanish "the next day" we must know WHEN
+     it was checked: that date is not written into the text (which stays
+     clean, hand-editable Markdown) but in a separate table stored with
+     the note -- `doneAt`, key = the line's text + rank among duplicates.
+     Moving or rewording a line therefore breaks nothing: a reworded line
+     is just a newly checked line. Vanished items are not erased: they go
+     to `archive` (30 days), from where they can be put back in one tap.
+     ================================================================ */
+  const PURGE_MODES = ["off", "now", "midnight", "hours", "days"];
+  const ARCHIVE_DAYS = 30;
+  /* Mode « aussitot » : un court delai laisse le temps de se rattraper
+     apres un tap malheureux (re-taper la case suffit). "At once" mode: a
+     short delay leaves time to recover from a mis-tap (tapping the box
+     again is enough). */
+  const NOW_GRACE_MS = 1500;
+  const OLD_DONE_MS = 3600 * 1000;
+  const FADE_MS = 500;
+
+  function normPurge(p) {
+    const mode = p && PURGE_MODES.includes(p.mode) ? p.mode : "off";
+    const max = mode === "hours" ? 168 : 365;
+    const n = Math.max(1, Math.min(max, Math.round(Number(p && p.n)) || 1));
+    return { mode, n };
+  }
+
+  /* Lignes cochees, avec leur cle. Le rang compte uniquement les lignes
+     COCHEES de meme texte : cocher ou decocher un doublon plus haut ne
+     decale donc pas les autres. Checked lines with their key. The rank
+     only counts CHECKED lines with the same text: checking or unchecking
+     a duplicate higher up therefore doesn't shift the others. */
+  function doneEntries(text) {
+    const seen = {};
+    const out = [];
+    String(text || "").split("\n").forEach((line, idx) => {
+      const m = line.match(TASK_RE);
+      if (!m || m[1].toLowerCase() !== "x") return;
+      const body = m[2].trim();
+      const k = seen[body] = (seen[body] || 0) + 1;
+      out.push({ idx, body, key: body + "#" + (k - 1) });
+    });
+    return out;
+  }
+
+  function taskProgress(text) {
+    let done = 0, total = 0;
+    String(text || "").split("\n").forEach((line) => {
+      const m = line.match(TASK_RE);
+      if (!m) return;
+      total++;
+      if (m[1].toLowerCase() === "x") done++;
+    });
+    return { done, total };
+  }
+
+  /* Met la table des dates en phase avec le texte : une ligne cochee
+     sans date recoit `now`, une date dont la ligne n'est plus cochee est
+     retiree. Reconciles the date table with the text: a checked line with
+     no date gets `now`, a date whose line is no longer checked is dropped. */
+  function reconcileStamps(text, stamps, now) {
+    const old = stamps && typeof stamps === "object" ? stamps : {};
+    const out = {};
+    let changed = false;
+    doneEntries(text).forEach((e) => {
+      if (typeof old[e.key] === "number") out[e.key] = old[e.key];
+      else { out[e.key] = now; changed = true; }
+    });
+    if (Object.keys(old).length !== Object.keys(out).length) changed = true;
+    return { stamps: out, changed };
+  }
+
+  /* Instant de disparition d'un element coche a `doneAt`.
+     When a item checked at `doneAt` is due to vanish. */
+  function dueAt(purge, doneAt) {
+    const p = normPurge(purge);
+    if (p.mode === "now") return doneAt + NOW_GRACE_MS;
+    if (p.mode === "midnight") {
+      const d = new Date(doneAt);
+      d.setHours(24, 0, 0, 0); // minuit SUIVANT, heure locale / NEXT local midnight
+      return d.getTime();
+    }
+    if (p.mode === "hours") return doneAt + p.n * 3600 * 1000;
+    if (p.mode === "days") return doneAt + p.n * 86400 * 1000;
+    return Infinity;
+  }
+
+  function dueEntries(text, stamps, purge, now) {
+    if (normPurge(purge).mode === "off") return [];
+    return doneEntries(text).filter((e) => {
+      const t = stamps && stamps[e.key];
+      return typeof t === "number" && dueAt(purge, t) <= now;
+    });
+  }
+
+  /* Retire les elements arrives a echeance. Rend le nouveau texte, la
+     table des dates recalee sur ce texte et la liste des elements retires.
+     Removes the items that are due. Returns the new text, the date table
+     realigned on it and the removed items. */
+  function splitDue(text, stamps, purge, now) {
+    const due = dueEntries(text, stamps, purge, now);
+    if (!due.length) return { text, stamps, removed: [] };
+    const gone = new Set(due.map((e) => e.idx));
+    const stampAt = {};
+    doneEntries(text).forEach((e) => { stampAt[e.idx] = stamps[e.key]; });
+    const lines = String(text).split("\n");
+    const keptIdx = [];
+    lines.forEach((_, i) => { if (!gone.has(i)) keptIdx.push(i); });
+    const next = keptIdx.map((i) => lines[i]).join("\n");
+    const out = {};
+    doneEntries(next).forEach((e) => {
+      const was = stampAt[keptIdx[e.idx]];
+      if (typeof was === "number") out[e.key] = was;
+    });
+    return {
+      text: next,
+      stamps: out,
+      removed: due.map((e) => ({ text: e.body, doneAt: stamps[e.key] }))
+    };
+  }
+
+  /* Lignes cochees depuis plus d'une heure (a estomper).
+     Lines checked for over an hour (to fade). */
+  function oldLines(text, stamps, now) {
+    const s = new Set();
+    doneEntries(text).forEach((e) => {
+      const t = stamps && stamps[e.key];
+      if (typeof t === "number" && now - t >= OLD_DONE_MS) s.add(e.idx);
+    });
+    return s;
+  }
+
+  /* Prochain instant ou il faut se reveiller (disparition ou passage au
+     « estompe »), ou Infinity. Next moment to wake up at (a disappearance
+     or a switch to "faded"), or Infinity. */
+  function nextWake(notes, now, dim) {
+    let best = Infinity;
+    notes.forEach((n) => {
+      const p = normPurge(n.purge);
+      doneEntries(n.text).forEach((e) => {
+        const t = n.doneAt && n.doneAt[e.key];
+        if (typeof t !== "number") return;
+        if (p.mode !== "off") best = Math.min(best, dueAt(p, t));
+        if (dim && t + OLD_DONE_MS > now) best = Math.min(best, t + OLD_DONE_MS);
+      });
+    });
+    return best;
+  }
+
+  function expireArchive(archive, now) {
+    const limit = now - ARCHIVE_DAYS * 86400 * 1000;
+    return (archive || []).filter((a) => typeof a.goneAt !== "number" || a.goneAt >= limit);
   }
 
   /* Couleurs de note : tres pales, pour distinguer un onglet de son voisin
@@ -78,7 +247,14 @@
       id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
       text: "",
       color: "none",
-      updatedAt: null
+      updatedAt: null,
+      // Disparition des elements coches (1.159.0) : reglage PROPRE a la
+      // note, dates de cochage et archive des elements disparus.
+      // Auto-removal of checked items (1.159.0): setting OWN to the note,
+      // check dates and archive of the vanished items.
+      purge: { mode: "off", n: 1 },
+      doneAt: {},
+      archive: []
     };
   }
 
@@ -141,19 +317,31 @@
             <button type="button" class="pwn-bar-btn pwn-bar-wide" data-act="normal" title="${i18n.t("notes.toolNormal")}" aria-label="${i18n.t("notes.toolNormal")}">${i18n.t("notes.toolNormalShort")}</button>
             <span class="pwn-bar-sep"></span>
             <button type="button" class="pwn-bar-btn pwn-bar-color" data-act="color" title="${i18n.t("notes.toolColor")}" aria-label="${i18n.t("notes.toolColor")}"><i></i></button>
+            <button type="button" class="pwn-bar-btn pwn-bar-purge" data-act="purge" title="${i18n.t("notes.toolPurge")}" aria-label="${i18n.t("notes.toolPurge")}">&#9203;</button>
             <button type="button" class="pwn-bar-btn" data-act="newNote" title="${i18n.t("notes.toolNewNote")}" aria-label="${i18n.t("notes.toolNewNote")}">+</button>
             <button type="button" class="pwn-bar-btn pwn-bar-del" data-act="deleteNote" title="${i18n.t("notes.toolDeleteNote")}" aria-label="${i18n.t("notes.toolDeleteNote")}">&#128465;</button>
           </div>
           <div class="pwn-palette" hidden></div>
+          <div class="pwn-purge" hidden></div>
           <div class="pwn-tabs" hidden></div>
           <div class="pwn-view"></div>
+          <div class="pwn-archive" hidden></div>
           <textarea class="pwn-edit" spellcheck="false" hidden></textarea>
+          <div class="pwn-sub" hidden><span class="pwn-prog"></span><button type="button" class="pwn-arch-btn" hidden></button></div>
           <div class="pwn-foot"><span class="pwn-meta"></span><span class="pwn-status"></span></div>
         </div>`;
       this.root = this.ctx.el.querySelector(".pw-notes");
       this.bar = this.ctx.el.querySelector(".pwn-bar");
       this.tabs = this.ctx.el.querySelector(".pwn-tabs");
       this.palette = this.ctx.el.querySelector(".pwn-palette");
+      this.purgeRow = this.ctx.el.querySelector(".pwn-purge");
+      this.archive = this.ctx.el.querySelector(".pwn-archive");
+      this.sub = this.ctx.el.querySelector(".pwn-sub");
+      this.prog = this.ctx.el.querySelector(".pwn-prog");
+      this.archBtn = this.ctx.el.querySelector(".pwn-arch-btn");
+      this.archiveOpen = false;
+      this.tickTimer = null;
+      this.sweepTimer = null;
       this.view = this.ctx.el.querySelector(".pwn-view");
       this.edit = this.ctx.el.querySelector(".pwn-edit");
       this.meta = this.ctx.el.querySelector(".pwn-meta");
@@ -182,7 +370,11 @@
           id: n.id || newNote().id,
           text: typeof n.text === "string" ? n.text : "",
           color: NOTE_COLORS.includes(n.color) ? n.color : "none",
-          updatedAt: n.updatedAt || null
+          updatedAt: n.updatedAt || null,
+          purge: normPurge(n.purge),
+          doneAt: n.doneAt && typeof n.doneAt === "object" ? n.doneAt : {},
+          archive: Array.isArray(n.archive)
+            ? n.archive.filter((a) => a && typeof a.text === "string") : []
         }));
         this.activeId = saved.notes.some((n) => n.id === saved.activeId) ? saved.activeId : this.notes[0].id;
       } else {
@@ -220,6 +412,29 @@
         }, 800);
       });
 
+      // Pastille « Terminees (N) » et panneau d'archive. stopPropagation :
+      // meme raison que la vue (un clic rouvrirait les reglages de la
+      // tuile en mode edition). "Done (N)" pill and archive panel.
+      // stopPropagation: same reason as the view.
+      this.archBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.archiveOpen ? this.closeArchive() : this.openArchive();
+      });
+      this.archive.addEventListener("click", (e) => this.onArchiveClick(e));
+      // pointerdown + preventDefault : meme raison que la palette.
+      // pointerdown + preventDefault: same reason as the palette.
+      this.purgeRow.addEventListener("pointerdown", (e) => {
+        const b = e.target.closest("button");
+        if (!b) return;
+        e.preventDefault();
+        e.stopPropagation();
+        if (b.dataset.mode) this.setPurge({ mode: b.dataset.mode });
+        else if (b.dataset.step) {
+          const p = normPurge(this.note && this.note.purge);
+          this.setPurge({ n: p.n + Number(b.dataset.step) });
+        }
+      });
+
       this.observer = new ResizeObserver(() => this.fit());
       this.observer.observe(this.ctx.el);
 
@@ -231,7 +446,34 @@
       // note's color class must be re-applied afterwards, otherwise it
       // would silently disappear.
       this.applyNoteColor();
+      // Les dates de cochage sont posees maintenant pour les lignes deja
+      // cochees (elles datent donc d'aujourd'hui : rien ne disparait d'un
+      // coup a la mise a jour). N'ecrit en base que si une fonction qui
+      // en a besoin est active -- un bloc-notes jamais touche reste intact.
+      // Check dates are set now for lines that are already checked (so
+      // they date from today: nothing vanishes at once on upgrade). Only
+      // writes to storage if a feature needing them is on.
+      if (this.needsStamps() && this.reconcileAll()) this.persist();
       this.render();
+      this.sweep();
+      this.scheduleTick();
+    }
+
+    needsStamps() {
+      return !!this.ctx.settings.dimOldDone || this.notes.some((n) => normPurge(n.purge).mode !== "off");
+    }
+
+    reconcileNote(n, now) {
+      const r = reconcileStamps(n.text, n.doneAt, now || Date.now());
+      if (r.changed) n.doneAt = r.stamps;
+      return r.changed;
+    }
+
+    reconcileAll() {
+      const now = Date.now();
+      let changed = false;
+      this.notes.forEach((n) => { if (this.reconcileNote(n, now)) changed = true; });
+      return changed;
     }
 
     applySettings() {
@@ -375,7 +617,14 @@
       if (act === "deleteNote") return this.deleteNote();
       if (act === "color") {
         this.palette.hidden = !this.palette.hidden;
+        this.purgeRow.hidden = true;
         if (!this.palette.hidden) this.renderPalette();
+        return;
+      }
+      if (act === "purge") {
+        this.purgeRow.hidden = !this.purgeRow.hidden;
+        this.palette.hidden = true;
+        if (!this.purgeRow.hidden) this.renderPurge();
         return;
       }
 
@@ -457,6 +706,7 @@
       // before switching notes: without this, text typed since the last
       // debounced save (800 ms) would be lost when changing tabs.
       if (this.editing) this.stopEdit();
+      this.closeArchive(false);
       this.activeId = id;
       this.applyNoteColor();
       this.render();
@@ -464,6 +714,7 @@
 
     addNote() {
       if (this.editing) this.stopEdit();
+      this.closeArchive(false);
       const n = newNote();
       this.notes.push(n);
       this.activeId = n.id;
@@ -482,9 +733,13 @@
       const cur = this.note;
       if (!cur) return;
       if (!window.confirm(this.ctx.i18n.t("notes.confirmDelete"))) return;
+      this.closeArchive(false);
       if (this.notes.length === 1) {
         cur.text = "";
         cur.color = "none";
+        cur.purge = normPurge();
+        cur.doneAt = {};
+        cur.archive = [];
       } else {
         const i = this.notes.indexOf(cur);
         this.notes.splice(i, 1);
@@ -564,8 +819,15 @@
       this.edit.hidden = true;
       this.bar.hidden = true;
       this.palette.hidden = true;
+      this.purgeRow.hidden = true;
       this.view.hidden = false;
       this.render();
+      // Rien ne disparait sous les doigts de l'utilisateur pendant qu'il
+      // ecrit : les echeances manquees sont traitees des la sortie.
+      // Nothing vanishes under the user's fingers while typing: missed
+      // deadlines are handled as soon as editing ends.
+      this.sweep();
+      this.scheduleTick();
     }
 
     toggleTask(lineIdx) {
@@ -577,21 +839,38 @@
       this.text = lines.join("\n");
       this.save();
       this.render();
+      this.sweep();
+      this.scheduleTick();
+    }
+
+    async write() {
+      await this.ctx.api.state.put(this.key, {
+        notes: this.notes,
+        activeId: this.activeId,
+        // Conserve pour d'eventuels lecteurs restes sur l'ancien format :
+        // la note active y reste lisible telle quelle. Kept for any
+        // reader still on the old format: the active note stays
+        // readable there as-is.
+        text: this.text,
+        updatedAt: this.updatedAt
+      });
+    }
+
+    /* Ecriture silencieuse : ne touche ni a l'horodatage « modifie » ni
+       au statut. Sert aux changements que l'utilisateur n'a pas faits
+       lui-meme (disparition automatique, dates de cochage).
+       Silent write: touches neither the "updated" timestamp nor the
+       status. Used for changes the user didn't make himself (automatic
+       removal, check dates). */
+    async persist() {
+      try { await this.write(); } catch (e) { /* le prochain essai suffira / next try will do */ }
     }
 
     async save() {
       this.updatedAt = new Date().toISOString();
+      if (this.note) this.reconcileNote(this.note);
       try {
-        await this.ctx.api.state.put(this.key, {
-          notes: this.notes,
-          activeId: this.activeId,
-          // Conserve pour d'eventuels lecteurs restes sur l'ancien format :
-          // la note active y reste lisible telle quelle. Kept for any
-          // reader still on the old format: the active note stays
-          // readable there as-is.
-          text: this.text,
-          updatedAt: this.updatedAt
-        });
+        await this.write();
         this.status.textContent = this.ctx.i18n.t("notes.saved");
         setTimeout(() => { if (this.status) this.status.textContent = ""; }, 2000);
       } catch (e) {
@@ -623,11 +902,210 @@
       // texte. Tabs are redrawn on every render: their label is derived
       // from the note's first line, so it must follow the text.
       this.renderTabs();
+      const dim = !!this.ctx.settings.dimOldDone && this.note;
+      const old = dim ? oldLines(this.text, this.note.doneAt, Date.now()) : null;
+      this.oldKey = old ? Array.from(old).join(",") : "";
       this.view.innerHTML = this.text.trim() === ""
         ? `<div class="pwn-line pwn-hint">${this.ctx.i18n.t("notes.placeholder")}</div>`
-        : renderLines(this.text);
+        : renderLines(this.text, old);
+      this.renderSub();
+      if (this.archiveOpen) this.renderArchive();
+      this.updatePurgeBtn();
+      if (!this.purgeRow.hidden) this.renderPurge();
       this.renderMeta();
       this.fit();
+    }
+
+    /* ---------- Progression et pastille « Terminees » ---------- */
+    renderSub() {
+      const i18n = this.ctx.i18n;
+      const p = taskProgress(this.text);
+      const showProg = this.ctx.settings.showProgress !== false && p.total > 0;
+      this.prog.textContent = showProg
+        ? i18n.t("notes.progress").replace("{done}", p.done).replace("{total}", p.total) : "";
+      const n = this.note ? this.note.archive.length : 0;
+      this.archBtn.hidden = n === 0 && !this.archiveOpen;
+      this.archBtn.textContent = this.archiveOpen
+        ? i18n.t("notes.archive.close") : i18n.t("notes.doneBtn").replace("{n}", n);
+      this.sub.hidden = !showProg && this.archBtn.hidden;
+    }
+
+    /* ---------- Disparition automatique / auto-removal ---------- */
+    updatePurgeBtn() {
+      const b = this.bar.querySelector(".pwn-bar-purge");
+      if (b) b.classList.toggle("pwn-bar-on", !!this.note && normPurge(this.note.purge).mode !== "off");
+    }
+
+    /* Meme principe que la palette : une rangee INTERNE a la tuile, des
+       boutons (et non un <select>) pour que le focus reste dans le
+       <textarea> -- voir wireToolbar().
+       Same principle as the palette: a row INSIDE the tile, buttons (not
+       a <select>) so focus stays in the <textarea> -- see wireToolbar(). */
+    renderPurge() {
+      const t = (k) => this.ctx.i18n.t(k);
+      const p = normPurge(this.note && this.note.purge);
+      const modes = ["off", "now", "midnight", "hours", "days"];
+      const chips = modes.map((m) =>
+        `<button type="button" class="pwn-chip${p.mode === m ? " pwn-chip-on" : ""}" data-mode="${m}">${t("notes.purge." + m)}</button>`
+      ).join("");
+      const step = (p.mode === "hours" || p.mode === "days")
+        ? `<span class="pwn-step"><button type="button" class="pwn-chip" data-step="-1" aria-label="${t("notes.purge.less")}">&minus;</button><b>${p.n}</b><i>${t(p.mode === "hours" ? "notes.purge.unitH" : "notes.purge.unitD")}</i><button type="button" class="pwn-chip" data-step="1" aria-label="${t("notes.purge.more")}">+</button></span>`
+        : "";
+      const sum = t("notes.purge.sum." + p.mode).replace("{n}", p.n);
+      this.purgeRow.innerHTML =
+        `<span class="pwn-purge-lbl">${t("notes.purge.label")}</span>${chips}${step}<div class="pwn-purge-sum">${sum}</div>`;
+    }
+
+    setPurge(patch) {
+      const n = this.note;
+      if (!n) return;
+      n.purge = normPurge(Object.assign({}, n.purge, patch));
+      this.reconcileNote(n);
+      this.save();
+      this.renderPurge();
+      this.updatePurgeBtn();
+      this.scheduleTick();
+    }
+
+    /* Marque les lignes arrivees a echeance (fondu), puis les retire
+       quand le fondu est fini. Jamais pendant la saisie.
+       Marks the lines that are due (fade), then removes them once the
+       fade is over. Never while typing. */
+    sweep() {
+      if (this.editing || this.sweepTimer) return;
+      const now = Date.now();
+      const act = this.note;
+      const hasDue = this.notes.some((n) => dueEntries(n.text, n.doneAt, n.purge, now).length);
+      if (!hasDue) { this.trimArchives(now); return; }
+      let delay = 0;
+      if (act && !this.archiveOpen && !this.view.hidden && !this.reducedMotion()) {
+        const due = dueEntries(act.text, act.doneAt, act.purge, now);
+        due.forEach((e) => {
+          const row = this.view.querySelector('.pwn-line[data-row="' + e.idx + '"]');
+          if (row) {
+            row.style.maxHeight = row.offsetHeight + "px";
+            void row.offsetHeight; // fige le point de depart / pins the starting point
+            row.classList.add("pwn-leaving");
+            row.style.maxHeight = "0px";
+            delay = FADE_MS;
+          }
+        });
+      }
+      if (!delay) { this.commitPurge(); return; }
+      this.sweepTimer = setTimeout(() => { this.sweepTimer = null; this.commitPurge(); }, delay);
+    }
+
+    reducedMotion() {
+      try { return !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }
+      catch (e) { return false; }
+    }
+
+    trimArchives(now) {
+      let changed = false;
+      this.notes.forEach((n) => {
+        const kept = expireArchive(n.archive, now);
+        if (kept.length !== n.archive.length) { n.archive = kept; changed = true; }
+      });
+      if (changed) { this.persist(); this.renderSub(); if (this.archiveOpen) this.renderArchive(); }
+    }
+
+    commitPurge() {
+      if (this.editing) return; // reprendra a la sortie d'edition / resumes when editing ends
+      const now = Date.now();
+      let changed = false;
+      this.notes.forEach((n) => {
+        const r = splitDue(n.text, n.doneAt, n.purge, now);
+        if (!r.removed.length) return;
+        n.text = r.text;
+        n.doneAt = r.stamps;
+        r.removed.forEach((x) => n.archive.push({ text: x.text, doneAt: x.doneAt, goneAt: now }));
+        changed = true;
+      });
+      this.notes.forEach((n) => { n.archive = expireArchive(n.archive, now); });
+      if (changed) { this.persist(); this.render(); }
+      else this.renderSub();
+    }
+
+    /* Un seul minuteur, reprogramme apres chaque passage : au plus tard
+       dans la minute (reveil de veille, changement d'heure), plus tot si
+       une echeance approche.
+       A single timer, rescheduled after each pass: within a minute at the
+       latest (wake from sleep, clock changes), sooner if a deadline is
+       near. */
+    scheduleTick() {
+      clearTimeout(this.tickTimer);
+      const wake = nextWake(this.notes, Date.now(), !!this.ctx.settings.dimOldDone);
+      const delay = isFinite(wake) ? Math.min(60000, Math.max(1000, wake - Date.now())) : 60000;
+      this.tickTimer = setTimeout(() => this.tick(), delay);
+    }
+
+    tick() {
+      this.sweep();
+      if (this.ctx.settings.dimOldDone && !this.editing && !this.archiveOpen && this.note) {
+        const key = Array.from(oldLines(this.text, this.note.doneAt, Date.now())).join(",");
+        if (key !== this.oldKey) this.render();
+      }
+      this.scheduleTick();
+    }
+
+    /* ---------- Archive « Terminees » ---------- */
+    openArchive() {
+      if (this.editing) this.stopEdit();
+      this.archiveOpen = true;
+      this.view.hidden = true;
+      this.archive.hidden = false;
+      // Un peu plus petit que la note : c'est une liste de consultation.
+      // A little smaller than the note: it is a lookup list.
+      this.archive.style.fontSize = Math.max(MIN_FONT_PX, Math.round((parseFloat(this.view.style.fontSize) || 16) * 0.8)) + "px";
+      this.renderArchive();
+      this.renderSub();
+    }
+
+    closeArchive(rerender) {
+      if (!this.archiveOpen) return;
+      this.archiveOpen = false;
+      this.archive.hidden = true;
+      this.view.hidden = false;
+      if (rerender !== false) this.render();
+    }
+
+    renderArchive() {
+      const i18n = this.ctx.i18n;
+      const items = this.note ? this.note.archive : [];
+      const locale = i18n.lang === "fr" ? "fr-FR" : "en-GB";
+      const rows = items.map((a, i) => {
+        const when = typeof a.doneAt === "number"
+          ? new Date(a.doneAt).toLocaleString(locale, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+          : "";
+        return { i, html: `<div class="pwn-arch-item"><span class="pwn-arch-text">${inline(a.text)}</span><span class="pwn-arch-when">${escapeHtml(when)}</span><button type="button" class="pwn-chip" data-arch="restore" data-i="${i}" title="${i18n.t("notes.archive.restore")}" aria-label="${i18n.t("notes.archive.restore")}">&#8617;</button></div>` };
+      }).reverse().map((r) => r.html).join("");
+      this.archive.innerHTML =
+        `<div class="pwn-arch-head"><b>${i18n.t("notes.archive.title")}</b>${items.length ? `<button type="button" class="pwn-chip" data-arch="clear">${i18n.t("notes.archive.clear")}</button>` : ""}</div>` +
+        `<div class="pwn-arch-hint">${i18n.t("notes.archive.hint").replace("{n}", ARCHIVE_DAYS)}</div>` +
+        (items.length ? rows : `<div class="pwn-arch-empty">${i18n.t("notes.archive.empty")}</div>`);
+    }
+
+    onArchiveClick(e) {
+      e.stopPropagation();
+      const b = e.target.closest("[data-arch]");
+      const n = this.note;
+      if (!b || !n) return;
+      if (b.dataset.arch === "restore") {
+        const a = n.archive[Number(b.dataset.i)];
+        if (!a) return;
+        n.archive.splice(Number(b.dataset.i), 1);
+        // Remis NON coche, en fin de note : on le retrouve la ou on
+        // ajoute d'habitude. Put back UNCHECKED, at the end of the note.
+        n.text += (!n.text || n.text.endsWith("\n") ? "" : "\n") + "[ ] " + a.text;
+        this.save();
+        this.render();
+        this.scheduleTick();
+      } else if (b.dataset.arch === "clear") {
+        if (!window.confirm(this.ctx.i18n.t("notes.archive.confirmClear"))) return;
+        n.archive = [];
+        this.save();
+        this.render();
+      }
     }
 
     /* Taille du texte : auto-ajustee par dichotomie, sinon taille fixe
@@ -677,16 +1155,32 @@
       // note's color class must be re-applied afterwards, otherwise it
       // would silently disappear.
       this.applyNoteColor();
+      if (this.needsStamps() && this.reconcileAll()) this.persist();
       this.render();
+      this.scheduleTick();
     }
 
     onLangChanged() { this.render(); }
 
     destroy() {
       clearTimeout(this.saveTimer);
+      clearTimeout(this.tickTimer);
+      clearTimeout(this.sweepTimer);
       if (this.observer) this.observer.disconnect();
     }
   }
+
+  NotesWidget._normPurge = normPurge;
+  NotesWidget._doneEntries = doneEntries;
+  NotesWidget._reconcileStamps = reconcileStamps;
+  NotesWidget._dueAt = dueAt;
+  NotesWidget._dueEntries = dueEntries;
+  NotesWidget._splitDue = splitDue;
+  NotesWidget._oldLines = oldLines;
+  NotesWidget._nextWake = nextWake;
+  NotesWidget._expireArchive = expireArchive;
+  NotesWidget._taskProgress = taskProgress;
+  NotesWidget._NOW_GRACE_MS = NOW_GRACE_MS;
 
   window.PiBoard.registerWidget("notes", NotesWidget);
 })();

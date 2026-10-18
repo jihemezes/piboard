@@ -32,6 +32,31 @@
 
 # Nouveautes / What's new
 
+## 1.159.0
+
+**Les éléments cochés peuvent disparaître tout seuls**
+
+Dans une liste à cocher du Bloc-notes, un élément fait ne reste plus forcément barré
+pour toujours. Le nouveau **sablier** de la barre d'outils fait disparaître les
+éléments cochés **aussitôt**, **à minuit**, ou **après un certain nombre d'heures ou
+de jours** — et ce **note par note** : votre liste de courses se nettoie pendant que
+votre pense-bête garde tout. Rien n'est perdu : les éléments disparus vont dans une
+archive (« Terminées »), d'où on les remet dans la liste d'un geste, pendant 30 jours.
+Deux petits plus : une **progression** « 5/8 faites » sous la note, et la possibilité
+d'**estomper** les éléments cochés depuis plus d'une heure.
+
+---
+
+**Checked items can vanish by themselves**
+
+In a Notes checklist, a finished item no longer has to stay struck through forever. The
+new **hourglass** in the toolbar makes checked items disappear **at once**, **at
+midnight**, or **after a number of hours or days** — **note by note**: your shopping list
+tidies itself while your reminder keeps everything. Nothing is lost: vanished items go to
+an archive ("Done"), from where you can put them back in the list in one tap, for 30
+days. Two small extras: a **"5/8 done" progress** line under the note, and the option to
+**fade** items checked for more than an hour.
+
 ## 1.158.0
 
 **Des effets pour la tuile Texte**

@@ -1,14 +1,14 @@
 {
   "id": "notes",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "name": {
     "en": "Notes",
     "fr": "Bloc-notes"
   },
   "titleBar": true,
   "description": {
-    "en": "Notepad with light Markdown, interactive checklists, sticky-note colors and auto-fitting text. Saved on the server, shared by all screens.",
-    "fr": "Bloc-notes avec Markdown léger, listes à cocher interactives, couleurs post-it et texte auto-ajusté. Enregistré sur le serveur, partagé entre les écrans."
+    "en": "Notepad with light Markdown, interactive checklists, optional automatic disappearance of checked items (per note, with a recoverable archive), sticky-note colors and auto-fitting text. Saved on the server, shared by all screens.",
+    "fr": "Bloc-notes avec Markdown léger, listes à cocher interactives, disparition automatique (facultative, par note) des éléments cochés avec archive récupérable, couleurs post-it et texte auto-ajusté. Enregistré sur le serveur, partagé entre les écrans."
   },
   "tagline": {
     "en": "Notepad with checklists and light formatting.",
@@ -121,6 +121,32 @@
       "label": {
         "en": "Show timestamp and word count",
         "fr": "Afficher l'horodatage et le compteur de mots"
+      }
+    },
+    {
+      "key": "showProgress",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show the \"done / total\" progress under the note",
+        "fr": "Afficher la progression « faites / total » sous la note"
+      },
+      "hint": {
+        "fr": "Par exemple « 5/8 faites » : une ligne discrète qui n'apparaît que si la note contient des cases à cocher.",
+        "en": "For example \"5/8 done\": a discreet line that only appears when the note contains checkboxes."
+      }
+    },
+    {
+      "key": "dimOldDone",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Fade items checked for more than an hour",
+        "fr": "Estomper les cases cochées depuis plus d'une heure"
+      },
+      "hint": {
+        "fr": "Les éléments faits récemment restent bien lisibles, les plus anciens s'effacent peu à peu en attendant leur disparition éventuelle.",
+        "en": "Recently done items stay easy to read; older ones fade while waiting for their possible disappearance."
       }
     }
   ]

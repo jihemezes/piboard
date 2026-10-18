@@ -358,3 +358,127 @@ body.touch .pwn-swatch { width: 28px; height: 28px; }
   display: block;
 }
 body.touch .pwn-bar-color i { width: 16px; height: 16px; }
+
+/* ============================================================
+   DISPARITION DES ELEMENTS COCHES (1.159.0)
+   Reglage par note (rangee .pwn-purge, ouverte par le sablier de la
+   barre d'outils), progression et pastille « Terminees (N) » sous la
+   note, panneau d'archive qui prend la place de la vue.
+   AUTO-REMOVAL OF CHECKED ITEMS (1.159.0)
+   Per-note setting (.pwn-purge row, opened by the toolbar's hourglass),
+   progress and "Done (N)" pill under the note, archive panel that takes
+   the view's place.
+   ============================================================ */
+.pwn-bar-on { color: var(--accent); border-color: var(--accent); }
+
+.pwn-purge {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex-shrink: 0;
+  padding: 4px 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.pwn-purge[hidden] { display: none; }
+.pwn-purge-lbl { margin-right: 2px; }
+.pwn-purge-sum { flex-basis: 100%; font-size: 11px; color: var(--faint); }
+
+/* Boutons de la rangee et du panneau : meme famille que la barre.
+   Buttons of the row and of the panel: same family as the toolbar. */
+.pwn-chip {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 8px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 999px;
+  background: var(--field-bg);
+  color: var(--muted);
+  font: inherit;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+}
+.pwn-chip:hover { color: var(--accent); border-color: var(--accent); }
+.pwn-chip-on { color: var(--accent); border-color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent); }
+.pwn-step { display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; }
+.pwn-step b { min-width: 2ch; text-align: center; color: var(--text); font-variant-numeric: tabular-nums; }
+.pwn-step i { font-style: normal; margin-right: 2px; }
+body.touch .pwn-chip { height: 32px; min-width: 32px; font-size: 13.5px; }
+
+/* Progression + pastille / progress + pill */
+.pwn-sub {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  min-height: 18px;
+  padding-top: 2px;
+  font-size: 11px;
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+}
+.pwn-sub[hidden] { display: none; }
+.pwn-arch-btn {
+  margin-left: auto;
+  padding: 1px 8px;
+  border: 1px solid var(--tile-edge);
+  border-radius: 999px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pwn-arch-btn:hover { color: var(--accent); border-color: var(--accent); }
+.pwn-arch-btn[hidden] { display: none; }
+body.touch .pwn-arch-btn { padding: 4px 12px; font-size: 12.5px; }
+
+/* Panneau d'archive / archive panel */
+.pwn-archive {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  line-height: 1.4;
+}
+.pwn-archive[hidden] { display: none; }
+.pwn-arch-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 2px; }
+.pwn-arch-hint { font-size: 0.7em; color: var(--faint); margin-bottom: 6px; }
+.pwn-arch-empty { color: var(--faint); }
+.pwn-arch-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 3px 0;
+  border-top: 1px solid var(--tile-edge);
+}
+.pwn-arch-text { flex: 1; min-width: 0; overflow-wrap: anywhere; color: var(--muted); text-decoration: line-through; text-decoration-color: var(--faint); }
+.pwn-arch-when { flex-shrink: 0; font-size: 0.7em; color: var(--faint); font-variant-numeric: tabular-nums; }
+
+/* Fondu puis repli d'une ligne qui disparait. widget.js fixe d'abord
+   la hauteur actuelle en max-height (une transition ne sait pas partir de
+   « none »), puis la ramene a 0.
+   Fade then fold of a line that vanishes. widget.js first pins the current
+   height as max-height (a transition can't start from "none"), then
+   brings it back to 0. */
+.pwn-view .pwn-leaving {
+  opacity: 0;
+  max-height: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  overflow: hidden;
+  transition: opacity 0.35s ease, max-height 0.5s ease 0.1s;
+}
+
+/* Elements coches depuis longtemps, estompes (reglage dimOldDone).
+   Items checked a long time ago, faded (dimOldDone setting). */
+.pwn-task.pwn-old { opacity: 0.45; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pwn-view .pwn-leaving { transition: none; }
+}
