@@ -4,10 +4,26 @@
    Every class is prefixed .pw-text: project rule, an unscoped class
    eventually collides with another tile's. */
 .pw-text {
+  position: relative;
   width: 100%;
   height: 100%;
-  display: flex;
   overflow: hidden;
+}
+/* La boite d'orientation porte le miroir et la rotation, et l'alignement
+   du texte : c'est elle qui remplit la tuile (ou, pour 90/270 degres,
+   dont les dimensions sont echangees par widget.js).
+   The orientation box carries mirror, rotation and text alignment: it
+   fills the tile (or, for 90/270 degrees, has its dimensions swapped by
+   widget.js). */
+.pw-text-orient {
+  position: absolute;
+  inset: 0;
+  display: flex;
+}
+.pw-text-orient.pw-text-turned {
+  inset: auto;
+  left: 50%;
+  top: 50%;
 }
 .pw-text-inner {
   width: 100%;
@@ -34,12 +50,201 @@
 .pw-text.pw-text-shadow .pw-text-inner { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.55); }
 
 /* Positions horizontale et verticale / horizontal and vertical positions */
-.pw-text-h-left { justify-content: flex-start; }
-.pw-text-h-center { justify-content: center; }
-.pw-text-h-right { justify-content: flex-end; }
-.pw-text-v-top { align-items: flex-start; }
-.pw-text-v-middle { align-items: center; }
-.pw-text-v-bottom { align-items: flex-end; }
+.pw-text-h-left .pw-text-orient { justify-content: flex-start; }
+.pw-text-h-center .pw-text-orient { justify-content: center; }
+.pw-text-h-right .pw-text-orient { justify-content: flex-end; }
+.pw-text-v-top .pw-text-orient { align-items: flex-start; }
+.pw-text-v-middle .pw-text-orient { align-items: center; }
+.pw-text-v-bottom .pw-text-orient { align-items: flex-end; }
 .pw-text-h-left .pw-text-inner { text-align: left; }
 .pw-text-h-center .pw-text-inner { text-align: center; }
 .pw-text-h-right .pw-text-inner { text-align: right; }
+
+/* ============================================================
+   EFFETS (1.158.0)
+   Chaque effet vit sur son propre element pour que `transform`,
+   `filter` et `animation` ne s'ecrasent jamais. Les durees, sens et
+   perspectives viennent de variables posees par widget.js sur
+   `.pw-text-inner`. Tout s'arrete si l'ordinateur demande de reduire
+   les animations.
+   EFFECTS (1.158.0). Each effect lives on its own element so
+   `transform`, `filter` and `animation` never overwrite one another.
+   Durations, directions and perspectives come from variables set by
+   widget.js on `.pw-text-inner`. Everything stops when the computer asks
+   to reduce motion.
+   ============================================================ */
+
+/* ---- Animations reprises de la tuile Logo / Image ---- */
+.pw-text-anim-spinY .pw-text-inner { animation: pwtx-spiny var(--pwt-dur, 8s) linear infinite var(--pwt-dir, normal); }
+.pw-text-anim-spinX .pw-text-inner { animation: pwtx-spinx var(--pwt-dur, 8s) linear infinite var(--pwt-dir, normal); }
+.pw-text-anim-breathe .pw-text-inner { animation: pwtx-breathe var(--pwt-dur, 8s) ease-in-out infinite var(--pwt-alt, alternate); }
+.pw-text-anim-float .pw-text-inner { animation: pwtx-float var(--pwt-dur, 8s) ease-in-out infinite var(--pwt-alt, alternate); }
+.pw-text-anim-glow .pw-text-inner { animation: pwtx-glow var(--pwt-dur, 8s) ease-in-out infinite var(--pwt-alt, alternate); }
+
+/* Brillance et degrade : le texte est peint par son fond.
+   Shine and gradient: the text is painted through its background. */
+.pw-text-clip {
+  width: fit-content;
+  max-width: 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+/* DEUX couches : la couleur du texte, fixe, dessous ; la bande claire,
+   qui traverse, dessus. Une seule couche degradee laissait le texte
+   transparent partout ou la bande n'etait pas.
+   TWO layers: the text colour, fixed, underneath; the light band,
+   sweeping, on top. A single gradient layer left the text transparent
+   wherever the band was not. */
+.pw-text-anim-shine .pw-text-inner {
+  background-image: linear-gradient(105deg, transparent 38%, #ffffff 50%, transparent 62%),
+    linear-gradient(var(--pwt-c, currentColor), var(--pwt-c, currentColor));
+  background-size: 250% 100%, 100% 100%;
+  background-repeat: no-repeat;
+  animation: pwtx-shine var(--pwt-dur, 8s) ease-in-out infinite var(--pwt-dir, normal);
+}
+.pw-text-anim-gradient .pw-text-inner {
+  background-size: 200% 100%;
+  animation: pwtx-grad var(--pwt-dur, 8s) linear infinite var(--pwt-dir, normal);
+}
+
+@keyframes pwtx-spiny {
+  from { transform: var(--pwt-persp, scale(1)) rotateY(0deg) scale(var(--pwt-fit, 1)); }
+  to { transform: var(--pwt-persp, scale(1)) rotateY(360deg) scale(var(--pwt-fit, 1)); }
+}
+@keyframes pwtx-spinx {
+  from { transform: var(--pwt-persp, scale(1)) rotateX(0deg) scale(var(--pwt-fit, 1)); }
+  to { transform: var(--pwt-persp, scale(1)) rotateX(360deg) scale(var(--pwt-fit, 1)); }
+}
+@keyframes pwtx-breathe {
+  from { transform: scale(.94); }
+  to { transform: scale(1.04); }
+}
+@keyframes pwtx-float {
+  from { transform: translateY(6%); filter: drop-shadow(0 4px 4px rgba(0, 0, 0, .18)); }
+  to { transform: translateY(-8%); filter: drop-shadow(0 14px 10px rgba(0, 0, 0, .10)); }
+}
+@keyframes pwtx-glow {
+  from { filter: drop-shadow(0 0 0 rgba(0, 0, 0, 0)) drop-shadow(0 0 0 rgba(0, 0, 0, 0)); }
+  to { filter: drop-shadow(0 0 .3em var(--accent, #ffb703)) drop-shadow(0 0 .08em var(--accent, #ffb703)); }
+}
+@keyframes pwtx-shine {
+  0% { background-position: 160% 0, 0 0; }
+  35%, 100% { background-position: -60% 0, 0 0; }
+}
+@keyframes pwtx-grad {
+  from { background-position: 0% 0; }
+  to { background-position: 100% 0; }
+}
+
+/* ---- Animations propres au texte : lettres ---- */
+.pw-text-ch { display: inline-block; position: relative; white-space: pre; }
+
+/* Machine a ecrire : chaque lettre apparait d'un coup a son tour ; un
+   curseur suit la derniere lettre apparue, puis clignote.
+   Typewriter: each letter appears at once in turn; a caret follows the
+   last letter shown, then blinks. */
+.pw-text-anim-typewriter .pw-text-ch { opacity: 0; }
+.pw-text-anim-typewriter .pw-text-run .pw-text-ch {
+  animation: pwtx-on .01s steps(1, end) forwards;
+  animation-delay: calc(var(--i) * var(--pwt-step, .1s));
+}
+.pw-text-anim-typewriter .pw-text-ch::after {
+  content: "";
+  position: absolute;
+  right: -.04em;
+  top: .1em;
+  bottom: .1em;
+  width: .07em;
+  background: var(--pwt-c, currentColor);
+  opacity: 0;
+}
+.pw-text-anim-typewriter .pw-text-run .pw-text-ch::after {
+  animation: pwtx-caret var(--pwt-step, .1s) steps(1, end) forwards;
+  animation-delay: calc(var(--i) * var(--pwt-step, .1s));
+}
+.pw-text-anim-typewriter .pw-text-run .pw-text-last::after {
+  animation: pwtx-blink 1s steps(1, end) infinite;
+  animation-delay: calc(var(--i) * var(--pwt-step, .1s));
+}
+@keyframes pwtx-on { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pwtx-caret { from { opacity: 1; } to { opacity: 0; } }
+@keyframes pwtx-blink { 0%, 50% { opacity: 1; } 50.01%, 100% { opacity: 0; } }
+
+/* Arrivee des lettres : chacune arrive a son tour. Le style
+   (montee, descente, zoom, fondu, bascule) vient de --pwt-arr.
+   Letter arrival: each one arrives in turn. The style comes from
+   --pwt-arr. */
+.pw-text-anim-arrive .pw-text-ch { opacity: 0; }
+.pw-text-anim-arrive .pw-text-run .pw-text-ch {
+  animation: var(--pwt-arr, pwtx-rise) var(--pwt-ld, .5s) cubic-bezier(.2, .8, .2, 1) both;
+  animation-delay: calc(var(--i) * var(--pwt-step, .1s));
+}
+@keyframes pwtx-rise { from { opacity: 0; transform: translateY(.7em); } to { opacity: 1; transform: none; } }
+@keyframes pwtx-drop { from { opacity: 0; transform: translateY(-.7em); } to { opacity: 1; transform: none; } }
+@keyframes pwtx-zoom { from { opacity: 0; transform: scale(2.4); } to { opacity: 1; transform: none; } }
+@keyframes pwtx-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes pwtx-flip { from { opacity: 0; transform: perspective(300px) rotateX(-90deg); } to { opacity: 1; transform: none; } }
+
+/* Fondu de fin de passe, avant que le texte ne soit rejoue.
+   End-of-run fade, before the text is replayed. */
+.pw-text-inner.pw-text-out { opacity: 0; transition: opacity .45s ease; }
+
+/* Vague : les lettres montent et descendent l'une apres l'autre. Les
+   delais NEGATIFS font que la vague est deja en route a l'affichage.
+   Wave: letters rise and fall one after another. NEGATIVE delays mean
+   the wave is already under way when displayed. */
+.pw-text-anim-wave .pw-text-ch {
+  animation: pwtx-wave var(--pwt-dur, 8s) ease-in-out infinite;
+  animation-delay: calc(var(--i) * var(--pwt-step, .1s) * -1);
+}
+@keyframes pwtx-wave {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-.28em); }
+  75% { transform: translateY(.12em); }
+}
+
+/* ---- Bandeau defilant / marquee ---- */
+.pw-text-anim-marquee .pw-text-inner {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+}
+.pw-text-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  animation: pwtx-mq var(--pwt-mqdur, 10s) linear infinite var(--pwt-dir, normal);
+}
+.pw-text-mq { flex: none; padding-inline-end: 1.5em; white-space: pre; }
+@keyframes pwtx-mq {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(var(--pwt-shift, 50%) * -1)); }
+}
+
+/* ---- Alternance de messages / message rotation ---- */
+.pw-text-msgs { display: grid; }
+.pw-text-msg { grid-area: 1 / 1; opacity: 0; transition: opacity .6s ease; }
+.pw-text-msg.pw-text-msg-on { opacity: 1; }
+
+/* ---- Neon scintillant : l'ensemble vacille, comme un tube defaillant.
+   Flickering neon: the whole text wavers, like a faulty tube. ---- */
+.pw-text-flicker { animation: pwtx-flicker 5s linear infinite; }
+@keyframes pwtx-flicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% { opacity: 1; }
+  20%, 24%, 55% { opacity: .35; }
+}
+
+/* ---- Pause au survol ou au toucher / pause on hover or touch ---- */
+.pw-text-pausable:hover .pw-text-inner,
+.pw-text-pausable:active .pw-text-inner,
+.pw-text-pausable:hover .pw-text-ch,
+.pw-text-pausable:active .pw-text-ch,
+.pw-text-pausable:hover .pw-text-ch::after,
+.pw-text-pausable:active .pw-text-ch::after,
+.pw-text-pausable:hover .pw-text-track,
+.pw-text-pausable:active .pw-text-track { animation-play-state: paused; }
+
+@media (prefers-reduced-motion: reduce) {
+  .pw-text-inner, .pw-text-ch, .pw-text-ch::after, .pw-text-track, .pw-text-orient { animation: none !important; }
+}

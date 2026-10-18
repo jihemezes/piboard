@@ -65,15 +65,183 @@
   const MIN_PX = 6;
   const MAX_PX = 400;
 
+  /* ---------- Effets (1.158.0) ----------
+     La tuile reprend les effets de la tuile Logo / Image (animations 3D,
+     respiration, flottement, brillance, halo ; miroir, rotation,
+     opacite) et en ajoute qui n'ont de sens que pour un texte : machine
+     a ecrire, arrivee des lettres, vague, degrade anime, bandeau
+     defilant, alternance de messages ; neon, contour, texte creux et
+     relief 3D.
+
+     UNE SEULE ANIMATION A LA FOIS, choisie dans une liste : les
+     combiner donnerait des conflits (une seule propriete `animation`
+     par element) et des rendus que personne n'a voulus.
+
+     LA STRUCTURE PORTE CHAQUE EFFET SUR SON PROPRE ELEMENT, pour que
+     leurs `transform`, `filter` et `animation` ne s'ecrasent jamais :
+       .pw-text           opacite
+         .pw-text-orient  miroir + rotation, filtre statique, scintillement
+           .pw-text-inner animation de l'ensemble (rotation 3D, respiration,
+                          flottement, halo, degrade, brillance)
+             lettres / piste / messages : animations propres a chaque mode
+
+     Effects (1.158.0). The tile carries over the Logo / Image tile's
+     effects and adds ones that only make sense for text. ONE ANIMATION
+     AT A TIME, picked from a list. EACH EFFECT LIVES ON ITS OWN ELEMENT so
+     transforms, filters and animations never overwrite one another. */
+  const ANIMS = new Set(["none", "typewriter", "arrive", "wave", "gradient", "marquee", "cycle",
+    "spinY", "spinX", "breathe", "float", "shine", "glow"]);
+  const LETTER_ANIMS = new Set(["typewriter", "arrive", "wave"]);
+  /* Ces deux animations peignent le texte par son FOND (`background-clip:
+     text`) : les ombres doivent alors passer par `filter`, un
+     `text-shadow` se verrait a travers les lettres transparentes.
+     These two paint the text through its BACKGROUND: shadows must use
+     `filter`, a `text-shadow` would show through the transparent
+     letters. */
+  const CLIP_ANIMS = new Set(["gradient", "shine"]);
+  const ARRIVE_STYLES = ["rise", "drop", "zoom", "fade", "flip"];
+  const ROTATIONS = new Set([0, 90, 180, 270]);
+  const DROP_SHADOW = "0 2px 6px rgba(0, 0, 0, 0.55)";
+  const RAINBOW = ["#ff3b30", "#ff9500", "#ffd60a", "#34c759", "#32ade6", "#5e5ce6", "#bf5af2"];
+  const EXTRUDE_DIRS = { br: [1, 1], bl: [-1, 1], b: [0, 1], tr: [1, -1] };
+
+  function clampRotate(v) {
+    const n = Number(v);
+    return ROTATIONS.has(n) ? n : 0;
+  }
+
+  function clampNum(v, min, max, dflt) {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return dflt;
+    return Math.max(min, Math.min(max, n));
+  }
+
+  /* Un message = une ligne non vide. Pour l'alternance de messages.
+     A message = one non-empty line. For the message rotation. */
+  function splitMessages(text) {
+    return String(text == null ? "" : text).split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+  }
+
+  /* Le bandeau defile sur UNE ligne : les retours saisis deviennent un
+     separateur. A marquee scrolls on ONE line: typed line breaks become a
+     separator. */
+  function marqueeText(text) {
+    return splitMessages(text).join("   •   ");
+  }
+
+  /* Miroir + rotation en une chaine `transform`. Le miroir est place
+     AVANT la rotation dans la liste CSS, donc applique en dernier : il
+     retourne le texte tel qu'on le voit a l'ecran, comme pour l'image.
+     Quand la rotation est de 90 ou 270 degres, la boite est centree
+     (translate) car ses dimensions sont echangees par fit().
+     Mirror + rotation as one `transform` string. The mirror comes BEFORE
+     the rotation, so it is applied last: it flips the text as seen on
+     screen, as for the image. */
+  function orientTransform(s) {
+    const rot = clampRotate(s.rotate);
+    const sx = s.flipH ? -1 : 1, sy = s.flipV ? -1 : 1;
+    const parts = [];
+    if (rot === 90 || rot === 270) parts.push("translate(-50%, -50%)");
+    if (sx !== 1 || sy !== 1) parts.push("scale(" + sx + ", " + sy + ")");
+    if (rot) parts.push("rotate(" + rot + "deg)");
+    return parts.join(" ");
+  }
+
+  /* Halo de neon : quatre couches dont le rayon est en `em`, donc
+     proportionnel a la taille du texte quelle qu'elle soit.
+     Neon halo: four layers sized in `em`, hence proportional to the
+     text size whatever it is. */
+  function neonLayers() {
+    return ["0 0 .04em var(--pwt-c)", "0 0 .12em var(--pwt-c)", "0 0 .3em var(--pwt-c)", "0 0 .65em var(--pwt-c)"];
+  }
+
+  /* Relief : une pile d'ombres pleines decalees d'un pixel, de plus en
+     plus loin, qui forme l'epaisseur du texte.
+     Relief: a stack of solid shadows offset by one pixel each, which
+     forms the text's thickness. */
+  function extrudeLayers(depthPx, dir) {
+    const d = Math.max(0, Math.min(40, Math.round(depthPx)));
+    const [dx, dy] = EXTRUDE_DIRS[dir] || EXTRUDE_DIRS.br;
+    const out = [];
+    for (let i = 1; i <= d; i++) out.push((dx * i) + "px " + (dy * i) + "px 0 var(--pwt-ex)");
+    return out;
+  }
+
+  /* Degrade PERIODIQUE : la suite de couleurs est repetee sur la seconde
+     moitie de l'image, qui fait 200 % de la largeur. Decaler le fond de
+     100 % (une largeur d'element) revient alors EXACTEMENT a un
+     periode : la boucle est sans couture.
+     PERIODIC gradient: the colour list is repeated on the second half of
+     the image, which is 200% wide. Shifting the background by 100% (one
+     element width) is then EXACTLY one period: the loop has no seam. */
+  function gradientCss(palette, a, b) {
+    let cols;
+    if (palette === "rainbow") cols = RAINBOW.slice();
+    else if (palette === "custom") cols = [a || "#4cc9f0", b || "#f72585"];
+    else cols = ["var(--accent)", "color-mix(in srgb, var(--accent) 40%, #ffffff)"];
+    const list = cols.concat([cols[0]]);
+    const stops = [];
+    for (let half = 0; half < 2; half++) {
+      list.forEach((c, i) => {
+        stops.push(c + " " + (half * 50 + (i / (list.length - 1)) * 50).toFixed(2) + "%");
+      });
+    }
+    return "linear-gradient(90deg, " + stops.join(", ") + ")";
+  }
+
+  function prefersReducedMotion() {
+    try {
+      return typeof window !== "undefined" && typeof window.matchMedia === "function"
+        && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    } catch (e) { return false; }
+  }
+
+  /* Decoupe en lettres (graphemes quand le navigateur sait le faire, pour
+     ne pas separer une lettre de son accent). Les espaces et les retours
+     restent des noeuds texte : ils ne s'animent pas, mais comptent dans
+     le rythme.
+     Splits into letters (graphemes where the browser can, so a letter is
+     never parted from its accent). Spaces and line breaks stay text
+     nodes: they do not animate but count in the rhythm. */
+  function graphemes(text) {
+    try {
+      if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        return Array.from(new Intl.Segmenter(undefined, { granularity: "grapheme" }).segment(text), (x) => x.segment);
+      }
+    } catch (e) { /* repli / fallback */ }
+    return Array.from(text);
+  }
+
+  function buildLetters(host, text, reverse) {
+    const chars = graphemes(text);
+    const n = chars.length;
+    let lastLetter = -1;
+    chars.forEach((c, i) => { if (!/^\s+$/.test(c)) lastLetter = i; });
+    const frag = document.createDocumentFragment();
+    chars.forEach((c, i) => {
+      if (/^\s+$/.test(c)) { frag.appendChild(document.createTextNode(c)); return; }
+      const span = document.createElement("span");
+      span.className = "pw-text-ch" + (i === lastLetter ? " pw-text-last" : "");
+      span.style.setProperty("--i", String(reverse ? n - 1 - i : i));
+      span.textContent = c;
+      frag.appendChild(span);
+    });
+    host.appendChild(frag);
+    return n;
+  }
+
   class TextWidget {
-    constructor(ctx) { this.ctx = ctx; }
+    constructor(ctx) { this.ctx = ctx; this.timers = []; this.kind = "none"; this.plain = ""; }
 
     init() {
       this.el = document.createElement("div");
       this.el.className = "pw-text";
+      this.orient = document.createElement("div");
+      this.orient.className = "pw-text-orient";
       this.inner = document.createElement("div");
       this.inner.className = "pw-text-inner";
-      this.el.appendChild(this.inner);
+      this.orient.appendChild(this.inner);
+      this.el.appendChild(this.orient);
       this.ctx.el.appendChild(this.el);
       this.render();
 
@@ -101,14 +269,57 @@
       // variables, except a custom color, which must not move.
     }
 
+    later(fn, ms) { this.timers.push(setTimeout(fn, Math.max(0, ms))); }
+
+    clearTimers() {
+      for (const t of this.timers) clearTimeout(t);
+      this.timers = [];
+    }
+
+    /* « Pause au survol » : les animations CSS s'arretent d'elles-memes
+       (voir le CSS) ; les chronometres de cette tuile attendent aussi.
+       "Pause on hover": CSS animations stop by themselves; this tile's
+       timers wait as well. */
+    held() {
+      try {
+        return this.el.classList.contains("pw-text-pausable") && this.el.matches(":hover, :active");
+      } catch (e) { return false; }
+    }
+
     render() {
       const s = this.ctx.settings || {};
       const text = String(s.text == null ? "" : s.text);
+      const upper = s.uppercase ? text.toLocaleUpperCase(this.ctx.i18n.lang || "fr") : text;
+      this.clearTimers();
+
+      const rotate = clampRotate(s.rotate);
+      const turned = rotate === 90 || rotate === 270;
+      const outlineMode = s.outline === "outline" || s.outline === "hollow" ? s.outline : "none";
+      const reduced = prefersReducedMotion();
+      let kind = ANIMS.has(s.anim) ? s.anim : "none";
+      if (reduced) kind = "none";
+      /* Un texte creux n'a pas de fond a peindre : il ne peut donc pas
+         recevoir un degrade ni une brillance.
+         Hollow text has no fill to paint: no gradient or shine on it. */
+      if (outlineMode === "hollow" && CLIP_ANIMS.has(kind)) kind = "none";
+      const messages = kind === "cycle" ? splitMessages(upper) : null;
+      if (kind === "cycle" && messages.length < 2) kind = "none";
+      this.kind = kind;
+      this.messages = messages;
 
       this.el.className = "pw-text"
         + " pw-text-h-" + (["left", "center", "right"].includes(s.align) ? s.align : "center")
         + " pw-text-v-" + (["top", "middle", "bottom"].includes(s.valign) ? s.valign : "middle")
-        + (s.shadow ? " pw-text-shadow" : "");
+        + (kind !== "none" ? " pw-text-anim pw-text-anim-" + kind : "")
+        + (kind !== "none" && s.animPause ? " pw-text-pausable" : "");
+
+      const op = clampNum(s.opacity, 10, 100, 100);
+      this.el.style.opacity = op < 100 ? String(op / 100) : "";
+      this.orient.className = "pw-text-orient" + (turned ? " pw-text-turned" : "")
+        + (s.neon === "flicker" && !reduced ? " pw-text-flicker" : "");
+      this.orient.style.transform = orientTransform(s);
+      if (!turned) { this.orient.style.width = ""; this.orient.style.height = ""; }
+      this.orient.style.filter = "";
 
       if (!text.trim()) {
         /* Une tuile vide ne doit pas etre une tuile INVISIBLE : sans ce
@@ -117,14 +328,21 @@
            An empty tile must not be an INVISIBLE tile: without this
            placeholder, a transparent tile with no text would be
            impossible to find on the page, edit mode included. */
+        this.plain = "";
+        this.kind = "none";
+        this.el.className = "pw-text pw-text-h-center pw-text-v-middle";
+        this.orient.style.transform = "";
         this.inner.className = "pw-text-inner pw-text-placeholder";
         this.inner.textContent = this.ctx.i18n.t("text.placeholder");
         this.inner.style.cssText = "";
         return;
       }
 
-      this.inner.className = "pw-text-inner";
-      this.inner.textContent = s.uppercase ? text.toLocaleUpperCase(this.ctx.i18n.lang || "fr") : text;
+      this.plain = kind === "marquee" ? marqueeText(upper) : upper;
+      const clip = CLIP_ANIMS.has(kind);
+      this.inner.className = "pw-text-inner" + (clip ? " pw-text-clip" : "");
+      this.inner.style.cssText = "";
+      this.inner.textContent = "";
       this.inner.style.fontFamily = FONTS[s.font] || FONTS.sans;
       this.inner.style.fontWeight = String(s.weight || "600");
       this.inner.style.fontStyle = s.italic ? "italic" : "normal";
@@ -151,7 +369,153 @@
       this.inner.style.color = s.useCustomColor && s.color
         ? s.color
         : (s.useAccentColor ? "var(--accent)" : "");
+      /* La couleur du texte, nommee une fois pour tous les effets (halo,
+         relief, brillance, curseur) : variable CSS, donc toujours a jour.
+         The text colour, named once for every effect (halo, relief,
+         shine, caret): a CSS variable, so always up to date. */
+      this.el.style.setProperty("--pwt-c", s.useCustomColor && s.color ? s.color
+        : (s.useAccentColor ? "var(--accent)" : "var(--text)"));
+      this.el.style.setProperty("--pwt-ex", "color-mix(in srgb, var(--pwt-c) 45%, #000000)");
+
+      const dur = clampNum(s.animSeconds, 1, 120, 8);
+      const reverse = s.animDir === "reverse";
+      this.inner.style.setProperty("--pwt-dur", dur + "s");
+      this.inner.style.setProperty("--pwt-dir", reverse ? "reverse" : "normal");
+      this.inner.style.setProperty("--pwt-alt", reverse ? "alternate-reverse" : "alternate");
+      this.applyPerspective(s);
+
+      if (LETTER_ANIMS.has(kind)) {
+        const n = buildLetters(this.inner, upper, reverse);
+        const count = Math.max(1, n);
+        const loop = s.animLoop !== false;
+        if (kind === "typewriter") {
+          this.inner.style.setProperty("--pwt-step", (dur * 0.6 / count) + "s");
+          this.startRun(loop, dur * 1000);
+        } else if (kind === "arrive") {
+          const style = ARRIVE_STYLES.includes(s.arriveStyle) ? s.arriveStyle : "rise";
+          this.inner.style.setProperty("--pwt-step", (dur * 0.55 / count) + "s");
+          this.inner.style.setProperty("--pwt-ld", Math.max(0.3, Math.min(0.9, dur * 0.25)) + "s");
+          this.inner.style.setProperty("--pwt-arr", "pwtx-" + style);
+          this.startRun(loop, dur * 1000);
+        } else {
+          this.inner.style.setProperty("--pwt-step", (dur / Math.max(count, 8)) + "s");
+        }
+      } else if (kind === "marquee") {
+        this.buildMarquee(2);
+      } else if (kind === "cycle") {
+        this.buildCycle(messages, dur * 1000, reverse);
+      } else {
+        this.inner.textContent = upper;
+      }
+      if (clip) {
+        this.inner.style.backgroundImage = kind === "gradient"
+          ? gradientCss(s.gradPalette, s.gradColorA, s.gradColorB) : "";
+      }
       this.fit();
+    }
+
+    /* Perspective des rotations 3D, proportionnelle a la LARGEUR de la
+       tuile (comme pour l'image) : une perspective fixe en pixels serait
+       violente sur une petite tuile et invisible sur une grande.
+       Perspective of the 3D rotations, proportional to the tile's
+       width, as for the image. */
+    applyPerspective(s) {
+      const level = ["off", "light", "medium", "strong"].includes(s.animPersp) ? s.animPersp : "medium";
+      const factor = { light: 6, medium: 3, strong: 1.8 }[level];
+      const fit = { off: 1, light: 0.95, medium: 0.88, strong: 0.78 }[level];
+      const w = Math.max(120, (this.el && this.el.clientWidth) || 400);
+      this.inner.style.setProperty("--pwt-persp", level === "off" ? "scale(1)" : "perspective(" + Math.round(w * factor) + "px)");
+      this.inner.style.setProperty("--pwt-fit", String(fit));
+    }
+
+    /* Machine a ecrire et arrivee des lettres : une « passe » rejouee
+       en boucle. La passe revele les lettres, le texte reste affiche,
+       puis s'efface en fondu avant la passe suivante : sans ce fondu, le
+       texte disparaitrait d'un coup. Sans boucle, une seule passe.
+       Typewriter and letter arrival: a "run" replayed in a loop. The run
+       reveals the letters, the text holds, then fades out before the next
+       run. Without the loop, a single run. */
+    startRun(loop, durMs) {
+      const inner = this.inner;
+      const go = () => {
+        inner.classList.remove("pw-text-out", "pw-text-run");
+        void inner.offsetWidth;
+        inner.classList.add("pw-text-run");
+        if (loop) {
+          this.later(() => inner.classList.add("pw-text-out"), durMs * 0.9);
+          this.later(wait, durMs);
+        }
+      };
+      const wait = () => { if (this.held()) this.later(wait, 300); else go(); };
+      go();
+    }
+
+    buildMarquee(copies) {
+      const track = document.createElement("div");
+      track.className = "pw-text-track";
+      for (let i = 0; i < copies; i++) {
+        const item = document.createElement("span");
+        item.className = "pw-text-mq";
+        item.textContent = this.plain;
+        track.appendChild(item);
+      }
+      this.inner.textContent = "";
+      this.inner.appendChild(track);
+    }
+
+    /* Le bandeau doit etre AU MOINS deux fois plus large que la tuile,
+       sinon un trou apparait pendant le defilement : on mesure un
+       element, puis on en met autant de copies qu'il en faut. La vitesse
+       est celle de « traverser la tuile en N secondes » : un texte long
+       ne file donc pas plus vite qu'un court.
+       The marquee must be AT LEAST twice as wide as the tile, otherwise a
+       gap shows while scrolling: one item is measured, then as many
+       copies as needed are laid. Speed is "crossing the tile in N
+       seconds": a long text does not run faster than a short one. */
+    setupMarquee() {
+      const track = this.inner.firstChild;
+      if (!track || !track.firstChild) return;
+      const item = track.firstChild.getBoundingClientRect();
+      const box = this.el.getBoundingClientRect();
+      const turned = this.orient.classList.contains("pw-text-turned");
+      const room = turned ? box.height : box.width;
+      if (!(item.width > 1) || !(room > 1)) return;
+      const copies = Math.max(2, Math.min(24, Math.ceil(room / item.width) + 1));
+      if (track.childNodes.length !== copies) {
+        this.buildMarquee(copies);
+      }
+      const secs = clampNum((this.ctx.settings || {}).animSeconds, 1, 120, 8);
+      this.inner.style.setProperty("--pwt-shift", item.width + "px");
+      this.inner.style.setProperty("--pwt-mqdur", Math.max(1, secs * item.width / room) + "s");
+    }
+
+    /* Alternance de messages : tous les messages sont empiles dans la
+       meme cellule d'une grille (la boite a donc la taille du plus
+       grand) et un seul est opaque ; on passe de l'un a l'autre par un
+       fondu.
+       Message rotation: all messages are stacked in the same grid cell
+       (so the box is as large as the largest) and only one is opaque;
+       they cross-fade. */
+    buildCycle(messages, ms, reverse) {
+      const wrap = document.createElement("div");
+      wrap.className = "pw-text-msgs";
+      messages.forEach((m, i) => {
+        const d = document.createElement("div");
+        d.className = "pw-text-msg" + (i === 0 ? " pw-text-msg-on" : "");
+        d.textContent = m;
+        wrap.appendChild(d);
+      });
+      this.inner.appendChild(wrap);
+      let idx = 0;
+      const next = () => {
+        if (this.held()) { this.later(next, 300); return; }
+        const items = wrap.children;
+        items[idx].classList.remove("pw-text-msg-on");
+        idx = (idx + (reverse ? items.length - 1 : 1)) % items.length;
+        items[idx].classList.add("pw-text-msg-on");
+        this.later(next, ms);
+      };
+      this.later(next, ms);
     }
 
     /* Un redimensionnement produit une rafale de mesures, et Gridstack
@@ -190,11 +554,23 @@
       else setTimeout(run, 16);
     }
 
+    /* Rotation de 90 ou 270 degres : la boite qui porte le texte prend
+       les dimensions ECHANGEES de la tuile, puis tourne ; le texte est
+       donc calcule pour la place qu'il occupera reellement a l'ecran.
+       A 90 or 270 degree rotation: the box carrying the text takes the
+       tile's SWAPPED dimensions, then turns; the text is sized for the
+       room it will really occupy on screen. */
     fit() {
       const s = this.ctx.settings || {};
-      if (!this.inner || !this.inner.textContent) return;
+      if (!this.inner || !this.plain) return;
+      const turned = this.orient.classList.contains("pw-text-turned");
+      const avail = this.el.getBoundingClientRect();
+      if (turned && avail.width >= 2 && avail.height >= 2) {
+        this.orient.style.width = avail.height + "px";
+        this.orient.style.height = avail.width + "px";
+      }
       if (s.sizeMode === "fixed") {
-        this.inner.style.fontSize = clamp(Number(s.fontSize) || 32) + "px";
+        this.afterSize(clamp(Number(s.fontSize) || 32));
         return;
       }
       const box = this.ctx.el.getBoundingClientRect();
@@ -213,14 +589,90 @@
          tile's box: `inner` may be inset (tile margins, displayed
          title). Measuring the whole tile overestimated the width, and
          the text could then overflow. */
-      const avail = this.el.getBoundingClientRect();
-      const width = Math.max(2, (avail.width || box.width));
-      const height = Math.max(2, (avail.height || box.height));
-      const natural = measureNatural(this.inner.textContent, this.inner.style);
-      this.inner.style.fontSize = sizeFor(natural, width, height) + "px";
+      let width = Math.max(2, (avail.width || box.width));
+      let height = Math.max(2, (avail.height || box.height));
+      if (turned) { const t = width; width = height; height = t; }
+      /* Le contour et le relief debordent des lettres : on leur reserve
+         de la place, proportionnelle a la taille (ils sont en %).
+         Outline and relief spill beyond the letters: room is reserved,
+         proportional to the size (they are in %). */
+      const ow = s.outline === "outline" || s.outline === "hollow" ? clampNum(s.outlineWidth, 0.5, 15, 3) / 2 : 0;
+      const ex = this.kind !== "none" && (CLIP_ANIMS.has(this.kind)) ? 0 : clampNum(s.extrude, 0, 15, 0);
+      const k = (ow + ex) / 100;
+      const style = this.inner.style;
+      const sizeOne = (text) => {
+        const nat = measureNatural(text, style);
+        return sizeFor({ w: nat.w + 2 * k * REFERENCE_PX, h: nat.h + 2 * k * REFERENCE_PX }, width, height);
+      };
+      let px;
+      if (this.kind === "marquee") {
+        /* Une seule ligne qui defile : seule la HAUTEUR contraint.
+           A single scrolling line: only the HEIGHT constrains. */
+        px = Math.floor(sizeFor({ w: 1, h: measureNatural(this.plain, style).h + 2 * k * REFERENCE_PX }, 1e9, height) * 0.85);
+      } else if (this.kind === "cycle" && this.messages) {
+        px = Math.min.apply(null, this.messages.map(sizeOne));
+      } else {
+        px = sizeOne(this.plain);
+      }
+      /* Des lettres separees perdent un peu de crenage : un peu de marge.
+         Separate letters lose a little kerning: a little margin. */
+      if (LETTER_ANIMS.has(this.kind)) px = Math.max(MIN_PX, Math.floor(px * 0.96));
+      this.afterSize(px);
+    }
+
+    afterSize(px) {
+      this.inner.style.fontSize = px + "px";
+      this.effects(px);
+      if (this.kind === "marquee") this.setupMarquee();
+    }
+
+    /* Ombre, neon, relief et contour. Le relief depend de la taille en
+       pixels : il est donc recalcule a chaque ajustement.
+       Shadow, neon, relief and outline. The relief depends on the size
+       in pixels, so it is recomputed at every fit. */
+    effects(px) {
+      const s = this.ctx.settings || {};
+      const st = this.inner.style;
+      const outlineMode = s.outline === "outline" || s.outline === "hollow" ? s.outline : "none";
+      const hollow = outlineMode === "hollow";
+      const useFilter = CLIP_ANIMS.has(this.kind) || hollow;
+      const neon = s.neon === "steady" || s.neon === "flicker";
+      const depth = useFilter ? 0 : Math.round(px * clampNum(s.extrude, 0, 15, 0) / 100);
+
+      st.webkitTextStroke = "";
+      st.paintOrder = "";
+      st.webkitTextFillColor = "";
+      if (outlineMode === "outline") {
+        st.webkitTextStroke = (clampNum(s.outlineWidth, 0.5, 15, 3) / 100) + "em " + (s.outlineColor || "#000000");
+        st.paintOrder = "stroke fill";
+      } else if (hollow) {
+        st.webkitTextStroke = (clampNum(s.outlineWidth, 0.5, 15, 3) / 100) + "em var(--pwt-c)";
+        st.webkitTextFillColor = "transparent";
+      }
+
+      if (useFilter) {
+        const f = [];
+        if (neon) {
+          f.push("drop-shadow(0 0 .06em var(--pwt-c))", "drop-shadow(0 0 .2em var(--pwt-c))", "drop-shadow(0 0 .5em var(--pwt-c))");
+        }
+        if (s.shadow) f.push("drop-shadow(" + DROP_SHADOW + ")");
+        st.textShadow = "none";
+        this.orient.style.filter = f.join(" ");
+        this.el.classList.remove("pw-text-shadow");
+      } else {
+        const layers = [];
+        if (neon) layers.push.apply(layers, neonLayers());
+        if (depth > 0) layers.push.apply(layers, extrudeLayers(depth, s.extrudeDir));
+        if (s.shadow) layers.push(DROP_SHADOW);
+        const custom = neon || depth > 0;
+        st.textShadow = custom ? layers.join(", ") : "";
+        this.orient.style.filter = "";
+        this.el.classList.toggle("pw-text-shadow", !!s.shadow && !custom);
+      }
     }
 
     destroy() {
+      this.clearTimers();
       if (this.ro) this.ro.disconnect();
     }
   }
@@ -304,6 +756,13 @@
   }
 
   TextWidget.FONTS = FONTS;
+  TextWidget.ANIMS = ANIMS;
+  TextWidget._splitMessages = splitMessages;
+  TextWidget._marqueeText = marqueeText;
+  TextWidget._gradientCss = gradientCss;
+  TextWidget._neonLayers = neonLayers;
+  TextWidget._extrudeLayers = extrudeLayers;
+  TextWidget._orientTransform = orientTransform;
   TextWidget._sizeFor = sizeFor;
   TextWidget._REFERENCE_PX = REFERENCE_PX;
   TextWidget._clamp = clamp;

@@ -1,7 +1,7 @@
 {
   "id": "text",
   "dir": "text",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "Text",
     "fr": "Texte"
@@ -11,8 +11,8 @@
     "fr": "Un titre ou une ligne de texte, placé où vous voulez."
   },
   "description": {
-    "en": "A style tile: displays free text (a page title, a section heading, a caption) with the font, size, weight, color and alignment of your choice. Combined with the transparent background it lets you title a page without any visible frame. Works in both classic and dashboard modes.",
-    "fr": "Une tuile de style : affiche un texte libre (titre de page, intitulé de section, légende) avec la police, la taille, la graisse, la couleur et l'alignement de votre choix. Associée au fond transparent, elle permet de titrer une page sans aucun cadre visible. Fonctionne aussi bien en mode classique qu'en mode tableau de bord."
+    "en": "A style tile: displays free text (a page title, a section heading, a caption) with the font, size, weight, color and alignment of your choice. Combined with the transparent background it lets you title a page without any visible frame. Works in both classic and dashboard modes. Effects: mirror and rotation, opacity, neon, outline and hollow text, 3D relief, and animations (typewriter, letters arriving one by one, wave, moving gradient, scrolling banner, rotating messages, 3D spins, breathing, floating, shine, glow).",
+    "fr": "Une tuile de style : affiche un texte libre (titre de page, intitulé de section, légende) avec la police, la taille, la graisse, la couleur et l'alignement de votre choix. Associée au fond transparent, elle permet de titrer une page sans aucun cadre visible. Fonctionne aussi bien en mode classique qu'en mode tableau de bord. Effets : miroir et rotation, opacité, néon, contour et texte creux, relief 3D, et animations (machine à écrire, arrivée des lettres une à une, vague, dégradé animé, bandeau défilant, alternance de messages, rotations 3D, respiration, flottement, brillance, pulsation)."
   },
   "size": {
     "w": 2,
@@ -306,6 +306,583 @@
       "hint": {
         "en": "Useful when the tile is transparent over a light background photo.",
         "fr": "Utile quand la tuile est transparente au-dessus d'une photo de fond claire."
+      }
+    },
+    {
+      "key": "opacity",
+      "type": "number",
+      "default": 100,
+      "min": 10,
+      "max": 100,
+      "step": 5,
+      "label": {
+        "en": "Opacity (%)",
+        "fr": "Opacité (%)"
+      },
+      "hint": {
+        "en": "Makes the text more or less transparent, from 100 (fully opaque) down to 10.",
+        "fr": "Rend le texte plus ou moins transparent, de 100 (opaque) à 10."
+      }
+    },
+    {
+      "key": "flipH",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Flip horizontally (mirror)",
+        "fr": "Miroir horizontal"
+      },
+      "hint": {
+        "en": "Mirrors the text left-right, as currently shown on screen. Combines with rotation below. Handy for a screen seen through a mirror or a glass.",
+        "fr": "Retourne le texte gauche-droite, tel qu'il apparaît actuellement à l'écran. Se combine avec la rotation ci-dessous. Pratique pour un écran vu dans un miroir ou à travers une vitre."
+      }
+    },
+    {
+      "key": "flipV",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Flip vertically (mirror)",
+        "fr": "Miroir vertical"
+      },
+      "hint": {
+        "en": "Turns the text upside down in a mirror, as currently shown on screen.",
+        "fr": "Retourne le texte de haut en bas, tel qu'il apparaît actuellement à l'écran."
+      }
+    },
+    {
+      "key": "rotate",
+      "type": "select",
+      "default": "0",
+      "label": {
+        "en": "Rotation",
+        "fr": "Rotation"
+      },
+      "options": [
+        {
+          "value": "0",
+          "label": {
+            "en": "None",
+            "fr": "Aucune"
+          }
+        },
+        {
+          "value": "90",
+          "label": {
+            "en": "90° clockwise",
+            "fr": "90° à droite"
+          }
+        },
+        {
+          "value": "180",
+          "label": {
+            "en": "180°",
+            "fr": "180°"
+          }
+        },
+        {
+          "value": "270",
+          "label": {
+            "en": "90° counter-clockwise",
+            "fr": "90° à gauche"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Turns the text by a quarter turn or half a turn. At 90° the text is sized for the room it will really take once turned, so a tall tile gets a large vertical title. Applied after the mirror settings above.",
+        "fr": "Fait pivoter le texte d'un quart ou d'un demi-tour. À 90° le texte est dimensionné pour la place qu'il occupera réellement une fois tourné : une tuile haute reçoit ainsi un grand titre vertical. Appliquée après les réglages de miroir ci-dessus."
+      }
+    },
+    {
+      "key": "neon",
+      "type": "select",
+      "default": "none",
+      "label": {
+        "en": "Neon",
+        "fr": "Néon"
+      },
+      "options": [
+        {
+          "value": "none",
+          "label": {
+            "en": "None",
+            "fr": "Aucun"
+          }
+        },
+        {
+          "value": "steady",
+          "label": {
+            "en": "Steady glow",
+            "fr": "Halo fixe"
+          }
+        },
+        {
+          "value": "flicker",
+          "label": {
+            "en": "Glow with flicker",
+            "fr": "Halo qui scintille"
+          }
+        }
+      ],
+      "hint": {
+        "en": "A glowing halo around the letters, in the text colour: pick a bright colour (or the theme accent) for the best sign look. The halo grows and shrinks with the text. \"Flicker\" makes the whole text waver like a faulty tube.",
+        "fr": "Un halo lumineux autour des lettres, dans la couleur du texte : choisissez une couleur vive (ou l'accent du thème) pour le meilleur effet d'enseigne. Le halo suit la taille du texte. « Scintille » fait vaciller tout le texte comme un tube défaillant."
+      }
+    },
+    {
+      "key": "outline",
+      "type": "select",
+      "default": "none",
+      "label": {
+        "en": "Outline",
+        "fr": "Contour"
+      },
+      "options": [
+        {
+          "value": "none",
+          "label": {
+            "en": "None",
+            "fr": "Aucun"
+          }
+        },
+        {
+          "value": "outline",
+          "label": {
+            "en": "Outline around the letters",
+            "fr": "Contour autour des lettres"
+          }
+        },
+        {
+          "value": "hollow",
+          "label": {
+            "en": "Hollow text (outline only)",
+            "fr": "Texte creux (contour seul)"
+          }
+        }
+      ],
+      "hint": {
+        "en": "\"Outline\" draws a stroke around the filled letters, in the outline colour below: it keeps a title readable on a busy photo. \"Hollow\" draws only the stroke, in the text colour, leaving the inside empty. Hollow text cannot take the gradient or shine animations.",
+        "fr": "« Contour » trace un trait autour des lettres pleines, dans la couleur de contour ci-dessous : il garde un titre lisible sur une photo chargée. « Creux » ne trace que le trait, dans la couleur du texte, et laisse l'intérieur vide. Un texte creux ne peut pas recevoir les animations dégradé et brillance."
+      }
+    },
+    {
+      "key": "outlineWidth",
+      "type": "number",
+      "default": 3,
+      "min": 0.5,
+      "max": 15,
+      "step": 0.5,
+      "label": {
+        "en": "Outline thickness (% of the size)",
+        "fr": "Épaisseur du contour (% de la taille)"
+      },
+      "hint": {
+        "en": "As a percentage of the text size, so the outline keeps the same look whatever the tile's size.",
+        "fr": "En pourcentage de la taille du texte : le contour garde le même aspect quelle que soit la taille de la tuile."
+      }
+    },
+    {
+      "key": "outlineColor",
+      "type": "color",
+      "default": "#000000",
+      "label": {
+        "en": "Outline color",
+        "fr": "Couleur du contour"
+      },
+      "hint": {
+        "en": "Colour of the stroke when \"Outline around the letters\" is chosen. Ignored for hollow text, which is drawn in the text colour.",
+        "fr": "Couleur du trait quand « Contour autour des lettres » est choisi. Ignorée pour un texte creux, tracé dans la couleur du texte."
+      }
+    },
+    {
+      "key": "extrude",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 15,
+      "step": 1,
+      "label": {
+        "en": "3D relief (% of the size, 0 = none)",
+        "fr": "Relief 3D (% de la taille, 0 = aucun)"
+      },
+      "hint": {
+        "en": "Gives the letters thickness, like a title in volume: a darker copy of the text colour is stacked behind them. 0 turns it off. Not available with the gradient and shine animations or with hollow text.",
+        "fr": "Donne de l'épaisseur aux lettres, comme un titre en volume : une copie plus sombre de la couleur du texte est empilée derrière elles. 0 le désactive. Indisponible avec les animations dégradé et brillance et avec un texte creux."
+      }
+    },
+    {
+      "key": "extrudeDir",
+      "type": "select",
+      "default": "br",
+      "label": {
+        "en": "Relief direction",
+        "fr": "Direction du relief"
+      },
+      "options": [
+        {
+          "value": "br",
+          "label": {
+            "en": "Down and right",
+            "fr": "Vers le bas à droite"
+          }
+        },
+        {
+          "value": "bl",
+          "label": {
+            "en": "Down and left",
+            "fr": "Vers le bas à gauche"
+          }
+        },
+        {
+          "value": "b",
+          "label": {
+            "en": "Straight down",
+            "fr": "Droit vers le bas"
+          }
+        },
+        {
+          "value": "tr",
+          "label": {
+            "en": "Up and right",
+            "fr": "Vers le haut à droite"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Where the thickness falls from the letters.",
+        "fr": "Le côté où retombe l'épaisseur des lettres."
+      }
+    },
+    {
+      "key": "anim",
+      "type": "select",
+      "default": "none",
+      "label": {
+        "en": "Animation",
+        "fr": "Animation"
+      },
+      "options": [
+        {
+          "value": "none",
+          "label": {
+            "en": "None",
+            "fr": "Aucune"
+          }
+        },
+        {
+          "value": "typewriter",
+          "label": {
+            "en": "Typewriter (letters typed one by one)",
+            "fr": "Machine à écrire (lettres tapées une à une)"
+          }
+        },
+        {
+          "value": "arrive",
+          "label": {
+            "en": "Letters arriving one after another",
+            "fr": "Arrivée des lettres, l'une après l'autre"
+          }
+        },
+        {
+          "value": "wave",
+          "label": {
+            "en": "Wave of letters",
+            "fr": "Vague de lettres"
+          }
+        },
+        {
+          "value": "gradient",
+          "label": {
+            "en": "Moving gradient inside the letters",
+            "fr": "Dégradé qui glisse dans les lettres"
+          }
+        },
+        {
+          "value": "marquee",
+          "label": {
+            "en": "Scrolling banner",
+            "fr": "Bandeau défilant"
+          }
+        },
+        {
+          "value": "cycle",
+          "label": {
+            "en": "Rotating messages (one line = one message)",
+            "fr": "Alternance de messages (une ligne = un message)"
+          }
+        },
+        {
+          "value": "spinY",
+          "label": {
+            "en": "Turn around the vertical axis",
+            "fr": "Rotation autour de l'axe vertical"
+          }
+        },
+        {
+          "value": "spinX",
+          "label": {
+            "en": "Turn around the horizontal axis",
+            "fr": "Rotation autour de l'axe horizontal"
+          }
+        },
+        {
+          "value": "breathe",
+          "label": {
+            "en": "Breathing (slow zoom in and out)",
+            "fr": "Respiration (zoom lent)"
+          }
+        },
+        {
+          "value": "float",
+          "label": {
+            "en": "Floating (rises and falls)",
+            "fr": "Flottement (monte et descend)"
+          }
+        },
+        {
+          "value": "shine",
+          "label": {
+            "en": "Light sweeping across",
+            "fr": "Brillance qui traverse"
+          }
+        },
+        {
+          "value": "glow",
+          "label": {
+            "en": "Pulsing glow",
+            "fr": "Pulsation lumineuse"
+          }
+        }
+      ],
+      "hint": {
+        "en": "One animation at a time. Turned off automatically if the computer asks to reduce motion (the text then simply shows).",
+        "fr": "Une animation à la fois. Coupée automatiquement si l'ordinateur demande de réduire les animations (le texte s'affiche alors simplement)."
+      }
+    },
+    {
+      "key": "animSeconds",
+      "type": "number",
+      "default": 8,
+      "min": 1,
+      "max": 120,
+      "step": 1,
+      "label": {
+        "en": "Animation duration (seconds per cycle)",
+        "fr": "Durée de l'animation (secondes par cycle)"
+      },
+      "hint": {
+        "en": "One full turn, one breath, one sweep, one wave, one typing run… For the scrolling banner it is the time to cross the tile; for rotating messages it is the time each message stays. Lower is faster.",
+        "fr": "Un tour complet, une respiration, un balayage, une vague, une passe de frappe… Pour le bandeau, c'est le temps de traverser la tuile ; pour l'alternance de messages, le temps d'affichage de chaque message. Plus petit = plus rapide."
+      }
+    },
+    {
+      "key": "animDir",
+      "type": "select",
+      "default": "forward",
+      "label": {
+        "en": "Animation direction",
+        "fr": "Sens de l'animation"
+      },
+      "options": [
+        {
+          "value": "forward",
+          "label": {
+            "en": "Normal",
+            "fr": "Normal"
+          }
+        },
+        {
+          "value": "reverse",
+          "label": {
+            "en": "Reversed",
+            "fr": "Inversé"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Reversed makes the banner scroll the other way, letters arrive from the right, messages run backwards.",
+        "fr": "Inversé fait défiler le bandeau dans l'autre sens, fait arriver les lettres par la droite et parcourt les messages à l'envers."
+      }
+    },
+    {
+      "key": "animLoop",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Replay the animation in a loop",
+        "fr": "Rejouer l'animation en boucle"
+      },
+      "hint": {
+        "en": "For the typewriter and the letter arrival: the text is shown, held, faded out, then played again. Untick to play it once and leave the text displayed.",
+        "fr": "Pour la machine à écrire et l'arrivée des lettres : le texte s'affiche, reste, s'efface en fondu, puis est rejoué. Décochez pour ne le jouer qu'une fois et laisser le texte affiché."
+      }
+    },
+    {
+      "key": "arriveStyle",
+      "type": "select",
+      "default": "rise",
+      "label": {
+        "en": "Letter arrival style",
+        "fr": "Style d'arrivée des lettres"
+      },
+      "options": [
+        {
+          "value": "rise",
+          "label": {
+            "en": "Rise from below",
+            "fr": "Montée par le bas"
+          }
+        },
+        {
+          "value": "drop",
+          "label": {
+            "en": "Drop from above",
+            "fr": "Descente par le haut"
+          }
+        },
+        {
+          "value": "zoom",
+          "label": {
+            "en": "Zoom in",
+            "fr": "Zoom"
+          }
+        },
+        {
+          "value": "fade",
+          "label": {
+            "en": "Fade in",
+            "fr": "Fondu"
+          }
+        },
+        {
+          "value": "flip",
+          "label": {
+            "en": "Flip up",
+            "fr": "Bascule"
+          }
+        }
+      ],
+      "hint": {
+        "en": "How each letter comes in, for the \"Letters arriving one after another\" animation.",
+        "fr": "La façon dont chaque lettre entre, pour l'animation « Arrivée des lettres »."
+      }
+    },
+    {
+      "key": "gradPalette",
+      "type": "select",
+      "default": "accent",
+      "label": {
+        "en": "Gradient colors",
+        "fr": "Couleurs du dégradé"
+      },
+      "options": [
+        {
+          "value": "accent",
+          "label": {
+            "en": "Theme accent",
+            "fr": "Accent du thème"
+          }
+        },
+        {
+          "value": "rainbow",
+          "label": {
+            "en": "Rainbow",
+            "fr": "Arc-en-ciel"
+          }
+        },
+        {
+          "value": "custom",
+          "label": {
+            "en": "Two colors of your choice",
+            "fr": "Deux couleurs au choix"
+          }
+        }
+      ],
+      "hint": {
+        "en": "For the \"Moving gradient inside the letters\" animation. The theme accent follows day and night and theme changes.",
+        "fr": "Pour l'animation « Dégradé qui glisse dans les lettres ». L'accent du thème suit la bascule jour/nuit et les changements de thème."
+      }
+    },
+    {
+      "key": "gradColorA",
+      "type": "color",
+      "default": "#4cc9f0",
+      "label": {
+        "en": "Gradient: first color",
+        "fr": "Dégradé : première couleur"
+      },
+      "hint": {
+        "en": "Used when the gradient is set to two colors of your choice.",
+        "fr": "Utilisée quand le dégradé est réglé sur deux couleurs au choix."
+      }
+    },
+    {
+      "key": "gradColorB",
+      "type": "color",
+      "default": "#f72585",
+      "label": {
+        "en": "Gradient: second color",
+        "fr": "Dégradé : seconde couleur"
+      },
+      "hint": {
+        "en": "Used when the gradient is set to two colors of your choice.",
+        "fr": "Utilisée quand le dégradé est réglé sur deux couleurs au choix."
+      }
+    },
+    {
+      "key": "animPersp",
+      "type": "select",
+      "default": "medium",
+      "label": {
+        "en": "3D perspective (rotations)",
+        "fr": "Perspective 3D (rotations)"
+      },
+      "options": [
+        {
+          "value": "off",
+          "label": {
+            "en": "None (flat)",
+            "fr": "Aucune (à plat)"
+          }
+        },
+        {
+          "value": "light",
+          "label": {
+            "en": "Light",
+            "fr": "Légère"
+          }
+        },
+        {
+          "value": "medium",
+          "label": {
+            "en": "Medium",
+            "fr": "Moyenne"
+          }
+        },
+        {
+          "value": "strong",
+          "label": {
+            "en": "Strong",
+            "fr": "Forte"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Depth of the two rotation animations. The stronger it is, the more the text is reduced so that its nearest edge does not leave the tile.",
+        "fr": "Profondeur des deux animations de rotation. Plus elle est forte, plus le texte est réduit pour que son bord le plus proche ne sorte pas de la tuile."
+      }
+    },
+    {
+      "key": "animPause",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Pause the animation on hover or touch",
+        "fr": "Mettre l'animation en pause au survol ou au toucher"
+      },
+      "hint": {
+        "en": "Freezes the animation while the mouse is over the tile or a finger is on it.",
+        "fr": "Fige l'animation tant que la souris survole la tuile ou qu'un doigt la touche."
       }
     }
   ]

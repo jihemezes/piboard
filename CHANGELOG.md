@@ -1,5 +1,40 @@
 # Changelog
 
+## 1.158.0
+
+- **Tuile Texte : les effets de la tuile Logo / Image, plus des effets propres au
+  texte.** Repris de l'image, avec les mêmes réglages et les mêmes noms :
+  rotation 3D autour de l'axe vertical et horizontal, respiration, flottement,
+  brillance, pulsation lumineuse, durée, sens, perspective 3D, pause au survol ou
+  au toucher, miroir horizontal et vertical, rotation 0/90/180/270°, opacité. Ajoutés
+  pour le texte : **machine à écrire** (curseur, boucle avec fondu de fin de
+  passe), **arrivée des lettres** (montée, descente, zoom, fondu, bascule), **vague
+  de lettres**, **dégradé animé** (accent du thème, arc-en-ciel ou deux couleurs ;
+  dégradé périodique, donc boucle sans couture), **bandeau défilant** (vitesse =
+  « traverser la tuile en N secondes », copies calculées pour ne laisser aucun
+  trou), **alternance de messages** (une ligne = un message, fondu enchaîné, taille
+  réglée sur le plus long) ; **néon** (halo en `em`, fixe ou scintillant),
+  **contour** et **texte creux**, **relief 3D** (pile d'ombres, 4 directions).
+  Contour et relief sont en % de la taille du texte, et la taille automatique leur
+  réserve leur place. Une rotation de 90/270° dimensionne le texte pour la place
+  réellement occupée une fois tourné. Une seule animation à la fois ; un texte
+  creux ne reçoit ni dégradé ni brillance, et le relief est indisponible avec ces
+  deux animations (le texte y est peint par son fond : leurs ombres passent par
+  `filter`). Structure : chaque effet vit sur son propre élément
+  (`.pw-text` opacité, `.pw-text-orient` miroir/rotation/filtre/scintillement,
+  `.pw-text-inner` animation d'ensemble, lettres/piste/messages) pour que
+  `transform`, `filter` et `animation` ne s'écrasent jamais. Respecte « réduire les
+  animations » (CSS et JS) ; les chronomètres sont arrêtés à chaque rendu et à la
+  destruction. 20 nouveaux réglages (`opacity`, `flipH`, `flipV`, `rotate`, `neon`,
+  `outline`, `outlineWidth`, `outlineColor`, `extrude`, `extrudeDir`, `anim`,
+  `animSeconds`, `animDir`, `animLoop`, `arriveStyle`, `gradPalette`, `gradColorA`,
+  `gradColorB`, `animPersp`, `animPause`), tous désactivés par défaut : une tuile
+  existante est inchangée. Aide FR/EN complétée (section « Les effets et les
+  animations » et un libellé par réglage). Tests : `test/textEffects.test.js` (22),
+  25 vérifications dans `dom-smoke.js`, et vérification dans Chromium de tous les
+  effets. Correctif trouvé en route : la brillance laissait le texte invisible hors
+  de la bande claire (deux couches de fond désormais).
+
 ## 1.157.0
 
 - **Plan du circuit : rotation du tracé (tuile Plan du circuit, cartes « Plan

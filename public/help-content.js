@@ -1951,11 +1951,27 @@ Franceinfo".</span></div>
   <li><b>Couleur</b> du thème ou personnalisée.</li>
   <li><b>Position</b> horizontale et verticale dans la tuile.</li>
   <li>Avec le fond transparent, le texte se pose directement sur le fond de page ; fonctionne en mode classique comme en tableau de bord.</li>
+  <li><b>Effets</b> : miroir et rotation (même à 90°, avec un grand titre vertical), opacité, <b>néon</b>, <b>contour</b> et texte creux, <b>relief 3D</b>.</li>
+  <li><b>Animations</b> : machine à écrire, arrivée des lettres une à une, vague, dégradé qui glisse dans les lettres, bandeau défilant, alternance de messages, rotations 3D, respiration, flottement, brillance, pulsation.</li>
 </ul>
 
 <h4>Deux façons de fixer la taille</h4>
           <div class="help-opt"><span class="help-opt-name">S'adapter à la tuile</span><span class="help-opt-desc">Par défaut. La taille est recalculée à chaque redimensionnement pour que le texte remplisse la tuile sans jamais déborder. C'est le bon choix dans presque tous les cas : une tuile de titre est presque toujours redimensionnée après coup, et un titre coupé est le défaut le plus visible qui soit sur un écran mural.</span></div>
           <div class="help-opt"><span class="help-opt-name">Taille fixe</span><span class="help-opt-desc">La taille en pixels que vous indiquez, quelle que soit la taille de la tuile. Prévisible — utile quand plusieurs titres doivent avoir exactement la même taille sur des tuiles de largeurs différentes — mais le texte déborde si vous rétrécissez la tuile.</span></div>
+
+<h4>Les effets et les animations</h4>
+          <p>Les effets de la tuile <b>Logo / Image</b> (rotations 3D, respiration, flottement, brillance, pulsation, miroir, rotation, opacité) sont repris tels quels, avec les mêmes réglages. S'y ajoutent des effets qui n'ont de sens que pour du texte.</p>
+          <p><b>Une seule animation à la fois</b>, choisie dans la liste : en combiner deux donnerait des conflits et des rendus que personne n'a voulus. Le texte garde sa taille automatique : une rotation à 90° est calculée pour la place réellement occupée une fois tournée, et le contour comme le relief réservent leur propre place.</p>
+          <ul>
+            <li><b>Machine à écrire</b> : les lettres sont tapées une à une, un curseur suit la dernière. Le texte reste affiché, s'efface en fondu, puis recommence (décochez la boucle pour ne le jouer qu'une fois).</li>
+            <li><b>Arrivée des lettres</b> : chaque lettre entre à son tour — par le bas, par le haut, en zoom, en fondu ou en bascule.</li>
+            <li><b>Vague</b> : les lettres montent et descendent l'une après l'autre, en continu.</li>
+            <li><b>Dégradé</b> : un dégradé de couleurs (accent du thème, arc-en-ciel ou deux couleurs au choix) glisse à l'intérieur des lettres, sans coupure.</li>
+            <li><b>Bandeau défilant</b> : le texte défile sur une seule ligne comme un bandeau d'information ; les retours à la ligne deviennent des puces. La vitesse est celle de « traverser la tuile en N secondes » : un texte long ne file pas plus vite qu'un court.</li>
+            <li><b>Alternance de messages</b> : une ligne = un message. Les messages s'affichent l'un après l'autre avec un fondu ; la taille est celle qui convient au plus long.</li>
+          </ul>
+          <p><b>Néon, contour, relief.</b> Le néon est un halo dans la couleur du texte (choisissez une couleur vive pour l'effet d'enseigne), fixe ou scintillant. Le contour trace un trait autour des lettres, ou ne laisse que le trait (texte creux). Le relief empile une copie plus sombre derrière les lettres, pour un titre en volume. Contour et relief s'expriment en <b>pourcentage de la taille</b> du texte : ils gardent le même aspect à toutes les tailles. Le relief n'est pas disponible avec le dégradé, la brillance ou un texte creux.</p>
+          <p><b>Accessibilité.</b> Si l'ordinateur demande de réduire les animations, elles sont toutes coupées et le texte s'affiche simplement. Avec « pause au survol ou au toucher », l'animation se fige tant qu'on touche la tuile.</p>
 
 <h4>Polices</h4>
           <p>Cinq familles sont proposées. <b>Seules les polices présentes sur la machine sont utilisées</b> : sur un Raspberry Pi le choix est nettement plus étroit que sur un PC. Chaque option liste donc plusieurs polices et retombe sur la plus proche disponible — jamais sur rien. Le rendu peut donc différer entre votre PC et le Pi ; si l'aspect compte, vérifiez sur l'écran de destination.</p>
@@ -1977,6 +1993,26 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Position horizontale</span><span class="help-opt-desc">Choix : Gauche, Centrée, Droite. Par défaut : Centrée.</span></div>
 <div class="help-opt"><span class="help-opt-name">Position verticale</span><span class="help-opt-desc">Choix : Haut, Milieu, Bas. Par défaut : Milieu.</span></div>
 <div class="help-opt"><span class="help-opt-name">Ombre portée</span><span class="help-opt-desc">Utile quand la tuile est transparente au-dessus d'une photo de fond claire. Désactivé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Opacité (%)</span><span class="help-opt-desc">De 10 à 100, par défaut 100.</span></div>
+<div class="help-opt"><span class="help-opt-name">Miroir horizontal</span><span class="help-opt-desc">Retourne le texte gauche-droite, tel qu'il apparaît à l'écran. Pratique pour un écran vu dans un miroir ou à travers une vitre. Désactivé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Miroir vertical</span><span class="help-opt-desc">Retourne le texte de haut en bas. Désactivé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Rotation</span><span class="help-opt-desc">Choix : Aucune, 90° à droite, 180°, 90° à gauche. À 90° le texte est dimensionné pour la place qu'il occupera une fois tourné : une tuile haute reçoit un grand titre vertical. Appliquée après les miroirs.</span></div>
+<div class="help-opt"><span class="help-opt-name">Néon</span><span class="help-opt-desc">Choix : Aucun, Halo fixe, Halo qui scintille. Un halo lumineux dans la couleur du texte ; « scintille » fait vaciller tout le texte comme un tube défaillant. Par défaut : Aucun.</span></div>
+<div class="help-opt"><span class="help-opt-name">Contour</span><span class="help-opt-desc">Choix : Aucun, Contour autour des lettres, Texte creux (contour seul). Un texte creux ne peut pas recevoir les animations dégradé et brillance. Par défaut : Aucun.</span></div>
+<div class="help-opt"><span class="help-opt-name">Épaisseur du contour (% de la taille)</span><span class="help-opt-desc">De 0,5 à 15, par défaut 3. En pourcentage de la taille du texte.</span></div>
+<div class="help-opt"><span class="help-opt-name">Couleur du contour</span><span class="help-opt-desc">Par défaut : « #000000 ». Ignorée pour un texte creux, tracé dans la couleur du texte.</span></div>
+<div class="help-opt"><span class="help-opt-name">Relief 3D (% de la taille, 0 = aucun)</span><span class="help-opt-desc">De 0 à 15, par défaut 0 (désactivé). Empile une copie plus sombre derrière les lettres.</span></div>
+<div class="help-opt"><span class="help-opt-name">Direction du relief</span><span class="help-opt-desc">Choix : Vers le bas à droite, Vers le bas à gauche, Droit vers le bas, Vers le haut à droite. Par défaut : Vers le bas à droite.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation</span><span class="help-opt-desc">Choix : Aucune, Machine à écrire, Arrivée des lettres, Vague de lettres, Dégradé qui glisse dans les lettres, Bandeau défilant, Alternance de messages, Rotation autour de l'axe vertical, Rotation autour de l'axe horizontal, Respiration, Flottement, Brillance qui traverse, Pulsation lumineuse. Une seule à la fois. Par défaut : Aucune.</span></div>
+<div class="help-opt"><span class="help-opt-name">Durée de l'animation (secondes par cycle)</span><span class="help-opt-desc">De 1 à 120, par défaut 8. Un tour, une respiration, une vague, une passe de frappe ; pour le bandeau, le temps de traverser la tuile ; pour l'alternance, le temps d'affichage de chaque message.</span></div>
+<div class="help-opt"><span class="help-opt-name">Sens de l'animation</span><span class="help-opt-desc">Choix : Normal, Inversé. Inversé fait défiler le bandeau dans l'autre sens, fait arriver les lettres par la droite et parcourt les messages à l'envers.</span></div>
+<div class="help-opt"><span class="help-opt-name">Rejouer l'animation en boucle</span><span class="help-opt-desc">Pour la machine à écrire et l'arrivée des lettres : le texte s'affiche, reste, s'efface en fondu, puis recommence. Décochée, une seule passe. Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Style d'arrivée des lettres</span><span class="help-opt-desc">Choix : Montée par le bas, Descente par le haut, Zoom, Fondu, Bascule. Par défaut : Montée par le bas.</span></div>
+<div class="help-opt"><span class="help-opt-name">Couleurs du dégradé</span><span class="help-opt-desc">Choix : Accent du thème, Arc-en-ciel, Deux couleurs au choix. L'accent du thème suit la bascule jour/nuit. Par défaut : Accent du thème.</span></div>
+<div class="help-opt"><span class="help-opt-name">Dégradé : première couleur</span><span class="help-opt-desc">Par défaut : « #4cc9f0 ». Utilisée avec « Deux couleurs au choix ».</span></div>
+<div class="help-opt"><span class="help-opt-name">Dégradé : seconde couleur</span><span class="help-opt-desc">Par défaut : « #f72585 ». Utilisée avec « Deux couleurs au choix ».</span></div>
+<div class="help-opt"><span class="help-opt-name">Perspective 3D (rotations)</span><span class="help-opt-desc">Choix : Aucune (à plat), Légère, Moyenne, Forte. Plus elle est forte, plus le texte est réduit pour que son bord le plus proche ne sorte pas de la tuile. Par défaut : Moyenne.</span></div>
+<div class="help-opt"><span class="help-opt-name">Mettre l'animation en pause au survol ou au toucher</span><span class="help-opt-desc">Fige l'animation tant que la souris survole la tuile ou qu'un doigt la touche. Désactivé par défaut.</span></div>
 `,
         en: `
 <p>A <b>style</b> tile: it displays no data, it is there to compose a page. A title at the top of a dashboard page, the heading of a group of tiles, a caption. Combined with the <b>transparent background</b> (tile settings → Appearance), it lets you title a page with no frame appearing at all.</p>
@@ -1991,11 +2027,27 @@ Franceinfo".</span></div>
   <li>Theme or custom <b>colour</b>.</li>
   <li>Horizontal and vertical <b>position</b> in the tile.</li>
   <li>With a transparent background the text sits right on the page background; works in classic and dashboard modes.</li>
+  <li><b>Effects</b>: mirror and rotation (even 90°, for a large vertical title), opacity, <b>neon</b>, <b>outline</b> and hollow text, <b>3D relief</b>.</li>
+  <li><b>Animations</b>: typewriter, letters arriving one by one, wave, a gradient sliding through the letters, scrolling banner, rotating messages, 3D spins, breathing, floating, shine, glow.</li>
 </ul>
 
 <h4>Two ways of setting the size</h4>
           <div class="help-opt"><span class="help-opt-name">Fit the tile</span><span class="help-opt-desc">The default. The size is recomputed on every resize so the text fills the tile without ever overflowing. This is the right choice in almost every case: a title tile is almost always resized afterwards, and clipped text is the most visible defect there is on a wall screen.</span></div>
           <div class="help-opt"><span class="help-opt-name">Fixed size</span><span class="help-opt-desc">The pixel size you give, whatever the tile's size. Predictable — useful when several titles must be exactly the same size on tiles of different widths — but the text overflows if you shrink the tile.</span></div>
+
+<h4>Effects and animations</h4>
+          <p>The <b>Logo / Image</b> tile's effects (3D spins, breathing, floating, shine, glow, mirror, rotation, opacity) are carried over as they are, with the same settings. On top come effects that only make sense for text.</p>
+          <p><b>One animation at a time</b>, picked from the list: combining two would cause conflicts and looks nobody asked for. The text keeps its automatic size: a 90° rotation is computed for the room it really takes once turned, and the outline and the relief reserve their own room.</p>
+          <ul>
+            <li><b>Typewriter</b>: letters are typed one by one, a caret follows the last one. The text holds, fades out, then starts again (untick the loop to play it once).</li>
+            <li><b>Letter arrival</b>: each letter comes in in turn — from below, from above, zooming, fading or flipping up.</li>
+            <li><b>Wave</b>: letters rise and fall one after another, continuously.</li>
+            <li><b>Gradient</b>: a colour gradient (theme accent, rainbow or two colours of your choice) slides through the letters, with no seam.</li>
+            <li><b>Scrolling banner</b>: the text scrolls on a single line like a news ticker; line breaks become bullets. The speed is "crossing the tile in N seconds": a long text does not run faster than a short one.</li>
+            <li><b>Rotating messages</b>: one line = one message. Messages show one after another with a cross-fade; the size is the one that suits the longest.</li>
+          </ul>
+          <p><b>Neon, outline, relief.</b> Neon is a halo in the text colour (pick a bright colour for the sign look), steady or flickering. The outline draws a stroke around the letters, or leaves only the stroke (hollow text). The relief stacks a darker copy behind the letters, for a title in volume. Outline and relief are expressed as a <b>percentage of the text size</b>: they look the same at every size. The relief is not available with the gradient, the shine or hollow text.</p>
+          <p><b>Accessibility.</b> If the computer asks to reduce motion, every animation is turned off and the text simply shows. With "pause on hover or touch", the animation freezes while the tile is touched.</p>
 
 <h4>Fonts</h4>
           <p>Five families are offered. <b>Only fonts present on the machine are used</b>: on a Raspberry Pi the choice is markedly narrower than on a PC. Each option therefore lists several fonts and falls back on the closest available one — never on nothing. The rendering may thus differ between your PC and the Pi; if looks matter, check on the target screen.</p>
@@ -2017,6 +2069,26 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Horizontal position</span><span class="help-opt-desc">Choices: Left, Centered, Right. Default: Centered.</span></div>
 <div class="help-opt"><span class="help-opt-name">Vertical position</span><span class="help-opt-desc">Choices: Top, Middle, Bottom. Default: Middle.</span></div>
 <div class="help-opt"><span class="help-opt-name">Text shadow</span><span class="help-opt-desc">Useful when the tile is transparent over a light background photo. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Opacity (%)</span><span class="help-opt-desc">From 10 to 100, default 100.</span></div>
+<div class="help-opt"><span class="help-opt-name">Flip horizontally (mirror)</span><span class="help-opt-desc">Mirrors the text left-right, as currently shown on screen. Handy for a screen seen through a mirror or a glass. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Flip vertically (mirror)</span><span class="help-opt-desc">Turns the text upside down in a mirror. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Rotation</span><span class="help-opt-desc">Choices: None, 90° clockwise, 180°, 90° counter-clockwise. At 90° the text is sized for the room it will take once turned: a tall tile gets a large vertical title. Applied after the mirrors.</span></div>
+<div class="help-opt"><span class="help-opt-name">Neon</span><span class="help-opt-desc">Choices: None, Steady glow, Glow with flicker. A glowing halo in the text colour; "flicker" makes the whole text waver like a faulty tube. Default: None.</span></div>
+<div class="help-opt"><span class="help-opt-name">Outline</span><span class="help-opt-desc">Choices: None, Outline around the letters, Hollow text (outline only). Hollow text cannot take the gradient or shine animations. Default: None.</span></div>
+<div class="help-opt"><span class="help-opt-name">Outline thickness (% of the size)</span><span class="help-opt-desc">From 0.5 to 15, default 3. As a percentage of the text size.</span></div>
+<div class="help-opt"><span class="help-opt-name">Outline color</span><span class="help-opt-desc">Default: "#000000". Ignored for hollow text, which is drawn in the text colour.</span></div>
+<div class="help-opt"><span class="help-opt-name">3D relief (% of the size, 0 = none)</span><span class="help-opt-desc">From 0 to 15, default 0 (off). Stacks a darker copy behind the letters.</span></div>
+<div class="help-opt"><span class="help-opt-name">Relief direction</span><span class="help-opt-desc">Choices: Down and right, Down and left, Straight down, Up and right. Default: Down and right.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation</span><span class="help-opt-desc">Choices: None, Typewriter, Letters arriving one after another, Wave of letters, Moving gradient inside the letters, Scrolling banner, Rotating messages, Turn around the vertical axis, Turn around the horizontal axis, Breathing, Floating, Light sweeping across, Pulsing glow. One at a time. Default: None.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation duration (seconds per cycle)</span><span class="help-opt-desc">From 1 to 120, default 8. One turn, one breath, one wave, one typing run; for the banner, the time to cross the tile; for rotating messages, how long each message stays.</span></div>
+<div class="help-opt"><span class="help-opt-name">Animation direction</span><span class="help-opt-desc">Choices: Normal, Reversed. Reversed makes the banner scroll the other way, letters arrive from the right and messages run backwards.</span></div>
+<div class="help-opt"><span class="help-opt-name">Replay the animation in a loop</span><span class="help-opt-desc">For the typewriter and the letter arrival: the text is shown, held, faded out, then starts again. Unticked, a single run. On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Letter arrival style</span><span class="help-opt-desc">Choices: Rise from below, Drop from above, Zoom in, Fade in, Flip up. Default: Rise from below.</span></div>
+<div class="help-opt"><span class="help-opt-name">Gradient colors</span><span class="help-opt-desc">Choices: Theme accent, Rainbow, Two colors of your choice. The theme accent follows day and night. Default: Theme accent.</span></div>
+<div class="help-opt"><span class="help-opt-name">Gradient: first color</span><span class="help-opt-desc">Default: "#4cc9f0". Used with "Two colors of your choice".</span></div>
+<div class="help-opt"><span class="help-opt-name">Gradient: second color</span><span class="help-opt-desc">Default: "#f72585". Used with "Two colors of your choice".</span></div>
+<div class="help-opt"><span class="help-opt-name">3D perspective (rotations)</span><span class="help-opt-desc">Choices: None (flat), Light, Medium, Strong. The stronger it is, the more the text is reduced so that its nearest edge does not leave the tile. Default: Medium.</span></div>
+<div class="help-opt"><span class="help-opt-name">Pause the animation on hover or touch</span><span class="help-opt-desc">Freezes the animation while the mouse is over the tile or a finger is on it. Off by default.</span></div>
 `
       }
     },

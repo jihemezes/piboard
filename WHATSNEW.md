@@ -32,6 +32,31 @@
 
 # Nouveautes / What's new
 
+## 1.158.0
+
+**Des effets pour la tuile Texte**
+
+La tuile Texte reprend les effets de la tuile Logo / Image : rotations 3D,
+respiration, flottement, brillance, pulsation, miroir, rotation et opacité. Elle en
+gagne qui n'ont de sens que pour un texte : **machine à écrire**, **arrivée des
+lettres** une à une, **vague**, **dégradé qui glisse dans les lettres**, **bandeau
+défilant** et **alternance de messages** (une ligne = un message). Côté style : **néon**
+(fixe ou scintillant), **contour**, **texte creux** et **relief 3D**. Un titre peut
+aussi être **tourné à 90°** pour remplir une tuile haute. Tout est désactivé par
+défaut, et le texte garde sa taille automatique.
+
+---
+
+**Effects for the Text tile**
+
+The Text tile now carries over the Logo / Image tile's effects: 3D spins, breathing,
+floating, shine, glow, mirror, rotation and opacity. It also gains some that only make
+sense for text: **typewriter**, letters **arriving one by one**, **wave**, a **gradient
+sliding through the letters**, **scrolling banner** and **rotating messages** (one line =
+one message). On the style side: **neon** (steady or flickering), **outline**, **hollow
+text** and **3D relief**. A title can also be **turned 90°** to fill a tall tile. Everything
+is off by default, and the text keeps its automatic size.
+
 ## 1.157.0
 
 **Faire pivoter le tracé du circuit**

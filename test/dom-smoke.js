@@ -2877,6 +2877,71 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("... et la valeur choisie suit", f1.circuitSettings().rotation === "auto");
     }
 
+    /* 1.158.0 : effets de la tuile Texte. */
+    {
+      const hostT = document.createElement("div");
+      document.body.appendChild(hostT);
+      const tw = window.PiBoard.embedWidget("text", hostT, { text: "Bonjour le monde", sizeMode: "fixed", fontSize: 100, anim: "typewriter", animSeconds: 6 });
+      await sleep(100);
+      const inner = () => hostT.querySelector(".pw-text-inner");
+      const letters = Array.from(hostT.querySelectorAll(".pw-text-ch"));
+      assert("texte : machine a ecrire = une lettre par caractere non blanc", letters.length === "Bonjourlemonde".length);
+      assert("texte : la passe de frappe demarre", inner().classList.contains("pw-text-run") && !!inner().style.getPropertyValue("--pwt-step"));
+      assert("texte : la derniere lettre porte le curseur", hostT.querySelectorAll(".pw-text-last").length === 1);
+      assert("texte : le contenu lu reste le texte saisi", inner().textContent === "Bonjour le monde");
+      const set = (o) => { tw.onSettingsChanged(Object.assign({ text: "Bonjour le monde", sizeMode: "fixed", fontSize: 100 }, o)); };
+
+      set({ anim: "arrive", arriveStyle: "zoom" });
+      assert("texte : l'arrivee des lettres retient son style", inner().style.getPropertyValue("--pwt-arr") === "pwtx-zoom");
+      set({ anim: "arrive", arriveStyle: "n'importe quoi" });
+      assert("texte : un style inconnu retombe sur « montee »", inner().style.getPropertyValue("--pwt-arr") === "pwtx-rise");
+      set({ anim: "wave" });
+      assert("texte : la vague ne rejoue pas (pas de passe)", !inner().classList.contains("pw-text-run") && hostT.querySelectorAll(".pw-text-ch").length > 0);
+      set({ anim: "marquee", text: "Un\nDeux" });
+      assert("texte : le bandeau est une piste d'au moins deux copies, sur une ligne",
+        hostT.querySelectorAll(".pw-text-mq").length >= 2 && !/\n/.test(hostT.querySelector(".pw-text-mq").textContent));
+      set({ anim: "cycle", text: "Un\nDeux\nTrois" });
+      assert("texte : un message par ligne, le premier affiche",
+        hostT.querySelectorAll(".pw-text-msg").length === 3 && hostT.querySelectorAll(".pw-text-msg-on").length === 1
+        && hostT.querySelector(".pw-text-msg").classList.contains("pw-text-msg-on"));
+      set({ anim: "cycle", text: "Une seule ligne" });
+      assert("texte : un seul message = pas d'alternance", hostT.querySelectorAll(".pw-text-msg").length === 0);
+      set({ anim: "gradient", gradPalette: "rainbow" });
+      assert("texte : le degrade peint le texte par son fond",
+        inner().classList.contains("pw-text-clip") && /linear-gradient/.test(inner().style.backgroundImage || inner().getAttribute("style")));
+      set({ anim: "gradient", outline: "hollow" });
+      assert("texte : un texte creux ne recoit pas de degrade", !inner().classList.contains("pw-text-clip")
+        && !hostT.querySelector(".pw-text").classList.contains("pw-text-anim-gradient"));
+      set({ anim: "shine" });
+      assert("texte : la brillance peint aussi par le fond", inner().classList.contains("pw-text-clip"));
+      set({ rotate: "90", flipH: true });
+      const or = hostT.querySelector(".pw-text-orient");
+      assert("texte : rotation 90 = boite d'orientation tournee et recentree",
+        or.classList.contains("pw-text-turned") && /rotate\(90deg\)/.test(or.style.transform) && /translate\(-50%, -50%\)/.test(or.style.transform));
+      assert("texte : miroir applique", /scale\(-1, 1\)/.test(or.style.transform));
+      set({ opacity: 60 });
+      assert("texte : opacite", hostT.querySelector(".pw-text").style.opacity === "0.6");
+      set({ opacity: 3 });
+      assert("texte : opacite bornee a 10 %", hostT.querySelector(".pw-text").style.opacity === "0.1");
+      set({ neon: "steady" });
+      assert("texte : neon = halo dans la couleur du texte", /var\(--pwt-c\)/.test(inner().style.textShadow || inner().getAttribute("style")));
+      set({ neon: "flicker" });
+      assert("texte : neon scintillant", hostT.querySelector(".pw-text-orient").classList.contains("pw-text-flicker"));
+      set({ extrude: 5, extrudeDir: "br" });
+      assert("texte : relief = pile d'ombres decalees", /5px 5px 0/.test(inner().style.textShadow || inner().getAttribute("style")));
+      set({ extrude: 0 });
+      assert("texte : sans relief ni neon, l'ombre simple reste une classe", !/5px 5px/.test(inner().getAttribute("style") || ""));
+      set({ shadow: true });
+      assert("texte : l'ombre portee d'origine est conservee", hostT.querySelector(".pw-text").classList.contains("pw-text-shadow"));
+      set({ outline: "outline", outlineWidth: 4, outlineColor: "#112233" });
+      assert("texte : contour en em, proportionnel a la taille", /0\.04em/.test(inner().style.webkitTextStroke || inner().getAttribute("style")));
+      set({ text: "" });
+      assert("texte : une tuile vide reste trouvable (invite)", hostT.querySelector(".pw-text-placeholder") !== null);
+      tw.destroy();
+      assert("texte : la destruction arrete les chronometres", tw.timers.length === 0);
+      hostT.remove();
+    }
+
     /* 1.151.1 : en edition, un appui sur ces tuiles n'ouvre plus leurs
        reglages (la fenetre se posait sur les blocs qu'on touchait). */
     {
