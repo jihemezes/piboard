@@ -364,3 +364,13 @@
 .pw-iptv .pwtv-sched-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pw-iptv .pwtv-sched-when { color: var(--muted); font-size: 11px; white-space: nowrap; }
 .pw-iptv .pwtv-sched-empty { color: var(--muted); font-size: 12px; }
+
+/* Etat du compte Xtream et bouton « Reessayer » (1.160.0).
+   Xtream account status and "Retry" button. */
+.pw-iptv .pwtv-account {
+  padding: 6px 12px 8px;
+  font-size: 0.8em;
+  opacity: 0.75;
+  text-align: center;
+}
+.pw-iptv .pwtv-retry { margin-top: 10px; }

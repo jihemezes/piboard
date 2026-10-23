@@ -154,7 +154,7 @@ async function handleProxyRequest(targetUrl, res) {
     res.send(buf);
   } catch (e) {
     clearTimeout(timer);
-    console.warn("[piboard] iptv hls-proxy echec pour", targetUrl, "->", e.message || e);
+    console.warn("[piboard] iptv hls-proxy echec pour", require("./iptv").redactSecrets(targetUrl), "->", require("./iptv").redactSecrets(e.message || e));
     if (!res.headersSent) res.status(502).json({ error: String(e.message || e) });
   }
 }

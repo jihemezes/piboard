@@ -319,7 +319,7 @@ function streamTranscoded(url, res, onError, mode, inputStream, opts) {
   ff.stdout.pipe(res);
 
   ff.on("error", (e) => {
-    console.warn("[piboard] iptv-audio ffmpeg", e.message || e);
+    console.warn("[piboard] iptv-audio ffmpeg", require("./iptv").redactSecrets(e.message || e));
     if (onError) onError(e);
   });
   ff.on("close", (code) => {
@@ -330,7 +330,7 @@ function streamTranscoded(url, res, onError, mode, inputStream, opts) {
     // tail of ffmpeg's error output, the only usable trace for
     // diagnosis.
     if (code !== 0 && code !== null && !res.writableEnded) {
-      console.warn("[piboard] iptv-audio ffmpeg code", code, stderrTail.trim());
+      console.warn("[piboard] iptv-audio ffmpeg code", code, require("./iptv").redactSecrets(stderrTail.trim()));
     }
     if (!res.writableEnded) res.end();
   });

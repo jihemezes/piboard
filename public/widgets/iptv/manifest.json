@@ -1,18 +1,18 @@
 {
   "id": "iptv",
-  "version": "0.12.0",
+  "version": "0.13.0",
   "name": {
     "en": "TV channels",
     "fr": "Chaînes TV"
   },
   "titleBar": true,
   "description": {
-    "en": "PiBoard provides NO channels and no content: this tile is a plain player, usable only if you already have, on your own, a subscription / access to an IPTV service or a freely available playlist. Reads a channel playlist (.m3u/.m3u8, the standard format VLC and Kodi use) and plays a channel right in the tile. Browse the list, filter by category or search by name, tap a channel to watch it. The list and live channels go through the PiBoard (IPTV platforms do not send the authorization a browser requires); movies and series are read directly by the browser. A button RECORDS what you are watching to a file by tapping the stream already received — no extra connection to the provider, which usually allows only one: scheduled recordings with margins before and after, resumption after a dropped feed, duration and free-space guards, a list of the recordings and conversion to .mp4. Performance note: a Raspberry Pi 4 handles 720p comfortably, 1080p is borderline once the rest of the dashboard is running alongside — the per-tile scheduling (see the matching help section) is worth using so it doesn't run around the clock.",
-    "fr": "PiBoard ne fournit AUCUNE chaîne ni aucun contenu : cette tuile est un simple lecteur, utilisable uniquement si vous disposez déjà par vous-même d'un abonnement / accès à un service IPTV ou d'une playlist en libre accès. Lit une playlist de chaînes (.m3u/.m3u8, le format standard que lisent VLC et Kodi) et diffuse une chaîne directement dans la tuile. Parcourez la liste, filtrez par catégorie ou cherchez par nom, touchez une chaîne pour la regarder. La liste et les chaînes en direct transitent par le PiBoard (les plateformes IPTV n'envoient pas l'autorisation qu'exige un navigateur) ; les films et séries sont lus directement par le navigateur. Un bouton permet d'ENREGISTRER dans un fichier ce que vous regardez, en dérivant le flux déjà reçu — aucune connexion supplémentaire chez le fournisseur, qui n'en autorise généralement qu'une : enregistrements programmés avec marges avant et après, reprise après coupure, garde-fous de durée et d'espace disque, liste des enregistrements et conversion en .mp4. Note de performance : un Raspberry Pi 4 tient le 720p confortablement, le 1080p est limite une fois le reste du tableau en fonctionnement à côté — la planification par tuile (voir la section d'aide correspondante) vaut le coup pour qu'elle ne tourne pas en permanence."
+    "en": "PiBoard provides NO channels and no content: this tile is a plain player, usable only if you already have, on your own, a subscription / access to an IPTV service or a freely available playlist. Reads a channel playlist (.m3u/.m3u8, the standard format VLC and Kodi use) or connects to a subscription service with its server address, username and password (Xtream Codes: live channels, movies and series, by category), and plays a channel right in the tile. Browse the list, filter by category or search by name, tap a channel to watch it. The list and live channels go through the PiBoard (IPTV platforms do not send the authorization a browser requires); movies and series are read directly by the browser. A button RECORDS what you are watching to a file by tapping the stream already received — no extra connection to the provider, which usually allows only one: scheduled recordings with margins before and after, resumption after a dropped feed, duration and free-space guards, a list of the recordings and conversion to .mp4. Performance note: a Raspberry Pi 4 handles 720p comfortably, 1080p is borderline once the rest of the dashboard is running alongside — the per-tile scheduling (see the matching help section) is worth using so it doesn't run around the clock.",
+    "fr": "PiBoard ne fournit AUCUNE chaîne ni aucun contenu : cette tuile est un simple lecteur, utilisable uniquement si vous disposez déjà par vous-même d'un abonnement / accès à un service IPTV ou d'une playlist en libre accès. Lit une playlist de chaînes (.m3u/.m3u8, le format standard que lisent VLC et Kodi) ou se connecte à un service par abonnement avec l'adresse du serveur, l'identifiant et le mot de passe (Xtream Codes : direct, films et séries, par catégorie), et diffuse une chaîne directement dans la tuile. Parcourez la liste, filtrez par catégorie ou cherchez par nom, touchez une chaîne pour la regarder. La liste et les chaînes en direct transitent par le PiBoard (les plateformes IPTV n'envoient pas l'autorisation qu'exige un navigateur) ; les films et séries sont lus directement par le navigateur. Un bouton permet d'ENREGISTRER dans un fichier ce que vous regardez, en dérivant le flux déjà reçu — aucune connexion supplémentaire chez le fournisseur, qui n'en autorise généralement qu'une : enregistrements programmés avec marges avant et après, reprise après coupure, garde-fous de durée et d'espace disque, liste des enregistrements et conversion en .mp4. Note de performance : un Raspberry Pi 4 tient le 720p confortablement, le 1080p est limite une fois le reste du tableau en fonctionnement à côté — la planification par tuile (voir la section d'aide correspondante) vaut le coup pour qu'elle ne tourne pas en permanence."
   },
   "tagline": {
-    "en": "Watch a channel from an .m3u playlist, and record it.",
-    "fr": "Regarder une chaîne depuis une playlist .m3u, et l'enregistrer."
+    "en": "Watch TV from an .m3u playlist or an Xtream account, and record it.",
+    "fr": "Regarder la TV depuis une playlist .m3u ou un compte Xtream, et l'enregistrer."
   },
   "size": {
     "w": 5,
@@ -24,6 +24,39 @@
   },
   "settings": [
     {
+      "key": "sourceType",
+      "type": "select",
+      "default": "m3u",
+      "label": {
+        "en": "Source type",
+        "fr": "Type de source"
+      },
+      "options": [
+        {
+          "value": "m3u",
+          "label": {
+            "en": "M3U playlist (address)",
+            "fr": "Playlist M3U (adresse)"
+          }
+        },
+        {
+          "value": "xtream",
+          "label": {
+            "en": "Xtream server (address, username, password)",
+            "fr": "Serveur Xtream (adresse, identifiant, mot de passe)"
+          }
+        }
+      ],
+      "hint": {
+        "en": "Most subscription providers give you a server address, a username and a password (the Xtream Codes system): that is the second choice. The first one is for a playlist file or link.",
+        "fr": "La plupart des fournisseurs par abonnement donnent une adresse de serveur, un identifiant et un mot de passe (système Xtream Codes) : c'est le second choix. Le premier est pour un fichier ou un lien de playlist."
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
       "key": "playlistUrl",
       "type": "text",
       "default": "",
@@ -32,12 +65,25 @@
         "fr": "Adresse de la playlist (.m3u)"
       },
       "hint": {
-        "en": "Either a plain M3U playlist address, or an Xtream Codes link from a subscription IPTV provider (typically containing \"username=\" and \"password=\", e.g. from a \"get.php\" link) — both are auto-detected, no need to pick a mode. The IPTV-org project (iptv-org.github.io) publishes large free-to-air M3U playlists by country and category, which work well here too.",
-        "fr": "Soit une adresse de playlist M3U simple, soit un lien Xtream Codes d'une plateforme IPTV par abonnement (contenant typiquement « username= » et « password= », par ex. depuis un lien « get.php ») — les deux sont détectés automatiquement, pas besoin de choisir un mode. Le projet IPTV-org (iptv-org.github.io) publie de vastes playlists M3U de chaînes en clair par pays et catégorie, qui fonctionnent aussi très bien ici."
+        "en": "Address of a plain M3U playlist. The IPTV-org project (iptv-org.github.io) publishes large free-to-air M3U playlists by country and category, which work well here. For a subscription with a username and password, pick « Xtream server » above instead: pasting a link containing \"username=\" and \"password=\" here is detected and moved to the Xtream fields for you (the password then goes to the encrypted vault rather than staying in the settings).",
+        "fr": "Adresse d'une playlist M3U simple. Le projet IPTV-org (iptv-org.github.io) publie de vastes playlists M3U de chaînes en clair par pays et catégorie, qui fonctionnent très bien ici. Pour un abonnement avec identifiant et mot de passe, choisissez plutôt « Serveur Xtream » ci-dessus : coller ici un lien contenant « username= » et « password= » est détecté et déplacé pour vous vers les champs Xtream (le mot de passe va alors dans le coffre chiffré au lieu de rester dans les réglages)."
       },
       "group": {
-        "en": "Playlist",
-        "fr": "Playlist"
+        "en": "Source",
+        "fr": "Source"
+      },
+      "showIf": {
+        "key": "sourceType",
+        "equals": "m3u"
+      },
+      "importCreds": {
+        "server": "xtreamServer",
+        "user": "xtreamUser",
+        "secret": "xtreamPassword",
+        "mode": {
+          "key": "sourceType",
+          "value": "xtream"
+        }
       }
     },
     {
@@ -45,16 +91,157 @@
       "type": "text",
       "default": "",
       "label": {
-        "en": "Category shown on opening (simple M3U playlists only)",
-        "fr": "Catégorie affichée à l'ouverture (playlists M3U simples uniquement)"
+        "en": "Category shown on opening",
+        "fr": "Catégorie affichée à l'ouverture"
       },
       "hint": {
-        "en": "Optional, and only applies to a plain M3U playlist (not an Xtream Codes one, auto-detected from the URL — those instead offer full navigation: Live / Movies / Series, then categories). Exact name of a category (e.g. \"News\"), to avoid scrolling a very long list every time.",
-        "fr": "Facultatif, et ne s'applique qu'à une playlist M3U simple (pas à une plateforme Xtream Codes, détectée automatiquement depuis l'URL — celles-ci proposent au contraire une navigation complète : Direct / Films / Séries, puis catégories). Nom exact d'une catégorie (ex. « News »), pour éviter de faire défiler une très longue liste à chaque fois."
+        "en": "Optional. Exact name of a category (e.g. \"News\"), to avoid scrolling a very long list every time. An Xtream account instead offers full navigation: Live / Movies / Series, then categories.",
+        "fr": "Facultatif. Nom exact d'une catégorie (ex. « News »), pour éviter de faire défiler une très longue liste à chaque fois. Un compte Xtream propose au contraire une navigation complète : Direct / Films / Séries, puis catégories."
       },
       "group": {
-        "en": "Playlist",
-        "fr": "Playlist"
+        "en": "Source",
+        "fr": "Source"
+      },
+      "showIf": {
+        "key": "sourceType",
+        "equals": "m3u"
+      }
+    },
+    {
+      "key": "xtreamServer",
+      "type": "text",
+      "default": "",
+      "showIf": {
+        "key": "sourceType",
+        "equals": "xtream"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      },
+      "importCreds": {
+        "server": "xtreamServer",
+        "user": "xtreamUser",
+        "secret": "xtreamPassword",
+        "mode": {
+          "key": "sourceType",
+          "value": "xtream"
+        }
+      },
+      "label": {
+        "en": "Server address",
+        "fr": "Adresse du serveur"
+      },
+      "hint": {
+        "en": "With the port, e.g. http://myserver.example:8080 (the scheme may be left out). You can also paste the whole \"get.php?username=…&password=…\" link your provider gave you: the username and password are picked out for you.",
+        "fr": "Avec le port, par ex. http://monserveur.exemple:8080 (le préfixe http:// peut être omis). Vous pouvez aussi coller en entier le lien « get.php?username=…&password=… » donné par votre fournisseur : l'identifiant et le mot de passe en sont extraits pour vous."
+      }
+    },
+    {
+      "key": "xtreamUser",
+      "type": "text",
+      "default": "",
+      "showIf": {
+        "key": "sourceType",
+        "equals": "xtream"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      },
+      "label": {
+        "en": "Username",
+        "fr": "Identifiant"
+      }
+    },
+    {
+      "key": "xtreamPassword",
+      "type": "secret",
+      "showIf": {
+        "key": "sourceType",
+        "equals": "xtream"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      },
+      "label": {
+        "en": "Password",
+        "fr": "Mot de passe"
+      },
+      "hint": {
+        "en": "Stored encrypted on the machine running PiBoard, never in the tile settings, in a backup or in an exported configuration by default, and never sent back to the screen. Leave empty to keep the one already stored.",
+        "fr": "Enregistré chiffré sur la machine qui fait tourner PiBoard, jamais dans les réglages de la tuile, ni dans une sauvegarde, ni dans une configuration exportée par défaut, et jamais renvoyé à l'écran. Laisser vide pour conserver celui déjà enregistré."
+      }
+    },
+    {
+      "key": "xtreamTest",
+      "type": "test",
+      "showIf": {
+        "key": "sourceType",
+        "equals": "xtream"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      },
+      "source": "/api/iptv/xtream-test",
+      "sends": [
+        "xtreamServer",
+        "xtreamUser"
+      ],
+      "secrets": [
+        "xtreamPassword"
+      ],
+      "label": {
+        "en": "Test the connection",
+        "fr": "Tester la connexion"
+      },
+      "hint": {
+        "en": "Checks the address, the username and the password (typed or already stored) without saving anything, and shows the subscription's state: expiry date and connections used.",
+        "fr": "Vérifie l'adresse, l'identifiant et le mot de passe (saisi ou déjà enregistré) sans rien enregistrer, et affiche l'état de l'abonnement : date d'expiration et connexions utilisées."
+      }
+    },
+    {
+      "key": "xtreamHideCategories",
+      "type": "textarea",
+      "default": "",
+      "showIf": {
+        "key": "sourceType",
+        "equals": "xtream"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      },
+      "label": {
+        "en": "Categories to hide (keywords)",
+        "fr": "Catégories à masquer (mots-clés)"
+      },
+      "hint": {
+        "en": "One keyword per line, or separated by commas. Any category whose name contains one of them (case and accents ignored) is left out of Live, Movies and Series — e.g. \"adult\".",
+        "fr": "Un mot-clé par ligne, ou séparés par des virgules. Toute catégorie dont le nom en contient un (casse et accents ignorés) disparaît du Direct, des Films et des Séries — par ex. « adulte »."
+      }
+    },
+    {
+      "key": "xtreamPinCategories",
+      "type": "textarea",
+      "default": "",
+      "showIf": {
+        "key": "sourceType",
+        "equals": "xtream"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      },
+      "label": {
+        "en": "Categories to show first (keywords)",
+        "fr": "Catégories à afficher en premier (mots-clés)"
+      },
+      "hint": {
+        "en": "Same format. Matching categories come first, in the order of your keywords; the others follow in the provider's order — e.g. \"France\".",
+        "fr": "Même format. Les catégories correspondantes passent en tête, dans l'ordre de vos mots-clés ; les autres suivent dans l'ordre du fournisseur — par ex. « France »."
       }
     },
     {

@@ -868,6 +868,15 @@ body.touch .modal-card { resize: none; }
 .field-password-wrap input[type="text"] { flex: 1; width: auto; }
 .field-password-wrap .field-password-toggle { flex: none; white-space: nowrap; }
 
+/* Champ « test » et note d'import des reglages (1.160.0).
+   Settings "test" field and import note. */
+.field-test { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+.field-test-msg:empty { display: none; }
+.field-test-msg.field-hint-error,
+.field .field-hint.field-hint-error { color: var(--danger); }
+.field-test-msg.field-note-ok,
+.field .field-hint.field-note-ok { color: var(--ok); }
+
 /* Etat d'un champ "secret" (voir fieldMarkup() cas "secret" dans
    app.js) : indique si une valeur est enregistree, sans jamais
    l'afficher. State of a "secret" field (see fieldMarkup()'s "secret"

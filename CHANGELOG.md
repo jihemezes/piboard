@@ -1,5 +1,123 @@
 # Changelog
 
+## 1.160.0
+
+- **Chaînes TV : connexion Xtream par adresse + identifiant + mot de passe.** Un
+  nouveau réglage **« Type de source »** (Playlist M3U / Serveur Xtream) remplace
+  l'astuce du lien « get.php » collé dans le champ playlist, qui continue pourtant
+  de fonctionner à l'identique. En mode Xtream, trois champs séparés : **Adresse du
+  serveur** (le préfixe `http://`, la barre finale, un chemin de panneau `/c/` ou
+  un lien `get.php` entier sont tolérés — `normalizeXtreamServer()`), **Identifiant**
+  et **Mot de passe**. La navigation Direct / Films / Séries, les catégories, les
+  épisodes par saison et la lecture sont celles de la 1.1x, inchangées.
+  **Le mot de passe vit dans le coffre chiffré** (`server/tileSecrets.js`, AES-256-GCM,
+  champ de manifeste `secret`) : jamais dans `layout.json`, ni dans une sauvegarde,
+  ni dans l'adresse des requêtes de la tuile (qui envoie `tile` + `server` + `user`,
+  le serveur reprenant le mot de passe dans le coffre), ni renvoyé à l'écran. Une
+  limite documentée : la clé est stockée à côté du coffre, sur la même machine.
+- **Bouton « Tester la connexion »** dans les réglages, nouveau type de champ
+  générique `test` (route POST, valeurs du formulaire envoyées *avant*
+  enregistrement, mot de passe saisi prioritaire sur celui du coffre). Il renvoie
+  l'état du compte : statut, date d'expiration, connexions utilisées sur le maximum,
+  mention « limite atteinte » et « compte d'essai ». Les mêmes informations restent
+  affichées sous les trois sources de la tuile.
+- **Chaque cause d'échec a son code et son message bilingue** (`XtreamError`,
+  `XTREAM_MESSAGES`, une seule fois côté serveur) : `not-configured`, `no-password`,
+  `bad-server`, `unreachable`, `timeout`, `bad-credentials`, `expired`, `disabled`,
+  `not-xtream`, `upstream`. Corrige au passage la détection des identifiants refusés :
+  un panneau Xtream répond **200 avec `user_info.auth = 0`**, ce que l'ancien code ne
+  reconnaissait pas. Le mode champs ne se replie plus sur le M3U (ce n'est pas une
+  playlist) et propose « Réessayer ». Deux états visuellement identiques donnent
+  deux messages distincts (leçon de la tuile Santé d'Internet).
+- **Catégories masquées / en premier** : deux réglages à mots-clés (un par ligne ou
+  séparés par des virgules, casse et accents ignorés) retirent des catégories du
+  Direct, des Films et des Séries, ou les remontent en tête dans l'ordre des mots-clés.
+- **Import automatique** : coller un lien `get.php?username=…&password=…` dans
+  « Adresse du serveur » ou « Adresse de la playlist » répartit serveur, identifiant
+  et mot de passe dans leurs champs, bascule en mode Xtream et **vide le champ
+  d'origine** (le mot de passe ne reste pas en clair dans les réglages).
+  Champ de manifeste générique `importCreds`.
+- **Rendez-vous d'enregistrement sans mot de passe** : en mode champs, chaque flux
+  porte aussi `ref`, la même URL où le mot de passe est remplacé par
+  `{xtream-password}` ; c'est elle que conservent `iptvSchedules.json` et l'état
+  « dernière chaîne ». À l'heure dite, la tuile la fait compléter par
+  `POST /api/iptv/xtream-unmask` (mot de passe repris dans le coffre).
+- **Journaux et diagnostic sans identifiants** : `redactSecrets()` masque
+  `username=`/`password=` et le chemin `/live|movie|series/<id>/<mot de passe>/` dans
+  les avertissements du serveur, du relais HLS, de VLC et de ffmpeg, et dans l'écran
+  de diagnostic (ffmpeg et VLC recopient l'URL complète).
+- **Formulaire de réglages** : champs conditionnels génériques (`showIf: { key, equals }`),
+  les champs d'un autre mode sont masqués sans rien perdre. Un secret remplacé seul
+  ne change aucun réglage visible : le formulaire horodate `_secretsRev` pour que la
+  tuile sache qu'elle doit se reconnecter.
+- **Correctif** : une seule erreur de chargement d'une catégorie ou d'une série faisait
+  afficher l'erreur dans **toutes** les catégories suivantes (`xItemsError` /
+  `xSeasonsError` n'étaient jamais remis à zéro) ; remis à zéro à chaque ouverture, avec
+  le message précis de l'échec.
+- Aide FR/EN de la tuile Chaînes TV : « Se connecter avec un compte Xtream », « Où va le
+  mot de passe », « Coller un lien get.php », catégories, échecs ; réglages renommés
+  sous le groupe « Source ». Tests : `test/iptvXtream.test.js` (89 vérifications contre
+  un faux panneau Xtream et le vrai serveur sur un dossier de données temporaire : le
+  mot de passe n'apparaît ni dans le coffre, ni dans un fichier de données, ni dans un
+  journal) et 50 assertions dans `dom-smoke.js` (formulaire, import, test, coffre,
+  requêtes sans mot de passe, `ref`, catégories, messages distincts, reconnexion).
+
+---
+
+- **TV channels: Xtream connection by address + username + password.** A new
+  **"Source type"** setting (M3U playlist / Xtream server) replaces the trick of
+  pasting a "get.php" link into the playlist field, which nevertheless keeps working
+  exactly as before. In Xtream mode, three separate fields: **Server address** (a
+  missing `http://`, a trailing slash, a `/c/` panel path or a whole `get.php` link
+  are tolerated — `normalizeXtreamServer()`), **Username** and **Password**. The
+  Live / Movies / Series navigation, categories, episodes by season and playback are
+  those of 1.1x, unchanged. **The password lives in the encrypted vault**
+  (`server/tileSecrets.js`, AES-256-GCM, manifest field `secret`): never in
+  `layout.json`, nor in a backup, nor in the address of the tile's requests (which send
+  `tile` + `server` + `user`, the server taking the password from the vault), nor sent
+  back to the screen. One documented limit: the key is stored next to the vault, on the
+  same machine.
+- **"Test the connection" button** in the settings, a new generic field type `test`
+  (POST route, form values sent *before* saving, typed password taking priority over
+  the vault's). It returns the account state: status, expiry date, connections used out
+  of the maximum, a "limit reached" mention and "trial account". The same information
+  stays displayed under the tile's three sources.
+- **Every failure cause has its own code and bilingual message** (`XtreamError`,
+  `XTREAM_MESSAGES`, once, server side): `not-configured`, `no-password`, `bad-server`,
+  `unreachable`, `timeout`, `bad-credentials`, `expired`, `disabled`, `not-xtream`,
+  `upstream`. Also fixes the detection of refused credentials: an Xtream panel answers
+  **200 with `user_info.auth = 0`**, which the old code did not recognise. Fields mode
+  no longer falls back to M3U (it isn't a playlist) and offers "Retry". Two visually
+  identical states give two distinct messages (lesson from the Internet health tile).
+- **Categories hidden / first**: two keyword settings (one per line or comma-separated,
+  case and accents ignored) remove categories from Live, Movies and Series, or move them
+  to the top in the order of the keywords.
+- **Automatic import**: pasting a `get.php?username=…&password=…` link into "Server
+  address" or "Playlist address" spreads server, username and password over their
+  fields, switches to Xtream mode and **empties the original field** (the password does
+  not stay in the clear in the settings). Generic manifest field `importCreds`.
+- **Recording appointments without the password**: in fields mode each stream also
+  carries `ref`, the same URL with the password replaced by `{xtream-password}`; this
+  is what `iptvSchedules.json` and the "last channel" state keep. When due, the tile has
+  it completed by `POST /api/iptv/xtream-unmask` (password taken from the vault).
+- **Logs and diagnostics free of credentials**: `redactSecrets()` masks
+  `username=`/`password=` and the `/live|movie|series/<id>/<password>/` path in the
+  warnings of the server, the HLS relay, VLC and ffmpeg, and in the diagnostic screen
+  (ffmpeg and VLC echo the full URL).
+- **Settings form**: generic conditional fields (`showIf: { key, equals }`), the fields
+  of another mode are hidden without losing anything. A secret replaced alone changes no
+  visible setting: the form stamps `_secretsRev` so the tile knows it must reconnect.
+- **Fix**: a single load error on one category or series made the error show in **every**
+  following category (`xItemsError` / `xSeasonsError` were never reset); now reset on
+  each opening, with the precise failure message.
+- FR/EN help of the TV channels tile: "Connecting with an Xtream account", "Where the
+  password goes", "Pasting a get.php link", categories, failures; settings renamed under
+  the "Source" group. Tests: `test/iptvXtream.test.js` (89 checks against a fake Xtream
+  panel and the real server on a temporary data folder: the password appears neither in
+  the vault, nor in a data file, nor in a log) and 50 assertions in `dom-smoke.js` (form,
+  import, test, vault, requests without the password, `ref`, categories, distinct
+  messages, reconnection).
+
 ## 1.159.0
 
 - **Bloc-notes : disparition automatique des éléments cochés, réglable pour chaque

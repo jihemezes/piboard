@@ -23,6 +23,12 @@
    ne sait pas lire nativement (Matroska/.mkv, tres courant) sont
    signales avant lecture plutot que d'echouer silencieusement.
 
+   Source: a plain M3U playlist address, or an Xtream account given as
+   server + username + password (1.160.0: separate fields, the password
+   kept in the server's encrypted vault, never in the settings). A
+   playlist link carrying username= and password= keeps working as it
+   always did.
+
    Two modes, auto-detected from the playlist URL:
 
    - XTREAM CODES (subscription IPTV platforms, username + password in
@@ -230,15 +236,100 @@
 
     onSettingsChanged(settings) {
       const old = this.ctx.settings;
-      const playlistChanged = settings.playlistUrl !== old.playlistUrl;
+      /* Tout ce qui designe la SOURCE. `_secretsRev` change quand le mot
+         de passe vient d'etre remplace : il n'est pas dans les reglages,
+         c'est le seul indice dont la tuile dispose.
+         Everything that designates the SOURCE. `_secretsRev` changes when
+         the password has just been replaced: it isn't in the settings, so
+         this is the only hint the tile has. */
+      const playlistChanged = ["playlistUrl", "sourceType", "xtreamServer", "xtreamUser", "_secretsRev"]
+        .some((k) => settings[k] !== old[k]);
+      const prefsChanged = settings.xtreamHideCategories !== old.xtreamHideCategories
+        || settings.xtreamPinCategories !== old.xtreamPinCategories;
       this.ctx.settings = settings;
       if (playlistChanged) {
         this.stopPlayback();
         this.resetNav();
         this.loadPlaylist();
+      } else if (prefsChanged && this.xCategoriesRaw) {
+        this.xCategories = this.applyCategoryPrefs(this.xCategoriesRaw);
+        this.render();
       } else {
         this.render();
       }
+    }
+
+    /* Source donnee par serveur + identifiant + mot de passe ?
+       Source given as server + username + password? */
+    xtreamFields() { return this.ctx.settings.sourceType === "xtream"; }
+
+    /* Parametres de requete designant le compte. En mode champs, le mot
+       de passe n'y figure PAS : le serveur le prend dans son coffre, et
+       `mask=1` lui fait ajouter `ref` (URL sans mot de passe) a chaque
+       flux, seule forme conservee sur disque.
+       Query parameters designating the account. In fields mode the
+       password is NOT in it: the server takes it from its vault. */
+    xq(extra) {
+      const s = this.ctx.settings;
+      const enc = encodeURIComponent;
+      const base = this.xtreamFields()
+        ? "tile=" + enc(this.ctx.instanceId) + "&server=" + enc(s.xtreamServer || "") + "&user=" + enc(s.xtreamUser || "") + "&mask=1"
+        : "url=" + enc(s.playlistUrl || "");
+      return base + (extra ? "&" + extra : "");
+    }
+
+    /* Message d'une reponse d'erreur du serveur, dans la langue de la
+       tuile ; null si la reponse n'en porte pas.
+       Message of a server error reply, in the tile's language. */
+    xtreamMessage(data) {
+      const m = data && data.message;
+      if (!m) return null;
+      return m[this.ctx.i18n.lang] || m.fr || m.en || null;
+    }
+
+    /* Masquer / epingler des categories d'apres les mots-cles des
+       reglages (sans accents ni casse). Hide / pin categories from the
+       settings' keywords (accent- and case-insensitive). */
+    applyCategoryPrefs(data) {
+      const s = this.ctx.settings;
+      const words = (t) => String(t || "").split(/[\n,;]+/).map((w) => normalize(w.trim())).filter(Boolean);
+      const hide = words(s.xtreamHideCategories);
+      const pin = words(s.xtreamPinCategories);
+      const out = Object.assign({}, data);
+      for (const k of ["live", "vod", "series"]) {
+        let list = (data[k] || []).filter((c) => !hide.some((w) => normalize(c.name).includes(w)));
+        if (pin.length) {
+          const rank = (c) => {
+            const n = normalize(c.name);
+            const i = pin.findIndex((w) => n.includes(w));
+            return i < 0 ? pin.length : i;
+          };
+          list = list.map((c, i) => ({ c, i, r: rank(c) })).sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.c);
+        }
+        out[k] = list;
+      }
+      return out;
+    }
+
+    /* Ligne d'etat du compte, sous les trois sources.
+       Account status line, under the three sources. */
+    accountLineHtml() {
+      const a = this.xAccount;
+      if (!a) return "";
+      const i18n = this.ctx.i18n;
+      const parts = [];
+      if (a.accountStatus) parts.push(escapeHtml(a.accountStatus));
+      if (a.expiresAt && /^\d+$/.test(String(a.expiresAt))) {
+        const d = new Date(Number(a.expiresAt) * 1000);
+        if (!isNaN(d)) parts.push(escapeHtml(i18n.t("iptv.account.expires").replace("{d}", d.toLocaleDateString(i18n.lang === "fr" ? "fr-FR" : "en-GB"))));
+      }
+      if (a.maxConnections != null) {
+        const active = a.activeConnections == null ? 0 : a.activeConnections;
+        parts.push(escapeHtml(i18n.t("iptv.account.connections").replace("{a}", active).replace("{n}", a.maxConnections)));
+        if (active >= a.maxConnections) parts.push(escapeHtml(i18n.t("iptv.account.limit")));
+      }
+      if (a.isTrial) parts.push(escapeHtml(i18n.t("iptv.account.trial")));
+      return parts.length ? `<div class="pwtv-account">${parts.join(" · ")}</div>` : "";
     }
 
     onLangChanged() { this.render(); }
@@ -263,6 +354,7 @@
     async loadPlaylist() {
       const s = this.ctx.settings;
       const i18n = this.ctx.i18n;
+      if (this.xtreamFields()) return this.loadXtreamFields();
       if (!s.playlistUrl) {
         this.mode = null;
         this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${i18n.t("iptv.needConfig")}</div></div>`;
@@ -277,6 +369,8 @@
           if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
           this.mode = "xtream";
           this.xCategories = data;
+          this.xCategoriesRaw = null; // les filtres de categories ne valent que pour le mode serveur / category filters only apply to server mode
+          this.xAccount = data;
           this.resetNav();
           this.view = "xtream-sources";
           this.render();
@@ -306,6 +400,48 @@
         console.warn("[piboard/iptv]", e);
         this.mode = null;
         this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${i18n.t("iptv.playlistError")}</div></div>`;
+      }
+    }
+
+    /* Mode « serveur Xtream » : pas de repli sur le M3U (ce n'est pas une
+       playlist) et un echec dit POURQUOI -- identifiants refuses,
+       abonnement expire, serveur injoignable -- au lieu d'un message
+       unique qui laisserait deviner.
+       "Xtream server" mode: no fallback to M3U (it isn't a playlist) and
+       a failure says WHY. */
+    async loadXtreamFields() {
+      const s = this.ctx.settings;
+      const i18n = this.ctx.i18n;
+      const seq = (this.loadSeq = (this.loadSeq || 0) + 1);
+      this.xCategoriesRaw = null;
+      this.xAccount = null;
+      if (!s.xtreamServer || !s.xtreamUser) {
+        this.mode = null;
+        this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${i18n.t("iptv.needConfigXtream")}</div></div>`;
+        return;
+      }
+      this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${i18n.t("iptv.xtream.reconnecting")}</div></div>`;
+      try {
+        const res = await fetch("/api/iptv/xtream-categories?" + this.xq());
+        let data = null;
+        try { data = await res.json(); } catch (e) { data = null; }
+        if (seq !== this.loadSeq) return; // une source plus recente a pris le relais / a newer source took over
+        if (!res.ok) { const err = new Error("status " + res.status); err.xtream = data; throw err; }
+        this.mode = "xtream";
+        this.xCategoriesRaw = data;
+        this.xAccount = data;
+        this.xCategories = this.applyCategoryPrefs(data);
+        this.resetNav();
+        this.view = "xtream-sources";
+        this.render();
+      } catch (e) {
+        if (seq !== this.loadSeq) return;
+        console.warn("[piboard/iptv] xtream", e.message || e);
+        this.mode = null;
+        const msg = this.xtreamMessage(e.xtream) || i18n.t("iptv.playlistError");
+        this.ctx.el.innerHTML = `<div class="pw-iptv"><div class="pwtv-msg">${escapeHtml(msg)}<br><button type="button" class="pwtv-btn pwtv-retry">${escapeHtml(i18n.t("iptv.retry"))}</button></div></div>`;
+        const btn = this.ctx.el.querySelector(".pwtv-retry");
+        if (btn) btn.addEventListener("click", () => this.loadPlaylist());
       }
     }
 
@@ -482,6 +618,7 @@
         <div class="pw-iptv">
           ${this.navHeaderHtml(i18n.t("iptv.sourcesTitle"), false, false)}
           <ul class="pwtv-list pwtv-sources-list">${rows}</ul>
+          ${this.accountLineHtml()}
         </div>`;
 
       this.ctx.el.querySelectorAll(".pwtv-source").forEach((li) => {
@@ -524,17 +661,21 @@
       this.search = "";
       this.view = "xtream-items";
       this.xItems = null; // null = chargement en cours / null = loading
+      // Remis a zero a chaque ouverture : sans cela, une seule erreur
+      // faisait afficher l'erreur dans TOUTES les categories suivantes.
+      // Reset on every opening: otherwise a single error made every later
+      // category show the error.
+      this.xItemsError = null;
       this.render();
-      const s = this.ctx.settings;
       try {
-        const res = await fetch(`/api/iptv/xtream-streams?url=${encodeURIComponent(s.playlistUrl)}&kind=${this.xSource}&categoryId=${encodeURIComponent(category.id)}`);
+        const res = await fetch(`/api/iptv/xtream-streams?${this.xq(`kind=${this.xSource}&categoryId=${encodeURIComponent(category.id)}`)}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
+        if (!res.ok) { const err = new Error(data && data.error ? data.error : "status " + res.status); err.xtream = data; throw err; }
         this.xItems = data;
       } catch (e) {
         console.warn("[piboard/iptv] xtream-streams", e);
         this.xItems = [];
-        this.xItemsError = true;
+        this.xItemsError = this.xtreamMessage(e.xtream) || this.ctx.i18n.t("iptv.playlistError");
       }
       if (this.view === "xtream-items") this.render();
     }
@@ -561,7 +702,7 @@
       this.ctx.el.innerHTML = `
         <div class="pw-iptv">
           ${this.navHeaderHtml(title, true, true)}
-          ${this.xItemsError ? `<div class="pwtv-msg">${i18n.t("iptv.playlistError")}</div>` : `<ul class="pwtv-list">${this.itemsHtml(list, true)}</ul>`}
+          ${this.xItemsError ? `<div class="pwtv-msg">${escapeHtml(this.xItemsError)}</div>` : `<ul class="pwtv-list">${this.itemsHtml(list, true)}</ul>`}
         </div>`;
 
       this.wireNavBack(() => { this.view = "xtream-categories"; this.search = ""; this.render(); });
@@ -579,17 +720,17 @@
       this.xSeries = series;
       this.view = "xtream-episodes";
       this.xSeasons = null;
+      this.xSeasonsError = null;
       this.render();
-      const s = this.ctx.settings;
       try {
-        const res = await fetch(`/api/iptv/xtream-series-info?url=${encodeURIComponent(s.playlistUrl)}&seriesId=${encodeURIComponent(series.id)}`);
+        const res = await fetch(`/api/iptv/xtream-series-info?${this.xq(`seriesId=${encodeURIComponent(series.id)}`)}`);
         const data = await res.json();
-        if (!res.ok) throw new Error(data && data.error ? data.error : "status " + res.status);
+        if (!res.ok) { const err = new Error(data && data.error ? data.error : "status " + res.status); err.xtream = data; throw err; }
         this.xSeasons = data.seasons || [];
       } catch (e) {
         console.warn("[piboard/iptv] xtream-series-info", e);
         this.xSeasons = [];
-        this.xSeasonsError = true;
+        this.xSeasonsError = this.xtreamMessage(e.xtream) || this.ctx.i18n.t("iptv.playlistError");
       }
       if (this.view === "xtream-episodes") this.render();
     }
@@ -617,7 +758,7 @@
       this.ctx.el.innerHTML = `
         <div class="pw-iptv pwtv-episodes-view">
           ${this.navHeaderHtml(title, true, false)}
-          ${this.xSeasonsError ? `<div class="pwtv-msg">${i18n.t("iptv.playlistError")}</div>` : (this.xSeasons.length ? seasonsHtml : `<div class="pwtv-msg">${i18n.t("iptv.noEpisodes")}</div>`)}
+          ${this.xSeasonsError ? `<div class="pwtv-msg">${escapeHtml(this.xSeasonsError)}</div>` : (this.xSeasons.length ? seasonsHtml : `<div class="pwtv-msg">${i18n.t("iptv.noEpisodes")}</div>`)}
         </div>`;
 
       this.wireNavBack(() => { this.view = "xtream-items"; this.render(); });
@@ -964,7 +1105,10 @@
         const list = await fetch("/api/iptv/schedules").then((r) => r.json());
         list.push({
           id: "s" + Date.now().toString(36),
-          url: this.current.url,
+          // `ref` = l'URL SANS mot de passe (mode champs) : le fichier
+          // des rendez-vous ne doit pas contenir ce que le coffre
+          // protege. `ref` = the URL WITHOUT the password (fields mode).
+          url: this.current.ref || this.current.url,
           channel: this.current.name,
           programme: this.current.programme || this.current.title || "",
           startAt: startAt.toISOString(),
@@ -1033,8 +1177,19 @@
         await fetch("/api/iptv/schedules", {
           method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(list)
         });
-        const target = (this.navList || this.channels || []).find((c) => c && c.url === due.url)
-          || { name: due.channel, url: due.url };
+        let target = (this.navList || this.channels || []).find((c) => c && (c.url === due.url || c.ref === due.url))
+          || { name: due.channel, url: due.url, ref: due.url };
+        /* Une URL conservee sans mot de passe le retrouve aupres du
+           coffre du serveur. A stored password-free URL gets its password
+           back from the server's vault. */
+        if (String(target.url).indexOf("{xtream-password}") >= 0) {
+          const r = await fetch("/api/iptv/xtream-unmask", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tile: this.ctx.instanceId, url: target.url })
+          });
+          if (!r.ok) throw new Error("unmask " + r.status);
+          target = Object.assign({}, target, { url: (await r.json()).url });
+        }
         await this.play(target);
         /* Le flux met un instant a s'etablir : l'enregistrement ne peut
            deriver que ce qui circule deja.
@@ -1463,7 +1618,7 @@
       // left only one result at the moment of the initial click.
       this.navList = this.mode === "xtream" ? (this.xItems || []) : this.channels;
       this.navIndex = this.navList.findIndex((it) => it.url === item.url);
-      this.ctx.api.state.put(this.stateKey(), item.url).catch(() => { /* non bloquant / non-blocking */ });
+      this.ctx.api.state.put(this.stateKey(), item.ref || item.url).catch(() => { /* non bloquant / non-blocking */ });
       this.renderPlayer();
     }
 

@@ -568,8 +568,8 @@
       group: "tiles",
       title: { fr: "Chaînes TV", en: "TV channels" },
       sub: {
-        fr: "Lit une playlist .m3u et diffuse une chaîne dans la tuile.",
-        en: "Reads an .m3u playlist and plays a channel in the tile."
+        fr: "Lit une playlist .m3u ou un compte Xtream et diffuse une chaîne dans la tuile.",
+        en: "Reads an .m3u playlist or an Xtream account and plays a channel in the tile."
       },
       html: {
         fr: `
@@ -577,10 +577,12 @@
           <div class="help-warn"><b>PiBoard ne fournit aucune chaîne ni aucun contenu.</b> Cette tuile est un simple lecteur : elle ne fonctionne que si vous disposez <b>déjà</b> par vous-même d'un abonnement ou d'un accès à un service IPTV, ou d'une playlist de chaînes en libre accès. Sans playlist de votre part, la tuile reste vide — c'est normal, il n'y a rien à débloquer ni à configurer côté PiBoard. Aucune adresse de service n'est fournie, suggérée ni intégrée par défaut, et il vous revient de vous assurer que la source que vous utilisez est légale dans votre pays.</div>
 
 <h4>Objectif</h4>
-<p>Regarder une chaîne directement sur le tableau, à partir d'une playlist .m3u que vous fournissez (le format que lisent VLC et Kodi).</p>
+<p>Regarder une chaîne directement sur le tableau, à partir d'une playlist .m3u que vous fournissez (le format que lisent VLC et Kodi) ou d'un compte d'abonnement à vous (adresse du serveur, identifiant et mot de passe — le système Xtream Codes).</p>
 <p><b>Ce que la tuile sait faire :</b></p>
 <ul>
   <li><b>Liste des chaînes</b> à parcourir, filtrer par catégorie ou chercher par nom ; un toucher lance la chaîne dans la tuile.</li>
+  <li><b>Compte Xtream</b> : adresse, identifiant et mot de passe saisis séparément (le mot de passe est conservé chiffré, jamais affiché), avec un bouton pour <b>tester la connexion</b> et voir l'état de l'abonnement (expiration, connexions utilisées).</li>
+  <li><b>Direct, films et séries</b> d'un compte Xtream, par catégories, avec des catégories que vous pouvez <b>masquer</b> ou <b>placer en premier</b> par mots-clés.</li>
   <li><b>Démarrage</b> sur la dernière chaîne regardée et/ou son coupé, au choix ; catégorie affichée par défaut.</li>
   <li><b>Films et séries</b> de la playlist lus directement par le navigateur.</li>
   <li><b>Enregistrement</b> de ce que vous regardez, sans seconde connexion chez le fournisseur : enregistrements programmés avec marges, reprise après coupure, durée maximale et garde-fou d'espace disque.</li>
@@ -589,9 +591,14 @@
 </ul>
 
 <h4>Fonctionnement</h4>
-          <p><b>Deux types de playlist sont reconnus automatiquement</b>, sans avoir à choisir un mode :</p>
-          <p><b>Xtream Codes</b> — le cas des plateformes IPTV par abonnement (une adresse contenant un identifiant et un mot de passe, typiquement un lien « get.php »). La tuile propose alors une navigation à plusieurs niveaux, comme SmartIPTV ou TiviMate : <b>Direct / Films / Séries</b>, puis les catégories de chaque source (ex. « France HD|OTT »), puis la liste des flux. Une série ajoute un niveau supplémentaire : ses épisodes, regroupés par saison. Le bouton ‹ en haut à gauche remonte d'un niveau.</p>
-          <p><b>M3U simple</b> — une playlist statique (ex. les listes en clair du projet IPTV-org). La tuile affiche alors une liste plate, avec un champ de recherche (insensible aux accents) et un filtre par catégorie.</p>
+          <p><b>Deux types de source</b>, que l'on choisit dans le réglage « Type de source » :</p>
+          <p><b>Serveur Xtream</b> (Xtream Codes) — le cas des plateformes IPTV par abonnement : votre fournisseur vous a donné une adresse de serveur, un identifiant et un mot de passe. La tuile propose alors une navigation à plusieurs niveaux, comme SmartIPTV ou TiviMate : <b>Direct / Films / Séries</b>, puis les catégories de chaque source (ex. « France HD|OTT »), puis la liste des flux. Une série ajoute un niveau supplémentaire : ses épisodes, regroupés par saison. Le bouton ‹ en haut à gauche remonte d'un niveau.</p>
+          <p><b>Se connecter avec un compte Xtream</b> : choisissez « Serveur Xtream (adresse, identifiant, mot de passe) », puis renseignez l'<b>adresse du serveur</b> (avec le port, ex. <code>http://monserveur.exemple:8080</code> ; le <code>http://</code> peut être omis), l'<b>identifiant</b> et le <b>mot de passe</b>. Le bouton <b>Tester la connexion</b> vérifie le tout sans rien enregistrer et affiche l'état de l'abonnement : date d'expiration, connexions utilisées sur le maximum autorisé (une limite atteinte est signalée : un autre appareil utilise peut-être l'abonnement). Une fois la tuile ouverte, la même information reste affichée sous les trois sources.</p>
+<p><b>Où va le mot de passe.</b> Il est enregistré <b>chiffré</b> dans un coffre sur la machine qui fait tourner PiBoard, séparé des réglages de la tuile : il ne figure ni dans la disposition, ni dans une sauvegarde, ni dans une configuration exportée par défaut, et il n'est jamais renvoyé à l'écran (le champ reste vide à la réouverture, une mention indique qu'un mot de passe est enregistré ; laissez-le vide pour le conserver). Une limite à connaître : la clé de chiffrement est stockée à côté du coffre, sur la même machine — cela protège d'un fichier copié ailleurs, pas de quelqu'un qui a la main sur tout le système. Les enregistrements programmés ne conservent, eux aussi, l'adresse du flux <b>sans le mot de passe</b> (il est repris dans le coffre à l'heure dite), et les journaux ainsi que l'écran de diagnostic masquent identifiant et mot de passe.</p>
+<p><b>Coller un lien « get.php »</b> : si votre fournisseur ne vous a donné qu'un lien du type <code>…get.php?username=…&amp;password=…</code>, collez-le dans « Adresse du serveur » (ou dans « Adresse de la playlist ») : la tuile en extrait le serveur, l'identifiant et le mot de passe, passe en mode Xtream et vide le champ d'origine pour que le mot de passe ne reste pas en clair dans les réglages. Un lien de ce type déjà saisi dans « Adresse de la playlist » avant la 1.160.0 continue de fonctionner comme avant.</p>
+<p><b>Catégories à masquer / à afficher en premier</b> : saisissez des mots-clés (un par ligne, ou séparés par des virgules ; casse et accents ignorés). Toute catégorie dont le nom contient l'un des mots-clés à masquer disparaît du Direct, des Films et des Séries ; celles qui contiennent un mot-clé « en premier » passent en tête, dans l'ordre de vos mots-clés, les autres suivant dans l'ordre du fournisseur.</p>
+<p><b>Si la connexion échoue</b>, la tuile dit pourquoi plutôt que d'afficher un message unique : identifiant ou mot de passe refusé, abonnement expiré, compte désactivé, serveur injoignable, délai dépassé, ou serveur qui ne répond pas comme un service Xtream. Un bouton « Réessayer » relance la connexion.</p>
+<p><b>M3U simple</b> — une playlist statique (ex. les listes en clair du projet IPTV-org). La tuile affiche alors une liste plate, avec un champ de recherche (insensible aux accents) et un filtre par catégorie.</p>
           <p>Dans les deux cas, touchez un flux pour le regarder ; le bouton ☰ ramène à l'endroit exact de la navigation où vous étiez.</p>
           <p><b>Films et séries</b> : certains formats de fichier utilisés par les plateformes IPTV (Matroska/<code>.mkv</code> notamment, très courant) ne se lisent pas nativement dans un navigateur. Un avertissement ⚠ apparaît alors avant la lecture plutôt que de laisser un échec silencieux sans explication.</p>
           <p><b>Pas de son</b> : de nombreuses plateformes IPTV encodent l'audio en AC3 ou DTS (compatibilité avec les box TV et téléviseurs) — des formats qu'<b>aucun navigateur ne sait décoder</b> (restriction de licence), même si la vidéo elle-même se lit sans problème. Le bouton son n'y change rien : il n'y a tout simplement aucun flux audio exploitable qui arrive jusqu'au navigateur. Une pastille ⚠ à côté du bouton son l'indique quand c'est le cas détecté.</p>
@@ -637,9 +644,16 @@
 
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
-<p class="help-opt-group">Playlist</p>
-<div class="help-opt"><span class="help-opt-name">Adresse de la playlist (.m3u)</span><span class="help-opt-desc">L'URL du fichier .m3u.</span></div>
-<div class="help-opt"><span class="help-opt-name">Catégorie affichée à l'ouverture (playlists M3U simples uniquement)</span><span class="help-opt-desc">Facultatif. Évite de faire défiler une longue liste à chaque fois.</span></div>
+<p class="help-opt-group">Source</p>
+<div class="help-opt"><span class="help-opt-name">Type de source</span><span class="help-opt-desc">« Playlist M3U (adresse) » (par défaut) pour un fichier ou un lien de playlist ; « Serveur Xtream (adresse, identifiant, mot de passe) » pour un abonnement. Les champs qui ne concernent pas le type choisi sont masqués, sans rien perdre de ce qu'ils contiennent.</span></div>
+<div class="help-opt"><span class="help-opt-name">Adresse de la playlist (.m3u)</span><span class="help-opt-desc">Type M3U : l'URL du fichier .m3u. Un lien contenant « username= » et « password= » y est détecté et converti en compte Xtream.</span></div>
+<div class="help-opt"><span class="help-opt-name">Catégorie affichée à l'ouverture</span><span class="help-opt-desc">Type M3U, facultatif. Évite de faire défiler une longue liste à chaque fois. Un compte Xtream offre à la place la navigation Direct / Films / Séries.</span></div>
+<div class="help-opt"><span class="help-opt-name">Adresse du serveur</span><span class="help-opt-desc">Type Xtream : avec le port, par ex. http://monserveur.exemple:8080. Un lien « get.php?username=…&amp;password=… » collé en entier est décomposé pour vous.</span></div>
+<div class="help-opt"><span class="help-opt-name">Identifiant</span><span class="help-opt-desc">Type Xtream : l'identifiant de l'abonnement.</span></div>
+<div class="help-opt"><span class="help-opt-name">Mot de passe</span><span class="help-opt-desc">Type Xtream : enregistré chiffré, jamais affiché ni conservé dans les réglages ; vide = conserver celui déjà enregistré.</span></div>
+<div class="help-opt"><span class="help-opt-name">Tester la connexion</span><span class="help-opt-desc">Vérifie l'adresse, l'identifiant et le mot de passe (saisi ou déjà enregistré) sans rien enregistrer ; affiche l'expiration et les connexions utilisées, ou la raison de l'échec.</span></div>
+<div class="help-opt"><span class="help-opt-name">Catégories à masquer (mots-clés)</span><span class="help-opt-desc">Type Xtream : un mot-clé par ligne ou séparés par des virgules ; les catégories dont le nom le contient disparaissent.</span></div>
+<div class="help-opt"><span class="help-opt-name">Catégories à afficher en premier (mots-clés)</span><span class="help-opt-desc">Type Xtream : même format ; les catégories correspondantes passent en tête, dans l'ordre de vos mots-clés.</span></div>
 <p class="help-opt-group">Lecture</p>
 <div class="help-opt"><span class="help-opt-name">Reprendre automatiquement la dernière chaîne</span><span class="help-opt-desc">Désactivé par défaut : une tuile qui se met à diffuser toute seule sur un écran mural est rarement souhaitable.</span></div>
 <div class="help-opt"><span class="help-opt-name">Démarrer sans le son</span><span class="help-opt-desc">Activé par défaut. Les navigateurs refusent de toute façon de démarrer une vidéo sonore sans interaction préalable.</span></div>
@@ -658,10 +672,12 @@
           <div class="help-warn"><b>PiBoard provides no channels and no content whatsoever.</b> This tile is a plain player: it only works if you <b>already</b> have, on your own, a subscription or access to an IPTV service, or a freely available channel playlist. With no playlist of yours, the tile stays empty — that is normal, there is nothing to unlock or configure on PiBoard's side. No service address is provided, suggested or bundled by default, and it is up to you to make sure the source you use is legal in your country.</div>
 
 <h4>Goal</h4>
-<p>Watch a channel right on the board, from an .m3u playlist you provide (the format VLC and Kodi read).</p>
+<p>Watch a channel right on the board, from an .m3u playlist you provide (the format VLC and Kodi read) or from a subscription account of your own (server address, username and password — the Xtream Codes system).</p>
 <p><b>What the tile can do:</b></p>
 <ul>
   <li><b>Channel list</b> to browse, filter by category or search by name; a touch plays the channel in the tile.</li>
+  <li><b>Xtream account</b>: address, username and password entered separately (the password is kept encrypted and never displayed), with a button to <b>test the connection</b> and see the subscription's state (expiry, connections used).</li>
+  <li><b>Live, movies and series</b> of an Xtream account, by category, with categories you can <b>hide</b> or <b>put first</b> by keywords.</li>
   <li><b>Start-up</b> on the last channel watched and/or muted, as you choose; default category shown.</li>
   <li><b>Films and series</b> from the playlist played directly by the browser.</li>
   <li><b>Recording</b> of what you watch, with no second connection at the provider: scheduled recordings with margins, resume after a drop, maximum duration and disk-space safeguard.</li>
@@ -670,9 +686,14 @@
 </ul>
 
 <h4>How it works</h4>
-          <p><b>Two playlist types are recognized automatically</b>, no need to pick a mode:</p>
-          <p><b>Xtream Codes</b> — subscription IPTV platforms (an address containing a username and password, typically a "get.php" link). The tile then offers multi-level navigation, like SmartIPTV or TiviMate: <b>Live / Movies / Series</b>, then each source's categories (e.g. "France HD|OTT"), then the stream list. A series adds one more level: its episodes, grouped by season. The ‹ button top-left goes back one level.</p>
-          <p><b>Plain M3U</b> — a static playlist (e.g. the IPTV-org project's free-to-air lists). The tile then shows a flat list, with a search box (accent-insensitive) and a category filter.</p>
+          <p><b>Two kinds of source</b>, picked with the "Source type" setting:</p>
+          <p><b>Xtream server</b> (Xtream Codes) — subscription IPTV platforms: your provider gave you a server address, a username and a password. The tile then offers multi-level navigation, like SmartIPTV or TiviMate: <b>Live / Movies / Series</b>, then each source's categories (e.g. "France HD|OTT"), then the stream list. A series adds one more level: its episodes, grouped by season. The ‹ button top-left goes back one level.</p>
+          <p><b>Connecting with an Xtream account</b>: pick "Xtream server (address, username, password)", then fill in the <b>server address</b> (with the port, e.g. <code>http://myserver.example:8080</code>; the <code>http://</code> may be left out), the <b>username</b> and the <b>password</b>. The <b>Test the connection</b> button checks everything without saving anything and shows the subscription's state: expiry date, connections used out of the maximum allowed (a reached limit is flagged: another device may be using the subscription). Once the tile is open, the same information stays displayed under the three sources.</p>
+<p><b>Where the password goes.</b> It is stored <b>encrypted</b> in a vault on the machine running PiBoard, apart from the tile's settings: it is in neither the layout, nor a backup, nor an exported configuration by default, and it is never sent back to the screen (the field stays empty on reopening, with a note saying a password is stored; leave it empty to keep it). One limit worth knowing: the encryption key is stored next to the vault, on the same machine — this protects against a file copied elsewhere, not against someone with control of the whole system. Scheduled recordings likewise keep the stream address <b>without the password</b> (taken from the vault at the due time), and the logs and the diagnostic screen hide username and password.</p>
+<p><b>Pasting a "get.php" link</b>: if your provider only gave you a link like <code>…get.php?username=…&amp;password=…</code>, paste it into "Server address" (or into "Playlist address"): the tile picks out the server, username and password, switches to Xtream mode and empties the original field so the password does not stay in the clear in the settings. A link of this kind already entered in "Playlist address" before 1.160.0 keeps working as before.</p>
+<p><b>Categories to hide / to show first</b>: enter keywords (one per line, or separated by commas; case and accents ignored). Any category whose name contains one of the keywords to hide disappears from Live, Movies and Series; those containing a "first" keyword move to the top, in the order of your keywords, the others following in the provider's order.</p>
+<p><b>If the connection fails</b>, the tile says why instead of showing a single message: username or password refused, subscription expired, account disabled, server unreachable, timeout, or a server that doesn't answer like an Xtream service. A "Retry" button reconnects.</p>
+<p><b>Plain M3U</b> — a static playlist (e.g. the IPTV-org project's free-to-air lists). The tile then shows a flat list, with a search box (accent-insensitive) and a category filter.</p>
           <p>Either way, tap a stream to watch it; the ☰ button returns to the exact spot in the navigation you were at.</p>
           <p><b>Movies and series</b>: some file formats used by IPTV platforms (Matroska/<code>.mkv</code> in particular, very common) don't play natively in a browser. A ⚠ warning shows up before playback rather than a silent, unexplained failure.</p>
           <p><b>No sound</b>: many IPTV platforms encode audio in AC3 or DTS (compatibility with set-top boxes and TVs) — formats <b>no browser can decode</b> (a licensing restriction), even though the video itself plays fine. The sound button changes nothing about that: there simply is no usable audio stream reaching the browser. A ⚠ badge next to the sound button flags it when this is detected.</p>
@@ -718,9 +739,16 @@
 
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
-<p class="help-opt-group">Playlist</p>
-<div class="help-opt"><span class="help-opt-name">Playlist address (.m3u)</span><span class="help-opt-desc">The .m3u file's URL.</span></div>
-<div class="help-opt"><span class="help-opt-name">Category shown on opening (simple M3U playlists only)</span><span class="help-opt-desc">Optional. Avoids scrolling a long list every time.</span></div>
+<p class="help-opt-group">Source</p>
+<div class="help-opt"><span class="help-opt-name">Source type</span><span class="help-opt-desc">"M3U playlist (address)" (default) for a playlist file or link; "Xtream server (address, username, password)" for a subscription. Fields that don't concern the chosen type are hidden, losing nothing of what they hold.</span></div>
+<div class="help-opt"><span class="help-opt-name">Playlist address (.m3u)</span><span class="help-opt-desc">M3U type: the .m3u file's URL. A link containing "username=" and "password=" is detected here and converted to an Xtream account.</span></div>
+<div class="help-opt"><span class="help-opt-name">Category shown on opening</span><span class="help-opt-desc">M3U type, optional. Avoids scrolling a long list every time. An Xtream account offers the Live / Movies / Series navigation instead.</span></div>
+<div class="help-opt"><span class="help-opt-name">Server address</span><span class="help-opt-desc">Xtream type: with the port, e.g. http://myserver.example:8080. A whole "get.php?username=…&amp;password=…" link pasted here is split up for you.</span></div>
+<div class="help-opt"><span class="help-opt-name">Username</span><span class="help-opt-desc">Xtream type: the subscription's username.</span></div>
+<div class="help-opt"><span class="help-opt-name">Password</span><span class="help-opt-desc">Xtream type: stored encrypted, never displayed nor kept in the settings; empty = keep the one already stored.</span></div>
+<div class="help-opt"><span class="help-opt-name">Test the connection</span><span class="help-opt-desc">Checks the address, username and password (typed or already stored) without saving anything; shows the expiry and connections used, or the reason for the failure.</span></div>
+<div class="help-opt"><span class="help-opt-name">Categories to hide (keywords)</span><span class="help-opt-desc">Xtream type: one keyword per line or comma-separated; categories whose name contains it disappear.</span></div>
+<div class="help-opt"><span class="help-opt-name">Categories to show first (keywords)</span><span class="help-opt-desc">Xtream type: same format; matching categories move to the top, in the order of your keywords.</span></div>
 <p class="help-opt-group">Playback</p>
 <div class="help-opt"><span class="help-opt-name">Resume the last channel automatically</span><span class="help-opt-desc">Off by default: a tile that starts playing on its own on a wall display is rarely what you want.</span></div>
 <div class="help-opt"><span class="help-opt-name">Start muted</span><span class="help-opt-desc">On by default. Browsers refuse to start a video with sound without prior interaction anyway.</span></div>

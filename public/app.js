@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.159.0
+   Version 1.160.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3697,6 +3697,27 @@
          seeing in the settings. */
       case "secret":
         return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-secret-key="${f.key}" value="" autocomplete="off" spellcheck="false" placeholder="${i18n.t("field.secret.placeholder")}"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div><small class="field-hint field-secret-status" data-secret-status="${f.key}"></small>${hint}</label>`;
+      /* Champ "test" : un bouton qui interroge une route du serveur avec
+         les valeurs ACTUELLES du formulaire (meme non enregistrees) et
+         affiche la reponse sous le bouton. Il ne porte aucune valeur :
+         pas de data-key, donc rien n'est collecte ni enregistre. Le
+         manifeste declare "source" (la route, en POST), "sends" (les
+         champs a transmettre) et "secrets" (les champs "secret" saisis,
+         transmis tels quels -- un champ laisse vide laisse le serveur
+         se servir de son coffre). Premier usage : « Tester la connexion »
+         de la tuile Chaines TV.
+         "test" field: a button that asks a server route with the form's
+         CURRENT values (even unsaved) and shows the answer below it. It
+         carries no value: no data-key, so nothing is collected or saved.
+         The manifest declares "source" (the POST route), "sends" (the
+         fields to transmit) and "secrets" (typed "secret" fields, sent
+         as they are -- an empty one lets the server use its vault). */
+      case "test":
+        return `<div class="field field-test" data-test-key="${f.key}" data-test-src="${escapeHtmlAttr(f.source || "")}" data-test-sends="${escapeHtmlAttr((f.sends || []).join(","))}" data-test-secrets="${escapeHtmlAttr((f.secrets || []).join(","))}">
+          <button type="button" class="btn small field-test-run">${label}</button>
+          <small class="field-hint field-test-msg" role="status" aria-live="polite"></small>
+          ${hint}
+        </div>`;
       /* Champ adresse avec suggestions cliquables (voir les gestionnaires
          delegues plus bas, ".field-address-input"/".field-address-suggest") :
          recherche Nominatim debouncee des la saisie, resultats affiches
@@ -3950,6 +3971,11 @@
     // pas. Each secret's state ("stored" / "not set"): asked of the
     // server, never guessed from the settings -- they don't contain it.
     fields.filter((f) => f.type === "secret").forEach((f) => refreshSecretStatus(tileId, f.key));
+    // Champs conditionnels, boutons de test, import d'identifiants colles.
+    // Conditional fields, test buttons, import of pasted credentials.
+    wireShowIf(form, fields);
+    wireTestButtons(form, tileId);
+    wireImportCreds(form, fields);
     $("tileSaveConfigMsg").textContent = "";
     $("tileSaveConfigMsg").classList.remove("field-hint-error");
     $("tileModal").hidden = false;
@@ -4606,7 +4632,122 @@
           .catch((e) => console.warn("[piboard] secret non enregistre:", e))
       );
     });
-    return Promise.all(jobs);
+    return Promise.all(jobs).then(() => jobs.length);
+  }
+
+  /* Champs conditionnels : un champ du manifeste peut porter
+     `showIf: { key, equals }` et ne s'affiche que lorsque le champ
+     `key` vaut `equals` (liste deroulante ou case a cocher). Un champ
+     masque reste dans le formulaire et sa valeur est toujours
+     collectee : changer de mode ne fait donc rien perdre.
+     Conditional fields: a manifest field may carry `showIf: { key,
+     equals }` and only shows while the field `key` equals `equals`
+     (dropdown or checkbox). A hidden field stays in the form and its
+     value is still collected: switching mode loses nothing. */
+  function wireShowIf(form, fields) {
+    const dependents = fields.filter((f) => f.showIf && f.showIf.key);
+    if (!dependents.length) return;
+    const boxOf = (key) => {
+      const el = form.querySelector(`[data-key="${key}"], [data-secret-key="${key}"], [data-test-key="${key}"]`);
+      return el ? el.closest(".field") : null;
+    };
+    const apply = () => {
+      dependents.forEach((f) => {
+        const ctl = form.querySelector(`[data-key="${f.showIf.key}"]`);
+        if (!ctl) return;
+        const cur = ctl.type === "checkbox" ? String(ctl.checked) : String(ctl.value);
+        const box = boxOf(f.key);
+        if (box) box.hidden = String(f.showIf.equals) !== cur;
+      });
+    };
+    new Set(dependents.map((f) => f.showIf.key)).forEach((key) => {
+      const ctl = form.querySelector(`[data-key="${key}"]`);
+      if (ctl) ctl.addEventListener("change", apply);
+    });
+    apply();
+  }
+
+  /* Boutons "test" (voir fieldMarkup()). Buttons "test". */
+  function wireTestButtons(form, tileId) {
+    form.querySelectorAll(".field-test").forEach((box) => {
+      const btn = box.querySelector(".field-test-run");
+      const msg = box.querySelector(".field-test-msg");
+      btn.addEventListener("click", async () => {
+        const values = {};
+        (box.dataset.testSends || "").split(",").filter(Boolean).forEach((key) => {
+          const el = form.querySelector(`[data-key="${key}"]`);
+          if (el) values[key] = el.value;
+        });
+        const secrets = {};
+        (box.dataset.testSecrets || "").split(",").filter(Boolean).forEach((key) => {
+          const el = form.querySelector(`[data-secret-key="${key}"]`);
+          if (el && el.value !== "") secrets[key] = el.value;
+        });
+        btn.disabled = true;
+        msg.classList.remove("field-hint-error", "field-note-ok");
+        msg.textContent = i18n.t("field.test.running");
+        try {
+          const r = await fetch(box.dataset.testSrc, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "x-piboard-client": CLIENT_ID },
+            body: JSON.stringify({ tile: tileId, lang: i18n.lang, values, secrets })
+          });
+          const d = await r.json();
+          if (!r.ok) throw new Error("status " + r.status);
+          msg.textContent = String(d.message || "");
+          msg.classList.add(d.ok ? "field-note-ok" : "field-hint-error");
+        } catch (e) {
+          msg.textContent = i18n.t("field.test.failed");
+          msg.classList.add("field-hint-error");
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    });
+  }
+
+  /* Import d'identifiants colles : un champ du manifeste peut porter
+     `importCreds: { server, user, secret, mode: { key, value } }`.
+     Quand une adresse contenant username= et password= y est collee, le
+     serveur, l'identifiant et le mot de passe sont repartis dans leurs
+     champs, le mode bascule, et -- point important -- le champ d'origine
+     est VIDE ou ramene au seul serveur : le mot de passe ne doit pas
+     rester en clair dans les reglages, c'est tout l'objet du coffre.
+     Import of pasted credentials: when an address containing username=
+     and password= is pasted, server, username and password are spread
+     over their fields, the mode switches and -- importantly -- the
+     original field is EMPTIED or reduced to the server alone. */
+  function wireImportCreds(form, fields) {
+    fields.filter((f) => f.importCreds).forEach((f) => {
+      const input = form.querySelector(`[data-key="${f.key}"]`);
+      if (!input) return;
+      const ic = f.importCreds;
+      const note = document.createElement("small");
+      note.className = "field-hint field-note-ok";
+      note.hidden = true;
+      input.closest(".field").appendChild(note);
+      input.addEventListener("change", () => {
+        let u;
+        try { u = new URL(input.value.trim()); } catch (e) { return; }
+        const user = u.searchParams.get("username");
+        const pass = u.searchParams.get("password");
+        if (!user || !pass) return;
+        const set = (key, v) => {
+          const el = form.querySelector(`[data-key="${key}"]`);
+          if (el) { el.value = v; el.dispatchEvent(new Event("change", { bubbles: true })); }
+        };
+        set(ic.user, user);
+        const sec = form.querySelector(`[data-secret-key="${ic.secret}"]`);
+        if (sec) sec.value = pass;
+        set(ic.mode.key, ic.mode.value);
+        set(ic.server, u.origin);
+        // Le champ d'origine ne garde ni identifiant ni mot de passe.
+        // The original field keeps neither username nor password.
+        if (f.key !== ic.server) input.value = "";
+        note.textContent = i18n.t("field.importCreds.done");
+        note.hidden = false;
+      });
+    });
   }
 
   function refreshSecretStatus(tileId, key) {
@@ -4664,8 +4805,15 @@
     // Secrets go to the vault BEFORE restarting the widget: otherwise
     // its very first request would hit a still-empty vault and wrongly
     // show a credentials error.
-    pushTileSecrets(tileId).then(() => {
-      applyTileFormValues(rec, collectTileFormValues());
+    pushTileSecrets(tileId).then((pushed) => {
+      const values = collectTileFormValues();
+      /* Un secret n'est pas dans les reglages : sans cette revision, une
+         tuile ne pourrait pas savoir que son mot de passe vient de
+         changer et garderait l'ancien jusqu'au prochain rechargement.
+         A secret isn't in the settings: without this revision a tile
+         couldn't tell its password just changed. */
+      if (pushed > 0) values._secretsRev = Date.now();
+      applyTileFormValues(rec, values);
     });
     $("tileModal").hidden = true;
     closeWidgetHelp(); // fenetre soeur, ne se ferme pas seule / sibling window, doesn't close on its own

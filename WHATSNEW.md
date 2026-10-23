@@ -32,6 +32,35 @@
 
 # Nouveautes / What's new
 
+## 1.160.0
+
+**Chaînes TV : connectez-vous avec votre abonnement**
+
+La tuile Chaînes TV accepte désormais un compte d'abonnement tel que votre fournisseur
+vous le donne : **adresse du serveur, identifiant et mot de passe** (le système Xtream).
+Choisissez « Serveur Xtream » dans les réglages, puis remplissez les trois champs : le
+**mot de passe est conservé chiffré**, jamais affiché ni enregistré avec les réglages.
+Un bouton **Tester la connexion** vérifie le tout et affiche l'état de l'abonnement
+(date d'expiration, connexions utilisées). Vous retrouvez le **direct, les films et les
+séries**, par catégories — que vous pouvez **masquer** ou **placer en premier** avec
+quelques mots-clés. Si la connexion échoue, la tuile dit **pourquoi** (mot de passe
+refusé, abonnement expiré, serveur injoignable…). Et si vous n'avez qu'un lien du type
+« get.php?username=… », collez-le : il est décomposé pour vous.
+
+---
+
+**TV channels: connect with your subscription**
+
+The TV channels tile now accepts a subscription account the way your provider gives it
+to you: **server address, username and password** (the Xtream system). Pick "Xtream
+server" in the settings, then fill in the three fields: the **password is stored
+encrypted**, never displayed nor saved with the settings. A **Test the connection**
+button checks everything and shows the subscription's state (expiry date, connections
+used). You find the **live channels, movies and series**, by category — which you can
+**hide** or **put first** with a few keywords. If the connection fails, the tile says
+**why** (password refused, subscription expired, server unreachable…). And if all you
+have is a link like "get.php?username=…", paste it: it is split up for you.
+
 ## 1.159.0
 
 **Les éléments cochés peuvent disparaître tout seuls**

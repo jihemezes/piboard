@@ -3277,27 +3277,40 @@ app.get("/api/iptv/playlist", async (req, res) => {
   try {
     res.json(await iptv.fetchPlaylist(target));
   } catch (e) {
-    console.warn("[piboard] iptv playlist echec pour", target, "->", e.message || e);
+    console.warn("[piboard] iptv playlist echec pour", iptv.redactSecrets(target), "->", iptv.redactSecrets(e.message || e));
     res.status(502).json({ error: String(e.message || e) });
   }
 });
 
-/* Xtream Codes : les trois routes suivantes attendent l'URL de
-   playlist TELLE QUE SAISIE dans les reglages (le meme champ que pour
-   un M3U simple) -- le serveur, jamais le widget, en extrait le
-   serveur racine et les identifiants. Voir parseXtreamCredentials()
-   dans server/iptv.js.
-   Xtream Codes: the three routes below expect the playlist URL AS
-   TYPED in the settings (the same field as for a plain M3U) -- the
-   server, never the widget, extracts the root server and credentials
-   from it. See parseXtreamCredentials() in server/iptv.js. */
+/* Xtream Codes : deux facons de designer le compte (voir
+   resolveXtreamCreds() dans server/iptv.js) -- le lien de playlist TEL
+   QUE SAISI (historique), ou `tile` + `server` + `user` avec le mot de
+   passe pris dans le COFFRE chiffre. Dans les deux cas c'est le serveur,
+   jamais le widget, qui assemble les identifiants ; en mode champs, le
+   mot de passe ne figure ni dans les reglages de la tuile ni dans
+   l'adresse de la requete.
+   Xtream Codes: two ways to designate the account (see
+   resolveXtreamCreds() in server/iptv.js) -- the playlist link AS TYPED
+   (legacy), or `tile` + `server` + `user` with the password taken from
+   the encrypted VAULT. Either way the server, never the widget,
+   assembles the credentials; in fields mode the password appears
+   neither in the tile settings nor in the request address. */
 function xtreamCredsOr400(req, res) {
-  const creds = iptv.parseXtreamCredentials(String(req.query.url || ""));
-  if (!creds) {
-    res.status(400).json({ error: "not an Xtream-style playlist URL (no username/password found)" });
+  const r = iptv.resolveXtreamCreds(req.query, (tileId, key) => tileSecrets.get(tileId, key));
+  if (r.error) {
+    res.status(400).json(r.error.toJSON());
     return null;
   }
-  return creds;
+  return r.creds;
+}
+
+/* Reponse d'erreur d'une route Xtream : code classe + message bilingue,
+   journal sans identifiants. Error reply of an Xtream route: classified
+   code + bilingual message, log free of credentials. */
+function xtreamFail(res, label, e) {
+  const err = e instanceof iptv.XtreamError ? e : new iptv.XtreamError("upstream", String((e && e.message) || e));
+  console.warn("[piboard] iptv", label, "echec ->", err.code, iptv.redactSecrets(err.detail || err.message));
+  res.status(err.code === "bad-credentials" || err.code === "expired" || err.code === "disabled" ? 401 : 502).json(err.toJSON());
 }
 
 /* Reencodage audio d'un flux (voir server/iptvAudio.js) : uniquement
@@ -3459,9 +3472,9 @@ app.get("/api/iptv/audio-fix", async (req, res) => {
     let vlcStderr = "";
     vlc.stderr.on("data", (d) => { vlcStderr = (vlcStderr + d.toString()).slice(-500); });
     vlc.on("close", (code) => {
-      if (code !== 0 && code !== null) console.warn("[piboard] iptv vlc transcode code", code, vlcStderr.trim());
+      if (code !== 0 && code !== null) console.warn("[piboard] iptv vlc transcode code", code, iptv.redactSecrets(vlcStderr.trim()));
     });
-    vlc.on("error", (e) => console.warn("[piboard] iptv vlc transcode", e.message || e));
+    vlc.on("error", (e) => console.warn("[piboard] iptv vlc transcode", iptv.redactSecrets(e.message || e)));
   } else if (sid) {
     /* Sans VLC, ffmpeg allait chercher l'URL tout seul : PiBoard ne
        voyait pas passer les octets et ne pouvait donc rien deriver. Il
@@ -3474,7 +3487,7 @@ app.get("/api/iptv/audio-fix", async (req, res) => {
       inputStream = await iptvSource.open(target);
       pipeSource = true;
     } catch (e) {
-      console.warn("[piboard] iptv source", e.message || e);
+      console.warn("[piboard] iptv source", iptv.redactSecrets(e.message || e));
       res.status(502).json({ error: "source", detail: String(e.message || e) });
       return;
     }
@@ -3560,10 +3573,14 @@ app.get("/api/iptv/diagnose", async (req, res) => {
 
   res.set("Content-Type", "text/plain; charset=utf-8");
   if (r.spawnError) {
-    res.send("Echec au demarrage de ffmpeg / Failed to start ffmpeg:\n" + r.spawnError);
+    res.send(iptv.redactSecrets("Echec au demarrage de ffmpeg / Failed to start ffmpeg:\n" + r.spawnError));
     return;
   }
-  res.send(
+  /* Le rapport peut etre copie dans un message ou une capture : les
+     identifiants en sont retires (ffmpeg et VLC recopient l'URL).
+     The report may be pasted into a message or screenshot: credentials
+     are removed (ffmpeg and VLC echo the URL). */
+  res.send(iptv.redactSecrets(
     "=== Diagnostic IPTV / IPTV diagnostic ===\n" +
     "URL : " + target + "\n" +
     "Mode : " + mode + "\n" +
@@ -3575,17 +3592,20 @@ app.get("/api/iptv/diagnose", async (req, res) => {
     (vlcAvailable ? "--- Sortie VLC (stderr) / VLC output (stderr) ---\n" + (vlcStderr || "(vide / empty)") + "\n\n" : "") +
     "--- Sortie ffmpeg (stderr) / ffmpeg output (stderr) ---\n" +
     (r.ffmpegStderr || "(vide / empty)")
-  );
+  ));
 });
 
+/* `mask=1` : chaque flux renvoye porte aussi `ref`, l'URL SANS le mot
+   de passe, seule forme que la tuile conserve (programmation). Reserve
+   au mode champs. `mask=1`: every returned stream also carries `ref`,
+   the URL WITHOUT the password, the only form the tile stores. */
 app.get("/api/iptv/xtream-categories", async (req, res) => {
   const creds = xtreamCredsOr400(req, res);
   if (!creds) return;
   try {
     res.json(await iptv.fetchXtreamCategories(creds.server, creds.username, creds.password));
   } catch (e) {
-    console.warn("[piboard] iptv xtream-categories echec ->", e.message || e);
-    res.status(502).json({ error: String(e.message || e) });
+    xtreamFail(res, "xtream-categories", e);
   }
 });
 
@@ -3594,10 +3614,9 @@ app.get("/api/iptv/xtream-streams", async (req, res) => {
   if (!creds) return;
   try {
     const kind = String(req.query.kind || "");
-    res.json(await iptv.fetchXtreamStreams(creds.server, creds.username, creds.password, kind, req.query.categoryId));
+    res.json(await iptv.fetchXtreamStreams(creds.server, creds.username, creds.password, kind, req.query.categoryId, req.query.mask === "1"));
   } catch (e) {
-    console.warn("[piboard] iptv xtream-streams echec ->", e.message || e);
-    res.status(502).json({ error: String(e.message || e) });
+    xtreamFail(res, "xtream-streams", e);
   }
 });
 
@@ -3605,11 +3624,49 @@ app.get("/api/iptv/xtream-series-info", async (req, res) => {
   const creds = xtreamCredsOr400(req, res);
   if (!creds) return;
   try {
-    res.json(await iptv.fetchXtreamSeriesEpisodes(creds.server, creds.username, creds.password, req.query.seriesId));
+    res.json(await iptv.fetchXtreamSeriesEpisodes(creds.server, creds.username, creds.password, req.query.seriesId, req.query.mask === "1"));
   } catch (e) {
-    console.warn("[piboard] iptv xtream-series-info echec ->", e.message || e);
-    res.status(502).json({ error: String(e.message || e) });
+    xtreamFail(res, "xtream-series-info", e);
   }
+});
+
+/* Bouton « Tester la connexion » des reglages. Le mot de passe peut
+   arriver dans le corps (saisi mais pas encore enregistre) ; sinon on
+   prend celui du coffre. Repond toujours 200 : un echec de connexion
+   est un RESULTAT du test, pas une erreur de la route.
+   "Test connection" button of the settings. The password may arrive in
+   the body (typed but not saved yet); otherwise the vault's is used.
+   Always answers 200: a failed connection is a test RESULT, not a
+   route error. */
+app.post("/api/iptv/xtream-test", async (req, res) => {
+  const b = req.body || {};
+  const v = b.values || {};
+  const sec = b.secrets || {};
+  const lang = b.lang === "en" ? "en" : "fr";
+  const r = iptv.resolveXtreamCreds(
+    { tile: b.tile, server: v.xtreamServer, user: v.xtreamUser, password: sec.xtreamPassword },
+    (tileId, key) => tileSecrets.get(tileId, key)
+  );
+  if (r.error) return res.json({ ok: false, code: r.error.code, message: iptv.XTREAM_MESSAGES[r.error.code][lang] });
+  try {
+    const a = await iptv.fetchXtreamAccount(r.creds.server, r.creds.username, r.creds.password);
+    res.json({ ok: true, code: "ok", account: a, message: iptv.describeTest(a, lang) });
+  } catch (e) {
+    const err = e instanceof iptv.XtreamError ? e : new iptv.XtreamError("upstream");
+    console.warn("[piboard] iptv xtream-test echec ->", err.code, iptv.redactSecrets(err.detail || err.message));
+    res.json({ ok: false, code: err.code, message: (iptv.XTREAM_MESSAGES[err.code] || iptv.XTREAM_MESSAGES.upstream)[lang] });
+  }
+});
+
+/* Rend a une URL conservee (`ref`) son mot de passe, pris dans le
+   coffre -- utilise quand un enregistrement programme se declenche.
+   Gives a stored URL (`ref`) its password back from the vault -- used
+   when a scheduled recording fires. */
+app.post("/api/iptv/xtream-unmask", (req, res) => {
+  const b = req.body || {};
+  const pwd = tileSecrets.get(String(b.tile || ""), "xtreamPassword");
+  if (!pwd) return res.status(400).json(new iptv.XtreamError("no-password").toJSON());
+  res.json({ url: iptv.unmaskPassword(String(b.url || ""), pwd) });
 });
 
 /* ---------- Statique / static ---------- */

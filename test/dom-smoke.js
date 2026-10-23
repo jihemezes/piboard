@@ -374,7 +374,7 @@ const IPTV_PLAYLIST_FIXTURE = {
    categories, three sources, a series with its episodes, and a movie in
    .mkv to check the format warning). */
 const XTREAM_CATEGORIES_FIXTURE = {
-  accountStatus: "Active", expiresAt: "1893456000",
+  accountStatus: "Active", expiresAt: "1893456000", maxConnections: 2, activeConnections: 2,
   live: [{ id: "10", name: "France HD|OTT" }, { id: "11", name: "France SD|OTT" }],
   vod: [{ id: "20", name: "Films Action" }],
   series: [{ id: "30", name: "Series FR" }]
@@ -428,6 +428,15 @@ const SCHED_OTHER_DAY_KEY = ["_schedSun", "_schedMon", "_schedTue", "_schedWed",
    of a real spam email -- script, event handler, tracking pixel,
    phishing link -- to check the sanitizing. */
 let MAIL_LIST_CALLS = 0;
+/* Chaines TV, connexion Xtream par champs (1.160.0) : appels IPTV
+   observes, echec simule, reponse du bouton « Tester », rendez-vous.
+   TV channels, Xtream fields connection: observed IPTV calls, simulated
+   failure, "Test" button reply, appointments. */
+const IPTV_XCALLS = [];
+let IPTV_XFAIL = null;
+let IPTV_STREAMS_FAIL_ONCE = null;
+const IPTV_XTEST = { answer: null, bodies: [] };
+let IPTV_SCHEDULES = [];
 let MOCK_BACKUPS = [];
 let BACKUP_SEQ = 0;
 let BACKUP_LAYOUT_RESTORED = null; // marqueur : dernier id restaure/importe, sans vraiment recharger la page / marker: last id restored/imported, without actually reloading the page
@@ -1178,10 +1187,36 @@ const dom = new JSDOM(html, {
         const tdd = String(tomorrow.getDate()).padStart(2, "0");
         return json({ [mm + "-" + dd]: "Testine", [tmm + "-" + tdd]: "Tomorrine" });
       }
+      if (u.includes("/api/iptv/xtream-test") && method === "POST") {
+        IPTV_XTEST.bodies.push(JSON.parse(opts.body));
+        return json(IPTV_XTEST.answer || { ok: false, code: "not-configured", message: "?" });
+      }
+      if (u.includes("/api/iptv/xtream-unmask") && method === "POST") {
+        const b = JSON.parse(opts.body);
+        return json({ url: String(b.url).replace("{xtream-password}", "pass456") });
+      }
+      if (u.includes("/api/iptv/schedules")) {
+        if (method === "PUT") { IPTV_SCHEDULES = JSON.parse(opts.body); return json({ ok: true }); }
+        return json(IPTV_SCHEDULES);
+      }
       if (u.includes("/api/iptv/xtream-categories")) {
+        IPTV_XCALLS.push(u);
+        if (IPTV_XFAIL) {
+          return Promise.resolve({ ok: false, status: IPTV_XFAIL.status, json: () => Promise.resolve(IPTV_XFAIL.body), text: () => Promise.resolve(JSON.stringify(IPTV_XFAIL.body)) });
+        }
         return json(XTREAM_CATEGORIES_FIXTURE);
       }
+      if (u.includes("/api/iptv/xtream-streams") && IPTV_STREAMS_FAIL_ONCE) {
+        const f = IPTV_STREAMS_FAIL_ONCE; IPTV_STREAMS_FAIL_ONCE = null;
+        return Promise.resolve({ ok: false, status: f.status, json: () => Promise.resolve(f.body), text: () => Promise.resolve(JSON.stringify(f.body)) });
+      }
       if (u.includes("/api/iptv/xtream-streams") && u.includes("kind=live")) {
+        IPTV_XCALLS.push(u);
+        /* En mode champs (mask=1), le serveur ajoute `ref` : l'URL sans le
+           mot de passe. In fields mode (mask=1) the server adds `ref`. */
+        if (u.includes("mask=1")) {
+          return json(XTREAM_LIVE_STREAMS_FIXTURE.map((x) => Object.assign({}, x, { ref: x.url.replace("pass456", "{xtream-password}") })));
+        }
         return json(XTREAM_LIVE_STREAMS_FIXTURE);
       }
       if (u.includes("/api/iptv/xtream-streams") && u.includes("kind=vod")) {
@@ -5055,6 +5090,199 @@ function catalogItemFor(catalog, document, widgetId) {
     await sleep(20);
     const audioWarn = tvTile.querySelector(".pwtv-audio-warn");
     assert("avertissement 'pas de piste audio' affiche quand audioTracks est vide", audioWarn && audioWarn.hidden === false);
+  }
+
+  console.log("== Chaines TV (Xtream par champs) : selecteur, coffre, connexion, erreurs distinctes (1.160.0) ==");
+  {
+    const tvTile = document.querySelector('[data-tile-id="t-r"]');
+    const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    const change = (el) => el.dispatchEvent(new window.Event("change", { bubbles: true }));
+    const openSettings = async () => { click(tvTile.querySelector(".tile-gear")); await sleep(80); return document.getElementById("tileForm"); };
+    const saveSettings = async () => { click(document.getElementById("tileSave")); await sleep(900); };
+    const boxOf = (form, key) => form.querySelector(`[data-key="${key}"], [data-secret-key="${key}"], [data-test-key="${key}"]`).closest(".field");
+    const waitFor = async (fn) => { let n = 0; while (!fn() && n++ < 80) await sleep(40); return fn(); };
+
+    console.log("== Xtream par champs : champs conditionnels du formulaire ==");
+    let form = await openSettings();
+    const typeSel = form.querySelector('[data-key="sourceType"]');
+    assert("le selecteur « Type de source » propose M3U et Xtream",
+      !!typeSel && [...typeSel.options].map((o) => o.value).join(",") === "m3u,xtream");
+    assert("tuile historique (lien dans la playlist) : type M3U par defaut", typeSel.value === "m3u");
+    assert("type M3U : adresse de playlist visible", boxOf(form, "playlistUrl").hidden === false);
+    assert("type M3U : tous les champs Xtream masques",
+      ["xtreamServer", "xtreamUser", "xtreamPassword", "xtreamTest", "xtreamHideCategories", "xtreamPinCategories"].every((k) => boxOf(form, k).hidden === true));
+    typeSel.value = "xtream"; change(typeSel);
+    assert("type Xtream : serveur, identifiant, mot de passe, test et filtres visibles",
+      ["xtreamServer", "xtreamUser", "xtreamPassword", "xtreamTest", "xtreamHideCategories", "xtreamPinCategories"].every((k) => boxOf(form, k).hidden === false));
+    assert("type Xtream : adresse de playlist masquee", boxOf(form, "playlistUrl").hidden === true);
+    assert("le mot de passe est un champ masque a l'ecran", form.querySelector('[data-secret-key="xtreamPassword"]').type === "password");
+    assert("le mot de passe n'a pas de data-key : il ne rejoint jamais les reglages de la tuile",
+      !form.querySelector('[data-key="xtreamPassword"]'));
+    typeSel.value = "m3u"; change(typeSel);
+    assert("retour en M3U : les champs Xtream se masquent de nouveau", boxOf(form, "xtreamUser").hidden === true && boxOf(form, "playlistUrl").hidden === false);
+
+    console.log("== Xtream par champs : un lien get.php colle est decompose ==");
+    const pl = form.querySelector('[data-key="playlistUrl"]');
+    pl.value = "http://panel.test:8080/get.php?username=bob&password=pw-Secret9&type=m3u_plus";
+    change(pl);
+    assert("import : la source passe en Xtream", typeSel.value === "xtream");
+    assert("import : serveur reduit a l'origine", form.querySelector('[data-key="xtreamServer"]').value === "http://panel.test:8080");
+    assert("import : identifiant extrait", form.querySelector('[data-key="xtreamUser"]').value === "bob");
+    assert("import : mot de passe place dans le champ secret", form.querySelector('[data-secret-key="xtreamPassword"]').value === "pw-Secret9");
+    assert("import : le champ playlist d'origine est VIDE (le mot de passe n'y reste pas en clair)", pl.value === "");
+    assert("import : une note previent l'utilisateur", !!form.querySelector(".field-note-ok:not([hidden])"));
+
+    console.log("== Xtream par champs : bouton « Tester la connexion » ==");
+    const testBtn = form.querySelector(".field-test-run");
+    const testMsg = form.querySelector(".field-test-msg");
+    IPTV_XTEST.answer = { ok: true, code: "ok", message: "Connexion réussie. Compte : Active. Connexions : 0/2." };
+    click(testBtn);
+    await waitFor(() => testMsg.textContent.includes("réussie"));
+    assert("test : le message du serveur s'affiche", testMsg.textContent.includes("Connexion réussie"));
+    assert("test : message de succes en vert", testMsg.classList.contains("field-note-ok") && !testMsg.classList.contains("field-hint-error"));
+    const sent = IPTV_XTEST.bodies[IPTV_XTEST.bodies.length - 1];
+    assert("test : envoie la tuile, le serveur et l'identifiant du formulaire (non enregistres)",
+      sent.tile === "t-r" && sent.values.xtreamServer === "http://panel.test:8080" && sent.values.xtreamUser === "bob");
+    assert("test : envoie le mot de passe SAISI (pas encore dans le coffre)", sent.secrets.xtreamPassword === "pw-Secret9");
+    assert("test : n'enregistre rien (aucun PUT de coffre)", !putCalls.some((c) => c.url.includes("/api/tile-secrets/")));
+    IPTV_XTEST.answer = { ok: false, code: "bad-credentials", message: "Identifiant ou mot de passe refusé par le serveur." };
+    click(testBtn);
+    await waitFor(() => testMsg.textContent.includes("refusé"));
+    assert("test : echec en rouge, avec la cause", testMsg.classList.contains("field-hint-error") && testMsg.textContent.includes("refusé"));
+
+    console.log("== Xtream par champs : enregistrement, coffre, requetes sans mot de passe ==");
+    IPTV_XCALLS.length = 0;
+    await saveSettings();
+    const secretPut = putCalls.filter((c) => c.url.includes("/api/tile-secrets/t-r/xtreamPassword")).pop();
+    assert("le mot de passe part au COFFRE (PUT /api/tile-secrets/t-r/xtreamPassword)",
+      !!secretPut && JSON.parse(secretPut.body).value === "pw-Secret9");
+    const layoutBodies = putCalls.filter((c) => c.url.includes("/api/layout")).map((c) => c.body);
+    assert("le mot de passe n'est dans AUCUN layout enregistre", layoutBodies.length > 0 && layoutBodies.every((b) => !b.includes("pw-Secret9")));
+    const lastLayout = JSON.parse(layoutBodies[layoutBodies.length - 1]);
+    const savedTile = JSON.stringify(lastLayout).includes('"id":"t-r"') ? JSON.stringify(lastLayout) : "";
+    assert("le layout porte le type Xtream, le serveur et l'identifiant (pas le mot de passe)",
+      savedTile.includes('"sourceType":"xtream"') && savedTile.includes("http://panel.test:8080") && savedTile.includes('"xtreamUser":"bob"'));
+    assert("le lien d'origine avec mot de passe a disparu des reglages enregistres", !savedTile.includes("get.php?username=bob"));
+    await waitFor(() => tvTile.querySelectorAll(".pwtv-source").length === 3);
+    assert("la tuile se connecte : trois sources proposees", tvTile.querySelectorAll(".pwtv-source").length === 3);
+    const first = IPTV_XCALLS[0] || "";
+    assert("requete de connexion : tuile, serveur, identifiant", first.includes("tile=t-r") && first.includes("server=") && first.includes("user=bob"));
+    assert("AUCUNE requete IPTV ne porte le mot de passe ni le parametre password",
+      IPTV_XCALLS.length > 0 && IPTV_XCALLS.every((u) => !u.includes("pw-Secret9") && !/[?&]password=/.test(u)));
+    assert("la ligne d'etat du compte s'affiche (statut, expiration, connexions)",
+      /Active/.test((tvTile.querySelector(".pwtv-account") || {}).textContent || "") && /2\/2/.test((tvTile.querySelector(".pwtv-account") || {}).textContent || ""));
+    assert("limite de connexions atteinte : signalee", /limite de connexions/.test((tvTile.querySelector(".pwtv-account") || {}).textContent || ""));
+
+    console.log("== Xtream par champs : flux avec `ref`, enregistrement programme sans mot de passe ==");
+    tvTile.querySelector('.pwtv-source[data-source="live"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(30);
+    tvTile.querySelector('.pwtv-item[data-id="10"]').dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await waitFor(() => tvTile.querySelector(".pwtv-item[data-idx]"));
+    assert("les requetes de flux demandent mask=1", IPTV_XCALLS.some((u) => u.includes("xtream-streams") && u.includes("mask=1")));
+    click(tvTile.querySelector(".pwtv-item[data-idx]"));
+    await sleep(40);
+    assert("lecture demarree", !!tvTile.querySelector(".pwtv-video"));
+    assert("l'URL de lecture reste complete (le flux doit demarrer)",
+      (tvTile.querySelector(".pwtv-video").getAttribute("src") || "").includes(encodeURIComponent("https://ex.test/live/user123/pass456/111.ts")));
+    click(tvTile.querySelector(".pwtv-schedule"));
+    await sleep(60);
+    click(tvTile.querySelector(".pwtv-sched-add"));
+    await waitFor(() => putCalls.some((c) => c.url.includes("/api/iptv/schedules")));
+    const schedPut = putCalls.filter((c) => c.url.includes("/api/iptv/schedules")).pop();
+    const sched = schedPut ? JSON.parse(schedPut.body) : [];
+    assert("rendez-vous enregistre", sched.length === 1 && sched[0].channel === "France 24", JSON.stringify(sched));
+    assert("l'URL conservee du rendez-vous NE CONTIENT PAS le mot de passe", !!sched[0] && !sched[0].url.includes("pass456") && sched[0].url.includes("{xtream-password}"), sched[0] && sched[0].url);
+    click(tvTile.querySelector(".pwtv-navback"));
+    await sleep(40);
+    if (tvTile.querySelector(".pwtv-back")) click(tvTile.querySelector(".pwtv-back"));
+    await sleep(30);
+
+    console.log("== Xtream par champs : categories masquees / en premier ==");
+    const catNames = () => [...tvTile.querySelectorAll(".pwtv-item .pwtv-name")].map((e) => e.textContent);
+    // retour a la liste des sources puis ouverture du Direct
+    const toLive = async () => {
+      tvTile.querySelector(".pwtv-navback") && click(tvTile.querySelector(".pwtv-navback"));
+      await sleep(20);
+      if (!tvTile.querySelector(".pwtv-source")) { tvTile.querySelector(".pwtv-navback") && click(tvTile.querySelector(".pwtv-navback")); await sleep(20); }
+      click(tvTile.querySelector('.pwtv-source[data-source="live"]'));
+      await sleep(30);
+    };
+    form = await openSettings();
+    form.querySelector('[data-key="xtreamHideCategories"]').value = "FRANCE sd, zzz";
+    await saveSettings();
+    await toLive();
+    assert("mot-cle a masquer (casse ignoree, liste a virgules) : « France SD » disparait",
+      catNames().join("|") === "France HD|OTT", catNames().join("|"));
+    form = await openSettings();
+    form.querySelector('[data-key="xtreamHideCategories"]').value = "";
+    form.querySelector('[data-key="xtreamPinCategories"]').value = "sd";
+    await saveSettings();
+    await toLive();
+    assert("mot-cle « en premier » : France SD passe en tete", catNames().join("|") === "France SD|OTT|France HD|OTT", catNames().join("|"));
+    form = await openSettings();
+    form.querySelector('[data-key="xtreamPinCategories"]').value = "";
+    await saveSettings();
+    await toLive();
+    assert("filtres vides : ordre du fournisseur retabli", catNames().join("|") === "France HD|OTT|France SD|OTT", catNames().join("|"));
+
+    console.log("== Xtream par champs : chaque cause d'echec a son message, et « Reessayer » ==");
+    const fail = async (status, code, fr) => {
+      IPTV_XFAIL = { status, body: { error: code, code, message: { fr, en: fr + " (en)" } } };
+    };
+    form = await openSettings();
+    form.querySelector('[data-key="xtreamUser"]').value = "bob2"; // change la source : la tuile se reconnecte
+    await fail(401, "bad-credentials", "Identifiant ou mot de passe refusé par le serveur.");
+    await saveSettings();
+    await waitFor(() => tvTile.querySelector(".pwtv-retry"));
+    const msgBad = (tvTile.querySelector(".pwtv-msg") || {}).textContent || "";
+    assert("identifiants refuses : message dedie + bouton Reessayer", msgBad.includes("refusé par le serveur") && !!tvTile.querySelector(".pwtv-retry"));
+    assert("en erreur : plus de sources affichees", tvTile.querySelectorAll(".pwtv-source").length === 0);
+    await fail(502, "unreachable", "Serveur injoignable : vérifiez l'adresse, le port et la connexion réseau.");
+    click(tvTile.querySelector(".pwtv-retry"));
+    await waitFor(() => ((tvTile.querySelector(".pwtv-msg") || {}).textContent || "").includes("injoignable"));
+    const msgDead = (tvTile.querySelector(".pwtv-msg") || {}).textContent || "";
+    assert("serveur injoignable : message DIFFERENT du precedent", msgDead.includes("injoignable") && msgDead !== msgBad);
+    await fail(401, "expired", "L'abonnement est expiré.");
+    click(tvTile.querySelector(".pwtv-retry"));
+    await waitFor(() => ((tvTile.querySelector(".pwtv-msg") || {}).textContent || "").includes("expiré"));
+    assert("abonnement expire : encore un autre message", (tvTile.querySelector(".pwtv-msg").textContent || "").includes("expiré"));
+    IPTV_XFAIL = null;
+    click(tvTile.querySelector(".pwtv-retry"));
+    await waitFor(() => tvTile.querySelectorAll(".pwtv-source").length === 3);
+    assert("Reessayer apres correction : les sources reviennent", tvTile.querySelectorAll(".pwtv-source").length === 3);
+
+    console.log("== Xtream par champs : une erreur sur une categorie ne bloque pas les suivantes ==");
+    click(tvTile.querySelector('.pwtv-source[data-source="live"]'));
+    await sleep(30);
+    IPTV_STREAMS_FAIL_ONCE = { status: 502, body: { error: "upstream", code: "upstream", message: { fr: "Le serveur a répondu par une erreur.", en: "The server answered with an error." } } };
+    click(tvTile.querySelector('.pwtv-item[data-id="10"]'));
+    await waitFor(() => ((tvTile.querySelector(".pwtv-msg") || {}).textContent || "").includes("répondu par une erreur"));
+    assert("categorie en erreur : message precis", ((tvTile.querySelector(".pwtv-msg") || {}).textContent || "").includes("répondu par une erreur"));
+    click(tvTile.querySelector(".pwtv-navback"));
+    await sleep(20);
+    click(tvTile.querySelector('.pwtv-item[data-id="11"]'));
+    await waitFor(() => tvTile.querySelector(".pwtv-item[data-idx]"));
+    assert("la categorie suivante s'affiche normalement (l'erreur ne colle plus)", tvTile.querySelectorAll(".pwtv-item[data-idx]").length === 2);
+
+    console.log("== Xtream par champs : nouveau mot de passe seul => reconnexion ; autre reglage => non ==");
+    const calls0 = IPTV_XCALLS.filter((u) => u.includes("xtream-categories")).length;
+    form = await openSettings();
+    form.querySelector('[data-key="startMuted"]').checked = !form.querySelector('[data-key="startMuted"]').checked;
+    await saveSettings();
+    assert("changer un autre reglage ne reconnecte pas", IPTV_XCALLS.filter((u) => u.includes("xtream-categories")).length === calls0);
+    form = await openSettings();
+    form.querySelector('[data-secret-key="xtreamPassword"]').value = "nouveau-mdp";
+    await saveSettings();
+    await waitFor(() => IPTV_XCALLS.filter((u) => u.includes("xtream-categories")).length > calls0);
+    assert("remplacer le seul mot de passe reconnecte la tuile (revision du secret)", IPTV_XCALLS.filter((u) => u.includes("xtream-categories")).length === calls0 + 1);
+    assert("le nouveau mot de passe est parti au coffre",
+      putCalls.filter((c) => c.url.includes("/api/tile-secrets/t-r/xtreamPassword")).some((c) => JSON.parse(c.body).value === "nouveau-mdp"));
+    assert("le nouveau mot de passe n'est dans aucun layout",
+      putCalls.filter((c) => c.url.includes("/api/layout")).every((c) => !c.body.includes("nouveau-mdp")));
+    form = await openSettings();
+    assert("a la reouverture, le champ mot de passe est VIDE (jamais renvoye)", form.querySelector('[data-secret-key="xtreamPassword"]').value === "");
+    click(document.getElementById("tileCancel") || document.querySelector("#tileModal .modal-close"));
+    await sleep(30);
   }
 
   console.log("== Flux RSS : plusieurs flux combines dans la meme tuile ==");
