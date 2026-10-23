@@ -7732,6 +7732,76 @@ function catalogItemFor(catalog, document, widgetId) {
     assert("ce n'est plus un cercle cerne de rayons droits (un soleil)",
       !/M12 3v3M12 18v3/.test(dashGear));
 
+    /* Ordre des pages (1.161.0) : fleches, glisser-deposer, duplication.
+       La page affichee reste la meme apres un deplacement. */
+    {
+      const rowsOf = () => document.getElementById("pagesList").querySelectorAll(".page-row");
+      const nameOf = (i) => rowsOf()[i].querySelector("[data-role=name]").value;
+      const typeName = (i, v) => {
+        const inp = rowsOf()[i].querySelector("[data-role=name]");
+        inp.value = v;
+        inp.dispatchEvent(new window.Event("input", { bubbles: true }));
+      };
+      const clickBtn = (i, role) => rowsOf()[i].querySelector("[data-role=" + role + "]")
+        .dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      typeName(1, "Alpha"); typeName(2, "Beta");
+      assert("la page 1 n'a ni fleche active ni poignee de glisser",
+        rowsOf()[0].querySelector("[data-role=grip]").getAttribute("draggable") !== "true");
+      assert("la premiere page secondaire ne peut pas monter au-dessus de la page 1",
+        rowsOf()[1].querySelector("[data-role=up]").disabled === true);
+      assert("la derniere page ne peut pas descendre",
+        rowsOf()[2].querySelector("[data-role=down]").disabled === true);
+
+      // On affiche la page « Beta » (3e), puis on la fait monter.
+      document.querySelectorAll(".dash-page-dot")[2].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(900);
+      assert("la page Beta est affichee avant le deplacement",
+        document.querySelector(".dash-page-dot.active").title === "Beta");
+      clickBtn(2, "up");
+      await sleep(150);
+      assert("la page monte d'un rang", nameOf(1) === "Beta" && nameOf(2) === "Alpha");
+      assert("le repere de page suit l'ordre choisi",
+        document.querySelectorAll(".dash-page-dot")[1].title === "Beta");
+      assert("la page affichee reste la meme : pas de saut visuel",
+        document.querySelector(".dash-page-dot.active").title === "Beta"
+        && document.querySelector(".dash-page-dot.active").dataset.pageIndex === "1");
+      assert("son conteneur est toujours le seul visible",
+        Array.from(document.querySelectorAll(".board-page")).filter((el) => !el.hidden).length === 1);
+      clickBtn(1, "down");
+      await sleep(150);
+      assert("la page redescend d'un rang", nameOf(1) === "Alpha" && nameOf(2) === "Beta");
+      assert("la page affichee est toujours Beta",
+        document.querySelector(".dash-page-dot.active").title === "Beta");
+
+      // Glisser-deposer : on lache la ligne 3 sur la ligne 2.
+      const grip = rowsOf()[2].querySelector("[data-role=grip]");
+      const mkDnd = (type) => {
+        const ev = new window.Event(type, { bubbles: true, cancelable: true });
+        ev.dataTransfer = { setData() {}, getData() { return "2"; }, setDragImage() {}, effectAllowed: "" };
+        return ev;
+      };
+      grip.dispatchEvent(mkDnd("dragstart"));
+      rowsOf()[1].dispatchEvent(mkDnd("dragover"));
+      rowsOf()[1].dispatchEvent(mkDnd("drop"));
+      await sleep(150);
+      assert("le glisser-deposer reordonne les pages", nameOf(1) === "Beta" && nameOf(2) === "Alpha");
+
+      // Retour a la page 1 pour la suite des verifications.
+      document.querySelectorAll(".dash-page-dot")[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(900);
+
+      // Duplication d'une page vide : une page de plus, juste apres.
+      clickBtn(1, "dup");
+      await sleep(250);
+      assert("la duplication ajoute une page", rowsOf().length === 4);
+      assert("la copie suit l'originale et porte son nom", /Beta/.test(nameOf(2)) && nameOf(1) === "Beta");
+      assert("la page affichee ne change pas a la duplication",
+        document.querySelector(".dash-page-dot.active").dataset.pageIndex === "0");
+      clickBtn(2, "del");
+      await sleep(150);
+      assert("la copie se supprime comme une page", rowsOf().length === 3);
+    }
+
     // Suppression d'une page vide : pas de confirmation attendue.
     const delRow = document.getElementById("pagesList").querySelectorAll(".page-row")[2];
     delRow.querySelector("[data-role=del]").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));

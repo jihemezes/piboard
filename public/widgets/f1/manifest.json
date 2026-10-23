@@ -2,7 +2,7 @@
   "_comment_fr": "DISPOSER LES CARTES : en mode édition, chaque carte est un bloc de la grille interne de la tuile. On le déplace par sa barre de titre, on le redimensionne par son coin, on le masque par sa croix, et la barre d'outils de la tuile rajoute un bloc masqué, applique une disposition prédéfinie, revient à celle par défaut, ou copie la disposition vers une autre tuile Formule 1. La disposition est enregistrée dans les réglages de CETTE tuile.",
   "_comment_en": "ARRANGING THE CARDS: in edit mode each card is a block of the tile's inner grid. Move it by its title bar, resize it by its corner, hide it with its cross; the tile's toolbar adds a hidden block back, applies a preset layout, returns to the default one, or copies the layout to another Formula 1 tile. The layout is saved in THIS tile's settings.",
   "id": "f1",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
@@ -11,8 +11,8 @@
   "editTapOpensSettings": false,
   "tileTheme": true,
   "description": {
-    "en": "A Formula 1 dashboard as blocks you arrange yourself: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings, the last race's results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every block.",
-    "fr": "Tableau de bord Formule 1 en blocs que l'on dispose soi-même : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs, résultats de la dernière course, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente tous les blocs."
+    "en": "A Formula 1 dashboard as blocks you arrange yourself: next race with a countdown, the full weekend timetable in your own time zone, driver standings, constructor standings, the last race's results, the circuit weather and the circuit map, plus optional cards for each weekend session (free practice, qualifying, sprint, starting grid) with a LIVE badge. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data comes from the free Jolpica API (the community successor to Ergast), with no key and no account, and a single reading feeds every block.",
+    "fr": "Tableau de bord Formule 1 en blocs que l'on dispose soi-même : prochaine course avec compte à rebours, programme complet du week-end dans votre fuseau, classement pilotes, classement constructeurs, résultats de la dernière course, météo du circuit et plan du circuit, plus des cartes facultatives pour chaque séance du week-end (essais libres, qualifications, sprint, grille de départ) avec un badge EN DIRECT. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Les données viennent de l'API gratuite Jolpica (successeur communautaire d'Ergast), sans clé ni compte, et un seul relevé alimente tous les blocs."
   },
   "tagline": {
     "en": "The F1 weekend, arranged your way.",
@@ -108,6 +108,97 @@
       "hint": {
         "en": "The forecast AT EACH SESSION'S HOUR, not the weather right now: what one comes for is whether it will rain during qualifying, not what the sky looks like over the circuit on a Tuesday. One row per session, with the condition, the temperature and the chance of rain -- the only figure highlighted, because in Formula 1 it is the one that changes a race. The forecast reaches seven days, so a session further out keeps its row with a dash rather than being hidden. Source: Open-Meteo, free and without a key, the same as the Weather tile.",
         "fr": "La prévision À L'HEURE DE CHAQUE SÉANCE, et non la météo de l'instant : ce qu'on vient chercher, c'est s'il pleuvra pendant les qualifications, pas le temps qu'il fait sur le circuit un mardi. Une ligne par séance, avec le temps, la température et la probabilité de pluie — le seul chiffre mis en avant, parce qu'en Formule 1 c'est celui qui change une course. La prévision porte à sept jours : une séance plus lointaine garde sa ligne avec un tiret plutôt que d'être masquée. Source : Open-Meteo, gratuit et sans clé, comme la tuile Météo."
+      }
+    },
+    {
+      "key": "showFp1",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Free practice 1\" card",
+        "fr": "Carte « Essais libres 1 »"
+      },
+      "hint": {
+        "en": "The classification of the first free practice: best time, gap to the fastest, laps run, and the tyre of the best lap. Source: OpenF1, free and without a key. Unticked by default; a weekend without such a session says so.",
+        "fr": "Le classement des premiers essais libres : meilleur temps, écart au plus rapide, tours effectués, et la gomme du meilleur tour. Source : OpenF1, gratuite et sans clé. Décochée par défaut ; un week-end sans cette séance le dit."
+      }
+    },
+    {
+      "key": "showFp2",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Free practice 2\" card",
+        "fr": "Carte « Essais libres 2 »"
+      },
+      "hint": {
+        "en": "Same as practice 1, for the second session. On a sprint weekend there is no second practice and the card says so.",
+        "fr": "Comme les essais 1, pour la deuxième séance. Sur un week-end sprint il n'y a pas d'essais 2 : la carte le dit."
+      }
+    },
+    {
+      "key": "showFp3",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Free practice 3\" card",
+        "fr": "Carte « Essais libres 3 »"
+      },
+      "hint": {
+        "en": "Same as practice 1, for the third session (absent on sprint weekends).",
+        "fr": "Comme les essais 1, pour la troisième séance (absente sur un week-end sprint)."
+      }
+    },
+    {
+      "key": "showSprintQuali",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Sprint qualifying\" card",
+        "fr": "Carte « Qualifications sprint »"
+      },
+      "hint": {
+        "en": "The sprint qualifying (formerly the Sprint Shootout), with the Q1, Q2 and Q3 times. Only on sprint weekends. Source: OpenF1.",
+        "fr": "Les qualifications du sprint (ex-Sprint Shootout), avec les temps Q1, Q2 et Q3. Uniquement les week-ends sprint. Source : OpenF1."
+      }
+    },
+    {
+      "key": "showQuali",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Qualifying\" card",
+        "fr": "Carte « Qualifications »"
+      },
+      "hint": {
+        "en": "The qualifying result with the Q1, Q2 and Q3 times and the gap to the pole, each on the driver's own best time. Source: Jolpica, with OpenF1 as a back-up.",
+        "fr": "Le résultat des qualifications avec les temps Q1, Q2 et Q3 et l'écart à la pole, calculé sur le meilleur temps de chacun. Source : Jolpica, avec OpenF1 en secours."
+      }
+    },
+    {
+      "key": "showSprint",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Sprint race\" card",
+        "fr": "Carte « Course sprint »"
+      },
+      "hint": {
+        "en": "The sprint race result: order, gap to the winner, retirements shown as such. Only on sprint weekends.",
+        "fr": "Le résultat de la course sprint : ordre d'arrivée, écart au vainqueur, abandons indiqués comme tels. Uniquement les week-ends sprint."
+      }
+    },
+    {
+      "key": "showGrid",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Starting grid\" card",
+        "fr": "Carte « Grille de départ »"
+      },
+      "hint": {
+        "en": "The starting grid as it comes out of qualifying, with each driver's gap to the pole. It is drawn from the qualifying result: a grid penalty applied afterwards is not reflected.",
+        "fr": "La grille de départ telle qu'elle sort des qualifications, avec l'écart de chaque pilote à la pole. Elle est tirée du résultat des qualifications : une pénalité appliquée ensuite n'y figure pas."
       }
     },
     {
@@ -249,6 +340,60 @@
       }
     },
     {
+      "key": "sessionRows",
+      "type": "number",
+      "default": 10,
+      "min": 3,
+      "max": 24,
+      "label": {
+        "en": "Session results shown",
+        "fr": "Résultats de séance affichés"
+      },
+      "hint": {
+        "en": "Rows shown on each weekend session card (practice, qualifying, sprint, grid).",
+        "fr": "Nombre de lignes affichées sur chaque carte de séance du week-end (essais, qualifications, sprint, grille)."
+      }
+    },
+    {
+      "key": "showTyres",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Tyre of the best lap",
+        "fr": "Pneu du meilleur tour"
+      },
+      "hint": {
+        "en": "A coloured chip (S soft, M medium, H hard, I intermediate, W wet) beside each driver on the session cards. It comes from OpenF1 once the session is over; if it is unavailable the card simply goes without.",
+        "fr": "Une pastille colorée (S tendre, M medium, H dur, I intermédiaire, W pluie) à côté de chaque pilote sur les cartes de séance. Elle vient d'OpenF1 une fois la séance terminée ; si elle est indisponible, la carte s'en passe."
+      }
+    },
+    {
+      "key": "favDrivers",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Favourite drivers",
+        "fr": "Pilotes favoris"
+      },
+      "hint": {
+        "en": "Codes, names or numbers separated by commas (VER, Norris, 16). Their rows are highlighted with a star on every card that lists drivers.",
+        "fr": "Codes, noms ou numéros séparés par des virgules (VER, Norris, 16). Leurs lignes sont mises en évidence, avec une étoile, sur toutes les cartes qui listent des pilotes."
+      }
+    },
+    {
+      "key": "favTeams",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Favourite teams",
+        "fr": "Écuries favorites"
+      },
+      "hint": {
+        "en": "Team names separated by commas (Ferrari, McLaren). Their drivers and their line in the constructor standings are highlighted.",
+        "fr": "Noms d'écuries séparés par des virgules (Ferrari, McLaren). Leurs pilotes et leur ligne du classement constructeurs sont mis en évidence."
+      }
+    },
+    {
       "key": "showTeamColors",
       "type": "checkbox",
       "default": true,
@@ -351,6 +496,21 @@
       "hint": {
         "en": "Two layouts instead of one: a \"Season\" layout, and a \"Race weekend\" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing.",
         "fr": "Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez."
+      }
+    },
+    {
+      "key": "liveRefreshSeconds",
+      "type": "number",
+      "default": 60,
+      "min": 30,
+      "max": 600,
+      "label": {
+        "en": "Refresh during a session (seconds)",
+        "fr": "Rafraîchir pendant une séance (secondes)"
+      },
+      "hint": {
+        "en": "While a session is under way the session cards are re-read at this pace and show a LIVE badge. The free OpenF1 access is rate limited, so 30 seconds is the floor.",
+        "fr": "Pendant une séance, les cartes de séance sont relues à ce rythme et portent un badge EN DIRECT. L'accès gratuit à OpenF1 est limité en débit : 30 secondes est le plancher."
       }
     },
     {

@@ -141,6 +141,7 @@
       const ec = mgp && Array.isArray(ev.event_categories)
         ? ev.event_categories.find((k) => k.category_id === mgp.id) : null;
       races.push({
+        id: ev.id || "",
         round: Number(ev.sequence) || races.length + 1,
         place: clean(ev.additional_name),
         fullName: clean(ev.name),
@@ -320,6 +321,189 @@
     }).filter((x) => x.name);
   }
 
+  /* ---------- Les seances du week-end (1.161.0) ----------
+     ESSAIS LIBRES, ESSAIS CHRONOMETRES, Q1, Q2, SPRINT, GRILLE : sept
+     cartes facultatives, une par seance, lues dans le MEME flux
+     motogp.com que le reste de la tuile (`results/sessions` puis
+     `results/session/<id>/classification`).
+
+     PIEGE DU FLUX : la liste des seances porte des heures « +00:00 »
+     qui sont en realite les heures LOCALES du circuit. On ne s'y fie
+     donc pas : c'est le CALENDRIER (`events`, aux fuseaux corrects) qui
+     dit si une seance a commence ; la liste ne sert qu'a retrouver
+     l'identifiant d'une seance par son type et son numero.
+
+     LA GRILLE se compose comme au Championnat : les douze du Q2, puis
+     les pilotes du Q1 qui n'ont pas accede au Q2.
+     THE WEEKEND'S SESSIONS: seven optional cards. TRAP: the session
+     list's "+00:00" times are actually the circuit's LOCAL times, so the
+     CALENDAR decides whether a session has started; the list only gives
+     a session's id by type and number. The GRID: the twelve of Q2, then
+     the Q1 riders who did not reach Q2. */
+  const SESSION_CARD_IDS = ["fp1", "practice", "fp2", "q1", "q2", "sprint", "grid"];
+  const SESSION_KINDS_OF = { fp1: ["fp1"], practice: ["practice"], fp2: ["fp2"], q1: ["q1"], q2: ["q2"], sprint: ["sprint"], grid: ["q1", "q2"] };
+  const FEED_TYPES = {
+    fp1: { type: "FP", number: 1 }, fp2: { type: "FP", number: 2 }, practice: { type: "PR" },
+    q1: { type: "Q", number: 1 }, q2: { type: "Q", number: 2 }, sprint: { type: "SPR" }
+  };
+  const SESSION_MINUTES = { fp1: 45, practice: 60, fp2: 30, q1: 15, q2: 15, sprint: 30 };
+  const LIVE_GRACE_MS = 10 * 60000;
+  const TUNING = { unused: 0 };
+
+  function weekendRace(races, now) {
+    if (!Array.isArray(races) || !races.length) return null;
+    for (const r of races) {
+      if (r.at == null) continue;
+      const first = r.sessions && r.sessions.length ? r.sessions[0].at : r.at;
+      if (now >= first - 12 * 3600000 && now <= r.at + RACE_LENGTH_MS) return r;
+    }
+    return lastRace(races, now) || nextRace(races, now);
+  }
+
+  function liveSession(race, now) {
+    if (!race || !Array.isArray(race.sessions)) return null;
+    for (const s of race.sessions) {
+      const len = SESSION_MINUTES[s.kind];
+      if (!len) continue;
+      if (now >= s.at && now <= s.at + len * 60000 + LIVE_GRACE_MS) return s.kind;
+    }
+    return null;
+  }
+
+  function sessionAt(race, kind) {
+    const s = race && Array.isArray(race.sessions) ? race.sessions.find((x) => x.kind === kind) : null;
+    return s ? s.at : null;
+  }
+
+  /* « 01:30.132 » -> 90.132. */
+  function parseLapTime(v) {
+    if (v == null || v === "") return null;
+    if (typeof v === "number") return Number.isFinite(v) ? v : null;
+    const m = /^(?:(\d+):)?(\d+(?:\.\d+)?)$/.exec(String(v).trim());
+    if (!m) return null;
+    return (m[1] ? Number(m[1]) * 60 : 0) + Number(m[2]);
+  }
+  function fmtLapTime(sec) {
+    if (sec == null || !Number.isFinite(sec)) return "";
+    const m = Math.floor(sec / 60);
+    const s = sec - m * 60;
+    const ss = s.toFixed(3).padStart(m ? 6 : 1, "0");
+    return m ? m + ":" + ss : ss;
+  }
+  function fmtGapTime(sec) {
+    if (sec == null || !Number.isFinite(sec) || sec <= 0) return "";
+    return "+" + sec.toFixed(3);
+  }
+
+  /* L'epreuve des resultats qui correspond a une course du calendrier :
+     le flux des resultats garde l'identifiant du calendrier dans
+     `toad_api_uuid` ; a defaut, le pays et les dates.
+     The results event matching a calendar race. */
+  function matchEvent(list, race) {
+    if (!Array.isArray(list) || !race) return null;
+    const real = list.filter((e) => e && !e.test);
+    if (race.id) {
+      const byId = real.find((e) => e.toad_api_uuid === race.id);
+      if (byId) return byId;
+    }
+    return real.find((e) => {
+      const iso = String((e.country && e.country.iso) || "").toUpperCase();
+      const from = Date.parse(e.date_start);
+      const to = Date.parse(e.date_end);
+      return iso && iso === race.iso && Number.isFinite(from) && Number.isFinite(to)
+        && race.at >= from - 36 * 3600000 && race.at <= to + 36 * 3600000;
+    }) || null;
+  }
+
+  /* La seance du flux pour un type et un numero. Une seance « pas
+     commencee » n'est pas prise : le flux le dit (NOT-STARTED).
+     The feed's session for a type and number. */
+  function pickWeekendSession(sessions, kind) {
+    const spec = FEED_TYPES[kind];
+    if (!spec || !Array.isArray(sessions)) return null;
+    const hits = sessions.filter((s) => String(s.type || "").toUpperCase() === spec.type
+      && (spec.number == null || Number(s.number) === spec.number)
+      && !/NOT/i.test(String(s.status || "")));
+    return hits.length ? hits[hits.length - 1] : null;
+  }
+
+  function withGaps(rows) {
+    const lead = rows.find((r) => r.best != null);
+    for (const r of rows) {
+      r.gap = lead && r.best != null && r !== lead ? fmtGapTime(r.best - lead.best) : "";
+    }
+    return rows;
+  }
+
+  /* Une classification d'essais, de Q1 ou de Q2 (meilleur tour), ou de
+     sprint (temps de course). Rend des lignes de meme forme.
+     A practice / Q1 / Q2 classification (best lap) or a sprint (race
+     time), as rows of one shape. */
+  function parseSessionRows(json, kind) {
+    const list = json && Array.isArray(json.classification) ? json.classification : null;
+    if (!list || !list.length) return null;
+    if (kind === "sprint") {
+      const rows = parseClassification(json);
+      if (!rows || !rows.length) return null;
+      return {
+        kind, hasTime: false,
+        rows: rows.map((r) => ({
+          pos: r.position, finished: r.finished, name: r.name, number: r.number, iso: r.iso,
+          team: r.team, maker: r.maker, best: null, time: r.time,
+          gap: r.finished ? (r.position === 1 ? "" : r.gap) : "", laps: r.laps || null
+        }))
+      };
+    }
+    const rows = list.map((x) => {
+      const r = x.rider || {};
+      const t = parseLapTime(x.best_lap && x.best_lap.time);
+      return {
+        pos: x.position != null ? Number(x.position) : null,
+        finished: t != null,
+        name: r.full_name || "",
+        number: r.number != null ? String(r.number) : "",
+        iso: (r.country && r.country.iso) || "",
+        team: clean((x.team && x.team.name) || ""),
+        maker: clean((x.constructor && x.constructor.name) || ""),
+        best: t, time: "", gap: "",
+        laps: Number(x.total_laps) || null,
+        advance: kind === "q1" && Number(x.position) >= 1 && Number(x.position) <= 2
+      };
+    }).filter((x) => x.name);
+    rows.sort((a, b) => (a.pos == null ? 1e9 : a.pos) - (b.pos == null ? 1e9 : b.pos));
+    withGaps(rows);
+    return { kind, hasTime: true, rows };
+  }
+
+  function buildGrid(q1, q2) {
+    if (!q1 || !q2 || !Array.isArray(q1.rows) || !Array.isArray(q2.rows) || !q2.rows.length) return null;
+    const inQ2 = new Set(q2.rows.map((r) => r.number));
+    const copy = (r) => Object.assign({}, r, { advance: false });
+    const rows = q2.rows.filter((r) => r.best != null).map(copy)
+      .concat(q1.rows.filter((r) => r.best != null && !inQ2.has(r.number)).map(copy));
+    rows.forEach((r, i) => { r.pos = i + 1; });
+    withGaps(rows);
+    return { kind: "grid", hasTime: true, rows };
+  }
+
+  /* ---------- Favoris ---------- */
+  function parseFavs(text) {
+    return String(text || "").split(/[,;]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+  }
+  function isFavRider(tokens, row) {
+    if (!tokens || !tokens.length || !row) return false;
+    const name = String(row.name || "").toLowerCase();
+    const num = row.number != null ? String(row.number) : "";
+    return tokens.some((t) => (num && t === num) || (t.length >= 3 && name.includes(t)));
+  }
+  function isFavTeam(tokens, row) {
+    if (!tokens || !tokens.length || !row) return false;
+    const team = String(row.team || "").toLowerCase();
+    const maker = String(row.maker || "").toLowerCase();
+    return tokens.some((t) => t.length >= 3 && (team.includes(t) || maker === t));
+  }
+
+
   /* ---------- Meteo du circuit, a l'heure de chaque seance ----------
      Meme raisonnement que la tuile Formule 1 : la meteo d'une course
      n'est pas la meteo d'un lieu. Une ligne par seance, prevision a
@@ -379,6 +563,15 @@
     { id: "teams", key: "showTeams", titleKey: "motogp.card.teams" },
     { id: "results", key: "showResults", titleKey: "motogp.card.results" },
     { id: "weather", key: "showWeather", titleKey: "motogp.card.weather" },
+    /* Les seances du week-end (1.161.0) : facultatives, decochees par
+       defaut. The weekend sessions: optional, unticked by default. */
+    { id: "fp1", key: "showFp1", titleKey: "motogp.card.fp1", optIn: true },
+    { id: "practice", key: "showPractice", titleKey: "motogp.card.practice", optIn: true },
+    { id: "fp2", key: "showFp2", titleKey: "motogp.card.fp2", optIn: true },
+    { id: "q1", key: "showQ1", titleKey: "motogp.card.q1", optIn: true },
+    { id: "q2", key: "showQ2", titleKey: "motogp.card.q2", optIn: true },
+    { id: "sprint", key: "showSprint", titleKey: "motogp.card.sprintRace", optIn: true },
+    { id: "grid", key: "showGrid", titleKey: "motogp.card.grid", optIn: true },
     { id: "circuit", key: "showCircuit", titleKey: "motogp.card.circuit", fit: false },
     /* Le logo (1.153.0) : la tuile Logo / Image hebergee, en option.
        The logo: the hosted Logo / Image tile, optional. */
@@ -398,6 +591,10 @@
       circuit: { x: 0, y: 0, w: 6, h: 7 }, next: { x: 6, y: 0, w: 6, h: 3 },
       schedule: { x: 6, y: 3, w: 3, h: 4 }, weather: { x: 9, y: 3, w: 3, h: 4 },
       results: { x: 0, y: 7, w: 4, h: 5 }, riders: { x: 4, y: 7, w: 4, h: 5 }, teams: { x: 8, y: 7, w: 4, h: 5 } } },
+    { id: "sessions", labelKey: "ig.preset.sessions", items: {
+      fp1: { x: 0, y: 0, w: 3, h: 6 }, practice: { x: 3, y: 0, w: 3, h: 6 }, fp2: { x: 6, y: 0, w: 3, h: 6 }, sprint: { x: 9, y: 0, w: 3, h: 6 },
+      q1: { x: 0, y: 6, w: 3, h: 6 }, q2: { x: 3, y: 6, w: 3, h: 6 }, grid: { x: 6, y: 6, w: 3, h: 6 },
+      next: { x: 9, y: 6, w: 3, h: 3 }, weather: { x: 9, y: 9, w: 3, h: 3 } } },
     { id: "season", labelKey: "ig.preset.season", items: {
       riders: { x: 0, y: 0, w: 5, h: 12 }, teams: { x: 5, y: 0, w: 4, h: 6 }, results: { x: 5, y: 6, w: 4, h: 6 },
       next: { x: 9, y: 0, w: 3, h: 3 }, circuit: { x: 9, y: 3, w: 3, h: 3 },
@@ -420,6 +617,12 @@
       this.circuitHost = null;
       this.circuitInst = null;
       this.circuitConf = "";
+      /* Seances du week-end / weekend sessions */
+      this.sess = {};
+      this.sessRound = "";
+      this.sessBusy = false;
+      this.lastFull = 0;
+      this.mg = { key: "", eventId: "" };
       this.logo = window.PiBoardInnerGrid && window.PiBoardInnerGrid.LogoSlot
         ? new window.PiBoardInnerGrid.LogoSlot(ctx, "pwmgp-logo") : null;
       this.board = window.PiBoardInnerGrid ? new window.PiBoardInnerGrid.BlockBoard({
@@ -472,11 +675,207 @@
 
     onLangChanged() { this.render(); }
 
+    /* ---------- Les seances du week-end (1.161.0) ---------- */
+    needSessions() {
+      return this.visibleBlocks().some((b) => SESSION_CARD_IDS.indexOf(b.id) >= 0);
+    }
+
+    wantedKinds() {
+      const out = [];
+      for (const b of this.visibleBlocks()) {
+        for (const k of SESSION_KINDS_OF[b.id] || []) if (out.indexOf(k) < 0) out.push(k);
+      }
+      return out;
+    }
+
+    liveSeconds() {
+      return Math.max(30, Math.min(600, Number(this.ctx.settings.liveRefreshSeconds) || 60));
+    }
+
+    async resolveEvent(race, ids) {
+      const key = ids.year + ":" + race.round;
+      if (this.mg.key === key && this.mg.eventId) return this.mg.eventId;
+      const list = await this.fetchJson(`${FEED}/results/events?seasonUuid=${ids.season}`);
+      const ev = matchEvent(list, race);
+      if (!ev) { const e = new Error("event not listed"); e.code = "wait"; throw e; }
+      this.mg = { key, eventId: ev.id };
+      return ev.id;
+    }
+
+    async fetchSessionData(kind, race) {
+      const ids = await this.resolveIds();
+      const eventId = await this.resolveEvent(race, ids);
+      const sessions = await this.fetchJson(`${FEED}/results/sessions?eventUuid=${eventId}&categoryUuid=${ids.category}`);
+      const s = pickWeekendSession(sessions, kind);
+      if (!s) { const e = new Error("session not available"); e.code = "wait"; throw e; }
+      const json = await this.fetchJson(`${FEED}/results/session/${s.id}/classification?test=false`);
+      const data = parseSessionRows(json, kind);
+      if (!data) { const e = new Error("empty"); e.code = "wait"; throw e; }
+      return data;
+    }
+
+    async loadSession(kind, race, now) {
+      const at = sessionAt(race, kind);
+      if (at == null || at > now) return;
+      const live = liveSession(race, now) === kind;
+      const ended = now > at + (SESSION_MINUTES[kind] || 30) * 60000 + LIVE_GRACE_MS;
+      const cur = this.sess[kind];
+      if (cur && cur.data) {
+        const age = now - cur.fetched;
+        if (live && age < this.liveSeconds() * 900) return;
+        if (!live && cur.final && age < 25 * 60000) return;
+        if (!live && !cur.final && age < 45000) return;
+      }
+      try {
+        const data = await this.fetchSessionData(kind, race);
+        this.sess[kind] = { data, error: null, fetched: now, final: ended };
+      } catch (e) {
+        this.sess[kind] = {
+          data: cur ? cur.data : null,
+          error: (e && e.code) || "error",
+          fetched: cur && cur.data ? cur.fetched : now,
+          final: false,
+          retryAt: now + 60000
+        };
+      }
+    }
+
+    async refreshSessions() {
+      if (this.sessBusy || !this.data || !this.data.races || !this.needSessions()) return;
+      const race = weekendRace(this.data.races, Date.now());
+      if (!race) return;
+      const rid = this.year() + ":" + race.round;
+      if (this.sessRound !== rid) { this.sessRound = rid; this.sess = {}; }
+      this.sessBusy = true;
+      try {
+        for (const kind of this.wantedKinds()) {
+          const before = this.sess[kind];
+          if (before && before.error && before.retryAt && Date.now() < before.retryAt) continue;
+          await this.loadSession(kind, race, Date.now());
+          if (this.sess[kind] !== before) this.render();
+        }
+      } finally {
+        this.sessBusy = false;
+        this.arm();
+      }
+    }
+
+    nextDelay(now) {
+      const base = Math.max(5, Math.min(360, Number(this.ctx.settings.refreshMinutes) || 30)) * 60000;
+      let ms = this.lastFull ? Math.max(5000, this.lastFull + base - now) : base;
+      if (this.needSessions() && this.data && this.data.races) {
+        const race = weekendRace(this.data.races, now);
+        if (race) {
+          if (liveSession(race, now)) {
+            ms = Math.min(ms, this.liveSeconds() * 1000);
+          } else {
+            const nx = nextSession(race, now);
+            if (nx && nx.at - now < base) ms = Math.min(ms, Math.max(15000, nx.at - now + 20000));
+            const open = Object.keys(this.sess).some((k) => this.sess[k].data && !this.sess[k].final);
+            if (open) ms = Math.min(ms, 60000);
+          }
+        }
+      }
+      return ms;
+    }
+
     arm() {
       clearTimeout(this.timer);
-      const mins = Math.max(5, Math.min(360, Number(this.ctx.settings.refreshMinutes) || 30));
-      this.timer = setTimeout(() => { this.refresh(); this.arm(); }, mins * 60000);
+      this.timer = setTimeout(() => this.onTimer(), this.nextDelay(Date.now()));
     }
+
+    async onTimer() {
+      const base = Math.max(5, Math.min(360, Number(this.ctx.settings.refreshMinutes) || 30)) * 60000;
+      if (!this.lastFull || Date.now() - this.lastFull >= base - 1000) await this.refresh();
+      else await this.refreshSessions();
+      this.arm();
+    }
+
+    favs() {
+      const s = this.ctx.settings;
+      return { riders: parseFavs(s.favRiders), teams: parseFavs(s.favTeams) };
+    }
+
+    isFav(row) {
+      const f = this.favs();
+      return isFavRider(f.riders, row) || isFavTeam(f.teams, row);
+    }
+
+    sessionRowHtml(r, id, hasTime) {
+      const isSprint = id === "sprint";
+      const fav = this.isFav(r);
+      const cells = [];
+      cells.push(`<td class="pwmgp-pos">${r.finished || !isSprint ? esc(r.pos == null ? "" : r.pos) : "—"}</td>`);
+      cells.push(`<td class="pwmgp-who"><div class="pwmgp-who-in">
+        ${this.ctx.settings.showTeamColors !== false ? `<span class="pwmgp-team" style="--pwmgp-team:${makerColor(r.maker)}"></span>` : ""}
+        ${flagOf(r.iso) ? `<span class="pwmgp-flag">${flagOf(r.iso)}</span>` : ""}
+        ${r.number ? `<span class="pwmgp-num">${esc(r.number)}</span>` : ""}
+        <span class="pwmgp-name">${esc(r.name)}</span>
+        ${fav ? `<span class="pwmgp-star" aria-hidden="true">★</span>` : ""}
+      </div></td>`);
+      if (isSprint) {
+        const i18n = this.ctx.i18n;
+        cells.push(`<td class="pwmgp-gap">${esc(r.finished ? (r.pos === 1 ? r.time : String(r.gap || "").replace(" lap", " " + i18n.t("motogp.lap"))) : i18n.t("motogp.dnf"))}</td>`);
+      } else {
+        cells.push(`<td class="pwmgp-time">${esc(r.best != null ? fmtLapTime(r.best) : "")}</td><td class="pwmgp-gap">${esc(r.gap)}</td>`);
+        if (id !== "grid") cells.push(`<td class="pwmgp-laps pwmgp-qopt">${esc(r.laps || "")}</td>`);
+      }
+      const cls = [(!r.finished && isSprint) ? "pwmgp-dnf" : "", fav ? "pwmgp-fav" : "", r.advance ? "pwmgp-adv" : ""].filter(Boolean).join(" ");
+      return `<tr${cls ? ` class="${cls}"` : ""}>${cells.join("")}</tr>`;
+    }
+
+    cardSession(id, now) {
+      const i18n = this.ctx.i18n;
+      const title = i18n.t("motogp.card." + id);
+      const race = weekendRace(this.data.races || [], now);
+      if (!race) return this.card(title, `<div class="pwmgp-msg">${esc(i18n.t("motogp.noData"))}</div>`);
+      const full = title + " · " + this.gpTitle(race);
+      const kinds = SESSION_KINDS_OF[id];
+      const ats = kinds.map((k) => sessionAt(race, k));
+      if (ats.some((a) => a == null)) return this.card(full, `<div class="pwmgp-msg">${esc(i18n.t("f1.sess.none"))}</div>`);
+      const startAt = Math.max.apply(null, ats);
+      if (startAt > now) {
+        return this.card(full, `<div class="pwmgp-msg">${esc(i18n.t("f1.sess.later").replace("{when}", dayTime(startAt, this.locale())))}</div>`);
+      }
+      let data = null;
+      let st = null;
+      if (id === "grid") {
+        const a = this.sess.q1, b = this.sess.q2;
+        data = a && b && a.data && b.data ? buildGrid(a.data, b.data) : null;
+        st = (b && !b.data) ? b : a;
+      } else {
+        st = this.sess[id];
+        data = st && st.data;
+      }
+      if (!data) {
+        const code = st && st.error;
+        const msg = code === "error" ? "f1.sess.error" : (st ? "f1.sess.wait" : "motogp.loading");
+        return this.card(full, `<div class="pwmgp-msg">${esc(i18n.t(msg))}</div>`);
+      }
+      const live = kinds.some((k) => liveSession(race, now) === k);
+      const n = Math.max(3, Math.min(30, Number(this.ctx.settings.sessionRows) || 12));
+      const rows = data.rows.slice(0, n).map((r) => this.sessionRowHtml(r, id, data.hasTime)).join("");
+      const th = (t, c) => `<th${c ? ` class="${c}"` : ""}>${esc(t)}</th>`;
+      let head;
+      if (id === "sprint") head = th("") + th(i18n.t("motogp.th.rider")) + th(i18n.t("f1.th.gap"));
+      else if (id === "grid") head = th("") + th(i18n.t("motogp.th.rider")) + th(i18n.t("f1.th.best")) + th(i18n.t("f1.th.gapPole"));
+      else head = th("") + th(i18n.t("motogp.th.rider")) + th(i18n.t("f1.th.best")) + th(i18n.t("f1.th.gap")) + th(i18n.t("f1.th.laps"), "pwmgp-qopt");
+      const badge = live ? `<div class="pwmgp-live"><span class="pwmgp-live-dot"></span>${esc(i18n.t("f1.sess.live"))}</div>` : "";
+      const note = st && st.error && data ? `<div class="pwmgp-stale">${esc(i18n.t("motogp.stale"))}</div>` : "";
+      const foot = [i18n.t("motogp.sess.credit")];
+      if (id === "q1") foot.push(i18n.t("motogp.sess.q1note"));
+      if (id === "grid") foot.push(i18n.t("motogp.sess.gridNote"));
+      return this.card(full, `
+        ${badge}
+        <table class="pwmgp-table pwmgp-sess-table">
+          <thead><tr>${head}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ${note}
+        <div class="pwmgp-note pwmgp-credit">${esc(foot.join(" · "))}</div>`,
+      live ? "pwmgp-is-live" : "");
+    }
+
 
     async fetchJson(url) {
       const res = await fetch(this.ctx.api.proxyUrl(url), { cache: "no-store" });
@@ -504,8 +903,9 @@
        new Grand Prix has been run. */
     async refresh() {
       const s = this.ctx.settings;
+      this.lastFull = Date.now();
       const needCal = s.showNext !== false || s.showSchedule !== false || s.showWeather !== false
-        || s.showCircuit !== false || s.autoLayout === true;
+        || s.showCircuit !== false || s.autoLayout === true || this.needSessions();
       const needStand = s.showRiders !== false || s.showTeams !== false;
       const needRes = s.showResults !== false;
       const prev = this.data || {};
@@ -527,6 +927,9 @@
       }
       this.render();
       if (this.data && s.showWeather !== false) this.refreshWeather();
+      /* Les seances se chargent apres le reste. Sessions load after the rest. */
+      this.refreshSessions();
+      this.arm();
     }
 
     async loadResults(ids) {
@@ -641,6 +1044,8 @@
         case "teams": return this.cardTeams();
         case "results": return this.cardResults();
         case "weather": return this.cardWeather(now);
+        case "fp1": case "practice": case "fp2": case "q1": case "q2": case "sprint": case "grid":
+          return this.cardSession(id, now);
         case "circuit": return this.cardCircuit(now);
         case "logo": return this.logo ? this.logo.markup(this.ctx.settings.logoFrame === true) : "";
         default: return "";
@@ -719,7 +1124,7 @@
       const list = this.data.riders;
       if (!list || !list.length) return this.msgCard("motogp.card.riders", "motogp.noData");
       const n = Math.max(3, Math.min(30, Number(this.ctx.settings.riderRows) || 10));
-      const rows = list.slice(0, n).map((r) => `<tr>
+      const rows = list.slice(0, n).map((r) => `<tr${this.isFav(r) ? ' class="pwmgp-fav"' : ""}>
           <td class="pwmgp-pos">${esc(r.position || "")}</td>
           <td class="pwmgp-who">${this.who(r)}</td>
           <td class="pwmgp-pts">${esc(r.points)}</td>
@@ -738,7 +1143,8 @@
       if (!list || !list.length) return this.msgCard("motogp.card.teams", "motogp.noData");
       const n = Math.max(3, Math.min(12, Number(this.ctx.settings.teamRows) || 11));
       const colors = this.ctx.settings.showTeamColors !== false;
-      const rows = list.slice(0, n).map((t) => `<tr>
+      const favT = this.favs().teams;
+      const rows = list.slice(0, n).map((t) => `<tr${isFavTeam(favT, t) ? ' class="pwmgp-fav"' : ""}>
           <td class="pwmgp-pos">${esc(t.position)}</td>
           <td class="pwmgp-who"><div class="pwmgp-who-in">
             ${colors ? `<span class="pwmgp-team" style="--pwmgp-team:${makerColor(t.maker)}"></span>` : ""}
@@ -760,7 +1166,7 @@
       const titleKey = res && res.which === "sprint" ? "motogp.card.sprint" : "motogp.card.results";
       if (!res || !res.rows || !res.rows.length) return this.msgCard(titleKey, "motogp.noData");
       const n = Math.max(3, Math.min(30, Number(this.ctx.settings.resultRows) || 10));
-      const rows = res.rows.slice(0, n).map((r) => `<tr class="${r.finished ? "" : "pwmgp-dnf"}">
+      const rows = res.rows.slice(0, n).map((r) => `<tr class="${(r.finished ? "" : "pwmgp-dnf ") + (this.isFav(r) ? "pwmgp-fav" : "")}">
           <td class="pwmgp-pos">${r.finished ? esc(r.position) : "—"}</td>
           <td class="pwmgp-who">${this.who(r)}</td>
           <td class="pwmgp-gap">${esc(r.finished ? (r.position === 1 ? r.time : r.gap.replace(" lap", " " + i18n.t("motogp.lap"))) : i18n.t("motogp.dnf"))}</td>
@@ -884,6 +1290,8 @@
   window.PiBoardMotoGpHelpers = {
     parseCalendar, nextRace, lastRace, nextSession, isRaceWeekend, raceName, sessionKind, parseIso,
     pickSeason, pickCategory, parseRiders, teamStandings, lastEvent, pickSession, parseClassification,
-    parseWeather, weatherAt, weatherUrl, flagOf, makerColor, countdown, BLOCKS, PRESETS, RACE_LENGTH_MS
+    parseWeather, weatherAt, weatherUrl, flagOf, makerColor, countdown, BLOCKS, PRESETS, RACE_LENGTH_MS,
+    weekendRace, liveSession, sessionAt, parseLapTime, fmtLapTime, fmtGapTime, matchEvent, pickWeekendSession,
+    parseSessionRows, buildGrid, parseFavs, isFavRider, isFavTeam, SESSION_MINUTES
   };
 })();

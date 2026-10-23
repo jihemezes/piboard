@@ -200,3 +200,50 @@
 @supports (color: color-contrast(#fff vs #000, #fff)) {
   .pw-motogp.pwmgp-skin-custom .pwmgp-card { color: color-contrast(var(--pwmgp-skin-bg) vs #11141a, #f3f5f9); }
 }
+
+
+/* ============================================================
+   1.161.0 — cartes de seance : essais, Q1, Q2, sprint, grille.
+   Session cards.
+   ============================================================ */
+.pw-motogp .pwmgp-sess-table th:nth-child(n+3) { text-align: right; padding-left: 8px; white-space: nowrap; }
+.pw-motogp .pwmgp-sess-table td.pwmgp-time,
+.pw-motogp .pwmgp-sess-table td.pwmgp-laps { text-align: right; padding-left: 8px; white-space: nowrap; }
+.pw-motogp .pwmgp-sess-table td.pwmgp-time { font-weight: 650; }
+.pw-motogp .pwmgp-sess-table td.pwmgp-laps { color: var(--muted); }
+
+/* Les tours effectues cedent la place avant tout le reste dans une
+   carte etroite. Laps yield first in a narrow card. */
+@container (max-width: 300px) {
+  .pw-motogp .pwmgp-qopt { display: none; }
+}
+
+/* Le favori : fond teinte, barre a gauche, etoile.
+   The favourite: tinted row, bar on the left, star. */
+.pw-motogp tr.pwmgp-fav td { background: color-mix(in srgb, var(--accent) 16%, transparent); font-weight: 650; }
+.pw-motogp tr.pwmgp-fav td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.pw-motogp .pwmgp-star { color: var(--accent); flex: 0 0 auto; font-size: .85em; }
+
+/* Q1 : les deux qui passent en Q2. Q1: the two going through. */
+.pw-motogp tr.pwmgp-adv td.pwmgp-pos { color: var(--accent); font-weight: 700; }
+.pw-motogp tr.pwmgp-adv td.pwmgp-pos::after { content: "→"; margin-left: 2px; }
+
+.pw-motogp .pwmgp-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: .72em;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #fff;
+  background: #d9232d;
+}
+.pw-motogp .pwmgp-live-dot {
+  width: .6em; height: .6em; border-radius: 50%; background: #fff;
+  animation: pwmgp-blink 1.2s ease-in-out infinite;
+}
+@keyframes pwmgp-blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .pw-motogp .pwmgp-live-dot { animation: none; } }

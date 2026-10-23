@@ -1,6 +1,6 @@
 {
   "id": "motogp",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "name": {
     "en": "MotoGP",
     "fr": "MotoGP"
@@ -9,8 +9,8 @@
   "editTapOpensSettings": false,
   "tileTheme": true,
   "description": {
-    "en": "A MotoGP dashboard as blocks you arrange yourself: next round with a countdown, the weekend timetable in your own time zone, rider standings, team standings, the last Grand Prix or sprint results, the circuit weather and the circuit map. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data from motogp.com's own public feed, with no key and no account.",
-    "fr": "Tableau de bord MotoGP en blocs que l'on dispose soi-même : prochaine manche avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement équipes, résultats du dernier Grand Prix ou du sprint, météo du circuit et plan du circuit. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Données du flux public de motogp.com, sans clé ni compte."
+    "en": "A MotoGP dashboard as blocks you arrange yourself: next round with a countdown, the weekend timetable in your own time zone, rider standings, team standings, the last Grand Prix or sprint results, the circuit weather and the circuit map, plus optional cards for each weekend session (practice, Q1, Q2, sprint, starting grid) with a LIVE badge. In edit mode, each block is moved and resized with the mouse or a finger inside the tile. Data from motogp.com's own public feed, with no key and no account.",
+    "fr": "Tableau de bord MotoGP en blocs que l'on dispose soi-même : prochaine manche avec compte à rebours, programme du week-end dans votre fuseau, classement pilotes, classement équipes, résultats du dernier Grand Prix ou du sprint, météo du circuit et plan du circuit, plus des cartes facultatives pour chaque séance du week-end (essais, Q1, Q2, sprint, grille de départ) avec un badge EN DIRECT. En mode édition, chaque bloc se déplace et se redimensionne à la souris ou au doigt à l'intérieur de la tuile. Données du flux public de motogp.com, sans clé ni compte."
   },
   "tagline": {
     "en": "The MotoGP weekend, arranged your way.",
@@ -143,6 +143,97 @@
       "hint": {
         "en": "The forecast AT EACH SESSION'S HOUR, one row per session: condition, temperature and chance of rain -- highlighted from 30 %, because on two wheels rain changes everything. Beyond seven days, a dash. Source: Open-Meteo, free and keyless.",
         "fr": "La prévision À L'HEURE DE CHAQUE SÉANCE, une ligne par séance : le temps, la température et la probabilité de pluie — mise en avant dès 30 %, parce qu'à moto la pluie change tout. Au-delà de sept jours, un tiret. Source : Open-Meteo, gratuit et sans clé."
+      }
+    },
+    {
+      "key": "showFp1",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Free Practice 1\" card",
+        "fr": "Carte « Essais libres 1 »"
+      },
+      "hint": {
+        "en": "The classification of the first free practice: best lap, gap to the fastest and laps run. Unticked by default; read from motogp.com once the session has started.",
+        "fr": "Le classement des premiers essais libres : meilleur tour, écart au plus rapide et tours effectués. Décochée par défaut ; lue sur motogp.com dès que la séance a commencé."
+      }
+    },
+    {
+      "key": "showPractice",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Practice\" card",
+        "fr": "Carte « Practice »"
+      },
+      "hint": {
+        "en": "The Friday-afternoon timed practice. Together with the free practices it decides who goes straight to Q2.",
+        "fr": "Les essais chronométrés du vendredi après-midi. Avec les essais libres, ils décident de ceux qui accèdent directement au Q2."
+      }
+    },
+    {
+      "key": "showFp2",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Free Practice 2\" card",
+        "fr": "Carte « Essais libres 2 »"
+      },
+      "hint": {
+        "en": "The classification of the second free practice (Saturday morning).",
+        "fr": "Le classement des deuxièmes essais libres (samedi matin)."
+      }
+    },
+    {
+      "key": "showQ1",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Qualifying 1\" card",
+        "fr": "Carte « Qualifications Q1 »"
+      },
+      "hint": {
+        "en": "The Q1 session: the two fastest riders go through to Q2, and are marked with an arrow.",
+        "fr": "La séance Q1 : les deux plus rapides accèdent au Q2 et sont signalés par une flèche."
+      }
+    },
+    {
+      "key": "showQ2",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Qualifying 2\" card",
+        "fr": "Carte « Qualifications Q2 »"
+      },
+      "hint": {
+        "en": "The Q2 session, which decides the front of the grid.",
+        "fr": "La séance Q2, qui décide de l'avant de la grille."
+      }
+    },
+    {
+      "key": "showSprint",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Sprint race\" card",
+        "fr": "Carte « Course sprint »"
+      },
+      "hint": {
+        "en": "The sprint result of the weekend: order, gap to the winner, riders who did not finish. Different from the \"Last Grand Prix\" card, which shows the last finished event.",
+        "fr": "Le résultat du sprint du week-end : ordre d'arrivée, écart au vainqueur, pilotes non classés. À ne pas confondre avec la carte « Résultats du dernier Grand Prix », qui montre la dernière épreuve terminée."
+      }
+    },
+    {
+      "key": "showGrid",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "\"Starting grid\" card",
+        "fr": "Carte « Grille de départ »"
+      },
+      "hint": {
+        "en": "The starting grid built from qualifying: the twelve of Q2, then the Q1 riders who did not reach Q2, each with the gap to the pole. A grid penalty applied afterwards is not reflected.",
+        "fr": "La grille de départ composée d'après les qualifications : les douze du Q2, puis les pilotes du Q1 qui n'ont pas accédé au Q2, chacun avec son écart à la pole. Une pénalité appliquée ensuite n'y figure pas."
       }
     },
     {
@@ -280,6 +371,47 @@
       }
     },
     {
+      "key": "sessionRows",
+      "type": "number",
+      "default": 12,
+      "min": 3,
+      "max": 30,
+      "label": {
+        "en": "Session results shown",
+        "fr": "Résultats de séance affichés"
+      },
+      "hint": {
+        "en": "Rows shown on each weekend session card (practice, qualifying, sprint, grid).",
+        "fr": "Nombre de lignes affichées sur chaque carte de séance du week-end (essais, qualifications, sprint, grille)."
+      }
+    },
+    {
+      "key": "favRiders",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Favourite riders",
+        "fr": "Pilotes favoris"
+      },
+      "hint": {
+        "en": "Names or numbers separated by commas (Marquez, 93). Their rows are highlighted with a star on every card that lists riders.",
+        "fr": "Noms ou numéros séparés par des virgules (Marquez, 93). Leurs lignes sont mises en évidence, avec une étoile, sur toutes les cartes qui listent des pilotes."
+      }
+    },
+    {
+      "key": "favTeams",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Favourite teams",
+        "fr": "Équipes favorites"
+      },
+      "hint": {
+        "en": "Team or maker names separated by commas (Ducati, Gresini). Their riders and their line in the team standings are highlighted.",
+        "fr": "Noms d'équipes ou de constructeurs séparés par des virgules (Ducati, Gresini). Leurs pilotes et leur ligne du classement des équipes sont mis en évidence."
+      }
+    },
+    {
       "key": "showTeamColors",
       "type": "checkbox",
       "default": true,
@@ -382,6 +514,21 @@
       "hint": {
         "en": "Two layouts instead of one: a \"Season\" layout, and a \"Race weekend\" layout used from twelve hours before the first session until three hours after the Grand Prix start. Each is arranged separately: in edit mode, the toolbar's first list chooses which one you are editing.",
         "fr": "Deux dispositions au lieu d'une : une disposition « Saison », et une disposition « Week-end de course » utilisée de douze heures avant la première séance jusqu'à trois heures après le départ du Grand Prix. Chacune se dispose à part : en mode édition, la première liste de la barre d'outils choisit celle que vous modifiez."
+      }
+    },
+    {
+      "key": "liveRefreshSeconds",
+      "type": "number",
+      "default": 60,
+      "min": 30,
+      "max": 600,
+      "label": {
+        "en": "Refresh during a session (seconds)",
+        "fr": "Rafraîchir pendant une séance (secondes)"
+      },
+      "hint": {
+        "en": "While a session is under way the session cards are re-read at this pace and show a LIVE badge. 30 seconds is the floor, out of consideration for the public feed.",
+        "fr": "Pendant une séance, les cartes de séance sont relues à ce rythme et portent un badge EN DIRECT. 30 secondes est le plancher, par égard pour le flux public."
       }
     },
     {

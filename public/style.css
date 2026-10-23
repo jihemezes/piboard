@@ -2804,7 +2804,7 @@ body.editing .grid-stack-item-content.tile-transparent {
 .pages-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 10px; }
 .page-row {
   display: grid;
-  grid-template-columns: auto 1fr auto auto auto auto auto;
+  grid-template-columns: auto 1fr auto auto auto auto auto auto auto auto;
   gap: 6px;
   align-items: center;
   padding: 6px 8px;
@@ -2826,8 +2826,14 @@ body.editing .grid-stack-item-content.tile-transparent {
    Page 1 is the main board: it cannot be deleted, otherwise the board
    would have no default content left. */
 .page-row.page-main .page-del { visibility: hidden; }
+.page-row.page-main [data-role=up], .page-row.page-main [data-role=down] { visibility: hidden; }
+.page-move { display: inline-flex; gap: 2px; }
+.page-grip[draggable=true] { cursor: grab; white-space: nowrap; }
+.page-row.page-dragging { opacity: 0.45; }
+.page-row.page-drop { outline: 2px dashed var(--accent, #4aa3ff); outline-offset: 1px; }
+.page-row .page-dup { color: var(--muted); }
 @media (max-width: 620px) {
-  .page-row { grid-template-columns: auto 1fr auto; }
+  .page-row { grid-template-columns: auto 1fr auto auto auto; }
 }
 
 

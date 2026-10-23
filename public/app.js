@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.160.0
+   Version 1.161.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -6128,7 +6128,8 @@
       const row = document.createElement("div");
       row.className = "page-row" + (i === 0 ? " page-main" : "");
       row.innerHTML = `
-        <span class="page-row-num">${i + 1}</span>
+        <span class="page-row-num page-grip" data-role="grip" ${i > 0 ? 'draggable="true"' : ""}
+              title="${escapeHtmlAttr(i18n.t(i > 0 ? "settings.pages.drag" : "settings.pages.mainFixed"))}">${i > 0 ? "&#8942;&#8942; " : ""}${i + 1}</span>
         <input type="text" data-role="name" value="${escapeHtmlAttr(p.name || "")}"
                placeholder="${escapeHtmlAttr(i18n.t("dash.page") + " " + (i + 1))}">
         <select data-role="dir">
@@ -6145,6 +6146,14 @@
                 title="${escapeHtmlAttr(i18n.t(normalizeBackground(p.background).image ? "pagebg.btnHas" : "pagebg.btnNone"))}">&#9635;</button>
         <button type="button" class="btn small page-theme${p.themeIdRaw ? " has-theme" : ""}" data-role="theme"
                 title="${escapeHtmlAttr(i18n.t("theme.pageBtn") + " : " + themeName(themeById(p.themeIdRaw)))}">&#9680;</button>
+        <span class="page-move">
+          <button type="button" class="btn small" data-role="up" ${i <= 1 ? "disabled" : ""}
+                  title="${escapeHtmlAttr(i18n.t("settings.pages.up"))}">&#9650;</button>
+          <button type="button" class="btn small" data-role="down" ${i === 0 || i >= pageCount() - 1 ? "disabled" : ""}
+                  title="${escapeHtmlAttr(i18n.t("settings.pages.down"))}">&#9660;</button>
+        </span>
+        <button type="button" class="btn small page-dup" data-role="dup"
+                title="${escapeHtmlAttr(i18n.t("settings.pages.duplicate"))}">&#10697;</button>
         <button type="button" class="btn small page-del" data-role="del"
                 title="${escapeHtmlAttr(i18n.t("settings.pages.delete"))}">&times;</button>`;
       const target = i === 0 ? mainPage : pages[i - 1];
@@ -6173,7 +6182,11 @@
       onActivate(row.querySelector("[data-role=theme]"), () => openThemePicker({ kind: "page", index: i }));
       if (i > 0) {
         onActivate(row.querySelector("[data-role=del]"), () => deletePage(i));
+        onActivate(row.querySelector("[data-role=up]"), () => movePage(i, i - 1));
+        onActivate(row.querySelector("[data-role=down]"), () => movePage(i, i + 1));
+        wirePageDrag(row, i);
       }
+      onActivate(row.querySelector("[data-role=dup]"), () => duplicatePage(i));
       list.appendChild(row);
     }
   }
@@ -8411,6 +8424,116 @@
       status.textContent = i18n.t("pagebg.uploadError");
     }
     $("pageBgFile").value = "";
+  }
+
+  /* ---------- Ordre des pages (1.161.0) / Page order ----------
+     La page 1 (le plateau principal) reste toujours la premiere : elle
+     porte les tuiles du mode classique et n'est pas dans `layout.pages`.
+     Seules les pages 2 et suivantes se reordonnent, par simple
+     deplacement dans le tableau `pages` -- chaque page garde son
+     conteneur et ses tuiles, rien n'est recree.
+     LA PAGE AFFICHEE RESTE LA MEME : on retient son identifiant avant le
+     deplacement et on retrouve son nouvel index apres, sans transition,
+     pour qu'aucun saut visuel ne se produise.
+     Page 1 (the main board) always stays first. Only pages 2+ are
+     reordered, by moving them within `pages`. The DISPLAYED PAGE STAYS
+     THE SAME: its id is kept before the move and its new index found
+     after, with no transition, so no visual jump happens. */
+  function movePage(from, to) {
+    if (from < 1 || to < 1 || from === to) return false;
+    if (from > pages.length || to > pages.length) return false;
+    const shown = pageAt(activePageIndex);
+    const shownId = shown ? shown.id : "main";
+    const [moved] = pages.splice(from - 1, 1);
+    pages.splice(to - 1, 0, moved);
+    let idx = 0;
+    for (let i = 0; i < pageCount(); i++) {
+      const d = pageAt(i);
+      if (d && d.id === shownId) { idx = i; break; }
+    }
+    activePageIndex = idx;
+    applyDisplayMode();
+    renderPagesEditor();
+    renderPageIndicator();
+    scheduleSave();
+    return true;
+  }
+
+  function wirePageDrag(row, index) {
+    const grip = row.querySelector("[data-role=grip]");
+    if (!grip) return;
+    grip.addEventListener("dragstart", (e) => {
+      row.classList.add("page-dragging");
+      try {
+        e.dataTransfer.effectAllowed = "move";
+        e.dataTransfer.setData("text/plain", String(index));
+        if (e.dataTransfer.setDragImage) e.dataTransfer.setDragImage(row, 10, 10);
+      } catch (err) { /* noop */ }
+      pageDragFrom = index;
+    });
+    grip.addEventListener("dragend", () => {
+      row.classList.remove("page-dragging");
+      pageDragFrom = 0;
+      for (const r of document.querySelectorAll("#pagesList .page-drop")) r.classList.remove("page-drop");
+    });
+    row.addEventListener("dragover", (e) => {
+      if (!pageDragFrom || index < 1) return;
+      e.preventDefault();
+      row.classList.add("page-drop");
+    });
+    row.addEventListener("dragleave", () => row.classList.remove("page-drop"));
+    row.addEventListener("drop", (e) => {
+      e.preventDefault();
+      row.classList.remove("page-drop");
+      const from = pageDragFrom;
+      pageDragFrom = 0;
+      if (from >= 1 && index >= 1 && from !== index) movePage(from, index);
+    });
+  }
+  let pageDragFrom = 0;
+
+  /* DUPLIQUER UNE PAGE : une nouvelle page, juste apres l'originale,
+     dont les tuiles sont des COPIES (memes reglages, images et secrets
+     recopies par le serveur, comme pour la copie d'une tuile). La page
+     affichee ne change pas.
+     DUPLICATE A PAGE: a new page right after the original, with COPIES
+     of its tiles. The displayed page does not change. */
+  async function duplicatePage(index) {
+    const src = pageAt(index);
+    if (!src) return;
+    const shown = pageAt(activePageIndex);
+    const shownId = shown ? shown.id : "main";
+    const zone = src.zone;
+    const ids = Array.from(tiles.values()).filter((r) => r.zone === zone).map((r) => r.conf.id);
+    const page = createPageElement({ id: newPageId() });
+    const label = src.name || (i18n.t("dash.page") + " " + (index + 1));
+    page.name = i18n.t("settings.pages.copyName").replace("{name}", label);
+    page.transition = normalizeTransition(src.transition);
+    page.dwellSeconds = normalizeDwell(src.dwellSeconds);
+    page.background = normalizeBackground(src.background);
+    page.themeId = normalizeThemeId(src.themeIdRaw);
+    page.tiles = [];
+    // Juste apres l'originale (la page 1 est devant toutes les autres).
+    // Right after the original (page 1 sits before all the others).
+    pages.splice(index, 0, page);
+    const destZone = "page:" + page.id;
+    for (const id of ids) {
+      const rec = tiles.get(id);
+      if (!rec) continue;
+      const node = rec.el && rec.el.gridstackNode;
+      const at = node ? { x: node.x, y: node.y, w: node.w, h: node.h } : undefined;
+      try { await relocateTile(id, destZone, { copy: true, at }); } catch (e) { console.warn("[piboard] page duplicate failed", e); }
+    }
+    let idx = 0;
+    for (let i = 0; i < pageCount(); i++) {
+      const d = pageAt(i);
+      if (d && d.id === shownId) { idx = i; break; }
+    }
+    activePageIndex = idx;
+    applyDisplayMode();
+    renderPagesEditor();
+    renderPageIndicator();
+    scheduleSave();
   }
 
   function addPage() {

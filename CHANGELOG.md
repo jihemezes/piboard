@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.161.0
+
+- **Pages réordonnables.** Réglages → Disposition : chaque page se déplace par
+  **▲ ▼** ou par **glisser-déposer** de sa poignée ; le bandeau d'indicateurs suit
+  le nouvel ordre et la page affichée ne bouge pas à l'écran. La page 1 (plateau
+  principal) reste fixe. Nouveau bouton **⧉ Dupliquer** : copie la page juste après
+  elle avec ses tuiles (via `relocateTile(..., {copy:true})`), son effet, sa durée,
+  son fond et son thème.
+- **Tuile Formule 1 (manifeste 1.10.0) : sept cartes de séance facultatives**
+  (décochées par défaut) : Essais libres 1/2/3, Qualifications sprint,
+  Qualifications (Q1/Q2/Q3), Course sprint, Grille de départ (écart à la pole).
+  Week-end en cours, sinon dernier Grand Prix. Sources : Jolpica (qualifications,
+  sprint) et **OpenF1** (essais, qualifications sprint, pneus). Pastille de pneu du
+  meilleur tour, **pilote / écurie favoris** en évidence, badge **EN DIRECT** et
+  relecture accélérée pendant une séance (réglage, 30 à 600 s), réveil automatique
+  au début de chaque séance. Disposition prête « Séances ». Appels OpenF1 espacés
+  (limite de débit) ; accès restreint pendant la séance → message dédié.
+- **Tuile MotoGP (manifeste 1.4.0) : sept cartes de séance** (Essais libres 1,
+  Practice, Essais libres 2, Q1, Q2, Course sprint, Grille de départ), mêmes
+  principes (favoris, EN DIRECT, disposition « Séances »). Les horaires du
+  calendrier font foi (le flux étiquette « UTC » des heures locales).
+- **Correctif F1** : la minuterie de la tuile pouvait ne pas se réarmer après un
+  rafraîchissement ; elle est désormais pilotée par `arm()`/`onTimer()`.
+- Aide FR/EN mise à jour (F1, MotoGP, Tableau de bord). Nouveaux tests :
+  `f1Sessions`, `motogpSessions` (réponses réelles d'API), blocs dom-smoke pages.
+
 ## 1.160.0
 
 - **Chaînes TV : connexion Xtream par adresse + identifiant + mot de passe.** Un

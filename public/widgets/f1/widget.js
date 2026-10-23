@@ -260,6 +260,248 @@
     };
   }
 
+  /* ---------- Les seances du week-end (1.161.0) ----------
+     ESSAIS LIBRES, QUALIFICATIONS, SPRINT, GRILLE : sept cartes
+     facultatives, une par seance. Deux sources, chacune pour ce qu'elle
+     sait faire :
+       - jolpica (deja utilisee) : qualifications et course sprint, avec
+         les noms, les ecuries et les temps Q1 / Q2 / Q3 ;
+       - OpenF1 (gratuite, sans cle) : essais libres, qualifications
+         sprint -- que jolpica n'a jamais publies -- et les PNEUS du
+         meilleur tour. Elle sert aussi de secours aux deux autres.
+     Une seance non encore courue n'est PAS demandee : on affiche son
+     horaire. Une seance terminee est gardee en memoire et n'est relue
+     que rarement ; seule la seance en cours est relue souvent, avec le
+     badge EN DIRECT.
+     THE WEEKEND'S SESSIONS: seven optional cards, one per session. Two
+     sources, each for what it does well: jolpica (qualifying, sprint) and
+     OpenF1 (free practice, sprint qualifying, tyres of the best lap),
+     which also backs the other two up. A session not yet run is NOT
+     requested; a finished one is kept and rarely re-read; only the
+     session under way is re-read often, with the LIVE badge. */
+  const OPENF1 = "https://api.openf1.org/v1";
+  const SESSION_KINDS = ["fp1", "fp2", "fp3", "sprintQuali", "sprint", "quali"];
+  const SESSION_BLOCKS = { fp1: "fp1", fp2: "fp2", fp3: "fp3", sprintQuali: "sprintQuali", sprint: "sprint", quali: "quali", grid: "quali" };
+  const OPENF1_NAMES = {
+    fp1: ["Practice 1"], fp2: ["Practice 2"], fp3: ["Practice 3"],
+    sprintQuali: ["Sprint Qualifying", "Sprint Shootout"], sprint: ["Sprint"], quali: ["Qualifying"]
+  };
+  /* Durees prevues, pour savoir si une seance est EN COURS. Expected
+     lengths, to know whether a session is under way. */
+  const SESSION_MINUTES = { fp1: 60, fp2: 60, fp3: 60, sprintQuali: 50, sprint: 45, quali: 70 };
+  const LIVE_GRACE_MS = 10 * 60000;
+
+  /* Le week-end affiche : celui qui est EN COURS (douze heures avant la
+     premiere seance jusqu'a trois heures apres la course), sinon le
+     dernier Grand Prix couru, sinon -- avant la premiere course -- la
+     prochaine. The weekend displayed: the one under way, else the last
+     Grand Prix run, else the next one. */
+  function weekendRace(races, now) {
+    if (!Array.isArray(races) || !races.length) return null;
+    for (const r of races) {
+      if (r.at == null) continue;
+      const first = r.sessions && r.sessions.length ? r.sessions[0].at : r.at;
+      if (now >= first - 12 * 3600000 && now <= r.at + RACE_LENGTH_MS) return r;
+    }
+    return lastRace(races, now) || nextRace(races, now);
+  }
+
+  /* La seance en cours, ou null. The session under way, or null. */
+  function liveSession(race, now) {
+    if (!race || !Array.isArray(race.sessions)) return null;
+    for (const s of race.sessions) {
+      const len = SESSION_MINUTES[s.kind];
+      if (!len) continue;
+      if (now >= s.at && now <= s.at + len * 60000 + LIVE_GRACE_MS) return s.kind;
+    }
+    return null;
+  }
+
+  function sessionAt(race, kind) {
+    const s = race && Array.isArray(race.sessions) ? race.sessions.find((x) => x.kind === kind) : null;
+    return s ? s.at : null;
+  }
+
+  /* « 1:18.518 » -> 78.518 ; null si vide. */
+  function parseLapTime(v) {
+    if (v == null || v === "") return null;
+    if (typeof v === "number") return Number.isFinite(v) ? v : null;
+    const m = /^(?:(\d+):)?(\d+(?:\.\d+)?)$/.exec(String(v).trim());
+    if (!m) return null;
+    return (m[1] ? Number(m[1]) * 60 : 0) + Number(m[2]);
+  }
+
+  /* 78.518 -> « 1:18.518 » ; 59.2 -> « 59.200 ». */
+  function fmtLapTime(sec) {
+    if (sec == null || !Number.isFinite(sec)) return "";
+    const m = Math.floor(sec / 60);
+    const s = sec - m * 60;
+    const ss = s.toFixed(3).padStart(m ? 6 : 1, "0");
+    return m ? m + ":" + ss : ss;
+  }
+
+  function fmtGapTime(sec) {
+    if (sec == null || !Number.isFinite(sec) || sec <= 0) return "";
+    return "+" + sec.toFixed(3);
+  }
+
+  /* Les pneus : la gomme du meilleur tour, en une lettre.
+     Tyres: the compound of the best lap, as one letter. */
+  const TYRE = {
+    SOFT: "S", MEDIUM: "M", HARD: "H", INTERMEDIATE: "I", WET: "W"
+  };
+  function tyreLetter(compound) { return TYRE[String(compound || "").toUpperCase()] || ""; }
+
+  /* Gomme du meilleur tour de chaque pilote, a partir des tours et des
+     relais d'OpenF1. Un pilote sans tour chronometre n'a pas de pastille.
+     Compound of each driver's best lap, from OpenF1's laps and stints. */
+  function tyresByDriver(laps, stints) {
+    const best = new Map();
+    for (const l of Array.isArray(laps) ? laps : []) {
+      const d = Number(l.driver_number);
+      const t = Number(l.lap_duration);
+      if (!Number.isFinite(d) || !Number.isFinite(t) || t <= 0) continue;
+      const cur = best.get(d);
+      if (!cur || t < cur.t) best.set(d, { t, lap: Number(l.lap_number) });
+    }
+    const out = new Map();
+    for (const [d, b] of best) {
+      const st = (Array.isArray(stints) ? stints : []).find((s) => Number(s.driver_number) === d
+        && Number(s.lap_start) <= b.lap && b.lap <= Number(s.lap_end));
+      const letter = st ? tyreLetter(st.compound) : "";
+      if (letter) out.set(d, letter);
+    }
+    return out;
+  }
+
+  /* Ecart a la pole (ou au premier) recalcule sur le MEILLEUR temps de
+     chacun : un pilote sorti en Q1 est compare a la pole, pas au
+     premier de sa propre manche.
+     Gap to the pole (or leader), recomputed on EACH driver's best time. */
+  function withGaps(rows) {
+    const lead = rows.find((r) => r.best != null);
+    for (const r of rows) {
+      r.gap = lead && r.best != null && r !== lead ? fmtGapTime(r.best - lead.best) : "";
+    }
+    return rows;
+  }
+
+  /* Qualifications / sprint de jolpica. kind : "quali" | "sprint". */
+  function parseJolpicaSession(json, kind) {
+    const races = (((json || {}).MRData || {}).RaceTable || {}).Races || [];
+    const race = races[0];
+    const list = race && (kind === "sprint" ? race.SprintResults : race.QualifyingResults);
+    if (!Array.isArray(list) || !list.length) return null;
+    const rows = list.map((r) => {
+      const d = r.Driver || {};
+      const c = r.Constructor || {};
+      const q = [r.Q1, r.Q2, r.Q3].map((x) => (x && String(x).trim()) || "");
+      const lastQ = [parseLapTime(q[2]), parseLapTime(q[1]), parseLapTime(q[0])].find((x) => x != null);
+      const finished = kind !== "sprint" || /^Finished$/i.test(r.status || "") || /^\+/.test(r.status || "");
+      return {
+        pos: Number(r.position) || null,
+        number: Number(r.number) || Number(d.permanentNumber) || null,
+        code: d.code || (d.familyName || "").slice(0, 3).toUpperCase(),
+        name: ((d.givenName || "") + " " + (d.familyName || "")).trim(),
+        nationality: d.nationality || "",
+        team: c.name || "", teamId: c.constructorId || "",
+        color: colorFor(c.constructorId),
+        q,
+        best: kind === "sprint" ? null : (lastQ == null ? null : lastQ),
+        gap: kind === "sprint" ? ((r.Time && r.Time.time) || "") : "",
+        time: kind === "sprint" ? ((r.Time && r.Time.time) || "") : "",
+        laps: Number(r.laps) || null,
+        status: r.status || "",
+        finished,
+        tyre: ""
+      };
+    });
+    if (kind !== "sprint") withGaps(rows);
+    else for (const r of rows) r.gap = r.finished ? (r.pos === 1 ? "" : r.time) : r.status;
+    return { source: "jolpica", kind, hasQ: kind !== "sprint", rows };
+  }
+
+  /* Resultats OpenF1 (essais, qualifications, sprint). `result` est la
+     liste de `session_result`, `drivers` celle de `drivers`.
+     OpenF1 results. */
+  function parseOpenF1Session(result, drivers, kind) {
+    if (!Array.isArray(result) || !result.length) return null;
+    const byNum = new Map();
+    for (const d of Array.isArray(drivers) ? drivers : []) byNum.set(Number(d.driver_number), d);
+    const isQ = kind === "quali" || kind === "sprintQuali";
+    const rows = result.map((r) => {
+      const d = byNum.get(Number(r.driver_number)) || {};
+      const dur = Array.isArray(r.duration) ? r.duration : [r.duration];
+      const q = isQ ? [0, 1, 2].map((i) => fmtLapTime(parseLapTime(dur[i]))) : ["", "", ""];
+      let best = null;
+      for (let i = dur.length - 1; i >= 0; i--) {
+        const t = parseLapTime(dur[i]);
+        if (t != null) { best = t; break; }
+      }
+      const out = r.dnf || r.dns || r.dsq;
+      const gapRaw = Array.isArray(r.gap_to_leader) ? null : r.gap_to_leader;
+      return {
+        pos: Number(r.position) || null,
+        number: Number(r.driver_number) || null,
+        code: d.name_acronym || String(r.driver_number),
+        name: ((d.first_name || "") + " " + (d.last_name || "")).trim() || d.full_name || "",
+        nationality: "",
+        team: d.team_name || "", teamId: String(d.team_name || "").toLowerCase().replace(/\s+/g, "_"),
+        color: d.team_colour ? "#" + String(d.team_colour).replace(/^#/, "") : "var(--muted)",
+        q,
+        best: kind === "sprint" ? null : best,
+        time: kind === "sprint" && typeof r.duration === "number" ? fmtLapTime(r.duration) : "",
+        gap: "",
+        gapRaw,
+        laps: Number(r.number_of_laps) || null,
+        status: r.dsq ? "DSQ" : (r.dns ? "DNS" : (r.dnf ? "DNF" : "")),
+        finished: !out,
+        tyre: ""
+      };
+    });
+    if (kind === "sprint") {
+      for (const r of rows) {
+        r.gap = !r.finished ? r.status : (r.pos === 1 ? "" : (typeof r.gapRaw === "number" ? fmtGapTime(r.gapRaw) : String(r.gapRaw || "")));
+      }
+    } else {
+      withGaps(rows);
+    }
+    return { source: "openf1", kind, hasQ: isQ, rows };
+  }
+
+  /* La grille de depart, d'apres les qualifications : meme ordre, avec
+     l'ecart a la pole. Starting grid, from qualifying. */
+  function gridFromQuali(data) {
+    if (!data || !Array.isArray(data.rows)) return null;
+    return { source: data.source, kind: "grid", hasQ: false, rows: data.rows.map((r) => Object.assign({}, r)) };
+  }
+
+  /* ---------- Favoris ----------
+     Pilotes et ecuries favoris : listes separees par des virgules,
+     comparees sans casse. Un pilote correspond par son code, son nom ou
+     son numero ; une ecurie par son nom.
+     Favourites: comma-separated lists, compared without case. */
+  function parseFavs(text) {
+    return String(text || "").split(/[,;]/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+  }
+  function isFavDriver(tokens, row) {
+    if (!tokens || !tokens.length || !row) return false;
+    const code = String(row.code || "").toLowerCase();
+    const name = String(row.name || "").toLowerCase();
+    const num = row.number ? String(row.number) : "";
+    return tokens.some((t) => t === code || t === num || (t.length >= 3 && name.includes(t)));
+  }
+  function isFavTeam(tokens, row) {
+    if (!tokens || !tokens.length || !row) return false;
+    const team = String(row.team || "").toLowerCase();
+    const id = String(row.teamId || "").toLowerCase();
+    return tokens.some((t) => t.length >= 3 && (team.includes(t) || id.includes(t.replace(/\s+/g, "_"))));
+  }
+
+  const SESSION_CARD_IDS = ["fp1", "fp2", "fp3", "sprintQuali", "quali", "sprint", "grid"];
+  /* Reglage des tests : l'ecart entre deux appels OpenF1. Tuning for tests. */
+  const TUNING = { gapMs: 350 };
+
   /* ---------- La meteo du circuit ----------
      LA METEO D'UNE COURSE N'EST PAS LA METEO D'UN LIEU. Un bulletin
      « 24 degres, averses » pour Spa ne dit rien d'utile : ce qu'on vient
@@ -392,6 +634,16 @@
     { id: "constructors", key: "showConstructors", titleKey: "f1.card.constructors" },
     { id: "results", key: "showResults", titleKey: "f1.card.results" },
     { id: "weather", key: "showWeather", titleKey: "f1.card.weather" },
+    /* Les seances du week-end (1.161.0) : facultatives, decochees par
+       defaut -- une tuile existante n'en voit surgir aucune.
+       The weekend sessions: optional, unticked by default. */
+    { id: "fp1", key: "showFp1", titleKey: "f1.card.fp1", optIn: true },
+    { id: "fp2", key: "showFp2", titleKey: "f1.card.fp2", optIn: true },
+    { id: "fp3", key: "showFp3", titleKey: "f1.card.fp3", optIn: true },
+    { id: "sprintQuali", key: "showSprintQuali", titleKey: "f1.card.sprintQuali", optIn: true },
+    { id: "quali", key: "showQuali", titleKey: "f1.card.quali", optIn: true },
+    { id: "sprint", key: "showSprint", titleKey: "f1.card.sprint", optIn: true },
+    { id: "grid", key: "showGrid", titleKey: "f1.card.grid", optIn: true },
     /* Le plan ne s'ajuste pas a l'echelle du texte : c'est un dessin
        vectoriel, qui suit deja la taille du bloc.
        The map is not text-scaled: a vector drawing already follows the
@@ -420,6 +672,13 @@
       circuit: { x: 0, y: 0, w: 6, h: 7 }, next: { x: 6, y: 0, w: 6, h: 3 },
       schedule: { x: 6, y: 3, w: 3, h: 4 }, weather: { x: 9, y: 3, w: 3, h: 4 },
       results: { x: 0, y: 7, w: 4, h: 5 }, drivers: { x: 4, y: 7, w: 4, h: 5 }, constructors: { x: 8, y: 7, w: 4, h: 5 } } },
+    /* « Seances » : les cartes du week-end en grand, deux rangees de
+       quatre. Les cartes non cochees laissent simplement leur place vide.
+       "Sessions": the weekend's cards large, two rows of four. */
+    { id: "sessions", labelKey: "ig.preset.sessions", items: {
+      fp1: { x: 0, y: 0, w: 3, h: 6 }, fp2: { x: 3, y: 0, w: 3, h: 6 }, fp3: { x: 6, y: 0, w: 3, h: 6 }, quali: { x: 9, y: 0, w: 3, h: 6 },
+      sprintQuali: { x: 0, y: 6, w: 3, h: 6 }, sprint: { x: 3, y: 6, w: 3, h: 6 }, grid: { x: 6, y: 6, w: 3, h: 6 },
+      next: { x: 9, y: 6, w: 3, h: 3 }, weather: { x: 9, y: 9, w: 3, h: 3 } } },
     { id: "season", labelKey: "ig.preset.season", items: {
       drivers: { x: 0, y: 0, w: 5, h: 12 }, constructors: { x: 5, y: 0, w: 4, h: 6 }, results: { x: 5, y: 6, w: 4, h: 6 },
       next: { x: 9, y: 0, w: 3, h: 3 }, circuit: { x: 9, y: 3, w: 3, h: 3 },
@@ -451,6 +710,12 @@
       this.circuitHost = null;
       this.circuitInst = null;
       this.circuitConf = "";
+      /* Seances du week-end / weekend sessions */
+      this.sess = {};
+      this.sessRound = "";
+      this.sessBusy = false;
+      this.lastFull = 0;
+      this.of1 = { list: null, year: "", at: 0, last: 0, drivers: {}, tyres: {} };
       this.logo = window.PiBoardInnerGrid && window.PiBoardInnerGrid.LogoSlot
         ? new window.PiBoardInnerGrid.LogoSlot(ctx, "pwf1-logo") : null;
       this.board = window.PiBoardInnerGrid ? new window.PiBoardInnerGrid.BlockBoard({
@@ -519,11 +784,287 @@
 
     onLangChanged() { this.render(); }
 
+    /* ---------- Les seances du week-end (1.161.0) ---------- */
+    needSessions() {
+      return this.visibleBlocks().some((b) => SESSION_CARD_IDS.indexOf(b.id) >= 0);
+    }
+
+    wantedKinds() {
+      const out = [];
+      for (const b of this.visibleBlocks()) {
+        const k = SESSION_BLOCKS[b.id];
+        if (k && out.indexOf(k) < 0) out.push(k);
+      }
+      return out;
+    }
+
+    liveSeconds() {
+      return Math.max(30, Math.min(600, Number(this.ctx.settings.liveRefreshSeconds) || 60));
+    }
+
+    /* Un appel a OpenF1 au plus toutes les 350 ms : l'acces gratuit est
+       limite (quelques requetes par seconde) et une rafale de quatre
+       cartes au premier affichage la depasserait.
+       At most one OpenF1 call every 350 ms: the free access is rate
+       limited and a first-display burst of four cards would exceed it. */
+    async throttle() {
+      const gap = TUNING.gapMs;
+      const wait = this.of1.last + gap - Date.now();
+      if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+      this.of1.last = Date.now();
+    }
+
+    async openf1(path) {
+      await this.throttle();
+      const res = await fetch(this.ctx.api.proxyUrl(`${OPENF1}/${path}`), { cache: "no-store" });
+      /* OpenF1 repond 404 quand il n'y a simplement rien a rendre.
+         OpenF1 answers 404 when there is simply nothing to return. */
+      if (res.status === 404) return [];
+      if (!res.ok) {
+        const e = new Error("status " + res.status);
+        e.code = res.status === 401 || res.status === 403 ? "locked" : (res.status === 429 ? "rate" : "error");
+        throw e;
+      }
+      const json = await res.json();
+      return Array.isArray(json) ? json : [];
+    }
+
+    async openf1Key(kind, race, at) {
+      const now = Date.now();
+      if (!this.of1.list || this.of1.year !== race.season || now - this.of1.at > 3600000) {
+        this.of1.list = await this.openf1(`sessions?year=${encodeURIComponent(race.season)}`);
+        this.of1.year = race.season;
+        this.of1.at = now;
+      }
+      const names = OPENF1_NAMES[kind] || [];
+      const hit = this.of1.list.find((s) => names.indexOf(s.session_name) >= 0
+        && Math.abs(Date.parse(s.date_start) - at) < 3 * 3600000);
+      return hit ? hit.session_key : null;
+    }
+
+    async openf1Drivers(key) {
+      if (!this.of1.drivers[key]) this.of1.drivers[key] = await this.openf1(`drivers?session_key=${key}`);
+      return this.of1.drivers[key];
+    }
+
+    async attachTyres(data, kind, race, at) {
+      const key = data.key != null ? data.key : await this.openf1Key(kind, race, at);
+      if (key == null) return;
+      let map = this.of1.tyres[key];
+      if (!map) {
+        const laps = await this.openf1(`laps?session_key=${key}`);
+        const stints = await this.openf1(`stints?session_key=${key}`);
+        map = tyresByDriver(laps, stints);
+        this.of1.tyres[key] = map;
+      }
+      for (const r of data.rows) r.tyre = map.get(r.number) || "";
+    }
+
+    async fetchSessionData(kind, race, at, live) {
+      let data = null;
+      if (kind === "quali" || kind === "sprint") {
+        try {
+          const j = await this.fetchJson(`${API}/${race.season}/${race.round}/${kind === "quali" ? "qualifying" : "sprint"}.json`);
+          data = parseJolpicaSession(j, kind);
+        } catch (e) { /* secours OpenF1 / OpenF1 takes over */ }
+      }
+      if (!data) {
+        const key = await this.openf1Key(kind, race, at);
+        if (key == null) { const e = new Error("no session"); e.code = "wait"; throw e; }
+        const result = await this.openf1(`session_result?session_key=${key}`);
+        const drivers = await this.openf1Drivers(key);
+        data = parseOpenF1Session(result, drivers, kind);
+        if (!data) { const e = new Error("empty"); e.code = "wait"; throw e; }
+        data.key = key;
+      }
+      /* Les pneus sont un bonus : leur echec ne coute jamais la carte.
+         Tyres are a bonus: their failure never costs the card. */
+      if (this.ctx.settings.showTyres !== false && !live) {
+        try { await this.attachTyres(data, kind, race, at); } catch (e) { /* noop */ }
+      }
+      return data;
+    }
+
+    async loadSession(kind, race, now) {
+      const at = sessionAt(race, kind);
+      if (at == null || at > now) return;
+      const live = liveSession(race, now) === kind;
+      const ended = now > at + (SESSION_MINUTES[kind] || 60) * 60000 + LIVE_GRACE_MS;
+      const cur = this.sess[kind];
+      if (cur && cur.data) {
+        const age = now - cur.fetched;
+        if (live && age < this.liveSeconds() * 900) return;
+        if (!live && cur.final && age < 25 * 60000) return;
+        if (!live && !cur.final && age < 45000) return;
+      }
+      try {
+        const data = await this.fetchSessionData(kind, race, at, live);
+        this.sess[kind] = { data, error: null, fetched: now, final: ended };
+      } catch (e) {
+        /* Une erreur n'efface pas ce qu'on affichait.
+           An error does not wipe what was displayed. */
+        this.sess[kind] = {
+          data: cur ? cur.data : null,
+          error: (e && e.code) || "error",
+          fetched: cur && cur.data ? cur.fetched : now,
+          final: false,
+          retryAt: now + 60000
+        };
+      }
+    }
+
+    async refreshSessions() {
+      if (this.sessBusy || !this.data || !this.data.races || !this.needSessions()) return;
+      const race = weekendRace(this.data.races, Date.now());
+      if (!race) return;
+      const rid = race.season + ":" + race.round;
+      if (this.sessRound !== rid) { this.sessRound = rid; this.sess = {}; }
+      this.sessBusy = true;
+      try {
+        for (const kind of this.wantedKinds()) {
+          const before = this.sess[kind];
+          const cur = this.sess[kind];
+          if (cur && cur.error && cur.retryAt && Date.now() < cur.retryAt) continue;
+          await this.loadSession(kind, race, Date.now());
+          if (this.sess[kind] !== before) this.render();
+        }
+      } finally {
+        this.sessBusy = false;
+        this.arm();
+      }
+    }
+
+    /* Le prochain reveil : la duree choisie, raccourcie quand une seance
+       est en cours (releve rapide), va commencer, ou vient de finir et
+       n'a pas encore ete relue une derniere fois.
+       The next wake-up: the chosen delay, shortened when a session is
+       under way, about to start, or just ended and not re-read once more. */
+    nextDelay(now) {
+      const base = Math.max(5, Math.min(360, Number(this.ctx.settings.refreshMinutes) || 30)) * 60000;
+      let ms = this.lastFull ? Math.max(5000, this.lastFull + base - now) : base;
+      if (this.needSessions() && this.data && this.data.races) {
+        const race = weekendRace(this.data.races, now);
+        if (race) {
+          if (liveSession(race, now)) {
+            ms = Math.min(ms, this.liveSeconds() * 1000);
+          } else {
+            const nx = nextSession(race, now);
+            if (nx && nx.at - now < base) ms = Math.min(ms, Math.max(15000, nx.at - now + 20000));
+            const open = Object.keys(this.sess).some((k) => this.sess[k].data && !this.sess[k].final);
+            if (open) ms = Math.min(ms, 60000);
+          }
+        }
+      }
+      return ms;
+    }
+
     arm() {
       clearTimeout(this.timer);
-      const mins = Math.max(5, Math.min(360, Number(this.ctx.settings.refreshMinutes) || 30));
-      this.timer = setTimeout(() => this.refresh(), mins * 60000);
+      this.timer = setTimeout(() => this.onTimer(), this.nextDelay(Date.now()));
     }
+
+    async onTimer() {
+      const base = Math.max(5, Math.min(360, Number(this.ctx.settings.refreshMinutes) || 30)) * 60000;
+      if (!this.lastFull || Date.now() - this.lastFull >= base - 1000) await this.refresh();
+      else await this.refreshSessions();
+      this.arm();
+    }
+
+    favs() {
+      const s = this.ctx.settings;
+      return { drivers: parseFavs(s.favDrivers), teams: parseFavs(s.favTeams) };
+    }
+
+    isFav(row) {
+      const f = this.favs();
+      return isFavDriver(f.drivers, row) || isFavTeam(f.teams, row);
+    }
+
+    tyreHtml(letter) {
+      if (!letter) return "";
+      const i18n = this.ctx.i18n;
+      return `<span class="pwf1-tyre pwf1-tyre-${esc(letter)}" title="${esc(i18n.t("f1.tyre." + letter))}">${esc(letter)}</span>`;
+    }
+
+    sessionRowHtml(r, kind, withTyres, colors) {
+      const flag = flagFor(FLAG, r.nationality);
+      const fav = this.isFav(r);
+      const isRace = kind === "sprint";
+      const cells = [];
+      cells.push(`<td class="pwf1-pos">${r.finished || !isRace ? esc(r.pos == null ? "" : r.pos) : "—"}</td>`);
+      cells.push(`<td class="pwf1-who"><div class="pwf1-who-in">
+        ${colors ? `<span class="pwf1-team" style="--pwf1-team:${esc(r.color)}"></span>` : ""}
+        ${flag ? `<span class="pwf1-flag">${flag}</span>` : ""}
+        <span class="pwf1-code">${esc(r.code)}</span>
+        <span class="pwf1-name">${esc(r.name)}</span>
+        ${fav ? `<span class="pwf1-star" aria-hidden="true">★</span>` : ""}
+      </div></td>`);
+      if (withTyres) cells.push(`<td class="pwf1-tyrecell">${this.tyreHtml(r.tyre)}</td>`);
+      if (kind === "quali" || kind === "sprintQuali") {
+        cells.push(`<td class="pwf1-q pwf1-qopt">${esc(r.q[0])}</td><td class="pwf1-q pwf1-qopt">${esc(r.q[1])}</td><td class="pwf1-q pwf1-time">${esc(r.q[2] || r.q[1] || r.q[0])}</td>`);
+        cells.push(`<td class="pwf1-gap">${esc(r.gap)}</td>`);
+      } else if (kind === "grid") {
+        cells.push(`<td class="pwf1-time">${esc(r.best != null ? fmtLapTime(r.best) : "")}</td><td class="pwf1-gap">${esc(r.gap)}</td>`);
+      } else if (isRace) {
+        cells.push(`<td class="pwf1-gap">${esc(r.pos === 1 && r.finished ? (r.time || "") : r.gap)}</td>`);
+      } else {
+        cells.push(`<td class="pwf1-time">${esc(r.best != null ? fmtLapTime(r.best) : "")}</td><td class="pwf1-gap">${esc(r.gap)}</td><td class="pwf1-laps">${esc(r.laps || "")}</td>`);
+      }
+      const cls = (r.finished || !isRace ? "" : "pwf1-dnf ") + (fav ? "pwf1-fav" : "");
+      return `<tr${cls.trim() ? ` class="${cls.trim()}"` : ""}>${cells.join("")}</tr>`;
+    }
+
+    cardSession(id, now) {
+      const i18n = this.ctx.i18n;
+      const isGrid = id === "grid";
+      const kind = SESSION_BLOCKS[id];
+      const title = i18n.t("f1.card." + id);
+      const race = weekendRace(this.data.races || [], now);
+      if (!race) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.noData"))}</div>`);
+      const full = title + " · " + race.name;
+      const at = sessionAt(race, kind);
+      if (at == null) return this.card(full, `<div class="pwf1-msg">${esc(i18n.t("f1.sess.none"))}</div>`);
+      if (at > now) {
+        const when = dayTime(at, this.locale());
+        return this.card(full, `<div class="pwf1-msg">${esc(i18n.t("f1.sess.later").replace("{when}", when))}</div>`);
+      }
+      const st = this.sess[kind];
+      let data = st && st.data;
+      if (data && isGrid) data = gridFromQuali(data);
+      if (!data) {
+        const code = st && st.error;
+        const msg = code === "locked" ? "f1.sess.locked" : (code === "error" || code === "rate" ? "f1.sess.error" : (st ? "f1.sess.wait" : "f1.loading"));
+        return this.card(full, `<div class="pwf1-msg">${esc(i18n.t(msg))}</div>`);
+      }
+      const live = liveSession(race, now) === kind;
+      const n = Math.max(3, Math.min(24, Number(this.ctx.settings.sessionRows) || 10));
+      const colors = this.ctx.settings.showTeamColors !== false;
+      const withTyres = this.ctx.settings.showTyres !== false && !isGrid && data.rows.some((r) => r.tyre);
+      const rows = data.rows.slice(0, n).map((r) => this.sessionRowHtml(r, isGrid ? "grid" : kind, withTyres, colors)).join("");
+      const th = (t, c) => `<th${c ? ` class="${c}"` : ""}>${esc(t)}</th>`;
+      let head;
+      if (isGrid) head = th("") + th(i18n.t("f1.th.driver")) + th(i18n.t("f1.th.best")) + th(i18n.t("f1.th.gapPole"));
+      else if (kind === "quali" || kind === "sprintQuali") {
+        head = th("") + th(i18n.t("f1.th.driver")) + (withTyres ? th("") : "")
+          + th("Q1", "pwf1-qopt") + th("Q2", "pwf1-qopt") + th("Q3") + th(i18n.t("f1.th.gap"));
+      } else if (kind === "sprint") head = th("") + th(i18n.t("f1.th.driver")) + (withTyres ? th("") : "") + th(i18n.t("f1.th.gap"));
+      else head = th("") + th(i18n.t("f1.th.driver")) + (withTyres ? th("") : "") + th(i18n.t("f1.th.best")) + th(i18n.t("f1.th.gap")) + th(i18n.t("f1.th.laps"));
+      const badge = live ? `<div class="pwf1-live"><span class="pwf1-live-dot"></span>${esc(i18n.t("f1.sess.live"))}</div>` : "";
+      const note = st && st.error ? `<div class="pwf1-stale">${esc(i18n.t("f1.stale"))}</div>` : "";
+      const credit = data.source === "openf1" ? "f1.sess.credit.openf1" : "f1.sess.credit.jolpica";
+      return this.card(full, `
+        ${badge}
+        <div class="pwf1-sess">
+          <table class="pwf1-table pwf1-sess-table">
+            <thead><tr>${head}</tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+        ${note}
+        <div class="pwf1-circ-foot"><span class="pwf1-circ-src">${esc(i18n.t(credit))}${isGrid ? " · " + esc(i18n.t("f1.sess.gridNote")) : ""}</span></div>`,
+      live ? "pwf1-is-live" : "");
+    }
+
 
     async fetchJson(url) {
       const res = await fetch(this.ctx.api.proxyUrl(url), { cache: "no-store" });
@@ -541,6 +1082,9 @@
        community API everyone shares. */
     async refresh() {
       const s = this.ctx.settings;
+      /* L'heure de la TENTATIVE, reussie ou non : un echec ne doit pas
+         declencher une boucle de relectures. The time of the ATTEMPT. */
+      this.lastFull = Date.now();
       const y = this.season();
       /* LA CARTE DU CIRCUIT COMPTE PARMI CELLES QUI ONT BESOIN DU
          CALENDRIER : c'est lui qui donne le circuit du week-end et ses
@@ -555,7 +1099,7 @@
          no error, no message, since nothing had failed: the question
          had simply never been asked. Found by the end-to-end test. */
       const needRaces = s.showNext !== false || s.showSchedule !== false || s.showWeather !== false
-        || s.showCircuit !== false || s.autoLayout === true;
+        || s.showCircuit !== false || s.autoLayout === true || this.needSessions();
       const jobs = [
         needRaces ? this.fetchJson(`${API}/${y}.json?limit=100`) : Promise.resolve(null),
         s.showDrivers !== false ? this.fetchJson(`${API}/${y}/driverStandings.json?limit=100`) : Promise.resolve(null),
@@ -581,6 +1125,10 @@
       }
       this.render();
       if (this.ctx.settings.showWeather !== false) this.refreshWeather();
+      /* Les cartes de seance se chargent apres le reste : le classement
+         ne doit jamais attendre OpenF1. Session cards load after the rest. */
+      this.refreshSessions();
+      this.arm();
     }
 
     /* COMME LE TRACE, LA METEO EST CHARGEE A PART -- mais pour une
@@ -711,6 +1259,8 @@
         case "constructors": return this.cardConstructors();
         case "results": return this.cardResults();
         case "weather": return this.cardWeather(now);
+        case "fp1": case "fp2": case "fp3": case "sprintQuali": case "quali": case "sprint": case "grid":
+          return this.cardSession(id, now);
         case "circuit": return this.cardCircuit(now);
         case "logo": return this.logo ? this.logo.markup(this.ctx.settings.logoFrame === true) : "";
         default: return "";
@@ -923,7 +1473,8 @@
         const d = x.Driver || {};
         const c = (x.Constructors || [])[0] || {};
         const flag = flagFor(FLAG, d.nationality);
-        return `<tr>
+        const fav = this.isFav({ code: d.code, name: ((d.givenName || "") + " " + (d.familyName || "")).trim(), number: d.permanentNumber, team: c.name, teamId: c.constructorId });
+        return `<tr${fav ? ' class="pwf1-fav"' : ""}>
           <td class="pwf1-pos">${esc(x.position)}</td>
           <td class="pwf1-who"><div class="pwf1-who-in">
             ${colors ? `<span class="pwf1-team" style="--pwf1-team:${colorFor(c.constructorId)}"></span>` : ""}
@@ -953,7 +1504,8 @@
 
       const rows = list.slice(0, n).map((x) => {
         const c = x.Constructor || {};
-        return `<tr>
+        const fav = isFavTeam(this.favs().teams, { team: c.name, teamId: c.constructorId });
+        return `<tr${fav ? ' class="pwf1-fav"' : ""}>
           <td class="pwf1-pos">${esc(x.position)}</td>
           <td class="pwf1-who"><div class="pwf1-who-in">
             ${colors ? `<span class="pwf1-team" style="--pwf1-team:${colorFor(c.constructorId)}"></span>` : ""}
@@ -1043,7 +1595,8 @@
            abandon s'affiche « Accident » ou « Moteur », pas « 18e ».
            The gap when there is one, the STATUS otherwise. */
         const right = r.finished && r.gap ? r.gap : (r.finished ? "" : r.status);
-        return `<tr class="${r.finished ? "" : "pwf1-dnf"}">
+        const fav = this.isFav({ code: r.code, name: r.name, team: r.constructorName, teamId: r.constructorId });
+        return `<tr class="${(r.finished ? "" : "pwf1-dnf ") + (fav ? "pwf1-fav" : "")}">
           <td class="pwf1-pos">${r.finished ? esc(r.position) : "—"}</td>
           <td class="pwf1-who"><div class="pwf1-who-in">
             ${colors ? `<span class="pwf1-team" style="--pwf1-team:${colorFor(r.constructorId)}"></span>` : ""}
@@ -1081,6 +1634,9 @@
     parseRaces, parseStandings, parseResults, nextRace, lastRace, nextSession,
     parseWeather, weatherAt, weatherUrl, describeWeather, WMO,
     countdown, whenOf, colorFor, flagFor, FLAG, COUNTRY_FLAG, TEAM_COLOR, RACE_LENGTH_MS,
-    isRaceWeekend, BLOCKS, PRESETS
+    isRaceWeekend, BLOCKS, PRESETS,
+    weekendRace, liveSession, sessionAt, parseLapTime, fmtLapTime, fmtGapTime, tyreLetter, tyresByDriver,
+    parseJolpicaSession, parseOpenF1Session, gridFromQuali, parseFavs, isFavDriver, isFavTeam,
+    SESSION_KINDS, SESSION_MINUTES, TUNING
   };
 })();

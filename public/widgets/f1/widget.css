@@ -542,3 +542,73 @@
 }
 .pw-f1 .pwf1-cd.pwf1-circ-cd-time { font-size: 1.05em; }
 .pw-f1.pwf1-skin-dark .pwf1-circ-cd { background: rgba(18, 21, 28, .85); }
+
+
+/* ============================================================
+   1.161.0 — cartes de seance : essais, qualifications, sprint, grille.
+   Session cards.
+   ============================================================ */
+.pw-f1 .pwf1-sess-table th:nth-child(n+3) { text-align: right; padding-left: 8px; white-space: nowrap; }
+.pw-f1 .pwf1-sess-table td.pwf1-time,
+.pw-f1 .pwf1-sess-table td.pwf1-q,
+.pw-f1 .pwf1-sess-table td.pwf1-laps { text-align: right; padding-left: 8px; white-space: nowrap; }
+.pw-f1 .pwf1-sess-table td.pwf1-time { font-weight: 650; }
+.pw-f1 .pwf1-sess-table td.pwf1-q:not(.pwf1-time),
+.pw-f1 .pwf1-sess-table td.pwf1-laps { color: var(--muted); }
+.pw-f1 .pwf1-sess-table td.pwf1-tyrecell { padding-left: 6px; width: 1%; }
+
+/* Le Q1 et le Q2 cedent la place avant tout le reste dans une carte
+   etroite : le Q3 (le temps retenu) et l'ecart suffisent.
+   Q1 and Q2 yield first in a narrow card. */
+@container (max-width: 330px) {
+  .pw-f1 .pwf1-qopt { display: none; }
+}
+
+/* Le favori : un fond teinte, une barre a gauche et une etoile.
+   The favourite: a tinted row, a bar on the left and a star. */
+.pw-f1 tr.pwf1-fav td { background: color-mix(in srgb, var(--accent) 16%, transparent); font-weight: 650; }
+.pw-f1 tr.pwf1-fav td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.pw-f1 .pwf1-star { color: var(--accent); flex: 0 0 auto; font-size: .85em; }
+
+/* Les pneus : une pastille a la couleur de la gomme.
+   Tyres: a chip in the compound's colour. */
+.pw-f1 .pwf1-tyre {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.35em;
+  height: 1.35em;
+  border-radius: 50%;
+  font-size: .72em;
+  font-weight: 800;
+  line-height: 1;
+  color: #111;
+  border: 2px solid var(--pwf1-tyre, #999);
+  background: color-mix(in srgb, var(--pwf1-tyre, #999) 22%, #fff);
+}
+.pw-f1 .pwf1-tyre-S { --pwf1-tyre: #e8002d; }
+.pw-f1 .pwf1-tyre-M { --pwf1-tyre: #f5c400; }
+.pw-f1 .pwf1-tyre-H { --pwf1-tyre: #f2f2f2; }
+.pw-f1 .pwf1-tyre-I { --pwf1-tyre: #2fb344; }
+.pw-f1 .pwf1-tyre-W { --pwf1-tyre: #2f7bff; }
+
+/* Le badge EN DIRECT. The LIVE badge. */
+.pw-f1 .pwf1-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin: 0 0 4px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: .72em;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #fff;
+  background: #d9232d;
+}
+.pw-f1 .pwf1-live-dot {
+  width: .6em; height: .6em; border-radius: 50%; background: #fff;
+  animation: pwf1-blink 1.2s ease-in-out infinite;
+}
+@keyframes pwf1-blink { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .pw-f1 .pwf1-live-dot { animation: none; } }

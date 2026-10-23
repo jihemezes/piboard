@@ -32,6 +32,31 @@
 
 # Nouveautes / What's new
 
+## 1.161.0
+
+**Réorganisez vos pages, et suivez tout le week-end de Grand Prix**
+
+Dans Réglages → Disposition, vous pouvez maintenant **changer l'ordre de vos pages**
+(flèches ▲ ▼ ou glisser-déposer) et **dupliquer une page** avec ses tuiles. La page 1
+reste en tête. Les tuiles **Formule 1** et **MotoGP** gagnent des cartes pour les
+**essais libres, les qualifications, la course sprint et la grille de départ** : elles
+montrent le week-end en cours (sinon le dernier Grand Prix), mettent en évidence votre
+**pilote ou équipe favoris**, affichent le **pneu du meilleur tour** (F1) et un badge
+**EN DIRECT** pendant une séance. Ces cartes sont décochées par défaut ; la disposition
+« Séances » les range pour vous.
+
+---
+
+**Reorder your pages, and follow the whole Grand Prix weekend**
+
+In Settings → Layout you can now **change the order of your pages** (▲ ▼ arrows or
+drag and drop) and **duplicate a page** with its tiles. Page 1 stays first. The
+**Formula 1** and **MotoGP** tiles gain cards for **free practice, qualifying, the
+sprint race and the starting grid**: they show the current weekend (otherwise the last
+Grand Prix), highlight your **favourite driver or team**, show the **tyre of the best
+lap** (F1) and a **LIVE** badge during a session. These cards are off by default; the
+"Sessions" layout arranges them for you.
+
 ## 1.160.0
 
 **Chaînes TV : connectez-vous avec votre abonnement**
