@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.162.0
+
+- **Tuile Formule 1 (manifeste 1.11.0) : carte décorative quand une séance
+  n'existe pas.** Pas de sprint ce week-end (cartes « Course sprint » et
+  « Qualifications sprint »), ou pas d'essais 2 ni 3 sur un week-end sprint : la
+  carte reste à sa place (la disposition ne bouge pas) et affiche un damier discret
+  avec des ondulations (anneaux animés en CSS, sans filtre SVG), un court texte et,
+  pour le sprint, le **prochain week-end sprint** de la saison
+  (`nextSprintRace()`). Deux réglages : « Texte des cartes « pas de séance » »
+  (thème / couleur choisie) et « Couleur de ce texte » (validée `#rrggbb`).
+  Remplace la simple phrase « Pas de séance de ce type ce week-end ». Aide FR/EN et
+  tests mis à jour.
+
 ## 1.161.0
 
 - **Pages réordonnables.** Réglages → Disposition : chaque page se déplace par

@@ -2,7 +2,7 @@
   "_comment_fr": "DISPOSER LES CARTES : en mode édition, chaque carte est un bloc de la grille interne de la tuile. On le déplace par sa barre de titre, on le redimensionne par son coin, on le masque par sa croix, et la barre d'outils de la tuile rajoute un bloc masqué, applique une disposition prédéfinie, revient à celle par défaut, ou copie la disposition vers une autre tuile Formule 1. La disposition est enregistrée dans les réglages de CETTE tuile.",
   "_comment_en": "ARRANGING THE CARDS: in edit mode each card is a block of the tile's inner grid. Move it by its title bar, resize it by its corner, hide it with its cross; the tile's toolbar adds a hidden block back, applies a preset layout, returns to the default one, or copies the layout to another Formula 1 tile. The layout is saved in THIS tile's settings.",
   "id": "f1",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "name": {
     "en": "Formula 1",
     "fr": "Formule 1"
@@ -511,6 +511,48 @@
       "hint": {
         "en": "While a session is under way the session cards are re-read at this pace and show a LIVE badge. The free OpenF1 access is rate limited, so 30 seconds is the floor.",
         "fr": "Pendant une séance, les cartes de séance sont relues à ce rythme et portent un badge EN DIRECT. L'accès gratuit à OpenF1 est limité en débit : 30 secondes est le plancher."
+      }
+    },
+    {
+      "key": "noSessText",
+      "type": "select",
+      "default": "theme",
+      "label": {
+        "en": "Text of the \"no session\" cards",
+        "fr": "Texte des cartes « pas de séance »"
+      },
+      "options": [
+        {
+          "value": "theme",
+          "label": {
+            "en": "Theme colour",
+            "fr": "Couleur du thème"
+          }
+        },
+        {
+          "value": "custom",
+          "label": {
+            "en": "Chosen colour",
+            "fr": "Couleur choisie"
+          }
+        }
+      ],
+      "hint": {
+        "en": "When a session does not exist this weekend (no sprint, or no practice 2 or 3 on a sprint weekend), its card shows a chequered flag with ripples and a short text. The text follows the theme, or the colour below.",
+        "fr": "Quand une séance n'existe pas ce week-end (pas de sprint, ou pas d'essais 2 ni 3 sur un week-end sprint), sa carte montre un damier avec des ondulations et un court texte. Le texte suit le thème, ou la couleur ci-dessous."
+      }
+    },
+    {
+      "key": "noSessColor",
+      "type": "color",
+      "default": "#ffffff",
+      "label": {
+        "en": "Colour of that text",
+        "fr": "Couleur de ce texte"
+      },
+      "hint": {
+        "en": "Used only when the text above is \"Chosen colour\".",
+        "fr": "Utilisée seulement si le texte ci-dessus est « Couleur choisie »."
       }
     },
     {

@@ -32,6 +32,24 @@
 
 # Nouveautes / What's new
 
+## 1.162.0
+
+**Formule 1 : une jolie carte quand il n'y a pas de sprint**
+
+Quand une séance n'existe pas ce week-end — pas de course sprint, ou pas d'essais 2 et 3
+sur un week-end sprint — la carte ne se contente plus d'une phrase : elle reste en place
+avec un **damier aux ondulations discrètes**, un court message et l'annonce du **prochain
+week-end sprint** de la saison. Le texte suit le thème, ou la couleur de votre choix.
+
+---
+
+**Formula 1: a nicer card when there is no sprint**
+
+When a session does not exist this weekend — no sprint race, or no practice 2 and 3 on a
+sprint weekend — the card no longer settles for one sentence: it stays in place with a
+**chequered flag and gentle ripples**, a short message and the season's **next sprint
+weekend**. The text follows the theme, or the colour of your choice.
+
 ## 1.161.0
 
 **Réorganisez vos pages, et suivez tout le week-end de Grand Prix**

@@ -200,6 +200,20 @@
     return null;
   }
 
+  /* Prochain week-end a course sprint, apres `afterRound` (ou apres
+     maintenant). Sert a la carte « pas de sprint ce week-end ».
+     The next sprint weekend after `afterRound`: used by the "no sprint
+     this weekend" card. */
+  function nextSprintRace(races, now, afterRound) {
+    if (!Array.isArray(races)) return null;
+    for (const r of races) {
+      if (afterRound != null && !(r.round > afterRound)) continue;
+      const sp = (r.sessions || []).find((x) => x.kind === "sprint");
+      if (sp && sp.at > now) return { race: r, at: sp.at };
+    }
+    return null;
+  }
+
   function lastRace(races, now) {
     if (!Array.isArray(races)) return null;
     let found = null;
@@ -1014,6 +1028,36 @@
       return `<tr${cls.trim() ? ` class="${cls.trim()}"` : ""}>${cells.join("")}</tr>`;
     }
 
+    /* Carte decorative quand la seance n'existe pas ce week-end : un
+       damier discret, des ondulations, et le texte par-dessus -- en
+       couleur du theme ou en couleur choisie. Les ondulations sont de
+       simples anneaux animes (transform/opacity) : aucun filtre SVG, donc
+       aucun cout sur un Raspberry Pi.
+       Decorative card when the session does not exist this weekend: a
+       faint chequered flag, ripples, text on top -- in the theme colour
+       or a chosen one. The ripples are plain animated rings (transform /
+       opacity): no SVG filter, so no cost on a Raspberry Pi. */
+    noSessionPanel(kind, race, now) {
+      const i18n = this.ctx.i18n;
+      const isSprint = kind === "sprint" || kind === "sprintQuali";
+      const main = isSprint ? i18n.t("f1.sess.nosprint") : i18n.t("f1.sess.nofp");
+      let sub = "";
+      if (isSprint) {
+        const nx = nextSprintRace(this.data.races || [], now, race.round);
+        sub = nx
+          ? i18n.t("f1.sess.nextSprint").replace("{place}", nx.race.name).replace("{when}", dayTime(nx.at, this.locale()))
+          : i18n.t("f1.sess.noNextSprint");
+      } else {
+        sub = i18n.t("f1.sess.nofpWhy");
+      }
+      const raw = String(this.ctx.settings.noSessColor || "").trim();
+      const custom = String(this.ctx.settings.noSessText || "theme") === "custom" && /^#[0-9a-fA-F]{6}$/.test(raw);
+      const style = custom ? ` style="color:${raw}"` : "";
+      return `<div class="pwf1-nosess${custom ? " pwf1-nosess-custom" : ""}"${style}>` +
+        `<div class="pwf1-ns-rip" aria-hidden="true"><i></i><i></i><i></i></div>` +
+        `<div class="pwf1-ns-txt"><b>${esc(main)}</b><span>${esc(sub)}</span></div></div>`;
+    }
+
     cardSession(id, now) {
       const i18n = this.ctx.i18n;
       const isGrid = id === "grid";
@@ -1023,7 +1067,7 @@
       if (!race) return this.card(title, `<div class="pwf1-msg">${esc(i18n.t("f1.noData"))}</div>`);
       const full = title + " · " + race.name;
       const at = sessionAt(race, kind);
-      if (at == null) return this.card(full, `<div class="pwf1-msg">${esc(i18n.t("f1.sess.none"))}</div>`);
+      if (at == null) return this.card(full, this.noSessionPanel(kind, race, now), "pwf1-card-nosess");
       if (at > now) {
         const when = dayTime(at, this.locale());
         return this.card(full, `<div class="pwf1-msg">${esc(i18n.t("f1.sess.later").replace("{when}", when))}</div>`);
@@ -1631,6 +1675,7 @@
   /* Expose pour les tests : les fonctions pures, qui n'ont besoin ni du
      DOM ni du reseau. Exposed for tests: the pure helpers. */
   window.PiBoardF1Helpers = {
+    nextSprintRace,
     parseRaces, parseStandings, parseResults, nextRace, lastRace, nextSession,
     parseWeather, weatherAt, weatherUrl, describeWeather, WMO,
     countdown, whenOf, colorFor, flagFor, FLAG, COUNTRY_FLAG, TEAM_COLOR, RACE_LENGTH_MS,

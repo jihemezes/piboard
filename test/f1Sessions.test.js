@@ -326,10 +326,25 @@ const at = (iso) => Date.parse(iso);
     const t = make({ showFp2: true, showFp3: true, showSprint: true, showSprintQuali: true }, now);
     try {
       await t.w.refreshSessions();
-      assert.ok(/f1\.sess\.none/.test(t.w.cardSession("fp2", now.v)));
-      assert.ok(/f1\.sess\.none/.test(t.w.cardSession("fp3", now.v)));
+      assert.ok(/pwf1-nosess[\s\S]*f1\.sess\.nofp/.test(t.w.cardSession("fp2", now.v)));
+      assert.ok(/pwf1-nosess[\s\S]*f1\.sess\.nofp/.test(t.w.cardSession("fp3", now.v)));
       assert.ok(/RUS/.test(t.w.cardSession("sprint", now.v)));
       assert.ok(/Q1/.test(t.w.cardSession("sprintQuali", now.v)));
+    } finally { t.restore(); }
+  });
+
+  await test("week-end sans sprint : carte decorative avec le prochain sprint, couleur choisie", async () => {
+    const now = { v: at("2026-03-07T10:00:00Z") };
+    const t = make({ showSprint: true, showSprintQuali: true, noSessText: "custom", noSessColor: "#ff8800" }, now);
+    try {
+      await t.w.refreshSessions();
+      const h = t.w.cardSession("sprint", now.v);
+      assert.ok(/pwf1-nosess/.test(h) && /pwf1-ns-rip/.test(h) && /f1\.sess\.nosprint/.test(h));
+      assert.ok(/f1\.sess\.nextSprint/.test(h), "le prochain sprint est annonce");
+      assert.ok(/style="color:#ff8800"/.test(h));
+      assert.ok(/pwf1-nosess/.test(t.w.cardSession("sprintQuali", now.v)));
+      t.w.ctx.settings.noSessColor = "red;background:url(x)";
+      assert.ok(!/style=/.test(t.w.cardSession("sprint", now.v)), "une couleur invalide n'est jamais injectee");
     } finally { t.restore(); }
   });
 
@@ -491,6 +506,17 @@ const at = (iso) => Date.parse(iso);
       const hit = a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
       assert.ok(!hit, ids[i] + " chevauche " + ids[j]);
     }
+  });
+
+  await test("nextSprintRace : prochain week-end sprint apres une manche, null s'il n'y en a plus", () => {
+    const r1 = races.find((r) => r.round === 1), r2 = races.find((r) => r.round === 2);
+    const sp2 = r2.sessions.find((x) => x.kind === "sprint");
+    assert.ok(sp2, "la manche 2 de la fixture a un sprint");
+    const nx = H.nextSprintRace(races, sp2.at - 86400000 * 10, r1.round);
+    assert.ok(nx && nx.race.round === 2 && nx.at === sp2.at);
+    assert.strictEqual(H.nextSprintRace(races, sp2.at + 1, 2), null);
+    assert.strictEqual(H.nextSprintRace(races, 0, 5), null);
+    assert.strictEqual(H.nextSprintRace(null, 0, 1), null);
   });
 
   if (failures) { console.log("\n>>> " + failures + " ECHEC(S)"); process.exit(1); }
