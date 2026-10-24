@@ -1,6 +1,6 @@
 {
   "id": "iptv",
-  "version": "0.13.0",
+  "version": "0.14.0",
   "name": {
     "en": "TV channels",
     "fr": "Chaînes TV"
@@ -272,6 +272,23 @@
       "hint": {
         "en": "Kept on by default. Browsers also refuse to autoplay a video with sound without a prior interaction — muted playback starts reliably.",
         "fr": "Activé par défaut. Les navigateurs refusent de toute façon de lancer une vidéo avec le son sans interaction préalable — la lecture muette, elle, démarre de façon fiable."
+      },
+      "group": {
+        "en": "Playback",
+        "fr": "Lecture"
+      }
+    },
+    {
+      "key": "hideChromeOnPlay",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Video only during playback",
+        "fr": "Vidéo seule pendant la lecture"
+      },
+      "hint": {
+        "en": "While a channel, movie or episode plays, the tile's frame, title bar and buttons disappear after 3 seconds and the mouse cursor is hidden; only the video stays. They come back when the mouse moves over the tile, on a touch, or on a key press. In edit mode nothing is hidden. Untick to keep the frame and buttons always visible.",
+        "fr": "Pendant la lecture d'une chaîne, d'un film ou d'un épisode, le cadre de la tuile, sa barre de titre et ses boutons disparaissent après 3 secondes et le curseur de la souris se masque : il ne reste que la vidéo. Ils reviennent au survol de la tuile, au toucher ou à l'appui d'une touche. En mode édition rien n'est masqué. Décochez pour garder cadre et boutons toujours visibles."
       },
       "group": {
         "en": "Playback",

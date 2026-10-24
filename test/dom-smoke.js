@@ -4858,9 +4858,42 @@ function catalogItemFor(catalog, document, widgetId) {
       tvTile.querySelector(".pwtv-video").muted === true);
     assert("bouton de retour a la liste present", !!tvTile.querySelector(".pwtv-back"));
 
+    console.log("== Chaines TV : video seule pendant la lecture (1.163.0) ==");
+    {
+      const frame = tvTile.querySelector(".grid-stack-item-content") || tvTile.closest(".grid-stack-item-content");
+      const root = tvTile.querySelector(".pw-iptv");
+      assert("video seule : le lecteur est en mode immersif (reglage actif par defaut)", root.classList.contains("pwtv-immersive"));
+      assert("video seule : la tuile porte tile-immersive et tile-awake juste apres le lancement",
+        !!frame && frame.classList.contains("tile-immersive") && frame.classList.contains("tile-awake") && !root.classList.contains("pwtv-idle"));
+      // jsdom ne sait pas lire : l'invite « Touchez pour lancer » peut etre
+      // affichee, et elle retient volontairement les boutons. On la retire.
+      // jsdom cannot play: the "Tap to start" prompt may be showing, and it
+      // deliberately holds the buttons. We clear it.
+      const wasEditingTv = document.body.classList.contains("editing");
+      assert("video seule : en mode edition, rien n'est masque (la tuile reste saisissable)", (await sleep(3300), !root.classList.contains("pwtv-idle") || !wasEditingTv));
+      document.body.classList.remove("editing");
+      root.dispatchEvent(new window.MouseEvent("mousemove", { bubbles: true }));
+      const st = root.querySelector(".pwtv-status"); if (st) { st.hidden = true; st.classList.remove("pwtv-status-clickable"); }
+      await sleep(3300);
+      assert("video seule : apres 3 s sans mouvement, boutons et cadre sont masques",
+        root.classList.contains("pwtv-idle") && !frame.classList.contains("tile-awake") && frame.classList.contains("tile-immersive"));
+      (frame || tvTile).dispatchEvent(new window.MouseEvent("mousemove", { bubbles: true }));
+      assert("video seule : un mouvement de souris les fait reapparaitre",
+        !root.classList.contains("pwtv-idle") && frame.classList.contains("tile-awake"));
+      (frame || tvTile).dispatchEvent(new window.MouseEvent("mouseleave"));
+      assert("video seule : la souris qui quitte la tuile les masque aussitot", root.classList.contains("pwtv-idle"));
+      document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+      assert("video seule : une touche du clavier les reveille", !root.classList.contains("pwtv-idle"));
+      (frame || tvTile).dispatchEvent(new window.Event("touchstart", { bubbles: true }));
+      assert("video seule : un toucher les reveille aussi", !root.classList.contains("pwtv-idle"));
+      if (wasEditingTv) document.body.classList.add("editing");
+    }
+
     tvTile.querySelector(".pwtv-back").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     await sleep(30);
     assert("retour a la liste : le lecteur est retire (le flux ne tourne plus)", !tvTile.querySelector(".pwtv-video"));
+    assert("video seule : retour a la liste, la tuile retrouve cadre et titre (classes retirees)",
+      (() => { const f = tvTile.querySelector(".grid-stack-item-content") || tvTile.closest(".grid-stack-item-content"); return !f.classList.contains("tile-immersive") && !f.classList.contains("tile-awake"); })());
     assert("retour a la liste : les chaines sont de nouveau listees", tvTile.querySelectorAll(".pwtv-item").length === 3);
   }
 

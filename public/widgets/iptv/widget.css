@@ -374,3 +374,23 @@
   text-align: center;
 }
 .pw-iptv .pwtv-retry { margin-top: 10px; }
+
+/* ---------- Video seule pendant la lecture (1.163.0) ---------- */
+.pw-iptv.pwtv-immersive { position: relative; }
+.pw-iptv.pwtv-immersive .pwtv-controls {
+  position: absolute;
+  top: var(--pwtv-title-h, 0);
+  left: 0;
+  right: 0;
+  z-index: 6;
+  padding: 8px 12px 22px;
+  background: linear-gradient(rgba(0, 0, 0, .72), rgba(0, 0, 0, 0));
+  transition: opacity .25s;
+}
+.pw-iptv.pwtv-immersive .pwtv-controls .pwtv-current { color: #fff; text-shadow: 0 1px 3px rgba(0, 0, 0, .8); }
+.pw-iptv.pwtv-immersive .pwtv-controls .pwtv-btn { background: rgba(255, 255, 255, .2); color: #fff; }
+.pw-iptv.pwtv-immersive.pwtv-idle .pwtv-controls { opacity: 0; pointer-events: none; }
+.pw-iptv.pwtv-immersive.pwtv-idle,
+.pw-iptv.pwtv-immersive.pwtv-idle .pwtv-video-wrap,
+.pw-iptv.pwtv-immersive.pwtv-idle .pwtv-video { cursor: none; }
+@media (prefers-reduced-motion: reduce) { .pw-iptv.pwtv-immersive .pwtv-controls { transition: none; } }

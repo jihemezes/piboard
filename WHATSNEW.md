@@ -32,6 +32,24 @@
 
 # Nouveautes / What's new
 
+## 1.163.0
+
+**Chaînes TV : rien que l'image**
+
+Pendant la lecture d'une chaîne, d'un film ou d'un épisode, le cadre de la tuile, sa barre
+de titre et les boutons s'effacent au bout de 3 secondes, et le curseur aussi : il ne reste
+que la vidéo. Passez la souris sur la tuile, touchez-la ou appuyez sur une touche, et tout
+réapparaît, avec le nom de la chaîne. Un réglage permet de revenir à l'affichage habituel.
+
+---
+
+**TV channels: just the picture**
+
+While a channel, movie or episode plays, the tile's frame, title bar and buttons fade away
+after 3 seconds, and so does the cursor: only the video is left. Move the mouse over the
+tile, touch it or press a key, and everything comes back, with the channel name. A setting
+lets you return to the usual display.
+
 ## 1.162.0
 
 **Formule 1 : une jolie carte quand il n'y a pas de sprint**

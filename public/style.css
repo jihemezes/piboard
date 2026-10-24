@@ -2799,6 +2799,33 @@ body.editing .grid-stack-item-content.tile-transparent {
   background: color-mix(in srgb, var(--tile) 35%, transparent) !important;
 }
 
+/* ---------- Tuile en « video seule » (Chaines TV, 1.163.0) ----------
+   Le widget pose `tile-immersive` sur la tuile pendant une lecture, puis
+   `tile-awake` tant que la souris bouge. Sans `tile-awake` : ni cadre, ni
+   ombre, ni barre de titre (qui passe en surimpression pour que la video
+   ne soit pas redimensionnee). Jamais en mode edition.
+   The widget sets `tile-immersive` on the tile during playback, then
+   `tile-awake` while the mouse moves. Without `tile-awake`: no frame, no
+   shadow, no title bar (which overlays so the video is not resized).
+   Never in edit mode. */
+body:not(.editing) .grid-stack-item-content.tile-immersive { transition: border-color .25s, box-shadow .25s; }
+body:not(.editing) .grid-stack-item-content.tile-immersive:not(.tile-awake) {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+body:not(.editing) .grid-stack-item-content.tile-immersive .tile-title {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  z-index: 7;
+  background: rgba(0, 0, 0, .72);
+  color: #fff;
+  border-bottom: 0;
+  transition: opacity .25s;
+}
+body:not(.editing) .grid-stack-item-content.tile-immersive:not(.tile-awake) .tile-title { opacity: 0; pointer-events: none; }
+
 /* Editeur de pages dans les reglages generaux / pages editor in the
    general settings */
 .pages-list { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 10px; }

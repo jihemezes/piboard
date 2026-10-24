@@ -151,6 +151,8 @@
     { key: "series", icon: "🎞" }
   ];
 
+  const IMMERSION_DELAY_MS = 3000;
+
   class IptvWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -454,6 +456,7 @@
     }
 
     render() {
+      this.releaseImmersion();
       const map = {
         "flat-list": () => this.renderFlatList(),
         "player": () => this.renderPlayer(),
@@ -818,7 +821,7 @@
       // there's nothing to seek through.
       const isVod = /\/(movie|series)\//.test(this.current.url || "");
       this.ctx.el.innerHTML = `
-        <div class="pw-iptv pwtv-playing">
+        <div class="pw-iptv pwtv-playing${s.hideChromeOnPlay !== false ? " pwtv-immersive" : ""}">
           <div class="pwtv-video-wrap">
             <video class="pwtv-video" playsinline ${isVod ? "controls" : ""} ${s.startMuted !== false ? "muted" : ""}></video>
             <div class="pwtv-status" hidden></div>
@@ -972,8 +975,70 @@
       const schedBtn = this.ctx.el.querySelector(".pwtv-schedule");
       if (schedBtn) schedBtn.addEventListener("click", () => this.addSchedule());
       this.refreshRecordButton();
+      this.setupImmersion();
       this.attachStream(video, this.current.url);
     }
+
+    /* ---------- Video seule pendant la lecture (1.163.0) ----------
+       Pendant une lecture, cadre de la tuile, barre de titre et boutons
+       s'effacent : il ne reste que le flux. Ils reviennent des que la
+       souris bouge, au toucher ou a une touche du clavier, et se
+       cachent de nouveau apres 3 secondes (ou des que la souris quitte
+       la tuile). Le curseur disparait avec eux. Jamais en mode edition,
+       ou la tuile doit rester saisissable. Les boutons passent en
+       surimpression en haut de la video : la video ne se redimensionne
+       donc jamais, et ne « saute » pas.
+       Video only during playback: the tile frame, title bar and buttons
+       fade away, leaving just the stream. They return on mouse move,
+       touch or a key press, and hide again after 3 seconds (or as soon
+       as the mouse leaves the tile). The cursor goes with them. Never in
+       edit mode, where the tile must stay grabbable. The buttons overlay
+       the top of the video, so the video never resizes or "jumps". */
+    setupImmersion() {
+      this.releaseImmersion();
+      const root = this.ctx.el.querySelector(".pwtv-immersive");
+      if (!root) return;
+      const content = this.ctx.el.closest ? this.ctx.el.closest(".grid-stack-item-content") : null;
+      const title = content && content.querySelector(".tile-title");
+      root.style.setProperty("--pwtv-title-h", (title && !title.hidden ? title.offsetHeight : 0) + "px");
+      const delay = IMMERSION_DELAY_MS;
+      const wake = () => {
+        root.classList.remove("pwtv-idle");
+        if (content) content.classList.add("tile-awake");
+        clearTimeout(this.immTimer);
+        this.immTimer = setTimeout(sleep, delay);
+      };
+      const sleep = () => {
+        const editing = document.body && document.body.classList.contains("editing");
+        const st = root.querySelector(".pwtv-status");
+        const prompt = st && !st.hidden && st.classList.contains("pwtv-status-clickable");
+        if (editing || prompt) { this.immTimer = setTimeout(sleep, delay); return; }
+        root.classList.add("pwtv-idle");
+        if (content) content.classList.remove("tile-awake");
+      };
+      const leave = () => { clearTimeout(this.immTimer); sleep(); };
+      const zone = content || root;
+      const onKey = () => wake();
+      zone.addEventListener("mousemove", wake);
+      zone.addEventListener("pointerdown", wake);
+      zone.addEventListener("touchstart", wake, { passive: true });
+      zone.addEventListener("mouseleave", leave);
+      document.addEventListener("keydown", onKey);
+      if (content) content.classList.add("tile-immersive");
+      this.immUndo = () => {
+        clearTimeout(this.immTimer);
+        zone.removeEventListener("mousemove", wake);
+        zone.removeEventListener("pointerdown", wake);
+        zone.removeEventListener("touchstart", wake);
+        zone.removeEventListener("mouseleave", leave);
+        document.removeEventListener("keydown", onKey);
+        if (content) content.classList.remove("tile-immersive", "tile-awake");
+        this.immUndo = null;
+      };
+      wake();
+    }
+
+    releaseImmersion() { if (this.immUndo) this.immUndo(); }
 
     /* ---------- Enregistrement / recording (1.113.0) ----------
        L'enregistrement vit cote serveur : il continue si l'on zappe, si
@@ -1636,6 +1701,7 @@
     destroy() {
       clearInterval(this.recTimer);
       clearInterval(this.schedTimer);
+      this.releaseImmersion();
       // Essentiel ici : une tuile detruite ne doit surtout pas laisser
       // un flux video tourner en arriere-plan sur un Pi. Essential
       // here: a destroyed tile must absolutely not leave a video stream

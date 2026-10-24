@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.163.0
+
+- **Chaînes TV : « vidéo seule » pendant la lecture** (manifeste 0.14.0). Pendant
+  une lecture (direct, film ou série), le cadre de la tuile, sa barre de titre et
+  tous les boutons s'effacent après 3 s sans mouvement et le curseur est masqué ;
+  ils reviennent au survol de la tuile, au toucher ou à une touche du clavier /
+  de la télécommande, et se recachent à la sortie de la souris. Les boutons (et le
+  nom de la chaîne) passent en surimpression en haut de l'image : la vidéo n'est
+  jamais redimensionnée. Rien n'est masqué en mode édition ni tant qu'une invite
+  « Touchez pour lancer » est affichée. Nouveau réglage « Vidéo seule pendant la
+  lecture » (activé par défaut) pour garder l'ancien affichage. Classes
+  `tile-immersive` / `tile-awake` posées sur la tuile (style.css), retirées au retour
+  à la liste et à la destruction de la tuile. Aide FR/EN et test dom-smoke.
+
 ## 1.162.0
 
 - **Tuile Formule 1 (manifeste 1.11.0) : carte décorative quand une séance
