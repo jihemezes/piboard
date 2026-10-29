@@ -135,8 +135,15 @@ const defaults = Object.fromEntries(manifest.settings.map((s) => [s.key, s.defau
   ok("le drapeau se deduit du code pays", H.flagOf("IT") === "🇮🇹" && H.flagOf("") === "");
 
   console.log("== La tuile, sur la grille interne ==");
+  /* L'horloge du WIDGET est celle de la fenetre jsdom, pas celle de Node :
+     il faut figer les deux, sinon le test depend de la date reelle
+     (il echouait des que la manche de la fixture etait passee).
+     The WIDGET's clock is the jsdom window's, not Node's: both must be
+     frozen, otherwise the test depends on the real date. */
   const realNow = Date.now;
+  const realWinNow = window.Date.now;
   Date.now = () => NOW;
+  window.Date.now = () => NOW;
   const host = document.createElement("div");
   document.body.appendChild(host);
   const i18n = { t: (k) => ({ "f1.unit.d": "j", "f1.unit.h": "h", "f1.unit.m": "m", "f1.unit.s": "s", "clock.date.format": "fr-FR", "motogp.gp": "GP · {place}", "motogp.laps": "{n} tours", "motogp.sprintLaps": "sprint {n}" }[k] || k), lang: "fr" };
@@ -193,6 +200,7 @@ const defaults = Object.fromEntries(manifest.settings.map((s) => [s.key, s.defau
 
   w.destroy();
   Date.now = realNow;
+  window.Date.now = realWinNow;
   ok("detruite, la tuile ne laisse pas de grille", !host.querySelector(".pig-root"));
   console.log(`\n>>> motogp : ${passed} verifications OK`);
   process.exit(0);

@@ -482,3 +482,53 @@ body.touch .pwn-arch-btn { padding: 4px 12px; font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) {
   .pwn-view .pwn-leaving { transition: none; }
 }
+
+/* ---------- Markdown complet (1.164.0) ---------- */
+.pwn-view .pwn-h1 { font-size: 1.45em; }
+.pwn-view .pwn-h2 { font-size: 1.3em; }
+.pwn-view .pwn-h3 { font-size: 1.18em; }
+.pwn-view .pwn-h4, .pwn-view .pwn-h5, .pwn-view .pwn-h6 { font-size: 1.05em; }
+.pwn-view .pwn-h5, .pwn-view .pwn-h6 { opacity: .85; }
+.pwn-view .pwn-bullet { padding-left: calc(1.1em + var(--pwn-ind, 0em)); }
+.pwn-view .pwn-bullet::before { left: calc(.25em + var(--pwn-ind, 0em)); }
+.pwn-view .pwn-bullet.pwn-sub1::before { background: transparent; border: 1.5px solid var(--accent); box-sizing: border-box; }
+.pwn-view .pwn-task { padding-left: var(--pwn-ind, 0em); }
+.pwn-view .pwn-ol { display: flex; gap: .45em; padding-left: var(--pwn-ind, 0em); }
+.pwn-view .pwn-num { flex: none; min-width: 1.4em; text-align: right; color: var(--accent); font-variant-numeric: tabular-nums; }
+.pwn-view .pwn-quote {
+  border-left: .22em solid var(--accent);
+  padding-left: .6em;
+  margin-left: calc((var(--pwn-q, 1) - 1) * .8em);
+  color: var(--muted);
+  font-style: italic;
+}
+.pwn-view .pwn-hr { height: 0; border-top: 1px solid var(--tile-edge); margin: .4em 0; }
+.pwn-view code {
+  font-family: var(--mono, ui-monospace, monospace);
+  font-size: .9em;
+  padding: 0 .3em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.pwn-view .pwn-code {
+  margin: .2em 0 .3em;
+  padding: .45em .6em;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  overflow: hidden;
+  white-space: pre-wrap;
+}
+.pwn-view .pwn-code code { padding: 0; background: none; font-size: .88em; }
+.pwn-view .pwn-tablewrap { overflow: hidden; }
+.pwn-view .pwn-table { border-collapse: collapse; width: 100%; font-size: .95em; }
+.pwn-view .pwn-table th, .pwn-view .pwn-table td { border: 1px solid var(--tile-edge); padding: .15em .45em; text-align: left; }
+.pwn-view .pwn-table th { font-weight: 700; background: color-mix(in srgb, var(--text) 7%, transparent); }
+.pwn-view .pwn-table .pwn-al-c { text-align: center; }
+.pwn-view .pwn-table .pwn-al-r { text-align: right; }
+
+/* Memo Markdown de la barre d'edition / editor-bar Markdown memo */
+.pwn-mdhelp { padding: 6px 8px; border: 1px solid var(--tile-edge); border-radius: 8px; font-size: 11.5px; line-height: 1.5; }
+.pwn-md-title { font-weight: 700; margin-bottom: 3px; }
+.pwn-md-row { display: flex; gap: 8px; align-items: baseline; }
+.pwn-md-row code { flex: none; min-width: 11em; font-family: var(--mono, ui-monospace, monospace); color: var(--accent); }
+.pwn-md-note { margin-top: 3px; color: var(--muted); }

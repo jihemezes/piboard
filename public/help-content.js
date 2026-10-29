@@ -1898,6 +1898,18 @@ Franceinfo".</span></div>
 <h4>Possibilités</h4>
           <p>Le texte accepte un Markdown léger (titres, gras, italique, barré) et surtout des listes à cocher interactives — tapez <code>[ ] Lait</code> pour créer une case à cocher directement cliquable sur l'écran, très pratique pour une liste de courses partagée à la maison. Le contenu est enregistré côté serveur et donc partagé entre tous les écrans PiBoard de la maison si vous en avez plusieurs. Le style « post-it » (couleur au choix) donne un rendu chaleureux ; la taille du texte s'ajuste automatiquement à la taille de la tuile, ou peut être fixée manuellement — jusqu'à 8 pixels, ce qui permet d'afficher beaucoup de texte quand PiBoard tourne sur un écran de bureau plutôt que sur une dalle tactile regardée de loin.</p>
 
+<h4>Le Markdown complet</h4>
+<p>Le texte de la note est du <b>Markdown</b> : ce que vous tapez, ou collez depuis un autre outil, s'affiche mis en forme, et reste du texte simple, modifiable à la main. Sont reconnus :</p>
+<ul>
+<li><b>Titres</b> de <code>#</code> à <code>######</code> (six tailles).</li>
+<li><b>Listes</b> à puces (<code>-</code>, <code>*</code>, <code>+</code>) et <b>numérotées</b> (<code>1.</code>, <code>2)</code>), <b>imbriquées</b> par indentation (deux espaces ou une tabulation par niveau).</li>
+<li><b>Cases à cocher dans n'importe quelle liste</b> : <code>[ ]</code>, <code>- [ ]</code>, <code>* [x]</code>, <code>1. [ ]</code>, y compris indentées pour des sous-tâches. Une case se coche d'un toucher ; chaque case est indépendante de ses voisines. Le décompte « faites / total », la disparition des éléments cochés et l'archive comptent toutes ces formes.</li>
+<li><b>Gras</b> <code>**a**</code> ou <code>__a__</code>, <i>italique</i> <code>*a*</code> ou <code>_a_</code>, ~~barré~~ <code>~~a~~</code>, <code>\`code\`</code> en ligne.</li>
+<li><b>Blocs de code</b> entre deux lignes <code>\`\`\`</code> : leur contenu reste du texte brut — une <code>[ ]</code> n'y est jamais une case.</li>
+<li><b>Citations</b> (<code>&gt; texte</code>, imbriquables), <b>séparateurs</b> (<code>---</code>) et <b>tableaux</b> (<code>| a | b |</code> suivi de <code>|---|---|</code>, alignements <code>:--</code>, <code>:-:</code>, <code>--:</code>).</li>
+</ul>
+<p><b>Les liens et les images restent du texte</b> : rien de cliquable sur un tableau de bord, et aucune image n'est chargée depuis un site tiers. Le bouton <b>?</b> de la barre d'édition affiche un mémo de ces syntaxes. Le Markdown collé est gardé tel quel, sans conversion.</p>
+
 <h4>La barre d'outils</h4>
           <p>Touchez la note pour passer en édition : une petite barre d'outils apparaît alors en haut de la tuile. Elle ne s'affiche qu'en édition, car elle agit sur le texte source. Chaque bouton fonctionne en <b>bascule</b> : le réappuyer retire la mise en forme au lieu de l'empiler.</p>
           <div class="help-opt"><span class="help-opt-name">☐</span><span class="help-opt-desc">Transforme la ligne en case à cocher. Sélectionnez plusieurs lignes pour toutes les convertir d'un coup.</span></div>
@@ -1932,6 +1944,7 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Couleur post-it</span><span class="help-opt-desc">Couleur de la tuile elle-même, ou une teinte post-it (jaune, vert, bleu, rose, orange).</span></div>
 <div class="help-opt"><span class="help-opt-name">Ajuster automatiquement la taille du texte</span><span class="help-opt-desc">La taille du texte s'adapte à la taille de la tuile.</span></div>
 <div class="help-opt"><span class="help-opt-name">Taille du texte si ajustement désactivé (px)</span><span class="help-opt-desc">Utilisée si l'ajustement automatique est désactivé. De 8 à 40 pixels : les petites valeurs servent surtout sur un écran de bureau, où l'on lit à 60 cm et où une taille pensée pour être vue à travers la pièce devient énorme.</span></div>
+<div class="help-opt"><span class="help-opt-name">Markdown complet</span><span class="help-opt-desc">Rend les titres (six niveaux), les listes à puces, numérotées et imbriquées, les cases à cocher dans toute liste, le code, les citations, les séparateurs et les tableaux. Les liens et les images restent du texte. Décochez pour revenir à l'ancien rendu léger (titres, puces « - », cases, gras, italique, barré). Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Lecture seule (les cases restent cochables)</span><span class="help-opt-desc">Empêche la modification du texte tout en gardant les cases à cocher interactives — pratique pour une liste préparée à l'avance que l'on ne veut faire que cocher.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher l'horodatage et le compteur de mots</span><span class="help-opt-desc">Petites informations discrètes en bas de la tuile.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher la progression « faites / total » sous la note</span><span class="help-opt-desc">Par exemple « 5/8 faites » : une ligne discrète qui n'apparaît que si la note contient des cases à cocher.</span></div>
@@ -1954,6 +1967,18 @@ Franceinfo".</span></div>
 
 <h4>Possibilities</h4>
           <p>The text accepts light Markdown (headings, bold, italics, strikethrough) and, most usefully, interactive checklists — type <code>[ ] Milk</code> to create a checkbox directly clickable on screen, very handy for a shopping list shared at home. The content is saved server-side and therefore shared across every PiBoard screen in the house if you have several. The "sticky note" style (choice of color) gives a warm look; text size adapts automatically to the tile's size, or can be set manually — down to 8 pixels, which fits a lot of text in when PiBoard runs on a desktop screen rather than a touchscreen seen from across the room.</p>
+
+<h4>Full Markdown</h4>
+<p>The note's text is <b>Markdown</b>: what you type, or paste from another tool, is shown formatted and stays plain text you can edit by hand. Recognised:</p>
+<ul>
+<li><b>Headings</b> from <code>#</code> to <code>######</code> (six sizes).</li>
+<li><b>Bulleted</b> (<code>-</code>, <code>*</code>, <code>+</code>) and <b>numbered</b> (<code>1.</code>, <code>2)</code>) <b>lists</b>, <b>nested</b> by indentation (two spaces or a tab per level).</li>
+<li><b>Checkboxes in any list</b>: <code>[ ]</code>, <code>- [ ]</code>, <code>* [x]</code>, <code>1. [ ]</code>, indented too for sub-tasks. A box is ticked with a tap; each box is independent of its neighbours. The "done / total" count, the disappearance of checked items and the archive handle all these forms.</li>
+<li><b>Bold</b> <code>**a**</code> or <code>__a__</code>, <i>italic</i> <code>*a*</code> or <code>_a_</code>, ~~strikethrough~~ <code>~~a~~</code>, inline <code>\`code\`</code>.</li>
+<li><b>Code blocks</b> between two <code>\`\`\`</code> lines: their content stays raw text — a <code>[ ]</code> there is never a checkbox.</li>
+<li><b>Quotes</b> (<code>&gt; text</code>, nestable), <b>separators</b> (<code>---</code>) and <b>tables</b> (<code>| a | b |</code> followed by <code>|---|---|</code>, alignments <code>:--</code>, <code>:-:</code>, <code>--:</code>).</li>
+</ul>
+<p><b>Links and images stay plain text</b>: nothing clickable on a dashboard, and no image is loaded from a third-party site. The <b>?</b> button in the editing bar shows a memo of these syntaxes. Pasted Markdown is kept as is, with no conversion.</p>
 
 <h4>The toolbar</h4>
           <p>Tap the note to start editing: a small toolbar then appears at the top of the tile. It only shows while editing, since it acts on the source text. Each button is a <b>toggle</b>: pressing it again removes the formatting instead of stacking it.</p>
@@ -1989,6 +2014,7 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Sticky-note color</span><span class="help-opt-desc">The tile's own color, or a sticky-note tint (yellow, green, blue, pink, orange).</span></div>
 <div class="help-opt"><span class="help-opt-name">Auto-fit text size to the tile</span><span class="help-opt-desc">Text size adapts to the tile's size.</span></div>
 <div class="help-opt"><span class="help-opt-name">Text size when auto-fit is off (px)</span><span class="help-opt-desc">Used if auto-fit is disabled. From 8 to 40 pixels: small values are mostly for a desktop screen, where you read from 60 cm and a size meant to be seen across the room becomes enormous.</span></div>
+<div class="help-opt"><span class="help-opt-name">Full Markdown</span><span class="help-opt-desc">Renders headings (six levels), bulleted, numbered and nested lists, checkboxes in any list, code, quotes, separators and tables. Links and images stay plain text. Untick to return to the former light rendering (headings, dash bullets, checkboxes, bold, italic, strikethrough). On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Read-only (checkboxes stay tappable)</span><span class="help-opt-desc">Prevents editing the text while keeping checkboxes interactive — handy for a list prepared in advance that should only be checked off.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show timestamp and word count</span><span class="help-opt-desc">Small discreet info at the bottom of the tile.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show the "done / total" progress under the note</span><span class="help-opt-desc">For example "5/8 done": a discreet line that only appears when the note contains checkboxes.</span></div>

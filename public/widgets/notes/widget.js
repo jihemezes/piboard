@@ -18,43 +18,172 @@
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
   }
 
-  /* Mise en forme en ligne : **gras**, *italique* et ~~barre~~
-     Le gras est traite AVANT l'italique : dans le cas contraire, le motif
+  /* Mise en forme en ligne, Markdown complet : **gras** / __gras__,
+     *italique* / _italique_, ~~barre~~ et `code`. Le code est traite EN
+     PREMIER : ce qu'il contient reste du texte brut (un `*` n'y ouvre pas
+     d'italique). Le gras est traite AVANT l'italique : sans cela, le motif
      de l'italique consommerait la premiere paire d'asterisques de
-     **gras** et produirait un italique vide suivi de texte brut.
-     Inline formatting: **bold**, *italic* and ~~strikethrough~~
-     Bold is handled BEFORE italic: otherwise the italic pattern would
-     consume the first pair of asterisks in **bold** and yield an empty
-     italic followed by raw text. */
+     **gras**. `_` n'ouvre un italique qu'en debut de mot, pour que
+     snake_case reste du texte. Les liens et les images restent du texte :
+     aucune requete reseau cachee, rien de cliquable sur un kiosque.
+     Full Markdown inline formatting: **bold** / __bold__, *italic* /
+     _italic_, ~~strikethrough~~ and `code`. Code goes FIRST: what it
+     holds stays raw text. Bold is handled BEFORE italic. `_` only opens
+     an italic at a word start so snake_case stays text. Links and images
+     stay text: no hidden network request, nothing clickable on a kiosk. */
+  function fmtInline(h) {
+    return h
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/(^|[^\w])__([^_]+)__(?!\w)/g, "$1<strong>$2</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>")
+      .replace(/(^|[^\w])_([^_\s](?:[^_]*[^_\s])?)_(?!\w)/g, "$1<em>$2</em>")
+      .replace(/~~([^~]+)~~/g, "<s>$1</s>");
+  }
+
   function inline(s) {
+    return String(s).split(/(`[^`\n]+`)/).map((part, i) =>
+      i % 2 ? "<code>" + escapeHtml(part.slice(1, -1)) + "</code>" : fmtInline(escapeHtml(part))).join("");
+  }
+
+  /* Ancien rendu leger (reglage « Markdown complet » decoche).
+     The former light rendering ("Full Markdown" setting unticked). */
+  function inlineLight(s) {
     return escapeHtml(s)
       .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
       .replace(/\*([^*]+)\*/g, "<em>$1</em>")
       .replace(/~~([^~]+)~~/g, "<s>$1</s>");
   }
 
-  const TASK_RE = /^(?:- )?\[([ xX])\]\s?(.*)$/;
+  /* Une ligne a cocher : indentation, puce ou numero facultatifs
+     (« - [ ] », « * [ ] », « + [ ] », « 1. [x] »), puis la case.
+     groupes : 1 indentation, 2 puce, 3 etat, 4 texte.
+     A checklist line: indentation, optional bullet or number, then the
+     box. Groups: 1 indent, 2 marker, 3 state, 4 text. */
+  const TASK_RE = /^(\s*)((?:[-*+]|\d+[.)])\s+)?\[([ xX])\]\s?(.*)$/;
+  const LIGHT_TASK_RE = /^(?:- )?\[([ xX])\]\s?(.*)$/;
+  const FENCE_RE = /^\s*(```|~~~)/;
+  const HR_RE = /^\s*([-*_])(?:\s*\1){2,}\s*$/;
+  const TABLE_SEP_RE = /^\s*\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*$/;
+
+  /* Lignes situees dans un bloc de code (``` ... ```) : une « [ ] » y
+     est du texte, jamais une case. Lines inside a fenced code block: a
+     "[ ]" there is text, never a checkbox. */
+  function fencedMask(lines) {
+    const mask = new Array(lines.length).fill(false);
+    let open = null;
+    lines.forEach((l, i) => {
+      const m = l.match(FENCE_RE);
+      if (open) { mask[i] = true; if (m && m[1] === open) open = null; }
+      else if (m) { mask[i] = true; open = m[1]; }
+    });
+    return mask;
+  }
+
+  function splitRow(line) {
+    let t = line.trim().replace(/\\\|/g, "\u0000");
+    if (t.startsWith("|")) t = t.slice(1);
+    if (t.endsWith("|")) t = t.slice(0, -1);
+    return t.split("|").map((c) => c.replace(/\u0000/g, "|").trim());
+  }
+
+  const indentWidth = (s) => s.replace(/\t/g, "    ").length;
 
   /* `old` : numeros de lignes cochees depuis longtemps, a estomper
      (reglage « Estomper les cases cochees depuis plus d'une heure »).
      `old`: line numbers checked a long time ago, to fade (setting "Fade
      items checked for more than an hour"). */
   function renderLines(text, old) {
-    return text.split("\n").map((line, idx) => {
+    const lines = text.split("\n");
+    const out = [];
+    const stack = [];
+    const level = (ind) => {
+      const w = indentWidth(ind);
+      while (stack.length && stack[stack.length - 1] > w) stack.pop();
+      if (!stack.length || stack[stack.length - 1] < w) stack.push(w);
+      return stack.length - 1;
+    };
+    const ind = (lvl) => (lvl ? ` style="--pwn-ind:${Math.min(lvl, 6) * 1.3}em"` : "");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const fence = line.match(FENCE_RE);
+      if (fence) {
+        stack.length = 0;
+        const body = [];
+        let j = i + 1;
+        while (j < lines.length) { const fm = lines[j].match(FENCE_RE); if (fm && fm[1] === fence[1]) break; body.push(lines[j]); j++; }
+        out.push(`<pre class="pwn-line pwn-code"><code>${escapeHtml(body.join("\n"))}</code></pre>`);
+        i = j;
+        continue;
+      }
+      if (line.includes("|") && i + 1 < lines.length && TABLE_SEP_RE.test(lines[i + 1]) && lines[i + 1].includes("|")) {
+        stack.length = 0;
+        const head = splitRow(line);
+        const al = splitRow(lines[i + 1]).map((c) => (c.startsWith(":") && c.endsWith(":") ? "c" : c.endsWith(":") ? "r" : ""));
+        const cls = (k) => (al[k] ? ` class="pwn-al-${al[k]}"` : "");
+        let html = `<div class="pwn-line pwn-tablewrap"><table class="pwn-table"><thead><tr>${head.map((c, k) => `<th${cls(k)}>${inline(c)}</th>`).join("")}</tr></thead><tbody>`;
+        let j = i + 2;
+        while (j < lines.length && lines[j].includes("|") && lines[j].trim() !== "") {
+          const cells = splitRow(lines[j]);
+          html += `<tr>${head.map((_, k) => `<td${cls(k)}>${inline(cells[k] || "")}</td>`).join("")}</tr>`;
+          j++;
+        }
+        out.push(html + "</tbody></table></div>");
+        i = j - 1;
+        continue;
+      }
       const task = line.match(TASK_RE);
+      if (task) {
+        const done = task[3].toLowerCase() === "x";
+        const aged = done && old && old.has(i);
+        out.push(`<div class="pwn-line pwn-task${done ? " pwn-done" : ""}${aged ? " pwn-old" : ""}" data-row="${i}"${ind(level(task[1]))}>
+          <button type="button" class="pwn-check" data-line="${i}" aria-checked="${done}"></button>
+          <span class="pwn-task-text">${inline(task[4])}</span></div>`);
+        continue;
+      }
+      if (HR_RE.test(line)) { stack.length = 0; out.push(`<div class="pwn-line pwn-hr"></div>`); continue; }
+      const heading = line.match(/^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$/);
+      if (heading) { stack.length = 0; out.push(`<div class="pwn-line pwn-h pwn-h${heading[1].length}">${inline(heading[2])}</div>`); continue; }
+      const quote = line.match(/^\s{0,3}((?:>\s?)+)(.*)$/);
+      if (quote) {
+        stack.length = 0;
+        const depth = (quote[1].match(/>/g) || []).length;
+        out.push(`<div class="pwn-line pwn-quote" style="--pwn-q:${Math.min(depth, 4)}">${inline(quote[2])}</div>`);
+        continue;
+      }
+      const bullet = line.match(/^(\s*)[-*+]\s+(.*)$/);
+      if (bullet) {
+        const lvl = level(bullet[1]);
+        out.push(`<div class="pwn-line pwn-bullet${lvl ? " pwn-sub1" : ""}"${ind(lvl)}>${inline(bullet[2])}</div>`);
+        continue;
+      }
+      const ordered = line.match(/^(\s*)(\d+[.)])\s+(.*)$/);
+      if (ordered) {
+        out.push(`<div class="pwn-line pwn-ol"${ind(level(ordered[1]))}><span class="pwn-num">${escapeHtml(ordered[2])}</span><span class="pwn-ol-text">${inline(ordered[3])}</span></div>`);
+        continue;
+      }
+      stack.length = 0;
+      if (line.trim() === "") { out.push(`<div class="pwn-line pwn-empty"></div>`); continue; }
+      out.push(`<div class="pwn-line">${inline(line)}</div>`);
+    }
+    return out.join("");
+  }
+
+  function renderLinesLight(text, old) {
+    return text.split("\n").map((line, idx) => {
+      const task = line.match(LIGHT_TASK_RE);
       if (task) {
         const done = task[1].toLowerCase() === "x";
         const aged = done && old && old.has(idx);
         return `<div class="pwn-line pwn-task${done ? " pwn-done" : ""}${aged ? " pwn-old" : ""}" data-row="${idx}">
           <button type="button" class="pwn-check" data-line="${idx}" aria-checked="${done}"></button>
-          <span class="pwn-task-text">${inline(task[2])}</span></div>`;
+          <span class="pwn-task-text">${inlineLight(task[2])}</span></div>`;
       }
       const heading = line.match(/^#+\s+(.*)$/);
-      if (heading) return `<div class="pwn-line pwn-h">${inline(heading[1])}</div>`;
+      if (heading) return `<div class="pwn-line pwn-h">${inlineLight(heading[1])}</div>`;
       const bullet = line.match(/^-\s+(.*)$/);
-      if (bullet) return `<div class="pwn-line pwn-bullet">${inline(bullet[1])}</div>`;
+      if (bullet) return `<div class="pwn-line pwn-bullet">${inlineLight(bullet[1])}</div>`;
       if (line.trim() === "") return `<div class="pwn-line pwn-empty"></div>`;
-      return `<div class="pwn-line">${inline(line)}</div>`;
+      return `<div class="pwn-line">${inlineLight(line)}</div>`;
     }).join("");
   }
 
@@ -108,10 +237,12 @@
   function doneEntries(text) {
     const seen = {};
     const out = [];
-    String(text || "").split("\n").forEach((line, idx) => {
-      const m = line.match(TASK_RE);
-      if (!m || m[1].toLowerCase() !== "x") return;
-      const body = m[2].trim();
+    const all = String(text || "").split("\n");
+    const mask = fencedMask(all);
+    all.forEach((line, idx) => {
+      const m = !mask[idx] && line.match(TASK_RE);
+      if (!m || m[3].toLowerCase() !== "x") return;
+      const body = m[4].trim();
       const k = seen[body] = (seen[body] || 0) + 1;
       out.push({ idx, body, key: body + "#" + (k - 1) });
     });
@@ -120,11 +251,13 @@
 
   function taskProgress(text) {
     let done = 0, total = 0;
-    String(text || "").split("\n").forEach((line) => {
-      const m = line.match(TASK_RE);
+    const all = String(text || "").split("\n");
+    const mask = fencedMask(all);
+    all.forEach((line, idx) => {
+      const m = !mask[idx] && line.match(TASK_RE);
       if (!m) return;
       total++;
-      if (m[1].toLowerCase() === "x") done++;
+      if (m[3].toLowerCase() === "x") done++;
     });
     return { done, total };
   }
@@ -318,11 +451,13 @@
             <span class="pwn-bar-sep"></span>
             <button type="button" class="pwn-bar-btn pwn-bar-color" data-act="color" title="${i18n.t("notes.toolColor")}" aria-label="${i18n.t("notes.toolColor")}"><i></i></button>
             <button type="button" class="pwn-bar-btn pwn-bar-purge" data-act="purge" title="${i18n.t("notes.toolPurge")}" aria-label="${i18n.t("notes.toolPurge")}">&#9203;</button>
+            <button type="button" class="pwn-bar-btn pwn-bar-md" data-act="mdhelp" title="${i18n.t("notes.toolMdHelp")}" aria-label="${i18n.t("notes.toolMdHelp")}">?</button>
             <button type="button" class="pwn-bar-btn" data-act="newNote" title="${i18n.t("notes.toolNewNote")}" aria-label="${i18n.t("notes.toolNewNote")}">+</button>
             <button type="button" class="pwn-bar-btn pwn-bar-del" data-act="deleteNote" title="${i18n.t("notes.toolDeleteNote")}" aria-label="${i18n.t("notes.toolDeleteNote")}">&#128465;</button>
           </div>
           <div class="pwn-palette" hidden></div>
           <div class="pwn-purge" hidden></div>
+          <div class="pwn-mdhelp" hidden></div>
           <div class="pwn-tabs" hidden></div>
           <div class="pwn-view"></div>
           <div class="pwn-archive" hidden></div>
@@ -335,6 +470,7 @@
       this.tabs = this.ctx.el.querySelector(".pwn-tabs");
       this.palette = this.ctx.el.querySelector(".pwn-palette");
       this.purgeRow = this.ctx.el.querySelector(".pwn-purge");
+      this.mdHelp = this.ctx.el.querySelector(".pwn-mdhelp");
       this.archive = this.ctx.el.querySelector(".pwn-archive");
       this.sub = this.ctx.el.querySelector(".pwn-sub");
       this.prog = this.ctx.el.querySelector(".pwn-prog");
@@ -606,6 +742,26 @@
       this.replaceRange(lineStart, lineEnd, out, lineStart, lineStart + out.length);
     }
 
+    /* Memo des syntaxes Markdown reconnues, dans la barre de l'editeur.
+       Memo of the recognised Markdown syntax, in the editor bar. */
+    renderMdHelp() {
+      const t = (k) => this.ctx.i18n.t(k);
+      const rows = [
+        ["# … ######", "notes.md.headings"],
+        ["- a  * a  + a  1. a", "notes.md.lists"],
+        ["  - a (2 " + t("notes.md.spaces") + ")", "notes.md.nested"],
+        ["- [ ] a   - [x] a   1. [ ] a", "notes.md.tasks"],
+        ["**a**  _a_  ~~a~~  `a`", "notes.md.inline"],
+        ["```", "notes.md.code"],
+        ["> a", "notes.md.quote"],
+        ["---", "notes.md.rule"],
+        ["| a | b |  /  |---|---|", "notes.md.table"]
+      ];
+      this.mdHelp.innerHTML = `<div class="pwn-md-title">${escapeHtml(t("notes.md.title"))}</div>` +
+        rows.map(([syn, k]) => `<div class="pwn-md-row"><code>${escapeHtml(syn)}</code><span>${escapeHtml(t(k))}</span></div>`).join("") +
+        `<div class="pwn-md-note">${escapeHtml(t("notes.md.note"))}</div>`;
+    }
+
     applyFormat(act) {
       // Actions de gestion de note traitees AVANT le garde ci-dessous :
       // addNote() et deleteNote() referment volontairement l'editeur,
@@ -615,13 +771,22 @@
       // cannot depend on this.editing.
       if (act === "newNote") return this.addNote();
       if (act === "deleteNote") return this.deleteNote();
+      if (act === "mdhelp") {
+        this.mdHelp.hidden = !this.mdHelp.hidden;
+        this.palette.hidden = true;
+        this.purgeRow.hidden = true;
+        if (!this.mdHelp.hidden) this.renderMdHelp();
+        return;
+      }
       if (act === "color") {
+        this.mdHelp.hidden = true;
         this.palette.hidden = !this.palette.hidden;
         this.purgeRow.hidden = true;
         if (!this.palette.hidden) this.renderPalette();
         return;
       }
       if (act === "purge") {
+        this.mdHelp.hidden = true;
         this.purgeRow.hidden = !this.purgeRow.hidden;
         this.palette.hidden = true;
         if (!this.purgeRow.hidden) this.renderPurge();
@@ -644,12 +809,14 @@
           return lines.map((l) => {
             if (l.trim() === "") return l;
             const m = l.match(TASK_RE);
-            if (allTasks && m) return m[2];
+            if (allTasks && m) return m[1] + (/^\d/.test(m[2] || "") ? m[2] : "") + m[4];
             if (m) return l;
             // Un titre ou une puce devient une case a cocher : les
             // marqueurs de bloc sont exclusifs entre eux.
             // A heading or bullet becomes a checkbox: block markers are
             // mutually exclusive.
+            const lm = l.match(/^(\s*)((?:[-*+]|\d+[.)])\s+)(.*)$/);
+            if (lm && (lm[1] !== "" || lm[2].trim() !== "-")) return lm[1] + lm[2] + "[ ] " + lm[3];
             return "[ ] " + l.replace(/^#+\s+/, "").replace(/^-\s+/, "");
           });
         });
@@ -834,7 +1001,7 @@
       const lines = this.text.split("\n");
       const m = (lines[lineIdx] || "").match(TASK_RE);
       if (!m) return;
-      const done = m[1].toLowerCase() === "x";
+      const done = m[3].toLowerCase() === "x";
       lines[lineIdx] = lines[lineIdx].replace(/\[([ xX])\]/, done ? "[ ]" : "[x]");
       this.text = lines.join("\n");
       this.save();
@@ -907,7 +1074,7 @@
       this.oldKey = old ? Array.from(old).join(",") : "";
       this.view.innerHTML = this.text.trim() === ""
         ? `<div class="pwn-line pwn-hint">${this.ctx.i18n.t("notes.placeholder")}</div>`
-        : renderLines(this.text, old);
+        : (this.ctx.settings.fullMarkdown !== false ? renderLines : renderLinesLight)(this.text, old);
       this.renderSub();
       if (this.archiveOpen) this.renderArchive();
       this.updatePurgeBtn();
@@ -1170,6 +1337,8 @@
     }
   }
 
+  NotesWidget._renderLines = renderLines;
+  NotesWidget._renderLinesLight = renderLinesLight;
   NotesWidget._normPurge = normPurge;
   NotesWidget._doneEntries = doneEntries;
   NotesWidget._reconcileStamps = reconcileStamps;

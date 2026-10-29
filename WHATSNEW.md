@@ -32,6 +32,25 @@
 
 # Nouveautes / What's new
 
+## 1.164.0
+
+**Bloc-notes : le Markdown, en entier**
+
+Collez une liste depuis un autre outil : les **« [ ] » deviennent de vraies cases à cocher**,
+y compris dans les listes à puces ou numérotées et leurs sous-listes. La tuile comprend aussi
+les titres, le code, les citations, les séparateurs et les **tableaux**. Les liens et les
+images restent du texte. Un bouton **?** dans la barre d'édition rappelle les syntaxes, et un
+réglage permet de revenir à l'ancien rendu.
+
+---
+
+**Notes: full Markdown**
+
+Paste a list from another tool: the **"[ ]" turn into real checkboxes**, including inside
+bulleted or numbered lists and their sub-lists. The tile also understands headings, code,
+quotes, separators and **tables**. Links and images stay plain text. A **?** button in the
+editing bar recalls the syntax, and a setting returns to the former rendering.
+
 ## 1.163.0
 
 **Chaînes TV : rien que l'image**

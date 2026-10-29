@@ -1,6 +1,6 @@
 {
   "id": "notes",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "name": {
     "en": "Notes",
     "fr": "Bloc-notes"
@@ -103,6 +103,19 @@
       "hint": {
         "fr": "De 8 à 40 pixels. Les petites valeurs sont surtout utiles sur un écran de bureau, où l'on est assis à 60 cm de la dalle : une taille pensée pour être lue à travers la pièce y devient énorme. Sur un écran tactile regardé de loin, restez au-dessus de 14.",
         "en": "From 8 to 40 pixels. Small values are mostly useful on a desktop screen, where you sit 60 cm away: a size meant to be read across the room looks enormous there. On a touchscreen seen from a distance, stay above 14."
+      }
+    },
+    {
+      "key": "fullMarkdown",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Full Markdown",
+        "fr": "Markdown complet"
+      },
+      "hint": {
+        "en": "Renders headings (six levels), bulleted, numbered and nested lists, checkboxes in any list, code, quotes, separators and tables. Links and images stay plain text. Untick to return to the former light rendering (headings, dash bullets, checkboxes, bold, italic, strikethrough).",
+        "fr": "Rend les titres (six niveaux), les listes à puces, numérotées et imbriquées, les cases à cocher dans toute liste, le code, les citations, les séparateurs et les tableaux. Les liens et les images restent du texte. Décochez pour revenir à l'ancien rendu léger (titres, puces « - », cases, gras, italique, barré)."
       }
     },
     {

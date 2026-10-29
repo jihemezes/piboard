@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.164.0
+
+- **Bloc-notes : Markdown complet** (manifeste 0.8.0). Le rendu reconnaît
+  désormais les titres 1 à 6, les listes à puces (`-` `*` `+`) et numérotées,
+  imbriquées par indentation, les **cases à cocher dans toute liste**
+  (`[ ]`, `- [ ]`, `* [x]`, `1. [ ]`, sous-tâches indentées — chaque case reste
+  indépendante), le code en ligne et les blocs ``` (contenu brut : une `[ ]` n'y est
+  jamais une case, et le compteur / l'archive l'ignorent), les citations,
+  les séparateurs, les tableaux (alignements `:--` `:-:` `--:`), `__gras__` et
+  `_italique_` (snake_case intact). Liens et images restent du texte. Le texte
+  reste du Markdown brut : collage tel quel, sans conversion. Nouveau réglage
+  « Markdown complet » (activé par défaut ; décoché : ancien rendu léger) et bouton
+  **?** de la barre d'édition (mémo des syntaxes). `TASK_RE` élargi
+  (indentation, puce ou numéro facultatifs) et partagé par le rendu, le compteur,
+  la disparition des éléments cochés et le bouton case à cocher. Aide FR/EN et
+  `test/notesMarkdown.test.js` (15 tests).
+
 ## 1.163.0
 
 - **Chaînes TV : « vidéo seule » pendant la lecture** (manifeste 0.14.0). Pendant
