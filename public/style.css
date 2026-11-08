@@ -4280,3 +4280,75 @@ body.touch-mode .set-panel-head h1, body.touch .set-panel-head h1 { font-size: 3
    la connait pas. / Version in the help header: absent when unknown. */
 .help-page-title .help-version { margin-left: 4px; }
 .help-page-title .help-version:empty { display: none; }
+
+/* ---------- Pavés tactiles : nombre, heure, date (1.165.0) ----------
+   Le clavier virtuel ne couvrait que les champs texte : les flèches
+   natives d'un champ numérique (quelques pixels) étaient impossibles à
+   viser au doigt. Ces règles ne s'appliquent qu'au clavier virtuel, donc
+   qu'en mode tactile. Rien ne change au clavier physique et à la souris.
+   Touch pads: number, time, date. The virtual keyboard only covered text
+   fields: a number field's native arrows (a few pixels) could not be hit
+   with a finger. These rules only apply with the virtual keyboard, so
+   only in touch mode. Nothing changes with a physical keyboard and mouse. */
+.vkb.vkb-pad { width: min(96vw, 640px); }
+.vkb-head { display: flex; flex-direction: column; gap: 6px; }
+.vkb-label { font-size: 15px; color: var(--muted); text-align: center; }
+.vkb-line { display: flex; gap: 10px; align-items: stretch; justify-content: center; }
+.vkb-disp {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84px;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  background: var(--field-bg);
+  color: var(--text);
+  font-size: 40px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+}
+.vkb-disp.vkb-mask { font-size: 34px; letter-spacing: .04em; }
+.vkb-disp.vkb-bad { border-color: #e5484d; color: #e5484d; }
+.vkb-range { text-align: center; font-size: 14px; color: var(--muted); }
+.vkb-key.vkb-step { flex: 0 0 96px; font-size: 40px; }
+.vkb-key.vkb-gap { visibility: hidden; }
+@media (max-height: 720px) {
+  .vkb-disp { height: 64px; font-size: 32px; }
+  .vkb-disp.vkb-mask { font-size: 28px; }
+  .vkb-key.vkb-step { font-size: 32px; flex-basis: 80px; }
+}
+/* Les flèches natives n'ont plus lieu d'être quand le pavé existe. */
+body.touch.vkb-on input[type="number"]::-webkit-inner-spin-button,
+body.touch.vkb-on input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+body.touch.vkb-on input[type="number"] { -moz-appearance: textfield; appearance: textfield; }
+
+/* Autres cibles trop petites au doigt (mode tactile seulement) / other
+   targets too small for a finger (touch mode only). */
+body.touch input[type="range"] { -webkit-appearance: none; appearance: none; height: 44px; background: transparent; cursor: pointer; }
+body.touch input[type="range"]::-webkit-slider-runnable-track { height: 8px; border-radius: 4px; background: var(--tile-edge); }
+body.touch input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 34px;
+  height: 34px;
+  margin-top: -13px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 3px solid var(--tile);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, .4);
+}
+body.touch input[type="range"]::-moz-range-track { height: 8px; border-radius: 4px; background: var(--tile-edge); }
+body.touch input[type="range"]::-moz-range-thumb { width: 28px; height: 28px; border-radius: 50%; background: var(--accent); border: 3px solid var(--tile); }
+body.touch input[type="radio"] { width: 26px; height: 26px; }
+body.touch .field input[type="time"],
+body.touch .field input[type="datetime-local"],
+body.touch .field input[type="password"],
+body.touch .field input[type="search"] { padding: 14px 14px; font-size: 17px; border-radius: 11px; min-height: 52px; width: 100%; }
+body.touch .page-row input,
+body.touch .page-row select { min-height: 48px; font-size: 16px; }
+body.touch .page-row button { min-width: 48px; min-height: 48px; font-size: 18px; }
+body.touch .ss-slot input[type="time"] { width: 150px; min-height: 52px; }
+body.touch .btn.small { padding: 12px 18px; font-size: 15px; min-height: 46px; }

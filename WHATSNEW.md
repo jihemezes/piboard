@@ -32,6 +32,27 @@
 
 # Nouveautes / What's new
 
+## 1.165.0
+
+**Écran tactile : enfin des réglages utilisables au doigt**
+
+Sur le Raspberry Pi, les réglages numériques (par exemple le nombre de pilotes affichés)
+étaient impossibles à modifier : les flèches étaient trop petites. Un **pavé à grandes
+touches** s'ouvre maintenant dès que vous touchez un nombre, une heure ou une date, avec
+des boutons **−** et **+**, la plage autorisée et une validation de la valeur. Les curseurs,
+les boutons du lecteur de chaînes, la barre du bloc-notes et les lignes de pages sont aussi
+plus grands. Rien ne change à la souris ou au clavier.
+
+---
+
+**Touch screen: settings you can finally use with a finger**
+
+On the Raspberry Pi, number settings (for example the number of drivers shown) could not be
+changed: the arrows were too small. A **big-key pad** now opens as soon as you touch a number,
+a time or a date, with **−** and **+** buttons, the allowed range and value checking.
+Sliders, the channel player's buttons, the notes bar and the page rows are bigger too.
+Nothing changes with a mouse or keyboard.
+
 ## 1.164.0
 
 **Bloc-notes : le Markdown, en entier**

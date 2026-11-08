@@ -218,7 +218,7 @@
 
 /* Cible tactile agrandie sur ecran tactile (doigt, pas souris).
    Larger touch target on a touch screen (finger, not mouse). */
-body.touch .pwn-bar-btn { min-width: 34px; height: 34px; font-size: 15px; }
+body.touch .pwn-bar-btn { min-width: 46px; height: 46px; font-size: 17px; }
 body.touch .pwn-bar-wide { font-size: 12.5px; }
 body.touch .pwn-bar-sep { height: 22px; }
 

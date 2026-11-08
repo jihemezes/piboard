@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.164.0
+   Version 1.165.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -610,16 +610,32 @@
     let target = null;   // element input/textarea actif
     let shift = false;
     let page = "letters"; // "letters" | "symbols"
+    let kind = "text";    // famille du champ actif / family of the active field
+    let buf = "";         // saisie en cours des pavés / pad entry in progress
+    let fresh = true;     // le prochain chiffre remplace la valeur / next digit replaces the value
+    let origin = "";      // valeur a l'ouverture, restauree si la saisie est incomplete / value at open
 
-    function isTypable(el) {
-      if (!el) return false;
-      if (el.tagName === "TEXTAREA") return !el.readOnly && !el.disabled;
-      if (el.tagName === "INPUT") {
-        const t = (el.getAttribute("type") || "text").toLowerCase();
-        return (t === "text" || t === "url" || t === "search") && !el.readOnly && !el.disabled;
-      }
-      return false;
+    /* Famille de saisie d'un champ : "text" (clavier de lettres), ou l'un
+       des pavés — "number", "time", "datetime". null : pas de clavier.
+       Les flèches natives d'un champ numerique (quelques pixels) sont
+       impossibles a viser au doigt : en tactile, ces champs recoivent un
+       PAVE a grandes touches, plus un pave pour l'heure et la date.
+       Input family of a field: "text" (letter keyboard) or one of the
+       pads. The native arrows of a number field are a few pixels wide and
+       cannot be hit with a finger: on touch these fields get a big-key PAD,
+       and the time and date fields get one too. */
+    function kindOf(el) {
+      if (!el || el.readOnly || el.disabled) return null;
+      if (el.tagName === "TEXTAREA") return "text";
+      if (el.tagName !== "INPUT") return null;
+      const t = (el.getAttribute("type") || "text").toLowerCase();
+      if (t === "text" || t === "url" || t === "search" || t === "password" || t === "email" || t === "tel") return "text";
+      if (t === "number") return "number";
+      if (t === "time") return "time";
+      if (t === "datetime-local") return "datetime";
+      return null;
     }
+    const isTypable = (el) => kindOf(el) !== null;
 
     function insertAtCursor(text) {
       if (!target) return;
@@ -658,8 +674,195 @@
       return b;
     }
 
+    /* ---------- Pavés : nombre, heure, date ---------- */
+    const isFrac = (el) => { const st = el.getAttribute("step"); return st === "any" || (st != null && st !== "" && Number(st) % 1 !== 0); };
+    const numAttr = (el, a) => { const v = el.getAttribute(a); return v == null || v === "" ? null : Number(v); };
+    const stepOf = (el) => { const st = Number(el.getAttribute("step")); return st > 0 ? st : 1; };
+    const decimals = (x) => (String(x).split(".")[1] || "").length;
+    const pad2 = (n) => String(n).padStart(2, "0");
+
+    /* Masque d'heure et de date : seuls les chiffres se saisissent, les
+       separateurs se placent d'eux-memes (« 1830 » -> « 18:30 »).
+       Time and date mask: only digits are typed, separators place
+       themselves. */
+    function maskOf() {
+      if (kind === "time") return { pattern: "HH:MM", len: 4 };
+      return lang === "fr" ? { pattern: "DD/MM/YYYY HH:MM", len: 12 } : { pattern: "MM/DD/YYYY HH:MM", len: 12 };
+    }
+    function maskText(digits) {
+      const m = maskOf();
+      let i = 0;
+      return m.pattern.replace(/[DMYH]/g, () => (i < digits.length ? digits[i++] : "_"));
+    }
+    /* Valeur du champ d'apres les chiffres saisis, ou null si incomplet
+       ou impossible (31/02, 25:00...). Value of the field from the typed
+       digits, or null when incomplete or impossible. */
+    function maskValue(digits) {
+      const m = maskOf();
+      if (digits.length !== m.len) return null;
+      const f = { D: "", M: "", Y: "", H: "", m: "" };
+      let i = 0, seenH = false;
+      for (const c of m.pattern) {
+        if (!/[DMYH]/.test(c)) continue;
+        const d = digits[i++];
+        if (c === "M" && seenH) f.m += d; else { f[c] += d; if (c === "H") seenH = true; }
+      }
+      const hh = Number(f.H), minutes = Number(f.m);
+      if (hh > 23 || minutes > 59) return null;
+      if (kind === "time") return pad2(hh) + ":" + pad2(minutes);
+      const y = Number(f.Y), mo = Number(f.M), d = Number(f.D);
+      const dt = new Date(y, mo - 1, d);
+      if (!(y >= 1000) || dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) return null;
+      return String(y).padStart(4, "0") + "-" + pad2(mo) + "-" + pad2(d) + "T" + pad2(hh) + ":" + pad2(minutes);
+    }
+    /* Chiffres a partir d'une valeur existante. Digits from an existing value. */
+    function maskDigits(value) {
+      const m = String(value || "").match(kind === "time" ? /^(\d\d):(\d\d)/ : /^(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/);
+      if (!m) return "";
+      if (kind === "time") return m[1] + m[2];
+      const [, y, mo, d, h, mi] = m;
+      return (lang === "fr" ? d + mo : mo + d) + y + h + mi;
+    }
+
+    function commitPad() {
+      if (!target) return;
+      let v = null;
+      if (kind === "number") {
+        const n = Number(buf);
+        if (buf !== "" && buf !== "-" && !/[.]$/.test(buf) && Number.isFinite(n)) v = buf;
+      } else v = maskValue(buf);
+      if (v !== null) {
+        target.value = v;
+        target.dispatchEvent(new Event("input", { bubbles: true }));
+      }
+    }
+
+    function padKey(ch) {
+      if (kind === "number") {
+        if (fresh) { buf = ""; fresh = false; }
+        if (ch === "." && (buf.includes(".") || !isFrac(target))) return;
+        if (ch === "." && (buf === "" || buf === "-")) buf += "0";
+        buf += ch;
+      } else {
+        if (fresh) { buf = ""; fresh = false; }
+        if (buf.length >= maskOf().len) return;
+        buf += ch;
+      }
+      commitPad(); render();
+    }
+    function padBack() {
+      if (fresh) { fresh = false; buf = buf.slice(0, -1); } else buf = buf.slice(0, -1);
+      commitPad(); render();
+    }
+    function padClear() { buf = ""; fresh = false; render(); }
+    function padSign() {
+      fresh = false;
+      buf = buf.startsWith("-") ? buf.slice(1) : "-" + buf;
+      commitPad(); render();
+    }
+    function padStep(dir) {
+      if (kind !== "number") return;
+      const st = stepOf(target), mn = numAttr(target, "min"), mx = numAttr(target, "max");
+      const cur = Number(buf);
+      let v = (Number.isFinite(cur) && buf !== "" && buf !== "-" ? cur : (mn != null ? mn : 0)) + dir * st;
+      if (mn != null) v = Math.max(mn, v);
+      if (mx != null) v = Math.min(mx, v);
+      buf = String(Number(v.toFixed(Math.max(decimals(st), decimals(mn != null ? mn : 0)))));
+      fresh = true;
+      commitPad(); render();
+    }
+
+    /* A la fermeture : une valeur numerique hors bornes est ramenee a la
+       borne, une saisie incomplete restitue la valeur d'origine.
+       On close: an out-of-range number is clamped to its bound, an
+       incomplete entry gives the original value back. */
+    function finalizePad() {
+      if (!target || kind === "text") return;
+      let v;
+      if (kind === "number") {
+        const n = Number(buf);
+        if (buf === "" || !Number.isFinite(n)) v = origin;
+        else {
+          const mn = numAttr(target, "min"), mx = numAttr(target, "max");
+          let c = n;
+          if (mn != null) c = Math.max(mn, c);
+          if (mx != null) c = Math.min(mx, c);
+          v = String(c);
+        }
+      } else {
+        v = maskValue(buf);
+        if (v === null) v = origin;
+      }
+      if (target.value !== v) target.value = v;
+      target.dispatchEvent(new Event("input", { bubbles: true }));
+      target.dispatchEvent(new Event("change", { bubbles: true }));
+    }
+
+    function renderPad() {
+      panel.innerHTML = "";
+      panel.classList.add("vkb-pad");
+      const label = (target.closest("label") && target.closest("label").querySelector("span")) || null;
+      const head = document.createElement("div");
+      head.className = "vkb-head";
+      if (label && label.textContent.trim()) {
+        const l = document.createElement("div");
+        l.className = "vkb-label";
+        l.textContent = label.textContent.trim();
+        head.appendChild(l);
+      }
+      const line = document.createElement("div");
+      line.className = "vkb-line";
+      let bad = false, shown;
+      if (kind === "number") {
+        shown = buf === "" ? "—" : buf;
+        const n = Number(buf), mn = numAttr(target, "min"), mx = numAttr(target, "max");
+        bad = buf !== "" && Number.isFinite(n) && ((mn != null && n < mn) || (mx != null && n > mx));
+        line.appendChild(keyBtn("−", "vkb-step", () => padStep(-1)));
+        const disp = document.createElement("div");
+        disp.className = "vkb-disp" + (bad ? " vkb-bad" : "");
+        disp.textContent = shown;
+        line.appendChild(disp);
+        line.appendChild(keyBtn("+", "vkb-step", () => padStep(1)));
+      } else {
+        const disp = document.createElement("div");
+        disp.className = "vkb-disp vkb-mask" + (buf.length === maskOf().len && maskValue(buf) === null ? " vkb-bad" : "");
+        disp.textContent = maskText(buf);
+        line.appendChild(disp);
+      }
+      head.appendChild(line);
+      if (kind === "number") {
+        const mn = numAttr(target, "min"), mx = numAttr(target, "max");
+        if (mn != null || mx != null) {
+          const r = document.createElement("div");
+          r.className = "vkb-range";
+          r.textContent = (mn != null ? mn : "") + " – " + (mx != null ? mx : "");
+          head.appendChild(r);
+        }
+      }
+      panel.appendChild(head);
+
+      const row = (keys) => {
+        const r = document.createElement("div");
+        r.className = "vkb-row";
+        keys.forEach((k) => r.appendChild(k));
+        panel.appendChild(r);
+      };
+      const digit = (d) => keyBtn(d, "", () => padKey(d));
+      const spacer = () => { const e = document.createElement("span"); e.className = "vkb-key vkb-gap"; return e; };
+      const mnV = kind === "number" ? numAttr(target, "min") : null;
+      const canNeg = kind === "number" && (mnV == null || mnV < 0);
+      row([digit("7"), digit("8"), digit("9"), keyBtn("⌫", "vkb-wide", padBack)]);
+      row([digit("4"), digit("5"), digit("6"), keyBtn(i18n.t("vkb.clear"), "vkb-wide", padClear)]);
+      row([digit("1"), digit("2"), digit("3"), canNeg ? keyBtn("±", "vkb-wide", padSign) : spacer()]);
+      row([digit("0"), kind === "number" && isFrac(target) ? keyBtn(".", "", () => padKey(".")) : spacer(),
+        keyBtn(i18n.t("vkb.done"), "vkb-wide vkb-done", () => hide())]);
+      reposition();
+    }
+
     function render() {
       if (!panel) return;
+      if (kind !== "text") return renderPad();
+      panel.classList.remove("vkb-pad");
       panel.innerHTML = "";
       const layout = LAYOUTS[lang] || LAYOUTS.en;
       const rows = page === "symbols" ? layout.symbols : layout.letters;
@@ -721,15 +924,21 @@
 
     function show(el) {
       if (!enabled || !isTypable(el)) return;
+      if (target && target !== el) finalizePad();
       target = el;
+      kind = kindOf(el);
       shift = false;
       page = "letters";
+      fresh = true;
+      origin = kind === "text" ? "" : el.value;
+      buf = kind === "number" ? String(el.value || "") : (kind === "text" ? "" : maskDigits(el.value));
       if (!panel) panel = $("vkb");
       panel.hidden = false;
       render();
     }
 
     function hide() {
+      finalizePad();
       if (panel) panel.hidden = true;
       if (target && document.activeElement === target) target.blur();
       target = null;
@@ -745,7 +954,15 @@
 
     return {
       attach,
-      setEnabled(v) { enabled = v; if (!v) hide(); },
+      setEnabled(v) {
+        enabled = v;
+        // Les flèches natives des champs numeriques ne se masquent que si
+        // le pave est la pour les remplacer (voir style.css).
+        // Native number arrows are only hidden when the pad is there to
+        // replace them.
+        document.body.classList.toggle("vkb-on", !!v);
+        if (!v) hide();
+      },
       setLang(l) { lang = l === "fr" ? "fr" : "en"; if (panel && !panel.hidden) render(); },
       hide
     };

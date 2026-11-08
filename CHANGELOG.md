@@ -1,5 +1,27 @@
 # Changelog
 
+## 1.165.0
+
+- **Tactile : pavés pour les champs numériques, l'heure et la date.** Le clavier
+  virtuel ne couvrait que les champs texte ; les flèches natives d'un champ
+  numérique (quelques pixels) étaient impossibles à viser au doigt — d'où des
+  réglages comme « Pilotes affichés » (F1, MotoGP) inutilisables sur le
+  Raspberry Pi. Un champ `number` ouvre maintenant un **pavé à grandes touches**
+  (chiffres, ⌫, « Effacer tout », ± si le minimum est négatif, « . » si le pas
+  est décimal, boutons − / + qui respectent pas et bornes, plage min–max
+  affichée, valeur hors bornes signalée en rouge puis ramenée à la borne à la
+  fermeture, saisie vide = valeur d'origine). Les champs `time` et
+  `datetime-local` ont un pavé à masque (« 1830 » → 18:30 ; JJ/MM/AAAA en
+  français, MM/DD/YYYY en anglais ; valeurs impossibles refusées). Les champs
+  mot de passe, e-mail et téléphone ouvrent le clavier de lettres. Les flèches
+  natives sont masquées (`body.touch.vkb-on`).
+- **Cibles agrandies en mode tactile** : curseurs (poignée 34 px), boutons radio,
+  champs heure / date / mot de passe, boutons du lecteur Chaînes TV (48 px),
+  barre d'outils du Bloc-notes (46 px), lignes de l'éditeur de pages et petits
+  boutons (46 px).
+- **Rien ne change au clavier physique et à la souris** : tout est conditionné
+  au clavier virtuel ou au mode tactile. Aide FR/EN et 19 contrôles dom-smoke.
+
 ## 1.164.0
 
 - **Bloc-notes : Markdown complet** (manifeste 0.8.0). Le rendu reconnaît

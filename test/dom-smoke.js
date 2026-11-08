@@ -11075,6 +11075,92 @@ function catalogItemFor(catalog, document, widgetId) {
     window.confirm = realConfirm;
   }
 
+  console.log("== Pave tactile : nombre, heure, date (1.165.0) ==");
+  {
+    const $p = (id) => document.getElementById(id);
+    const press = (txt) => {
+      const k = Array.from(document.querySelectorAll("#vkb .vkb-key")).find((b) => b.textContent === txt);
+      if (!k) return false;
+      k.dispatchEvent(new window.Event("pointerdown", { bubbles: true, cancelable: true }));
+      return true;
+    };
+    const focusOn = (el) => el.dispatchEvent(new window.FocusEvent("focusin", { bubbles: true }));
+    const vk = () => $p("vkb");
+    window.PiBoard.openSettings("input");
+    await sleep(20);
+    const keyboardWas = $p("setKeyboard").checked;
+    $p("setKeyboard").checked = true;
+    $p("settingsSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    assert("pave : le clavier virtuel active pose la classe vkb-on (fleches natives masquees en tactile)",
+      document.body.classList.contains("vkb-on"));
+
+    window.PiBoard.openSettings("layout");
+    await sleep(20);
+    const rows = $p("setRows"); // number, 4..16
+    rows.value = "8";
+    focusOn(rows);
+    assert("pave : un champ numerique ouvre un pave a grandes touches, pas le clavier de lettres",
+      vk().hidden === false && vk().classList.contains("vkb-pad") && Array.from(vk().querySelectorAll(".vkb-key")).some((b) => b.textContent === "7"));
+    assert("pave : plage min–max affichee", /4\s*–\s*16/.test(vk().textContent));
+    press("1"); press("2");
+    assert("pave : le premier chiffre remplace la valeur, les suivants s'ajoutent (12)", rows.value === "12");
+    press("⌫");
+    assert("pave : effacer retire le dernier chiffre", rows.value === "1");
+    press("9"); press("9");
+    assert("pave : une valeur hors bornes est signalee pendant la saisie", !!vk().querySelector(".vkb-bad"));
+    press("Terminé");
+    assert("pave : a la fermeture, la valeur est ramenee a la borne (99 -> 16)", rows.value === "16" && vk().hidden === true);
+    focusOn(rows);
+    press("+");
+    assert("pave : + et − remplacent les fleches natives, bornes respectees", rows.value === "16");
+    press("−"); press("−");
+    assert("pave : − diminue de un pas (16 -> 14)", rows.value === "14");
+    press("Effacer tout"); press("Terminé");
+    assert("pave : saisie vide a la fermeture -> valeur a l'ouverture restituee (16)", rows.value === "16");
+
+    /* Heure et date : champs time / datetime-local. */
+    const tm = document.createElement("input");
+    tm.type = "time"; tm.id = "tmpTime"; tm.value = "07:15";
+    document.body.appendChild(tm);
+    focusOn(tm);
+    assert("pave : un champ heure ouvre le pave", vk().hidden === false && /07:15|__:__/.test(vk().textContent));
+    press("1"); press("8"); press("3");
+    assert("pave heure : saisie incomplete -> la valeur n'est pas modifiee", tm.value === "07:15");
+    press("0");
+    assert("pave heure : 1830 -> 18:30", tm.value === "18:30");
+    press("Effacer tout"); press("2"); press("5"); press("6"); press("1");
+    assert("pave heure : 25:61 est refuse", tm.value === "18:30" && !!vk().querySelector(".vkb-bad"));
+    press("Terminé");
+    assert("pave heure : saisie invalide a la fermeture -> valeur d'origine", tm.value === "07:15");
+    tm.remove();
+
+    const dt = document.createElement("input");
+    dt.type = "datetime-local"; dt.id = "tmpDt";
+    document.body.appendChild(dt);
+    focusOn(dt);
+    "311220261845".split("").forEach((c) => press(c));
+    assert("pave date : 31/12/2026 18:45 (ordre francais)", dt.value === "2026-12-31T18:45");
+    press("Effacer tout");
+    "310220261845".split("").forEach((c) => press(c));
+    assert("pave date : 31/02 est refuse", dt.value === "2026-12-31T18:45" && !!vk().querySelector(".vkb-bad"));
+    press("Terminé");
+    dt.remove();
+
+    /* Mot de passe : saisissable au clavier virtuel. */
+    const pw = document.createElement("input");
+    pw.type = "password"; document.body.appendChild(pw);
+    focusOn(pw);
+    assert("clavier : un champ mot de passe ouvre le clavier de lettres", vk().hidden === false && !vk().classList.contains("vkb-pad"));
+    press("Terminé"); pw.remove();
+
+    window.confirm = () => true;
+    $p("setKeyboard").checked = keyboardWas;
+    $p("settingsSave").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+    await sleep(80);
+    assert("pave : clavier virtuel desactive -> vkb-on retire", document.body.classList.contains("vkb-on") === keyboardWas);
+  }
+
   console.log("== Sortie du mode edition ==");
   document.getElementById("btnEdit").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
   assert("grille reverrouillee", document.querySelector(".grid-stack").classList.contains("grid-stack-static"));

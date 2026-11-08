@@ -394,3 +394,8 @@
 .pw-iptv.pwtv-immersive.pwtv-idle .pwtv-video-wrap,
 .pw-iptv.pwtv-immersive.pwtv-idle .pwtv-video { cursor: none; }
 @media (prefers-reduced-motion: reduce) { .pw-iptv.pwtv-immersive .pwtv-controls { transition: none; } }
+
+/* Mode tactile : boutons du lecteur assez grands pour un doigt (1.165.0). */
+body.touch .pwtv-btn { width: 48px; height: 48px; font-size: 20px; border-radius: 12px; }
+body.touch .pw-iptv .pwtv-volume { width: 130px; }
+body.touch .pw-iptv .pwtv-controls { gap: 12px; }
