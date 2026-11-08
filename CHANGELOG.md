@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.165.1
+
+- **Publication : nouvelle tentative automatique de la construction.** La 1.165.0
+  avait échoué sur les trois plateformes à cause d'un `504 Gateway Time-out`
+  renvoyé par github.com pendant le téléchargement d'un outil de packaging
+  (electron-builder). `scripts/publish.js` relance maintenant electron-builder
+  jusqu'à 4 fois (pause de 20, 40, 60 s ; réglable par
+  `PIBOARD_BUILD_ATTEMPTS`). Le cache d'electron-builder conserve les outils
+  déjà récupérés : chaque tentative repart plus loin. Aucun changement dans
+  l'application.
+
 ## 1.165.0
 
 - **Tactile : pavés pour les champs numériques, l'heure et la date.** Le clavier

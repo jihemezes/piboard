@@ -237,7 +237,31 @@ const bin = path.join(
   root, "node_modules", ".bin",
   process.platform === "win32" ? "electron-builder.cmd" : "electron-builder"
 );
-const run = spawnSync(bin, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+/* Les outils de packaging (icones, AppImage, NSIS...) sont telecharges
+   depuis github.com a chaque construction. Un 504 passager du CDN de
+   GitHub suffisait a rendre rouges les trois plateformes (1.165.0).
+   electron-builder garde dans son cache ce qu'il a deja recupere : on
+   relance donc la construction jusqu'a 4 fois, avec une pause
+   croissante, et chaque tentative repart plus loin que la precedente.
+   Les outils deja telecharges ne le sont pas une seconde fois.
+   The packaging tools (icons, AppImage, NSIS...) are downloaded from
+   github.com on every build. A transient 504 from GitHub's CDN was
+   enough to turn all three platforms red (1.165.0). electron-builder
+   keeps what it already fetched in its cache, so the build is retried
+   up to 4 times with a growing pause, each attempt getting further than
+   the previous one. */
+const MAX_ATTEMPTS = Math.max(1, Number(process.env.PIBOARD_BUILD_ATTEMPTS) || 4);
+let run;
+for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+  run = spawnSync(bin, args, { cwd: root, stdio: "inherit", shell: process.platform === "win32" });
+  if (run.status === 0 || attempt === MAX_ATTEMPTS) break;
+  const pauseS = 20 * attempt;
+  console.warn(
+    `\nTentative ${attempt}/${MAX_ATTEMPTS} echouee : nouvelle tentative dans ${pauseS} s.` +
+    `\nAttempt ${attempt}/${MAX_ATTEMPTS} failed: retrying in ${pauseS} s.\n`
+  );
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, pauseS * 1000);
+}
 if (!publishing) process.exit(run.status === null ? 1 : run.status);
 if (run.status !== 0) {
   console.error("\nLa construction ou l'envoi a echoue : on verifie ce qui manque en ligne avant d'abandonner." +
