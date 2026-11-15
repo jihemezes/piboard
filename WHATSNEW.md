@@ -32,6 +32,29 @@
 
 # Nouveautes / What's new
 
+## 1.171.0
+
+**Flux RSS : jusqu'à 12 flux dans une seule tuile**
+
+Dans la tuile **Flux RSS**, la liste de flux est maintenant **éditable** : ajoutez jusqu'à
+**12 flux**, réordonnez-les, suspendez-en un sans le supprimer, donnez-lui un nom court et une
+couleur. Vos trois flux actuels sont repris tels quels. En plus : des **groupes** (Actualités,
+Tech, Sport…) avec pastilles de sélection ou rotation automatique, des **filtres par mots-clés**
+pour garder ou masquer des articles, un **quota par flux** pour qu'un flux bavard n'écrase pas
+les autres, la **suppression des doublons** entre flux, et un **avertissement** quand un flux
+ne répond plus.
+
+---
+
+**RSS feeds: up to 12 feeds in a single tile**
+
+In the **RSS feed** tile, the feed list is now **editable**: add up to **12 feeds**, reorder
+them, pause one without deleting it, give it a short name and a colour. Your current three
+feeds carry over unchanged. Also: **groups** (News, Tech, Sport…) with selector pills or
+automatic rotation, **keyword filters** to keep or hide articles, a **per-feed quota** so a
+chatty feed does not drown the others, **duplicate removal** between feeds, and a **warning**
+when a feed stops answering.
+
 ## 1.170.0
 
 **Soyez prévenu quand un nouvel appareil arrive sur votre réseau**

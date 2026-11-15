@@ -14,7 +14,31 @@
      deux sources ne se confondent pas ; un choix explicite l'emporte.
      Per-feed tag colour. With no choice each slot gets its own hue so
      two sources are never mixed up; an explicit choice wins. */
-  const AUTO_TAG_COLORS = ["#3b82f6", "#f97316", "#22c55e"];
+  const AUTO_TAG_COLORS = ["#3b82f6", "#f97316", "#22c55e", "#8b5cf6", "#ec4899", "#14b8a6", "#eab308", "#ef4444", "#06b6d4", "#84cc16", "#f43f5e", "#6366f1"];
+  const MAX_FEEDS = 12;
+
+  /* Comparaison de mots : minuscules, sans accents. Words comparison:
+     lower case, accents stripped. */
+  function fold(str) {
+    return String(str || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  }
+  function wordList(raw) {
+    return String(raw || "").split(/[,;]/).map((w) => fold(w).trim()).filter(Boolean);
+  }
+  /* Cle de dedoublonnage : le lien sans parametres ni ancre, sinon le
+     titre simplifie. Duplicate key: the link without query or anchor,
+     otherwise the simplified title. */
+  function linkKey(link) {
+    try {
+      const u = new URL(link);
+      return "l:" + u.hostname.toLowerCase().replace(/^www\./, "") + u.pathname.replace(/\/+$/, "");
+    } catch (e) { return ""; }
+  }
+  function titleKey(title) {
+    const t = fold(title).replace(/[^a-z0-9]+/g, " ").trim();
+    return t.length >= 12 ? "t:" + t : "";
+  }
+
   function cleanColor(c) {
     const m = /^#([0-9a-f]{6})$/i.exec(String(c || "").trim());
     return m ? "#" + m[1].toLowerCase() : "";
@@ -212,6 +236,10 @@
       this.currentItems = []; // items effectivement rendus (sous-ensemble ou rotation) / actually rendered items (subset or rotation)
       this.modal = null;
       this.press = { supported: false, accounts: [] }; // abonnements presse / press subscriptions
+      this.failed = [];     // flux sans reponse / feeds that did not answer
+      this.groups = [];     // groupes presents / groups present
+      this.groupSel = null; // groupe affiche (null = tous, "" = sans groupe) / shown group (null = all, "" = ungrouped)
+      this.groupTimer = null;
       this.openToken = 0; // ignore une extraction qui repond apres qu'un autre article a ete ouvert / ignores an extraction that answers after another article was opened
     }
 
@@ -224,6 +252,15 @@
       // re-renders (rotation, refresh, language change) which fully
       // replace the innerHTML.
       this.ctx.el.addEventListener("click", (e) => {
+        const chip = e.target.closest(".pwr-group-chip");
+        if (chip) {
+          e.stopPropagation();
+          const g = chip.dataset.g;
+          this.groupSel = g === "*" ? null : g.slice(2);
+          this.cursor = 0;
+          this.render();
+          return;
+        }
         const li = e.target.closest(".pwr-item[data-link='1']");
         if (!li) return;
         e.stopPropagation(); // sinon rouvre les reglages en mode edition / else reopens settings in edit mode
@@ -242,6 +279,7 @@
     onSettingsChanged(settings) {
       this.ctx.settings = settings;
       this.cursor = 0;
+      this.groupSel = null;
       this.refresh();
       this.arm();
     }
@@ -268,6 +306,9 @@
         this.refreshPress()
       ]);
       const ok = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
+      // Flux en panne : nommes, sans empecher les autres de s'afficher.
+      // Failing feeds: named, without preventing the others from showing.
+      this.failed = results.map((r, i) => (r.status === "rejected" ? (slots[i].label || this.hostOf(slots[i].url)) : null)).filter(Boolean);
 
       if (!ok.length) {
         console.warn("[piboard/rss] tous les flux configures ont echoue");
@@ -288,7 +329,27 @@
         return tb - ta;
       });
 
-      // Nom de source pour l'en-tete : uniquement pertinent avec un seul
+      // Doublons : meme article publie par deux flux. L'ordre du tri etant
+      // chronologique, le premier flux de la liste l'emporte a date egale.
+      // Duplicates: the same article published by two feeds.
+      let items = allItems;
+      if (this.ctx.settings.dedupe !== false && ok.length > 1) {
+        const seen = new Set();
+        items = allItems.filter((it) => {
+          const keys = [linkKey(it.link), titleKey(it.title)].filter(Boolean);
+          if (keys.some((k) => seen.has(k))) return false;
+          keys.forEach((k) => seen.add(k));
+          return true;
+        });
+      }
+      // Groupes : dans l'ordre de la liste, seulement ceux des flux qui ont
+      // repondu. Groups: in list order, only those of feeds that answered.
+      const groups = [];
+      ok.forEach((f) => { if (f.group && !groups.includes(f.group)) groups.push(f.group); });
+      this.groups = groups;
+      if (this.groupSel && !groups.includes(this.groupSel)) this.groupSel = null;
+
+
       // flux (avec plusieurs, chaque article porte deja la sienne, voir
       // render()). Source name for the header: only meaningful with a
       // single feed (with several, each item already carries its own,
@@ -300,26 +361,72 @@
            Single feed: its colour is only used when chosen (the
            historical header stays unchanged otherwise). */
         sourceColor: ok.length === 1 && ok[0].sourceChosen ? ok[0].sourceColor : "",
-        items: allItems
+        items
       };
       this.render();
+      this.armGroups();
     }
 
-    /* Emplacements de flux configures : le premier (url/label1) est
-       obligatoire, les deux suivants facultatifs -- meme convention que
-       les "emplacements fixes" utilises ailleurs dans PiBoard (trajets
-       du widget Trajet, fuseaux de l'Horloge, alarmes...).
-       Configured feed slots: the first (url/label1) is required, the
-       next two optional -- the same "fixed slots" convention used
-       elsewhere in PiBoard (Commute widget's trips, Clock's zones,
-       alarms...). */
+    /* Flux configures : la liste du reglage `feeds` (jusqu'a 12, chacun
+       avec nom, couleur, groupe et mots a garder / masquer). Tant que
+       cette liste n'a jamais ete enregistree, on lit les anciens
+       reglages a trois emplacements (url/label1/color1, url2..., url3...)
+       : une tuile existante garde ses flux. Un flux decoche ou sans
+       adresse http(s) est ignore.
+       Configured feeds: the `feeds` setting's list (up to 12, each with
+       name, colour, group and words to keep / hide). As long as that
+       list was never saved, the old three-slot settings are read: an
+       existing tile keeps its feeds. A ticked-off feed or one without
+       an http(s) address is ignored. */
     feedSlots() {
       const s = this.ctx.settings;
-      return [
-        { url: s.url, label: s.label1, color: s.color1, idx: 0 },
-        { url: s.url2, label: s.label2, color: s.color2, idx: 1 },
-        { url: s.url3, label: s.label3, color: s.color3, idx: 2 }
-      ].filter((slot) => slot.url);
+      let list = null;
+      const raw = String(s.feeds == null ? "" : s.feeds).trim();
+      if (raw) {
+        try { const p = JSON.parse(raw); if (Array.isArray(p)) list = p; } catch (e) { list = null; }
+      }
+      if (!list) {
+        list = [
+          { url: s.url, label: s.label1, color: s.color1, n: 0 },
+          { url: s.url2, label: s.label2, color: s.color2, n: 1 },
+          { url: s.url3, label: s.label3, color: s.color3, n: 2 }
+        ];
+      }
+      return list.slice(0, MAX_FEEDS).map((f, i) => ({
+        url: String((f && f.url) || "").trim(),
+        label: (f && f.label) || "",
+        color: (f && f.color) || "",
+        idx: f && Number.isInteger(f.n) && f.n >= 0 ? f.n : i,
+        group: String((f && f.group) || "").trim(),
+        keep: wordList(f && f.keep),
+        hide: wordList(f && f.hide),
+        on: !f || f.on !== false
+      })).filter((f) => f.on && /^https?:\/\//i.test(f.url));
+    }
+
+    /* Filtre des articles d'UN flux : mots a garder / a masquer du flux
+       et de la tuile, puis quota des plus recents. Filters ONE feed's
+       items: the feed's and the tile's words to keep / hide, then the
+       most-recent quota. */
+    filterItems(items, slot) {
+      const s = this.ctx.settings;
+      const hide = slot.hide.concat(wordList(s.hideWords));
+      const keepOwn = slot.keep, keepTile = wordList(s.keepWords);
+      let out = items;
+      if (keepOwn.length || keepTile.length || hide.length) {
+        out = items.filter((it) => {
+          const hay = fold(it.title + " " + String(it.content || "").replace(/<[^>]+>/g, " ").slice(0, 400));
+          if (hide.some((w) => hay.includes(w))) return false;
+          if (keepOwn.length && !keepOwn.some((w) => hay.includes(w))) return false;
+          if (keepTile.length && !keepTile.some((w) => hay.includes(w))) return false;
+          return true;
+        });
+      }
+      const quota = Math.max(0, Math.min(20, Number(s.perFeedMax) || 0));
+      if (quota > 0) {
+        out = out.slice().sort((a, b) => (new Date(b.date).getTime() || 0) - (new Date(a.date).getTime() || 0)).slice(0, quota);
+      }
+      return out;
     }
 
     async refreshPress() {
@@ -406,11 +513,57 @@
          another feed is removed. */
       const chosen = cleanColor(slot.color);
       const sourceColor = chosen || AUTO_TAG_COLORS[slot.idx % AUTO_TAG_COLORS.length];
-      parsed.items.forEach((it) => { it.sourceLabel = sourceLabel; it.sourceColor = sourceColor; it.sourceChosen = !!chosen; });
+      parsed.items = this.filterItems(parsed.items, slot);
+      parsed.items.forEach((it) => { it.sourceLabel = sourceLabel; it.sourceColor = sourceColor; it.sourceChosen = !!chosen; it.group = slot.group; });
+      parsed.group = slot.group;
       parsed.source = sourceLabel;
       parsed.sourceColor = sourceColor;
       parsed.sourceChosen = !!chosen;
       return parsed;
+    }
+
+    hostOf(url) {
+      try { return new URL(url).hostname.replace(/^www\./, ""); } catch (e) { return String(url || ""); }
+    }
+
+    /* Liste des « vues » de groupe : chaque groupe, puis « Autres » si
+       des articles n'ont pas de groupe. The group "views": each group,
+       then "Other" if some items have none. */
+    groupViews() {
+      const views = this.groups.slice();
+      if (this.feed && this.feed.items.some((it) => !it.group)) views.push("");
+      return views;
+    }
+
+    groupChipsHtml() {
+      const t = (k) => this.ctx.i18n.t(k);
+      const chip = (value, text) => {
+        const active = (value === null ? this.groupSel === null : this.groupSel === value);
+        return `<button type="button" class="pwr-group-chip${active ? " active" : ""}" data-g="${value === null ? "*" : "g:" + escapeAttr(value)}">${escapeHtml(text)}</button>`;
+      };
+      const all = this.ctx.settings.groupView === "rotate" ? "" : chip(null, t("rss.group.all"));
+      return `<div class="pwr-groups">${all}${this.groupViews().map((g) => chip(g, g || t("rss.group.other"))).join("")}</div>`;
+    }
+
+    /* Rotation automatique entre les groupes. Automatic rotation between
+       groups. */
+    armGroups() {
+      clearInterval(this.groupTimer);
+      const s = this.ctx.settings;
+      if (s.groupView !== "rotate") { if (s.groupView !== "tabs") this.groupSel = null; return; }
+      const views = this.groupViews();
+      if (views.length < 2 && !this.groups.length) return;
+      if (this.groupSel === null || !views.includes(this.groupSel)) this.groupSel = views[0] === undefined ? null : views[0];
+      this.render();
+      const secs = Math.max(5, Math.min(300, Number(s.groupSeconds) || 20));
+      if (views.length < 2) return;
+      this.groupTimer = setInterval(() => {
+        const v = this.groupViews();
+        const i = v.indexOf(this.groupSel);
+        this.groupSel = v[(i + 1) % v.length];
+        this.cursor = 0;
+        this.render();
+      }, secs * 1000);
     }
 
     render() {
@@ -423,10 +576,26 @@
         return;
       }
 
+      /* Groupes : le selecteur ou la rotation ne s'appliquent que si des
+         flux portent un nom de groupe. Groups: the selector or rotation
+         only apply if some feeds carry a group name. */
+      const useGroups = (s.groupView === "tabs" || s.groupView === "rotate") && this.groups.length > 0;
+      const pool = useGroups && this.groupSel !== null
+        ? this.feed.items.filter((it) => (it.group || "") === this.groupSel)
+        : this.feed.items;
+      const chips = useGroups ? this.groupChipsHtml() : "";
+      if (!pool.length) {
+        this.ctx.el.innerHTML = `<div class="pw-rss">${chips}<div class="pwr-empty">${this.ctx.i18n.t("rss.empty")}</div></div>`;
+        return;
+      }
+
       const items = s.rotate
-        ? [this.feed.items[this.cursor % this.feed.items.length]]
-        : this.feed.items.slice(0, Math.max(1, Number(s.maxItems) || 6));
+        ? [pool[this.cursor % pool.length]]
+        : pool.slice(0, Math.max(1, Number(s.maxItems) || 6));
       this.currentItems = items;
+      const warn = s.warnFailed !== false && this.failed.length
+        ? `<div class="pwr-warn" title="${escapeAttr(this.failed.join(", "))}">⚠ ${escapeHtml(this.ctx.i18n.t(this.failed.length > 1 ? "rss.failedN" : "rss.failed1").replace("{n}", String(this.failed.length)))} : ${escapeHtml(this.failed.join(", "))}</div>`
+        : "";
 
       // Un seul flux configure : en-tete unique au-dessus de la liste,
       // comportement historique inchange. Plusieurs flux combines :
@@ -445,6 +614,7 @@
 
       this.ctx.el.innerHTML = `
         <div class="pw-rss ${s.rotate ? "pwr-rotate" : ""}">
+          ${chips}${warn}
           <div class="pwr-source${this.feed.sourceColor ? " pwr-source-coloured" : ""}"${tagStyle(this.feed.sourceColor)} ${s.showSource !== false && !multiFeed ? "" : "hidden"}>${this.feed.source || ""}</div>
           <ul>
             ${items.map((it, idx) => `
@@ -455,9 +625,9 @@
           </ul>
         </div>`;
 
-      if (s.rotate && this.feed.items.length > 1) {
+      if (s.rotate && pool.length > 1) {
         this.rotateTimer = setInterval(() => {
-          this.cursor = (this.cursor + 1) % this.feed.items.length;
+          this.cursor = (this.cursor + 1) % pool.length;
           this.render();
         }, 8000);
       }
@@ -649,6 +819,7 @@
     destroy() {
       clearInterval(this.timer);
       clearInterval(this.rotateTimer);
+      clearInterval(this.groupTimer);
       if (this.modal) {
         this.modal.remove();
         if (this._escHandler) document.removeEventListener("keydown", this._escHandler);

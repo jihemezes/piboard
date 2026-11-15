@@ -206,3 +206,36 @@
   color: var(--ok);
 }
 .pwr-modal-sub-warn { color: var(--danger); font-style: normal; }
+
+/* --- Groupes de flux et avertissement (1.171.0) ---
+   Feed groups and warning. */
+.pw-rss .pwr-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-bottom: 7px;
+}
+.pw-rss .pwr-group-chip {
+  font: inherit;
+  font-size: 11px;
+  padding: 2px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.pw-rss .pwr-group-chip.active {
+  color: var(--accent);
+  border-color: var(--accent);
+  font-weight: 700;
+}
+.pw-rss .pwr-warn {
+  font-size: 11px;
+  color: var(--danger, #d08a30);
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.171.0
+
+- **Tuile Flux RSS : jusqu'à 12 flux** (au lieu de 3). Le champ « Flux » devient une liste
+  éditable (type de champ `feedlist`, JSON dans un champ caché) : ajout, suppression,
+  réordonnancement, case activer/désactiver, nom court, adresse validée, et un panneau ⋯
+  par flux (groupe, mots à garder / à masquer, couleur auto ou libre). Les anciens réglages
+  `url/label1/color1…url3` sont repris automatiquement (clé `legacy` du manifeste) ; une liste
+  `feeds` vide mais présente (« [] ») signifie « volontairement vide ».
+- Groupes de flux : toutes ensemble / pastilles de sélection / rotation automatique
+  (`groupSeconds`). Filtres de mots-clés (casse et accents ignorés, titre + 400 premiers
+  caractères du résumé), quota `perFeedMax`, dédoublonnage par lien puis par titre,
+  ligne d'avertissement `.pwr-warn` pour les flux en panne, couleur automatique stable par flux.
+- Tests : `rssFeeds.test.js` (nouveau), bloc « liste de flux éditable » dans `dom-smoke.js`.
+- Aide FR/EN de la tuile réécrite.
+
 ## 1.170.1
 
 - Tuile Analyse réseau : « Mémoriser les hôtes », « Journal », « Tout reconnaître »

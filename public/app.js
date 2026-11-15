@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.170.1
+   Version 1.171.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3536,9 +3536,20 @@
       if (!sec) { sec = { name, fields: [] }; byName.set(name, sec); sections.push(sec); }
       sec.fields.push(f);
     }
+    /* Valeurs effectives : reglages enregistres, completes par les
+       valeurs par defaut du manifeste (y compris celles des champs
+       caches, qui servent a reprendre d'anciens reglages -- voir le
+       champ "feedlist").
+       Effective values: saved settings, completed by the manifest's
+       defaults (including hidden fields', which serve to carry over
+       older settings -- see the "feedlist" field). */
+    const eff = {};
+    for (const f of fields) eff[f.key] = f.default;
+    Object.assign(eff, settings);
     return sections.map((sec) => {
       const inner = sec.fields
-        .map((f) => fieldMarkup(f, settings[f.key] !== undefined ? settings[f.key] : f.default))
+        .filter((f) => !f.hidden)
+        .map((f) => fieldMarkup(f, settings[f.key] !== undefined ? settings[f.key] : f.default, eff))
         .join("");
       // Une section titree est un encadre ; la section generale (sans
       // titre) reste sans cadre pour ne pas alourdir les widgets simples.
@@ -3551,7 +3562,43 @@
 
   const TAGCOLOR_PALETTE = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280"];
 
-  function fieldMarkup(f, value) {
+  /* Teintes automatiques des flux (les trois premieres sont celles de
+     l'ancienne tuile). Automatic feed hues (the first three are the old
+     tile's). */
+  const FEED_AUTO_COLORS = ["#3b82f6", "#f97316", "#22c55e", "#8b5cf6", "#ec4899", "#14b8a6", "#eab308", "#ef4444", "#06b6d4", "#84cc16", "#f43f5e", "#6366f1"];
+
+  function feedRowHtml(x, i) {
+    x = x || {};
+    const color = /^#[0-9a-f]{6}$/i.test(String(x.color || "")) ? String(x.color).toLowerCase() : "";
+    const n = Number.isInteger(x.n) && x.n >= 0 ? x.n : i;
+    const dot = color || FEED_AUTO_COLORS[n % FEED_AUTO_COLORS.length];
+    const t = (k) => escapeHtmlAttr(i18n.t(k));
+    return `<div class="feed-row" data-n="${n}" data-color="${color}">
+      <div class="feed-main">
+        <input type="checkbox" class="feed-on" ${x.on === false ? "" : "checked"} title="${t("feedlist.on")}" aria-label="${t("feedlist.on")}">
+        <span class="feed-dot" style="background:${dot}"></span>
+        <input type="text" class="feed-label" maxlength="40" value="${escapeHtmlAttr(x.label || "")}" placeholder="${t("feedlist.name")}" autocomplete="off" spellcheck="false">
+        <input type="text" class="feed-url" value="${escapeHtmlAttr(x.url || "")}" placeholder="https://\u2026/rss.xml" autocomplete="off" spellcheck="false" inputmode="url">
+        <button type="button" class="feed-btn feed-more" aria-expanded="false" title="${t("feedlist.more")}">\u22EF</button>
+        <button type="button" class="feed-btn feed-up" title="${t("feedlist.up")}">\u25B2</button>
+        <button type="button" class="feed-btn feed-down" title="${t("feedlist.down")}">\u25BC</button>
+        <button type="button" class="feed-btn feed-del" title="${t("feedlist.del")}">\u2715</button>
+      </div>
+      <div class="feed-adv" hidden>
+        <label><span>${escapeHtml(i18n.t("feedlist.group"))}</span><input type="text" class="feed-group" maxlength="30" value="${escapeHtmlAttr(x.group || "")}" autocomplete="off"></label>
+        <label><span>${escapeHtml(i18n.t("feedlist.keep"))}</span><input type="text" class="feed-keep" maxlength="120" value="${escapeHtmlAttr(x.keep || "")}" autocomplete="off"></label>
+        <label><span>${escapeHtml(i18n.t("feedlist.hide"))}</span><input type="text" class="feed-hide" maxlength="120" value="${escapeHtmlAttr(x.hide || "")}" autocomplete="off"></label>
+        <div class="feed-colors" role="group" aria-label="${t("feedlist.color")}">
+          <span>${escapeHtml(i18n.t("feedlist.color"))}</span>
+          <button type="button" class="feed-color-auto${color ? "" : " active"}">${escapeHtml(i18n.t("tagcolor.auto"))}</button>
+          ${TAGCOLOR_PALETTE.map((c) => `<button type="button" class="feed-color-sw${c === color ? " active" : ""}" data-c="${c}" style="background:${c}" aria-label="${c}"></button>`).join("")}
+          <input type="color" class="feed-color-custom" value="${color || dot}" title="${t("tagcolor.custom")}" aria-label="${t("tagcolor.custom")}">
+        </div>
+      </div>
+    </div>`;
+  }
+
+  function fieldMarkup(f, value, allValues) {
     const label = i18n.fromManifest(f.label);
     const v = value == null ? "" : value;
     const hint = f.hint ? `<small class="field-hint">${i18n.fromManifest(f.hint)}</small>` : "";
@@ -3911,6 +3958,48 @@
           <input type="hidden" data-key="${f.key}" value="${escapeHtmlAttr(String(v))}">
           ${hint}
         </div>`;
+      /* Champ "feedlist" : liste editable de flux (adresse, nom, couleur,
+         groupe, mots a garder / masquer), utilisee par la tuile Flux RSS
+         pour depasser les trois emplacements fixes d'origine. La liste
+         est rangee en JSON dans un champ cache, comme "rows" : la
+         collecte du formulaire n'a pas a changer.
+         REPRISE : tant que la liste n'a jamais ete enregistree, elle est
+         construite a partir des anciens reglages (champs caches
+         `legacy` du manifeste), si bien qu'une tuile existante retrouve
+         ses flux sans rien perdre.
+         "feedlist" field: an editable list of feeds (address, name,
+         colour, group, words to keep / hide), used by the RSS tile to go
+         beyond the original three fixed slots. The list is kept as JSON
+         in a hidden input, like "rows": form collection does not change.
+         CARRY-OVER: as long as the list was never saved, it is built
+         from the old settings (the manifest's hidden `legacy` fields), so
+         an existing tile finds its feeds again without losing anything. */
+      case "feedlist": {
+        let list = null;
+        try {
+          const parsed = JSON.parse(String(v || ""));
+          if (Array.isArray(parsed)) list = parsed;
+        } catch (e) { list = null; }
+        if (!list) {
+          list = [];
+          (f.legacy || []).forEach((leg, i) => {
+            const url = allValues && String(allValues[leg.url] || "").trim();
+            if (!url) return;
+            list.push({ url, label: String(allValues[leg.label] || ""), color: String(allValues[leg.color] || ""), on: true, n: i });
+          });
+        }
+        const max = Number(f.max) || 12;
+        return `<div class="field field-wide field-feedlist" data-feedlist="${f.key}" data-max="${max}">
+          <span>${label}</span>
+          <div class="feed-body">${list.slice(0, max).map((x, i) => feedRowHtml(x, i)).join("")}</div>
+          <div class="feed-actions">
+            <button type="button" class="btn small feed-add">+ ${escapeHtml(i18n.t("feedlist.add"))}</button>
+            <span class="feed-count field-hint"></span>
+          </div>
+          <input type="hidden" data-key="${f.key}" value="${escapeHtmlAttr(JSON.stringify(list.slice(0, max)))}">
+          ${hint}
+        </div>`;
+      }
       /* Champ "tagcolor" : une couleur d'etiquette a choisir dans une
          palette, ou « Auto » (valeur vide : le widget choisit lui-meme),
          ou une couleur libre. La valeur est rangee dans un champ cache.
@@ -4209,6 +4298,7 @@
     // Initialised after the form is inserted, the catalog being fetched
     // from the server.
     form.querySelectorAll("[data-rows-field]").forEach((el) => initRowsEditor(el));
+    if (window.PiBoard && window.PiBoard._feedlistRefresh) window.PiBoard._feedlistRefresh(form);
 
     // Selecteurs multiples (type "multipick") : catalogue range par
     // familles, charge depuis un fichier statique.
@@ -12507,6 +12597,113 @@
         const box = inp.closest(".field-tagcolor");
         if (box) setTagColor(box, String(inp.value || "").toLowerCase(), inp);
       });
+    }
+
+    /* Liste de flux (champs "feedlist").
+       Feed list ("feedlist" fields). */
+    {
+      const readList = (box) => [...box.querySelectorAll(".feed-row")].map((row) => ({
+        url: row.querySelector(".feed-url").value.trim(),
+        label: row.querySelector(".feed-label").value.trim(),
+        color: row.dataset.color || "",
+        on: row.querySelector(".feed-on").checked,
+        group: row.querySelector(".feed-group").value.trim(),
+        keep: row.querySelector(".feed-keep").value.trim(),
+        hide: row.querySelector(".feed-hide").value.trim(),
+        n: Number(row.dataset.n) || 0
+      }));
+      const refresh = (box, fire) => {
+        const rows = box.querySelectorAll(".feed-row");
+        const max = Number(box.dataset.max) || 12;
+        const hidden = box.querySelector("input[type=hidden][data-key]");
+        if (hidden) hidden.value = JSON.stringify(readList(box));
+        const add = box.querySelector(".feed-add");
+        if (add) add.disabled = rows.length >= max;
+        const cnt = box.querySelector(".feed-count");
+        if (cnt) cnt.textContent = rows.length + " / " + max;
+        rows.forEach((row, i) => {
+          const up = row.querySelector(".feed-up");
+          const down = row.querySelector(".feed-down");
+          if (up) up.disabled = i === 0;
+          if (down) down.disabled = i === rows.length - 1;
+          const url = row.querySelector(".feed-url").value.trim();
+          row.querySelector(".feed-url").classList.toggle("feed-bad", !!url && !/^https?:\/\//i.test(url));
+          row.classList.toggle("feed-off", !row.querySelector(".feed-on").checked);
+        });
+        if (hidden && fire) hidden.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      const setDot = (row) => {
+        const dot = row.querySelector(".feed-dot");
+        if (dot) dot.style.background = row.dataset.color || FEED_AUTO_COLORS[(Number(row.dataset.n) || 0) % FEED_AUTO_COLORS.length];
+      };
+      document.querySelectorAll(".field-feedlist").forEach((box) => refresh(box, false));
+      // Les listes sont creees a l'ouverture des reglages : on s'initialise
+      // aussi apres coup, par observation de la delegation ci-dessous.
+      // Lists are created when the settings open: they also initialise
+      // afterwards, through the delegation below.
+      const boxOf = (el) => el.closest && el.closest(".field-feedlist");
+      document.addEventListener("click", (e) => {
+        const t = e.target;
+        if (!t || !t.closest) return;
+        const box = boxOf(t);
+        if (!box) return;
+        const row = t.closest(".feed-row");
+        if (t.closest(".feed-add")) {
+          e.preventDefault();
+          const max = Number(box.dataset.max) || 12;
+          const rows = box.querySelectorAll(".feed-row");
+          if (rows.length >= max) return;
+          const used = new Set([...rows].map((r) => Number(r.dataset.n)));
+          let n = 0; while (used.has(n)) n++;
+          box.querySelector(".feed-body").insertAdjacentHTML("beforeend", feedRowHtml({ on: true, n }, rows.length));
+          refresh(box, true);
+          const last = box.querySelector(".feed-row:last-child .feed-url");
+          if (last) last.focus();
+          return;
+        }
+        if (!row) return;
+        if (t.closest(".feed-del")) { e.preventDefault(); row.remove(); refresh(box, true); return; }
+        if (t.closest(".feed-up")) { e.preventDefault(); if (row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling); refresh(box, true); return; }
+        if (t.closest(".feed-down")) { e.preventDefault(); if (row.nextElementSibling) row.parentNode.insertBefore(row.nextElementSibling, row); refresh(box, true); return; }
+        if (t.closest(".feed-more")) {
+          e.preventDefault();
+          const adv = row.querySelector(".feed-adv");
+          adv.hidden = !adv.hidden;
+          t.closest(".feed-more").setAttribute("aria-expanded", String(!adv.hidden));
+          return;
+        }
+        const sw = t.closest(".feed-color-auto, .feed-color-sw");
+        if (sw) {
+          e.preventDefault();
+          row.dataset.color = sw.classList.contains("feed-color-auto") ? "" : sw.dataset.c;
+          row.querySelectorAll(".feed-color-auto, .feed-color-sw, .feed-color-custom").forEach((el) => el.classList.remove("active"));
+          sw.classList.add("active");
+          setDot(row);
+          refresh(box, true);
+        }
+      });
+      document.addEventListener("input", (e) => {
+        const t = e.target;
+        const box = t && boxOf(t);
+        if (!box) return;
+        const row = t.closest(".feed-row");
+        if (t.classList.contains("feed-color-custom") && row) {
+          row.dataset.color = String(t.value || "").toLowerCase();
+          row.querySelectorAll(".feed-color-auto, .feed-color-sw").forEach((el) => el.classList.remove("active"));
+          t.classList.add("active");
+          setDot(row);
+        }
+        refresh(box, true);
+      });
+      document.addEventListener("change", (e) => {
+        const t = e.target;
+        const box = t && boxOf(t);
+        if (box && t.classList.contains("feed-on")) refresh(box, true);
+      });
+      // Exposition pour les tests et pour l'ouverture des reglages.
+      // Exposed for tests and for the settings opening.
+      window.PiBoard = window.PiBoard || {};
+      window.PiBoard._feedlistRefresh = (root) => (root || document).querySelectorAll(".field-feedlist").forEach((b) => refresh(b, false));
     }
 
     /* Selection de photos de la phototheque (champs "photoselect" des

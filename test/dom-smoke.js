@@ -7413,8 +7413,9 @@ function catalogItemFor(catalog, document, widgetId) {
        field the form collects like any other. */
     {
       const rssM = catalog.find((m) => m.id === "rss");
-      assert("rss : trois couleurs d'etiquette et un litere dans le manifeste",
-        rssM && ["color1", "color2", "color3"].every((k) => (rssM.settings || []).some((f) => f.key === k && f.type === "tagcolor"))
+      assert("rss : la liste de flux (jusqu'a 12) et un litere dans le manifeste",
+        rssM && (rssM.settings || []).some((f) => f.key === "feeds" && f.type === "feedlist" && f.max === 12)
+        && ["color1", "color2", "color3"].every((k) => (rssM.settings || []).some((f) => f.key === k && f.hidden === true))
         && (rssM.settings || []).some((f) => f.key === "showColorBar" && f.type === "checkbox"));
       const host = document.createElement("div");
       host.innerHTML = `<div class="field field-wide field-tagcolor"><div class="tagcolor-row"><button type="button" class="tagcolor-auto active">Auto</button><button type="button" class="tagcolor-swatch" data-c="#ef4444"></button><button type="button" class="tagcolor-swatch" data-c="#22c55e"></button><input type="color" class="tagcolor-custom" value="#3b82f6"></div><input type="hidden" data-key="color1" value=""></div>`;
@@ -7435,6 +7436,64 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("rss : Auto remet une valeur vide", hid.value === "" && host.querySelector(".tagcolor-auto").classList.contains("active")
         && !custom.classList.contains("active"));
       host.remove();
+    }
+
+    /* ---------- Flux RSS : liste de flux editable (1.171.0) ----------
+       Reglages reels d'une tuile existante (anciens reglages a trois
+       emplacements) : la liste reprend ses flux, on en ajoute, deplace,
+       decoche et retire, et la limite de 12 est tenue.
+       Real settings of an existing tile (old three-slot settings): the
+       list carries its feeds over; feeds are added, moved, unticked and
+       removed, and the limit of 12 is held. */
+    {
+      const clickF = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      const tileEl = document.querySelector('[data-tile-id="t-s"]');
+      clickF(tileEl.querySelector(".tile-gear"));
+      await sleep(80);
+      const box = document.querySelector("#tileForm .field-feedlist");
+      assert("rss (reglages) : le champ liste de flux est affiche", !!box && box.dataset.max === "12");
+      assert("rss (reglages) : les champs caches ne sont pas affiches",
+        !document.querySelector('#tileForm [data-key="url"]') && !document.querySelector('#tileForm [data-key="color2"]'));
+      const rows = () => [...box.querySelectorAll(".feed-row")];
+      const hid = () => JSON.parse(box.querySelector("input[type=hidden][data-key='feeds']").value);
+      assert("rss (reglages) : les deux flux de l'ancienne tuile sont repris",
+        rows().length === 2 && rows()[0].querySelector(".feed-url").value === "https://feed.test/rss.xml"
+        && rows()[0].querySelector(".feed-label").value === "Flux Un"
+        && rows()[1].querySelector(".feed-url").value === "https://feed2.test/rss.xml");
+      assert("rss (reglages) : compteur 2 / 12", box.querySelector(".feed-count").textContent === "2 / 12");
+      clickF(box.querySelector(".feed-add"));
+      assert("rss (reglages) : un flux ajoute", rows().length === 3 && hid().length === 3 && hid()[2].on === true);
+      const third = rows()[2].querySelector(".feed-url");
+      third.value = "https://feed3.test/atom.xml";
+      third.dispatchEvent(new window.Event("input", { bubbles: true }));
+      rows()[2].querySelector(".feed-label").value = "Trois";
+      rows()[2].querySelector(".feed-label").dispatchEvent(new window.Event("input", { bubbles: true }));
+      assert("rss (reglages) : la saisie se retrouve dans la valeur enregistree", hid()[2].url === "https://feed3.test/atom.xml" && hid()[2].label === "Trois");
+      clickF(rows()[2].querySelector(".feed-up"));
+      assert("rss (reglages) : un flux monte d'un cran", hid()[1].label === "Trois" && hid()[2].url === "https://feed2.test/rss.xml");
+      assert("rss (reglages) : premier non remontable, dernier non descendable",
+        rows()[0].querySelector(".feed-up").disabled && rows()[2].querySelector(".feed-down").disabled);
+      const cb = rows()[0].querySelector(".feed-on");
+      cb.checked = false;
+      cb.dispatchEvent(new window.Event("change", { bubbles: true }));
+      assert("rss (reglages) : un flux decoche est suspendu sans etre supprime", hid()[0].on === false && hid().length === 3);
+      clickF(rows()[1].querySelector(".feed-more"));
+      assert("rss (reglages) : les options avancees s'ouvrent", rows()[1].querySelector(".feed-adv").hidden === false);
+      clickF(rows()[1].querySelector(".feed-color-sw[data-c='#ef4444']"));
+      assert("rss (reglages) : la couleur choisie est enregistree", hid()[1].color === "#ef4444"
+        && rows()[1].querySelector(".feed-dot").style.background !== "");
+      rows()[1].querySelector(".feed-group").value = "Tech";
+      rows()[1].querySelector(".feed-group").dispatchEvent(new window.Event("input", { bubbles: true }));
+      assert("rss (reglages) : le groupe est enregistre", hid()[1].group === "Tech");
+      clickF(rows()[0].querySelector(".feed-del"));
+      assert("rss (reglages) : un flux retire", rows().length === 2 && hid().length === 2);
+      for (let i = rows().length; i < 14; i++) clickF(box.querySelector(".feed-add"));
+      assert("rss (reglages) : 12 flux au plus, le bouton Ajouter se desactive", rows().length === 12 && box.querySelector(".feed-add").disabled);
+      const bad = rows()[0].querySelector(".feed-url");
+      bad.value = "pas une adresse";
+      bad.dispatchEvent(new window.Event("input", { bubbles: true }));
+      assert("rss (reglages) : une adresse non http(s) est signalee", bad.classList.contains("feed-bad"));
+      document.querySelector("#tileModal .modal-close").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
     }
 
     /* ---------- Gestion de la bibliotheque (1.155.0) ----------

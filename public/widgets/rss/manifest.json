@@ -1,17 +1,17 @@
 {
   "id": "rss",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "name": {
     "en": "RSS feed",
     "fr": "Flux RSS"
   },
   "description": {
-    "en": "Latest headlines from an RSS or Atom feed, with automatic rotation. Articles with a link open in a popup showing the full article text extracted from the linked page (reader mode, like a browser's — no ads or navigation clutter), the feed's own illustration when provided, falling back to the feed's own summary if extraction fails.",
-    "fr": "Derniers titres d'un flux RSS ou Atom, avec rotation automatique. Les articles pourvus d'un lien s'ouvrent dans une popup affichant le texte complet de l'article extrait de la page liée (mode lecture, comme celui d'un navigateur — sans publicités ni menus), l'illustration fournie par le flux quand elle existe, avec repli sur le résumé du flux si l'extraction échoue."
+    "en": "Latest headlines from up to 12 RSS or Atom feeds, combined or grouped, with per-feed colours, filters and automatic rotation. Articles with a link open in a popup showing the full article text extracted from the linked page (reader mode, like a browser's — no ads or navigation clutter), the feed's own illustration when provided, falling back to the feed's own summary if extraction fails.",
+    "fr": "Derniers titres de 12 flux RSS ou Atom au plus, combinés ou groupés, avec couleur et filtres par flux et rotation automatique. Les articles pourvus d'un lien s'ouvrent dans une popup affichant le texte complet de l'article extrait de la page liée (mode lecture, comme celui d'un navigateur — sans publicités ni menus), l'illustration fournie par le flux quand elle existe, avec repli sur le résumé du flux si l'extraction échoue."
   },
   "tagline": {
-    "en": "Latest headlines from an RSS or Atom feed.",
-    "fr": "Derniers titres d'un flux RSS ou Atom."
+    "en": "Latest headlines from up to 12 RSS or Atom feeds.",
+    "fr": "Derniers titres de 12 flux RSS ou Atom au plus."
   },
   "size": {
     "w": 4,
@@ -23,53 +23,37 @@
   },
   "settings": [
     {
-      "key": "url",
-      "type": "text",
-      "default": "https://www.lemonde.fr/rss/une.xml",
-      "label": {
-        "en": "Feed 1: address (.xml)",
-        "fr": "Flux 1 : adresse (.xml)"
-      },
-      "hint": {
-        "en": "Required. Up to 2 more feeds can be added below (\"Additional feeds\") to combine several sources in the same tile, each item tagged with its source.",
-        "fr": "Obligatoire. Jusqu'à 2 flux supplémentaires peuvent être ajoutés plus bas (« Flux supplémentaires ») pour combiner plusieurs sources dans la même tuile, chaque article étant marqué de sa source."
-      },
-      "group": {
-        "en": "Feed",
-        "fr": "Flux"
-      }
-    },
-    {
-      "key": "label1",
-      "type": "text",
+      "key": "feeds",
+      "type": "feedlist",
       "default": "",
+      "max": 12,
+      "legacy": [
+        {
+          "url": "url",
+          "label": "label1",
+          "color": "color1"
+        },
+        {
+          "url": "url2",
+          "label": "label2",
+          "color": "color2"
+        },
+        {
+          "url": "url3",
+          "label": "label3",
+          "color": "color3"
+        }
+      ],
       "label": {
-        "en": "Feed 1: short tag (optional)",
-        "fr": "Flux 1 : étiquette courte (facultatif)"
+        "en": "Feeds (up to 12)",
+        "fr": "Flux (jusqu'à 12)"
       },
       "hint": {
-        "en": "Only used once a 2nd feed is added below (with a single feed, the full source name is shown as a header instead). Leave empty to use the feed's own title — often too long for a compact tag (e.g. \"Le Monde.fr – Actualités et Infos en France et dans le monde\"); a short override like \"Le Monde\" reads much better next to each item.",
-        "fr": "Utilisé seulement dès qu'un 2e flux est ajouté ci-dessous (avec un seul flux, le nom complet de la source reste affiché en en-tête). Laissez vide pour utiliser le titre du flux lui-même — souvent trop long pour une étiquette compacte (ex. « Le Monde.fr – Actualités et Infos en France et dans le monde ») ; une version courte comme « Le Monde » se lit bien mieux à côté de chaque article."
+        "en": "Add the RSS or Atom addresses you want to combine. Each feed has its own name, colour and optional group; untick one to pause it without deleting it. Use ▲▼ to order them.",
+        "fr": "Ajoutez les adresses RSS ou Atom à combiner. Chaque flux a son nom, sa couleur et un groupe facultatif ; décochez-en un pour le suspendre sans le supprimer. ▲▼ règlent l'ordre."
       },
       "group": {
-        "en": "Feed",
-        "fr": "Flux"
-      }
-    },
-    {
-      "key": "color1",
-      "type": "tagcolor",
-      "default": "",
-      "label": {
-        "en": "Feed 1: tag colour",
-        "fr": "Flux 1 : couleur de l'étiquette"
-      },
-      "hint": {
-        "en": "Auto gives each feed its own colour. Pick one to recognise this source at a glance.",
-        "fr": "Auto donne à chaque flux sa propre couleur. Choisissez-en une pour reconnaître cette source d'un coup d'œil."
-      },
-      "group": {
-        "en": "Feed",
+        "en": "Feeds",
         "fr": "Flux"
       }
     },
@@ -83,6 +67,30 @@
       "label": {
         "en": "Items shown",
         "fr": "Nombre d'articles"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "perFeedMax",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 20,
+      "step": 1,
+      "label": {
+        "en": "Maximum items per feed (0 = no limit)",
+        "fr": "Articles maximum par flux (0 = sans limite)"
+      },
+      "hint": {
+        "en": "Keeps a chatty feed from drowning the others in the combined list: only its N most recent items are kept.",
+        "fr": "Évite qu'un flux très bavard noie les autres dans la liste combinée : seuls ses N articles les plus récents sont gardés."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
       }
     },
     {
@@ -96,6 +104,10 @@
       "hint": {
         "en": "With a single feed: its name as a header above the list. With several feeds combined: a short tag next to each article instead, so you can tell which one it came from.",
         "fr": "Avec un seul flux : son nom en en-tête au-dessus de la liste. Avec plusieurs flux combinés : une étiquette courte à côté de chaque article à la place, pour savoir de quelle source il provient."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
       }
     },
     {
@@ -109,6 +121,10 @@
       "hint": {
         "en": "A thin bar in the feed's colour at the left of each article, readable from afar. Used when several feeds are combined, or when you picked a colour.",
         "fr": "Une fine barre de la couleur du flux à gauche de chaque article, repérable de loin. Utilisé quand plusieurs flux sont combinés, ou dès qu'une couleur est choisie."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
       }
     },
     {
@@ -118,108 +134,138 @@
       "label": {
         "en": "Rotate one headline at a time",
         "fr": "Faire défiler un titre à la fois"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
       }
     },
     {
-      "key": "url2",
+      "key": "groupView",
+      "type": "select",
+      "default": "all",
+      "options": [
+        {
+          "value": "all",
+          "label": {
+            "en": "Everything together",
+            "fr": "Tout ensemble"
+          }
+        },
+        {
+          "value": "tabs",
+          "label": {
+            "en": "Group selector on the tile",
+            "fr": "Sélecteur de groupes sur la tuile"
+          }
+        },
+        {
+          "value": "rotate",
+          "label": {
+            "en": "Automatic rotation between groups",
+            "fr": "Rotation automatique entre les groupes"
+          }
+        }
+      ],
+      "label": {
+        "en": "Feed groups",
+        "fr": "Groupes de flux"
+      },
+      "hint": {
+        "en": "Only matters if you gave some feeds a group name. Selector: tap a group name on the tile. Rotation: the tile shows each group in turn.",
+        "fr": "N'a d'effet que si vous avez donné un nom de groupe à certains flux. Sélecteur : touchez un nom de groupe sur la tuile. Rotation : la tuile montre chaque groupe à tour de rôle."
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "groupSeconds",
+      "type": "number",
+      "default": 20,
+      "min": 5,
+      "max": 300,
+      "step": 5,
+      "label": {
+        "en": "Seconds per group (rotation)",
+        "fr": "Secondes par groupe (rotation)"
+      },
+      "showIf": {
+        "key": "groupView",
+        "equals": "rotate"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
+      }
+    },
+    {
+      "key": "dedupe",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Hide duplicates between feeds",
+        "fr": "Masquer les doublons entre flux"
+      },
+      "hint": {
+        "en": "An article published by two feeds (same link or same title) appears only once, under the first feed of the list.",
+        "fr": "Un article publié par deux flux (même lien ou même titre) n'apparaît qu'une fois, sous le premier flux de la liste."
+      },
+      "group": {
+        "en": "Filters",
+        "fr": "Filtres"
+      }
+    },
+    {
+      "key": "keepWords",
       "type": "text",
       "default": "",
       "label": {
-        "en": "Feed 2: address (.xml, optional)",
-        "fr": "Flux 2 : adresse (.xml, facultatif)"
+        "en": "Keep only articles containing (words, comma-separated)",
+        "fr": "Garder seulement les articles contenant (mots séparés par des virgules)"
       },
       "hint": {
-        "en": "Leave empty to not use this slot.",
-        "fr": "Laissez vide pour ne pas utiliser cet emplacement."
+        "en": "Applies to every feed, on top of each feed's own words. Case and accents are ignored. Empty = keep everything.",
+        "fr": "S'applique à tous les flux, en plus des mots propres à chaque flux. Majuscules et accents ignorés. Vide = tout garder."
       },
       "group": {
-        "en": "Additional feeds",
-        "fr": "Flux supplémentaires"
+        "en": "Filters",
+        "fr": "Filtres"
       }
     },
     {
-      "key": "label2",
+      "key": "hideWords",
       "type": "text",
       "default": "",
       "label": {
-        "en": "Feed 2: short tag (optional)",
-        "fr": "Flux 2 : étiquette courte (facultatif)"
+        "en": "Hide articles containing (words, comma-separated)",
+        "fr": "Masquer les articles contenant (mots séparés par des virgules)"
       },
       "hint": {
-        "en": "Leave empty to use the feed's own title.",
-        "fr": "Laissez vide pour utiliser le titre du flux lui-même."
+        "en": "Useful against spoilers, a sport you don't follow or a recurring topic.",
+        "fr": "Utile contre les spoilers, un sport qu'on ne suit pas ou un sujet récurrent."
       },
       "group": {
-        "en": "Additional feeds",
-        "fr": "Flux supplémentaires"
+        "en": "Filters",
+        "fr": "Filtres"
       }
     },
     {
-      "key": "color2",
-      "type": "tagcolor",
-      "default": "",
+      "key": "warnFailed",
+      "type": "checkbox",
+      "default": true,
       "label": {
-        "en": "Feed 2: tag colour",
-        "fr": "Flux 2 : couleur de l'étiquette"
+        "en": "Warn when a feed does not answer",
+        "fr": "Signaler un flux qui ne répond pas"
       },
       "hint": {
-        "en": "Auto gives each feed its own colour. Pick one to recognise this source at a glance.",
-        "fr": "Auto donne à chaque flux sa propre couleur. Choisissez-en une pour reconnaître cette source d'un coup d'œil."
+        "en": "A small warning line names the failing feeds; the others keep showing.",
+        "fr": "Une petite ligne d'avertissement nomme les flux en panne ; les autres continuent de s'afficher."
       },
       "group": {
-        "en": "Additional feeds",
-        "fr": "Flux supplémentaires"
-      }
-    },
-    {
-      "key": "url3",
-      "type": "text",
-      "default": "",
-      "label": {
-        "en": "Feed 3: address (.xml, optional)",
-        "fr": "Flux 3 : adresse (.xml, facultatif)"
-      },
-      "hint": {
-        "en": "Leave empty to not use this slot.",
-        "fr": "Laissez vide pour ne pas utiliser cet emplacement."
-      },
-      "group": {
-        "en": "Additional feeds",
-        "fr": "Flux supplémentaires"
-      }
-    },
-    {
-      "key": "label3",
-      "type": "text",
-      "default": "",
-      "label": {
-        "en": "Feed 3: short tag (optional)",
-        "fr": "Flux 3 : étiquette courte (facultatif)"
-      },
-      "hint": {
-        "en": "Leave empty to use the feed's own title.",
-        "fr": "Laissez vide pour utiliser le titre du flux lui-même."
-      },
-      "group": {
-        "en": "Additional feeds",
-        "fr": "Flux supplémentaires"
-      }
-    },
-    {
-      "key": "color3",
-      "type": "tagcolor",
-      "default": "",
-      "label": {
-        "en": "Feed 3: tag colour",
-        "fr": "Flux 3 : couleur de l'étiquette"
-      },
-      "hint": {
-        "en": "Auto gives each feed its own colour. Pick one to recognise this source at a glance.",
-        "fr": "Auto donne à chaque flux sa propre couleur. Choisissez-en une pour reconnaître cette source d'un coup d'œil."
-      },
-      "group": {
-        "en": "Additional feeds",
-        "fr": "Flux supplémentaires"
+        "en": "Filters",
+        "fr": "Filtres"
       }
     },
     {
@@ -232,7 +278,65 @@
       "label": {
         "en": "Refresh (minutes)",
         "fr": "Rafraîchissement (minutes)"
+      },
+      "group": {
+        "en": "Display",
+        "fr": "Affichage"
       }
+    },
+    {
+      "key": "url",
+      "type": "text",
+      "default": "https://www.lemonde.fr/rss/une.xml",
+      "hidden": true
+    },
+    {
+      "key": "label1",
+      "type": "text",
+      "default": "",
+      "hidden": true
+    },
+    {
+      "key": "color1",
+      "type": "tagcolor",
+      "default": "",
+      "hidden": true
+    },
+    {
+      "key": "url2",
+      "type": "text",
+      "default": "",
+      "hidden": true
+    },
+    {
+      "key": "label2",
+      "type": "text",
+      "default": "",
+      "hidden": true
+    },
+    {
+      "key": "color2",
+      "type": "tagcolor",
+      "default": "",
+      "hidden": true
+    },
+    {
+      "key": "url3",
+      "type": "text",
+      "default": "",
+      "hidden": true
+    },
+    {
+      "key": "label3",
+      "type": "text",
+      "default": "",
+      "hidden": true
+    },
+    {
+      "key": "color3",
+      "type": "tagcolor",
+      "default": "",
+      "hidden": true
     }
   ]
 }

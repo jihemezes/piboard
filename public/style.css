@@ -4448,3 +4448,30 @@ body.touch .page-row select { min-height: 48px; font-size: 16px; }
 body.touch .page-row button { min-width: 48px; min-height: 48px; font-size: 18px; }
 body.touch .ss-slot input[type="time"] { width: 150px; min-height: 52px; }
 body.touch .btn.small { padding: 12px 18px; font-size: 15px; min-height: 46px; }
+
+/* --- Liste de flux des reglages (champ "feedlist", 1.171.0) ---
+   Settings feed list ("feedlist" field). */
+.field-feedlist .feed-body { display: flex; flex-direction: column; gap: 6px; margin: 4px 0; }
+.field-feedlist .feed-row { border: 1px solid var(--tile-edge, rgba(127,127,127,.35)); border-radius: 8px; padding: 6px 8px; }
+.field-feedlist .feed-row.feed-off .feed-main > input[type=text] { opacity: .5; }
+.field-feedlist .feed-main { display: flex; align-items: center; gap: 6px; }
+.field-feedlist .feed-dot { flex: 0 0 auto; width: 12px; height: 12px; border-radius: 50%; }
+.field-feedlist .feed-label { flex: 0 1 28%; min-width: 0; }
+.field-feedlist .feed-url { flex: 1 1 auto; min-width: 0; }
+.field-feedlist .feed-url.feed-bad { border-color: var(--danger, #d05050); }
+.field-feedlist .feed-btn { flex: 0 0 auto; min-width: 30px; padding: 3px 6px; border-radius: 6px; border: 1px solid var(--tile-edge, rgba(127,127,127,.35)); background: transparent; color: inherit; cursor: pointer; touch-action: manipulation; }
+.field-feedlist .feed-btn:disabled { opacity: .3; cursor: default; }
+.field-feedlist .feed-adv { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 10px; margin-top: 8px; }
+.field-feedlist .feed-adv[hidden] { display: none; }
+.field-feedlist .feed-adv label { display: flex; flex-direction: column; gap: 2px; font-size: 12px; }
+.field-feedlist .feed-colors { grid-column: 1 / -1; display: flex; align-items: center; flex-wrap: wrap; gap: 5px; font-size: 12px; }
+.field-feedlist .feed-color-auto { font: inherit; font-size: 11px; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--tile-edge, rgba(127,127,127,.35)); background: transparent; color: inherit; cursor: pointer; }
+.field-feedlist .feed-color-auto.active { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.field-feedlist .feed-color-sw { width: 20px; height: 20px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; padding: 0; }
+.field-feedlist .feed-color-sw.active { border-color: var(--text, #fff); box-shadow: 0 0 0 1px var(--accent); }
+.field-feedlist .feed-color-custom { width: 26px; height: 22px; padding: 0; border: 1px solid var(--tile-edge, rgba(127,127,127,.35)); border-radius: 5px; background: transparent; }
+.field-feedlist .feed-actions { display: flex; align-items: center; gap: 10px; }
+@media (max-width: 640px) {
+  .field-feedlist .feed-adv { grid-template-columns: 1fr; }
+  .field-feedlist .feed-label { flex-basis: 22%; }
+}
