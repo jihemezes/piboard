@@ -3628,6 +3628,22 @@ body.touch .photos-check, body.touch-mode .photos-check { width: 32px; height: 3
 .folder-row:hover { background: var(--field-bg); }
 .folder-row small { color: var(--muted); margin-left: 6px; }
 .folder-msg { padding: 10px; color: var(--muted); font-size: 12px; }
+.folder-shortcuts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.folder-shortcuts:empty { display: none; }
+.folder-chip { white-space: nowrap; }
+.folder-row-lib { font-weight: 600; }
+.folder-images { margin: 0 0 10px; }
+.folder-images-head, .folder-images-more { margin: 0 0 6px; font-size: 12px; color: var(--muted); }
+.folder-images-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 6px; max-height: 30vh; overflow-y: auto; }
+.folder-img { margin: 0; position: relative; }
+.folder-img img { display: block; width: 100%; aspect-ratio: 1; object-fit: cover; border-radius: 6px; background: var(--field-bg); }
+.folder-img figcaption { font-size: 10px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder-img.noprev img { visibility: hidden; }
+.folder-img.noprev::before { content: "🖼"; position: absolute; inset: 0 0 14px 0; display: flex; align-items: center; justify-content: center; font-size: 22px; background: var(--field-bg); border-radius: 6px; }
+@media (pointer: coarse) {
+  .folder-row { padding: 12px 12px; }
+  .folder-chip { min-height: 40px; }
+}
 .folder-new { display: flex; gap: 6px; }
 .folder-new input { flex: 1; min-width: 0; }
 

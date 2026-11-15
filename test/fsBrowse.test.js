@@ -100,5 +100,47 @@ test("emplacements de depart : une liste de dossiers qui existent", () => {
   assert.strictEqual(new Set(roots.map((r) => r.path)).size, roots.length, "pas de doublon");
 });
 
+test("listDir(images) : nomme les images, marque les phototheques, ignore le reste", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "piboard-fs-img-"));
+  fs.writeFileSync(path.join(dir, "b.JPG"), "x");
+  fs.writeFileSync(path.join(dir, "a.png"), "x");
+  fs.writeFileSync(path.join(dir, "c.heic"), "x");
+  fs.writeFileSync(path.join(dir, "note.txt"), "x");
+  fs.writeFileSync(path.join(dir, ".hidden.jpg"), "x");
+  fs.mkdirSync(path.join(dir, "Photos Library.photoslibrary"));
+  fs.mkdirSync(path.join(dir, "Autre"));
+  const plain = B.listDir(dir);
+  assert.strictEqual(plain.images, undefined, "sans option, pas d'images");
+  const r = B.listDir(dir, { images: true });
+  assert.deepStrictEqual(r.images.map((i) => i.name), ["a.png", "b.JPG", "c.heic"]);
+  assert.strictEqual(r.imageCount, 3);
+  assert.strictEqual(r.images.find((i) => i.name === "c.heic").native, false);
+  assert.strictEqual(r.images.find((i) => i.name === "a.png").native, true);
+  assert.strictEqual(r.dirs.find((d) => d.name === "Photos Library.photoslibrary").library, true);
+  assert.strictEqual(r.dirs.find((d) => d.name === "Autre").library, undefined);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
+test("listShortcuts : dossiers existants + phototheques donnees", () => {
+  const sc = B.listShortcuts([{ name: "Vacances", path: "/x/Vacances.photoslibrary" }]);
+  assert.ok(sc.some((s) => s.kind === "library" && s.name === "Vacances"));
+  for (const s of sc.filter((x) => x.kind !== "library")) assert.ok(fs.statSync(s.path).isDirectory(), s.path);
+});
+
+test("previewable : image ordinaire seulement, chemin absolu", () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "piboard-fs-prev-"));
+  const img = path.join(dir, "a.jpg");
+  fs.writeFileSync(img, "x");
+  fs.writeFileSync(path.join(dir, "secret.txt"), "x");
+  fs.mkdirSync(path.join(dir, "d.jpg"));
+  assert.strictEqual(B.previewable(img), img);
+  assert.strictEqual(B.previewable(path.join(dir, "secret.txt")), null, "pas une image");
+  assert.strictEqual(B.previewable(path.join(dir, "d.jpg")), null, "un dossier");
+  assert.strictEqual(B.previewable("a.jpg"), null, "relatif");
+  assert.strictEqual(B.previewable(path.join(dir, "absent.jpg")), null);
+  assert.strictEqual(B.previewable(""), null);
+  fs.rmSync(dir, { recursive: true, force: true });
+});
+
 console.log(failures ? `\n>>> ${failures} ECHEC(S)` : "\n>>> TOUS LES TESTS PASSENT");
 process.exit(failures ? 1 : 0);

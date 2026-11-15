@@ -32,6 +32,27 @@
 
 # Nouveautes / What's new
 
+## 1.167.0
+
+**Choisir un dossier ou une photothèque, sans rien taper**
+
+Partout où PiBoard demande un dossier ou une photothèque (diaporama, écran de veille,
+enregistrement TV…), le bouton **« Parcourir… »** ouvre maintenant le **Finder** sur Mac,
+l'**Explorateur** sous Windows, le sélecteur de fichiers sous Linux. Sur un Raspberry Pi
+ou dans un navigateur, l'explorateur de PiBoard prend le relais : gros boutons tactiles,
+**raccourcis** (Images, clés USB, photothèques trouvées), **aperçu des images** du dossier,
+et il se rouvre là où vous l'aviez laissé.
+
+---
+
+**Pick a folder or a library without typing anything**
+
+Wherever PiBoard asks for a folder or a library (slideshow, screen saver, TV recording…),
+the **"Browse…"** button now opens the **Finder** on Mac, **File Explorer** on Windows and
+the file chooser on Linux. On a Raspberry Pi or in a browser, PiBoard's own browser takes
+over: big touch-friendly buttons, **shortcuts** (Pictures, USB keys, detected libraries),
+a **preview of the folder's images**, and it reopens where you left it.
+
 ## 1.166.0
 
 **Vos photos Mac dans PiBoard**

@@ -4,16 +4,20 @@
    choisir un emplacement (aujourd'hui : le dossier d'enregistrement de
    la tuile Chaines TV).
 
-   PORTEE VOLONTAIREMENT ETROITE. Ce module ne sait que deux choses :
-   lister les sous-dossiers d'un dossier, et creer un dossier. Il ne
-   lit aucun fichier, n'en renvoie jamais le contenu, et ne supprime
-   rien. Un chemin est un chemin absolu de la machine : c'est le propre
+   PORTEE VOLONTAIREMENT ETROITE. Ce module sait lister les
+   sous-dossiers d'un dossier, creer un dossier et (1.167.0) nommer les
+   IMAGES qu'un dossier contient, pour en montrer des apercus pendant
+   la navigation. Il ne renvoie jamais le contenu d'un fichier (les
+   apercus passent par une route a part, limitee aux images) et ne
+   supprime rien. Un chemin est un chemin absolu de la machine : c'est le propre
    d'un reglage qui designe un disque USB ou un partage reseau.
 
    Browsing the FOLDERS of the machine running PiBoard, to pick a
-   location. Deliberately narrow: it only lists a folder's subfolders
-   and creates a folder. It never reads a file, never returns file
-   contents, and deletes nothing.
+   location. Deliberately narrow: it lists a folder's subfolders,
+   creates a folder and (1.167.0) names the IMAGES a folder holds so
+   previews can be shown while browsing. It never returns file
+   contents itself (previews go through a separate, images-only route)
+   and deletes nothing.
    ============================================================ */
 
 "use strict";
@@ -91,7 +95,26 @@ function listRoots() {
    inaccessible ne doit pas empecher de voir les autres.
    Subfolders of a folder. Unreadable entries are skipped rather than
    failing the whole listing. */
-function listDir(dir) {
+/* Images reconnues pour les apercus (1.167.0). Les formats que le
+   navigateur affiche tels quels, puis ceux qu'il faut convertir
+   (possible sous macOS seulement ; sinon l'interface montre un repere).
+   Images recognised for previews. Browser-native formats first, then
+   those needing conversion (macOS only; elsewhere a placeholder). */
+const PREVIEW_EXT = ["jpg", "jpeg", "png", "gif", "webp"];
+const CONVERT_EXT = ["heic", "heif", "tif", "tiff", "bmp"];
+const IMAGES_MAX = 120;
+
+function imageExt(name) {
+  const m = /\.([A-Za-z0-9]+)$/.exec(String(name || ""));
+  return m ? m[1].toLowerCase() : "";
+}
+function isImageName(name) {
+  const e = imageExt(name);
+  return PREVIEW_EXT.includes(e) || CONVERT_EXT.includes(e);
+}
+function isLibraryName(name) { return /\.photoslibrary$/i.test(String(name || "")); }
+
+function listDir(dir, opts) {
   const full = path.resolve(String(dir || ""));
   const entries = fs.readdirSync(full, { withFileTypes: true });
   const dirs = [];
@@ -101,12 +124,68 @@ function listDir(dir) {
     if (e.isSymbolicLink()) {
       try { isDir = fs.statSync(path.join(full, e.name)).isDirectory(); } catch (err) { isDir = false; }
     }
-    if (isDir) dirs.push({ name: e.name, path: path.join(full, e.name) });
+    if (isDir) {
+      const d = { name: e.name, path: path.join(full, e.name) };
+      if (isLibraryName(e.name)) d.library = true;
+      dirs.push(d);
+    }
   }
   dirs.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
   let writable = true;
   try { fs.accessSync(full, fs.constants.W_OK); } catch (e) { writable = false; }
-  return { path: full, parent: parentOf(full), writable, dirs, breadcrumb: breadcrumb(full) };
+  const out = { path: full, parent: parentOf(full), writable, dirs, breadcrumb: breadcrumb(full) };
+  if (opts && opts.images) {
+    const images = [];
+    let total = 0;
+    for (const e of entries) {
+      if (e.name.startsWith(".") || !isImageName(e.name)) continue;
+      if (!(e.isFile() || e.isSymbolicLink())) continue;
+      total++;
+      if (images.length < IMAGES_MAX) images.push({ name: e.name, path: path.join(full, e.name), native: PREVIEW_EXT.includes(imageExt(e.name)) });
+    }
+    images.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: "base" }));
+    out.images = images;
+    out.imageCount = total;
+  }
+  return out;
+}
+
+/* Emplacements usuels a proposer en un clic (1.167.0) : Images, Bureau,
+   Documents, puis les phototheques deja decouvertes. Un dossier absent
+   est simplement omis.
+   Usual places offered in one click: Pictures, Desktop, Documents,
+   then any libraries already discovered. Absent folders are omitted. */
+function listShortcuts(libraries) {
+  const out = [];
+  const home = os.homedir();
+  const add = (name, dir, kind) => {
+    if (!dir || out.some((x) => x.path === dir)) return;
+    try { if (fs.statSync(dir).isDirectory()) out.push({ name, path: dir, kind }); } catch (e) { /* absent */ }
+  };
+  add("Pictures", path.join(home, "Pictures"), "pictures");
+  add("Pictures", path.join(home, "Images"), "pictures");
+  add("Desktop", path.join(home, "Desktop"), "desktop");
+  add("Desktop", path.join(home, "Bureau"), "desktop");
+  add("Documents", path.join(home, "Documents"), "documents");
+  add("Downloads", path.join(home, "Downloads"), "downloads");
+  for (const l of libraries || []) {
+    if (l && l.path) out.push({ name: l.name || path.basename(l.path), path: l.path, kind: "library" });
+  }
+  return out;
+}
+
+/* Un fichier image dont on peut donner un apercu : chemin absolu, image
+   reconnue, fichier ordinaire. Renvoie le chemin resolu ou null.
+   An image file safe to preview: absolute path, recognised image,
+   regular file. Returns the resolved path or null. */
+function previewable(file) {
+  const f = String(file || "");
+  if (!f || !path.isAbsolute(f) || f.includes("\u0000") || !isImageName(f)) return null;
+  const full = path.resolve(f);
+  try {
+    if (!fs.statSync(full).isFile()) return null;
+  } catch (e) { return null; }
+  return full;
 }
 
 function mkdir(parent, name) {
@@ -117,4 +196,7 @@ function mkdir(parent, name) {
   return full;
 }
 
-module.exports = { isValidFolderName, parentOf, breadcrumb, listRoots, listDir, mkdir };
+module.exports = {
+  isValidFolderName, parentOf, breadcrumb, listRoots, listDir, mkdir,
+  listShortcuts, previewable, isImageName, isLibraryName, PREVIEW_EXT, CONVERT_EXT, IMAGES_MAX
+};

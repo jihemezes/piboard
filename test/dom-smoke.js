@@ -939,7 +939,10 @@ const dom = new JSDOM(html, {
         return json({ services: asked.map(canned) });
       }
       if (u.includes("/api/fs/roots")) {
-        return json({ separator: "/", roots: [{ name: "jm", path: "/home/jm" }, { name: "/", path: "/" }] });
+        return json({
+          separator: "/", roots: [{ name: "jm", path: "/home/jm" }, { name: "/", path: "/" }],
+          shortcuts: [{ name: "Pictures", path: "/home/jm/Pictures", kind: "pictures" }, { name: "Vacances", path: "/Volumes/X/Vacances.photoslibrary", kind: "library" }]
+        });
       }
       if (u.includes("/api/fs/list")) {
         const asked = decodeURIComponent((u.match(/path=([^&]*)/) || [])[1] || "");
@@ -948,7 +951,9 @@ const dom = new JSDOM(html, {
           path: asked, parent: asked === "/" ? null : "/home",
           writable: true,
           dirs: FS_MOCK.dirs(asked),
-          breadcrumb: []
+          breadcrumb: [],
+          images: asked === "/home/jm" && /images=1/.test(u) ? [{ name: "a.jpg", path: "/home/jm/a.jpg", native: true }, { name: "b.heic", path: "/home/jm/b.heic", native: false }] : undefined,
+          imageCount: 2
         });
       }
       if (u.includes("/api/fs/mkdir") && method === "POST") {
@@ -9687,6 +9692,13 @@ function catalogItemFor(catalog, document, widgetId) {
     await sleep(80);
     assert("dossier : entrer dans un dossier montre ses sous-dossiers et permet de le choisir",
       /Videos|home/.test($d("folderPath").textContent) && $d("folderChoose").disabled === false);
+    assert("dossier : des raccourcis sont proposes (Images, phototheques)",
+      $d("folderShortcuts").querySelectorAll(".folder-chip").length === 2
+      && /Vacances/.test($d("folderShortcuts").textContent));
+    assert("dossier : les images du dossier sont apercues",
+      $d("folderImages").hidden === false
+      && $d("folderImages").querySelectorAll("img").length === 2
+      && /\/api\/fs\/thumb\?path=/.test($d("folderImages").querySelector("img").getAttribute("src")));
 
     $d("folderNewName").value = "Enregistrements";
     click($d("folderCreate"));

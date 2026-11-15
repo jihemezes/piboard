@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.166.0
+   Version 1.167.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3892,7 +3892,7 @@
         </div>`;
       }
       case "folder":
-        return `<label class="field"><span>${label}</span><div class="field-folder-wrap"><input type="text" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-folder-browse" data-for="${f.key}">${i18n.t("folder.browse")}</button></div>${hint}</label>`;
+        return `<label class="field"><span>${label}</span><div class="field-folder-wrap"><input type="text" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-folder-browse" data-for="${f.key}"${f.pick === "photoslib" ? ' data-pick="photoslib"' : ""}>${i18n.t("folder.browse")}</button></div>${hint}</label>`;
       case "password":
         return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div>${hint}</label>`;
       /* Champ "secret" : contrairement a "password" ci-dessus, la valeur
@@ -7052,14 +7052,79 @@
      Picking a folder ON THE MACHINE RUNNING PIBOARD -- not on the one
      looking at the board. A browser's own file picker would only see
      the local machine, and cannot designate a folder anyway. */
-  const folderPicker = { onPick: null, current: "", separator: "/" };
+  const folderPicker = { onPick: null, current: "", separator: "/", kind: "folder", notice: "" };
 
-  function openFolderPicker(startPath, onPick) {
+  /* Dernier dossier utilise, par genre de choix (1.167.0) : on rouvre
+     la ou l'on etait plutot qu'a la racine.
+     Last folder used, per kind of choice: reopen where one was. */
+  function lastFolderKey(kind) { return "piboardLastFolder-" + kind; }
+  function lastFolder(kind) {
+    try { return localStorage.getItem(lastFolderKey(kind)) || ""; } catch (e) { return ""; }
+  }
+  function rememberFolder(kind, picked) {
+    let keep = String(picked || "");
+    if (kind === "photoslib") keep = keep.replace(/[\\/][^\\/]+[\\/]?$/, "") || keep;
+    try { if (keep) localStorage.setItem(lastFolderKey(kind), keep); } catch (e) { /* stockage indisponible */ }
+  }
+
+  /* Fenetre native (Finder / Explorateur) quand l'application de
+     bureau en offre une, explorateur integre sinon (Raspberry Pi,
+     navigateur, poste distant). Un seul point d'entree pour tous les
+     champs "dossier" et "phototheque" : plus aucun chemin a taper.
+     Native window (Finder / Explorer) when the desktop app has one,
+     built-in browser otherwise. A single entry point for every folder
+     and library field: no more paths to type. */
+  let nativePickCache = null;
+  async function nativePickAvailable() {
+    if (nativePickCache === null) {
+      try {
+        const r = await fetch("/api/fs/native");
+        nativePickCache = r.ok ? !!(await r.json()).available : false;
+      } catch (e) { nativePickCache = false; }
+    }
+    return nativePickCache;
+  }
+
+  async function choosePath(opts) {
+    const o = opts || {};
+    const kind = o.kind === "photoslib" ? "photoslib" : "folder";
+    const start = String(o.start || "").trim() || lastFolder(kind);
+    const done = (picked) => {
+      rememberFolder(kind, picked);
+      if (o.onPick) o.onPick(picked);
+    };
+    let notice = "";
+    if (await nativePickAvailable()) {
+      try {
+        const r = await fetch("/api/fs/native", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ kind, start })
+        });
+        const data = await r.json();
+        if (r.ok) { if (data.path) done(data.path); return; }
+        if (data.error === "not-a-library") notice = i18n.t("folder.notLibrary");
+      } catch (e) { /* on retombe sur l'explorateur integre / built-in browser fallback */ }
+    }
+    openFolderPicker(start, done, { kind, notice });
+  }
+
+  function openFolderPicker(startPath, onPick, opts) {
+    const o = opts || {};
     folderPicker.onPick = onPick || null;
+    folderPicker.kind = o.kind === "photoslib" ? "photoslib" : "folder";
+    folderPicker.notice = o.notice || "";
+    const lib = folderPicker.kind === "photoslib";
     $("folderModal").hidden = false;
+    $("folderTitle").textContent = i18n.t(lib ? "folder.libTitle" : "folder.title");
     $("folderNewName").value = "";
+    $("folderNewRow").hidden = lib;
+    $("folderChoose").hidden = lib;
+    $("folderHint").hidden = !lib;
     $("folderStatus").hidden = true;
-    loadFolder(String(startPath || "").trim());
+    loadShortcuts();
+    loadFolder(String(startPath || "").trim()).then(() => {
+      if (folderPicker.notice) folderStatus(folderPicker.notice, true);
+    });
   }
 
   function closeFolderPicker() {
@@ -7074,6 +7139,36 @@
     el.classList.toggle("field-hint-error", !!isError);
   }
 
+  const SHORTCUT_ICON = { pictures: "🖼", desktop: "🖥", documents: "📄", downloads: "⬇", library: "📷" };
+
+  /* Raccourcis : Images, Bureau, Documents... et les phototheques
+     trouvees sur la machine (un clic).
+     Shortcuts: Pictures, Desktop, Documents... and the libraries found
+     on the machine (one click). */
+  async function loadShortcuts() {
+    const bar = $("folderShortcuts");
+    bar.innerHTML = "";
+    let data;
+    try { data = await fetch("/api/fs/roots").then((r) => r.json()); } catch (e) { return; }
+    folderPicker.separator = data.separator || "/";
+    const lib = folderPicker.kind === "photoslib";
+    const list = (data.shortcuts || []).slice().sort((x, y) => (y.kind === "library" ? 1 : 0) - (x.kind === "library" ? 1 : 0));
+    bar.innerHTML = list.map((sc) => {
+      const label = sc.kind === "library" ? sc.name : i18n.t("folder.sc." + sc.kind);
+      return `<button type="button" class="btn small folder-chip" data-sc="${escapeHtmlAttr(sc.path)}" data-kind="${escapeHtmlAttr(sc.kind)}">${SHORTCUT_ICON[sc.kind] || "📁"} ${escapeHtml(label)}</button>`;
+    }).join("");
+    bar.querySelectorAll("[data-sc]").forEach((b) => onActivate(b, () => {
+      if (lib && b.dataset.kind === "library") pickFolderNow(b.dataset.sc);
+      else loadFolder(b.dataset.sc);
+    }));
+  }
+
+  function pickFolderNow(picked) {
+    const cb = folderPicker.onPick;
+    closeFolderPicker();
+    if (cb && picked) cb(picked);
+  }
+
   /* Sans chemin de depart (ou avec un chemin devenu invalide), on
      propose les points de depart plutot qu'une erreur : disques,
      dossier personnel, points de montage.
@@ -7081,11 +7176,15 @@
      points are offered rather than an error. */
   async function loadFolder(dir) {
     const list = $("folderList");
+    const imgs = $("folderImages");
+    imgs.hidden = true;
+    imgs.innerHTML = "";
     list.innerHTML = `<li class="folder-msg">${escapeHtml(i18n.t("common.loading"))}</li>`;
     if (!dir) return loadRoots();
+    const lib = folderPicker.kind === "photoslib";
     let data;
     try {
-      const r = await fetch("/api/fs/list?path=" + encodeURIComponent(dir));
+      const r = await fetch("/api/fs/list?path=" + encodeURIComponent(dir) + (lib ? "" : "&images=1"));
       data = await r.json();
       if (!r.ok) throw new Error(data.error || "");
     } catch (e) {
@@ -7095,15 +7194,39 @@
     folderPicker.current = data.path;
     $("folderPath").textContent = data.path;
     $("folderChoose").disabled = false;
-    if (!data.writable) folderStatus(i18n.t("folder.readonly"), true);
+    if (!data.writable && !lib) folderStatus(i18n.t("folder.readonly"), true);
     else folderStatus("");
     const rows = [];
     if (data.parent) rows.push(`<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(data.parent)}">↑ ${escapeHtml(i18n.t("folder.up"))}</button></li>`);
     for (const d of data.dirs) {
-      rows.push(`<li><button type="button" class="folder-row" data-go="${escapeHtmlAttr(d.path)}">${escapeHtml(d.name)}</button></li>`);
+      const isLib = !!d.library;
+      rows.push(`<li><button type="button" class="folder-row${isLib ? " folder-row-lib" : ""}" ${isLib && lib ? "data-pick" : "data-go"}="${escapeHtmlAttr(d.path)}">${isLib ? "📷 " : ""}${escapeHtml(d.name)}</button></li>`);
     }
     list.innerHTML = rows.join("") || `<li class="folder-msg">${escapeHtml(i18n.t("folder.empty"))}</li>`;
     list.querySelectorAll("[data-go]").forEach((b) => onActivate(b, () => loadFolder(b.dataset.go)));
+    list.querySelectorAll("[data-pick]").forEach((b) => onActivate(b, () => pickFolderNow(b.dataset.pick)));
+    renderFolderImages(data);
+  }
+
+  /* Apercus des images du dossier : on voit si c'est le bon avant de
+     le choisir. Un format que la machine ne sait pas reduire montre un
+     simple repere.
+     Previews of the folder's images: one sees whether it is the right
+     one before choosing it. A format the machine cannot shrink shows a
+     plain marker. */
+  function renderFolderImages(data) {
+    const box = $("folderImages");
+    const images = data.images || [];
+    if (!images.length) { box.hidden = true; return; }
+    const total = data.imageCount || images.length;
+    box.innerHTML = `<p class="folder-images-head">${escapeHtml(i18n.t("folder.images", { n: total }))}</p><div class="folder-images-grid">` +
+      images.map((im) => `<figure class="folder-img" title="${escapeHtmlAttr(im.name)}"><img loading="lazy" alt="" src="/api/fs/thumb?path=${encodeURIComponent(im.path)}"><figcaption>${escapeHtml(im.name)}</figcaption></figure>`).join("") +
+      `</div>` + (total > images.length ? `<p class="folder-images-more">${escapeHtml(i18n.t("folder.imagesMore", { n: total - images.length }))}</p>` : "");
+    box.querySelectorAll("img").forEach((img) => img.addEventListener("error", () => {
+      const f = img.closest(".folder-img");
+      if (f) f.classList.add("noprev");
+    }));
+    box.hidden = false;
   }
 
   async function loadRoots() {
@@ -7560,10 +7683,10 @@
       const btn = e.target.closest && e.target.closest(".clone-path-pick");
       if (!btn) return;
       const id = btn.dataset.path;
-      openFolderPicker("", (picked) => {
+      choosePath({ kind: "folder", onPick: (picked) => {
         clonePathChoices[id] = picked;
         if (cloneInfo) $("cloneBody").innerHTML = cloneSummaryHtml(cloneInfo);
-      });
+      } });
     });
     document.addEventListener("click", (e) => {
       if (e.target && e.target.id === "cloneReloadBtn") location.reload();
@@ -7863,10 +7986,10 @@
       const pick = e.target.closest && e.target.closest(".pagex-path-pick");
       if (pick) {
         const id = pick.dataset.path;
-        openFolderPicker("", (picked) => {
+        choosePath({ kind: "folder", onPick: (picked) => {
           pagexPathChoices[id] = picked;
           if (pagexInfo) { $("pagexBody").innerHTML = pagexSummaryHtml(pagexInfo); syncPagexTarget(); }
-        });
+        } });
         return;
       }
       if (e.target && e.target.id === "pagexReloadBtn") location.reload();
@@ -7921,12 +8044,7 @@
     $("folderNewName").addEventListener("keydown", (e) => {
       if (e.key === "Enter") { e.preventDefault(); createFolder(); }
     });
-    onActivate($("folderChoose"), () => {
-      const pick = folderPicker.current;
-      const cb = folderPicker.onPick;
-      closeFolderPicker();
-      if (cb && pick) cb(pick);
-    });
+    onActivate($("folderChoose"), () => pickFolderNow(folderPicker.current));
   }
 
   /* ============================================================
@@ -8630,6 +8748,33 @@
     $("photosOtherRow").hidden = !(sel.value === "__other__");
   }
 
+  /* "Autre photothèque..." : on la designe dans le Finder (ou
+     l'explorateur integre), sans taper de chemin. Si la personne
+     renonce, la liste revient a son choix precedent.
+     "Another library...": pointed at in the Finder (or the built-in
+     browser), no path typed. If cancelled, the list goes back. */
+  function pickOtherLibrary(reload) {
+    let chosen = false;
+    choosePath({
+      kind: "photoslib",
+      start: photosState.library || "",
+      onPick: (picked) => {
+        chosen = true;
+        photosState.library = picked;
+        photosState.albumsFor = "";
+        try { localStorage.setItem(photosKey(), picked); } catch (e) { /* stockage indisponible */ }
+        renderPhotosLibSelect();
+        reload();
+      }
+    }).then(() => {
+      /* Fenetre native annulee : la liste revient a son choix. Avec
+         l'explorateur integre (ouvert), on n'y touche pas.
+         Native window cancelled: the list goes back. Left alone when
+         the built-in browser is open. */
+      if (!chosen && $("folderModal").hidden) renderPhotosLibSelect();
+    });
+  }
+
   async function openPhotos() {
     photosState.selected = new Set();
     photosState.items = [];
@@ -8823,24 +8968,13 @@
     $("photosLib").addEventListener("change", () => {
       const v = $("photosLib").value;
       $("photosOtherRow").hidden = v !== "__other__";
-      if (v === "__other__") { $("photosOtherPath").focus(); return; }
+      if (v === "__other__") { pickOtherLibrary(reload); return; }
       photosState.library = v;
       photosState.albumsFor = "";
       try { localStorage.setItem(photosKey(), v); } catch (e) { /* stockage indisponible */ }
       reload();
     });
-    onActivate($("photosOtherGo"), () => {
-      const v = String($("photosOtherPath").value || "").trim();
-      if (!v) return;
-      photosState.library = v;
-      photosState.albumsFor = "";
-      try { localStorage.setItem(photosKey(), v); } catch (e) { /* stockage indisponible */ }
-      renderPhotosLibSelect();
-      reload();
-    });
-    $("photosOtherPath").addEventListener("keydown", (e) => {
-      if (e.key === "Enter") { e.preventDefault(); $("photosOtherGo").click(); }
-    });
+    onActivate($("photosOtherGo"), () => pickOtherLibrary(reload));
   }
 
   async function refreshPageBgList() {
@@ -12115,9 +12249,17 @@
     document.addEventListener("click", (e) => {
       const btn = e.target.closest(".field-folder-browse");
       if (!btn) return;
-      const input = btn.parentElement.querySelector("input[data-key]");
+      const input = btn.parentElement.querySelector("input");
       if (!input) return;
-      openFolderPicker(input.value, (chosen) => { input.value = chosen; });
+      choosePath({
+        kind: btn.dataset.pick === "photoslib" ? "photoslib" : "folder",
+        start: input.value,
+        onPick: (chosen) => {
+          input.value = chosen;
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+          input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
     });
 
     document.addEventListener("click", (e) => {

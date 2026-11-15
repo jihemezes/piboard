@@ -412,7 +412,7 @@
 <div class="modal modal-stacked" id="folderModal" hidden>
   <div class="modal-card folder-card">
     <header class="modal-head">
-      <h2 data-i18n="folder.title">Choose a folder</h2>
+      <h2 id="folderTitle" data-i18n="folder.title">Choose a folder</h2>
       <button class="modal-close" id="folderClose" aria-label="Close">&times;</button>
     </header>
     <div class="folder-body">
@@ -420,8 +420,11 @@
         <button type="button" class="btn small" id="folderRoots" data-i18n="folder.roots">Locations</button>
         <code class="folder-path" id="folderPath"></code>
       </div>
+      <div class="folder-shortcuts" id="folderShortcuts"></div>
+      <p class="field-hint" id="folderHint" hidden data-i18n="folder.libHint">Pick a library ending in .photoslibrary.</p>
       <ul class="folder-list" id="folderList"></ul>
-      <div class="folder-new">
+      <div class="folder-images" id="folderImages" hidden></div>
+      <div class="folder-new" id="folderNewRow">
         <input type="text" id="folderNewName" maxlength="100" placeholder="" data-i18n-placeholder="folder.newName">
         <button type="button" class="btn small" id="folderCreate" data-i18n="folder.create">Create folder</button>
       </div>
@@ -937,7 +940,7 @@
         </label>
         <label class="field" id="ssFolderField">
           <span data-i18n="ss.folderPath">Local folder path</span>
-          <input type="text" id="setSSFolderPath">
+          <div class="field-folder-wrap"><input type="text" id="setSSFolderPath" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-folder-browse" data-i18n="folder.browse">Browse…</button></div>
         </label>
         <label class="field" id="ssWebdavUrlField">
           <span data-i18n="ss.webdavUrl">WebDAV folder URL</span>
@@ -1491,8 +1494,7 @@
       </label>
     </div>
     <div class="library-urlrow" id="photosOtherRow" hidden>
-      <input type="text" id="photosOtherPath" autocomplete="off" spellcheck="false" placeholder="/Volumes/…/Photos Library.photoslibrary">
-      <button type="button" class="btn small primary" id="photosOtherGo" data-i18n="photos.otherGo">Use</button>
+      <button type="button" class="btn small primary" id="photosOtherGo" data-i18n="photos.otherGo">Choose a library…</button>
     </div>
     <div class="library-toolbar photos-selbar">
       <button type="button" class="btn small" id="photosSelPage" data-i18n="photos.selectPage">Select shown photos</button>

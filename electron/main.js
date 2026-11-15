@@ -435,6 +435,27 @@ function registerController() {
        Electron, seul a posseder un vrai navigateur.
        Press subscriptions: the session lives here, in the Electron
        process, the only one with a real browser. */
+    /* Choix d'un dossier (1.167.0) : la vraie fenetre du systeme
+       (Finder, Explorateur, GTK). Pour une phototheque Photos, qui est
+       un PAQUET (un dossier que macOS presente comme un fichier), on
+       autorise aussi la selection de "fichier".
+       Folder choice: the system's own window. A Photos library is a
+       PACKAGE (a folder macOS presents as a file), so "file" selection
+       is allowed too. */
+    pickPath: async (opts) => {
+      const o = opts || {};
+      const lib = o.kind === "photoslib";
+      const options = {
+        title: lib ? "Photos Library" : "PiBoard",
+        properties: lib ? ["openDirectory", "openFile"] : ["openDirectory", "createDirectory"]
+      };
+      if (o.start) options.defaultPath = String(o.start);
+      const r = mainWindow && !mainWindow.isDestroyed()
+        ? await dialog.showOpenDialog(mainWindow, options)
+        : await dialog.showOpenDialog(options);
+      if (r.canceled || !r.filePaths || !r.filePaths[0]) return { cancelled: true };
+      return { path: r.filePaths[0] };
+    },
     pressLogin: (url) => require("./pressSession").login(url, mainWindow),
     pressStatus: (domains) => require("./pressSession").status(domains),
     pressLogout: (domain) => require("./pressSession").logout(domain),

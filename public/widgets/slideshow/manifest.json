@@ -86,11 +86,11 @@
     },
     {
       "key": "folderPath",
-      "type": "text",
+      "type": "folder",
       "default": "",
       "label": {
-        "en": "Local folder path (only used by \"Local folder\")",
-        "fr": "Chemin du dossier local (utilisé seulement par « Dossier local »)"
+        "en": "Local folder (only used by \"Local folder\")",
+        "fr": "Dossier local (utilisé seulement par « Dossier local »)"
       },
       "group": {
         "en": "Source",
@@ -144,15 +144,16 @@
     },
     {
       "key": "photosLibrary",
-      "type": "text",
+      "type": "folder",
+      "pick": "photoslib",
       "default": "",
       "label": {
         "en": "Photos library location (only used by \"Photos library\")",
         "fr": "Emplacement de la photothèque (utilisé seulement par « Photothèque Photos »)"
       },
       "hint": {
-        "en": "Leave empty to use the first library found in your Pictures folder. Otherwise give the full path of a .photoslibrary package.",
-        "fr": "Laissez vide pour utiliser la première photothèque trouvée dans votre dossier Images. Sinon, indiquez le chemin complet d'un paquet .photoslibrary."
+        "en": "Leave empty to use the first library found in your Pictures folder. Otherwise use \"Browse…\" to pick a .photoslibrary package in the Finder.",
+        "fr": "Laissez vide pour utiliser la première photothèque trouvée dans votre dossier Images. Sinon, utilisez « Parcourir… » pour choisir un paquet .photoslibrary dans le Finder."
       },
       "group": {
         "en": "Source",

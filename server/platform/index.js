@@ -298,6 +298,22 @@ async function pressCall(name, arg) {
   return kioskController[name](arg);
 }
 
+/* Fenetre native de choix de dossier (1.167.0) : Finder, Explorateur
+   de fichiers, selecteur GTK. Elle n'existe que dans l'application de
+   bureau (Electron) ; sur le Raspberry Pi ou dans un navigateur, l'
+   interface utilise son explorateur de dossiers integre.
+   Native folder-choosing window: Finder, File Explorer, GTK chooser.
+   Only the desktop application has one; elsewhere the interface uses
+   its built-in folder browser. */
+function nativePickSupported() {
+  return !!(kioskController && typeof kioskController.pickPath === "function");
+}
+
+async function pickPath(opts) {
+  if (!nativePickSupported()) throw new Error("no-native-picker");
+  return kioskController.pickPath(opts || {});
+}
+
 function canOpenLog() {
   return !!(kioskController && typeof kioskController.openLog === "function");
 }
@@ -429,6 +445,8 @@ module.exports = {
   canOpenLog,
   pressSupported,
   pressCall,
+  nativePickSupported,
+  pickPath,
   isDesktopApp,
   getAutoStart,
   setAutoStart,

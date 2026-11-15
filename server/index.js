@@ -3432,14 +3432,89 @@ function recordingDir(req) {
    et creer, rien d'autre.
    Picking a folder on the machine: list and create, nothing else. */
 app.get("/api/fs/roots", (req, res) => {
-  res.json({ roots: fsBrowse.listRoots(), separator: require("path").sep });
+  let libraries = [];
+  try { libraries = photosLibrary.discoverLibraries(platform.photosLibraryRoots()); } catch (e) { libraries = []; }
+  res.json({
+    roots: fsBrowse.listRoots(),
+    shortcuts: fsBrowse.listShortcuts(libraries),
+    separator: require("path").sep
+  });
 });
 
 app.get("/api/fs/list", (req, res) => {
   try {
-    res.json(fsBrowse.listDir(String(req.query.path || "")));
+    res.json(fsBrowse.listDir(String(req.query.path || ""), { images: req.query.images === "1" }));
   } catch (e) {
     res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+/* Apercu d'une image pendant la navigation (1.167.0). Limite aux
+   images ; les gros fichiers sont reduits (macOS : sips), sinon
+   l'apercu est refuse plutot que de charger un fichier enorme.
+   Preview of an image while browsing. Images only; big files are
+   shrunk (macOS: sips), otherwise refused rather than loading a huge
+   file. */
+const FS_THUMB_RAW_MAX = 1500000;
+const FS_THUMB_NOCONV_MAX = 12000000;
+app.get("/api/fs/thumb", async (req, res) => {
+  const full = fsBrowse.previewable(req.query.path);
+  if (!full) return res.status(404).end();
+  try {
+    const size = fs.statSync(full).size;
+    const ext = full.split(".").pop().toLowerCase();
+    const native = fsBrowse.PREVIEW_EXT.includes(ext);
+    if (native && size <= FS_THUMB_RAW_MAX) {
+      res.set("Cache-Control", "private, max-age=300");
+      return res.sendFile(full);
+    }
+    const dir = require("path").join(require("os").tmpdir(), "piboard-fs-thumbs");
+    fs.mkdirSync(dir, { recursive: true });
+    const key = require("crypto").createHash("sha1").update(full + ":" + size + ":" + fs.statSync(full).mtimeMs).digest("hex");
+    const dest = require("path").join(dir, key + ".jpg");
+    if (!fs.existsSync(dest)) {
+      const ok = await platform.imageToJpeg(full, dest, 240);
+      if (!ok) {
+        if (native && size <= FS_THUMB_NOCONV_MAX) {
+          res.set("Cache-Control", "private, max-age=300");
+          return res.sendFile(full);
+        }
+        return res.status(404).end();
+      }
+    }
+    res.set("Cache-Control", "private, max-age=300");
+    return res.sendFile(dest);
+  } catch (e) {
+    return res.status(404).end();
+  }
+});
+
+/* Fenetre native de choix (1.167.0) : seulement dans l'application de
+   bureau, et seulement pour une requete locale -- la fenetre s'ouvre
+   sur CE poste, inutile et trompeuse pour quelqu'un qui regarde le
+   tableau depuis un autre.
+   Native chooser window: desktop app only, and only for a local
+   request -- the window opens on THIS machine, useless and misleading
+   for someone viewing the board from another one. */
+app.get("/api/fs/native", (req, res) => {
+  res.json({ available: platform.nativePickSupported() && isLocalRequest(req) });
+});
+
+app.post("/api/fs/native", async (req, res) => {
+  if (!platform.nativePickSupported() || !isLocalRequest(req)) {
+    return res.status(404).json({ error: "native-unavailable" });
+  }
+  const b = req.body || {};
+  const kind = b.kind === "photoslib" ? "photoslib" : "folder";
+  try {
+    const r = await platform.pickPath({ kind, start: String(b.start || "") });
+    if (!r || r.cancelled || !r.path) return res.json({ cancelled: true });
+    if (kind === "photoslib" && !photosLibrary.isLibraryPath(r.path)) {
+      return res.status(400).json({ error: "not-a-library" });
+    }
+    res.json({ path: r.path });
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
   }
 });
 

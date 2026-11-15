@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.167.0
+
+- **Plus aucun chemin à taper pour les photos et les dossiers.** Un point d'entrée
+  unique côté interface, `choosePath({kind, start, onPick})`, sert tous les champs
+  « dossier » et « photothèque » : diaporama (`folderPath`, `photosLibrary`),
+  économiseur d'écran, enregistrement TV, transfert de pages, clonage. Dans
+  l'application de bureau (Electron), il ouvre la **fenêtre native** (Finder,
+  Explorateur, sélecteur GTK) via `dialog.showOpenDialog` : nouvelle fonction
+  `pickPath` du contrôleur de kiosque, exposée par `platform.nativePickSupported()`
+  / `platform.pickPath()` ; routes `GET|POST /api/fs/native`, **réservées aux
+  requêtes locales** (la fenêtre s'ouvre sur CE poste). Pour une photothèque
+  (paquet que macOS présente comme un fichier) la sélection « fichier » est
+  autorisée, puis `isLibraryPath` revalide côté serveur. Sans Electron (Pi,
+  navigateur, poste distant) : l'explorateur intégré, repris et enrichi.
+- **Explorateur intégré** : raccourcis (Images, Bureau, Documents, Téléchargements,
+  photothèques détectées), **aperçus des images** du dossier (`GET /api/fs/thumb`,
+  limité aux images, réduction par `sips` sur Mac, plafond sans conversion),
+  mode « photothèque » (un paquet `.photoslibrary` se choisit d'une touche),
+  **dernier dossier mémorisé** par genre de choix (`localStorage`), cibles tactiles
+  agrandies. `fsBrowse.listDir(dir, {images})`, `listShortcuts`, `previewable`.
+- Diaporama : `folderPath` et `photosLibrary` passent au type `folder` ; la
+  fenêtre d'import Photos remplace le champ de chemin par un bouton.
+- Aide FR/EN mise à jour. Tests : `fsBrowse.test.js`, `fsNative.test.js` (route
+  réelle), bloc dom-smoke.
+
 ## 1.166.0
 
 - **Photothèque Photos (macOS) comme source d'images.** Nouveau module
