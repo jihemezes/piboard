@@ -26,7 +26,9 @@ const rssItem = (title, link, day, hour) => `<item><title>${title}</title><link>
 const rss = (title, items) => `<?xml version="1.0"?><rss version="2.0"><channel><title>${title}</title>${items.join("")}</channel></rss>`;
 const FEEDS = {};
 const DOWN = new Set();
+const SEEN = [];
 global.fetch = window.fetch = (url) => {
+  SEEN.push(String(url));
   const u = decodeURIComponent(String(url));
   if (u.startsWith("/api/press")) return Promise.resolve({ ok: false });
   const key = Object.keys(FEEDS).find((k) => u.includes(k + "?") || u.endsWith(k) || u.includes(k + "&"));
@@ -210,6 +212,7 @@ const feeds = (list) => JSON.stringify(list);
     await w.refresh();
     const warn = w.ctx.el.querySelector(".pwr-warn");
     assert.ok(warn && /Tech/.test(warn.textContent), "le flux en panne est nomme");
+    assert.ok(/Tech \(502\)/.test(warn.textContent), "le code HTTP du flux en panne est indique");
     assert.ok(w.ctx.el.querySelectorAll(".pwr-item").length > 0, "les autres flux s'affichent");
     w = make({ feeds: feeds(l), warnFailed: false });
     await w.refresh();
@@ -219,6 +222,22 @@ const feeds = (list) => JSON.stringify(list);
     await w.refresh();
     assert.ok(w.ctx.el.querySelector(".pwr-err"), "tous en panne : message d'erreur habituel");
     DOWN.clear();
+    console.log("  OK");
+  }
+
+  console.log("== Identite navigateur par flux (1.171.1) ==");
+  {
+    SEEN.length = 0;
+    const l = [
+      { url: "http://foot.test/rss", label: "Foot", on: true },
+      { url: "http://tech.test/rss", label: "Tech", on: true, ua: true }
+    ];
+    const w = make({ feeds: feeds(l) });
+    await w.refresh();
+    const foot = SEEN.find((u) => u.includes(encodeURIComponent("http://foot.test/rss")));
+    const tech = SEEN.find((u) => u.includes(encodeURIComponent("http://tech.test/rss")));
+    assert.ok(foot && !/ua=browser/.test(foot), "case decochee : requete inchangee");
+    assert.ok(tech && /[?&]ua=browser&/.test(tech), "case cochee : ua=browser");
     console.log("  OK");
   }
 

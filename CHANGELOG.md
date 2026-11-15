@@ -1,5 +1,15 @@
 # Changelog
 
+## 1.171.1
+
+- Tuile Flux RSS : certains sites (actu.fr) répondent 403 à l'identifiant « PiBoard/0.1 (+https://…) »
+  du proxy. Nouvelle case par flux « Se présenter comme un navigateur ordinaire » (⋯, champ `ua`
+  de la liste, décochée par défaut) : la tuile ajoute `ua=browser` à `/api/proxy`, qui envoie
+  alors `Mozilla/5.0 (compatible; PiBoard/<version>)`. Liste blanche côté serveur : aucun
+  User-Agent libre accepté ; sans la case, la requête est inchangée.
+- Un flux en échec affiche son code HTTP dans l'avertissement (« Actu Toulouse (403) »).
+- Tests : `proxyUserAgent.test.js` (nouveau), `rssFeeds.test.js` étendu. Aide FR/EN mise à jour.
+
 ## 1.171.0
 
 - **Tuile Flux RSS : jusqu'à 12 flux** (au lieu de 3). Le champ « Flux » devient une liste

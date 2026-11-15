@@ -308,7 +308,12 @@
       const ok = results.filter((r) => r.status === "fulfilled").map((r) => r.value);
       // Flux en panne : nommes, sans empecher les autres de s'afficher.
       // Failing feeds: named, without preventing the others from showing.
-      this.failed = results.map((r, i) => (r.status === "rejected" ? (slots[i].label || this.hostOf(slots[i].url)) : null)).filter(Boolean);
+      this.failed = results.map((r, i) => {
+        if (r.status !== "rejected") return null;
+        const name = slots[i].label || this.hostOf(slots[i].url);
+        const m = /proxy (\d{3})/.exec(String(r.reason && r.reason.message));
+        return m ? name + " (" + m[1] + ")" : name;
+      }).filter(Boolean);
 
       if (!ok.length) {
         console.warn("[piboard/rss] tous les flux configures ont echoue");
@@ -400,6 +405,7 @@
         group: String((f && f.group) || "").trim(),
         keep: wordList(f && f.keep),
         hide: wordList(f && f.hide),
+        ua: !!(f && f.ua),
         on: !f || f.on !== false
       })).filter((f) => f.on && /^https?:\/\//i.test(f.url));
     }
@@ -498,7 +504,9 @@
       // response indefinitely.
       const proxied = this.ctx.api.proxyUrl(slot.url);
       const sep = proxied.includes("?") ? "&" : "?";
-      const url = proxied + sep + "_=" + Date.now();
+      // Identifiant « navigateur » : uniquement pour les flux ou la case est cochee.
+      // "Browser" identity: only for feeds with the box ticked.
+      const url = proxied + sep + (slot.ua ? "ua=browser&" : "") + "_=" + Date.now();
       const xml = await fetch(url, { cache: "no-store" }).then((r) => {
         if (!r.ok) throw new Error("proxy " + r.status);
         return r.text();

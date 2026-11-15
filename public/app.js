@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.171.0
+   Version 1.171.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3588,6 +3588,7 @@
         <label><span>${escapeHtml(i18n.t("feedlist.group"))}</span><input type="text" class="feed-group" maxlength="30" value="${escapeHtmlAttr(x.group || "")}" autocomplete="off"></label>
         <label><span>${escapeHtml(i18n.t("feedlist.keep"))}</span><input type="text" class="feed-keep" maxlength="120" value="${escapeHtmlAttr(x.keep || "")}" autocomplete="off"></label>
         <label><span>${escapeHtml(i18n.t("feedlist.hide"))}</span><input type="text" class="feed-hide" maxlength="120" value="${escapeHtmlAttr(x.hide || "")}" autocomplete="off"></label>
+        <label class="feed-ua-row"><input type="checkbox" class="feed-ua" ${x.ua ? "checked" : ""}><span>${escapeHtml(i18n.t("feedlist.ua"))}</span><small class="field-hint">${escapeHtml(i18n.t("feedlist.uaHint"))}</small></label>
         <div class="feed-colors" role="group" aria-label="${t("feedlist.color")}">
           <span>${escapeHtml(i18n.t("feedlist.color"))}</span>
           <button type="button" class="feed-color-auto${color ? "" : " active"}">${escapeHtml(i18n.t("tagcolor.auto"))}</button>
@@ -12610,6 +12611,7 @@
         group: row.querySelector(".feed-group").value.trim(),
         keep: row.querySelector(".feed-keep").value.trim(),
         hide: row.querySelector(".feed-hide").value.trim(),
+        ua: row.querySelector(".feed-ua").checked,
         n: Number(row.dataset.n) || 0
       }));
       const refresh = (box, fire) => {

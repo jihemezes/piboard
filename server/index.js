@@ -2248,7 +2248,13 @@ app.get("/api/proxy", async (req, res) => {
     const upstream = await fetch(parsed.href, {
       signal: controller.signal,
       redirect: "follow",
-      headers: { "User-Agent": "PiBoard/0.1 (+https://github.com/jihemezes/piboard)" }
+      /* ?ua=browser (liste blanche, jamais un User-Agent libre) : certains sites
+         (ex. actu.fr) refusent l'identifiant « robot » par defaut en 403. Choix
+         fait flux par flux dans la tuile RSS. Whitelisted option, never a free
+         User-Agent: some sites refuse the default bot identity with a 403. */
+      headers: { "User-Agent": req.query.ua === "browser"
+        ? "Mozilla/5.0 (compatible; PiBoard/" + APP_VERSION + ")"
+        : "PiBoard/0.1 (+https://github.com/jihemezes/piboard)" }
     });
     clearTimeout(timer);
     const body = await upstream.text();

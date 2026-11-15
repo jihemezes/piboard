@@ -32,6 +32,23 @@
 
 # Nouveautes / What's new
 
+## 1.171.1
+
+**Flux RSS : les sites qui refusent PiBoard**
+
+Un flux refusé par son site (erreur 403, comme actu.fr) peut maintenant être lu : dans les options
+**⋯** du flux, cochez **« Se présenter comme un navigateur ordinaire »**. Cette case ne concerne
+que ce flux ; les autres ne changent pas. Quand un flux échoue, l'avertissement indique aussi
+le code de l'erreur.
+
+---
+
+**RSS feeds: sites that refuse PiBoard**
+
+A feed refused by its site (error 403, like actu.fr) can now be read: in the feed's **⋯**
+options, tick **"Present as a regular browser"**. This box applies to that feed only; the
+others do not change. When a feed fails, the warning now also shows the error code.
+
 ## 1.171.0
 
 **Flux RSS : jusqu'à 12 flux dans une seule tuile**
