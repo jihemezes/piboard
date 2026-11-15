@@ -168,3 +168,71 @@
 .pw-netscan .pwn-note:empty { display: none; }
 .pw-netscan .pwn-note-ok { color: var(--ok, #3fa860); }
 .pw-netscan .pwn-note-err { color: var(--danger, #d05050); }
+
+/* --- Surveillance : reference des hotes, pastilles, bandeau, journal ---
+   Surveillance: host reference, badges, banner, journal. */
+.pw-netscan .pwn-base {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.pw-netscan .pwn-base-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.pw-netscan .pwn-io-btn:disabled { opacity: 0.35; cursor: default; }
+.pw-netscan .pwn-io-btn.pwn-on { opacity: 1; border-color: var(--accent); color: var(--accent); }
+.pw-netscan .pwn-io-btn.pwn-confirm {
+  opacity: 1;
+  border-color: var(--danger, #d05050);
+  color: var(--danger, #d05050);
+}
+.pw-netscan .pwn-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 5px 8px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger, #d05050);
+  background: rgba(208, 80, 80, 0.14);
+  border: 1px solid rgba(208, 80, 80, 0.45);
+}
+.pw-netscan .pwn-badge {
+  flex: 0 0 auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 1px 5px;
+  border-radius: 5px;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+.pw-netscan .pwn-badge-new { color: #fff; background: var(--danger, #d05050); }
+.pw-netscan .pwn-badge-rnd { color: var(--muted); border: 1px solid var(--tile-edge); }
+.pw-netscan .pwn-badge-chg { color: #1b1b1b; background: #e0a93a; }
+.pw-netscan .pwn-row.pwn-new { box-shadow: inset 3px 0 0 var(--danger, #d05050); padding-left: 8px; }
+.pw-netscan .pwn-row.pwn-changed { box-shadow: inset 3px 0 0 #e0a93a; padding-left: 8px; }
+.pw-netscan .pwn-ack-btn { color: var(--accent); opacity: 0.9; }
+.pw-netscan .pwn-absent-title {
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.pw-netscan .pwn-row.pwn-absent .pwn-name { color: var(--muted); }
+.pw-netscan .pwn-log-time {
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+.pw-netscan .pwn-log-icon { flex: 0 0 auto; }

@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.170.0
+
+- **Tuile Analyse réseau : mémorisation des hôtes et alerte de nouvel appareil.**
+  Bouton « Mémoriser les hôtes » : les appareils présents à cet instant deviennent la
+  **référence** (`server/netBaseline.js`, `data/netBaseline.json`, incluse dans les
+  sauvegardes). Un hôte absent de la référence reçoit la pastille NOUVEAU, une barre
+  rouge et un bandeau « Tout reconnaître » ; ✓ ajoute un appareil à la référence ;
+  « Mettre à jour la référence » et ✕ demandent une double touche (pas de boîte de
+  dialogue sur le kiosque tactile).
+- **Identité par adresse MAC** (clé `mac:…`, à défaut `ip:…`). Une MAC « localement
+  administrée » (bit 2 du 1er octet : Wi-Fi privé des téléphones) porte la pastille
+  « MAC aléatoire » et ne déclenche **pas** d'alerte, sauf option.
+- **Alertes** : clignotement plein écran + son (même `startAlert` que le compte à
+  rebours, durée réglable) et webhook (`/api/notify`, `{message}`, `{name}`, `{ip}`,
+  `{mac}`, `{vendor}`, `{details}`, `{event}`). Le webhook est **revendiqué** auprès du
+  serveur (`POST /api/network-baseline/claim`) : un seul envoi par événement même si le
+  Pi et le Mac affichent la tuile. Au premier chargement, seuls les événements de moins
+  de 3 minutes font clignoter l'écran.
+- **Extensions** : journal des arrivées/départs/changements (`GET /api/network-baseline`,
+  bouton « Journal ») ; un hôte n'est « parti » qu'après deux analyses sans lui, et une
+  analyse ne ramenant que la machine elle-même est ignorée ; détection d'un changement
+  d'IP ou de nom d'un appareil connu (pastille « modifié ») ; alerte d'absence prolongée
+  (`absentHours`) avec « Oublier » ; « Reconnaître » par appareil.
+- Le journal est alimenté à la fin de **chaque** analyse réussie (`networkScan.onScan`),
+  quel que soit l'écran qui l'a demandée. Réponse de `/api/network-scan` enrichie
+  (`status`, `alert`, `changed`, `randomMac`, `firstSeen`, `baseline`, `absent`…).
+- Manifeste 0.2.0 : 10 nouveaux réglages. Aide FR/EN. Tests : `netBaseline.test.js`,
+  `netBaselineRoutes.test.js`, `netscanWatch.test.js`.
+
 ## 1.169.0
 
 - **Tuile Flux RSS : couleur de l'étiquette de chaque source.** Trois réglages

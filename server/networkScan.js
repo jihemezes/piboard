@@ -541,6 +541,17 @@ async function performScan(cidrOverride) {
    needlessly double the ICMP traffic on the network). */
 const state = { scanning: false, lastResult: null, lastError: null, inFlight: null };
 
+/* Abonnes a la fin d'une analyse reussie (journal des hotes, voir
+   server/netBaseline.js). Une erreur d'abonne ne doit jamais faire
+   echouer l'analyse elle-meme.
+   Subscribers to a successful scan's completion (host journal, see
+   server/netBaseline.js). A subscriber's error must never make the
+   scan itself fail. */
+const scanListeners = [];
+function onScan(fn) {
+  if (typeof fn === "function") scanListeners.push(fn);
+}
+
 function scanNetwork(cidrOverride) {
   if (state.inFlight) return state.inFlight;
   state.scanning = true;
@@ -548,6 +559,9 @@ function scanNetwork(cidrOverride) {
     .then((result) => {
       state.lastResult = result;
       state.lastError = null;
+      for (const fn of scanListeners) {
+        try { fn(result); } catch (e) { console.warn("[piboard/networkScan] listener", e); }
+      }
       return result;
     })
     .catch((e) => {
@@ -569,6 +583,7 @@ function getState() {
 module.exports = {
   scanNetwork,
   getState,
+  onScan,
   detectSubnets,
   defaultCidr,
   preferredCidr,

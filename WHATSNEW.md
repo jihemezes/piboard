@@ -32,6 +32,33 @@
 
 # Nouveautes / What's new
 
+## 1.170.0
+
+**Soyez prévenu quand un nouvel appareil arrive sur votre réseau**
+
+Dans la tuile **Analyse réseau**, touchez **« Mémoriser les hôtes »** quand tout est normal :
+les appareils présents deviennent votre **référence**. Dès qu'un inconnu apparaît, il reçoit
+une pastille **NOUVEAU** et un bandeau rouge le signale ; vous pouvez le **reconnaître** d'un
+geste. Vous choisissez l'alerte : **écran qui clignote**, **son**, et/ou **notification**
+sur votre téléphone (ntfy, Home Assistant, SMS Free Mobile…), envoyée une seule fois même si
+plusieurs écrans affichent la tuile. Les téléphones à adresse Wi-Fi privée sont repérés pour
+éviter les fausses alertes. En plus : un **journal** des arrivées et départs, l'alerte quand
+un appareil connu **change d'adresse ou de nom**, et l'alerte quand une caméra ou un NAS
+**disparaît trop longtemps**.
+
+---
+
+**Get warned when a new device joins your network**
+
+In the **Network scan** tile, tap **"Memorize hosts"** when everything is normal: the devices
+present become your **reference**. As soon as a stranger shows up, it gets a **NEW** badge and
+a red banner points it out; you can **acknowledge** it in one tap. You choose the alert:
+**flashing screen**, **sound**, and/or a **notification** on your phone (ntfy, Home Assistant,
+Free Mobile SMS…), sent only once even if several screens display the tile. Phones using a
+private Wi-Fi address are flagged to avoid false alarms. Also: a **log** of arrivals and
+departures, an alert when a known device **changes address or name**, and an alert when a
+camera or NAS **disappears for too long**.
+
 ## 1.169.0
 
 **Une couleur par source dans la tuile Flux RSS**

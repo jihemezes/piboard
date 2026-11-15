@@ -44,6 +44,7 @@ const usbMedia = require("./usbMedia");
 const photosLibrary = require("./photosLibrary");
 const networkScan = require("./networkScan");
 const netHosts = require("./netHosts");
+const netBaseline = require("./netBaseline");
 const hostWatch = require("./hostWatch");
 const youtube = require("./youtube");
 const library = require("./library");
@@ -488,6 +489,39 @@ app.get("/api/public-ip", async (req, res) => {
    never blocks on a ~10-20s scan if a recent result is already
    available. The subnet can be forced via ?cidr=192.168.1.0/24 (tile
    setting); without it, the Pi's subnet is auto-detected. */
+/* Journal des hotes (server/netBaseline.js) : alimente a la fin de
+   CHAQUE analyse reussie, quel que soit l'ecran qui l'a demandee.
+   Host journal (server/netBaseline.js): fed at the end of EVERY
+   successful scan, whichever screen asked for it. */
+networkScan.onScan((result) => {
+  netBaseline.save(netBaseline.observe(netBaseline.load(), result));
+});
+
+/* Resultat enrichi : noms personnalises + statut par rapport a la
+   reference memorisee (nouveau / connu / change), appareils connus
+   absents depuis longtemps. Never stored in the scan cache.
+   Enriched result: custom names + status relative to the memorized
+   reference (new / known / changed), known devices absent for long. */
+function networkScanPayload(result, scanning, query) {
+  const aliases = netHosts.loadAliases();
+  const named = netHosts.applyAliases(result.hosts, aliases);
+  const ann = netBaseline.annotate(netBaseline.load(), named, aliases, {
+    absentHours: Number(query.absentHours) || 0,
+    alertRandom: query.alertRandom === "1"
+  });
+  return {
+    scanning,
+    hosts: ann.hosts,
+    cidr: result.cidr,
+    scannedAt: result.scannedAt,
+    baseline: ann.baseline,
+    absent: ann.absent,
+    newCount: ann.newCount,
+    alertCount: ann.alertCount,
+    changedCount: ann.changedCount
+  };
+}
+
 app.get("/api/network-scan", async (req, res) => {
   const forceRescan = req.query.rescan === "1";
   const cidrOverride = req.query.cidr ? String(req.query.cidr) : undefined;
@@ -497,27 +531,84 @@ app.get("/api/network-scan", async (req, res) => {
   // Custom names are applied on the fly to the scan result (never
   // stored in the scan cache): renaming a device therefore shows up
   // immediately, without re-running a ~15 s scan.
-  const aliases = netHosts.loadAliases();
   const cached = networkScan.getState();
   if (!forceRescan && cached.result) {
-    return res.json({
-      scanning: cached.scanning,
-      hosts: netHosts.applyAliases(cached.result.hosts, aliases),
-      cidr: cached.result.cidr,
-      scannedAt: cached.result.scannedAt
-    });
+    return res.json(networkScanPayload(cached.result, cached.scanning, req.query));
   }
   try {
     const result = await networkScan.scanNetwork(cidrOverride);
-    res.json({
-      scanning: false,
-      hosts: netHosts.applyAliases(result.hosts, aliases),
-      cidr: result.cidr,
-      scannedAt: result.scannedAt
-    });
+    res.json(networkScanPayload(result, false, req.query));
   } catch (e) {
     res.status(400).json({ error: String(e.message || e) });
   }
+});
+
+/* ---------- Reference des hotes (voir server/netBaseline.js) ----------
+   Memoriser les appareils presents a un instant T, puis signaler tout
+   nouvel arrivant. Persiste dans data/netBaseline.json.
+   Memorize the devices present at a moment T, then flag any newcomer.
+   Persisted in data/netBaseline.json. */
+function baselineSummary(state) {
+  return state.baseline
+    ? { at: state.baseline.at, count: Object.keys(state.baseline.hosts).length }
+    : null;
+}
+
+app.get("/api/network-baseline", (req, res) => {
+  const state = netBaseline.load();
+  const limit = Math.max(1, Math.min(netBaseline.MAX_LOG, Number(req.query.limit) || 100));
+  res.json({
+    baseline: baselineSummary(state),
+    log: state.log.slice(-limit).reverse()
+  });
+});
+
+app.post("/api/network-baseline/memorize", (req, res) => {
+  try {
+    const last = networkScan.getState().result;
+    if (!last) return res.status(409).json({ error: "no scan yet" });
+    const next = netBaseline.memorize(netBaseline.load(), netHosts.applyAliases(last.hosts, netHosts.loadAliases()), netHosts.loadAliases());
+    res.json({ ok: true, baseline: baselineSummary(netBaseline.save(next)) });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/network-baseline/ack", (req, res) => {
+  try {
+    const keys = (req.body || {}).keys;
+    const last = networkScan.getState().result;
+    const aliases = netHosts.loadAliases();
+    const hosts = last ? netHosts.applyAliases(last.hosts, aliases) : [];
+    const next = netBaseline.acknowledge(netBaseline.load(), keys, hosts, aliases);
+    res.json({ ok: true, baseline: baselineSummary(netBaseline.save(next)) });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/network-baseline/forget", (req, res) => {
+  try {
+    const next = netBaseline.forget(netBaseline.load(), (req.body || {}).keys);
+    res.json({ ok: true, baseline: baselineSummary(netBaseline.save(next)) });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.post("/api/network-baseline/claim", (req, res) => {
+  try {
+    const out = netBaseline.claim(netBaseline.load(), (req.body || {}).ids);
+    netBaseline.save(out.state);
+    res.json({ ok: true, granted: out.granted });
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.delete("/api/network-baseline", (req, res) => {
+  netBaseline.save(netBaseline.reset(netBaseline.load()));
+  res.json({ ok: true, baseline: null });
 });
 
 /* ---------- Noms personnalises des hotes (voir server/netHosts.js) ----------

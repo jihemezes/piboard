@@ -6,7 +6,15 @@
    Queries /api/network-scan (PiBoard core endpoint, see
    server/networkScan.js) which sweeps the Pi's subnet (ping + ARP
    table) and attempts a reverse DNS lookup for each active host.
-   Displays each host as "Hostname — IP address". */
+   Displays each host as "Hostname — IP address".
+   Surveillance (1.170.0) : l'utilisateur memorise les hotes presents a
+   un instant T (bouton « Memoriser ») ; un hote absent de cette
+   reference est ensuite signale NOUVEAU (pastille, bandeau, alerte
+   plein ecran + son, webhook). Voir server/netBaseline.js.
+   Surveillance (1.170.0): the user memorizes the hosts present at a
+   moment T ("Memorize" button); a host missing from that reference is
+   then flagged NEW (badge, banner, full-screen alert + sound,
+   webhook). See server/netBaseline.js. */
 (function () {
   "use strict";
 
@@ -48,6 +56,11 @@
       this.editingIndex = null; // index de la ligne en cours de renommage / row being renamed
       this.note = "";      // compte rendu du dernier export/import / last export-import report
       this.noteKind = "";  // "ok" | "err" | "" -- couleur du compte rendu / report colour
+      this.view = "list";  // "list" | "log" -- journal des hotes / host journal
+      this.logData = null; // dernier journal charge / last loaded journal
+      this.confirm = null; // action en attente de confirmation (double touche) / action awaiting confirmation (double tap)
+      this.screenSeen = null; // evenements deja annonces a l'ecran (null = 1er chargement) / events already announced on screen (null = first load)
+      this.claimTried = new Set(); // evenements deja proposes au serveur pour le webhook / events already offered to the server for the webhook
     }
 
     async init() {
@@ -77,6 +90,9 @@
       const params = [];
       if (forceRescan) params.push("rescan=1");
       if (s.subnetOverride && s.subnetOverride.trim()) params.push("cidr=" + encodeURIComponent(s.subnetOverride.trim()));
+      const absent = Number(s.absentHours) || 0;
+      if (absent > 0) params.push("absentHours=" + Math.min(720, absent));
+      if (s.alertRandomMac === true) params.push("alertRandom=1");
       return "/api/network-scan" + (params.length ? "?" + params.join("&") : "");
     }
 
@@ -90,6 +106,7 @@
         this.lastData = data;
         this.scanning = !!data.scanning;
         this.render();
+        this.processAlerts(data);
       } catch (e) {
         console.warn("[piboard/networkscan]", e);
         this.scanning = false;
@@ -118,6 +135,95 @@
       }
     }
 
+    formatDateTime(iso) {
+      try {
+        const locale = this.ctx.i18n.lang === "fr" ? "fr-FR" : "en-US";
+        return new Date(iso).toLocaleString(locale, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
+      } catch (e) {
+        return "";
+      }
+    }
+
+    /* Barre de la reference : date et taille de la reference memorisee,
+       bouton pour la (re)memoriser, journal, suppression. Les actions
+       destructives demandent une seconde touche (« Confirmer ? ») plutot
+       qu'une boite de dialogue, que le kiosque tactile gere mal.
+       Reference bar: date and size of the memorized reference, button to
+       (re)memorize it, journal, deletion. Destructive actions ask for a
+       second tap ("Confirm?") rather than a dialog box, which the touch
+       kiosk handles poorly. */
+    baselineBarHtml(data) {
+      const i18n = this.ctx.i18n;
+      const b = data.baseline;
+      const noHost = !(data.hosts && data.hosts.length);
+      const text = b
+        ? i18n.t("netscan.baseSince") + " " + this.formatDateTime(b.at) + " · " + b.count + " " + i18n.t("netscan.baseDevices")
+        : i18n.t("netscan.baseNone");
+      const memLabel = this.confirm === "memorize"
+        ? i18n.t("netscan.baseConfirm")
+        : i18n.t(b ? "netscan.baseUpdate" : "netscan.baseMemorize");
+      const reset = b
+        ? `<button type="button" class="pwn-io-btn${this.confirm === "reset" ? " pwn-confirm" : ""}" data-act="reset" title="${escapeHtmlAttr(i18n.t("netscan.baseResetTitle"))}">${this.confirm === "reset" ? escapeHtml(i18n.t("netscan.baseConfirm")) : "✕"}</button>`
+        : "";
+      return `
+          <div class="pwn-base">
+            <span class="pwn-base-text">${escapeHtml(text)}</span>
+            <button type="button" class="pwn-io-btn pwn-mem-btn${this.confirm === "memorize" ? " pwn-confirm" : ""}" data-act="memorize" ${noHost ? "disabled" : ""} title="${escapeHtmlAttr(i18n.t("netscan.baseMemorizeTitle"))}">${escapeHtml(memLabel)}</button>
+            <button type="button" class="pwn-io-btn${this.view === "log" ? " pwn-on" : ""}" data-act="log" title="${escapeHtmlAttr(i18n.t("netscan.logTitle"))}">${escapeHtml(i18n.t(this.view === "log" ? "netscan.logBack" : "netscan.log"))}</button>
+            ${reset}
+          </div>`;
+    }
+
+    bannerHtml(data) {
+      const i18n = this.ctx.i18n;
+      const n = Number(data.newCount) || 0;
+      const c = Number(data.changedCount) || 0;
+      if (!n && !c) return "";
+      const parts = [];
+      if (n) parts.push(n + " " + i18n.t(n > 1 ? "netscan.bannerNewN" : "netscan.bannerNew1"));
+      if (c) parts.push(c + " " + i18n.t(c > 1 ? "netscan.bannerChangedN" : "netscan.bannerChanged1"));
+      return `
+          <div class="pwn-banner">
+            <span>⚠ ${escapeHtml(parts.join(" · "))}</span>
+            <button type="button" class="pwn-io-btn" data-act="ackall">${escapeHtml(i18n.t("netscan.ackAll"))}</button>
+          </div>`;
+    }
+
+    absentHtml(data) {
+      const i18n = this.ctx.i18n;
+      const list = data.absent || [];
+      if (!list.length) return "";
+      const h = Number(this.ctx.settings.absentHours) || 0;
+      const rows = list.map((a, idx) => `
+          <div class="pwn-row pwn-absent" data-aidx="${idx}">
+            <span class="pwn-name">${escapeHtml(a.name)}</span>
+            <span class="pwn-sep">—</span>
+            <span class="pwn-ip">${escapeHtml(i18n.t("netscan.lastSeen") + " " + this.formatDateTime(a.lastSeen))}</span>
+            <button type="button" class="pwn-rename-btn pwn-forget-btn" data-act="forget" title="${escapeHtmlAttr(i18n.t("netscan.forget"))}">✕</button>
+          </div>`).join("");
+      return `<div class="pwn-absent-title">${escapeHtml(i18n.t("netscan.absentTitle").replace("{h}", String(h)))}</div>${rows}`;
+    }
+
+    logHtml() {
+      const i18n = this.ctx.i18n;
+      const log = this.logData;
+      if (!log) return `<div class="pwn-empty">${escapeHtml(i18n.t("netscan.scanning"))}</div>`;
+      if (!log.length) return `<div class="pwn-empty">${escapeHtml(i18n.t("netscan.logEmpty"))}</div>`;
+      const ICON = { new: "🆕", arrive: "➕", leave: "➖", changed: "🔁", baseline: "📌", reset: "♻️", ack: "✓", forget: "🗑" };
+      return log.map((e) => {
+        const label = e.type === "baseline"
+          ? i18n.t("netscan.log_baseline").replace("{n}", String(e.count || 0))
+          : (e.label ? e.label : "");
+        return `
+          <div class="pwn-row pwn-logrow">
+            <span class="pwn-log-time">${escapeHtml(this.formatDateTime(e.t))}</span>
+            <span class="pwn-log-icon" title="${escapeHtmlAttr(i18n.t("netscan.log_" + e.type))}">${ICON[e.type] || "•"}</span>
+            <span class="pwn-name">${escapeHtml(label || i18n.t("netscan.log_" + e.type))}</span>
+            <span class="pwn-ip">${escapeHtml(e.ip || "")}</span>
+          </div>`;
+      }).join("");
+    }
+
     render() {
       const i18n = this.ctx.i18n;
       const data = this.lastData || { hosts: [], cidr: "", scannedAt: null };
@@ -128,9 +234,15 @@
       else if (data.scannedAt) statusParts.push(i18n.t("netscan.lastScan") + " " + this.formatTime(data.scannedAt));
       if (data.cidr) statusParts.push(data.cidr);
 
-      const rows = hosts.length
-        ? hosts.map((h, idx) => this.rowHtml(h, idx)).join("")
-        : `<div class="pwn-empty">${this.scanning ? i18n.t("netscan.scanning") : i18n.t("netscan.empty")}</div>`;
+      let body;
+      if (this.view === "log") {
+        body = this.logHtml();
+      } else {
+        const rows = hosts.length
+          ? hosts.map((h, idx) => this.rowHtml(h, idx)).join("")
+          : `<div class="pwn-empty">${this.scanning ? i18n.t("netscan.scanning") : i18n.t("netscan.empty")}</div>`;
+        body = rows + this.absentHtml(data);
+      }
 
       this.ctx.el.innerHTML = `
         <div class="pw-netscan">
@@ -141,11 +253,14 @@
             <button type="button" class="pwn-scan-btn" ${this.scanning ? "disabled" : ""}>${this.scanning ? i18n.t("netscan.scanning") : i18n.t("netscan.scanNow")}</button>
           </div>
           <div class="pwn-status">${escapeHtml(statusParts.join(" · "))}</div>
+          ${this.baselineBarHtml(data)}
+          ${this.bannerHtml(data)}
           <div class="pwn-note${this.noteKind ? " pwn-note-" + this.noteKind : ""}">${escapeHtml(this.note || "")}</div>
-          <div class="pwn-list">${rows}</div>
+          <div class="pwn-list">${body}</div>
         </div>`;
       this.wireScanButton();
       this.wireIoButtons();
+      this.wireActions();
       this.wireRows();
     }
 
@@ -182,12 +297,29 @@
       // secondary info when a custom name replaces it, to keep the
       // mapping with what the network reports.
       const orig = h.alias && h.hostname ? `<span class="pwn-orig">${escapeHtml(h.hostname)}</span>` : "";
+      // Pastilles de surveillance : NOUVEAU, MAC aleatoire, modifie.
+      // Surveillance badges: NEW, random MAC, changed.
+      let badges = "";
+      let ack = "";
+      if (h.status === "new") {
+        badges += `<span class="pwn-badge pwn-badge-new">${escapeHtml(i18n.t("netscan.badgeNew"))}</span>`;
+        if (h.randomMac) badges += `<span class="pwn-badge pwn-badge-rnd" title="${escapeHtmlAttr(i18n.t("netscan.badgeRandomTitle"))}">${escapeHtml(i18n.t("netscan.badgeRandom"))}</span>`;
+      }
+      if (h.changed) {
+        const was = [h.changed.fromIp, h.changed.fromHostname].filter(Boolean).join(" / ");
+        badges += `<span class="pwn-badge pwn-badge-chg" title="${escapeHtmlAttr(i18n.t("netscan.changedTitle") + " " + was)}">${escapeHtml(i18n.t("netscan.badgeChanged"))}</span>`;
+      }
+      if (h.status === "new" || h.changed) {
+        ack = `<button type="button" class="pwn-rename-btn pwn-ack-btn" data-act="ack" title="${escapeHtmlAttr(i18n.t("netscan.ack"))}">✓</button>`;
+      }
       return `
-        <div class="pwn-row${h.isSelf ? " pwn-self" : ""}${h.alias ? " pwn-aliased" : ""}" data-idx="${idx}">
+        <div class="pwn-row${h.isSelf ? " pwn-self" : ""}${h.alias ? " pwn-aliased" : ""}${h.status === "new" ? " pwn-new" : ""}${h.changed ? " pwn-changed" : ""}" data-idx="${idx}">
           <span class="pwn-name">${escapeHtml(this.displayName(h))}</span>
+          ${badges}
           ${orig}
           <span class="pwn-sep">—</span>
           <span class="pwn-ip">${escapeHtml(h.ip)}</span>
+          ${ack}
           <button type="button" class="pwn-rename-btn" title="${escapeHtmlAttr(this.ctx.i18n.t("netscan.rename"))}">✎</button>
         </div>`;
     }
@@ -200,7 +332,7 @@
       // pointerup rather than click: on the kiosk touchscreen, click
       // can be swallowed by underlying layers (same finding as on the
       // project's other touch tiles).
-      el.querySelectorAll(".pwn-rename-btn").forEach((btn) => {
+      el.querySelectorAll(".pwn-rename-btn:not([data-act])").forEach((btn) => {
         btn.addEventListener("pointerup", (e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -266,6 +398,205 @@
         console.warn("[piboard/networkscan] rename", e);
       }
       this.render();
+    }
+
+    /* ---------- Reference des hotes : actions ----------
+       Boutons a attribut data-act, relies apres chaque rendu. pointerup
+       et stopPropagation() : meme raison que les autres boutons de la
+       tuile (ecran tactile, mode edition du tableau).
+       Host reference: actions. Buttons with a data-act attribute, wired
+       after every render. pointerup and stopPropagation(): same reason
+       as the tile's other buttons (touchscreen, board edit mode). */
+    wireActions() {
+      this.ctx.el.querySelectorAll("[data-act]").forEach((btn) => {
+        btn.addEventListener("pointerup", (e) => {
+          e.stopPropagation();
+          e.preventDefault();
+          if (btn.disabled) return;
+          const row = btn.closest(".pwn-row");
+          this.runAction(btn.dataset.act, row);
+        });
+      });
+    }
+
+    async api(url, method, body) {
+      const res = await fetch(url, {
+        method,
+        headers: body ? { "Content-Type": "application/json" } : undefined,
+        body: body ? JSON.stringify(body) : undefined
+      });
+      const out = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(out.error || ("status " + res.status));
+      return out;
+    }
+
+    /* Double touche : la 1re arme l'action (« Confirmer ? »), la 2nde, dans
+       les 4 secondes, l'execute. Double tap: the 1st arms the action
+       ("Confirm?"), the 2nd, within 4 seconds, runs it. */
+    armed(act) {
+      if (this.confirm === act) { this.confirm = null; clearTimeout(this.confirmTimer); return true; }
+      this.confirm = act;
+      this.render();
+      clearTimeout(this.confirmTimer);
+      this.confirmTimer = setTimeout(() => { this.confirm = null; this.render(); }, 4000);
+      return false;
+    }
+
+    async runAction(act, row) {
+      const i18n = this.ctx.i18n;
+      const data = this.lastData || {};
+      try {
+        if (act === "log") {
+          this.view = this.view === "log" ? "list" : "log";
+          this.logData = null;
+          this.render();
+          if (this.view === "log") await this.loadLog();
+          return;
+        }
+        if (act === "memorize") {
+          if (data.baseline && !this.armed("memorize")) return;
+          const out = await this.api("/api/network-baseline/memorize", "POST", {});
+          this.screenSeen = null;
+          this.claimTried.clear();
+          this.setNote(i18n.t("netscan.baseDone") + " " + out.baseline.count + " " + i18n.t("netscan.baseDevices"), "ok");
+          await this.refresh(false);
+          return;
+        }
+        if (act === "reset") {
+          if (!this.armed("reset")) return;
+          await this.api("/api/network-baseline", "DELETE");
+          this.claimTried.clear();
+          this.setNote(i18n.t("netscan.baseResetDone"), "ok");
+          await this.refresh(false);
+          return;
+        }
+        if (act === "ack" || act === "ackall") {
+          const hosts = data.hosts || [];
+          const keys = act === "ackall"
+            ? hosts.filter((h) => h.status === "new" || h.changed).map((h) => h.key)
+            : [hosts[Number(row && row.dataset.idx)] && hosts[Number(row.dataset.idx)].key];
+          const clean = keys.filter(Boolean);
+          if (!clean.length) return;
+          await this.api("/api/network-baseline/ack", "POST", { keys: clean });
+          await this.refresh(false);
+          return;
+        }
+        if (act === "forget") {
+          const a = (data.absent || [])[Number(row && row.dataset.aidx)];
+          if (!a) return;
+          await this.api("/api/network-baseline/forget", "POST", { keys: [a.key] });
+          await this.refresh(false);
+        }
+      } catch (e) {
+        console.warn("[piboard/networkscan] action", act, e);
+        const msg = /no scan yet/.test(String(e.message)) ? i18n.t("netscan.baseNoScan") : String(e.message || e);
+        this.setNote(msg, "err");
+      }
+    }
+
+    async loadLog() {
+      try {
+        const out = await this.api("/api/network-baseline?limit=100", "GET");
+        this.logData = out.log || [];
+      } catch (e) {
+        this.logData = [];
+      }
+      if (this.view === "log") this.render();
+    }
+
+    /* ---------- Alertes ----------
+       Trois evenements : « new » (hote absent de la reference),
+       « changed » (IP ou nom d'un appareil connu modifie), « absent »
+       (appareil connu non vu depuis N heures). Alerte a l'ecran : une
+       seule fois par evenement et par ecran. Au tout premier chargement,
+       seuls les evenements de moins de 3 minutes alertent : un hote
+       arrive hier et deja connu ne doit pas faire clignoter l'ecran
+       parce que le tableau vient de redemarrer. Webhook : l'evenement
+       est revendique aupres du serveur, qui ne l'accorde qu'une fois,
+       meme si le Pi et le Mac affichent tous deux la tuile.
+       Alerts. Three events: "new" (host missing from the reference),
+       "changed" (a known device's IP or name changed), "absent" (known
+       device not seen for N hours). On-screen alert: once per event and
+       per screen. On the very first load, only events under 3 minutes
+       old alert: a host that arrived yesterday and is already known must
+       not flash the screen because the board just restarted. Webhook:
+       the event is claimed from the server, which grants it only once,
+       even if the Pi and the Mac both display the tile. */
+    collectEvents(data) {
+      const s = this.ctx.settings;
+      const events = [];
+      (data.hosts || []).forEach((h) => {
+        if (h.status === "new" && h.alert && h.eventId) {
+          events.push({ id: h.eventId, kind: "new", name: this.displayName(h), ip: h.ip, mac: h.mac, vendor: h.vendor, ts: h.firstSeen });
+        } else if (h.status === "known" && h.changed && s.alertChanges !== false && h.eventId) {
+          events.push({ id: h.eventId, kind: "changed", name: this.displayName(h), ip: h.ip, mac: h.mac, vendor: h.vendor, ts: h.changed.at });
+        }
+      });
+      if ((Number(s.absentHours) || 0) > 0) {
+        (data.absent || []).forEach((a) => {
+          events.push({ id: a.eventId, kind: "absent", name: a.name, ip: a.ip, mac: a.mac, vendor: a.vendor, ts: null, last: a.lastSeen });
+        });
+      }
+      return events;
+    }
+
+    processAlerts(data) {
+      const s = this.ctx.settings;
+      const events = this.collectEvents(data);
+      const first = this.screenSeen === null;
+      if (first) this.screenSeen = new Set();
+      const fresh = events.filter((e) => !this.screenSeen.has(e.id));
+      events.forEach((e) => this.screenSeen.add(e.id));
+
+      const recent = (e) => e.ts && (Date.now() - new Date(e.ts).getTime()) < 180000;
+      const toScreen = fresh.filter((e) => !first || recent(e));
+      const wantsFlash = s.alertFlash !== false;
+      const wantsSound = s.alertSound !== false;
+      if (toScreen.length && (wantsFlash || wantsSound) && this.ctx.api && this.ctx.api.startAlert) {
+        this.ctx.api.startAlert({
+          flash: wantsFlash,
+          soundName: wantsSound ? (s.soundChoice || "beep-double") : null,
+          durationMs: Math.max(1, Number(s.alertDurationSeconds) || 15) * 1000
+        });
+      }
+
+      if (s.notifyUrl && String(s.notifyUrl).trim()) {
+        const todo = events.filter((e) => !this.claimTried.has(e.id));
+        todo.forEach((e) => this.claimTried.add(e.id));
+        if (todo.length) this.sendNotifications(todo);
+      }
+    }
+
+    fillTemplate(text, e) {
+      const details = [e.ip, e.mac, e.vendor].filter(Boolean).join(", ");
+      return String(text)
+        .replace(/\{name\}/g, e.name || "")
+        .replace(/\{ip\}/g, e.ip || "")
+        .replace(/\{mac\}/g, e.mac || "")
+        .replace(/\{vendor\}/g, e.vendor || "")
+        .replace(/\{details\}/g, details)
+        .replace(/\{event\}/g, e.kind)
+        .replace(/\{last\}/g, e.last ? this.formatDateTime(e.last) : "");
+    }
+
+    async sendNotifications(list) {
+      const s = this.ctx.settings;
+      try {
+        const out = await this.api("/api/network-baseline/claim", "POST", { ids: list.map((e) => e.id) });
+        const granted = new Set(out.granted || []);
+        const i18n = this.ctx.i18n;
+        list.filter((e) => granted.has(e.id)).forEach((e) => {
+          const tpl = (s.notifyMessage && String(s.notifyMessage).trim())
+            || i18n.t(e.kind === "new" ? "netscan.msgNew" : e.kind === "changed" ? "netscan.msgChanged" : "netscan.msgAbsent");
+          const message = this.fillTemplate(tpl, e).replace(/\(\s*\)/g, "").replace(/\s+/g, " ").trim();
+          const url = String(s.notifyUrl).includes("{message}")
+            ? String(s.notifyUrl).replace(/\{message\}/g, encodeURIComponent(message))
+            : s.notifyUrl;
+          this.ctx.api.notify(url, s.notifyMethod, message);
+        });
+      } catch (e) {
+        console.warn("[piboard/networkscan] claim", e);
+      }
     }
 
     renderError(message) {
@@ -403,6 +734,7 @@
     destroy() {
       clearInterval(this.timer);
       clearTimeout(this.noteTimer);
+      clearTimeout(this.confirmTimer);
     }
   }
 

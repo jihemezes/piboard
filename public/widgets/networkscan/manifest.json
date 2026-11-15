@@ -1,14 +1,14 @@
 {
   "id": "networkscan",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "name": {
     "en": "Network scan",
     "fr": "Analyse réseau"
   },
   "titleBar": true,
   "description": {
-    "en": "Scans the local network and lists active hosts (hostname — IP address).",
-    "fr": "Analyse le réseau local et liste les hôtes actifs (nom d'hôte — adresse IP)."
+    "en": "Scans the local network and lists active hosts (hostname — IP address). Can memorize the hosts present at a chosen moment and raise an alert when a new one appears.",
+    "fr": "Analyse le réseau local et liste les hôtes actifs (nom d'hôte — adresse IP). Peut mémoriser les hôtes présents à un instant choisi et alerter quand un nouvel appareil apparaît."
   },
   "tagline": {
     "en": "List of active devices on the local network.",
@@ -50,6 +50,211 @@
       "hint": {
         "en": "0 = manual only (use the \"Scan now\" button on the tile). A scan takes roughly 10–20 seconds depending on the network's size.",
         "fr": "0 = analyse manuelle uniquement (bouton « Analyser maintenant » sur la tuile). Une analyse prend environ 10 à 20 secondes selon la taille du réseau."
+      }
+    },
+    {
+      "key": "alertFlash",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Flash the whole screen when a new device appears",
+        "fr": "Faire clignoter tout l'écran à l'arrivée d'un nouvel appareil"
+      },
+      "hint": {
+        "en": "Alerts only work once you have memorized the hosts (\"Memorize\" button on the tile) and only while a scan runs: set an automatic rescan above, with the tile displayed on a board.",
+        "fr": "Les alertes ne fonctionnent qu'après avoir mémorisé les hôtes (bouton « Mémoriser » de la tuile) et seulement quand une analyse a lieu : réglez une réanalyse automatique ci-dessus, avec la tuile affichée sur un tableau."
+      }
+    },
+    {
+      "key": "alertSound",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Play a sound when a new device appears (needs speakers)",
+        "fr": "Jouer un son à l'arrivée d'un nouvel appareil (nécessite des haut-parleurs)"
+      }
+    },
+    {
+      "key": "soundChoice",
+      "type": "select",
+      "default": "beep-double",
+      "label": {
+        "en": "Alert sound",
+        "fr": "Son de l'alerte"
+      },
+      "hint": {
+        "en": "All sounds are synthesized on the fly (no audio files, works offline).",
+        "fr": "Tous les sons sont synthétisés à la volée (aucun fichier audio, fonctionne hors-ligne)."
+      },
+      "options": [
+        {
+          "value": "beep-simple",
+          "label": {
+            "en": "🔔 Simple beep",
+            "fr": "🔔 Bip simple"
+          }
+        },
+        {
+          "value": "beep-double",
+          "label": {
+            "en": "🔔 Double beep",
+            "fr": "🔔 Double bip"
+          }
+        },
+        {
+          "value": "siren-police",
+          "label": {
+            "en": "🚓 Police siren",
+            "fr": "🚓 Sirène police"
+          }
+        },
+        {
+          "value": "siren-firefighter",
+          "label": {
+            "en": "🚒 Firefighter siren",
+            "fr": "🚒 Sirène pompiers"
+          }
+        },
+        {
+          "value": "siren-fire-alarm",
+          "label": {
+            "en": "🔥 Fire alarm klaxon",
+            "fr": "🔥 Alarme incendie"
+          }
+        },
+        {
+          "value": "siren-submarine",
+          "label": {
+            "en": "🚨 Submarine dive klaxon",
+            "fr": "🚨 Klaxon plongée sous-marine"
+          }
+        },
+        {
+          "value": "bell-train",
+          "label": {
+            "en": "🚆 Train crossing bell",
+            "fr": "🚆 Cloche de passage à niveau"
+          }
+        },
+        {
+          "value": "bell-door",
+          "label": {
+            "en": "🔔 Doorbell (ding-dong)",
+            "fr": "🔔 Sonnette d'entrée (ding-dong)"
+          }
+        },
+        {
+          "value": "jingle",
+          "label": {
+            "en": "🎵 Short jingle",
+            "fr": "🎵 Jingle bref"
+          }
+        }
+      ]
+    },
+    {
+      "key": "alertDurationSeconds",
+      "type": "number",
+      "default": 15,
+      "min": 5,
+      "max": 300,
+      "step": 5,
+      "label": {
+        "en": "Alert duration (seconds, tap the screen to stop it)",
+        "fr": "Durée de l'alerte (secondes, touchez l'écran pour l'arrêter)"
+      }
+    },
+    {
+      "key": "notifyUrl",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Notification webhook URL (optional, {message} = the text below)",
+        "fr": "URL webhook de notification (optionnel, {message} = le texte ci-dessous)"
+      },
+      "hint": {
+        "en": "ntfy, Home Assistant, Free Mobile SMS… Called once per event, even if several screens display the tile.",
+        "fr": "ntfy, Home Assistant, SMS Free Mobile… Appelée une seule fois par événement, même si plusieurs écrans affichent la tuile."
+      }
+    },
+    {
+      "key": "notifyMethod",
+      "type": "select",
+      "default": "GET",
+      "label": {
+        "en": "Webhook method",
+        "fr": "Méthode du webhook"
+      },
+      "options": [
+        {
+          "value": "GET",
+          "label": {
+            "en": "GET",
+            "fr": "GET"
+          }
+        },
+        {
+          "value": "POST",
+          "label": {
+            "en": "POST (body = message)",
+            "fr": "POST (corps = message)"
+          }
+        }
+      ]
+    },
+    {
+      "key": "notifyMessage",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Notification message (optional)",
+        "fr": "Message de la notification (optionnel)"
+      },
+      "hint": {
+        "en": "You can use {name}, {ip}, {mac}, {vendor} and {event} (new, changed or absent). Empty = a default message.",
+        "fr": "Vous pouvez utiliser {name}, {ip}, {mac}, {vendor} et {event} (new, changed ou absent). Vide = un message par défaut."
+      }
+    },
+    {
+      "key": "alertChanges",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Also alert when a known device changes IP address or name",
+        "fr": "Alerter aussi quand un appareil connu change d'adresse IP ou de nom"
+      },
+      "hint": {
+        "en": "A changed IP is normal with DHCP; reserve fixed addresses in your router for devices you want to watch closely, or untick this.",
+        "fr": "Un changement d'IP est normal en DHCP ; réservez des adresses fixes dans votre box pour les appareils à surveiller de près, ou décochez cette case."
+      }
+    },
+    {
+      "key": "alertRandomMac",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alert for devices using a random MAC address",
+        "fr": "Alerter pour les appareils à adresse MAC aléatoire"
+      },
+      "hint": {
+        "en": "Phones with private Wi-Fi address change their MAC regularly and would trigger false alarms: they are listed with a \"random MAC\" badge but silent by default.",
+        "fr": "Les téléphones en « adresse Wi-Fi privée » changent régulièrement de MAC et déclencheraient de fausses alertes : ils sont listés avec une pastille « MAC aléatoire » mais restent silencieux par défaut."
+      }
+    },
+    {
+      "key": "absentHours",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 720,
+      "step": 1,
+      "label": {
+        "en": "Alert when a known device has not been seen for (hours)",
+        "fr": "Alerter quand un appareil connu n'a pas été vu depuis (heures)"
+      },
+      "hint": {
+        "en": "0 = off. Useful for a camera, a NAS or a server that must stay online.",
+        "fr": "0 = désactivé. Utile pour une caméra, un NAS ou un serveur qui doit rester en ligne."
       }
     },
     {
