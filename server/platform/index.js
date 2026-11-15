@@ -49,6 +49,10 @@
      restartServer(version)    relancer apres mise a jour / relaunch after update
      checkDesktopUpdates()     recherche via electron-updater / check via electron-updater
      gpuUsage()                charge du GPU ou null / GPU load or null
+     photosLibraryRoots()      dossiers des phototheques Photos (macOS), [] ailleurs
+                               folders of Photos libraries (macOS), [] elsewhere
+     imageToJpeg(src,dest,px)  Promise<bool> : JPEG reduit (sips), false hors macOS
+                               Promise<bool>: shrunk JPEG (sips), false off macOS
    ============================================================ */
 "use strict";
 
@@ -441,6 +445,8 @@ module.exports = {
      Raspberry Pi, notably. Callers must handle that case: it is the
      NORMAL case, not a failure. */
   gpuUsage: impl.gpuUsage,
+  photosLibraryRoots: impl.photosLibraryRoots,
+  imageToJpeg: impl.imageToJpeg,
   ffmpegCandidates: impl.ffmpegCandidates,
   ffmpegInstallHint: impl.ffmpegInstallHint,
   chromiumCandidates: impl.chromiumCandidates,

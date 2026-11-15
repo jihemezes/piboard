@@ -573,6 +573,16 @@ const LIBRARY_MOCK = {
   // 1.155.0 : gestion de la bibliotheque / library management
   manage: false, used: [], patched: [], moved: [], restored: [], deleted: [], urls: [], uploads: [], listUrls: []
 };
+/* Photos (Mac) : phototheque factice / fake Photos library (1.166.0) */
+const PHOTOS_MOCK = {
+  supported: true, perm: false, listUrls: [], imports: [],
+  libs: [{ path: "/Users/jm/Pictures/Photos Library.photoslibrary", name: "Photos Library", hasDb: true, access: { ok: true } }],
+  items: [
+    { id: "A/AAAA1111.jpg", name: "IMG_0001.JPG", w: 4000, h: 3000, date: 1, fav: true },
+    { id: "B/BBBB2222.heic", name: "<b>IMG_0002</b>.HEIC", w: 3000, h: 4000, date: 2, fav: false },
+    { id: "C/CCCC3333.jpg", name: "IMG_0003.JPG", w: 2000, h: 1500, date: 3, fav: false }
+  ]
+};
 const SHUTDOWN_MOCK = { answer: { ok: false } };
 const QUOTE_MOCK = { fail: false };
 const FS_MOCK = {
@@ -1002,6 +1012,28 @@ const dom = new JSDOM(html, {
         const f = opts.body && opts.body.get ? opts.body.get("images") : null;
         LIBRARY_MOCK.uploads.push({ section: u.split("/").pop(), name: f && f.name });
         return json({ ok: true, added: ["user:x:" + (f && f.name)], rejected: [] });
+      }
+      if (u === "/api/photos/status") {
+        return json({ supported: PHOTOS_MOCK.supported, libraries: PHOTOS_MOCK.supported ? PHOTOS_MOCK.libs : [] });
+      }
+      if (u.startsWith("/api/photos/albums")) {
+        return json({ mode: "database", albums: [{ id: "10", title: "Vacances", count: 2 }] });
+      }
+      if (u.startsWith("/api/photos/list")) {
+        PHOTOS_MOCK.listUrls.push(u);
+        if (PHOTOS_MOCK.perm) {
+          return Promise.resolve({ ok: false, status: 403, json: () => Promise.resolve({ error: "permission" }) });
+        }
+        const q = new URLSearchParams(u.split("?")[1] || "");
+        let items = PHOTOS_MOCK.items;
+        if (q.get("source") === "favorites") items = items.filter((i) => i.fav);
+        return json({ mode: "database", albumFound: true, total: items.length, missing: 1,
+          items: items.map((i) => Object.assign({ thumb: "/api/photos/thumb?id=" + encodeURIComponent(i.id) }, i)) });
+      }
+      if (u === "/api/photos/import" && method === "POST") {
+        const body = JSON.parse(opts.body || "{}");
+        PHOTOS_MOCK.imports.push(body);
+        return json({ ok: true, added: body.ids.map((i) => "user:" + body.section + ":" + i), rejected: [] });
       }
       if (/\/api\/library\?/.test(u) && method === "GET") {
         LIBRARY_MOCK.listUrls.push(u);
@@ -7192,6 +7224,80 @@ function catalogItemFor(catalog, document, widgetId) {
         document.getElementById("libraryStatus").textContent.includes("disque illisible"));
       LIBRARY_MOCK.fail = false;
       document.getElementById("libraryModal").hidden = true;
+    }
+
+    /* ---------- Photos (Mac) : choisir des photos a importer (1.166.0) ----------
+       Parcours reel : le bouton n'existe que sur un Mac ayant une
+       phototheque, la grille echappe les noms, la selection multiple
+       survit a un changement de filtre, l'import envoie la section et les
+       identifiants, une autorisation macOS refusee est expliquee.
+       Photos (Mac): real journey. */
+    {
+      const click = (id) => document.getElementById(id).dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      PHOTOS_MOCK.supported = true;
+      click("pageBgLibrary");
+      await sleep(200);
+      assert("photos : le bouton apparait sur un Mac avec phototheque", document.getElementById("libraryPhotos").hidden === false);
+      click("libraryPhotos");
+      await sleep(250);
+      const pg = document.getElementById("photosGrid");
+      assert("photos : la fenetre s'ouvre par-dessus la bibliotheque", document.getElementById("photosModal").hidden === false);
+      assert("photos : les trois photos sont listees", pg.querySelectorAll(".photos-item").length === 3);
+      assert("photos : le nom est echappe, pas interprete",
+        !pg.querySelector(".library-item-name b") && /<b>IMG_0002<\/b>/.test(pg.querySelectorAll(".library-item-name")[1].textContent));
+      assert("photos : la phototheque trouvee est proposee",
+        document.getElementById("photosLib").options[0].textContent === "Photos Library");
+      assert("photos : le favori est signale", pg.querySelectorAll(".photos-fav").length === 1);
+      assert("photos : importer est desactive sans selection", document.getElementById("photosImport").disabled === true);
+      pg.querySelectorAll(".photos-item")[0].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      pg.querySelectorAll(".photos-item")[1].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      assert("photos : deux photos selectionnees",
+        pg.querySelectorAll(".photos-item.selected").length === 2 && /2/.test(document.getElementById("photosSelCount").textContent));
+      assert("photos : le bouton annonce le nombre",
+        document.getElementById("photosImport").disabled === false && /2/.test(document.getElementById("photosImport").textContent));
+      document.getElementById("photosSource").value = "favorites";
+      document.getElementById("photosSource").dispatchEvent(new window.Event("change", { bubbles: true }));
+      await sleep(200);
+      assert("photos : le filtre favoris est envoye au serveur", /source=favorites/.test(PHOTOS_MOCK.listUrls[PHOTOS_MOCK.listUrls.length - 1]));
+      assert("photos : seule la photo favorite reste affichee", pg.querySelectorAll(".photos-item").length === 1);
+      assert("photos : la selection survit au changement de filtre", /2/.test(document.getElementById("photosSelCount").textContent));
+      document.getElementById("photosSource").value = "all";
+      document.getElementById("photosSource").dispatchEvent(new window.Event("change", { bubbles: true }));
+      document.getElementById("photosNoShots").checked = false;
+      document.getElementById("photosNoShots").dispatchEvent(new window.Event("change", { bubbles: true }));
+      await sleep(200);
+      assert("photos : le filtre captures d'ecran est transmis", /noScreenshots=0/.test(PHOTOS_MOCK.listUrls[PHOTOS_MOCK.listUrls.length - 1]));
+      click("photosSelNone");
+      assert("photos : effacer la selection", pg.querySelectorAll(".photos-item.selected").length === 0
+        && document.getElementById("photosImport").disabled === true);
+      click("photosSelPage");
+      assert("photos : tout selectionner", pg.querySelectorAll(".photos-item.selected").length === 3);
+      document.getElementById("photosSection").value = "photos";
+      click("photosImport");
+      await sleep(250);
+      const sent = PHOTOS_MOCK.imports[PHOTOS_MOCK.imports.length - 1];
+      assert("photos : l'import envoie section et identifiants",
+        sent && sent.section === "photos" && sent.ids.length === 3 && sent.ids[0] === "A/AAAA1111.jpg"
+        && sent.library === "/Users/jm/Pictures/Photos Library.photoslibrary");
+      assert("photos : le resultat de l'import est annonce", /3/.test(document.getElementById("photosStatus").textContent));
+      assert("photos : la selection est videe apres l'import", pg.querySelectorAll(".photos-item.selected").length === 0);
+
+      PHOTOS_MOCK.perm = true;
+      document.getElementById("photosOrder").value = "oldest";
+      document.getElementById("photosOrder").dispatchEvent(new window.Event("change", { bubbles: true }));
+      await sleep(200);
+      assert("photos : une autorisation macOS refusee est expliquee",
+        /Confidentialit/.test(document.getElementById("photosStatus").textContent) && pg.querySelectorAll(".photos-item").length === 0);
+      PHOTOS_MOCK.perm = false;
+      document.getElementById("photosModal").hidden = true;
+      document.getElementById("libraryModal").hidden = true;
+
+      PHOTOS_MOCK.supported = false;
+      click("pageBgLibrary");
+      await sleep(200);
+      assert("photos : le bouton reste cache hors macOS", document.getElementById("libraryPhotos").hidden === true);
+      document.getElementById("libraryModal").hidden = true;
+      PHOTOS_MOCK.supported = true;
     }
 
     /* ---------- Gestion de la bibliotheque (1.155.0) ----------

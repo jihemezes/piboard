@@ -32,6 +32,29 @@
 
 # Nouveautes / What's new
 
+## 1.166.0
+
+**Vos photos Mac dans PiBoard**
+
+Sur un Mac, PiBoard sait maintenant lire votre **photothèque Photos**, sans jamais la modifier.
+Le **diaporama** peut afficher toutes vos photos, vos **favoris**, les plus récentes ou
+**un album**, en écartant les captures d'écran, en ne gardant que le paysage ou le portrait,
+ou les grandes photos seulement. Et partout où l'on choisit une image (fond de page, logo,
+écran de veille), le bouton **« Photos (Mac)… »** de la bibliothèque permet de **cocher des
+photos** et de les **importer** dans PiBoard. Les photos HEIC de l'iPhone sont converties
+automatiquement.
+
+---
+
+**Your Mac's photos in PiBoard**
+
+On a Mac, PiBoard can now read your **Photos library**, without ever modifying it. The
+**slideshow** can show all your photos, your **favourites**, the most recent ones or **one
+album**, leaving out screenshots, keeping only landscape or portrait, or only large photos.
+And everywhere an image is picked (page background, logo, screen saver), the library's
+**"Photos (Mac)…"** button lets you **tick photos** and **import** them into PiBoard. iPhone
+HEIC photos are converted automatically.
+
 ## 1.165.0
 
 **Écran tactile : enfin des réglages utilisables au doigt**

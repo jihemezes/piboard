@@ -1,6 +1,6 @@
 {
   "id": "slideshow",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "Slideshow",
     "fr": "Diaporama"
@@ -32,8 +32,8 @@
         "fr": "Source des photos"
       },
       "hint": {
-        "en": "Upload: manage photos directly from the tile (button on the tile) — no web server needed. Local folder: a NAS/SMB share mounted on the Pi, or a cloud folder synced with rclone. USB key: automatically shows photos from any USB drive currently plugged into the Pi — nothing to configure. WebDAV: a Nextcloud/ownCloud/NAS WebDAV share. Image URLs: the original method, one URL per line below.",
-        "fr": "Téléversement : gérez les photos directement depuis la tuile (bouton sur la tuile) — aucun serveur web requis. Dossier local : un partage NAS/SMB monté sur le Pi, ou un dossier cloud synchronisé avec rclone. Clé USB : affiche automatiquement les photos de toute clé USB actuellement branchée sur le Pi — rien à configurer. WebDAV : un partage Nextcloud/ownCloud/NAS. URLs d'images : la méthode d'origine, une URL par ligne ci-dessous."
+        "en": "Upload: manage photos directly from the tile (button on the tile) — no web server needed. Local folder: a NAS/SMB share mounted on the Pi, or a cloud folder synced with rclone. USB key: automatically shows photos from any USB drive currently plugged into the Pi — nothing to configure. WebDAV: a Nextcloud/ownCloud/NAS WebDAV share. Photos library: on a Mac, reads your Photos library directly (read-only), with its albums, favourites and filters. Image URLs: the original method, one URL per line below.",
+        "fr": "Téléversement : gérez les photos directement depuis la tuile (bouton sur la tuile) — aucun serveur web requis. Dossier local : un partage NAS/SMB monté sur le Pi, ou un dossier cloud synchronisé avec rclone. Clé USB : affiche automatiquement les photos de toute clé USB actuellement branchée sur le Pi — rien à configurer. WebDAV : un partage Nextcloud/ownCloud/NAS. Photothèque Photos : sur un Mac, lit directement votre photothèque Photos (en lecture seule), avec ses albums, favoris et filtres. URLs d'images : la méthode d'origine, une URL par ligne ci-dessous."
       },
       "options": [
         {
@@ -62,6 +62,13 @@
           "label": {
             "en": "WebDAV share",
             "fr": "Partage WebDAV"
+          }
+        },
+        {
+          "value": "photos",
+          "label": {
+            "en": "Photos library (Mac only)",
+            "fr": "Photothèque Photos (Mac uniquement)"
           }
         },
         {
@@ -134,6 +141,207 @@
         "fr": "Source"
       },
       "sensitivity": "personal"
+    },
+    {
+      "key": "photosLibrary",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Photos library location (only used by \"Photos library\")",
+        "fr": "Emplacement de la photothèque (utilisé seulement par « Photothèque Photos »)"
+      },
+      "hint": {
+        "en": "Leave empty to use the first library found in your Pictures folder. Otherwise give the full path of a .photoslibrary package.",
+        "fr": "Laissez vide pour utiliser la première photothèque trouvée dans votre dossier Images. Sinon, indiquez le chemin complet d'un paquet .photoslibrary."
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "photosSource",
+      "type": "select",
+      "default": "all",
+      "label": {
+        "en": "Which photos",
+        "fr": "Quelles photos"
+      },
+      "hint": {
+        "en": "All photos, your favourites, the most recent ones, or one album.",
+        "fr": "Toutes les photos, vos favoris, les plus récentes, ou un album."
+      },
+      "options": [
+        {
+          "value": "all",
+          "label": {
+            "en": "All photos",
+            "fr": "Toutes les photos"
+          }
+        },
+        {
+          "value": "favorites",
+          "label": {
+            "en": "Favourites",
+            "fr": "Favoris"
+          }
+        },
+        {
+          "value": "recent",
+          "label": {
+            "en": "Most recent (300)",
+            "fr": "Récentes (300)"
+          }
+        },
+        {
+          "value": "album",
+          "label": {
+            "en": "One album",
+            "fr": "Un album"
+          }
+        }
+      ],
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "photosAlbum",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Album name (only used by \"One album\")",
+        "fr": "Nom de l'album (utilisé seulement par « Un album »)"
+      },
+      "hint": {
+        "en": "The album's title as shown in Photos, capital letters do not matter. The \"Photos (Mac)\" window of the image library lists your albums.",
+        "fr": "Le titre de l'album tel qu'il apparaît dans Photos, sans tenir compte des majuscules. La fenêtre « Photos (Mac) » de la bibliothèque d'images liste vos albums."
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "photosOrder",
+      "type": "select",
+      "default": "recent",
+      "label": {
+        "en": "Photos order",
+        "fr": "Ordre des photos"
+      },
+      "hint": {
+        "en": "The \"Shuffle the photos\" option below overrides this order.",
+        "fr": "L'option « Mélanger les photos » ci-dessous prend le pas sur cet ordre."
+      },
+      "options": [
+        {
+          "value": "recent",
+          "label": {
+            "en": "Newest first",
+            "fr": "Plus récentes d'abord"
+          }
+        },
+        {
+          "value": "oldest",
+          "label": {
+            "en": "Oldest first",
+            "fr": "Plus anciennes d'abord"
+          }
+        }
+      ],
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "photosOrient",
+      "type": "select",
+      "default": "any",
+      "label": {
+        "en": "Photo shape",
+        "fr": "Forme des photos"
+      },
+      "hint": {
+        "en": "Keep only landscape or only portrait photos.",
+        "fr": "Ne garder que les photos en paysage ou en portrait."
+      },
+      "options": [
+        {
+          "value": "any",
+          "label": {
+            "en": "Any",
+            "fr": "Toutes"
+          }
+        },
+        {
+          "value": "landscape",
+          "label": {
+            "en": "Landscape only",
+            "fr": "Paysage seulement"
+          }
+        },
+        {
+          "value": "portrait",
+          "label": {
+            "en": "Portrait only",
+            "fr": "Portrait seulement"
+          }
+        }
+      ],
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "photosMinWidth",
+      "type": "number",
+      "default": 0,
+      "label": {
+        "en": "Minimum size of the longest side (pixels, 0 = no limit)",
+        "fr": "Taille minimale du plus grand côté (pixels, 0 = sans limite)"
+      },
+      "hint": {
+        "en": "Leaves out small photos. Useful for a large screen: 2000 is a good start.",
+        "fr": "Écarte les petites photos. Utile sur un grand écran : 2000 est un bon début."
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "photosNoShots",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Leave out screenshots",
+        "fr": "Écarter les captures d'écran"
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
+    },
+    {
+      "key": "photosLimit",
+      "type": "number",
+      "default": 300,
+      "label": {
+        "en": "Maximum number of photos",
+        "fr": "Nombre maximal de photos"
+      },
+      "hint": {
+        "en": "Keeps the slideshow light on a small machine.",
+        "fr": "Garde le diaporama léger sur une petite machine."
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      }
     },
     {
       "key": "images",

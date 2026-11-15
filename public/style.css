@@ -3256,6 +3256,65 @@ body.touch-mode .library-detail-row select,
 body.touch .library-detail-row input,
 body.touch .library-detail-row select { min-height: 40px; }
 
+/* ---------- Photos (Mac) : selection de photos a importer ----------
+   Meme grille que la bibliotheque ; une coche en coin dit qu'une photo
+   est retenue (la bordure seule ne se voit pas sur une photo claire).
+   Same grid as the library; a corner tick says a photo is chosen (the
+   border alone is invisible on a bright photo). */
+.photos-modal { z-index: 1200; }
+.photos-item img { aspect-ratio: 4 / 3; }
+.photos-item.selected img { opacity: .82; }
+.photos-check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  line-height: 1;
+  color: #fff;
+  background: rgba(0, 0, 0, 0.45);
+  border: 2px solid rgba(255, 255, 255, 0.85);
+}
+.photos-item .photos-check { color: transparent; }
+.photos-item.selected .photos-check {
+  color: #fff;
+  background: var(--accent, #4C8DFF);
+  border-color: var(--accent, #4C8DFF);
+}
+.photos-fav {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  color: #ff5a6a;
+  font-size: 16px;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+}
+.photos-selbar { border-bottom: 0; border-top: 1px solid var(--tile-edge); }
+.photos-into { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.photos-into select {
+  font: inherit;
+  font-size: 13px;
+  padding: 5px 9px;
+  border-radius: 7px;
+  border: 1px solid var(--tile-edge);
+  background: transparent;
+  color: var(--text);
+}
+#photosOtherRow input { flex: 1 1 auto; min-width: 0; }
+#photosCard .library-foot { display: flex; align-items: center; gap: 12px; }
+#photosCard .library-foot .field-hint { flex: 1 1 auto; margin: 0; }
+body.touch .photos-modal .library-toolbar select,
+body.touch .photos-modal .library-toolbar .btn,
+body.touch .photos-into select,
+body.touch-mode .photos-modal .library-toolbar select,
+body.touch-mode .photos-modal .library-toolbar .btn,
+body.touch-mode .photos-into select { min-height: 44px; }
+body.touch .photos-check, body.touch-mode .photos-check { width: 32px; height: 32px; font-size: 19px; }
+
 /* ============================================================
    Themes de couleurs (1.111.0)
    ============================================================ */

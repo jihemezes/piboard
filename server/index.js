@@ -41,6 +41,7 @@ const store = require("./store");
 const media = require("./media");
 const localFolder = require("./localFolder");
 const usbMedia = require("./usbMedia");
+const photosLibrary = require("./photosLibrary");
 const networkScan = require("./networkScan");
 const netHosts = require("./netHosts");
 const hostWatch = require("./hostWatch");
@@ -1554,6 +1555,100 @@ app.get("/api/usb-media-file", (req, res) => {
     res.sendFile(full);
   } catch (e) {
     res.status(404).end();
+  }
+});
+
+/* ---------- Photos (macOS) : phototheque en lecture seule ----------
+   Source du diaporama (mode "photos") et de l'import dans la
+   bibliotheque d'images. Voir server/photosLibrary.js. Jamais d'ecriture
+   dans la phototheque. Photos (macOS): read-only library, slideshow
+   source and import into the image library. See server/photosLibrary.js. */
+function photosLibraryFrom(q) {
+  const wanted = String((q && q.library) || "").trim();
+  if (wanted) {
+    if (!photosLibrary.isLibraryPath(wanted)) throw Object.assign(new Error("invalid library"), { status: 400 });
+    return wanted;
+  }
+  const found = photosLibrary.discoverLibraries();
+  if (!found.length) throw Object.assign(new Error("no library"), { status: 404 });
+  return found[0].path;
+}
+
+function photosFail(res, e) {
+  const code = e && e.code;
+  if (code === "EPERM" || code === "EACCES") return res.status(403).json({ error: "permission" });
+  res.status((e && e.status) || 400).json({ error: String((e && e.message) || e) });
+}
+
+function photosOpts(q) {
+  return {
+    source: ["favorites", "recent", "album"].includes(q.source) ? q.source : "all",
+    album: String(q.album || ""),
+    order: ["oldest", "random"].includes(q.order) ? q.order : "recent",
+    orient: ["landscape", "portrait"].includes(q.orient) ? q.orient : "any",
+    minWidth: Number(q.minWidth) || 0,
+    noScreenshots: q.noScreenshots === "1" || q.noScreenshots === "true",
+    offset: Number(q.offset) || 0,
+    limit: Number(q.limit) || 120
+  };
+}
+
+app.get("/api/photos/status", (req, res) => {
+  try {
+    res.json(photosLibrary.status());
+  } catch (e) {
+    res.status(500).json({ error: String((e && e.message) || e) });
+  }
+});
+
+app.get("/api/photos/albums", (req, res) => {
+  try {
+    res.json(photosLibrary.albums(photosLibraryFrom(req.query)));
+  } catch (e) {
+    photosFail(res, e);
+  }
+});
+
+app.get("/api/photos/list", (req, res) => {
+  try {
+    const lib = photosLibraryFrom(req.query);
+    const out = photosLibrary.list(lib, photosOpts(req.query));
+    const base = "library=" + encodeURIComponent(lib) + "&id=";
+    const slide = req.query.urls === "1";
+    res.json({
+      mode: out.mode, dbError: out.dbError, albumFound: out.albumFound, total: out.total, missing: out.missing,
+      items: out.items.map((a) => slide
+        ? { name: a.id, url: "/api/photos/file?" + base + encodeURIComponent(a.id) + "&max=" + photosLibrary.SLIDE_MAX_PX }
+        : { id: a.id, name: a.original || a.file, w: a.w, h: a.h, date: a.date, fav: a.fav,
+            thumb: "/api/photos/thumb?" + base + encodeURIComponent(a.id) })
+    });
+  } catch (e) {
+    photosFail(res, e);
+  }
+});
+
+async function sendPhoto(req, res, opts) {
+  try {
+    const lib = photosLibraryFrom(req.query);
+    const served = await photosLibrary.servedFile(lib, String(req.query.id || ""), opts);
+    if (!served) return res.status(415).end();
+    res.set("Cache-Control", "private, max-age=3600");
+    res.sendFile(served.file);
+  } catch (e) {
+    res.status(e && (e.code === "EPERM" || e.code === "EACCES") ? 403 : 404).end();
+  }
+}
+
+app.get("/api/photos/thumb", (req, res) => sendPhoto(req, res, { thumb: true }));
+app.get("/api/photos/file", (req, res) => sendPhoto(req, res, { max: Math.min(8000, Number(req.query.max) || 0) }));
+
+app.post("/api/photos/import", express.json({ limit: "64kb" }), async (req, res) => {
+  try {
+    const b = req.body || {};
+    const lib = photosLibraryFrom({ library: b.library });
+    res.json(Object.assign({ ok: true }, await photosLibrary.importAssets(lib, b.ids, String(b.section || ""), library)));
+  } catch (e) {
+    photosFail(res, e);
   }
 });
 

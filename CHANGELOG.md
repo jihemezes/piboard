@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.166.0
+
+- **Photothèque Photos (macOS) comme source d'images.** Nouveau module
+  `server/photosLibrary.js` : lecture **directe et en lecture seule** du paquet
+  `Photos Library.photoslibrary` (originaux sous `originals/`, vignettes sous
+  `resources/derivatives/`). Favoris, albums utilisateur, tailles, orientation,
+  dates et captures d'écran viennent de `database/Photos.sqlite`, lue sur une
+  **copie** (Photos verrouille la base, journal WAL vivant) avec `node:sqlite`
+  (repli : l'outil `sqlite3` de macOS). Requêtes **tolérantes au schéma** : seules
+  les colonnes présentes sont interrogées, la table de jointure des albums
+  (`Z_<n>ASSETS`) est retrouvée par sa forme et départagée par le nombre
+  d'albums utilisateur visés. Base illisible ou schéma inattendu : repli sur la
+  lecture des fichiers (récentes, sans favoris/albums/filtres), annoncé dans
+  l'interface. Originaux absents (iCloud « Optimiser le stockage ») écartés et
+  comptés. Identifiants de photo de forme stricte (`<dossier>/<fichier>`),
+  aucune sortie possible du paquet.
+- **Conversion et cache.** HEIC/TIFF/BMP convertis en JPEG par `sips`
+  (nouvelles fonctions de la couche plateforme : `photosLibraryRoots()` et
+  `imageToJpeg()`, présentes dans les trois fichiers, inactives hors macOS) ;
+  JPEG de plus de 6 Mo réduits à 2560 px pour le diaporama ; cache dans le
+  dossier temporaire, plafonné à 400 Mo.
+- **Routes** : `/api/photos/status`, `albums`, `list`, `thumb`, `file`, et
+  `POST /api/photos/import`.
+- **Diaporama** (manifeste 0.4.0) : source « Photothèque Photos (Mac
+  uniquement) » avec emplacement, quelles photos (toutes / favoris / 300
+  récentes / un album), nom d'album, ordre, forme, taille minimale, captures
+  d'écran écartées, nombre maximal ; rechargée à la revérification périodique.
+- **Bibliothèque d'images** : bouton « Photos (Mac)… » (visible seulement sur un
+  Mac ayant une photothèque) qui ouvre une grille de sélection multiple (mêmes
+  filtres, ordre, « autre photothèque » mémorisée) ; « Importer (N) » **copie**
+  les photos choisies dans la section voulue (fonds, logos, photos), 50 au plus
+  par envoi. Tous les sélecteurs d'images (fond de page, tuile Logo, diaporama,
+  écran de veille) en profitent.
+- `electron-builder.yml` : textes d'usage `NSPhotoLibraryUsageDescription` et
+  `NSPicturesFolderUsageDescription`. Aucun entitlement ajouté : si macOS
+  refuse l'accès, la fenêtre explique d'autoriser PiBoard dans « Accès complet au
+  disque ».
+- Non vérifié sur une vraie photothèque (le schéma de Photos n'est pas
+  documenté) : 10 contrôles serveur sur un paquet factice avec une vraie base
+  SQLite, et 22 contrôles dom-smoke. Aide FR/EN.
+
 ## 1.165.1
 
 - **Publication : nouvelle tentative automatique de la construction.** La 1.165.0

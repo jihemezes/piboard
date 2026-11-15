@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.165.1
+   Version 1.166.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -7993,6 +7993,7 @@
     $("libraryDrop").hidden = true;
     $("libraryModal").hidden = false;
     refreshLibrary();
+    refreshPhotosButton();
   }
 
   function openLibraryManager() {
@@ -8553,6 +8554,292 @@
           librarySetStatus(i18n.t("library.downloadFailed"), "err");
         }
       });
+    });
+  }
+
+  /* ============================================================
+     Photos (Mac) : choisir des photos de la phototheque a importer
+     ============================================================
+     Une fenetre empilee au-dessus de la bibliotheque d'images. Elle ne
+     modifie JAMAIS la phototheque : le serveur la lit en lecture seule
+     (server/photosLibrary.js) et l'import COPIE les photos choisies dans
+     une section de la bibliotheque PiBoard. Comme tous les selecteurs
+     d'images passent par la bibliotheque (fonds de page, tuile Logo,
+     diaporama, ecran de veille), ils en profitent tous. Le bouton
+     n'apparait que sur un Mac ayant une phototheque.
+
+     A window stacked above the image library. It NEVER modifies the
+     Photos library: the server reads it read-only and the import COPIES
+     the chosen photos into a section of the PiBoard library. All image
+     pickers go through the library (page background, Logo tile,
+     slideshow, screen saver), so they all benefit. The button only shows
+     on a Mac that has a library. */
+  const PHOTOS_PAGE = 120;
+  const photosState = { libs: [], library: "", items: [], total: 0, missing: 0, selected: new Set(), seq: 0, albumsFor: "", importing: false };
+
+  function photosKey() { return "piboardPhotosLibrary"; }
+
+  async function refreshPhotosButton() {
+    const btn = $("libraryPhotos");
+    if (!btn) return;
+    let ok = false;
+    try {
+      const r = await fetch("/api/photos/status");
+      const st = await r.json();
+      ok = !!(r.ok && st && st.supported);
+      photosState.libs = ok ? (st.libraries || []) : [];
+    } catch (e) { ok = false; }
+    btn.hidden = !ok;
+  }
+
+  function photosSetStatus(text, kind) {
+    const el = $("photosStatus");
+    if (!el) return;
+    el.textContent = text || "";
+    el.classList.toggle("library-status-err", kind === "err");
+  }
+
+  function photosQuery(extra) {
+    const q = new URLSearchParams({
+      source: $("photosSource").value,
+      order: $("photosOrder").value,
+      orient: $("photosOrient").value,
+      minWidth: $("photosSize").value,
+      noScreenshots: $("photosNoShots").checked ? "1" : "0",
+      limit: String(PHOTOS_PAGE)
+    });
+    if ($("photosSource").value === "album") q.set("album", $("photosAlbum").value);
+    if (photosState.library) q.set("library", photosState.library);
+    for (const k of Object.keys(extra || {})) q.set(k, String(extra[k]));
+    return q.toString();
+  }
+
+  function renderPhotosLibSelect() {
+    const sel = $("photosLib");
+    const opts = photosState.libs.map((l) => `<option value="${escapeHtmlAttr(l.path)}">${escapeHtml(l.name)}</option>`);
+    opts.push(`<option value="__other__">${escapeHtml(i18n.t("photos.otherLib"))}</option>`);
+    sel.innerHTML = opts.join("");
+    let saved = "";
+    try { saved = localStorage.getItem(photosKey()) || ""; } catch (e) { /* stockage indisponible */ }
+    const known = photosState.libs.some((l) => l.path === saved);
+    if (saved && !known) {
+      sel.insertAdjacentHTML("afterbegin", `<option value="${escapeHtmlAttr(saved)}">${escapeHtml(saved.split("/").pop().replace(/\.photoslibrary$/i, ""))}</option>`);
+    }
+    sel.value = saved || (photosState.libs[0] ? photosState.libs[0].path : "__other__");
+    photosState.library = sel.value === "__other__" ? "" : sel.value;
+    $("photosOtherRow").hidden = !(sel.value === "__other__");
+  }
+
+  async function openPhotos() {
+    photosState.selected = new Set();
+    photosState.items = [];
+    photosState.albumsFor = "";
+    const sec = $("photosSection");
+    sec.innerHTML = (libraryState.sections && libraryState.sections.length ? libraryState.sections : ["backgrounds", "logos", "photos"])
+      .map((x) => `<option value="${escapeHtmlAttr(x)}">${escapeHtml(librarySectionLabel(x))}</option>`).join("");
+    sec.value = libraryState.section || "photos";
+    $("photosModal").hidden = false;
+    // Etat frais : la phototheque a pu apparaitre ou une autorisation etre donnee.
+    // Fresh status: a library may have appeared or a permission been granted.
+    try {
+      const st = await fetch("/api/photos/status").then((r) => r.json());
+      photosState.libs = (st && st.libraries) || [];
+    } catch (e) { photosState.libs = []; }
+    renderPhotosLibSelect();
+    if (!photosState.libs.length && $("photosLib").value === "__other__") {
+      photosSetStatus(i18n.t("photos.noLibrary"), "err");
+      $("photosGrid").innerHTML = "";
+      updatePhotosSelection();
+      return;
+    }
+    loadPhotos(true);
+  }
+
+  function closePhotos() {
+    $("photosModal").hidden = true;
+  }
+
+  async function loadAlbums() {
+    if (photosState.albumsFor === photosState.library) return;
+    const sel = $("photosAlbum");
+    try {
+      const r = await fetch("/api/photos/albums" + (photosState.library ? "?library=" + encodeURIComponent(photosState.library) : ""));
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || ("status " + r.status));
+      sel.innerHTML = (data.albums || []).map((a) =>
+        `<option value="${escapeHtmlAttr(a.title)}">${escapeHtml(libFmt("photos.albumItem", { title: a.title, n: a.count }))}</option>`).join("");
+      photosState.albumsFor = photosState.library;
+    } catch (e) {
+      sel.innerHTML = "";
+    }
+  }
+
+  function photoThumbHtml(it) {
+    const sel = photosState.selected.has(it.id);
+    const fav = it.fav ? `<span class="photos-fav" title="${escapeHtmlAttr(i18n.t("photos.favTitle"))}">\u2665</span>` : "";
+    return `<div class="library-item photos-item${sel ? " selected" : ""}" data-id="${escapeHtmlAttr(it.id)}" role="button" tabindex="0" aria-pressed="${sel}">
+      <img src="${escapeHtmlAttr(it.thumb)}" alt="" loading="lazy">
+      <span class="photos-check" aria-hidden="true">\u2713</span>${fav}
+      <span class="library-item-name">${escapeHtml(it.name || "")}</span>
+    </div>`;
+  }
+
+  function wirePhotosItems(root) {
+    root.querySelectorAll(".photos-item").forEach((el) => {
+      const toggle = () => {
+        const id = el.dataset.id;
+        if (photosState.selected.has(id)) photosState.selected.delete(id); else photosState.selected.add(id);
+        const on = photosState.selected.has(id);
+        el.classList.toggle("selected", on);
+        el.setAttribute("aria-pressed", String(on));
+        updatePhotosSelection();
+      };
+      onActivate(el, toggle);
+      el.addEventListener("keydown", (e) => {
+        if (e.key === " " || e.key === "Enter") { e.preventDefault(); toggle(); }
+      });
+    });
+  }
+
+  function updatePhotosSelection() {
+    const n = photosState.selected.size;
+    $("photosSelCount").textContent = n ? libFmt("photos.selected", { n }) : "";
+    const btn = $("photosImport");
+    btn.disabled = !n || photosState.importing;
+    btn.textContent = n ? libFmt("photos.importN", { n }) : i18n.t("photos.import");
+  }
+
+  async function loadPhotos(reset) {
+    const grid = $("photosGrid");
+    const seq = ++photosState.seq;
+    if (reset) {
+      photosState.items = [];
+      grid.innerHTML = `<p class="field-hint">${i18n.t("photos.loading")}</p>`;
+      $("photosMore").hidden = true;
+    }
+    photosSetStatus("");
+    if ($("photosSource").value === "album") await loadAlbums();
+    if (seq !== photosState.seq) return;
+    try {
+      const r = await fetch("/api/photos/list?" + photosQuery({ offset: photosState.items.length }));
+      const data = await r.json().catch(() => ({}));
+      if (seq !== photosState.seq) return;
+      if (!r.ok) {
+        const code = String(data.error || "");
+        throw Object.assign(new Error(code || ("status " + r.status)), { photosCode: code, status: r.status });
+      }
+      const fresh = data.items || [];
+      photosState.items = photosState.items.concat(fresh);
+      photosState.total = data.total || 0;
+      photosState.missing = data.missing || 0;
+      if (reset) grid.innerHTML = "";
+      if (!photosState.items.length) {
+        grid.innerHTML = `<p class="field-hint">${i18n.t(data.albumFound === false ? "photos.noAlbum" : "photos.empty")}</p>`;
+      } else {
+        const holder = document.createElement("div");
+        holder.innerHTML = fresh.map(photoThumbHtml).join("");
+        wirePhotosItems(holder);
+        while (holder.firstChild) grid.appendChild(holder.firstChild);
+      }
+      $("photosMore").hidden = photosState.items.length >= photosState.total;
+      const parts = [];
+      if (data.mode === "files") parts.push(i18n.t("photos.filesMode"));
+      if (photosState.items.length) parts.push(libFmt("photos.count", { shown: photosState.items.length, total: photosState.total }));
+      if (photosState.missing) parts.push(libFmt("photos.missing", { n: photosState.missing }));
+      photosSetStatus(parts.join(" \u00b7 "));
+    } catch (e) {
+      if (seq !== photosState.seq) return;
+      console.warn("[piboard] photos", e);
+      grid.innerHTML = "";
+      const msg = e.photosCode === "permission" ? i18n.t("photos.permission")
+        : (e.photosCode === "no library" || e.status === 404) ? i18n.t("photos.noLibrary")
+        : String(e.message || e);
+      photosSetStatus(msg, "err");
+    }
+    updatePhotosSelection();
+  }
+
+  async function importPhotos() {
+    const ids = Array.from(photosState.selected);
+    if (!ids.length || photosState.importing) return;
+    const section = $("photosSection").value;
+    photosState.importing = true;
+    updatePhotosSelection();
+    let added = 0;
+    let refused = 0;
+    try {
+      for (let i = 0; i < ids.length; i += 5) {
+        photosSetStatus(libFmt("photos.importing", { i: Math.min(ids.length, i + 5), n: ids.length }));
+        const r = await fetch("/api/photos/import", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ library: photosState.library, section, ids: ids.slice(i, i + 5) })
+        });
+        const out = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(out.error || ("status " + r.status));
+        added += (out.added || []).length;
+        refused += (out.rejected || []).length;
+      }
+      photosSetStatus(refused
+        ? libFmt("photos.importPartial", { n: added, m: refused })
+        : libFmt("photos.imported", { n: added, section: librarySectionLabel(section) }), refused && !added ? "err" : "");
+      photosState.selected = new Set();
+      $("photosGrid").querySelectorAll(".photos-item.selected").forEach((el) => { el.classList.remove("selected"); el.setAttribute("aria-pressed", "false"); });
+      // La bibliotheque, derriere, montre aussitot les nouvelles images.
+      // The library behind shows the new images right away.
+      if (section === libraryState.section) refreshLibrary(); else refreshLibraryUsage();
+    } catch (e) {
+      console.warn("[piboard] import photos", e);
+      photosSetStatus(i18n.t("photos.importFailed") + " (" + String(e.message || e) + ")", "err");
+    } finally {
+      photosState.importing = false;
+      updatePhotosSelection();
+    }
+  }
+
+  function wirePhotos() {
+    onActivate($("libraryPhotos"), openPhotos);
+    onActivate($("photosClose"), closePhotos);
+    onActivate($("photosImport"), importPhotos);
+    onActivate($("photosMore"), () => loadPhotos(false));
+    onActivate($("photosSelNone"), () => {
+      photosState.selected = new Set();
+      $("photosGrid").querySelectorAll(".photos-item.selected").forEach((el) => { el.classList.remove("selected"); el.setAttribute("aria-pressed", "false"); });
+      updatePhotosSelection();
+    });
+    onActivate($("photosSelPage"), () => {
+      photosState.items.forEach((it) => photosState.selected.add(it.id));
+      $("photosGrid").querySelectorAll(".photos-item").forEach((el) => { el.classList.add("selected"); el.setAttribute("aria-pressed", "true"); });
+      updatePhotosSelection();
+    });
+    const reload = () => loadPhotos(true);
+    for (const id of ["photosOrder", "photosOrient", "photosSize", "photosNoShots", "photosAlbum"]) {
+      $(id).addEventListener("change", reload);
+    }
+    $("photosSource").addEventListener("change", () => {
+      $("photosAlbum").hidden = $("photosSource").value !== "album";
+      reload();
+    });
+    $("photosLib").addEventListener("change", () => {
+      const v = $("photosLib").value;
+      $("photosOtherRow").hidden = v !== "__other__";
+      if (v === "__other__") { $("photosOtherPath").focus(); return; }
+      photosState.library = v;
+      photosState.albumsFor = "";
+      try { localStorage.setItem(photosKey(), v); } catch (e) { /* stockage indisponible */ }
+      reload();
+    });
+    onActivate($("photosOtherGo"), () => {
+      const v = String($("photosOtherPath").value || "").trim();
+      if (!v) return;
+      photosState.library = v;
+      photosState.albumsFor = "";
+      try { localStorage.setItem(photosKey(), v); } catch (e) { /* stockage indisponible */ }
+      renderPhotosLibSelect();
+      reload();
+    });
+    $("photosOtherPath").addEventListener("keydown", (e) => {
+      if (e.key === "Enter") { e.preventDefault(); $("photosOtherGo").click(); }
     });
   }
 
@@ -11768,6 +12055,7 @@
     wireClone();
     onActivate($("libraryAdd"), () => $("libraryFile").click());
     onActivate($("libraryOnline"), showLibraryCatalog);
+    wirePhotos();
     $("libraryFile").addEventListener("change", (e) => {
       // Copie avant de vider : vider le champ vide aussi sa liste de fichiers.
       // Copy before clearing: clearing the field also empties its file list.

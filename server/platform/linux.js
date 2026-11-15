@@ -544,6 +544,18 @@ function readAmdGpu() {
 const GPU_TIMEOUT_MS = 4000;
 const NVIDIA_QUERY = "utilization.gpu,temperature.gpu,memory.used,memory.total,name";
 
+/* Phototheque Photos : specifique a macOS. Ici, aucune racine et pas de
+   conversion -- la source « Photos (Mac) » n'est donc jamais proposee.
+   Photos library: macOS-specific. Here, no root and no conversion -- the
+   "Photos (Mac)" source is therefore never offered. */
+function photosLibraryRoots() {
+  return [];
+}
+
+function imageToJpeg() {
+  return Promise.resolve(false);
+}
+
 function gpuUsage() {
   const amd = readAmdGpu();
   if (amd) return Promise.resolve(amd);
@@ -1108,6 +1120,8 @@ module.exports = {
   updateSupport,
   restartServer,
   gpuUsage,
+  photosLibraryRoots,
+  imageToJpeg,
   parseNvidiaSmi,
   parseGpuBusyPercent,
   MOUNT_ROOTS,

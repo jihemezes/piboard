@@ -1428,6 +1428,7 @@
       <button type="button" class="btn small" id="libraryAdd" data-i18n="library.add">Add my images…</button>
       <button type="button" class="btn small" id="libraryUrlBtn" data-i18n="library.fromUrl">From a web address…</button>
       <button type="button" class="btn small" id="libraryOnline" data-i18n="library.online">More online…</button>
+      <button type="button" class="btn small" id="libraryPhotos" data-i18n="photos.open" hidden>Photos (Mac)…</button>
       <input type="file" accept="image/*" multiple hidden id="libraryFile">
     </div>
     <div class="library-urlrow" id="libraryUrlRow" hidden>
@@ -1445,6 +1446,68 @@
     <footer class="library-foot">
       <p class="field-hint" id="libraryStatus"></p>
       <p class="field-hint library-usage" id="libraryUsage"></p>
+    </footer>
+  </div>
+</div>
+
+<!-- Photos (Mac) : choisir des photos de la phototheque a importer dans la
+     bibliotheque d'images. Lecture seule, voir server/photosLibrary.js.
+     Photos (Mac): choose photos from the Photos library to import into the
+     image library. Read-only, see server/photosLibrary.js. -->
+<div class="modal modal-stacked photos-modal" id="photosModal" hidden>
+  <div class="modal-card library-card" id="photosCard">
+    <header class="modal-head">
+      <h2 data-i18n="photos.title">Photos library (Mac)</h2>
+      <button class="modal-close" id="photosClose" aria-label="Close">&times;</button>
+    </header>
+    <div class="library-toolbar">
+      <select id="photosLib" aria-label="Library"></select>
+      <select id="photosSource">
+        <option value="all" data-i18n="photos.src.all">All photos</option>
+        <option value="favorites" data-i18n="photos.src.favorites">Favourites</option>
+        <option value="recent" data-i18n="photos.src.recent">Most recent</option>
+        <option value="album" data-i18n="photos.src.album">One album…</option>
+      </select>
+      <select id="photosAlbum" hidden></select>
+      <select id="photosOrder">
+        <option value="recent" data-i18n="photos.order.recent">Newest first</option>
+        <option value="oldest" data-i18n="photos.order.oldest">Oldest first</option>
+        <option value="random" data-i18n="photos.order.random">Random order</option>
+      </select>
+      <select id="photosOrient">
+        <option value="any" data-i18n="photos.orient.any">Any shape</option>
+        <option value="landscape" data-i18n="photos.orient.landscape">Landscape</option>
+        <option value="portrait" data-i18n="photos.orient.portrait">Portrait</option>
+      </select>
+      <select id="photosSize">
+        <option value="0" data-i18n="photos.size.any">Any size</option>
+        <option value="1000" data-i18n="photos.size.1000">1000 px and more</option>
+        <option value="2000" data-i18n="photos.size.2000">2000 px and more</option>
+        <option value="3000" data-i18n="photos.size.3000">3000 px and more</option>
+      </select>
+      <label class="library-hiddenbox">
+        <input type="checkbox" id="photosNoShots" checked>
+        <span data-i18n="photos.noShots">No screenshots</span>
+      </label>
+    </div>
+    <div class="library-urlrow" id="photosOtherRow" hidden>
+      <input type="text" id="photosOtherPath" autocomplete="off" spellcheck="false" placeholder="/Volumes/…/Photos Library.photoslibrary">
+      <button type="button" class="btn small primary" id="photosOtherGo" data-i18n="photos.otherGo">Use</button>
+    </div>
+    <div class="library-toolbar photos-selbar">
+      <button type="button" class="btn small" id="photosSelPage" data-i18n="photos.selectPage">Select shown photos</button>
+      <button type="button" class="btn small" id="photosSelNone" data-i18n="photos.clear">Clear selection</button>
+      <span class="library-spacer"></span>
+      <span class="field-hint" id="photosSelCount"></span>
+      <label class="photos-into"><span data-i18n="photos.into">Add to:</span> <select id="photosSection"></select></label>
+      <button type="button" class="btn small primary" id="photosImport" disabled data-i18n="photos.import">Import</button>
+    </div>
+    <div class="library-gridwrap">
+      <div class="library-grid" id="photosGrid"></div>
+    </div>
+    <footer class="library-foot">
+      <p class="field-hint" id="photosStatus"></p>
+      <button type="button" class="btn small" id="photosMore" hidden data-i18n="photos.more">Show more</button>
     </footer>
   </div>
 </div>

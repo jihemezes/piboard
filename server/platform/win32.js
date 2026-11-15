@@ -401,6 +401,18 @@ const GPU_PS = "$ErrorActionPreference='Stop';" +
   "(Get-Counter -Counter (\"\\\" + $n + \"(*)\\*\") -ErrorAction Stop).CounterSamples | " +
   "Select-Object Path,CookedValue | ConvertTo-Json -Compress";
 
+/* Phototheque Photos : specifique a macOS. Ici, aucune racine et pas de
+   conversion -- la source « Photos (Mac) » n'est donc jamais proposee.
+   Photos library: macOS-specific. Here, no root and no conversion -- the
+   "Photos (Mac)" source is therefore never offered. */
+function photosLibraryRoots() {
+  return [];
+}
+
+function imageToJpeg() {
+  return Promise.resolve(false);
+}
+
 function gpuUsage() {
   return new Promise((resolve) => {
     execFile("nvidia-smi", ["--query-gpu=" + NVIDIA_QUERY, "--format=csv,noheader,nounits"],
@@ -828,6 +840,8 @@ module.exports = {
   updateSupport,
   restartServer,
   gpuUsage,
+  photosLibraryRoots,
+  imageToJpeg,
   parseNvidiaSmi,
   parseGpuCounters,
   ffmpegCandidates,

@@ -138,6 +138,28 @@ function gpuUsage() {
   return Promise.resolve(null);
 }
 
+/* ---------- Phototheque Photos / Photos library ----------
+   Dossiers ou chercher des phototheques (« Photos Library.photoslibrary »)
+   et conversion d'une image en JPEG redimensionne avec `sips`, outil
+   livre avec tout macOS (il lit le HEIC des iPhone).
+   Folders where to look for Photos libraries, and conversion of an
+   image to a resized JPEG with `sips`, a tool shipped with every macOS
+   (it reads iPhone HEIC). */
+function photosLibraryRoots() {
+  return [path.join(require("os").homedir(), "Pictures")];
+}
+
+function imageToJpeg(src, dest, maxPx) {
+  return new Promise((resolve) => {
+    require("child_process").execFile(
+      "/usr/bin/sips",
+      ["-s", "format", "jpeg", "-s", "formatOptions", "85", "-Z", String(Math.max(64, Number(maxPx) || 2560)), src, "--out", dest],
+      { timeout: 60000 },
+      (err) => resolve(!err)
+    );
+  });
+}
+
 function filesystemRoot() {
   return "/";
 }
@@ -829,6 +851,8 @@ module.exports = {
   updateSupport,
   restartServer,
   gpuUsage,
+  photosLibraryRoots,
+  imageToJpeg,
   MOUNT_ROOTS,
   ffmpegCandidates,
   ffmpegInstallHint,

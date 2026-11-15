@@ -485,6 +485,10 @@ mac:
     # local-network permission, but usages are declared for the
     # widgets that may need them one day.
     NSLocalNetworkUsageDescription: PiBoard scans the local network for the network-scan tile.
+    # Source « Photos (Mac) » : PiBoard lit la photothèque en lecture seule.
+    # "Photos (Mac)" source: PiBoard reads the library read-only.
+    NSPhotoLibraryUsageDescription: PiBoard reads your Photos library, read-only, to show your photos in the slideshow and to import the ones you choose.
+    NSPicturesFolderUsageDescription: PiBoard reads your Photos library, read-only, to show your photos in the slideshow and to import the ones you choose.
 
 # Publication des mises a jour. electron-builder depose ici l'installeur
 # ET le fichier latest.yml que lit electron-updater. Le depot doit etre

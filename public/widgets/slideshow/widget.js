@@ -144,6 +144,36 @@
           if (data.error) return { error: data.error, src };
           return { urls: (data.items || []).map((it) => it.url), src, noKey: !(data.volumes || []).length };
         }
+        if (src === "photos") {
+          /* Phototheque Photos du Mac, lue en lecture seule par le
+             serveur (voir server/photosLibrary.js). Les filtres sont
+             appliques cote serveur ; le melange reste ici, comme pour
+             les autres sources. Mac Photos library, read-only through
+             the server. Filters run on the server; shuffling stays here,
+             as for the other sources. */
+          const q = new URLSearchParams({
+            urls: "1",
+            source: String(s.photosSource || "all"),
+            album: String(s.photosAlbum || ""),
+            order: String(s.photosOrder || "recent"),
+            orient: String(s.photosOrient || "any"),
+            minWidth: String(Number(s.photosMinWidth) || 0),
+            noScreenshots: s.photosNoShots === false ? "0" : "1",
+            limit: String(Math.max(1, Math.min(2000, Number(s.photosLimit) || 300)))
+          });
+          if (s.photosLibrary) q.set("library", String(s.photosLibrary));
+          const r = await fetch("/api/photos/list?" + q.toString());
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok || data.error) {
+            const code = String(data.error || "");
+            const tr = (k) => this.ctx.i18n.t(k);
+            return { error: code === "permission" ? tr("slideshow.photosPermission")
+              : (code === "no library" || r.status === 404) ? tr("slideshow.photosNone")
+              : code || ("HTTP " + r.status), src };
+          }
+          if (data.albumFound === false) return { error: this.ctx.i18n.t("slideshow.photosNoAlbum"), src };
+          return { urls: (data.items || []).map((it) => it.url), src };
+        }
         // "urls"
         return { urls: parseUrls(s.images), src };
       } catch (e) {
@@ -300,6 +330,7 @@
           : src === "folder" ? "slideshow.emptyFolder"
           : src === "webdav" ? "slideshow.emptyWebdav"
           : src === "usb" ? (noKey ? "slideshow.emptyUsbNoKey" : "slideshow.emptyUsb")
+          : src === "photos" ? "slideshow.emptyPhotos"
           : "slideshow.empty"
       );
       this.ctx.el.innerHTML = `
@@ -346,7 +377,7 @@
        or WebDAV share (files can change outside PiBoard). Not needed for
        "upload" (updated immediately from the manager) or "urls" (static list). */
     armRefresh(src) {
-      if (src !== "folder" && src !== "webdav" && src !== "usb") return;
+      if (src !== "folder" && src !== "webdav" && src !== "usb" && src !== "photos") return;
       const minutes = Math.max(2, Number(this.ctx.settings.refreshMinutes) || 15);
       this.refreshTimer = setInterval(() => this.build(), minutes * 60000);
     }
