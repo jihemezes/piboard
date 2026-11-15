@@ -9,6 +9,34 @@
     return escapeHtml(s).replace(/"/g, "&quot;");
   }
 
+  /* Couleur d'etiquette par flux (1.169.0). Sans choix, chaque
+     emplacement recoit sa propre teinte (bleu, orange, vert) pour que
+     deux sources ne se confondent pas ; un choix explicite l'emporte.
+     Per-feed tag colour. With no choice each slot gets its own hue so
+     two sources are never mixed up; an explicit choice wins. */
+  const AUTO_TAG_COLORS = ["#3b82f6", "#f97316", "#22c55e"];
+  function cleanColor(c) {
+    const m = /^#([0-9a-f]{6})$/i.exec(String(c || "").trim());
+    return m ? "#" + m[1].toLowerCase() : "";
+  }
+  /* Encre lisible sur la couleur choisie : sombre sur un fond clair
+     (jaune, vert...), claire sur un fond fonce. Readable ink on the
+     chosen colour: dark on a light fill, light on a dark one. */
+  function inkOn(hex) {
+    const n = parseInt(hex.slice(1), 16);
+    const lin = (v) => { const c = v / 255; return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4); };
+    const L = 0.2126 * lin((n >> 16) & 255) + 0.7152 * lin((n >> 8) & 255) + 0.0722 * lin(n & 255);
+    const white = 1.05 / (L + 0.05);
+    const dark = (L + 0.05) / 0.0597;       // #111827, luminance ~0.0097
+    // Blanc de preference tant que son contraste reste raisonnable.
+    // White preferred as long as its contrast stays reasonable.
+    return white >= dark * 0.75 ? "#ffffff" : "#111827";
+  }
+  function tagStyle(hex) {
+    const c = cleanColor(hex);
+    return c ? ` style="--pwr-tag:${c};--pwr-tag-ink:${inkOn(c)}"` : "";
+  }
+
   function textOf(node, tag) {
     const el = node.querySelector(tag);
     return el ? el.textContent.trim() : "";
@@ -265,7 +293,15 @@
       // render()). Source name for the header: only meaningful with a
       // single feed (with several, each item already carries its own,
       // see render()).
-      this.feed = { source: ok.length === 1 ? ok[0].source : null, items: allItems };
+      this.feed = {
+        source: ok.length === 1 ? ok[0].source : null,
+        /* Seul flux : sa couleur n'est utilisee que si elle a ete choisie
+           (l'en-tete historique reste inchange sinon).
+           Single feed: its colour is only used when chosen (the
+           historical header stays unchanged otherwise). */
+        sourceColor: ok.length === 1 && ok[0].sourceChosen ? ok[0].sourceColor : "",
+        items: allItems
+      };
       this.render();
     }
 
@@ -280,9 +316,9 @@
     feedSlots() {
       const s = this.ctx.settings;
       return [
-        { url: s.url, label: s.label1 },
-        { url: s.url2, label: s.label2 },
-        { url: s.url3, label: s.label3 }
+        { url: s.url, label: s.label1, color: s.color1, idx: 0 },
+        { url: s.url2, label: s.label2, color: s.color2, idx: 1 },
+        { url: s.url3, label: s.label3, color: s.color3, idx: 2 }
       ].filter((slot) => slot.url);
     }
 
@@ -326,6 +362,23 @@
       });
     }
 
+    /* Ligne de meta de la fenetre de lecture : la source en pastille
+       de sa couleur (quand les etiquettes sont affichees), puis la date.
+       Reading window's meta line: the source as a pill in its colour
+       (when tags are shown), then the date. */
+    setModalMeta(metaEl, it, extraMeta, date) {
+      const s = this.ctx.settings;
+      const name = it.sourceLabel || (this.feed && this.feed.source) || "";
+      const multi = !!this.feed && this.feed.source == null;
+      const coloured = s.showSource !== false && name && (multi || (this.feed && this.feed.sourceColor));
+      const rest = [extraMeta, date].filter(Boolean).join(" · ");
+      if (!coloured) {
+        metaEl.textContent = [name, rest].filter(Boolean).join(" · ");
+        return;
+      }
+      metaEl.innerHTML = `<span class="pwr-tag"${tagStyle(it.sourceColor)}>${escapeHtml(name)}</span>${rest ? " " + escapeHtml(rest) : ""}`;
+    }
+
     async fetchOneFeed(slot) {
       // Meme classe de bug que celle deja corrigee sur le widget
       // Trafic : sans parametre variant d'un cycle a l'autre, l'URL
@@ -345,8 +398,18 @@
       });
       const parsed = parseFeed(xml);
       const sourceLabel = (slot.label || "").trim() || parsed.source || "";
-      parsed.items.forEach((it) => { it.sourceLabel = sourceLabel; });
+      /* Couleur choisie (explicite) ou teinte automatique du
+         emplacement : l'emplacement d'origine fixe la teinte, elle ne
+         change donc pas quand on retire un autre flux.
+         Chosen colour (explicit) or the slot's automatic hue: the
+         original slot fixes the hue, so it does not change when
+         another feed is removed. */
+      const chosen = cleanColor(slot.color);
+      const sourceColor = chosen || AUTO_TAG_COLORS[slot.idx % AUTO_TAG_COLORS.length];
+      parsed.items.forEach((it) => { it.sourceLabel = sourceLabel; it.sourceColor = sourceColor; it.sourceChosen = !!chosen; });
       parsed.source = sourceLabel;
+      parsed.sourceColor = sourceColor;
+      parsed.sourceChosen = !!chosen;
       return parsed;
     }
 
@@ -376,14 +439,17 @@
       // feedSlots()/refresh().
       const multiFeed = this.feed.source == null;
       const showTags = s.showSource !== false && multiFeed;
+      // Liseré : flux combines, ou couleur choisie pour le flux unique.
+      // Bar: combined feeds, or a colour chosen for the single feed.
+      const showBar = s.showColorBar !== false && (multiFeed || !!this.feed.sourceColor);
 
       this.ctx.el.innerHTML = `
         <div class="pw-rss ${s.rotate ? "pwr-rotate" : ""}">
-          <div class="pwr-source" ${s.showSource !== false && !multiFeed ? "" : "hidden"}>${this.feed.source || ""}</div>
+          <div class="pwr-source${this.feed.sourceColor ? " pwr-source-coloured" : ""}"${tagStyle(this.feed.sourceColor)} ${s.showSource !== false && !multiFeed ? "" : "hidden"}>${this.feed.source || ""}</div>
           <ul>
             ${items.map((it, idx) => `
-              <li class="pwr-item ${it.link ? "pwr-clickable" : ""}" data-idx="${idx}" data-link="${it.link ? "1" : ""}">
-                <div class="pwr-title">${this.badgeHtml(it)}${showTags && it.sourceLabel ? `<span class="pwr-tag">${escapeHtml(it.sourceLabel)}</span>` : ""}${it.title}</div>
+              <li class="pwr-item ${it.link ? "pwr-clickable" : ""}${showBar ? " pwr-barred" : ""}"${showBar ? tagStyle(it.sourceColor) : ""} data-idx="${idx}" data-link="${it.link ? "1" : ""}">
+                <div class="pwr-title">${this.badgeHtml(it)}${showTags && it.sourceLabel ? `<span class="pwr-tag"${tagStyle(it.sourceColor)}>${escapeHtml(it.sourceLabel)}</span>` : ""}${it.title}</div>
                 <div class="pwr-meta">${niceDate(it.date, lang)}</div>
               </li>`).join("")}
           </ul>
@@ -463,7 +529,7 @@
       // refresh()). it.sourceLabel (specific to this item) takes
       // precedence over this.feed.source (null as soon as several feeds
       // are combined, see refresh()).
-      metaEl.textContent = [it.sourceLabel || (this.feed && this.feed.source), niceDate(it.date, lang)].filter(Boolean).join(" · ");
+      this.setModalMeta(metaEl, it, "", niceDate(it.date, lang));
       const bodyEl = modal.querySelector(".pwr-modal-body");
       bodyEl.innerHTML = figureHtml + `<p class="pwr-modal-loading">${i18n.t("common.loading")}</p>`;
       modal.hidden = false;
@@ -567,7 +633,7 @@
         else if (plainTextLen < 40) thinNote = `<p class="pwr-modal-thin-note">${i18n.t("rss.readerModeUnavailable")}</p>`;
         html = fallback.trim() ? thinNote + fallback : `<p class="pwr-modal-empty">${i18n.t("rss.noContent")}</p>`;
       } else if (extraMeta) {
-        metaEl.textContent = [it.sourceLabel || (this.feed && this.feed.source), extraMeta, niceDate(it.date, lang)].filter(Boolean).join(" · ");
+        this.setModalMeta(metaEl, it, extraMeta, niceDate(it.date, lang));
       }
       const previewNote = isPartialPreview && !subNote.includes("pwr-modal-sub-warn")
         ? `<p class="pwr-modal-thin-note">${i18n.t("rss.freePreviewOnly")}</p>` : "";

@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.169.0
+
+- **Tuile Flux RSS : couleur de l'étiquette de chaque source.** Trois réglages
+  `color1..3` (nouveau type de champ de manifeste `tagcolor` : « Auto », 9 pastilles,
+  couleur libre ; valeur vide = auto) et `showColorBar`. Sans choix, chaque
+  emplacement reçoit sa teinte (bleu / orange / vert, fixée par l'emplacement
+  d'origine : elle ne bouge pas si un autre flux est retiré). Étiquette à fond plein,
+  **encre claire ou foncée calculée** par contraste (`inkOn`, blanc préféré tant que
+  le contraste reste raisonnable). Liseré coloré à gauche de chaque article (flux
+  combinés, ou couleur choisie). Flux unique : l'en-tête historique reste inchangé
+  tant qu'aucune couleur n'est choisie, il la prend ensuite. Fenêtre de lecture : la
+  source devient une pastille de sa couleur (`setModalMeta`). Valeur validée
+  (`#rrggbb` seulement) avant d'aller dans un attribut `style`.
+- Aide FR/EN. Tests : `rssTagColor.test.js` (widget seul), palette dans dom-smoke.
+
 ## 1.168.1
 
 - Réglages : la famille « Écran de veille » s'appelle désormais **« Écran de veille / Diaporama »**

@@ -3589,6 +3589,16 @@ body.touch .photos-check, body.touch-mode .photos-check { width: 32px; height: 3
 }
 .shutdown-denied-detail { user-select: text; color: var(--muted); }
 
+/* Couleur d'etiquette (1.169.0) / tag colour picker */
+.tagcolor-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 4px; }
+.tagcolor-swatch { width: 28px; height: 28px; padding: 0; border-radius: 50%; border: 2px solid transparent; cursor: pointer; box-shadow: inset 0 0 0 1px rgba(0,0,0,.25); }
+.tagcolor-swatch.active { border-color: var(--text); outline: 2px solid var(--bg, #fff); outline-offset: -4px; }
+.tagcolor-auto { padding: 5px 12px; border-radius: 14px; border: 1px solid var(--tile-edge); background: var(--field-bg); color: var(--text); font: inherit; font-size: 13px; cursor: pointer; }
+.tagcolor-auto.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.tagcolor-custom { width: 36px; height: 30px; padding: 0; border: 1px solid var(--tile-edge); border-radius: 6px; background: none; cursor: pointer; }
+.tagcolor-custom.active { outline: 2px solid var(--text); outline-offset: 1px; }
+@media (pointer: coarse) { .tagcolor-swatch { width: 40px; height: 40px; } .tagcolor-auto { padding: 10px 16px; } .tagcolor-custom { width: 48px; height: 40px; } }
+
 /* Selection dans la photothèque (1.168.0) / photos-library selection */
 .photos-albums-panel { margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--tile-edge); border-radius: 8px; }
 .photos-albums-panel > summary { cursor: pointer; font-weight: 600; }

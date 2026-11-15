@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.168.1
+   Version 1.169.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3549,6 +3549,8 @@
     }).join("");
   }
 
+  const TAGCOLOR_PALETTE = ["#ef4444", "#f97316", "#eab308", "#22c55e", "#14b8a6", "#3b82f6", "#8b5cf6", "#ec4899", "#6b7280"];
+
   function fieldMarkup(f, value) {
     const label = i18n.fromManifest(f.label);
     const v = value == null ? "" : value;
@@ -3909,6 +3911,26 @@
           <input type="hidden" data-key="${f.key}" value="${escapeHtmlAttr(String(v))}">
           ${hint}
         </div>`;
+      /* Champ "tagcolor" : une couleur d'etiquette a choisir dans une
+         palette, ou « Auto » (valeur vide : le widget choisit lui-meme),
+         ou une couleur libre. La valeur est rangee dans un champ cache.
+         "tagcolor" field: a tag colour picked from a palette, or "Auto"
+         (empty value: the widget picks by itself), or a free colour.
+         The value is kept in a hidden input. */
+      case "tagcolor": {
+        const cur = /^#[0-9a-f]{6}$/i.test(String(v)) ? String(v).toLowerCase() : "";
+        const inPalette = TAGCOLOR_PALETTE.includes(cur);
+        return `<div class="field field-wide field-tagcolor" data-tagcolor="${f.key}">
+          <span>${label}</span>
+          <div class="tagcolor-row" role="group" aria-label="${escapeHtmlAttr(label)}">
+            <button type="button" class="tagcolor-auto${cur ? "" : " active"}" aria-pressed="${!cur}">${escapeHtml(i18n.t("tagcolor.auto"))}</button>
+            ${TAGCOLOR_PALETTE.map((c) => `<button type="button" class="tagcolor-swatch${c === cur ? " active" : ""}" data-c="${c}" style="background:${c}" aria-pressed="${c === cur}" aria-label="${c}"></button>`).join("")}
+            <input type="color" class="tagcolor-custom${cur && !inPalette ? " active" : ""}" value="${cur || "#3b82f6"}" title="${escapeHtmlAttr(i18n.t("tagcolor.custom"))}" aria-label="${escapeHtmlAttr(i18n.t("tagcolor.custom"))}">
+          </div>
+          <input type="hidden" data-key="${f.key}" value="${cur}">
+          ${hint}
+        </div>`;
+      }
       case "password":
         return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div>${hint}</label>`;
       /* Champ "secret" : contrairement a "password" ci-dessus, la valeur
@@ -12458,6 +12480,34 @@
         }
       });
     });
+
+    /* Palette de couleur d'etiquette (champs "tagcolor").
+       Tag-colour palette ("tagcolor" fields). */
+    {
+      const setTagColor = (box, value, which) => {
+        const hidden = box.querySelector("input[type=hidden]");
+        if (!hidden) return;
+        hidden.value = value;
+        box.querySelectorAll(".tagcolor-auto, .tagcolor-swatch, .tagcolor-custom").forEach((el) => el.classList.remove("active"));
+        box.querySelectorAll(".tagcolor-auto, .tagcolor-swatch").forEach((el) => el.setAttribute("aria-pressed", "false"));
+        if (which) { which.classList.add("active"); if (which.setAttribute && which.tagName === "BUTTON") which.setAttribute("aria-pressed", "true"); }
+        hidden.dispatchEvent(new Event("change", { bubbles: true }));
+      };
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest && e.target.closest(".tagcolor-auto, .tagcolor-swatch");
+        if (!btn) return;
+        const box = btn.closest(".field-tagcolor");
+        if (!box) return;
+        e.preventDefault();
+        setTagColor(box, btn.classList.contains("tagcolor-auto") ? "" : btn.dataset.c, btn);
+      });
+      document.addEventListener("input", (e) => {
+        const inp = e.target;
+        if (!inp || !inp.classList || !inp.classList.contains("tagcolor-custom")) return;
+        const box = inp.closest(".field-tagcolor");
+        if (box) setTagColor(box, String(inp.value || "").toLowerCase(), inp);
+      });
+    }
 
     /* Selection de photos de la phototheque (champs "photoselect" des
        tuiles, et section Ecran de veille).

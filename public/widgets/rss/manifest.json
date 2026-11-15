@@ -1,6 +1,6 @@
 {
   "id": "rss",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "name": {
     "en": "RSS feed",
     "fr": "Flux RSS"
@@ -57,6 +57,23 @@
       }
     },
     {
+      "key": "color1",
+      "type": "tagcolor",
+      "default": "",
+      "label": {
+        "en": "Feed 1: tag colour",
+        "fr": "Flux 1 : couleur de l'étiquette"
+      },
+      "hint": {
+        "en": "Auto gives each feed its own colour. Pick one to recognise this source at a glance.",
+        "fr": "Auto donne à chaque flux sa propre couleur. Choisissez-en une pour reconnaître cette source d'un coup d'œil."
+      },
+      "group": {
+        "en": "Feed",
+        "fr": "Flux"
+      }
+    },
+    {
       "key": "maxItems",
       "type": "number",
       "default": 6,
@@ -79,6 +96,19 @@
       "hint": {
         "en": "With a single feed: its name as a header above the list. With several feeds combined: a short tag next to each article instead, so you can tell which one it came from.",
         "fr": "Avec un seul flux : son nom en en-tête au-dessus de la liste. Avec plusieurs flux combinés : une étiquette courte à côté de chaque article à la place, pour savoir de quelle source il provient."
+      }
+    },
+    {
+      "key": "showColorBar",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Coloured bar beside each article",
+        "fr": "Liseré coloré à côté de chaque article"
+      },
+      "hint": {
+        "en": "A thin bar in the feed's colour at the left of each article, readable from afar. Used when several feeds are combined, or when you picked a colour.",
+        "fr": "Une fine barre de la couleur du flux à gauche de chaque article, repérable de loin. Utilisé quand plusieurs flux sont combinés, ou dès qu'une couleur est choisie."
       }
     },
     {
@@ -125,6 +155,23 @@
       }
     },
     {
+      "key": "color2",
+      "type": "tagcolor",
+      "default": "",
+      "label": {
+        "en": "Feed 2: tag colour",
+        "fr": "Flux 2 : couleur de l'étiquette"
+      },
+      "hint": {
+        "en": "Auto gives each feed its own colour. Pick one to recognise this source at a glance.",
+        "fr": "Auto donne à chaque flux sa propre couleur. Choisissez-en une pour reconnaître cette source d'un coup d'œil."
+      },
+      "group": {
+        "en": "Additional feeds",
+        "fr": "Flux supplémentaires"
+      }
+    },
+    {
       "key": "url3",
       "type": "text",
       "default": "",
@@ -152,6 +199,23 @@
       "hint": {
         "en": "Leave empty to use the feed's own title.",
         "fr": "Laissez vide pour utiliser le titre du flux lui-même."
+      },
+      "group": {
+        "en": "Additional feeds",
+        "fr": "Flux supplémentaires"
+      }
+    },
+    {
+      "key": "color3",
+      "type": "tagcolor",
+      "default": "",
+      "label": {
+        "en": "Feed 3: tag colour",
+        "fr": "Flux 3 : couleur de l'étiquette"
+      },
+      "hint": {
+        "en": "Auto gives each feed its own colour. Pick one to recognise this source at a glance.",
+        "fr": "Auto donne à chaque flux sa propre couleur. Choisissez-en une pour reconnaître cette source d'un coup d'œil."
       },
       "group": {
         "en": "Additional feeds",

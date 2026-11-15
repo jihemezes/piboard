@@ -32,6 +32,25 @@
 
 # Nouveautes / What's new
 
+## 1.169.0
+
+**Une couleur par source dans la tuile Flux RSS**
+
+Quand la tuile réunit plusieurs flux, l'étiquette de chaque source a maintenant **sa propre
+couleur**, automatique par défaut, pour reconnaître d'un coup d'œil d'où vient un article.
+Dans les réglages, chaque flux propose une **palette de couleurs** (ou une couleur libre) ;
+le texte de l'étiquette reste toujours lisible. Une fine barre de la même couleur longe chaque
+article, et la fenêtre de lecture reprend la pastille de la source.
+
+---
+
+**One colour per source in the RSS tile**
+
+When the tile combines several feeds, each source's tag now has **its own colour**, automatic
+by default, so you can tell at a glance where an article comes from. In the settings each feed
+offers a **colour palette** (or a free colour); the tag's text always stays readable. A thin
+bar in the same colour runs along each article, and the reading window shows the source pill.
+
 ## 1.168.0
 
 **Choisissez précisément vos photos Mac**

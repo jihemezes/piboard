@@ -7406,6 +7406,37 @@ function catalogItemFor(catalog, document, widgetId) {
       host.remove();
     }
 
+    /* ---------- Flux RSS : couleur d'etiquette (1.169.0) ----------
+       Palette, « Auto » et couleur libre : la valeur arrive dans le
+       champ cache, que le formulaire collecte comme les autres.
+       Palette, "Auto" and free colour: the value lands in the hidden
+       field the form collects like any other. */
+    {
+      const rssM = catalog.find((m) => m.id === "rss");
+      assert("rss : trois couleurs d'etiquette et un litere dans le manifeste",
+        rssM && ["color1", "color2", "color3"].every((k) => (rssM.settings || []).some((f) => f.key === k && f.type === "tagcolor"))
+        && (rssM.settings || []).some((f) => f.key === "showColorBar" && f.type === "checkbox"));
+      const host = document.createElement("div");
+      host.innerHTML = `<div class="field field-wide field-tagcolor"><div class="tagcolor-row"><button type="button" class="tagcolor-auto active">Auto</button><button type="button" class="tagcolor-swatch" data-c="#ef4444"></button><button type="button" class="tagcolor-swatch" data-c="#22c55e"></button><input type="color" class="tagcolor-custom" value="#3b82f6"></div><input type="hidden" data-key="color1" value=""></div>`;
+      document.body.appendChild(host);
+      const hid = host.querySelector("input[data-key]");
+      const clk = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      clk(host.querySelectorAll(".tagcolor-swatch")[1]);
+      assert("rss : une pastille de la palette fixe la couleur",
+        hid.value === "#22c55e" && host.querySelectorAll(".tagcolor-swatch")[1].classList.contains("active")
+        && !host.querySelector(".tagcolor-auto").classList.contains("active"));
+      const custom = host.querySelector(".tagcolor-custom");
+      custom.value = "#8B5CF6";
+      custom.dispatchEvent(new window.Event("input", { bubbles: true }));
+      assert("rss : la couleur libre est prise en minuscules et remplace la pastille",
+        hid.value === "#8b5cf6" && custom.classList.contains("active")
+        && host.querySelectorAll(".tagcolor-swatch.active").length === 0);
+      clk(host.querySelector(".tagcolor-auto"));
+      assert("rss : Auto remet une valeur vide", hid.value === "" && host.querySelector(".tagcolor-auto").classList.contains("active")
+        && !custom.classList.contains("active"));
+      host.remove();
+    }
+
     /* ---------- Gestion de la bibliotheque (1.155.0) ----------
        Parcours reel depuis les reglages generaux : la place occupee, la
        fenetre ouverte SANS destination (un clic ouvre le detail au lieu de

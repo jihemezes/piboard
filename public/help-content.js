@@ -2449,7 +2449,7 @@ Franceinfo".</span></div>
 <p>Suivre l'actualité d'un site (presse, blog, journal local…) directement sur le tableau.</p>
 <p><b>Ce que la tuile sait faire :</b></p>
 <ul>
-  <li><b>Jusqu'à 3 flux</b> RSS ou Atom réunis, chacun avec une étiquette courte.</li>
+  <li><b>Jusqu'à 3 flux</b> RSS ou Atom réunis, chacun avec une étiquette courte et <b>sa couleur</b> (automatique ou choisie).</li>
   <li><b>Liste</b> des derniers titres ou <b>défilement</b> d'un titre à la fois, source affichée en option.</li>
   <li><b>Lecture de l'article complet</b> d'un toucher, en mode lecture (sans publicités ni menus), avec l'illustration du flux ; repli sur le résumé si l'extraction échoue.</li>
   <li><b>Articles réservés aux abonnés</b> lus en entier quand vous êtes abonné et connecté dans Réglages → Abonnements presse ; ✓ et 🔒 signalent ce qui est lisible.</li>
@@ -2464,6 +2464,8 @@ Franceinfo".</span></div>
 <p class="help-opt-group">Flux</p>
 <div class="help-opt"><span class="help-opt-name">Flux 1 : adresse (.xml)</span><span class="help-opt-desc">Facultatifs. Laisser l'adresse vide pour ne pas utiliser un emplacement.</span></div>
 <div class="help-opt"><span class="help-opt-name">Flux 1–3 : étiquette courte (facultatif)</span><span class="help-opt-desc">Facultatif, utilisé seulement dès qu'un 2e flux est ajouté.</span></div>
+<div class="help-opt"><span class="help-opt-name">Flux 1–3 : couleur de l'étiquette</span><span class="help-opt-desc">« Auto » donne à chaque flux sa propre couleur (bleu, orange, vert) : on reconnaît la source d'un coup d'œil. Une pastille de la palette, ou la couleur libre à droite, impose la couleur de ce flux. Le texte de l'étiquette passe tout seul en clair ou en foncé pour rester lisible. La couleur se retrouve sur l'étiquette de chaque article, sur le liseré, et dans la fenêtre de lecture. Avec un seul flux, l'en-tête garde son aspect habituel tant qu'aucune couleur n'est choisie ; dès qu'on en choisit une, l'en-tête la prend aussi.</span></div>
+<div class="help-opt"><span class="help-opt-name">Liseré coloré à côté de chaque article</span><span class="help-opt-desc">Une fine barre de la couleur du flux à gauche de chaque article, repérable de loin. Utilisé quand plusieurs flux sont combinés, ou dès qu'une couleur est choisie.</span></div>
 <div class="help-opt"><span class="help-opt-name">Nombre d'articles</span><span class="help-opt-desc">Combien de titres afficher au maximum.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher la source</span><span class="help-opt-desc">Avec un seul flux : son nom en en-tête. Avec plusieurs flux combinés : une étiquette à côté de chaque article à la place.</span></div>
 <div class="help-opt"><span class="help-opt-name">Faire défiler un titre à la fois</span><span class="help-opt-desc">Alterne un article à la fois plutôt que d'afficher toute la liste. Désactivé par défaut.</span></div>
@@ -2486,7 +2488,7 @@ Franceinfo".</span></div>
 <p>Follow a site's news (press, blog, local paper…) right on the board.</p>
 <p><b>What the tile can do:</b></p>
 <ul>
-  <li><b>Up to 3 feeds</b>, RSS or Atom, combined, each with a short label.</li>
+  <li><b>Up to 3 feeds</b>, RSS or Atom, combined, each with a short label and <b>its own colour</b> (automatic or chosen).</li>
   <li><b>List</b> of the latest headlines or <b>one headline at a time</b>, source shown optionally.</li>
   <li><b>Full article</b> with a touch, in reading mode (no ads or menus), with the feed's illustration; falls back to the summary if extraction fails.</li>
   <li><b>Subscriber-only articles</b> read in full when you are subscribed and signed in under Settings → Press subscriptions; ✓ and 🔒 show what can be read.</li>
@@ -2501,6 +2503,8 @@ Franceinfo".</span></div>
 <p class="help-opt-group">Feed</p>
 <div class="help-opt"><span class="help-opt-name">Feed 1: address (.xml)</span><span class="help-opt-desc">Optional. Leave the address empty to not use a slot.</span></div>
 <div class="help-opt"><span class="help-opt-name">Feed 1–3: short tag (optional)</span><span class="help-opt-desc">Optional, only used once a 2nd feed is added.</span></div>
+<div class="help-opt"><span class="help-opt-name">Feed 1–3: tag colour</span><span class="help-opt-desc">"Auto" gives each feed its own colour (blue, orange, green) so you can tell sources apart at a glance. A swatch from the palette, or the free colour on the right, sets this feed's colour. The tag's text turns light or dark by itself to stay readable. The colour shows on each article's tag, on the bar, and in the reading window. With a single feed the header keeps its usual look until a colour is chosen; once one is, the header takes it too.</span></div>
+<div class="help-opt"><span class="help-opt-name">Coloured bar beside each article</span><span class="help-opt-desc">A thin bar in the feed's colour at the left of each article, readable from afar. Used when several feeds are combined, or once a colour is chosen.</span></div>
 <div class="help-opt"><span class="help-opt-name">Items shown</span><span class="help-opt-desc">How many headlines to show at most.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show the source</span><span class="help-opt-desc">With a single feed: its name as a header. With several feeds combined: a tag next to each article instead.</span></div>
 <div class="help-opt"><span class="help-opt-name">Rotate one headline at a time</span><span class="help-opt-desc">Alternates one article at a time rather than showing the whole list. Off by default.</span></div>

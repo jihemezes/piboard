@@ -22,8 +22,11 @@
   margin-right: 6px;
   padding: 1px 6px;
   border-radius: 5px;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
-  color: var(--accent);
+  /* --pwr-tag : couleur du flux (1.169.0) ; a defaut, l'accent. Fond
+     plein, encre lisible calculee. --pwr-tag: the feed's colour; the
+     accent otherwise. Solid fill, computed readable ink. */
+  background: var(--pwr-tag, color-mix(in srgb, var(--accent) 18%, transparent));
+  color: var(--pwr-tag-ink, var(--accent));
   font-family: var(--mono);
   font-size: 10px;
   font-weight: 700;
@@ -32,6 +35,21 @@
   vertical-align: middle;
   white-space: nowrap;
 }
+/* En-tete du flux unique, quand sa couleur a ete choisie (1.169.0).
+   Single feed's header when its colour was chosen. */
+.pw-rss .pwr-source.pwr-source-coloured {
+  align-self: flex-start;
+  max-width: 100%;
+  box-sizing: border-box;
+  padding: 2px 10px;
+  border-radius: 6px;
+  background: var(--pwr-tag);
+  color: var(--pwr-tag-ink);
+  font-weight: 700;
+}
+/* Lisere colore a gauche de l'article. Coloured bar at the article's left. */
+.pwr-modal-meta .pwr-tag { margin-right: 4px; }
+
 /* Ascenseur : si le nombre d'articles choisi (reglage "Nombre max
    d'articles") depasse ce qui tient dans la hauteur de la tuile, les
    articles en trop restaient jusqu'ici invisibles (overflow: hidden),
@@ -98,6 +116,17 @@
 }
 .pw-rss .pwr-item.pwr-clickable:hover { background: color-mix(in srgb, var(--accent) 10%, transparent); }
 .pw-rss .pwr-item.pwr-clickable:active { background: color-mix(in srgb, var(--accent) 18%, transparent); }
+/* Lisere colore a gauche de l'article (1.169.0), apres la regle des
+   articles cliquables dont la marge negative le rognerait.
+   Coloured bar at the article's left, after the clickable rule whose
+   negative margin would clip it. */
+.pw-rss .pwr-item.pwr-barred,
+.pw-rss .pwr-item.pwr-clickable.pwr-barred {
+  margin-left: 0;
+  padding-left: 9px;
+  border-left: 4px solid var(--pwr-tag);
+  border-radius: 0 6px 6px 0;
+}
 
 /* ---------- Popup de lecture (contenu de l'article) ----------
    Reutilise les classes de modale du coeur (.modal/.modal-card) pour la
