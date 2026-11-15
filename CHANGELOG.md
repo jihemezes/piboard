@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.171.2
+
+- Aide de la tuile Flux RSS : la case « Se présenter comme un navigateur ordinaire » (1.171.1) avait
+  sa seule explication noyée dans un long paragraphe. Nouvelle rubrique « Un flux refusé par son site
+  (erreur 403) » (FR/EN) et mention dans l'option « Flux (jusqu'à 12) ». Aucun changement de code.
+
 ## 1.171.1
 
 - Tuile Flux RSS : certains sites (actu.fr) répondent 403 à l'identifiant « PiBoard/0.1 (+https://…) »
