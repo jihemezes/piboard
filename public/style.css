@@ -4248,6 +4248,7 @@ body.touch-mode .help-pager-title { font-size: 17px; }
 .set-fam.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
 .set-fam:focus-visible { outline: 3px solid var(--text); outline-offset: 2px; }
 .set-fam-name { flex: 1; min-width: 0; }
+.set-fam-sub { display: block; margin-top: 1px; font-size: 12px; font-weight: 500; opacity: 0.8; line-height: 1.2; }
 .set-fam-count { flex: none; font-size: 12px; font-weight: 500; opacity: 0.75; }
 .set-fam.set-nomatch { opacity: 0.4; }
 
@@ -4354,6 +4355,7 @@ body.touch-mode .help-pager-title { font-size: 17px; }
 
 body.touch-mode .set-fam, body.touch .set-fam { min-height: 60px; font-size: 18px; }
 body.touch-mode .set-fam-count, body.touch .set-fam-count { font-size: 14px; }
+body.touch-mode .set-fam-sub, body.touch .set-fam-sub { font-size: 14px; }
 body.touch-mode .set-dirty-badge, body.touch .set-dirty-badge { font-size: 14px; }
 body.touch-mode .set-help, body.touch .set-help { width: 40px; height: 40px; font-size: 18px; }
 body.touch-mode .set-foot .btn, body.touch .set-foot .btn { min-height: 64px; padding: 0 32px; font-size: 20px; }

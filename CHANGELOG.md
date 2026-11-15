@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.168.1
+
+- Réglages : la famille « Écran de veille » s'appelle désormais **« Écran de veille / Diaporama »**
+  (EN : « Screen saver / Slideshow »), pour qu'on retrouve la configuration du
+  diaporama. Dans le menu de gauche, le nom long se coupe sur son « / » : « Écran de
+  veille » reste en gras, « Diaporama » passe dessous en plus petit (`.set-fam-sub`),
+  sans élargir la colonne ni changer l'esthétique. La recherche des réglages trouve
+  aussi la famille par « diaporama ». Titre de la rubrique d'aide aligné.
+
 ## 1.168.0
 
 - **Sélection dans la photothèque Photos (Mac).** Nouvelle source « Ma sélection »

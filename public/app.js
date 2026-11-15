@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.168.0
+   Version 1.168.1
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -9488,7 +9488,20 @@
       b.classList.toggle("active", fam === setUi.family && !setUi.query);
       const name = document.createElement("span");
       name.className = "set-fam-name";
-      name.textContent = setFamilyName(fam);
+      /* Un nom long (« Écran de veille / Diaporama ») se coupe sur son
+         « / » : le nom d'usage reste sur la première ligne, le complément
+         passe dessous en plus petit, au lieu d'un retour à la ligne au
+         milieu d'un mot. A long name ("Screen saver / Slideshow") splits
+         at its " / ": the main name stays on the first line, the
+         complement goes below, smaller, instead of wrapping mid-phrase. */
+      const famParts = setFamilyName(fam).split(" / ");
+      name.textContent = famParts[0];
+      if (famParts.length > 1) {
+        const sub = document.createElement("small");
+        sub.className = "set-fam-sub";
+        sub.textContent = famParts.slice(1).join(" / ");
+        name.appendChild(sub);
+      }
       const count = document.createElement("span");
       count.className = "set-fam-count";
       count.hidden = true;
