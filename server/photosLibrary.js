@@ -351,7 +351,89 @@ function findAlbum(albums, ref) {
   return albums.find((a) => a.id === q) || albums.find((a) => a.title.toLowerCase() === q) || null;
 }
 
-/* opts : source (all|favorites|recent|album), album, order
+/* ---------- Selection (1.168.0) ----------
+   Un choix durable : des ALBUMS entiers (qui suivent la phototheque :
+   une photo ajoutee a l'album apparait toute seule), des PHOTOS
+   ajoutees une a une, et des PHOTOS ECARTEES. Resultat = (albums U
+   photos) - ecartees. Une selection vide ne designe aucune photo.
+   A lasting choice: whole ALBUMS (they follow the library: a photo
+   added to the album shows up by itself), PHOTOS added one by one, and
+   PHOTOS LEFT OUT. Result = (albums U photos) - left out. An empty
+   selection designates no photo. */
+const SEL_ALBUMS_MAX = 200;
+const SEL_IDS_MAX = 5000;
+
+function normalizeSelection(sel) {
+  let o = sel;
+  if (typeof o === "string") { try { o = JSON.parse(o || "{}"); } catch (e) { o = {}; } }
+  if (!o || typeof o !== "object") o = {};
+  const albums = [];
+  const seen = new Set();
+  for (const a of Array.isArray(o.albums) ? o.albums : []) {
+    const isObj = a && typeof a === "object";
+    const id = String(isObj ? (a.id == null ? "" : a.id) : (a == null ? "" : a)).trim();
+    /* Une simple chaine peut etre un titre ou un numero : les deux sont
+       essayes. A plain string may be a title or a number: both are tried. */
+    const title = isObj ? (a.title != null ? String(a.title).trim() : "") : id;
+    if (!id && !title) continue;
+    const key = id + "\u0000" + title;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    albums.push({ id, title });
+    if (albums.length >= SEL_ALBUMS_MAX) break;
+  }
+  const ids = (list) => {
+    const out = [];
+    const u = new Set();
+    for (const x of Array.isArray(list) ? list : []) {
+      const id = String(x == null ? "" : x);
+      if (!ID_RE.test(id) || id.includes("..") || u.has(id)) continue;
+      u.add(id);
+      out.push(id);
+      if (out.length >= SEL_IDS_MAX) break;
+    }
+    return out;
+  };
+  return { albums, include: ids(o.include), exclude: ids(o.exclude) };
+}
+
+/* Un album de la selection : meme id ET meme titre d'abord (un numero
+   interne peut changer si Photos reconstruit sa base), sinon le titre.
+   A selection album: same id AND same title first (an internal number
+   may change if Photos rebuilds its database), otherwise the title. */
+function resolveSelectionAlbum(albums, ref) {
+  if (ref.id && ref.title) {
+    const exact = albums.find((a) => a.id === ref.id && a.title === ref.title);
+    if (exact) return exact;
+  }
+  if (ref.title) {
+    const t = ref.title.toLowerCase();
+    const byTitle = albums.find((a) => a.title.toLowerCase() === t);
+    if (byTitle) return byTitle;
+  }
+  /* Titre introuvable (album renomme) : on retombe sur le numero.
+     Title not found (album renamed): fall back on the number. */
+  return ref.id ? (albums.find((a) => a.id === ref.id) || null) : null;
+}
+
+function selectionMatcher(lib, selection) {
+  const sel = normalizeSelection(selection);
+  const pks = new Set();
+  for (const ref of sel.albums) {
+    const al = resolveSelectionAlbum(lib.albums || [], ref);
+    if (al) for (const p of al.pks) pks.add(p);
+  }
+  const inc = new Set(sel.include);
+  const exc = new Set(sel.exclude);
+  const cov = (a) => pks.has(a.pk);
+  return {
+    empty: !sel.albums.length && !sel.include.length,
+    cov,
+    isSel: (a) => (cov(a) || inc.has(a.id)) && !exc.has(a.id)
+  };
+}
+
+/* opts : source (all|favorites|recent|album|selection), album, selection, order
    (recent|oldest|random), orient (any|landscape|portrait), minWidth,
    noScreenshots, rng. Les photos sans dimensions connues (repli sans
    base) passent les filtres de forme et de taille.
@@ -370,6 +452,9 @@ function filterAssets(lib, opts) {
       const pks = new Set(album.pks);
       list = list.filter((a) => pks.has(a.pk));
     }
+  } else if (o.source === "selection") {
+    const m = selectionMatcher(lib, o.selection);
+    list = m.empty ? [] : list.filter((a) => m.isSel(a));
   }
   if (o.noScreenshots) list = list.filter((a) => !a.shot);
   if (o.orient === "landscape") list = list.filter((a) => !(a.w && a.h) || a.w >= a.h);
@@ -433,7 +518,7 @@ function list(libPath, opts, deps) {
   const here = items.filter((a) => localFlag(lib, libPath, a));
   const offset = Math.max(0, Number(opts && opts.offset) || 0);
   const limit = Math.min(2000, Math.max(1, Number(opts && opts.limit) || 120));
-  return {
+  const out = {
     mode: lib.mode,
     dbError: lib.dbError || "",
     albumFound,
@@ -441,6 +526,18 @@ function list(libPath, opts, deps) {
     missing: items.length - here.length,
     items: here.slice(offset, offset + limit)
   };
+  /* Avec une selection : chaque photo dit si elle est retenue (sel) et
+     si un album choisi la couvre (cov) -- de quoi cocher / decocher
+     sans ambiguite --, et on donne le nombre total de photos retenues.
+     With a selection: each photo says whether it is kept (sel) and
+     whether a chosen album covers it (cov) -- enough to tick / untick
+     unambiguously -- and the total of kept photos is given. */
+  if (opts && opts.selection) {
+    const m = selectionMatcher(lib, opts.selection);
+    out.items = out.items.map((a) => Object.assign({}, a, { sel: !m.empty && m.isSel(a), cov: m.cov(a) }));
+    out.selTotal = m.empty ? 0 : lib.assets.filter((a) => m.isSel(a) && localFlag(lib, libPath, a)).length;
+  }
+  return out;
 }
 
 function albums(libPath, deps) {
@@ -567,7 +664,7 @@ function status() {
 module.exports = {
   ID_RE, RECENT_COUNT, SLIDE_MAX_PX, IMPORT_MAX, THUMB_PX,
   isLibraryPath, discoverLibraries, checkAccess, status,
-  loadLibrary, filterAssets, list, albums,
+  loadLibrary, filterAssets, list, albums, normalizeSelection, selectionMatcher,
   originalPath, derivativePath, servedFile, importAssets, labelFor,
   setCacheDir, clearMemory, pruneCache
 };

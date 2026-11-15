@@ -265,6 +265,8 @@ const DEFAULT_SETTINGS = {
     slideshowSource: "upload",
     slideshowImages: "",
     slideshowFolderPath: "",
+    slideshowPhotosSelection: "",
+    slideshowPhotosLibrary: "",
     slideshowWebdavUrl: "",
     slideshowWebdavUser: "",
     slideshowWebdavPass: "",
@@ -1581,8 +1583,14 @@ function photosFail(res, e) {
 }
 
 function photosOpts(q) {
+  const o = photosOptsBase(q);
+  if (q.selection != null && q.selection !== "") o.selection = photosLibrary.normalizeSelection(q.selection);
+  return o;
+}
+
+function photosOptsBase(q) {
   return {
-    source: ["favorites", "recent", "album"].includes(q.source) ? q.source : "all",
+    source: ["favorites", "recent", "album", "selection"].includes(q.source) ? q.source : "all",
     album: String(q.album || ""),
     order: ["oldest", "random"].includes(q.order) ? q.order : "recent",
     orient: ["landscape", "portrait"].includes(q.orient) ? q.orient : "any",
@@ -1609,23 +1617,36 @@ app.get("/api/photos/albums", (req, res) => {
   }
 });
 
-app.get("/api/photos/list", (req, res) => {
-  try {
-    const lib = photosLibraryFrom(req.query);
-    const out = photosLibrary.list(lib, photosOpts(req.query));
-    const base = "library=" + encodeURIComponent(lib) + "&id=";
-    const slide = req.query.urls === "1";
-    res.json({
-      mode: out.mode, dbError: out.dbError, albumFound: out.albumFound, total: out.total, missing: out.missing,
-      items: out.items.map((a) => slide
-        ? { name: a.id, url: "/api/photos/file?" + base + encodeURIComponent(a.id) + "&max=" + photosLibrary.SLIDE_MAX_PX }
-        : { id: a.id, name: a.original || a.file, w: a.w, h: a.h, date: a.date, fav: a.fav,
-            thumb: "/api/photos/thumb?" + base + encodeURIComponent(a.id) })
-    });
-  } catch (e) {
-    photosFail(res, e);
-  }
-});
+/* GET pour les filtres simples ; POST (meme reponse) quand une
+   selection est jointe, car la liste des photos choisies peut depasser
+   ce qu'une adresse accepte.
+   GET for simple filters; POST (same answer) when a selection is
+   attached, since the chosen photos' list can exceed what a URL takes. */
+function photosListHandler(src) {
+  return (req, res) => {
+    try {
+      const q = src(req);
+      const lib = photosLibraryFrom(q);
+      const out = photosLibrary.list(lib, photosOpts(q));
+      const base = "library=" + encodeURIComponent(lib) + "&id=";
+      const slide = q.urls === "1" || q.urls === true;
+      const body = {
+        mode: out.mode, dbError: out.dbError, albumFound: out.albumFound, total: out.total, missing: out.missing,
+        items: out.items.map((a) => slide
+          ? { name: a.id, url: "/api/photos/file?" + base + encodeURIComponent(a.id) + "&max=" + photosLibrary.SLIDE_MAX_PX }
+          : { id: a.id, name: a.original || a.file, w: a.w, h: a.h, date: a.date, fav: a.fav,
+              thumb: "/api/photos/thumb?" + base + encodeURIComponent(a.id),
+              sel: a.sel, cov: a.cov })
+      };
+      if (out.selTotal != null) body.selTotal = out.selTotal;
+      res.json(body);
+    } catch (e) {
+      photosFail(res, e);
+    }
+  };
+}
+app.get("/api/photos/list", photosListHandler((req) => req.query));
+app.post("/api/photos/list", express.json({ limit: "1mb" }), photosListHandler((req) => Object.assign({}, req.query, req.body || {})));
 
 async function sendPhoto(req, res, opts) {
   try {

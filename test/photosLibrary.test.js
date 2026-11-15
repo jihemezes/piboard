@@ -120,6 +120,36 @@ console.log("== Photos : albums et liste (originaux absents ecartes) ==");
   console.log("  OK");
 }
 
+console.log("== Photos : selection (albums + photos - ecartees) ==");
+{
+  const f = (o) => ids(photos.filterAssets(data, Object.assign({ source: "selection", order: "oldest" }, o)).items);
+  const vac = data.albums.find((a) => a.title === "Vacances");
+  const fam = data.albums.find((a) => a.title === "Famille");
+  assert.deepStrictEqual(f({ selection: "" }), [], "selection vide : aucune photo");
+  assert.deepStrictEqual(f({ selection: { albums: [], include: [], exclude: ["A/AAAA1111.jpg"] } }), [], "seulement des ecartees : rien");
+  assert.deepStrictEqual(f({ selection: { albums: [{ id: vac.id, title: vac.title }] } }), ["A/AAAA1111.jpg", "B/BBBB2222.heic", "0/0000AAAA.jpg"], "album entier");
+  assert.deepStrictEqual(f({ selection: { albums: [{ id: vac.id, title: "Vacances" }], exclude: ["B/BBBB2222.heic"] } }), ["A/AAAA1111.jpg", "0/0000AAAA.jpg"], "tout l'album sauf une photo");
+  assert.deepStrictEqual(f({ selection: { albums: [vac.title], include: ["C/CCCC3333.png"], exclude: ["A/AAAA1111.jpg"] } }), ["B/BBBB2222.heic", "C/CCCC3333.png", "0/0000AAAA.jpg"], "album + photo ajoutee - ecartee, album donne par titre seul");
+  assert.deepStrictEqual(f({ selection: { albums: [{ id: "999", title: "vacances" }] } }), ["A/AAAA1111.jpg", "B/BBBB2222.heic", "0/0000AAAA.jpg"], "le numero interne a change : le titre fait foi");
+  assert.deepStrictEqual(f({ selection: { albums: [{ id: "999", title: "Disparu" }] } }), [], "album disparu ignore");
+  assert.deepStrictEqual(f({ selection: { include: ["../../etc/passwd", "A/AAAA1111.jpg"] } }), ["A/AAAA1111.jpg"], "identifiant invalide ecarte");
+  assert.deepStrictEqual(f({ selection: JSON.stringify({ albums: [{ id: fam.id, title: "Famille" }] }) }), ["1/1111BBBB.jpg", "2/2222CCCC.jpg"], "selection donnee en JSON");
+  assert.deepStrictEqual(f({ selection: { albums: [{ id: vac.id, title: "Vacances" }] }, orient: "portrait" }), ["B/BBBB2222.heic", "0/0000AAAA.jpg"], "les filtres s'appliquent ensuite");
+
+  // list() : drapeaux sel / cov et total retenu (originaux locaux seulement)
+  const l = photos.list(lib, { source: "all", limit: 100, selection: { albums: [{ id: vac.id, title: "Vacances" }], include: ["2/2222CCCC.jpg"], exclude: ["A/AAAA1111.jpg"] } });
+  const by = Object.fromEntries(l.items.map((i) => [i.id, i]));
+  assert.strictEqual(by["A/AAAA1111.jpg"].sel, false);
+  assert.strictEqual(by["A/AAAA1111.jpg"].cov, true, "ecartee mais couverte par l'album");
+  assert.strictEqual(by["B/BBBB2222.heic"].sel, true);
+  assert.strictEqual(by["2/2222CCCC.jpg"].sel, true);
+  assert.strictEqual(by["2/2222CCCC.jpg"].cov, false, "ajoutee a la main");
+  assert.strictEqual(by["C/CCCC3333.png"].sel, false);
+  assert.strictEqual(l.selTotal, 3, "B, 0 (album) + 2 (ajoutee)");
+  assert.strictEqual(photos.list(lib, { limit: 5 }).selTotal, undefined, "sans selection, pas de total");
+  console.log("  OK");
+}
+
 console.log("== Photos : filtres ==");
 {
   const f = (o) => ids(photos.filterAssets(data, o).items);

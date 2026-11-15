@@ -575,7 +575,7 @@ const LIBRARY_MOCK = {
 };
 /* Photos (Mac) : phototheque factice / fake Photos library (1.166.0) */
 const PHOTOS_MOCK = {
-  supported: true, perm: false, listUrls: [], imports: [],
+  supported: true, perm: false, listUrls: [], imports: [], posts: [],
   libs: [{ path: "/Users/jm/Pictures/Photos Library.photoslibrary", name: "Photos Library", hasDb: true, access: { ok: true } }],
   items: [
     { id: "A/AAAA1111.jpg", name: "IMG_0001.JPG", w: 4000, h: 3000, date: 1, fav: true },
@@ -1031,6 +1031,18 @@ const dom = new JSDOM(html, {
         }
         const q = new URLSearchParams(u.split("?")[1] || "");
         let items = PHOTOS_MOCK.items;
+        if (method === "POST") {
+          /* Selection : l'album « Vacances » (10) couvre A et B. */
+          const body = JSON.parse(opts.body || "{}");
+          PHOTOS_MOCK.posts.push(body);
+          const sel = JSON.parse(body.selection || "{}");
+          const covered = (sel.albums || []).some((a) => String(a.id) === "10") ? ["A/AAAA1111.jpg", "B/BBBB2222.heic"] : [];
+          const isSel = (i) => (covered.includes(i.id) || (sel.include || []).includes(i.id)) && !(sel.exclude || []).includes(i.id);
+          if (body.source === "selection") items = items.filter(isSel);
+          return json({ mode: "database", albumFound: true, total: items.length, missing: 0,
+            selTotal: PHOTOS_MOCK.items.filter(isSel).length,
+            items: items.map((i) => Object.assign({ thumb: "/api/photos/thumb?id=" + encodeURIComponent(i.id), sel: isSel(i), cov: covered.includes(i.id) }, i)) });
+        }
         if (q.get("source") === "favorites") items = items.filter((i) => i.fav);
         return json({ mode: "database", albumFound: true, total: items.length, missing: 1,
           items: items.map((i) => Object.assign({ thumb: "/api/photos/thumb?id=" + encodeURIComponent(i.id) }, i)) });
@@ -7303,6 +7315,95 @@ function catalogItemFor(catalog, document, widgetId) {
       assert("photos : le bouton reste cache hors macOS", document.getElementById("libraryPhotos").hidden === true);
       document.getElementById("libraryModal").hidden = true;
       PHOTOS_MOCK.supported = true;
+    }
+
+    /* ---------- Photos (Mac) : selection pour diaporama / veille (1.168.0) ----------
+       La meme fenetre, en mode selection : albums coches dans une liste,
+       photos cochees une a une, photos decochees dans un album ; le
+       resultat revient dans le champ cache, sans rien importer.
+       Same window in selection mode: albums ticked from a list, photos
+       ticked one by one, photos unticked inside an album; the result
+       goes back to the hidden field, nothing imported. */
+    {
+      const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      const host = document.createElement("div");
+      host.innerHTML = `<div class="field field-wide field-photoselect"><span>Sel</span><div class="photoselect-row"><button type="button" class="btn small photoselect-open">Choisir</button><span class="photoselect-summary field-hint"></span></div><input type="hidden" data-key="photosSelection" value=""></div>`;
+      document.body.appendChild(host);
+      PHOTOS_MOCK.supported = true;
+      PHOTOS_MOCK.posts = [];
+      click(host.querySelector(".photoselect-open"));
+      await sleep(300);
+      const pg = document.getElementById("photosGrid");
+      assert("selection : la fenetre s'ouvre en mode selection",
+        document.getElementById("photosModal").hidden === false
+        && document.getElementById("photosCard").classList.contains("photos-select-mode")
+        && document.getElementById("photosImport").hidden === true
+        && document.getElementById("photosDone").hidden === false
+        && document.getElementById("photosIntoRow").hidden === true);
+      assert("selection : la liste des albums est proposee a cocher",
+        document.getElementById("photosAlbumsPanel").hidden === false
+        && document.querySelectorAll("#photosAlbumsList input[type=checkbox]").length === 1
+        && /Vacances/.test(document.getElementById("photosAlbumsList").textContent));
+      assert("selection : le choix « Ma selection » est offert", document.getElementById("photosSelOption").hidden === false);
+      assert("selection : rien de coche au depart", pg.querySelectorAll(".photos-item.selected").length === 0
+        && PHOTOS_MOCK.posts.length >= 1 && PHOTOS_MOCK.posts[0].selection);
+
+      click(pg.querySelectorAll(".photos-item")[0]);
+      assert("selection : une photo cochee", pg.querySelectorAll(".photos-item.selected").length === 1
+        && /1/.test(document.getElementById("photosSelCount").textContent));
+
+      const box = document.querySelector("#photosAlbumsList input[type=checkbox]");
+      box.checked = true;
+      box.dispatchEvent(new window.Event("change", { bubbles: true }));
+      await sleep(250);
+      const last = PHOTOS_MOCK.posts[PHOTOS_MOCK.posts.length - 1];
+      assert("selection : l'album coche est envoye au serveur",
+        JSON.parse(last.selection).albums.some((a) => a.id === "10" && a.title === "Vacances"));
+      assert("selection : l'album entier est coche (2 photos), pas la 3e",
+        pg.querySelectorAll(".photos-item.selected").length === 2 && /2/.test(document.getElementById("photosSelCount").textContent));
+
+      click(pg.querySelectorAll(".photos-item")[1]);   // decoche B : tout l'album sauf B
+      assert("selection : decocher une photo d'un album l'ecarte",
+        pg.querySelectorAll(".photos-item.selected").length === 1 && /1/.test(document.getElementById("photosSelCount").textContent));
+
+      click(document.getElementById("photosDone"));
+      const saved = JSON.parse(host.querySelector("input[data-key]").value);
+      assert("selection : le champ garde albums, ajoutees et ecartees",
+        saved.albums.length === 1 && saved.albums[0].id === "10"
+        && saved.include.includes("A/AAAA1111.jpg") && saved.exclude.includes("B/BBBB2222.heic"));
+      assert("selection : la fenetre se referme et le resume est a jour",
+        document.getElementById("photosModal").hidden === true
+        && /1/.test(host.querySelector(".photoselect-summary").textContent));
+
+      // Reouverture : la selection est reprise, vue « Ma selection ».
+      PHOTOS_MOCK.posts = [];
+      click(host.querySelector(".photoselect-open"));
+      await sleep(300);
+      assert("selection : reouverte sur la selection existante",
+        document.getElementById("photosSource").value === "selection"
+        && pg.querySelectorAll(".photos-item").length === 1
+        && document.querySelector("#photosAlbumsList input[type=checkbox]").checked === true);
+      click(document.getElementById("photosSelNone"));
+      await sleep(250);
+      assert("selection : tout effacer vide les albums et les photos",
+        pg.querySelectorAll(".photos-item.selected").length === 0
+        && document.querySelector("#photosAlbumsList input[type=checkbox]").checked === false);
+      click(document.getElementById("photosDone"));
+      assert("selection : champ vide apres effacement", host.querySelector("input[data-key]").value === "");
+
+      // Mode import : les elements propres a la selection disparaissent.
+      document.getElementById("pageBgLibrary").dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+      await sleep(200);
+      click(document.getElementById("libraryPhotos"));
+      await sleep(250);
+      assert("selection : le mode import n'affiche pas les controles de selection",
+        document.getElementById("photosAlbumsPanel").hidden === true
+        && document.getElementById("photosDone").hidden === true
+        && document.getElementById("photosImport").hidden === false
+        && document.getElementById("photosSelOption").hidden === true);
+      document.getElementById("photosModal").hidden = true;
+      document.getElementById("libraryModal").hidden = true;
+      host.remove();
     }
 
     /* ---------- Gestion de la bibliotheque (1.155.0) ----------

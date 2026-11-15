@@ -21,9 +21,11 @@ window.eval(fs.readFileSync(path.join(__dirname, "..", "public", "widgets", "sli
 assert.ok(Slideshow);
 
 let lastUrl = "";
+let lastInit = null;
 let answer = { ok: true, status: 200, body: { items: [{ name: "A/x.jpg", url: "/api/photos/file?id=A%2Fx.jpg&max=2560" }], albumFound: true } };
-global.fetch = window.fetch = (url) => {
+global.fetch = window.fetch = (url, init) => {
   lastUrl = String(url);
+  lastInit = init || null;
   return Promise.resolve({ ok: answer.ok, status: answer.status, json: () => Promise.resolve(answer.body) });
 };
 
@@ -54,6 +56,28 @@ function make(settings) {
     assert.strictEqual(q.get("library"), "/Users/jm/Pictures/Photos Library.photoslibrary");
     assert.strictEqual(r.src, "photos");
     assert.deepStrictEqual(JSON.parse(JSON.stringify(r.urls)), ["/api/photos/file?id=A%2Fx.jpg&max=2560"]);
+    console.log("  OK");
+  }
+
+  console.log("== Diaporama Photos : « Ma selection » (POST) ==");
+  {
+    const sel = JSON.stringify({ albums: [{ id: "10", title: "Vacances" }], include: ["C/CCCC3333.png"], exclude: ["A/AAAA1111.jpg"] });
+    const r = await make({ photosSource: "selection", photosSelection: sel, photosOrder: "oldest" }).loadImages();
+    assert.strictEqual(lastUrl, "/api/photos/list", "pas de selection dans l'adresse");
+    assert.strictEqual(lastInit.method, "POST");
+    const body = JSON.parse(lastInit.body);
+    assert.strictEqual(body.source, "selection");
+    assert.strictEqual(body.selection, sel);
+    assert.strictEqual(body.urls, "1");
+    assert.strictEqual(body.order, "oldest");
+    assert.strictEqual(r.urls.length, 1);
+    const saved = answer;
+    answer = { ok: true, status: 200, body: { items: [], albumFound: true } };
+    const empty = await make({ photosSource: "selection", photosSelection: "" }).loadImages();
+    assert.strictEqual(empty.error, "slideshow.photosNoSelection", "selection vide : message qui dit quoi faire");
+    answer = saved;
+    await make({ photosSource: "favorites" }).loadImages();
+    assert.ok(!lastInit || !lastInit.method, "les autres sources restent en GET");
     console.log("  OK");
   }
 

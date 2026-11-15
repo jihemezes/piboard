@@ -162,7 +162,22 @@
             limit: String(Math.max(1, Math.min(2000, Number(s.photosLimit) || 300)))
           });
           if (s.photosLibrary) q.set("library", String(s.photosLibrary));
-          const r = await fetch("/api/photos/list?" + q.toString());
+          /* « Ma selection » : albums + photos choisis (1.168.0). La
+             liste peut etre longue, donc POST. Une selection vide
+             n'affiche rien, avec un message qui dit quoi faire.
+             "My selection": chosen albums + photos. The list can be
+             long, hence POST. An empty selection shows nothing, with a
+             message saying what to do. */
+          let r;
+          if (q.get("source") === "selection") {
+            const body = Object.fromEntries(q.entries());
+            body.selection = String(s.photosSelection || "");
+            r = await fetch("/api/photos/list", {
+              method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body)
+            });
+          } else {
+            r = await fetch("/api/photos/list?" + q.toString());
+          }
           const data = await r.json().catch(() => ({}));
           if (!r.ok || data.error) {
             const code = String(data.error || "");
@@ -172,6 +187,9 @@
               : code || ("HTTP " + r.status), src };
           }
           if (data.albumFound === false) return { error: this.ctx.i18n.t("slideshow.photosNoAlbum"), src };
+          if (q.get("source") === "selection" && !(data.items || []).length) {
+            return { error: this.ctx.i18n.t("slideshow.photosNoSelection"), src };
+          }
           return { urls: (data.items || []).map((it) => it.url), src };
         }
         // "urls"

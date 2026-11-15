@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.168.0
+
+- **Sélection dans la photothèque Photos (Mac).** Nouvelle source « Ma sélection »
+  (`photosSource: "selection"`) pour la tuile Diaporama, et source « Photothèque
+  Photos (Mac) » pour l'écran de veille (`slideshowSource: "photos"`, réglages
+  `slideshowPhotosSelection` / `slideshowPhotosLibrary`). Modèle côté serveur
+  (`normalizeSelection`, `selectionMatcher` dans `server/photosLibrary.js`) :
+  résultat = (albums entiers ∪ photos ajoutées) − photos écartées ; les albums
+  **suivent la photothèque** (résolus à chaque lecture, par numéro ET titre, repli
+  sur le titre si Photos renumérote sa base), une sélection vide ne désigne rien
+  (sauf pour l'écran de veille, où vide = toute la photothèque). Identifiants de
+  photo revalidés (`ID_RE`), plafonds 200 albums / 5000 photos.
+- `POST /api/photos/list` (même réponse que GET) quand une sélection est jointe :
+  la liste peut dépasser la longueur d'une adresse. La réponse porte, par photo,
+  `sel` (retenue) et `cov` (couverte par un album choisi) et le total `selTotal`.
+- **Fenêtre de sélection** : la fenêtre Photos existe désormais en deux modes
+  (import / sélection). En mode sélection : liste d'albums à cocher avec leur
+  nombre de photos, cases par photo, vue « Ma sélection », filtres inchangés,
+  compteur de photos retenues, « Valider » rend un JSON dans un champ caché.
+  Nouveau type de champ de manifeste `photoselect` (bouton + résumé).
+- Fonds de page : inchangés (une page = une image, déjà couverte par l'import).
+- Aide FR/EN. Tests : sélection dans `photosLibrary.test.js`,
+  `photosRoutes.test.js`, `slideshowPhotos.test.js`, parcours complet dans dom-smoke.
+
 ## 1.167.0
 
 - **Plus aucun chemin à taper pour les photos et les dossiers.** Un point d'entrée

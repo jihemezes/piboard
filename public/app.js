@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.167.0
+   Version 1.168.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -3893,6 +3893,22 @@
       }
       case "folder":
         return `<label class="field"><span>${label}</span><div class="field-folder-wrap"><input type="text" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-folder-browse" data-for="${f.key}"${f.pick === "photoslib" ? ' data-pick="photoslib"' : ""}>${i18n.t("folder.browse")}</button></div>${hint}</label>`;
+      /* Champ "photoselect" : une selection de photos de la phototheque
+         Photos (albums, photos cochees, photos ecartees), rangee en JSON
+         dans un champ cache. Le bouton ouvre la fenetre de selection.
+         "photoselect" field: a selection of Photos-library pictures
+         (albums, ticked photos, left-out photos), kept as JSON in a
+         hidden input. The button opens the selection window. */
+      case "photoselect":
+        return `<div class="field field-wide field-photoselect" data-photoselect="${f.key}">
+          <span>${label}</span>
+          <div class="photoselect-row">
+            <button type="button" class="btn small photoselect-open">${escapeHtml(i18n.t("photoselect.open"))}</button>
+            <span class="photoselect-summary field-hint">${escapeHtml(photosSelectionSummary(String(v)))}</span>
+          </div>
+          <input type="hidden" data-key="${f.key}" value="${escapeHtmlAttr(String(v))}">
+          ${hint}
+        </div>`;
       case "password":
         return `<label class="field"><span>${label}</span><div class="field-password-wrap"><input type="password" data-key="${f.key}" value="${String(v).replace(/"/g, "&quot;")}" autocomplete="off" spellcheck="false"><button type="button" class="btn small field-password-toggle" data-i18n="field.password.show">${i18n.t("field.password.show")}</button></div>${hint}</label>`;
       /* Champ "secret" : contrairement a "password" ci-dessus, la valeur
@@ -8693,7 +8709,56 @@
      slideshow, screen saver), so they all benefit. The button only shows
      on a Mac that has a library. */
   const PHOTOS_PAGE = 120;
-  const photosState = { libs: [], library: "", items: [], total: 0, missing: 0, selected: new Set(), seq: 0, albumsFor: "", importing: false };
+  const photosState = { libs: [], library: "", items: [], total: 0, missing: 0, selected: new Set(), seq: 0, albumsFor: "", importing: false,
+    mode: "import", sel: null, onDone: null, albumList: [], selTotal: 0 };
+
+  /* ---------- Mode "selection" (1.168.0) ----------
+     La meme fenetre sert a CHOISIR ce que montre le diaporama ou
+     l'ecran de veille, sans rien copier : albums entiers (mis a jour
+     par la phototheque), photos cochees une a une, photos decochees
+     dans un album. Le resultat est un petit texte JSON range dans le
+     reglage ; le serveur en tire la liste (voir selectionMatcher dans
+     server/photosLibrary.js).
+     The same window CHOOSES what the slideshow or screen saver shows,
+     copying nothing: whole albums (kept up to date by the library),
+     photos ticked one by one, photos unticked inside an album. The
+     result is a small JSON text kept in the setting. */
+  function parsePhotosSelection(text) {
+    let o = {};
+    try { o = typeof text === "string" ? JSON.parse(text || "{}") : (text || {}); } catch (e) { o = {}; }
+    if (!o || typeof o !== "object") o = {};
+    return {
+      albums: (Array.isArray(o.albums) ? o.albums : []).filter((a) => a && (a.id || a.title)).map((a) => ({ id: String(a.id || ""), title: String(a.title || "") })),
+      include: new Set(Array.isArray(o.include) ? o.include.map(String) : []),
+      exclude: new Set(Array.isArray(o.exclude) ? o.exclude.map(String) : [])
+    };
+  }
+  function stringifyPhotosSelection(sel) {
+    const empty = !sel.albums.length && !sel.include.size;
+    if (empty) return "";
+    return JSON.stringify({ albums: sel.albums, include: Array.from(sel.include), exclude: Array.from(sel.exclude) });
+  }
+  function photosSelectionSummary(text) {
+    const sel = parsePhotosSelection(text);
+    if (!sel.albums.length && !sel.include.size) return i18n.t("photoselect.none");
+    const parts = [];
+    if (sel.albums.length) parts.push(libFmt("photoselect.albums", { n: sel.albums.length }));
+    if (sel.include.size) parts.push(libFmt("photoselect.photos", { n: sel.include.size }));
+    if (sel.exclude.size) parts.push(libFmt("photoselect.excluded", { n: sel.exclude.size }));
+    return parts.join(" \u00b7 ");
+  }
+  function toggleSelectionPhoto(it) {
+    const S = photosState.sel;
+    if (it.sel) {
+      S.include.delete(it.id);
+      if (it.cov) S.exclude.add(it.id);
+      it.sel = false;
+    } else {
+      S.exclude.delete(it.id);
+      if (!it.cov) S.include.add(it.id);
+      it.sel = true;
+    }
+  }
 
   function photosKey() { return "piboardPhotosLibrary"; }
 
@@ -8717,19 +8782,30 @@
     el.classList.toggle("library-status-err", kind === "err");
   }
 
-  function photosQuery(extra) {
-    const q = new URLSearchParams({
+  function photosParams(extra) {
+    const p = {
       source: $("photosSource").value,
       order: $("photosOrder").value,
       orient: $("photosOrient").value,
       minWidth: $("photosSize").value,
       noScreenshots: $("photosNoShots").checked ? "1" : "0",
       limit: String(PHOTOS_PAGE)
-    });
-    if ($("photosSource").value === "album") q.set("album", $("photosAlbum").value);
-    if (photosState.library) q.set("library", photosState.library);
-    for (const k of Object.keys(extra || {})) q.set(k, String(extra[k]));
-    return q.toString();
+    };
+    if (p.source === "album") p.album = $("photosAlbum").value;
+    if (photosState.library) p.library = photosState.library;
+    for (const k of Object.keys(extra || {})) p[k] = String(extra[k]);
+    return p;
+  }
+
+  function photosFetchList(extra) {
+    const p = photosParams(extra);
+    if (photosState.mode === "select") {
+      p.selection = stringifyPhotosSelection(photosState.sel) || JSON.stringify({ albums: [], include: [], exclude: [] });
+      return fetch("/api/photos/list", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p)
+      });
+    }
+    return fetch("/api/photos/list?" + new URLSearchParams(p).toString());
   }
 
   function renderPhotosLibSelect() {
@@ -8775,15 +8851,38 @@
     });
   }
 
-  async function openPhotos() {
+  async function openPhotos(opts) {
+    const o = opts && opts.select ? opts : null;
+    photosState.mode = o ? "select" : "import";
+    photosState.sel = o ? parsePhotosSelection(o.selection) : null;
+    photosState.onDone = o ? o.onDone : null;
     photosState.selected = new Set();
     photosState.items = [];
     photosState.albumsFor = "";
+    photosState.selTotal = 0;
+    const selMode = !!o;
+    $("photosCard").classList.toggle("photos-select-mode", selMode);
+    $("photosTitle").textContent = i18n.t(selMode ? "photoselect.title" : "photos.title");
+    $("photosAlbumsPanel").hidden = !selMode;
+    $("photosIntoRow").hidden = selMode;
+    $("photosImport").hidden = selMode;
+    $("photosDone").hidden = !selMode;
+    $("photosSelOption").hidden = !selMode;
+    $("photosSelOption").disabled = !selMode;
+    if (!selMode && $("photosSource").value === "selection") $("photosSource").value = "all";
+    if (selMode) {
+      /* On ouvre sur la selection si elle existe, sur toute la
+         phototheque sinon. Opens on the selection if there is one. */
+      $("photosSource").value = stringifyPhotosSelection(photosState.sel) ? "selection" : "all";
+      $("photosAlbum").hidden = true;
+      if (o.library) { photosState.library = o.library; try { localStorage.setItem(photosKey(), o.library); } catch (e) { /* stockage indisponible */ } }
+    }
     const sec = $("photosSection");
     sec.innerHTML = (libraryState.sections && libraryState.sections.length ? libraryState.sections : ["backgrounds", "logos", "photos"])
       .map((x) => `<option value="${escapeHtmlAttr(x)}">${escapeHtml(librarySectionLabel(x))}</option>`).join("");
     sec.value = libraryState.section || "photos";
     $("photosModal").hidden = false;
+    updatePhotosSelection();
     // Etat frais : la phototheque a pu apparaitre ou une autorisation etre donnee.
     // Fresh status: a library may have appeared or a permission been granted.
     try {
@@ -8802,6 +8901,38 @@
 
   function closePhotos() {
     $("photosModal").hidden = true;
+    photosState.onDone = null;
+  }
+
+  /* "Valider" : la selection est rendue a l'appelant (le champ du
+     reglage), qui l'enregistre avec le reste du formulaire.
+     "Done": the selection is handed back to the caller (the setting's
+     field), which saves it with the rest of the form. */
+  function finishPhotosSelection() {
+    const cb = photosState.onDone;
+    const text = photosState.sel ? stringifyPhotosSelection(photosState.sel) : "";
+    const library = photosState.library;
+    closePhotos();
+    if (cb) cb(text, library);
+  }
+
+  function renderAlbumsPanel() {
+    const box = $("photosAlbumsList");
+    if (!box) return;
+    const chosen = photosState.sel ? photosState.sel.albums : [];
+    const isOn = (a) => chosen.some((c) => (c.id === a.id && c.title === a.title) || (!c.id && c.title.toLowerCase() === a.title.toLowerCase()) || (c.title && c.title.toLowerCase() === a.title.toLowerCase()));
+    box.innerHTML = photosState.albumList.length
+      ? photosState.albumList.map((a, i) => `<label class="photos-album"><input type="checkbox" data-ai="${i}"${isOn(a) ? " checked" : ""}><span>${escapeHtml(libFmt("photos.albumItem", { title: a.title, n: a.count }))}</span></label>`).join("")
+      : `<p class="field-hint">${escapeHtml(i18n.t("photoselect.noAlbums"))}</p>`;
+    $("photosAlbumsCount").textContent = chosen.length ? libFmt("photoselect.albumsChosen", { n: chosen.length }) : "";
+    box.querySelectorAll("input[data-ai]").forEach((cb) => cb.addEventListener("change", () => {
+      const a = photosState.albumList[Number(cb.dataset.ai)];
+      const S = photosState.sel;
+      S.albums = S.albums.filter((c) => !((c.id === a.id && c.title === a.title) || (c.title && c.title.toLowerCase() === a.title.toLowerCase())));
+      if (cb.checked) S.albums.push({ id: a.id, title: a.title });
+      $("photosAlbumsCount").textContent = S.albums.length ? libFmt("photoselect.albumsChosen", { n: S.albums.length }) : "";
+      loadPhotos(true);
+    }));
   }
 
   async function loadAlbums() {
@@ -8813,14 +8944,17 @@
       if (!r.ok) throw new Error(data.error || ("status " + r.status));
       sel.innerHTML = (data.albums || []).map((a) =>
         `<option value="${escapeHtmlAttr(a.title)}">${escapeHtml(libFmt("photos.albumItem", { title: a.title, n: a.count }))}</option>`).join("");
+      photosState.albumList = data.albums || [];
       photosState.albumsFor = photosState.library;
     } catch (e) {
       sel.innerHTML = "";
+      photosState.albumList = [];
     }
+    if (photosState.mode === "select") renderAlbumsPanel();
   }
 
   function photoThumbHtml(it) {
-    const sel = photosState.selected.has(it.id);
+    const sel = photosState.mode === "select" ? !!it.sel : photosState.selected.has(it.id);
     const fav = it.fav ? `<span class="photos-fav" title="${escapeHtmlAttr(i18n.t("photos.favTitle"))}">\u2665</span>` : "";
     return `<div class="library-item photos-item${sel ? " selected" : ""}" data-id="${escapeHtmlAttr(it.id)}" role="button" tabindex="0" aria-pressed="${sel}">
       <img src="${escapeHtmlAttr(it.thumb)}" alt="" loading="lazy">
@@ -8833,6 +8967,16 @@
     root.querySelectorAll(".photos-item").forEach((el) => {
       const toggle = () => {
         const id = el.dataset.id;
+        if (photosState.mode === "select") {
+          const it = photosState.items.find((x) => x.id === id);
+          if (!it) return;
+          toggleSelectionPhoto(it);
+          el.classList.toggle("selected", !!it.sel);
+          el.setAttribute("aria-pressed", String(!!it.sel));
+          photosState.selTotal = Math.max(0, photosState.selTotal + (it.sel ? 1 : -1));
+          updatePhotosSelection();
+          return;
+        }
         if (photosState.selected.has(id)) photosState.selected.delete(id); else photosState.selected.add(id);
         const on = photosState.selected.has(id);
         el.classList.toggle("selected", on);
@@ -8847,6 +8991,11 @@
   }
 
   function updatePhotosSelection() {
+    if (photosState.mode === "select") {
+      const t = photosState.selTotal;
+      $("photosSelCount").textContent = t ? libFmt("photoselect.kept", { n: t }) : i18n.t("photoselect.noneKept");
+      return;
+    }
     const n = photosState.selected.size;
     $("photosSelCount").textContent = n ? libFmt("photos.selected", { n }) : "";
     const btn = $("photosImport");
@@ -8863,10 +9012,10 @@
       $("photosMore").hidden = true;
     }
     photosSetStatus("");
-    if ($("photosSource").value === "album") await loadAlbums();
+    if ($("photosSource").value === "album" || photosState.mode === "select") await loadAlbums();
     if (seq !== photosState.seq) return;
     try {
-      const r = await fetch("/api/photos/list?" + photosQuery({ offset: photosState.items.length }));
+      const r = await photosFetchList({ offset: photosState.items.length });
       const data = await r.json().catch(() => ({}));
       if (seq !== photosState.seq) return;
       if (!r.ok) {
@@ -8877,6 +9026,7 @@
       photosState.items = photosState.items.concat(fresh);
       photosState.total = data.total || 0;
       photosState.missing = data.missing || 0;
+      if (data.selTotal != null) photosState.selTotal = data.selTotal;
       if (reset) grid.innerHTML = "";
       if (!photosState.items.length) {
         grid.innerHTML = `<p class="field-hint">${i18n.t(data.albumFound === false ? "photos.noAlbum" : "photos.empty")}</p>`;
@@ -8943,16 +9093,35 @@
   }
 
   function wirePhotos() {
-    onActivate($("libraryPhotos"), openPhotos);
+    onActivate($("libraryPhotos"), () => openPhotos());
+    onActivate($("photosDone"), finishPhotosSelection);
+    $("setSSSource").addEventListener("change", () => {
+      $("ssPhotosField").hidden = $("setSSSource").value !== "photos";
+    });
     onActivate($("photosClose"), closePhotos);
     onActivate($("photosImport"), importPhotos);
     onActivate($("photosMore"), () => loadPhotos(false));
     onActivate($("photosSelNone"), () => {
+      if (photosState.mode === "select") {
+        photosState.sel = { albums: [], include: new Set(), exclude: new Set() };
+        photosState.selTotal = 0;
+        renderAlbumsPanel();
+        loadPhotos(true);
+        return;
+      }
       photosState.selected = new Set();
       $("photosGrid").querySelectorAll(".photos-item.selected").forEach((el) => { el.classList.remove("selected"); el.setAttribute("aria-pressed", "false"); });
       updatePhotosSelection();
     });
     onActivate($("photosSelPage"), () => {
+      if (photosState.mode === "select") {
+        let added = 0;
+        photosState.items.forEach((it) => { if (!it.sel) { toggleSelectionPhoto(it); added++; } });
+        photosState.selTotal += added;
+        $("photosGrid").querySelectorAll(".photos-item").forEach((el) => { el.classList.add("selected"); el.setAttribute("aria-pressed", "true"); });
+        updatePhotosSelection();
+        return;
+      }
       photosState.items.forEach((it) => photosState.selected.add(it.id));
       $("photosGrid").querySelectorAll(".photos-item").forEach((el) => { el.classList.add("selected"); el.setAttribute("aria-pressed", "true"); });
       updatePhotosSelection();
@@ -9998,6 +10167,10 @@
     $("setSSWebdavUser").value = ss.slideshowWebdavUser || "";
     $("setSSWebdavPass").value = ss.slideshowWebdavPass || "";
     $("setSSImages").value = ss.slideshowImages || "";
+    $("setSSPhotosSelection").value = ss.slideshowPhotosSelection || "";
+    $("setSSPhotosLibrary").value = ss.slideshowPhotosLibrary || "";
+    $("ssPhotosSummary").textContent = photosSelectionSummary(ss.slideshowPhotosSelection || "");
+    $("ssPhotosField").hidden = (savedSource || "upload") !== "photos";
     $("setSSInterval").value = ss.slideshowInterval || 12;
     $("setSSShuffle").checked = !!ss.slideshowShuffle;
     // Comportement historique (avant que ce reglage soit expose) : le
@@ -10034,6 +10207,8 @@
       slideshowWebdavUser: $("setSSWebdavUser").value,
       slideshowWebdavPass: $("setSSWebdavPass").value,
       slideshowImages: $("setSSImages").value,
+      slideshowPhotosSelection: $("setSSPhotosSelection").value,
+      slideshowPhotosLibrary: $("setSSPhotosLibrary").value,
       slideshowInterval: Math.max(3, Number($("setSSInterval").value) || 12),
       slideshowShuffle: $("setSSShuffle").checked,
       slideshowKenBurns: $("setSSKenBurns").checked,
@@ -10249,6 +10424,15 @@
           webdavUser: ss.slideshowWebdavUser,
           webdavPass: ss.slideshowWebdavPass,
           images: ss.slideshowImages,
+          /* Phototheque Photos : une selection vide veut dire « toute la
+             phototheque » pour l'ecran de veille.
+             Photos library: an empty selection means "the whole
+             library" for the screen saver. */
+          photosLibrary: ss.slideshowPhotosLibrary || "",
+          photosSource: ss.slideshowPhotosSelection ? "selection" : "all",
+          photosSelection: ss.slideshowPhotosSelection || "",
+          photosNoShots: true,
+          photosLimit: 500,
           intervalSeconds: ss.slideshowInterval,
           shuffle: !!ss.slideshowShuffle,
           // Comportement historique : zoom lent actif par defaut tant
@@ -12258,6 +12442,40 @@
           input.value = chosen;
           input.dispatchEvent(new Event("input", { bubbles: true }));
           input.dispatchEvent(new Event("change", { bubbles: true }));
+        }
+      });
+    });
+
+    /* Selection de photos de la phototheque (champs "photoselect" des
+       tuiles, et section Ecran de veille).
+       Photos-library selection ("photoselect" fields of tiles, and the
+       Screen saver section). */
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest(".photoselect-open");
+      if (!btn) return;
+      e.preventDefault();
+      const box = btn.closest(".field-photoselect");
+      const hidden = box && box.querySelector("input[type=hidden]");
+      if (!hidden) return;
+      const form = box.closest("form");
+      const libInput = (form && form.querySelector('[data-key="photosLibrary"]')) || box.querySelector(".photoselect-lib") || $("setSSPhotosLibrary");
+      openPhotos({
+        select: true,
+        selection: hidden.value,
+        library: libInput ? String(libInput.value || "").trim() : "",
+        onDone: (text, library) => {
+          /* La selection se rapporte a LA photothèque ouverte : on
+             memorise laquelle, pour que le diaporama lise la meme.
+             The selection refers to THE library that was open: it is
+             remembered so the slideshow reads the same one. */
+          if (libInput && library && libInput.value !== library) {
+            libInput.value = library;
+            libInput.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+          hidden.value = text;
+          const sum = box.querySelector(".photoselect-summary");
+          if (sum) sum.textContent = photosSelectionSummary(text);
+          hidden.dispatchEvent(new Event("change", { bubbles: true }));
         }
       });
     });

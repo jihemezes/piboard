@@ -32,6 +32,27 @@
 
 # Nouveautes / What's new
 
+## 1.168.0
+
+**Choisissez précisément vos photos Mac**
+
+Dans la tuile **Diaporama** (source « Photothèque Photos ») et dans l'**écran de veille**,
+le bouton **« Choisir dans la photothèque… »** ouvre une fenêtre de sélection. Cochez des
+**albums entiers** dans une liste : ils se mettent à jour tout seuls quand vous y ajoutez des
+photos. Cochez des photos une à une, ou **décochez** celles que vous ne voulez pas dans un
+album : « tout l'album sauf… ». Un compteur indique combien de photos sont retenues, et rien
+n'est copié ni modifié dans Photos.
+
+---
+
+**Pick exactly the Mac photos you want**
+
+In the **Slideshow** tile ("Photos library" source) and in the **screen saver**, the
+**"Choose in the library…"** button opens a selection window. Tick **whole albums** from a
+list: they update by themselves when you add photos to them. Tick photos one by one, or
+**untick** the ones you do not want inside an album: "the whole album except…". A counter says
+how many photos are kept, and nothing is copied or changed in Photos.
+
 ## 1.167.0
 
 **Choisir un dossier ou une photothèque, sans rien taper**

@@ -3589,6 +3589,15 @@ body.touch .photos-check, body.touch-mode .photos-check { width: 32px; height: 3
 }
 .shutdown-denied-detail { user-select: text; color: var(--muted); }
 
+/* Selection dans la photothèque (1.168.0) / photos-library selection */
+.photos-albums-panel { margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--tile-edge); border-radius: 8px; }
+.photos-albums-panel > summary { cursor: pointer; font-weight: 600; }
+.photos-albums-list { display: flex; flex-wrap: wrap; gap: 4px 14px; max-height: 20vh; overflow-y: auto; margin-top: 4px; }
+.photos-album { display: inline-flex; align-items: center; gap: 6px; padding: 3px 0; cursor: pointer; }
+.photoselect-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.photoselect-summary { margin: 0; }
+@media (pointer: coarse) { .photos-album { padding: 9px 0; } }
+
 /* Explorateur de dossiers (1.113.2) / folder browser */
 .field-folder-wrap { display: flex; gap: 6px; align-items: center; }
 .field-folder-wrap input { flex: 1; min-width: 0; }

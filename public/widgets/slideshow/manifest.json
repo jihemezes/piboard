@@ -169,8 +169,8 @@
         "fr": "Quelles photos"
       },
       "hint": {
-        "en": "All photos, your favourites, the most recent ones, or one album.",
-        "fr": "Toutes les photos, vos favoris, les plus récentes, ou un album."
+        "en": "All photos, your favourites, the most recent ones, one album, or \"My selection\": albums and photos you pick in your library.",
+        "fr": "Toutes les photos, vos favoris, les plus récentes, un album, ou « Ma sélection » : des albums et des photos que vous choisissez dans votre photothèque."
       },
       "options": [
         {
@@ -197,8 +197,15 @@
         {
           "value": "album",
           "label": {
-            "en": "One album",
-            "fr": "Un album"
+            "en": "One album (typed name)",
+            "fr": "Un album (nom saisi)"
+          }
+        },
+        {
+          "value": "selection",
+          "label": {
+            "en": "My selection (albums and photos)",
+            "fr": "Ma sélection (albums et photos)"
           }
         }
       ],
@@ -223,6 +230,24 @@
         "en": "Source",
         "fr": "Source"
       }
+    },
+    {
+      "key": "photosSelection",
+      "type": "photoselect",
+      "default": "",
+      "label": {
+        "en": "My selection",
+        "fr": "Ma sélection"
+      },
+      "hint": {
+        "en": "Tick whole albums (they update by themselves when you add photos to them), individual photos, or untick the ones you do not want. Only used by \"My selection\".",
+        "fr": "Cochez des albums entiers (ils se mettent à jour tout seuls quand vous y ajoutez des photos), des photos une à une, ou décochez celles dont vous ne voulez pas. Utilisé seulement par « Ma sélection »."
+      },
+      "group": {
+        "en": "Source",
+        "fr": "Source"
+      },
+      "showIf": { "key": "photosSource", "equals": "selection" }
     },
     {
       "key": "photosOrder",

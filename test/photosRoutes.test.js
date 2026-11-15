@@ -85,6 +85,22 @@ function check(label, cond, detail) {
   p = await post({ library: lib, section: "photos", ids: [] });
   check("import : rien de choisi refuse", p.status === 400);
 
+  console.log("== Selection (POST /api/photos/list) ==");
+  {
+    const post = async (body) => {
+      const r = await fetch(BASE + "/api/photos/list", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      return { status: r.status, body: await r.json() };
+    };
+    let p = await post({ library: lib, source: "selection", selection: JSON.stringify({ include: ["A/AAAA1111.jpg"] }), urls: "1" });
+    check("selection : une photo retenue, adresse de diaporama", p.status === 200 && p.body.items.length === 1 && /\/api\/photos\/file\?/.test(p.body.items[0].url));
+    p = await post({ library: lib, source: "selection", selection: "", urls: "1" });
+    check("selection : vide = aucune photo", p.status === 200 && p.body.items.length === 0);
+    p = await post({ library: lib, source: "all", selection: { include: ["B/BBBB2222.jpg"] } });
+    check("selection : drapeaux sel / cov et total", p.status === 200 && p.body.selTotal === 1 && p.body.items.some((i) => i.id === "B/BBBB2222.jpg" && i.sel === true && i.cov === false));
+    p = await post({ library: "/etc", source: "selection" });
+    check("selection : bibliotheque invalide refusee", p.status === 400);
+  }
+
   fs.rmSync(tmp, { recursive: true, force: true });
   console.log(failed ? "\n" + failed + " echec(s)" : "\nTout est OK");
   process.exit(failed ? 1 : 0);
