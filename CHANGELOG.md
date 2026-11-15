@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.170.1
+
+- Tuile Analyse réseau : « Mémoriser les hôtes », « Journal », « Tout reconnaître »
+  et ✕ ouvraient aussi la fenêtre « Ouvrir un fichier » de l'import CSV : le câblage
+  d'Importer visait toute la classe `.pwn-io-btn` au lieu des seuls boutons
+  `[data-io]`. Corrigé ; `netscanWatch.test.js` vérifie qu'aucun bouton de
+  surveillance n'ouvre de sélecteur de fichier et qu'Importer en ouvre bien un.
+
 ## 1.170.0
 
 - **Tuile Analyse réseau : mémorisation des hôtes et alerte de nouvel appareil.**

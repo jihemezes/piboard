@@ -108,6 +108,11 @@ const tick = (ms) => new Promise((r) => setTimeout(r, ms || 15));
   check("changement et absence alertent a l'ecran", alerts.length === nA + 1, String(alerts.length - nA));
 
   console.log("== Surveillance : actions ==");
+  // Regression 1.170.1 : les boutons de surveillance partageaient la classe
+  // des boutons Export/Import, et ouvraient la fenetre « Ouvrir un fichier ».
+  let fileDialogs = 0;
+  const realCreate = w.document.createElement.bind(w.document);
+  w.document.createElement = (tag) => { const n = realCreate(tag); if (String(tag).toLowerCase() === "input") n.click = () => { if (n.type === "file") fileDialogs++; }; return n; };
   const tap = (node) => node.dispatchEvent(new w.Event("pointerup", { bubbles: true, cancelable: true }));
   payload = mk([host(), intrus("2026-10-30T10:00:00.000Z")], { newCount: 1, alertCount: 1 });
   await widget.refresh(true);
@@ -158,6 +163,10 @@ const tick = (ms) => new Promise((r) => setTimeout(r, ms || 15));
 
   // Les boutons d'action ne sont pas pris pour le renommage.
   check("renommage : un seul bouton ✎ par ligne d'hote", el.querySelectorAll(".pwn-row:not(.pwn-absent) .pwn-rename-btn:not([data-act])").length === el.querySelectorAll(".pwn-row:not(.pwn-absent):not(.pwn-logrow)").length);
+
+  check("aucun bouton de surveillance n'ouvre de selecteur de fichier", fileDialogs === 0, String(fileDialogs));
+  tap(el.querySelector("[data-io='import']"));
+  check("le bouton Importer, lui, en ouvre bien un", fileDialogs === 1, String(fileDialogs));
 
   widget.destroy();
   console.log(failed ? "\n" + failed + " echec(s)" : "\nnetscanWatch : tous les tests OK");

@@ -640,7 +640,7 @@
     }
 
     wireIoButtons() {
-      this.ctx.el.querySelectorAll(".pwn-io-btn").forEach((btn) => {
+      this.ctx.el.querySelectorAll(".pwn-io-btn[data-io]").forEach((btn) => {
         // pointerup et stopPropagation() : meme raison que les autres
         // boutons de la tuile (ecran tactile, mode edition du tableau).
         // pointerup and stopPropagation(): same reason as the tile's
