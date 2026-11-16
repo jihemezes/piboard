@@ -32,6 +32,27 @@
 
 # Nouveautes / What's new
 
+## 1.172.0
+
+**Clic droit sur une tuile : un menu pour la modifier seule**
+
+Avec la souris, un **clic droit sur une tuile** ouvre un menu qui ne concerne que cette tuile, sans
+passer par le mode édition : **réglages**, **actualiser maintenant**, **déplacer ou redimensionner
+cette tuile seule** (les autres restent en place), **plein écran**, **verrouiller** la tuile pour
+qu'aucune autre ne puisse la pousser, **déplacer ou dupliquer** vers une autre page, et **supprimer**
+(avec confirmation). Le clic droit habituel (copier, coller) reste disponible dans les champs, sur
+les liens et le texte sélectionné, ou avec la touche Maj. Pas de menu en mode tactile.
+
+---
+
+**Right-click a tile: a menu to change it alone**
+
+With a mouse, a **right-click on a tile** opens a menu that concerns that tile only, without going
+through edit mode: **settings**, **refresh now**, **move or resize this tile alone** (the others
+stay put), **full screen**, **lock** the tile so no other can push it, **move or duplicate** to
+another page, and **remove** (with confirmation). The usual right-click (copy, paste) stays
+available in fields, on links and selected text, or with the Shift key. No menu in touch mode.
+
 ## 1.171.1
 
 **Flux RSS : les sites qui refusent PiBoard**

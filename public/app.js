@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.171.2
+   Version 1.172.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -2348,9 +2348,14 @@
       minH: manifest && manifest.size ? manifest.size.minH : 1,
       maxW: manifest && manifest.size ? manifest.size.maxW : undefined,
       maxH: manifest && manifest.size ? manifest.size.maxH : undefined,
+      /* Tuile verrouillee (menu clic droit) : aucune autre tuile ne peut la
+         deplacer, et elle ne se deplace ni ne se redimensionne.
+         Locked tile (right-click menu): no other tile can displace it. */
+      locked: !!conf.locked, noMove: !!conf.locked, noResize: !!conf.locked,
       content: tileMarkup(conf, manifest)
     });
     el.dataset.tileId = conf.id;
+    if (conf.locked) el.classList.add("tile-locked");
 
     const record = { conf, manifest, instance: null, el, zone };
     tiles.set(conf.id, record);
@@ -2808,7 +2813,8 @@
         id,
         widget: rec.conf.widget,
         x: node.x, y: node.y, w: node.w, h: node.h,
-        settings: rec.conf.settings || {}
+        settings: rec.conf.settings || {},
+        ...(rec.conf.locked ? { locked: true } : {})
       });
     }
     return out;
@@ -3126,6 +3132,7 @@
     const conf = JSON.parse(JSON.stringify(rec.conf));
     Object.assign(conf, { x: place.x, y: place.y, w: place.w, h: place.h });
     if (o.copy) {
+      delete conf.locked; // une copie n'est pas verrouillee / a copy is not locked
       conf.id = "t-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
       try {
         await apiPost("/api/tiles/" + encodeURIComponent(tileId) + "/duplicate", { to: conf.id });
@@ -3202,6 +3209,207 @@
     }
     moveToastTimer = setTimeout(hide, 8000);
   }
+
+  /* ====================================================================
+     MENU CONTEXTUEL D'UNE TUILE (clic droit) -- 1.172.0
+
+     Hors mode tactile, un clic droit sur une tuile ouvre un menu qui agit
+     sur CETTE tuile seule, sans passer par le mode edition global :
+     reglages, actualiser, deplacer / redimensionner seule, plein ecran,
+     verrouiller, deplacer ou dupliquer vers une page, supprimer.
+
+     Le clic droit natif (copier / coller) reste intact sur les champs de
+     saisie, les liens, le texte selectionne et les contenus integres
+     (pages web, video) ; Maj + clic droit rend aussi la main au
+     navigateur. Mode tactile : aucun menu.
+
+     TILE CONTEXT MENU (right-click). Outside touch mode, a right-click on
+     a tile opens a menu acting on THAT tile only, without the global edit
+     mode. The native right-click (copy / paste) is left alone on inputs,
+     links, selected text and embedded content; Shift + right-click also
+     returns control to the browser. Touch mode: no menu.
+     ==================================================================== */
+  let tileCtxEl = null;
+  let tileCtxDelete = false;
+  let soloEdit = null;
+
+  function closeTileCtx() {
+    if (tileCtxEl) { tileCtxEl.remove(); tileCtxEl = null; }
+    tileCtxDelete = false;
+    document.removeEventListener("pointerdown", tileCtxOutside, true);
+    document.removeEventListener("keydown", tileCtxKey, true);
+    window.removeEventListener("blur", closeTileCtx);
+    window.removeEventListener("resize", closeTileCtx);
+  }
+  function tileCtxOutside(e) { if (tileCtxEl && !tileCtxEl.contains(e.target)) closeTileCtx(); }
+  function tileCtxKey(e) { if (e.key === "Escape") { e.stopPropagation(); closeTileCtx(); } }
+
+  /* Faut-il laisser le menu natif du navigateur ? Should the native menu stay? */
+  function nativeMenuWanted(e) {
+    if (e.shiftKey) return true;
+    const t = e.target;
+    if (!t || !t.closest) return true;
+    if (t.closest("input, textarea, select, [contenteditable=''], [contenteditable='true'], a[href], iframe, webview, video, audio, embed, object")) return true;
+    try { const sel = window.getSelection && window.getSelection(); if (sel && String(sel).trim()) return true; } catch (err) { /* noop */ }
+    return false;
+  }
+
+  function setTileLocked(rec, on) {
+    on = !!on;
+    if (on) rec.conf.locked = true; else delete rec.conf.locked;
+    try { gridForZone(rec.zone).update(rec.el, { locked: on, noMove: on, noResize: on }); } catch (e) { /* noop */ }
+    rec.el.classList.toggle("tile-locked", on);
+    scheduleSave();
+  }
+
+  /* Deplacer / redimensionner UNE tuile : la grille est deverrouillee, mais
+     toutes les autres tuiles sont figees le temps de la manipulation.
+     Move / resize ONE tile: the grid is unlocked, every other tile is
+     frozen meanwhile. */
+  function startSoloEdit(rec) {
+    if (editing || !rec || rec.conf.locked) return;
+    endSoloEdit();
+    const g = gridForZone(rec.zone);
+    const saved = [];
+    for (const n of g.engine.nodes) {
+      if (n.el === rec.el) continue;
+      saved.push({ el: n.el, locked: !!n.locked, noMove: !!n.noMove, noResize: !!n.noResize });
+      try { g.update(n.el, { locked: true, noMove: true, noResize: true }); } catch (e) { /* noop */ }
+    }
+    g.setStatic(false);
+    rec.el.classList.add("tile-solo");
+    document.body.classList.add("tile-solo-on");
+    const bar = document.createElement("div");
+    bar.className = "solo-bar";
+    bar.setAttribute("role", "status");
+    bar.innerHTML = `<span>${escapeHtml(i18n.t("tilemenu.soloHint"))}</span><button type="button" class="btn small primary">${escapeHtml(i18n.t("tilemenu.soloDone"))}</button>`;
+    document.body.appendChild(bar);
+    onActivate(bar.querySelector("button"), () => endSoloEdit());
+    soloEdit = { rec, g, saved, bar };
+    document.addEventListener("keydown", soloKey, true);
+  }
+  function soloKey(e) { if (e.key === "Escape") endSoloEdit(); }
+  function endSoloEdit() {
+    if (!soloEdit) return;
+    const { rec, g, saved, bar } = soloEdit;
+    soloEdit = null;
+    document.removeEventListener("keydown", soloKey, true);
+    for (const s of saved) {
+      try { g.update(s.el, { locked: s.locked, noMove: s.noMove, noResize: s.noResize }); } catch (e) { /* noop */ }
+    }
+    if (!editing) { try { g.setStatic(true); } catch (e) { /* noop */ } }
+    if (rec && rec.el) rec.el.classList.remove("tile-solo");
+    document.body.classList.remove("tile-solo-on");
+    if (bar) bar.remove();
+    scheduleSave();
+  }
+  document.addEventListener("piboard:editing", () => endSoloEdit());
+
+  function toggleTileFullscreen(rec) {
+    const el = rec.el;
+    try {
+      if (document.fullscreenElement === el) { document.exitFullscreen(); return; }
+      const p = el.requestFullscreen && el.requestFullscreen();
+      if (p && p.catch) p.catch((e) => console.warn("[piboard] plein ecran refuse", e));
+    } catch (e) { console.warn("[piboard] plein ecran impossible", e); }
+  }
+  document.addEventListener("fullscreenchange", () => {
+    // Les tuiles qui mesurent leur zone (cartes, graphiques) se redimensionnent.
+    try { window.dispatchEvent(new Event("resize")); } catch (e) { /* noop */ }
+  });
+
+  function openTileCtx(rec, x, y) {
+    closeTileCtx();
+    const t = (k) => i18n.t("tilemenu." + k);
+    const m = document.createElement("div");
+    m.className = "tile-ctx";
+    m.setAttribute("role", "menu");
+    const items = [];
+    const add = (id, label, fn, cls) => items.push({ id, label, fn, cls: cls || "" });
+    add("settings", t("settings"), () => openTileSettings(rec.conf.id));
+    if (rec.instance && typeof rec.instance.refresh === "function") {
+      add("refresh", t("refresh"), () => { try { Promise.resolve(rec.instance.refresh()).catch(() => {}); } catch (e) { /* noop */ } });
+    }
+    if (!editing && !rec.conf.locked) add("solo", t("solo"), () => startSoloEdit(rec));
+    if (document.fullscreenEnabled) {
+      add("fullscreen", document.fullscreenElement === rec.el ? t("fullscreenExit") : t("fullscreen"), () => toggleTileFullscreen(rec));
+    }
+    add("lock", rec.conf.locked ? t("unlock") : t("lock"), () => setTileLocked(rec, !rec.conf.locked));
+    const dests = moveDestinations(rec.zone);
+    if (dests.length) {
+      add("move", t("moveTo"), null, "has-sub");
+      add("copy", t("copyTo"), null, "has-sub");
+    }
+    add("delete", t("delete"), null, "danger");
+
+    const render = () => {
+      m.innerHTML = "";
+      for (const it of items) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("role", "menuitem");
+        b.className = "tile-ctx-item " + it.cls;
+        b.dataset.act = it.id;
+        b.textContent = it.id === "delete" && tileCtxDelete ? t("deleteConfirm") : it.label + (it.cls === "has-sub" ? " ▸" : "");
+        if (it.id === "delete" && tileCtxDelete) b.classList.add("confirm");
+        b.addEventListener("click", (ev) => {
+          ev.preventDefault(); ev.stopPropagation();
+          if (it.id === "delete") {
+            if (!tileCtxDelete) { tileCtxDelete = true; render(); return; }
+            closeTileCtx(); removeTile(rec.conf.id); return;
+          }
+          if (it.id === "move" || it.id === "copy") { showDests(it.id === "copy"); return; }
+          closeTileCtx();
+          it.fn();
+        });
+        m.appendChild(b);
+      }
+      const first = m.querySelector("button");
+      if (first) first.focus({ preventScroll: true });
+    };
+    const showDests = (copy) => {
+      m.innerHTML = "";
+      const back = document.createElement("button");
+      back.type = "button"; back.className = "tile-ctx-item back"; back.textContent = "◂ " + (copy ? t("copyTo") : t("moveTo"));
+      back.addEventListener("click", (ev) => { ev.stopPropagation(); render(); });
+      m.appendChild(back);
+      for (const d of dests) {
+        const b = document.createElement("button");
+        b.type = "button"; b.setAttribute("role", "menuitem"); b.className = "tile-ctx-item dest"; b.dataset.dest = d.zone;
+        b.textContent = d.label;
+        b.addEventListener("click", (ev) => {
+          ev.preventDefault(); ev.stopPropagation();
+          closeTileCtx();
+          const id = rec.conf.id;
+          (copy ? duplicateTileTo(id, d.zone) : moveTileTo(id, d.zone)).catch((err) => console.error("[piboard] move failed", err));
+        });
+        m.appendChild(b);
+      }
+    };
+    render();
+    document.body.appendChild(m);
+    // Reste dans l'ecran / stays on screen
+    const r = m.getBoundingClientRect();
+    const W = window.innerWidth || 1024, H = window.innerHeight || 768;
+    m.style.left = Math.max(4, Math.min(x, W - (r.width || 220) - 4)) + "px";
+    m.style.top = Math.max(4, Math.min(y, H - (r.height || 260) - 4)) + "px";
+    tileCtxEl = m;
+    document.addEventListener("pointerdown", tileCtxOutside, true);
+    document.addEventListener("keydown", tileCtxKey, true);
+    window.addEventListener("blur", closeTileCtx);
+    window.addEventListener("resize", closeTileCtx);
+  }
+
+  document.addEventListener("contextmenu", (e) => {
+    if (document.body.classList.contains("touch") || document.body.classList.contains("touch-mode")) return;
+    const item = e.target && e.target.closest ? e.target.closest(".grid-stack-item") : null;
+    if (!item || !item.dataset || !item.dataset.tileId) { closeTileCtx(); return; }
+    const rec = tiles.get(item.dataset.tileId);
+    if (!rec) return;
+    if (nativeMenuWanted(e)) { closeTileCtx(); return; }
+    e.preventDefault();
+    openTileCtx(rec, e.clientX, e.clientY);
+  });
 
   /* Le bloc « Emplacement » de la fenetre de reglages : une liste de
      destinations et deux boutons. The "Location" block of the settings

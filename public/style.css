@@ -4476,3 +4476,33 @@ body.touch .btn.small { padding: 12px 18px; font-size: 15px; min-height: 46px; }
   .field-feedlist .feed-adv { grid-template-columns: 1fr; }
   .field-feedlist .feed-label { flex-basis: 22%; }
 }
+
+/* ---------- Menu contextuel de tuile + verrou + deplacement seul (1.172.0) ---------- */
+.tile-ctx {
+  position: fixed; z-index: 9000; min-width: 210px; max-width: 320px; padding: 4px;
+  background: var(--tile, #1b1f27); color: var(--text, #e8eaed);
+  border: 1px solid var(--tile-edge, rgba(255,255,255,.18)); border-radius: 10px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.45); display: flex; flex-direction: column; gap: 1px;
+}
+.tile-ctx-item {
+  all: unset; box-sizing: border-box; display: block; padding: 8px 12px; border-radius: 7px;
+  font-size: 14px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.tile-ctx-item:hover, .tile-ctx-item:focus-visible { background: color-mix(in srgb, var(--accent, #4aa3ff) 22%, transparent); }
+.tile-ctx-item.danger { color: #ff6b6b; }
+.tile-ctx-item.danger.confirm { background: #c0392b; color: #fff; font-weight: 600; }
+.tile-ctx-item.back { opacity: .75; border-bottom: 1px solid var(--tile-edge, rgba(255,255,255,.12)); border-radius: 7px 7px 0 0; margin-bottom: 2px; }
+.solo-bar {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 8900;
+  display: flex; align-items: center; gap: 14px; padding: 10px 14px; border-radius: 12px;
+  background: var(--tile, #1b1f27); color: var(--text, #e8eaed); font-size: 14px;
+  border: 1px solid var(--accent, #4aa3ff); box-shadow: 0 8px 26px rgba(0,0,0,.5);
+}
+.grid-stack-item.tile-solo > .grid-stack-item-content { outline: 2px dashed var(--accent, #4aa3ff); outline-offset: -2px; cursor: grab; }
+body.tile-solo-on .grid-stack-item.tile-solo .tile-head { display: flex; cursor: grab; }
+body.editing .grid-stack-item.tile-locked > .grid-stack-item-content::after,
+.grid-stack-item.tile-locked.tile-solo > .grid-stack-item-content::after {
+  content: "\1F512"; position: absolute; right: 6px; bottom: 4px; font-size: 14px; opacity: .8; pointer-events: none;
+}
+.grid-stack-item:fullscreen { background: var(--bg, #000); padding: 0; }
+.grid-stack-item:fullscreen > .grid-stack-item-content { inset: 0; }

@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.172.0
+
+- **Menu contextuel de tuile (clic droit), hors mode tactile.** Agit sur la tuile seule, sans mode édition
+  global : réglages, actualiser (si `instance.refresh`), déplacer / redimensionner seule (grille
+  déverrouillée, autres tuiles figées via `locked/noMove/noResize` le temps de la manipulation, bandeau
+  « Terminé », Échap), plein écran (API Fullscreen sur la tuile), verrouiller / déverrouiller, déplacer ou
+  dupliquer vers une page ou un tiroir, supprimer en deux clics.
+- Verrou : champ `locked` de la tuile, enregistré dans la disposition (`serializeZone`), appliqué à la création
+  (`addWidget`), non copié par « Dupliquer ». Cadenas visible en mode édition.
+- Le clic droit natif est conservé sur les champs de saisie, liens, texte sélectionné, contenus intégrés
+  (iframe/webview/vidéo) et avec Maj. Aucun menu en mode tactile.
+- Tests : bloc « Menu contextuel de tuile » dans `dom-smoke.js`. Aide FR/EN (page d'accueil du tableau).
+
 ## 1.171.2
 
 - Aide de la tuile Flux RSS : la case « Se présenter comme un navigateur ordinaire » (1.171.1) avait

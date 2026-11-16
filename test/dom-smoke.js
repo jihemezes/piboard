@@ -11488,6 +11488,97 @@ function catalogItemFor(catalog, document, widgetId) {
     }
   }
 
+  console.log("== Menu contextuel de tuile (clic droit) (1.172.0) ==");
+  {
+    const MouseEv = window.MouseEvent;
+    const ctxOn = (el, opts) => {
+      const ev = new MouseEv("contextmenu", Object.assign({ bubbles: true, cancelable: true, clientX: 40, clientY: 40 }, opts || {}));
+      el.dispatchEvent(ev);
+      return ev;
+    };
+    const menu = () => document.querySelector(".tile-ctx");
+    const act = (id) => menu() && menu().querySelector('[data-act="' + id + '"]');
+    const click = (el) => el.dispatchEvent(new MouseEv("click", { bubbles: true, cancelable: true }));
+    const tile = document.querySelector('[data-tile-id="t-s"]');
+    const body = tile.querySelector(".tile-body");
+
+    let ev = ctxOn(body);
+    assert("menu : un clic droit sur une tuile ouvre le menu", !!menu() && ev.defaultPrevented);
+    assert("menu : reglages, verrou, supprimer presents",
+      !!act("settings") && !!act("lock") && !!act("delete") && !!act("solo"));
+    assert("menu : un clic ailleurs le ferme", (() => {
+      document.body.dispatchEvent(new window.Event("pointerdown", { bubbles: true }));
+      return !menu();
+    })());
+
+    // Menu natif conserve : champ de saisie, texte, Maj + clic droit
+    const inp = document.createElement("input");
+    tile.querySelector(".tile-body").appendChild(inp);
+    ev = ctxOn(inp);
+    assert("menu : clic droit dans un champ de saisie -> menu natif conserve", !menu() && !ev.defaultPrevented);
+    inp.remove();
+    ev = ctxOn(body, { shiftKey: true });
+    assert("menu : Maj + clic droit -> menu natif conserve", !menu() && !ev.defaultPrevented);
+    ev = ctxOn(document.getElementById("boardEmpty") || document.body);
+    assert("menu : clic droit hors tuile -> rien", !menu());
+
+    // Reglages
+    ctxOn(body);
+    click(act("settings"));
+    await sleep(60);
+    assert("menu : Reglages ouvre la fenetre de CETTE tuile", !document.getElementById("tileModal").hidden && !menu());
+    document.querySelector("#tileModal .modal-close").dispatchEvent(new MouseEv("click", { bubbles: true }));
+
+    // Verrouiller / deverrouiller
+    ctxOn(body);
+    click(act("lock"));
+    assert("verrou : la tuile est verrouillee dans la grille", tile.gridstackNode.locked === true && tile.gridstackNode.noMove === true && tile.classList.contains("tile-locked"));
+    await sleep(750);
+    {
+      const puts = putCalls.filter((c) => c.url.includes("/api/layout"));
+      const last = JSON.parse(puts[puts.length - 1].body);
+      const entry = last.tiles.find((x) => x.id === "t-s");
+      assert("verrou : enregistre dans la disposition (locked: true)", !!entry && entry.locked === true);
+    }
+    ctxOn(body);
+    assert("verrou : le menu propose Deverrouiller et masque le deplacement seul", /D[eé]verrouiller|Unlock/.test(act("lock").textContent) && !act("solo"));
+    click(act("lock"));
+    assert("verrou : deverrouillee", !tile.gridstackNode.locked && !tile.classList.contains("tile-locked"));
+    await sleep(750);
+    {
+      const puts = putCalls.filter((c) => c.url.includes("/api/layout"));
+      const entry = JSON.parse(puts[puts.length - 1].body).tiles.find((x) => x.id === "t-s");
+      assert("verrou : deverrouille -> plus de drapeau enregistre", !!entry && entry.locked === undefined);
+    }
+
+    // Deplacement d'une tuile seule
+    ctxOn(body);
+    click(act("solo"));
+    const others = [...document.querySelectorAll(".board .grid-stack-item")].filter((e) => e !== tile && e.gridstackNode);
+    assert("solo : barre d'information affichee", !!document.querySelector(".solo-bar") && tile.classList.contains("tile-solo"));
+    assert("solo : la grille est deverrouillee, les autres tuiles figees",
+      !document.querySelector(".grid-stack").classList.contains("grid-stack-static") && others.length > 0 && others.every((e) => e.gridstackNode.locked === true && e.gridstackNode.noMove === true));
+    document.querySelector(".solo-bar button").dispatchEvent(new MouseEv("click", { bubbles: true }));
+    assert("solo : Termine restaure la grille et les autres tuiles",
+      !document.querySelector(".solo-bar") && document.querySelector(".grid-stack").classList.contains("grid-stack-static")
+      && others.every((e) => !e.gridstackNode.locked && !e.gridstackNode.noMove));
+
+    // Suppression en deux temps
+    const before = document.querySelectorAll(".grid-stack-item[data-tile-id]").length;
+    ctxOn(body);
+    click(act("delete"));
+    assert("suppression : un premier clic demande confirmation", !!menu() && act("delete").classList.contains("confirm")
+      && document.querySelectorAll(".grid-stack-item[data-tile-id]").length === before);
+    document.body.dispatchEvent(new window.Event("pointerdown", { bubbles: true }));
+    assert("suppression : abandonner le menu ne supprime rien", document.querySelectorAll(".grid-stack-item[data-tile-id]").length === before);
+
+    // Mode tactile : pas de menu
+    document.body.classList.add("touch");
+    ev = ctxOn(body);
+    assert("mode tactile : pas de menu contextuel", !menu() && !ev.defaultPrevented);
+    document.body.classList.remove("touch");
+  }
+
   console.log(process.exitCode ? "\n>>> ECHECS DETECTES" : "\n>>> TOUS LES TESTS PASSENT");
   window.close();
   process.exit(process.exitCode || 0);
