@@ -330,9 +330,10 @@
 
     buildMap() {
       const s = this.ctx.settings;
+      const home = this.homeTarget();
       this.map = L.map(this.mapEl, {
-        center: [this.coords.lat, this.coords.lon],
-        zoom: Number(s.zoom) || 13,
+        center: [home.lat, home.lon],
+        zoom: home.z,
         zoomControl: false,
         attributionControl: false
       });
@@ -388,6 +389,25 @@
       // +/- buttons top-right: the legend already occupies the top-left
       // corner. Free zoom/pan, as requested.
       L.control.zoom({ position: "topright" }).addTo(this.map);
+
+      /* Verrou de la vue (1.173.0) : sous les boutons +/-, discret. Il
+         fige le zoom et la position sans toucher aux mises a jour des
+         donnees. View lock: under the +/- buttons, discreet. It freezes
+         zoom and position without touching data updates. */
+      {
+        const self = this;
+        const ViewControl = L.Control.extend({
+          onAdd() {
+            const dom = self.makeViewControlDom();
+            if (L.DomEvent) { L.DomEvent.disableClickPropagation(dom); L.DomEvent.disableScrollPropagation(dom); }
+            return dom;
+          }
+        });
+        this.viewControl = new ViewControl({ position: "topright" }).addTo(this.map);
+      }
+      this.applyLock();
+      this.map.on("moveend", () => this.armAutoReturn());
+      this.armAutoReturn();
       window.__piboardTrafficMap__ = this.map; // pour les tests uniquement / test-only
 
       // Piege classique de Leaflet : si le conteneur n'a pas encore sa
@@ -432,6 +452,177 @@
        The ts= parameter timestamps each cycle: the view being stable, the
        URLs would otherwise be identical between refreshes and the
        browser's HTTP cache could serve a stale state. */
+
+    /* ---------- Vue de la carte : verrou, vue d'origine (1.173.0) ----------
+       Reglages : mapLocked (verrou), homeView (vue memorisee, JSON),
+       autoReturnMinutes (retour automatique, 0 = jamais).
+       La vue memorisee n'est valable que pour la ville et le zoom de
+       reglage avec lesquels elle a ete prise : si on les change, on
+       revient au cadrage des reglages.
+       Map view: lock, home view. The memorized view is only valid for the
+       city and zoom setting it was taken with. */
+    isLocked() {
+      const v = this.ctx.settings.mapLocked;
+      return v === true || v === "true";
+    }
+
+    homeTarget() {
+      const s = this.ctx.settings;
+      const z = Number(s.zoom) || 13;
+      let hv = null;
+      try {
+        hv = typeof s.homeView === "string" ? (s.homeView ? JSON.parse(s.homeView) : null) : (s.homeView || null);
+      } catch (e) { hv = null; }
+      if (hv && Number.isFinite(hv.lat) && Number.isFinite(hv.lon) && Number.isFinite(hv.z)
+          && hv.city === String(s.city || "") && hv.zoom === z) {
+        return { lat: hv.lat, lon: hv.lon, z: hv.z, memorized: true };
+      }
+      return { lat: this.coords.lat, lon: this.coords.lon, z, memorized: false };
+    }
+
+    /* Active ou coupe TOUS les gestes de zoom et de deplacement. Les
+       couches de donnees ne sont pas concernees : le rafraichissement
+       continue. All zoom and pan gestures on or off. Data layers are not
+       affected: refreshing continues. */
+    applyLock() {
+      const m = this.map;
+      if (!m) return;
+      const locked = this.isLocked();
+      ["dragging", "touchZoom", "doubleClickZoom", "scrollWheelZoom", "boxZoom", "keyboard", "tapHold"].forEach((h) => {
+        const hd = m[h];
+        if (hd && typeof hd.enable === "function") { if (locked) hd.disable(); else hd.enable(); }
+      });
+      const root = this.ctx.el.querySelector(".pw-traffic");
+      if (root) root.classList.toggle("pwt-locked", locked);
+      this.refreshViewControl();
+    }
+
+    saveHome() {
+      if (!this.map) return;
+      const s = this.ctx.settings;
+      const c = this.map.getCenter();
+      const hv = {
+        lat: Math.round(c.lat * 1e6) / 1e6, lon: Math.round(c.lng * 1e6) / 1e6, z: this.map.getZoom(),
+        city: String(s.city || ""), zoom: Number(s.zoom) || 13
+      };
+      return JSON.stringify(hv);
+    }
+
+    persist(patch) {
+      this.ctx.settings = Object.assign({}, this.ctx.settings, patch);
+      if (typeof this.ctx.updateSettings === "function") this.ctx.updateSettings(patch);
+    }
+
+    /* Verrouiller fige la vue AFFICHEE et la memorise comme vue d'origine :
+       apres un redemarrage, c'est cette vue qui revient.
+       Locking freezes the DISPLAYED view and memorizes it as the home view. */
+    setLocked(on) {
+      on = !!on;
+      if (on && this.map) this.persist({ mapLocked: true, homeView: this.saveHome() });
+      else this.persist({ mapLocked: on });
+      this.applyLock();
+      this.armAutoReturn();
+      this.flashViewNote(on ? "traffic.viewLocked" : "traffic.viewUnlocked");
+    }
+
+    memorizeView() {
+      if (!this.map) return;
+      this.persist({ homeView: this.saveHome() });
+      this.flashViewNote("traffic.viewSaved");
+    }
+
+    goHome() {
+      if (!this.map) return;
+      const h = this.homeTarget();
+      this.map.setView([h.lat, h.lon], h.z, { animate: true });
+      this.flashViewNote("traffic.viewHome");
+    }
+
+    differsFromHome() {
+      if (!this.map) return false;
+      const h = this.homeTarget();
+      const c = this.map.getCenter();
+      return this.map.getZoom() !== h.z || Math.abs(c.lat - h.lat) > 1e-4 || Math.abs(c.lng - h.lon) > 1e-4;
+    }
+
+    /* Retour automatique a la vue d'origine : carte deverrouillee,
+       deplacee, puis laissee tranquille N minutes. Automatic return to the
+       home view: unlocked map, moved, then left alone N minutes. */
+    armAutoReturn() {
+      clearTimeout(this.autoReturnTimer);
+      this.autoReturnTimer = null;
+      const n = Number(this.ctx.settings.autoReturnMinutes) || 0;
+      if (!this.map || n <= 0 || this.isLocked()) return;
+      this.autoReturnTimer = setTimeout(() => {
+        this.autoReturnTimer = null;
+        if (this.map && !this.isLocked() && this.differsFromHome()) this.goHome();
+      }, n * 60000);
+    }
+
+    makeViewControlDom() {
+      const t = (k) => this.ctx.i18n.t(k);
+      const icons = {
+        lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+        unlock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>',
+        home: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/></svg>',
+        pin: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s6-5.6 6-10a6 6 0 0 0-12 0c0 4.4 6 10 6 10z"/><circle cx="12" cy="11" r="2"/></svg>'
+      };
+      const box = document.createElement("div");
+      box.className = "pwt-viewctl";
+      const mk = (cls, icon, key, fn) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "pwt-vbtn " + cls;
+        b.innerHTML = icons[icon];
+        b.dataset.icon = icon;
+        b.dataset.tkey = key;
+        // pointerup plutot que click, comme les autres boutons de la tuile.
+        b.addEventListener("pointerup", (e) => { e.preventDefault(); e.stopPropagation(); fn(); });
+        // Clavier : Entree / Espace.
+        b.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); fn(); } });
+        box.appendChild(b);
+        return b;
+      };
+      mk("pwt-vlock", "lock", "traffic.lockBtn", () => this.setLocked(!this.isLocked()));
+      mk("pwt-vhome", "home", "traffic.homeBtn", () => this.goHome());
+      mk("pwt-vpin", "pin", "traffic.pinBtn", () => this.memorizeView());
+      const note = document.createElement("div");
+      note.className = "pwt-vnote";
+      note.hidden = true;
+      box.appendChild(note);
+      this.viewBox = box;
+      this.refreshViewControl();
+      return box;
+    }
+
+    refreshViewControl() {
+      const box = this.viewBox;
+      if (!box) return;
+      const t = (k) => this.ctx.i18n.t(k);
+      const locked = this.isLocked();
+      const lock = box.querySelector(".pwt-vlock");
+      if (lock) {
+        lock.setAttribute("aria-pressed", String(locked));
+        lock.classList.toggle("on", locked);
+        lock.title = lock.ariaLabel = locked ? t("traffic.unlockBtn") : t("traffic.lockBtn");
+        lock.innerHTML = locked
+          ? '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>'
+          : '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 7.5-2"/></svg>';
+      }
+      const home = box.querySelector(".pwt-vhome");
+      if (home) home.title = home.ariaLabel = t("traffic.homeBtn");
+      const pin = box.querySelector(".pwt-vpin");
+      if (pin) pin.title = pin.ariaLabel = t("traffic.pinBtn");
+    }
+
+    flashViewNote(key) {
+      const n = this.viewBox && this.viewBox.querySelector(".pwt-vnote");
+      if (!n) return;
+      n.textContent = this.ctx.i18n.t(key);
+      n.hidden = false;
+      clearTimeout(this.viewNoteTimer);
+      this.viewNoteTimer = setTimeout(() => { n.hidden = true; }, 1800);
+    }
 
     buildFlowLayer() {
       const s = this.ctx.settings;
@@ -731,7 +922,11 @@
         this.init();
         return;
       }
-      if (this.map) this.map.setZoom(Number(settings.zoom) || 13);
+      /* Le zoom des reglages n'est reapplique que s'il a change : un autre
+         reglage ne doit pas defaire la vue choisie ou verrouillee. */
+      if (this.map && settings.zoom !== old.zoom) this.map.setZoom(Number(settings.zoom) || 13);
+      this.applyLock();
+      this.armAutoReturn();
       this.lastRefreshAt = 0; // reappliquer immediatement les nouveaux reglages de calendrier
       this.tick();
     }
@@ -744,6 +939,8 @@
       if (this._onTheme) { window.removeEventListener("piboard:theme", this._onTheme); this._onTheme = null; }
       clearInterval(this.scheduleTimer);
       clearInterval(this.uiTimer);
+      clearTimeout(this.autoReturnTimer);
+      clearTimeout(this.viewNoteTimer);
       if (this.closeBoostMenu) document.removeEventListener("pointerup", this.closeBoostMenu);
       if (this.observer) this.observer.disconnect();
       if (this.map) this.map.remove();

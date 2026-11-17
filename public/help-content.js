@@ -4674,7 +4674,7 @@ Somfy = https://www.somfy.fr".</span></div>
 <p>Voir l'état du trafic routier autour de chez vous, en temps réel, avec les données de l'application TomTom.</p>
 <p><b>Ce que la tuile sait faire :</b></p>
 <ul>
-  <li><b>Carte</b> centrée sur votre ville, au zoom choisi.</li>
+  <li><b>Carte</b> centrée sur votre ville, au zoom choisi, avec un <b>cadenas</b> pour verrouiller le zoom et la position (un glissement involontaire ne la déplace plus), une <b>vue d'origine</b> mémorisable et un retour automatique.</li>
   <li><b>Flux de circulation</b> coloré (style et épaisseur réglables), <b>incidents</b> (style au choix) et <b>bouchons</b>, chacun masquable.</li>
   <li><b>Calendrier de rafraîchissement</b> pour rester dans le quota gratuit : rapide pendant vos plages de trajet du matin et du soir, plus lent le reste du temps, en pause pendant la plage silencieuse.</li>
   <li>Clé TomTom gratuite, partagée avec la tuile Trajet domicile-travail ; fond de carte CARTO.</li>
@@ -4693,12 +4693,23 @@ Somfy = https://www.somfy.fr".</span></div>
           <p>Le compte gratuit inclut <b>50 000 requêtes de tuiles</b> (le fond de carte et les couches de trafic) et <b>2 500 requêtes hors tuiles</b> par jour — largement suffisant pour un usage personnel, d'autant que le calendrier de rafraîchissement intelligent de la tuile (détaillé plus bas) est justement pensé pour rester confortablement dans cette limite. Aucune carte bancaire n'est nécessaire pour ce niveau gratuit. Gardez votre clé confidentielle : ne la partagez pas publiquement (par exemple dans un dépôt de code visible de tous).</p>
           <p>Le point le plus important pour rester dans le quota gratuit : le calendrier de rafraîchissement intelligent. Vous définissez vos plages de trajet habituelles (matin et après-midi), pendant lesquelles la carte se rafraîchit rapidement ; en dehors, le rythme ralentit automatiquement, et une plage silencieuse (nuit) suspend complètement les requêtes puisque le trafic n'y a pas d'intérêt. Le bouton « Rafraîchir maintenant », en haut à gauche des boutons de zoom, permet de forcer un rythme rapide temporaire à tout moment (par exemple avant un départ imprévu).</p>
 
+<h4>Verrouiller le zoom et la position</h4>
+          <p>Sous les boutons +/− en haut à droite de la carte, trois petits boutons discrets (à moitié transparents tant qu'on ne les survole pas) :</p>
+          <ul>
+            <li><b>Cadenas</b> : verrouille la carte. Tous les gestes de zoom et de déplacement sont désactivés (glisser, molette, double-clic, pincement, clavier) et les boutons +/− sont grisés ; la vue <b>affichée</b> est mémorisée comme vue d'origine, et le verrou est enregistré avec la tuile (il survit à un redémarrage). Les <b>données continuent de se mettre à jour</b> normalement, et les bouchons et incidents restent cliquables. Recliquez pour déverrouiller.</li>
+            <li><b>Viseur</b> : « Revenir à la vue d'origine » (la vue mémorisée, sinon la ville et le zoom des réglages) ; fonctionne aussi carte verrouillée.</li>
+            <li><b>Repère</b> : « Mémoriser la vue actuelle comme vue d'origine », sans verrouiller.</li>
+          </ul>
+          <p>Avec <b>Retour à la vue d'origine après (minutes)</b>, une carte déverrouillée qu'on a déplacée revient seule à sa vue d'origine après ce délai sans y toucher (pratique sur un écran partagé). Si vous changez la <b>Ville</b> ou le <b>Niveau de zoom</b> dans les réglages, la vue mémorisée est abandonnée au profit de ces réglages.</p>
+
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <p class="help-opt-group">Emplacement &amp; carte</p>
 <div class="help-opt"><span class="help-opt-name">Clé API TomTom</span><span class="help-opt-desc">Nécessaire pour toute donnée de trafic. Une offre gratuite est proposée par TomTom.</span></div>
 <div class="help-opt"><span class="help-opt-name">Ville</span><span class="help-opt-desc">Centre de la carte.</span></div>
 <div class="help-opt"><span class="help-opt-name">Niveau de zoom</span><span class="help-opt-desc">Zoom initial de la carte (ajustable ensuite librement à l'écran, y compris au pincer-zoomer tactile).</span></div>
+<div class="help-opt"><span class="help-opt-name">Verrouiller le zoom et la position de la carte</span><span class="help-opt-desc">Équivaut au cadenas de la carte : fige le zoom et la position, et mémorise la vue affichée comme vue d'origine. Les données continuent de se mettre à jour. Désactivé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Retour à la vue d'origine après (minutes, 0 = jamais)</span><span class="help-opt-desc">Carte déverrouillée et déplacée : elle revient seule à la vue d'origine après ce délai sans y toucher. 0 par défaut (jamais).</span></div>
 <div class="help-opt"><span class="help-opt-name">Fond de carte</span><span class="help-opt-desc">Voyager (routier coloré), sombre, clair, ou automatique selon le thème du tableau.</span></div>
 <p class="help-opt-group">Affichage du trafic</p>
 <div class="help-opt"><span class="help-opt-name">Afficher le flux de circulation (routes colorées)</span><span class="help-opt-desc">Les routes colorées selon la fluidité du trafic.</span></div>
@@ -4727,7 +4738,7 @@ Somfy = https://www.somfy.fr".</span></div>
 <p>See the road traffic around you in real time, with the TomTom app's own data.</p>
 <p><b>What the tile can do:</b></p>
 <ul>
-  <li><b>Map</b> centred on your city, at the chosen zoom.</li>
+  <li><b>Map</b> centred on your city, at the chosen zoom, with a <b>padlock</b> to lock zoom and position (an accidental drag no longer moves it), a memorizable <b>home view</b> and an automatic return.</li>
   <li>Coloured <b>traffic flow</b> (adjustable style and thickness), <b>incidents</b> (style of your choice) and <b>jams</b>, each can be hidden.</li>
   <li><b>Refresh schedule</b> to stay within the free quota: fast during your morning and evening commute windows, slower otherwise, paused during the quiet window.</li>
   <li>Free TomTom key, shared with the Commute tile; CARTO basemap.</li>
@@ -4746,12 +4757,23 @@ Somfy = https://www.somfy.fr".</span></div>
           <p>The free account includes <b>50,000 tile requests</b> (the base map and traffic layers) and <b>2,500 non-tile requests</b> per day — plenty for personal use, especially since the tile's smart refresh schedule (detailed below) is precisely designed to stay comfortably within this limit. No credit card is needed for this free tier. Keep your key confidential: don't share it publicly (for instance in a code repository visible to everyone).</p>
           <p>The most important point for staying within the free quota: the smart refresh schedule. You set your usual commute windows (morning and afternoon), during which the map refreshes quickly; outside those, the pace automatically slows down, and a quiet window (night) fully suspends requests since traffic isn't relevant then. The "Refresh now" button, top-left of the zoom buttons, lets you force a temporary fast pace at any time (for instance before an unplanned trip).</p>
 
+<h4>Locking zoom and position</h4>
+          <p>Under the +/− buttons at the top right of the map, three small discreet buttons (half transparent until hovered):</p>
+          <ul>
+            <li><b>Padlock</b>: locks the map. Every zoom and pan gesture is disabled (drag, wheel, double-click, pinch, keyboard) and the +/− buttons are greyed out; the <b>displayed</b> view is memorized as the home view, and the lock is saved with the tile (it survives a restart). <b>Data keeps updating</b> as usual, and jams and incidents stay clickable. Click again to unlock.</li>
+            <li><b>Crosshair</b>: "Back to the home view" (the memorized view, otherwise the city and zoom from the settings); works while locked too.</li>
+            <li><b>Pin</b>: "Memorize the current view as the home view", without locking.</li>
+          </ul>
+          <p>With <b>Return to the home view after (minutes)</b>, an unlocked map that was moved goes back to its home view by itself after that long untouched (handy on a shared screen). If you change the <b>City</b> or the <b>Zoom level</b> in the settings, the memorized view is dropped in favour of those settings.</p>
+
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <p class="help-opt-group">Location &amp; map</p>
 <div class="help-opt"><span class="help-opt-name">TomTom API key</span><span class="help-opt-desc">Needed for any traffic data. A free tier is offered by TomTom.</span></div>
 <div class="help-opt"><span class="help-opt-name">City</span><span class="help-opt-desc">Map center.</span></div>
 <div class="help-opt"><span class="help-opt-name">Zoom level</span><span class="help-opt-desc">Initial map zoom (freely adjustable afterwards on screen, including touch pinch-zoom).</span></div>
+<div class="help-opt"><span class="help-opt-name">Lock zoom and position of the map</span><span class="help-opt-desc">Same as the map's padlock: freezes zoom and position, and memorizes the displayed view as the home view. Data keeps refreshing. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Return to the home view after (minutes, 0 = never)</span><span class="help-opt-desc">Unlocked and moved map: it goes back to the home view by itself after that long untouched. 0 by default (never).</span></div>
 <div class="help-opt"><span class="help-opt-name">Base map</span><span class="help-opt-desc">Voyager (colored, roads), dark, light, or automatic following the board's theme.</span></div>
 <p class="help-opt-group">Traffic display</p>
 <div class="help-opt"><span class="help-opt-name">Show traffic flow (colored roads)</span><span class="help-opt-desc">Roads colored by how smoothly traffic is moving.</span></div>

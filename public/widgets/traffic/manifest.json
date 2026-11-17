@@ -1,6 +1,6 @@
 {
   "id": "traffic",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "name": {
     "en": "Traffic map",
     "fr": "Carte de trafic"
@@ -64,6 +64,57 @@
       "label": {
         "en": "Zoom level",
         "fr": "Niveau de zoom"
+      },
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "mapLocked",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Lock zoom and position of the map",
+        "fr": "Verrouiller le zoom et la position de la carte"
+      },
+      "hint": {
+        "en": "Same as the padlock under the +/- buttons on the map. Locking memorizes the displayed view as the home view; data keeps refreshing.",
+        "fr": "Équivaut au cadenas sous les boutons +/− de la carte. Verrouiller mémorise la vue affichée comme vue d'origine ; les données continuent de se mettre à jour."
+      },
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "autoReturnMinutes",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 240,
+      "step": 1,
+      "label": {
+        "en": "Return to the home view after (minutes, 0 = never)",
+        "fr": "Retour à la vue d'origine après (minutes, 0 = jamais)"
+      },
+      "hint": {
+        "en": "When the map is unlocked and has been moved, it goes back to the home view after this long without being touched.",
+        "fr": "Carte déverrouillée et déplacée : elle revient seule à la vue d'origine après ce délai sans y toucher."
+      },
+      "group": {
+        "en": "Location & map",
+        "fr": "Emplacement & carte"
+      }
+    },
+    {
+      "key": "homeView",
+      "type": "text",
+      "default": "",
+      "hidden": true,
+      "label": {
+        "en": "Home view",
+        "fr": "Vue d'origine"
       },
       "group": {
         "en": "Location & map",

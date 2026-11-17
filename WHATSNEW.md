@@ -32,6 +32,25 @@
 
 # Nouveautes / What's new
 
+## 1.173.0
+
+**Carte de trafic : un cadenas pour ne plus déplacer la carte par erreur**
+
+Sous les boutons +/− de la carte, un petit **cadenas** discret **verrouille le zoom et la position** :
+plus de glissement ni de molette accidentels, et les données continuent de se mettre à jour. Le verrou
+est conservé après un redémarrage. Deux autres boutons : **revenir à la vue d'origine** et **mémoriser la
+vue actuelle** comme vue d'origine. Un réglage permet aussi un **retour automatique** à cette vue après
+quelques minutes si la carte déverrouillée a été déplacée.
+
+---
+
+**Traffic map: a padlock to stop moving the map by accident**
+
+Under the map's +/− buttons, a small discreet **padlock** **locks zoom and position**: no more
+accidental drags or wheel zooms, and the data keeps updating. The lock survives a restart. Two more
+buttons: **back to the home view** and **memorize the current view** as the home view. A setting also
+gives an **automatic return** to that view after a few minutes if the unlocked map was moved.
+
 ## 1.172.0
 
 **Clic droit sur une tuile : un menu pour la modifier seule**

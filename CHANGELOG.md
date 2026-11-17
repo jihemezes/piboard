@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.173.0
+
+- **Tuile Carte de trafic : verrou du zoom et de la position.** Trois petits boutons discrets sous les
+  boutons +/− (`makeViewControlDom`, contrôle Leaflet `topright`) : cadenas, viseur « Revenir à la vue d'origine »,
+  repère « Mémoriser la vue actuelle ». Le cadenas coupe tous les gestes (`dragging`, `touchZoom`,
+  `doubleClickZoom`, `scrollWheelZoom`, `boxZoom`, `keyboard`) et grise +/− ; les couches de données et leur
+  rafraîchissement ne sont pas touchés ; les infobulles restent cliquables.
+- Réglages : `mapLocked` (case), `autoReturnMinutes` (retour automatique, 0 = jamais), `homeView` (JSON caché).
+  Verrouiller mémorise la vue affichée ; la vue mémorisée n'est valable que pour la ville et le zoom de
+  réglage avec lesquels elle a été prise. Enregistré avec la tuile (`ctx.updateSettings`).
+- `onSettingsChanged` ne réapplique plus le zoom des réglages à chaque enregistrement, seulement si `zoom` a changé.
+- Tests : `trafficViewLock.test.js` (nouveau). Aide FR/EN de la tuile.
+
 ## 1.172.0
 
 - **Menu contextuel de tuile (clic droit), hors mode tactile.** Agit sur la tuile seule, sans mode édition
