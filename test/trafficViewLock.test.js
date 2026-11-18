@@ -27,6 +27,8 @@ function fakeMap() {
   m.setView = (c, z) => { m.view = { lat: c[0], lng: c[1], z }; m.setViewCalls.push([c, z]); };
   m.on = (ev, fn) => { m.listeners[ev] = fn; };
   m.remove = () => {};
+  m.container = window.document.createElement("div");
+  m.getContainer = () => m.container;
   return m;
 }
 function make(settings) {
@@ -63,6 +65,21 @@ const allOn = (m, on) => HANDLERS.every((h) => m[h].on === on);
   assert.ok(allOn(w.map, true), "second appui : deverrouille");
   assert.strictEqual(saved[1].mapLocked, false);
   assert.ok(!("homeView" in saved[1]), "deverrouiller ne touche pas a la vue memorisee");
+  console.log("  OK");
+
+  console.log("== Balayage tactile entre pages (1.173.1) ==");
+  {
+    const t = make();
+    t.w.applyLock();
+    assert.strictEqual(t.w.map.container.style.touchAction, "", "deverrouillee : touch-action laisse a Leaflet");
+    t.w.setLocked(true);
+    assert.strictEqual(t.w.map.container.style.touchAction, "none",
+      "verrouillee : touch-action reste none, les evenements tactiles atteignent le tableau (changement de page au doigt)");
+    t.w.setLocked(false);
+    assert.strictEqual(t.w.map.container.style.touchAction, "", "deverrouillee de nouveau : rendu a Leaflet");
+    const css = fs.readFileSync(path.join(__dirname, "..", "public", "widgets", "traffic", "widget.css"), "utf8");
+    assert.ok(/pwt-locked \.leaflet-container\s*\{\s*touch-action:\s*none\s*!important/.test(css), "regle CSS de secours presente");
+  }
   console.log("  OK");
 
   console.log("== Mise a jour des donnees non touchee ==");

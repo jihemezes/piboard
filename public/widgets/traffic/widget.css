@@ -376,3 +376,6 @@
 /* Carte verrouillee : boutons +/- grises, curseur normal. */
 .pw-traffic.pwt-locked .leaflet-control-zoom a { opacity: .35; pointer-events: none; }
 .pw-traffic.pwt-locked .leaflet-container, .pw-traffic.pwt-locked .leaflet-grab { cursor: default; }
+/* Carte verrouillee : les evenements tactiles doivent continuer d'atteindre PiBoard
+   (balayage lateral pour changer de page). Locked map: touch events must keep reaching PiBoard. */
+.pw-traffic.pwt-locked .leaflet-container { touch-action: none !important; }

@@ -492,6 +492,23 @@
         const hd = m[h];
         if (hd && typeof hd.enable === "function") { if (locked) hd.disable(); else hd.enable(); }
       });
+      /* Sur ecran tactile : Leaflet retire de son conteneur ses classes
+         `leaflet-touch-drag` / `leaflet-touch-zoom` quand on coupe ces
+         gestes, et `touch-action` retombe a `auto` -- le navigateur
+         reprend alors le geste a son compte (defilement natif, annulation
+         des evenements tactiles) et le balayage lateral qui change de page
+         du tableau n'arrive plus jusqu'a PiBoard. On garde donc
+         `touch-action: none` : les evenements tactiles continuent de
+         parvenir au document, comme carte deverrouillee.
+         On a touchscreen: Leaflet removes its touch classes when these
+         gestures are disabled, `touch-action` falls back to `auto`, the
+         browser takes the gesture over and the sideways swipe changing the
+         dashboard page no longer reaches PiBoard. `touch-action: none` is
+         kept so touch events still reach the document. */
+      try {
+        const c = typeof m.getContainer === "function" ? m.getContainer() : null;
+        if (c && c.style) c.style.touchAction = locked ? "none" : "";
+      } catch (e) { /* noop */ }
       const root = this.ctx.el.querySelector(".pw-traffic");
       if (root) root.classList.toggle("pwt-locked", locked);
       this.refreshViewControl();

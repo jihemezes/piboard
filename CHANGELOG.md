@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.173.1
+
+- Carte de trafic verrouillée sur écran tactile (Raspberry Pi) : le balayage latéral du doigt ne changeait plus
+  de page du tableau. Cause probable : en coupant `dragging` et `touchZoom`, Leaflet retire ses classes
+  `leaflet-touch-drag` / `leaflet-touch-zoom` et `touch-action` du conteneur retombe à `auto` ; le navigateur
+  reprend alors le geste (défilement natif / annulation des évènements tactiles) et le `touchend` du balayage
+  n'arrive plus. `touch-action: none` est maintenant forcé (style en ligne + règle CSS `!important`) tant que la
+  carte est verrouillée. Test ajouté dans `trafficViewLock.test.js`.
+
 ## 1.173.0
 
 - **Tuile Carte de trafic : verrou du zoom et de la position.** Trois petits boutons discrets sous les
