@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.174.0
+
+- **Tuile Analyse réseau : fenêtre de test d'un appareil.** Un appui sur une ligne (hors boutons, sans
+  glissement) ouvre une fenêtre posée sur `<body>` : informations (IP, MAC, fabricant, type de MAC, nom, état,
+  copie IP / MAC), Ping (ICMP, repli « ping TCP » émis par PiBoard quand l'ICMP est muet, notamment sous macOS),
+  Ports ouverts (36 ports courants + liste libre, bannières HTTP/HTTPS/SSH/FTP, certificat), Traceroute,
+  Noms (système, PTR, mDNS en unicast, NetBIOS NBSTAT), Requête ARP (sonde UDP puis table ARP, OUI), Surveiller
+  (ping toutes les 2 s, courbe, alerte après 3 pertes), Interface web, Wake-on-LAN (paquet magique en diffusion).
+- Nouveau module `server/hostTools.js` et routes `POST /api/net-tools/{ping,ports,traceroute,names,arp,wol}`.
+  Adresses privées seulement ; commandes système par `execFile` sans shell.
+- Tests : `hostTools.test.js`, `netscanHostWindow.test.js`. Aide FR/EN de la tuile.
+
 ## 1.173.1
 
 - Carte de trafic verrouillée sur écran tactile (Raspberry Pi) : le balayage latéral du doigt ne changeait plus

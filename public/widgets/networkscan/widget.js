@@ -326,6 +326,27 @@
 
     wireRows() {
       const el = this.ctx.el;
+      /* Fenetre « hote » (1.174.0) : un appui sur la ligne, hors de ses
+         boutons, l'ouvre. Un glissement (defilement de la liste au doigt)
+         ne l'ouvre pas. Host window: a tap on the row, outside its
+         buttons, opens it; a drag (scrolling the list) does not. */
+      el.querySelectorAll(".pwn-row[data-idx]:not(.pwn-editing), .pwn-row[data-aidx]").forEach((row) => {
+        let start = null;
+        row.addEventListener("pointerdown", (e) => { start = { x: e.clientX || 0, y: e.clientY || 0 }; });
+        row.addEventListener("pointerup", (e) => {
+          if (e.target && e.target.closest && e.target.closest("button, input, a")) return;
+          const moved = start ? Math.abs((e.clientX || 0) - start.x) + Math.abs((e.clientY || 0) - start.y) : 0;
+          start = null;
+          if (moved > 12) return;
+          if (document.body.classList.contains("editing")) return;
+          e.stopPropagation();
+          const data = this.lastData || {};
+          const host = row.dataset.aidx != null
+            ? Object.assign({ absent: true }, (data.absent || [])[Number(row.dataset.aidx)])
+            : (data.hosts || [])[Number(row.dataset.idx)];
+          if (host && host.ip) this.openHost(host);
+        });
+      });
       // pointerup plutot que click : sur l'ecran tactile du kiosque, le
       // click peut etre absorbe par les couches sous-jacentes (meme
       // constat que sur les autres tuiles tactiles du projet).
@@ -731,7 +752,286 @@
       });
     }
 
+    /* ====================================================================
+       FENETRE D'UN HOTE (1.174.0) : informations, tests (ping, ports,
+       traceroute, noms, ARP), surveillance, interface web, reveil reseau,
+       copie de l'IP / de la MAC. Posee sur <body> : une tuile est trop
+       petite, et un element `fixed` dans la grille serait mal place.
+       HOST WINDOW: info, tests, monitoring, web UI, Wake-on-LAN, copy.
+       ==================================================================== */
+    openHost(h) {
+      this.closeHost();
+      const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
+      const esc = escapeHtml, attr = escapeHtmlAttr;
+      const mac = h.mac || "";
+      const first = mac ? parseInt(mac.replace(/[^0-9a-f]/gi, "").slice(0, 2), 16) : NaN;
+      const macKind = !mac ? "—" : (first & 2 ? t("macLocal") : t("macGlobal"));
+      const name = h.absent ? h.name : this.displayName(h);
+      const back = document.createElement("div");
+      back.className = "pwn-hw-back";
+      back.innerHTML = `
+        <div class="pwn-hw" role="dialog" aria-modal="true" aria-label="${attr(name)}">
+          <div class="pwn-hw-head">
+            <div class="pwn-hw-title"><b>${esc(name)}</b><span>${esc(h.ip)}${mac ? " · " + esc(mac) : ""}</span></div>
+            <button type="button" class="pwn-hw-x" data-hw="close" aria-label="${attr(t("close"))}">✕</button>
+          </div>
+          <div class="pwn-hw-info">
+            <div><span>${esc(t("ip"))}</span><b>${esc(h.ip)}</b><button type="button" class="pwn-hw-mini" data-hw="copyip">${esc(t("copy"))}</button></div>
+            <div><span>${esc(t("mac"))}</span><b>${esc(mac || "—")}</b>${mac ? `<button type="button" class="pwn-hw-mini" data-hw="copymac">${esc(t("copy"))}</button>` : ""}</div>
+            <div><span>${esc(t("vendor"))}</span><b>${esc(h.vendor || "—")}</b></div>
+            <div><span>${esc(t("macKind"))}</span><b>${esc(macKind)}</b></div>
+            <div><span>${esc(t("hostname"))}</span><b>${esc(h.hostname || "—")}</b></div>
+            <div><span>${esc(t("state"))}</span><b>${esc(h.absent ? t("stateAbsent") : h.isSelf ? t("stateSelf") : h.status === "new" ? t("stateNew") : t("statePresent"))}</b></div>
+          </div>
+          <div class="pwn-hw-acts">
+            <button type="button" class="pwn-hw-btn" data-hw="ping">${esc(t("ping"))}</button>
+            <button type="button" class="pwn-hw-btn" data-hw="ports">${esc(t("ports"))}</button>
+            <button type="button" class="pwn-hw-btn" data-hw="trace">${esc(t("trace"))}</button>
+            <button type="button" class="pwn-hw-btn" data-hw="names">${esc(t("names"))}</button>
+            <button type="button" class="pwn-hw-btn" data-hw="arp">${esc(t("arp"))}</button>
+            <button type="button" class="pwn-hw-btn" data-hw="watch">${esc(t("watch"))}</button>
+            <button type="button" class="pwn-hw-btn" data-hw="web">${esc(t("web"))}</button>
+            <button type="button" class="pwn-hw-btn" data-hw="wol"${mac && !h.isSelf ? "" : " disabled"}>${esc(t("wol"))}</button>
+          </div>
+          <label class="pwn-hw-portsline"><span>${esc(t("portsExtra"))}</span><input type="text" class="pwn-hw-ports" placeholder="8888, 10000-10010" autocomplete="off" spellcheck="false"></label>
+          <div class="pwn-hw-results"></div>
+        </div>`;
+      document.body.appendChild(back);
+      this.hw = { back, host: h, web: "http://" + h.ip + "/", watch: null };
+      const box = back.querySelector(".pwn-hw");
+      ["pointerdown", "pointerup", "click", "keydown", "contextmenu"].forEach((ty) => box.addEventListener(ty, (e) => e.stopPropagation()));
+      back.addEventListener("pointerup", (e) => { if (e.target === back) this.closeHost(); });
+      box.querySelectorAll("[data-hw]").forEach((b) => b.addEventListener("pointerup", (e) => {
+        e.preventDefault();
+        if (b.disabled) return;
+        this.hostAction(b.dataset.hw, b);
+      }));
+      box.querySelectorAll("button[data-hw]").forEach((b) => b.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") { e.preventDefault(); this.hostAction(b.dataset.hw, b); }
+      }));
+      this.hwKey = (e) => { if (e.key === "Escape") this.closeHost(); };
+      document.addEventListener("keydown", this.hwKey);
+      const firstBtn = box.querySelector('[data-hw="ping"]');
+      if (firstBtn && firstBtn.focus) firstBtn.focus();
+    }
+
+    closeHost() {
+      if (!this.hw) return;
+      if (this.hw.watch) clearTimeout(this.hw.watch.timer);
+      this.hw.back.remove();
+      this.hw = null;
+      if (this.hwKey) { document.removeEventListener("keydown", this.hwKey); this.hwKey = null; }
+    }
+
+    hwCard(key, title) {
+      const res = this.hw.back.querySelector(".pwn-hw-results");
+      let card = res.querySelector('[data-card="' + key + '"]');
+      if (!card) {
+        card = document.createElement("div");
+        card.className = "pwn-hw-card";
+        card.dataset.card = key;
+        res.prepend(card);
+      }
+      card.innerHTML = `<div class="pwn-hw-card-t">${escapeHtml(title)}</div><div class="pwn-hw-card-b"></div>`;
+      return card.querySelector(".pwn-hw-card-b");
+    }
+
+    async hwPost(path, body) {
+      const r = await fetch("/api/net-tools/" + path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const out = await r.json().catch(() => ({}));
+      if (!r.ok) {
+        const err = new Error(out.error || ("status " + r.status));
+        err.code = out.error;
+        throw err;
+      }
+      return out;
+    }
+
+    copyText(text) {
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => this.copyFallback(text));
+      } catch (e) { /* noop */ }
+      return Promise.resolve(this.copyFallback(text));
+    }
+
+    copyFallback(text) {
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+        document.body.appendChild(ta); ta.select();
+        const ok = document.execCommand && document.execCommand("copy");
+        ta.remove();
+        return !!ok;
+      } catch (e) { return false; }
+    }
+
+    ms(v) { return v == null ? "—" : (Math.round(v * 10) / 10).toLocaleString(this.ctx.i18n.lang === "en" ? "en-GB" : "fr-FR") + " ms"; }
+
+    async hostAction(act, btn) {
+      if (!this.hw) return;
+      const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
+      const esc = escapeHtml;
+      const h = this.hw.host;
+      const ip = h.ip;
+      const busy = (b, on) => { if (b) { b.disabled = on; b.classList.toggle("busy", on); } };
+      const fail = (body, e) => { body.innerHTML = `<div class="pwn-hw-err">${esc(e && e.code === "private-only" ? t("privateOnly") : t("error") + " " + (e && e.message || ""))}</div>`; };
+
+      if (act === "close") return this.closeHost();
+      if (act === "copyip" || act === "copymac") {
+        const ok = await this.copyText(act === "copyip" ? ip : h.mac);
+        if (btn) { const old = btn.textContent; btn.textContent = ok ? t("copied") : t("copyFail"); setTimeout(() => { btn.textContent = old; }, 1500); }
+        return;
+      }
+      if (act === "web") {
+        window.open(this.hw.web, "_blank", "noopener");
+        return;
+      }
+      if (act === "watch") return this.toggleWatch(btn);
+
+      const titles = { ping: t("ping"), ports: t("ports"), trace: t("trace"), names: t("names"), arp: t("arp"), wol: t("wol") };
+      const body = this.hwCard(act, titles[act] || act);
+      body.innerHTML = `<div class="pwn-hw-wait">${esc(t("running"))}</div>`;
+      busy(btn, true);
+      try {
+        if (act === "ping") {
+          const r = await this.hwPost("ping", { ip, count: 4 });
+          body.innerHTML = this.pingHtml(r);
+        } else if (act === "ports") {
+          const extra = (this.hw.back.querySelector(".pwn-hw-ports") || {}).value || "";
+          const r = await this.hwPost("ports", extra.trim() ? { ip, ports: extra, withCommon: true } : { ip });
+          if (r.web) this.hw.web = r.web;
+          body.innerHTML = this.portsHtml(r);
+        } else if (act === "trace") {
+          const r = await this.hwPost("traceroute", { ip });
+          body.innerHTML = !r.available ? `<div class="pwn-hw-err">${esc(t("traceMissing"))}</div>`
+            : !r.hops.length ? `<div class="pwn-hw-muted">${esc(t("noAnswer"))}</div>`
+            : `<table class="pwn-hw-tbl">${r.hops.map((x) => `<tr><td>${x.hop}</td><td>${esc(x.ip || "*")}</td><td>${esc(this.ms(x.ms))}</td></tr>`).join("")}</table>`;
+        } else if (act === "names") {
+          const r = await this.hwPost("names", { ip });
+          const row = (k, v) => `<tr><td>${esc(t(k))}</td><td>${esc(v || "—")}</td></tr>`;
+          body.innerHTML = `<table class="pwn-hw-tbl">${row("nameSystem", r.system)}${row("nameDns", r.dns)}${row("nameMdns", r.mdns)}${row("nameNetbios", r.netbios && r.netbios.name)}${r.netbios && r.netbios.workgroup ? row("nameWorkgroup", r.netbios.workgroup) : ""}</table>`;
+        } else if (act === "arp") {
+          const r = await this.hwPost("arp", { ip });
+          body.innerHTML = r.self ? `<div class="pwn-hw-muted">${esc(t("arpSelf"))}</div>`
+            : !r.mac ? `<div class="pwn-hw-err">${esc(t("arpNone"))}</div>`
+            : `<table class="pwn-hw-tbl"><tr><td>${esc(t("mac"))}</td><td><b>${esc(r.mac)}</b></td></tr><tr><td>OUI</td><td>${esc(r.oui)}</td></tr><tr><td>${esc(t("vendor"))}</td><td>${esc(r.vendor || "—")}</td></tr><tr><td>${esc(t("macKind"))}</td><td>${esc(r.local ? t("macLocal") : t("macGlobal"))}</td></tr><tr><td>${esc(t("arpTime"))}</td><td>${esc(this.ms(r.ms))}</td></tr></table>`;
+        } else if (act === "wol") {
+          const r = await this.hwPost("wol", { mac: h.mac, ip });
+          body.innerHTML = r.ok ? `<div class="pwn-hw-ok">${esc(t("wolSent").replace("{n}", String(r.targets.length)))}</div><div class="pwn-hw-muted">${esc(t("wolHint"))}</div>`
+            : `<div class="pwn-hw-err">${esc(t("wolFail"))}</div>`;
+        }
+      } catch (e) {
+        fail(body, e);
+      } finally {
+        busy(btn, false);
+      }
+    }
+
+    pingHtml(r) {
+      const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
+      const esc = escapeHtml;
+      const line = (s) => t("pingStats").replace("{s}", s.sent).replace("{r}", s.received).replace("{l}", s.loss);
+      let html = "";
+      const ic = r.icmp;
+      if (ic.received) {
+        html += `<div class="pwn-hw-ok">${esc(line(ic))}</div>
+          <div>${esc(t("rtt"))} : min ${esc(this.ms(ic.min))} · ${esc(t("avg"))} ${esc(this.ms(ic.avg))} · max ${esc(this.ms(ic.max))}${ic.ttl != null ? " · TTL " + ic.ttl : ""}</div>
+          <div class="pwn-hw-chips">${ic.times.map((x) => `<span>${esc(this.ms(x))}</span>`).join("")}</div>`;
+      } else {
+        html += `<div class="pwn-hw-muted">${esc(ic.available ? t("icmpNone") : t("icmpMissing"))}</div>`;
+      }
+      if (r.tcp) {
+        html += r.tcp.received
+          ? `<div class="pwn-hw-ok">${esc(t("tcpAlive").replace("{p}", String(r.tcp.port)))} · ${esc(t("avg"))} ${esc(this.ms(r.tcp.avg))}</div>`
+          : `<div class="pwn-hw-err">${esc(t("noAnswer"))}</div>`;
+      }
+      return html;
+    }
+
+    portsHtml(r) {
+      const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
+      const esc = escapeHtml;
+      const head = `<div>${esc(t("portsSummary").replace("{n}", r.scanned).replace("{o}", r.open.length).replace("{c}", r.closed).replace("{f}", r.filtered))}</div>`;
+      if (!r.open.length) return head + `<div class="pwn-hw-muted">${esc(t("portsNone"))}</div>`;
+      const rows = r.open.map((p) => {
+        const d = [];
+        if (p.http) {
+          if (p.http.status) d.push("HTTP " + p.http.status);
+          if (p.http.server) d.push(p.http.server);
+          if (p.http.title) d.push("« " + p.http.title + " »");
+          if (p.http.cert && p.http.cert.subject) d.push("🔒 " + p.http.cert.subject + (p.http.cert.issuer ? " (" + p.http.cert.issuer + ")" : ""));
+        }
+        if (p.banner) d.push(p.banner);
+        return `<tr><td><b>${p.port}</b></td><td>${esc(p.service || "")}</td><td>${esc(d.join(" · "))}</td></tr>`;
+      }).join("");
+      const web = r.web ? `<div><button type="button" class="pwn-hw-mini pwn-hw-openweb">${esc(t("web"))} → ${esc(r.web)}</button></div>` : "";
+      setTimeout(() => {
+        const b = this.hw && this.hw.back.querySelector(".pwn-hw-openweb");
+        if (b) b.addEventListener("pointerup", (e) => { e.preventDefault(); e.stopPropagation(); window.open(r.web, "_blank", "noopener"); });
+      }, 0);
+      return head + `<table class="pwn-hw-tbl">${rows}</table>` + web;
+    }
+
+    /* Surveillance : un ping toutes les 2 s tant que la fenetre est
+       ouverte, courbe des 60 derniers temps, alerte apres 3 pertes de
+       suite. Monitoring: one ping every 2 s while the window is open,
+       chart of the last 60 times, alert after 3 losses in a row. */
+    toggleWatch(btn) {
+      const hw = this.hw;
+      if (!hw) return;
+      if (hw.watch) {
+        clearTimeout(hw.watch.timer);
+        hw.watch = null;
+        if (btn) btn.classList.remove("on");
+        return;
+      }
+      const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
+      const body = this.hwCard("watch", t("watch"));
+      hw.watch = { samples: [], misses: 0, sent: 0, lost: 0, timer: null, body };
+      if (btn) btn.classList.add("on");
+      const step = async () => {
+        const w = this.hw && this.hw.watch;
+        if (!w) return;
+        let ms = null;
+        try {
+          const r = await this.hwPost("ping", { ip: this.hw.host.ip, count: 1 });
+          ms = r.icmp && r.icmp.received ? r.icmp.avg : (r.tcp && r.tcp.received ? r.tcp.avg : null);
+        } catch (e) { ms = null; }
+        if (!this.hw || this.hw.watch !== w) return;
+        w.sent++;
+        if (ms == null) { w.lost++; w.misses++; } else w.misses = 0;
+        w.samples.push(ms);
+        if (w.samples.length > 60) w.samples.shift();
+        this.renderWatch(w);
+        w.timer = setTimeout(step, 2000);
+      };
+      this.renderWatch(hw.watch);
+      step();
+    }
+
+    renderWatch(w) {
+      const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
+      const esc = escapeHtml;
+      const vals = w.samples.filter((v) => v != null);
+      const max = Math.max(1, ...vals);
+      const W = 300, H = 60, n = Math.max(2, w.samples.length);
+      const pts = w.samples.map((v, i) => v == null ? null : [Math.round(i * (W / (n - 1))), Math.round(H - 4 - (v / max) * (H - 10))]);
+      const path = pts.filter(Boolean).map((p, i) => (i ? "L" : "M") + p[0] + " " + p[1]).join(" ");
+      const losses = w.samples.map((v, i) => v == null ? `<line x1="${Math.round(i * (W / (n - 1)))}" x2="${Math.round(i * (W / (n - 1)))}" y1="0" y2="${H}" class="loss"/>` : "").join("");
+      const last = w.samples.length ? w.samples[w.samples.length - 1] : null;
+      const avg = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+      const down = w.misses >= 3;
+      w.body.innerHTML = `
+        ${down ? `<div class="pwn-hw-alert">⚠ ${esc(t("watchDown").replace("{n}", String(w.misses)))}</div>` : ""}
+        <svg class="pwn-hw-spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${losses}<path d="${path}"/></svg>
+        <div>${esc(t("watchLast"))} ${esc(this.ms(last))} · ${esc(t("avg"))} ${esc(this.ms(avg))} · max ${esc(this.ms(vals.length ? max : null))} · ${esc(t("watchLoss").replace("{l}", String(w.sent ? Math.round(w.lost / w.sent * 100) : 0)))}</div>
+        <div class="pwn-hw-muted">${esc(t("watchHint"))}</div>`;
+      const card = w.body.closest(".pwn-hw-card");
+      if (card) card.classList.toggle("down", down);
+    }
+
     destroy() {
+      this.closeHost();
       clearInterval(this.timer);
       clearTimeout(this.noteTimer);
       clearTimeout(this.confirmTimer);

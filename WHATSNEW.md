@@ -32,6 +32,26 @@
 
 # Nouveautes / What's new
 
+## 1.174.0
+
+**Analyse réseau : touchez un appareil pour le tester**
+
+Dans la tuile **Analyse réseau**, touchez une ligne : une fenêtre s'ouvre pour cet appareil, avec ses
+informations (IP, MAC, fabricant, type d'adresse) et une boîte à outils : **ping**, **ports ouverts** avec
+le service reconnu, **traceroute**, **noms** (DNS, Bonjour, NetBIOS), **requête ARP**, **surveillance en
+direct** avec courbe et alerte, accès à son **interface web**, **réveil réseau** (Wake-on-LAN) et copie de
+l'IP ou de la MAC. Ces tests ne visent que votre réseau local.
+
+---
+
+**Network scan: tap a device to test it**
+
+In the **Network scan** tile, tap a row: a window opens for that device, with its details (IP, MAC,
+manufacturer, address type) and a toolbox: **ping**, **open ports** with the recognised service,
+**traceroute**, **names** (DNS, Bonjour, NetBIOS), **ARP request**, **live monitoring** with chart and
+alert, access to its **web interface**, **Wake-on-LAN** and copying the IP or MAC. These tests only
+target your local network.
+
 ## 1.173.0
 
 **Carte de trafic : un cadenas pour ne plus déplacer la carte par erreur**

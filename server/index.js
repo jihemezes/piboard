@@ -611,6 +611,88 @@ app.delete("/api/network-baseline", (req, res) => {
   res.json({ ok: true, baseline: null });
 });
 
+/* ---------- Outils de test d'un hote (voir server/hostTools.js) -- 1.174.0 ----------
+   Fenetre « hote » de la tuile Analyse reseau. Adresses PRIVEES seulement :
+   le serveur ne doit pas servir a sonder Internet.
+   Host test tools for the Network scan tile's host window. Private
+   addresses only. */
+const hostTools = require("./hostTools");
+function hostToolIp(req, res) {
+  const ip = String((req.body && req.body.ip) || "").trim();
+  if (!hostTools.isPrivateIp(ip)) {
+    res.status(400).json({ error: "private-only", message: "only local network (private) IPv4 addresses are allowed" });
+    return null;
+  }
+  return ip;
+}
+app.post("/api/net-tools/ping", async (req, res) => {
+  const ip = hostToolIp(req, res); if (!ip) return;
+  try { res.json(await hostTools.ping(ip, req.body.count)); }
+  catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+app.post("/api/net-tools/ports", async (req, res) => {
+  const ip = hostToolIp(req, res); if (!ip) return;
+  let ports = null;
+  try { if (req.body.ports) ports = hostTools.parsePortList(req.body.ports); }
+  catch (e) { return res.status(400).json({ error: "bad-ports", message: String(e.message || e) }); }
+  try {
+    const extra = ports && req.body.withCommon ? hostTools.COMMON_PORTS.map((p) => p[0]) : [];
+    const list = ports ? [...new Set(extra.concat(ports))].sort((a, b) => a - b) : null;
+    res.json(await hostTools.scanPorts(ip, list));
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+app.post("/api/net-tools/traceroute", async (req, res) => {
+  const ip = hostToolIp(req, res); if (!ip) return;
+  try { res.json(await hostTools.traceroute(ip)); }
+  catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+app.post("/api/net-tools/names", async (req, res) => {
+  const ip = hostToolIp(req, res); if (!ip) return;
+  try {
+    const [system, ptr, mdns, netbios] = await Promise.all([
+      platform.reverseLookup(ip, 2000).catch(() => null),
+      hostTools.dnsReverse(ip),
+      hostTools.mdnsName(ip),
+      hostTools.netbiosName(ip)
+    ]);
+    res.json({ ip, system: system || null, dns: ptr, mdns, netbios });
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+/* Sonde ARP : un datagramme force la resolution de l'adresse MAC par le
+   noyau, puis on relit la table ARP. ARP probe: a datagram forces the
+   kernel to resolve the MAC, then the ARP table is read back. */
+app.post("/api/net-tools/arp", async (req, res) => {
+  const ip = hostToolIp(req, res); if (!ip) return;
+  try {
+    const self = networkScan.detectSubnets().some((s) => s.address === ip);
+    const t0 = Date.now();
+    await networkScan.udpPoke([ip]);
+    await new Promise((r) => setTimeout(r, 300));
+    const entries = await platform.readArpEntries(new Set([ip]), 3000);
+    const e = entries.find((x) => x.ip === ip);
+    const info = e ? hostTools.macInfo(e.mac) : null;
+    res.json({
+      ip, self, ms: Date.now() - t0,
+      mac: info ? info.mac : null,
+      oui: info ? info.oui : null,
+      local: info ? info.local : null,
+      multicast: info ? info.multicast : null,
+      vendor: info ? networkScan.vendorForMac(info.mac) : null
+    });
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+app.post("/api/net-tools/wol", async (req, res) => {
+  const mac = hostTools.normalizeMac(req.body && req.body.mac);
+  if (!mac) return res.status(400).json({ error: "invalid-mac" });
+  const ip = String((req.body && req.body.ip) || "");
+  try {
+    const cidrs = networkScan.detectSubnets().map((s) => s.cidr).filter(Boolean);
+    const targets = hostTools.broadcastFor(hostTools.isPrivateIp(ip) ? ip : "0.0.0.0", cidrs);
+    const out = await hostTools.wakeOnLan(mac, targets);
+    res.json({ ok: out.sent > 0, mac, targets, sent: out.sent });
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+
 /* ---------- Noms personnalises des hotes (voir server/netHosts.js) ----------
    Persistes dans data/netHosts.json, donc conserves d'une mise a jour
    ou d'une reinstallation a l'autre, et embarques dans les sauvegardes.

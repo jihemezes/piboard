@@ -236,3 +236,56 @@
   font-variant-numeric: tabular-nums;
 }
 .pw-netscan .pwn-log-icon { flex: 0 0 auto; }
+
+/* ---- Fenetre d'un hote (1.174.0) / host window ---- */
+.pw-netscan .pwn-row[data-idx], .pw-netscan .pwn-row[data-aidx] { cursor: pointer; }
+.pwn-hw-back {
+  position: fixed; inset: 0; z-index: 8500; display: flex; align-items: center; justify-content: center;
+  background: rgba(0,0,0,.55); padding: 16px;
+}
+.pwn-hw {
+  width: min(720px, 100%); max-height: 92vh; overflow: auto; box-sizing: border-box;
+  background: var(--tile, #1b1f27); color: var(--text, #e8eaed); border: 1px solid var(--tile-edge, rgba(255,255,255,.18));
+  border-radius: 14px; box-shadow: 0 16px 50px rgba(0,0,0,.55); padding: 14px 16px; font-size: 14px;
+}
+.pwn-hw-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; }
+.pwn-hw-title { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.pwn-hw-title b { font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pwn-hw-title span { color: var(--muted, #9aa0a6); font-family: var(--mono, monospace); font-size: 12.5px; }
+.pwn-hw-x { all: unset; cursor: pointer; padding: 4px 10px; border-radius: 8px; font-size: 18px; }
+.pwn-hw-x:hover { background: rgba(127,127,127,.2); }
+.pwn-hw-info { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px 14px; margin-bottom: 12px; }
+.pwn-hw-info > div { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.pwn-hw-info span { color: var(--muted, #9aa0a6); font-size: 12px; flex: 0 0 auto; }
+.pwn-hw-info b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-family: var(--mono, monospace); font-size: 13px; }
+.pwn-hw-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.pwn-hw-btn, .pwn-hw-mini {
+  border: 1px solid var(--tile-edge, rgba(255,255,255,.2)); background: rgba(127,127,127,.12); color: inherit;
+  border-radius: 8px; padding: 7px 12px; font: inherit; cursor: pointer; touch-action: manipulation;
+}
+.pwn-hw-mini { padding: 2px 8px; font-size: 12px; }
+.pwn-hw-btn:hover, .pwn-hw-mini:hover { background: rgba(127,127,127,.25); }
+.pwn-hw-btn.on { background: var(--accent, #4aa3ff); color: var(--on-accent, #fff); border-color: var(--accent, #4aa3ff); }
+.pwn-hw-btn.busy { opacity: .6; cursor: progress; }
+.pwn-hw-btn:disabled { opacity: .4; cursor: default; }
+.pwn-hw-portsline { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12.5px; color: var(--muted, #9aa0a6); }
+.pwn-hw-ports { flex: 1; min-width: 0; background: var(--field-bg, rgba(127,127,127,.12)); color: var(--text, #e8eaed); border: 1px solid var(--tile-edge, rgba(255,255,255,.2)); border-radius: 6px; padding: 5px 8px; font: inherit; }
+.pwn-hw-results { display: flex; flex-direction: column; gap: 8px; }
+.pwn-hw-card { border: 1px solid var(--tile-edge, rgba(255,255,255,.15)); border-radius: 10px; padding: 8px 10px; }
+.pwn-hw-card.down { border-color: var(--danger, #e5534b); }
+.pwn-hw-card-t { font-weight: 700; margin-bottom: 4px; }
+.pwn-hw-card-b > div { margin: 2px 0; }
+.pwn-hw-tbl { border-collapse: collapse; width: 100%; font-size: 13px; }
+.pwn-hw-tbl td { padding: 3px 8px 3px 0; vertical-align: top; border-top: 1px solid rgba(127,127,127,.15); }
+.pwn-hw-tbl td:first-child { white-space: nowrap; color: var(--muted, #9aa0a6); }
+.pwn-hw-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.pwn-hw-chips span { font-family: var(--mono, monospace); font-size: 12px; padding: 1px 6px; border-radius: 6px; background: rgba(127,127,127,.15); }
+.pwn-hw-ok { color: var(--ok, #3fb950); }
+.pwn-hw-err, .pwn-hw-alert { color: var(--danger, #e5534b); }
+.pwn-hw-alert { font-weight: 700; }
+.pwn-hw-muted, .pwn-hw-wait { color: var(--muted, #9aa0a6); }
+.pwn-hw-spark { width: 100%; height: 60px; display: block; margin: 4px 0; }
+.pwn-hw-spark path { fill: none; stroke: var(--accent, #4aa3ff); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.pwn-hw-spark line.loss { stroke: var(--danger, #e5534b); stroke-width: 2; opacity: .6; vector-effect: non-scaling-stroke; }
+@media (max-width: 560px) { .pwn-hw-info { grid-template-columns: 1fr; } }
+body.touch .pwn-hw-btn { padding: 11px 16px; }
