@@ -289,3 +289,10 @@
 .pwn-hw-spark line.loss { stroke: var(--danger, #e5534b); stroke-width: 2; opacity: .6; vector-effect: non-scaling-stroke; }
 @media (max-width: 560px) { .pwn-hw-info { grid-template-columns: 1fr; } }
 body.touch .pwn-hw-btn { padding: 11px 16px; }
+
+/* Etendue du test de ports, progression (1.175.0) */
+.pwn-hw-scope { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; color: var(--text, #e8eaed); }
+.pwn-hw-scope label { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.pwn-hw-prog { height: 6px; border-radius: 3px; background: rgba(127,127,127,.2); overflow: hidden; margin: 2px 0 4px; }
+.pwn-hw-prog > div { height: 100%; background: var(--accent, #4aa3ff); transition: width .4s; }
+.pwn-hw-progline { display: flex; align-items: center; justify-content: space-between; gap: 8px; color: var(--muted, #9aa0a6); font-size: 12.5px; }

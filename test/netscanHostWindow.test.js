@@ -27,6 +27,7 @@ const tick = (ms) => new Promise((r) => setTimeout(r, ms || 20));
   const host = { ip: "192.168.1.20", hostname: "nas", mac: "a8:bb:cc:00:00:20", key: "mac:a8:bb:cc:00:00:20", isSelf: false, vendor: "Synology", status: "known", alias: null };
   const payload = { scanning: false, hosts: [host], cidr: "192.168.1.0/24", scannedAt: new Date().toISOString(), baseline: null, absent: [{ key: "mac:x", name: "Camera", ip: "192.168.1.30", mac: "a8:bb:cc:00:00:30", lastSeen: "2026-11-01T10:00:00.000Z" }], newCount: 0, alertCount: 0, changedCount: 0 };
   let pingDown = false;
+  let stopped = false;
   w.fetch = async (url, opts) => {
     const u = String(url);
     const body = opts && opts.body ? JSON.parse(opts.body) : null;
@@ -36,7 +37,9 @@ const tick = (ms) => new Promise((r) => setTimeout(r, ms || 20));
     if (u === "/api/net-tools/ping") return ok(pingDown
       ? { icmp: { available: true, times: [], sent: 1, received: 0, loss: 100 }, tcp: { port: null, times: [null], sent: 1, received: 0, loss: 100 }, alive: false }
       : { icmp: { available: true, ttl: 64, times: [0.5, 0.7], sent: 2, received: 2, loss: 0, min: 0.5, avg: 0.6, max: 0.7 }, alive: true });
-    if (u === "/api/net-tools/ports") return ok({ ip: body.ip, scanned: 36, open: [{ port: 5001, state: "open", service: "HTTPS (NAS)", http: { status: 200, title: "DiskStation", cert: { subject: "synology", issuer: "Synology Inc." } } }, { port: 22, state: "open", service: "SSH", banner: "SSH-2.0-OpenSSH_8.2" }], closed: 30, filtered: 4, web: "https://192.168.1.20:5001/" });
+    if (u === "/api/net-tools/portscan") return ok({ id: "j1", ip: body.ip, scope: body.scope, done: false, total: 1163, scanned: 100, closed: 99, filtered: 0, open: [{ port: 22, state: "open", service: "SSH" }], web: null });
+    if (u === "/api/net-tools/portscan/j1/stop") { stopped = true; return ok({ ok: true }); }
+    if (u === "/api/net-tools/portscan/j1") return ok({ id: "j1", ip: "192.168.1.20", done: true, stopped, total: 1163, scanned: 1163, closed: 1130, filtered: 31, open: [{ port: 5001, state: "open", service: "HTTPS (NAS)", http: { status: 200, title: "DiskStation", cert: { subject: "synology", issuer: "Synology Inc." } } }, { port: 22, state: "open", service: "SSH", banner: "SSH-2.0-OpenSSH_8.2" }], web: "https://192.168.1.20:5001/" });
     if (u === "/api/net-tools/traceroute") return ok({ available: false, hops: [] });
     if (u === "/api/net-tools/names") return ok({ system: "nas.local", dns: null, mdns: "nas.local", netbios: { name: "NAS", workgroup: "WORKGROUP" } });
     if (u === "/api/net-tools/arp") return ok({ ip: body.ip, self: false, ms: 312, mac: "a8:bb:cc:00:00:20", oui: "A8:BB:CC", local: false, vendor: "Synology" });
@@ -78,9 +81,15 @@ const tick = (ms) => new Promise((r) => setTimeout(r, ms || 20));
   check("ping : route appelee avec l'IP", calls.some((c) => c.u === "/api/net-tools/ping" && c.body.ip === "192.168.1.20"));
   check("ping : statistiques affichees", !!card("ping") && /TTL 64/.test(card("ping").textContent));
   win().querySelector(".pwn-hw-ports").value = "8888";
-  up(btn("ports")); await tick();
-  const pc = calls.find((c) => c.u === "/api/net-tools/ports");
-  check("ports : ports en plus transmis avec les ports courants", pc && pc.body.ports === "8888" && pc.body.withCommon === true);
+  check("etendue : trois choix, Rapide par defaut", win().querySelectorAll('input[name="pwn-scope"]').length === 3 && win().querySelector('input[name="pwn-scope"]:checked').value === "quick");
+  win().querySelector('input[name="pwn-scope"][value="extended"]').checked = true;
+  up(btn("ports")); await tick(60);
+  const pc = calls.find((c) => c.u === "/api/net-tools/portscan");
+  check("ports : etendue et ports en plus transmis", pc && pc.body.scope === "extended" && pc.body.ports === "8888");
+  check("ports : progression et bouton Arreter pendant le test", !!card("ports").querySelector(".pwn-hw-prog") && !!card("ports").querySelector(".pwn-hw-stop") && /SSH/.test(card("ports").textContent));
+  up(card("ports").querySelector(".pwn-hw-stop")); await tick(60);
+  check("Arreter : demande envoyee au serveur", stopped === true);
+  await tick(800);
   check("ports : services, titre web, certificat et banniere", /DiskStation/.test(card("ports").textContent) && /Synology Inc\./.test(card("ports").textContent) && /OpenSSH/.test(card("ports").textContent));
   up(btn("web"));
   check("interface web : ouvre l'adresse trouvee par le test de ports", opened[opened.length - 1] === "https://192.168.1.20:5001/");

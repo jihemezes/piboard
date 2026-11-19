@@ -32,6 +32,23 @@
 
 # Nouveautes / What's new
 
+## 1.175.0
+
+**Analyse réseau : test de ports rapide, étendu ou complet**
+
+Dans la fenêtre d'un appareil, choisissez l'**étendue** du test de ports : **Rapide** (36 ports courants,
+2 secondes), **Étendue** (plus de 1 100 ports, une vingtaine de secondes) ou **Complète** (les 65 535 ports).
+Une barre montre l'avancement, les ports ouverts apparaissent au fur et à mesure, et **Arrêter** interrompt
+le test en gardant ce qui a déjà été trouvé.
+
+---
+
+**Network scan: quick, extended or full port test**
+
+In a device's window, choose the port test **scope**: **Quick** (36 common ports, 2 seconds), **Extended**
+(over 1,100 ports, about twenty seconds) or **Full** (all 65,535 ports). A bar shows progress, open ports
+appear as they are found, and **Stop** interrupts the test while keeping what was already found.
+
 ## 1.174.0
 
 **Analyse réseau : touchez un appareil pour le tester**

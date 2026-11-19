@@ -793,6 +793,14 @@
             <button type="button" class="pwn-hw-btn" data-hw="web">${esc(t("web"))}</button>
             <button type="button" class="pwn-hw-btn" data-hw="wol"${mac && !h.isSelf ? "" : " disabled"}>${esc(t("wol"))}</button>
           </div>
+          <div class="pwn-hw-portsline">
+            <span>${esc(t("scope"))}</span>
+            <span class="pwn-hw-scope" role="radiogroup">
+              <label><input type="radio" name="pwn-scope" value="quick" checked> ${esc(t("scopeQuick"))}</label>
+              <label><input type="radio" name="pwn-scope" value="extended"> ${esc(t("scopeExtended"))}</label>
+              <label><input type="radio" name="pwn-scope" value="full"> ${esc(t("scopeFull"))}</label>
+            </span>
+          </div>
           <label class="pwn-hw-portsline"><span>${esc(t("portsExtra"))}</span><input type="text" class="pwn-hw-ports" placeholder="8888, 10000-10010" autocomplete="off" spellcheck="false"></label>
           <div class="pwn-hw-results"></div>
         </div>`;
@@ -818,6 +826,7 @@
     closeHost() {
       if (!this.hw) return;
       if (this.hw.watch) clearTimeout(this.hw.watch.timer);
+      if (this.hw.portJob) { clearTimeout(this.hw.portJob.timer); this.stopPortJob(); if (this.hw.portJob.resolve) this.hw.portJob.resolve(); this.hw.portJob = null; }
       this.hw.back.remove();
       this.hw = null;
       if (this.hwKey) { document.removeEventListener("keydown", this.hwKey); this.hwKey = null; }
@@ -897,10 +906,12 @@
           const r = await this.hwPost("ping", { ip, count: 4 });
           body.innerHTML = this.pingHtml(r);
         } else if (act === "ports") {
-          const extra = (this.hw.back.querySelector(".pwn-hw-ports") || {}).value || "";
-          const r = await this.hwPost("ports", extra.trim() ? { ip, ports: extra, withCommon: true } : { ip });
-          if (r.web) this.hw.web = r.web;
-          body.innerHTML = this.portsHtml(r);
+          const extra = ((this.hw.back.querySelector(".pwn-hw-ports") || {}).value || "").trim();
+          const sel = this.hw.back.querySelector('input[name="pwn-scope"]:checked');
+          const scope = sel ? sel.value : "quick";
+          if (this.hw.portJob) { this.stopPortJob(); }
+          const first = await this.hwPost("portscan", Object.assign({ ip, scope }, extra ? { ports: extra } : {}));
+          await this.followPortJob(first, body, btn);
         } else if (act === "trace") {
           const r = await this.hwPost("traceroute", { ip });
           body.innerHTML = !r.available ? `<div class="pwn-hw-err">${esc(t("traceMissing"))}</div>`
@@ -927,6 +938,48 @@
       }
     }
 
+    /* Suit une tache de test de ports : barre de progression, ports
+       ouverts au fil de l'eau, bouton Arreter. Follows a port scan job. */
+    followPortJob(job, body, btn) {
+      const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
+      const hw = this.hw;
+      return new Promise((resolve) => {
+        hw.portJob = { id: job.id, timer: null, resolve };
+        const draw = (j) => {
+          if (j.web) hw.web = j.web;
+          const pct = j.total ? Math.floor(j.scanned / j.total * 100) : 100;
+          const prog = j.done ? "" : `<div class="pwn-hw-prog"><div style="width:${pct}%"></div></div>
+            <div class="pwn-hw-progline"><span>${escapeHtml(t("scanProgress").replace("{d}", j.scanned.toLocaleString()).replace("{n}", j.total.toLocaleString()).replace("{p}", String(pct)))}</span>
+            <button type="button" class="pwn-hw-mini pwn-hw-stop">${escapeHtml(t("stop"))}</button></div>`;
+          const stopped = j.done && j.stopped ? `<div class="pwn-hw-muted">${escapeHtml(t("scanStopped"))}</div>` : "";
+          body.innerHTML = prog + stopped + this.portsHtml(Object.assign({}, j, { scanned: j.done ? j.scanned : j.scanned }), !j.done);
+          const stop = body.querySelector(".pwn-hw-stop");
+          if (stop) stop.addEventListener("pointerup", (e) => { e.preventDefault(); e.stopPropagation(); this.stopPortJob(); });
+        };
+        const poll = async () => {
+          if (!this.hw || this.hw !== hw || !hw.portJob || hw.portJob.id !== job.id) return resolve();
+          let j;
+          try {
+            const r = await fetch("/api/net-tools/portscan/" + encodeURIComponent(job.id));
+            j = await r.json();
+            if (!r.ok) throw new Error(j.error || r.status);
+          } catch (e) { body.innerHTML = `<div class="pwn-hw-err">${escapeHtml(t("error") + " " + e.message)}</div>`; hw.portJob = null; return resolve(); }
+          draw(j);
+          if (j.done) { hw.portJob = null; return resolve(); }
+          hw.portJob.timer = setTimeout(poll, 700);
+        };
+        draw(job);
+        if (job.done) { hw.portJob = null; return resolve(); }
+        hw.portJob.timer = setTimeout(poll, 400);
+      });
+    }
+
+    stopPortJob() {
+      const hw = this.hw;
+      if (!hw || !hw.portJob) return;
+      fetch("/api/net-tools/portscan/" + encodeURIComponent(hw.portJob.id) + "/stop", { method: "POST" }).catch(() => {});
+    }
+
     pingHtml(r) {
       const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
       const esc = escapeHtml;
@@ -948,11 +1001,11 @@
       return html;
     }
 
-    portsHtml(r) {
+    portsHtml(r, running) {
       const t = (k) => this.ctx.i18n.t("netscan.hw." + k);
       const esc = escapeHtml;
-      const head = `<div>${esc(t("portsSummary").replace("{n}", r.scanned).replace("{o}", r.open.length).replace("{c}", r.closed).replace("{f}", r.filtered))}</div>`;
-      if (!r.open.length) return head + `<div class="pwn-hw-muted">${esc(t("portsNone"))}</div>`;
+      const head = `<div>${esc(t("portsSummary").replace("{n}", Number(r.scanned).toLocaleString()).replace("{o}", r.open.length).replace("{c}", Number(r.closed).toLocaleString()).replace("{f}", Number(r.filtered).toLocaleString()))}</div>`;
+      if (!r.open.length) return head + (running ? "" : `<div class="pwn-hw-muted">${esc(t("portsNone"))}</div>`);
       const rows = r.open.map((p) => {
         const d = [];
         if (p.http) {

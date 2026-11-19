@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.175.0
+
+- **Analyse réseau, fenêtre d'un hôte : étendue du test de ports.** Rapide (36 ports courants), Étendue (1 163 :
+  ports 1-1024 + ports applicatifs courants) ou Complète (65 535). Le test tourne en tâche de fond côté serveur
+  (`POST /api/net-tools/portscan`, `GET /api/net-tools/portscan/:id`, `POST …/:id/stop`) : progression, ports
+  ouverts affichés au fil de l'eau (avec bannière), bouton Arrêter, arrêt à la fermeture de la fenêtre.
+  200 sondes en parallèle pour Étendue / Complète, 3 tâches au plus en même temps, tâches oubliées après 10 min.
+- Tests : `hostTools.test.js` et `netscanHostWindow.test.js` étendus. Aide FR/EN.
+
 ## 1.174.0
 
 - **Tuile Analyse réseau : fenêtre de test d'un appareil.** Un appui sur une ligne (hors boutons, sans

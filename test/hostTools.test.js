@@ -52,6 +52,28 @@ const ht = require("../server/hostTools");
   assert.deepStrictEqual(ht.parseHttpHead("HTTP/1.1 401 Unauthorized\r\nserver: lighttpd\r\n\r\n<title> Routeur </title>"), { status: 401, server: "lighttpd", title: "Routeur" });
   console.log("  OK");
 
+  console.log("== Etendue et tache de fond ==");
+  assert.strictEqual(ht.portsForScope("quick").length, 36);
+  const ext = ht.portsForScope("extended");
+  assert.ok(ext.length > 1100 && ext.includes(1) && ext.includes(1024) && ext.includes(8123) && ext.includes(32400), "etendue : 1-1024 + applicatifs");
+  assert.strictEqual(ht.portsForScope("full").length, 65535);
+  {
+    const s3 = net.createServer((c) => c.end());
+    await new Promise((res) => s3.listen(0, "127.0.0.1", res));
+    const p3 = s3.address().port;
+    const job = ht.startPortJob("127.0.0.1", [p3, closedPort], { scope: "extended", timeoutMs: 500 });
+    let v; for (let k = 0; k < 50; k++) { v = ht.getPortJob(job.id); if (v.done) break; await new Promise((r) => setTimeout(r, 100)); }
+    assert.ok(v.done && v.scanned === 2 && v.open.length === 1 && v.open[0].port === p3 && v.closed === 1, "tache : resultat complet");
+    // arret : une longue liste s'arrete avant la fin
+    const big = Array.from({ length: 3000 }, (_, k) => 20000 + k);
+    const j2 = ht.startPortJob("127.0.0.1", big, { scope: "full", timeoutMs: 300 });
+    ht.stopPortJob(j2.id);
+    for (let k = 0; k < 50; k++) { v = ht.getPortJob(j2.id); if (v.done) break; await new Promise((r) => setTimeout(r, 100)); }
+    assert.ok(v.done && v.stopped && v.scanned < 3000, "Arreter interrompt la tache");
+    s3.close();
+  }
+  console.log("  OK");
+
   console.log("== NetBIOS, mDNS ==");
   assert.strictEqual(ht.encodeNetbiosName("*\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0").length, 34);
   // reponse NBSTAT fabriquee : 2 noms (PC-SALON <00> unique, WORKGROUP <00> groupe) + MAC
@@ -109,6 +131,14 @@ const ht = require("../server/hostTools");
   assert.strictEqual(x.status, 200);
   assert.ok(x.body.open.some((o) => o.port === srv2.address().port), "route ports : port ouvert trouve");
   srv2.close();
+  x = await post("portscan", { ip: "8.8.8.8", scope: "full" });
+  assert.strictEqual(x.status, 400, "portscan : adresse publique refusee");
+  x = await post("portscan", { ip: "127.0.0.1", scope: "quick" });
+  assert.strictEqual(x.status, 200, "portscan demarre");
+  assert.ok(x.body.id && x.body.total === 36);
+  const g = await fetch("http://127.0.0.1:" + s.port + "/api/net-tools/portscan/" + x.body.id);
+  assert.strictEqual(g.status, 200, "suivi de la tache");
+  await post("portscan/" + x.body.id + "/stop", {});
   x = await post("ping", { ip: "127.0.0.1", count: 1 });
   assert.strictEqual(x.status, 200, "route ping repond");
   assert.ok("icmp" in x.body && "alive" in x.body);

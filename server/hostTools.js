@@ -287,6 +287,96 @@ async function scanPorts(ip, ports, opts) {
   };
 }
 
+/* ---------- Etendue du test de ports (1.175.0) ----------
+   « quick » : les ports courants ci-dessus ; « extended » : les ports 1 a
+   1024 (services systeme) plus les ports applicatifs courants au-dela ;
+   « full » : les 65 535 ports. Les deux derniers tournent en TACHE de
+   fond interrogee par la fenetre (progression, ports ouverts au fil de
+   l'eau, arret possible).
+   Port scan scope: quick / extended (1-1024 + common app ports) / full
+   (all 65,535). The last two run as a background JOB polled by the
+   window (progress, open ports as found, can be stopped). */
+const EXTENDED_HIGH = [1080, 1194, 1433, 1521, 1723, 1883, 1900, 2049, 2082, 2083, 2181, 2375, 2376, 3000, 3001, 3128,
+  3260, 3306, 3389, 3478, 3689, 4000, 4040, 4443, 4444, 4567, 4711, 4848, 5000, 5001, 5004, 5005, 5060, 5061, 5222,
+  5353, 5357, 5432, 5555, 5601, 5672, 5683, 5800, 5900, 5901, 5938, 5984, 6000, 6379, 6443, 6667, 7000, 7001, 7070,
+  7100, 7443, 7547, 7676, 8000, 8001, 8008, 8009, 8010, 8042, 8060, 8069, 8080, 8081, 8082, 8083, 8086, 8088, 8089,
+  8090, 8096, 8123, 8181, 8200, 8222, 8243, 8291, 8333, 8384, 8443, 8444, 8448, 8500, 8554, 8581, 8686, 8728, 8729,
+  8765, 8800, 8834, 8843, 8880, 8883, 8888, 8889, 8989, 9000, 9001, 9042, 9080, 9090, 9091, 9100, 9101, 9102, 9200,
+  9443, 9999, 10000, 10001, 10050, 10051, 10243, 11211, 15672, 16992, 16993, 17500, 18080, 19999, 20000, 25565,
+  27017, 28017, 32400, 32469, 37777, 49152, 49153, 49154, 50000, 51413, 55443, 62078];
+function portsForScope(scope) {
+  if (scope === "full") return Array.from({ length: 65535 }, (_, i) => i + 1);
+  if (scope === "extended") {
+    const set = new Set(Array.from({ length: 1024 }, (_, i) => i + 1));
+    EXTENDED_HIGH.forEach((p) => set.add(p));
+    COMMON_PORTS.forEach((p) => set.add(p[0]));
+    return [...set].sort((a, b) => a - b);
+  }
+  return COMMON_PORTS.map((p) => p[0]);
+}
+
+async function describeOpen(ip, r) {
+  r.service = SERVICE.get(r.port) || null;
+  if (HTTP_PORTS.has(r.port)) r.http = await httpProbe(ip, r.port, false, 2000);
+  else if (TLS_PORTS.has(r.port)) r.http = await httpProbe(ip, r.port, true, 2500);
+  else if (BANNER_PORTS.has(r.port)) r.banner = await readBanner(ip, r.port, 1500);
+  if (r.http && !r.http.status && !r.http.cert) delete r.http;
+  return r;
+}
+
+const jobs = new Map();
+const MAX_JOBS = 3;
+let jobSeq = 0;
+
+function webUrl(ip, open) {
+  const w = open.find((r) => HTTP_PORTS.has(r.port) || TLS_PORTS.has(r.port));
+  if (!w) return null;
+  const secure = TLS_PORTS.has(w.port);
+  return (secure ? "https://" : "http://") + ip + (w.port === (secure ? 443 : 80) ? "" : ":" + w.port) + "/";
+}
+
+function jobView(job) {
+  return {
+    id: job.id, ip: job.ip, scope: job.scope, done: job.done, stopped: job.stopped,
+    total: job.total, scanned: job.scanned, closed: job.closed, filtered: job.filtered,
+    open: job.open.slice().sort((a, b) => a.port - b.port), web: webUrl(job.ip, job.open),
+    elapsedMs: (job.endedAt || Date.now()) - job.startedAt
+  };
+}
+
+function startPortJob(ip, ports, opts) {
+  const o = opts || {};
+  for (const [id, j] of jobs) if (Date.now() - (j.endedAt || j.startedAt) > 10 * 60000) jobs.delete(id);
+  const running = [...jobs.values()].filter((j) => !j.done);
+  if (running.length >= MAX_JOBS) { const e = new Error("too many scans"); e.code = "busy"; throw e; }
+  const job = { id: "ps" + (++jobSeq) + "-" + Date.now().toString(36), ip, scope: o.scope || "quick", total: ports.length,
+    scanned: 0, closed: 0, filtered: 0, open: [], done: false, stopped: false, startedAt: Date.now(), endedAt: null };
+  jobs.set(job.id, job);
+  const timeoutMs = o.timeoutMs || (job.scope === "full" ? 600 : 900);
+  const limit = job.scope === "quick" ? 48 : 200;
+  let i = 0;
+  const pendingDescribe = [];
+  (async () => {
+    await Promise.all(Array.from({ length: Math.min(limit, ports.length) }, async () => {
+      while (i < ports.length && !job.stopped) {
+        const port = ports[i++];
+        const r = await tcpProbe(ip, port, timeoutMs);
+        job.scanned++;
+        if (r.state === "open") { job.open.push(r); pendingDescribe.push(describeOpen(ip, r).catch(() => r)); }
+        else if (r.state === "closed") job.closed++;
+        else job.filtered++;
+      }
+    }));
+    await Promise.all(pendingDescribe);
+    job.done = true;
+    job.endedAt = Date.now();
+  })();
+  return job;
+}
+
+function getPortJob(id) { const j = jobs.get(String(id)); return j ? jobView(j) : null; }
+function stopPortJob(id) { const j = jobs.get(String(id)); if (j) j.stopped = true; return !!j; }
+
 /* ---------- Traceroute ---------- */
 function tracerouteCommand(ip, platform) {
   const p = platform || process.platform;
@@ -492,6 +582,10 @@ module.exports = {
   ping,
   tcpProbe,
   COMMON_PORTS,
+  portsForScope,
+  startPortJob,
+  getPortJob,
+  stopPortJob,
   parsePortList,
   parseHttpHead,
   scanPorts,

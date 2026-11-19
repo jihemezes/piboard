@@ -641,6 +641,28 @@ app.post("/api/net-tools/ports", async (req, res) => {
     res.json(await hostTools.scanPorts(ip, list));
   } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
 });
+/* Test de ports en tache de fond : etendue quick / extended / full.
+   Background port scan with a scope. */
+app.post("/api/net-tools/portscan", (req, res) => {
+  const ip = hostToolIp(req, res); if (!ip) return;
+  const scope = ["quick", "extended", "full"].includes(req.body.scope) ? req.body.scope : "quick";
+  let extra = [];
+  try { if (req.body.ports) extra = hostTools.parsePortList(req.body.ports); }
+  catch (e) { return res.status(400).json({ error: "bad-ports", message: String(e.message || e) }); }
+  const list = [...new Set(hostTools.portsForScope(scope).concat(extra))].sort((a, b) => a - b);
+  try {
+    const job = hostTools.startPortJob(ip, list, { scope });
+    res.json(hostTools.getPortJob(job.id));
+  } catch (e) { res.status(e.code === "busy" ? 429 : 500).json({ error: e.code || String(e.message || e) }); }
+});
+app.get("/api/net-tools/portscan/:id", (req, res) => {
+  const v = hostTools.getPortJob(req.params.id);
+  if (!v) return res.status(404).json({ error: "not-found" });
+  res.json(v);
+});
+app.post("/api/net-tools/portscan/:id/stop", (req, res) => {
+  res.json({ ok: hostTools.stopPortJob(req.params.id) });
+});
 app.post("/api/net-tools/traceroute", async (req, res) => {
   const ip = hostToolIp(req, res); if (!ip) return;
   try { res.json(await hostTools.traceroute(ip)); }
