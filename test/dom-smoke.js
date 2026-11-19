@@ -11579,6 +11579,61 @@ function catalogItemFor(catalog, document, widgetId) {
     document.body.classList.remove("touch");
   }
 
+  console.log("== Partage d'un article : fenetre commune (1.176.0) ==");
+  {
+    const opened = [];
+    const realOpen = window.open;
+    window.open = (u) => { opened.push(u); return { focus() {} }; };
+    const click = (el) => el.dispatchEvent(new window.MouseEvent("click", { bubbles: true, cancelable: true }));
+    const sheet = () => document.getElementById("shareSheet");
+    const item = (id) => sheet() && sheet().querySelector('.share-item[data-id="' + id + '"]');
+    const d = { title: "Un titre", url: "https://journal.test/a1", source: "Journal", text: "Un titre\n— Journal\nhttps://journal.test/a1" };
+    await window.PiBoard.share(d, { extras: [{ id: "later", icon: "📑", label: "Lire plus tard", run: () => { window.__later = true; } }] });
+    assert("partage : la fenetre s'ouvre", !!sheet());
+    assert("partage : courriel, WhatsApp, Telegram, QR, telephone, copie, extra de la tuile",
+      ["mail", "whatsapp", "telegram", "qr", "phone", "copy", "later"].every((k) => !!item(k)));
+    assert("partage : pas de menu systeme hors app Mac ou navigateur qui partage", !item("native"));
+    click(item("mail"));
+    await sleep(20);
+    assert("partage : courriel = lien mailto avec objet et texte", /^mailto:\?subject=Un%20titre&body=Un%20titre%0A/.test(opened[opened.length - 1] || ""));
+    assert("partage : la fenetre se ferme apres un choix", !sheet());
+    await window.PiBoard.share(d, {});
+    click(item("whatsapp")); await sleep(10);
+    assert("partage : WhatsApp prerempli", /^https:\/\/wa\.me\/\?text=Un%20titre/.test(opened[opened.length - 1] || ""));
+    await window.PiBoard.share(d, {});
+    click(item("telegram")); await sleep(10);
+    assert("partage : Telegram avec le lien", /^https:\/\/t\.me\/share\/url\?url=https%3A%2F%2Fjournal\.test%2Fa1/.test(opened[opened.length - 1] || ""));
+    await window.PiBoard.share(d, {});
+    click(item("qr")); await sleep(10);
+    assert("partage : QR code du lien", !document.getElementById("qrModal").hidden && document.getElementById("qrUrl").textContent === d.url);
+    document.getElementById("qrModal").hidden = true;
+    // Telephone : non configure -> renvoie aux reglages ; configure -> /api/notify.
+    await window.PiBoard.share(d, {});
+    assert("partage : telephone a configurer", /share\.phoneSetup|configurer|set up/i.test(item("phone").textContent));
+    document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    assert("partage : Echap ferme", !sheet());
+    const $q = (id) => document.getElementById(id);
+    click($q("btnSettings") || $q("dashSettings"));
+    await sleep(60);
+    $q("setShareNotifyUrl").value = "https://ntfy.test/sujet?t={title}";
+    $q("setShareNotifyMethod").value = "POST";
+    $q("setShareNotifyBody").value = "{title} {url}";
+    const before = putCalls.filter((c) => c.url.includes("/api/notify")).length;
+    click($q("setShareTest")); await sleep(40);
+    const testCall = putCalls.filter((c) => c.url.includes("/api/notify"))[before];
+    assert("reglages : Envoyer un essai utilise les valeurs saisies", !!testCall && JSON.parse(testCall.body).url === "https://ntfy.test/sujet?t=PiBoard");
+    click($q("settingsSave")); await sleep(80);
+    await window.PiBoard.share(d, {});
+    click(item("phone")); await sleep(40);
+    const calls = putCalls.filter((c) => c.url.includes("/api/notify"));
+    const last = calls.length ? JSON.parse(calls[calls.length - 1].body) : {};
+    assert("partage : envoi sur le telephone (adresse encodee, message en clair)",
+      last.url === "https://ntfy.test/sujet?t=Un%20titre" && last.method === "POST" && last.body === "Un titre https://journal.test/a1");
+    assert("partage : la fenetre reste ouverte et confirme l'envoi", !!sheet() && /share\.phoneSent|Envoy|Sent/.test(item("phone").textContent));
+    document.dispatchEvent(new window.KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    window.open = realOpen;
+  }
+
   console.log(process.exitCode ? "\n>>> ECHECS DETECTES" : "\n>>> TOUS LES TESTS PASSENT");
   window.close();
   process.exit(process.exitCode || 0);

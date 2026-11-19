@@ -1096,6 +1096,26 @@
         <p class="hint"><a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener" data-i18n="settings.cartoKey.link">Request a free CARTO key</a></p>
       </fieldset>
 
+      <!-- Partage d'articles vers le telephone (1.176.0) -->
+      <fieldset class="form-section" id="secShare" data-help="content">
+        <legend data-i18n="settings.section.share">Sharing</legend>
+        <small class="field-hint" data-i18n="settings.share.intro">Used by the "Send to my phone" choice when sharing an article. Any notification service called by a web address works: ntfy, Home Assistant, Free Mobile SMS, Pushover, IFTTT…</small>
+        <label class="field">
+          <span data-i18n="settings.share.url">Notification address</span>
+          <input type="text" id="setShareNotifyUrl" autocomplete="off" spellcheck="false" placeholder="https://ntfy.sh/my-topic">
+        </label>
+        <label class="field">
+          <span data-i18n="settings.share.method">Method</span>
+          <select id="setShareNotifyMethod"><option value="POST">POST</option><option value="GET">GET</option></select>
+        </label>
+        <label class="field">
+          <span data-i18n="settings.share.body">Message (POST)</span>
+          <input type="text" id="setShareNotifyBody" autocomplete="off" spellcheck="false">
+        </label>
+        <small class="field-hint" data-i18n="settings.share.hint">Placeholders: {title}, {url}, {source}, {text}. In the address they are URL-encoded. Examples: ntfy = POST https://ntfy.sh/my-topic with "{title} {url}"; Free Mobile SMS = GET https://smsapi.free-mobile.fr/sendmsg?user=…&amp;pass=…&amp;msg={text}.</small>
+        <p><button type="button" class="btn small" id="setShareTest" data-i18n="settings.share.test">Send a test</button> <span id="setShareTestResult" class="field-hint"></span></p>
+      </fieldset>
+
       <!-- Abonnements presse (1.141.0) : session de navigateur par site,
            pour lire en entier les articles payants dans la tuile Flux RSS.
            Application de bureau uniquement (voir server/pressAccess.js).

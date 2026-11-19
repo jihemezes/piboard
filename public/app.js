@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.175.0
+   Version 1.176.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -111,6 +111,8 @@
        concerns them, and what to refresh once the image has been copied
        into their folder. */
     openLibrary(target, section, onPicked) { openLibrary(target, section, onPicked); },
+    /* Fenetre de partage commune (1.176.0). Common share window. */
+    share(d, opts) { return openShareSheet(d || {}, opts || {}); },
     /* Ouvre les reglages generaux sur une famille (general, look, layout,
        input, saver, content, project) et, au choix, une section.
        Opens the general settings on a family and, optionally, a section. */
@@ -7779,6 +7781,153 @@
     modal.hidden = false;
   }
 
+
+  /* ====================================================================
+     PARTAGE D'UN CONTENU (1.176.0) -- fenetre commune aux tuiles.
+     Les moyens proposes dependent de l'endroit ou tourne PiBoard :
+       - app de bureau sur Mac : menu de partage du systeme (AirDrop,
+         Messages, Mail, Notes...) via le serveur et Electron ;
+       - navigateur qui sait partager (Safari, Edge, Chrome Windows /
+         Android) : partage du navigateur (navigator.share) ;
+       - partout : courriel, WhatsApp, Telegram, QR code, envoi sur le
+         telephone (notification), copie du lien.
+     En kiosque sur le Pi (pas de messagerie, pas de navigateur a cote),
+     les liens a ouvrir s'affichent en QR code : le telephone les ouvre.
+     SHARING A CONTENT, common window for tiles. What is offered depends
+     on where PiBoard runs; on the kiosk Pi, links to open become QR
+     codes that the phone opens.
+     ==================================================================== */
+  let nativeShareAvail = null;
+  async function nativeShareAvailable() {
+    if (nativeShareAvail !== null) return nativeShareAvail;
+    try {
+      const r = await fetch("/api/share/native", { cache: "no-store" });
+      nativeShareAvail = r.ok ? !!(await r.json()).available : false;
+    } catch (e) { nativeShareAvail = false; }
+    return nativeShareAvail;
+  }
+  /* Kiosque : PiBoard affiche par le navigateur de la machine meme, sous
+     Linux, hors application de bureau. Kiosk: Linux, same machine, no app. */
+  function isKioskScreen() {
+    const local = /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname);
+    return local && !appIntegration.desktopApp && appIntegration.platform === "linux";
+  }
+  function fillShareTemplate(tpl, d, encode) {
+    const f = (v) => (encode ? encodeURIComponent(String(v || "")) : String(v || ""));
+    return String(tpl || "").replace(/\{(title|url|source|text)\}/g, (m, k) => f(d[k]));
+  }
+  function sendShareToPhone(d) {
+    const url = settings && settings.shareNotifyUrl ? String(settings.shareNotifyUrl).trim() : "";
+    if (!url) return Promise.reject(new Error("not configured"));
+    const method = settings.shareNotifyMethod === "GET" ? "GET" : "POST";
+    const body = fillShareTemplate(settings.shareNotifyBody || "{title}\n{url}", d, false);
+    return apiPut("/api/notify", { url: fillShareTemplate(url, d, true), method, body }).then((r) => {
+      if (r && r.ok === false) throw new Error("HTTP " + (r.status || "?"));
+      return r;
+    });
+  }
+  function closeShareSheet() {
+    const old = document.getElementById("shareSheet");
+    if (old) old.remove();
+  }
+  async function copyToClipboard(text) {
+    try { await navigator.clipboard.writeText(text); return true; } catch (e) { /* repli */ }
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand("copy"); ta.remove(); return !!ok;
+    } catch (e) { return false; }
+  }
+
+  // Bouton « Envoyer un essai » des reglages : champs en cours, pas encore enregistres.
+  document.addEventListener("click", async (e) => {
+    const b = e.target && e.target.closest ? e.target.closest("#setShareTest") : null;
+    if (!b) return;
+    e.preventDefault();
+    const out = $("setShareTestResult");
+    const url = $("setShareNotifyUrl").value.trim();
+    if (!url) { out.textContent = i18n.t("settings.share.needUrl"); return; }
+    const d = { title: "PiBoard", url: "https://github.com/jihemezes/piboard", source: "PiBoard", text: i18n.t("settings.share.testText") };
+    try {
+      const r = await apiPut("/api/notify", {
+        url: fillShareTemplate(url, d, true),
+        method: $("setShareNotifyMethod").value === "GET" ? "GET" : "POST",
+        body: fillShareTemplate($("setShareNotifyBody").value || "{title}\n{url}", d, false)
+      });
+      if (r && r.ok === false) throw new Error("HTTP " + (r.status || "?"));
+      out.textContent = i18n.t("settings.share.sent");
+    } catch (err) { out.textContent = i18n.t("settings.share.failed") + " " + (err.message || ""); }
+  });
+
+  /* d = { title, url, text, source }, opts = { x, y, extras: [{ id, label, icon, run }] } */
+  async function openShareSheet(d, opts) {
+    const o = opts || {};
+    closeShareSheet();
+    const t = (k) => i18n.t("share." + k);
+    const full = d.text || [d.title, d.url].filter(Boolean).join("\n");
+    const kiosk = isKioskScreen();
+    const openLink = (url, label) => {
+      if (kiosk) { closeShareSheet(); openQr(url, label); return; }
+      const w = window.open(url, "_blank", "noopener");
+      if (!w && !/^https?:/i.test(url)) location.href = url;
+    };
+    const items = [];
+    if (await nativeShareAvailable()) {
+      items.push({ id: "native", icon: "⤴", label: t("native"), hint: t("nativeHintMac"), run: async () => {
+        await apiPost("/api/share/native", { url: d.url, text: full, x: o.x, y: o.y });
+      } });
+    } else if (navigator.share) {
+      items.push({ id: "native", icon: "⤴", label: t("native"), hint: t("nativeHintBrowser"), run: async () => {
+        try { await navigator.share({ title: d.title, text: full, url: d.url }); } catch (e) { /* annule / cancelled */ }
+      } });
+    }
+    items.push({ id: "mail", icon: "✉", label: t("mail"), run: () => openLink("mailto:?subject=" + encodeURIComponent(d.title || "") + "&body=" + encodeURIComponent(full), t("mail")) });
+    if (appIntegration.desktopApp && appIntegration.platform === "darwin") {
+      items.push({ id: "sms", icon: "💬", label: t("messages"), run: () => openLink("sms:&body=" + encodeURIComponent(full), t("messages")) });
+    }
+    items.push({ id: "whatsapp", icon: "🟢", label: "WhatsApp", run: () => openLink("https://wa.me/?text=" + encodeURIComponent(full), "WhatsApp") });
+    items.push({ id: "telegram", icon: "✈", label: "Telegram", run: () => openLink("https://t.me/share/url?url=" + encodeURIComponent(d.url || "") + "&text=" + encodeURIComponent(d.text && d.url ? full.replace(d.url, "").trim() : (d.title || "")), "Telegram") });
+    if (d.url) items.push({ id: "qr", icon: "▦", label: t("qr"), run: () => { closeShareSheet(); openQr(d.url, d.title || t("qr")); } });
+    const phoneReady = !!(settings && settings.shareNotifyUrl);
+    items.push({ id: "phone", icon: "📱", label: t("phone"), hint: phoneReady ? "" : t("phoneSetup"), keep: true, run: async (btn) => {
+      if (!phoneReady) { closeShareSheet(); window.PiBoard.openSettings && window.PiBoard.openSettings("content", "secShare"); return; }
+      try { await sendShareToPhone({ title: d.title, url: d.url, source: d.source, text: full }); btn.querySelector(".share-lab").textContent = t("phoneSent"); }
+      catch (e) { btn.querySelector(".share-lab").textContent = t("phoneFail"); }
+    } });
+    if (d.url) items.push({ id: "copy", icon: "⧉", label: t("copy"), keep: true, run: async (btn) => {
+      const ok = await copyToClipboard(d.url);
+      btn.querySelector(".share-lab").textContent = ok ? t("copied") : t("copyFail");
+    } });
+    for (const x of o.extras || []) items.push(x);
+
+    const back = document.createElement("div");
+    back.id = "shareSheet";
+    back.className = "share-back";
+    back.innerHTML = `<div class="share-sheet" role="dialog" aria-modal="true" aria-label="${escapeHtmlAttr(t("title"))}">
+        <div class="share-head"><b>${escapeHtml(t("title"))}</b><button type="button" class="share-x" aria-label="${escapeHtmlAttr(i18n.t("common.close"))}">✕</button></div>
+        <div class="share-what">${escapeHtml(d.title || d.url || "")}${d.source ? `<span>${escapeHtml(d.source)}</span>` : ""}</div>
+        <div class="share-grid">${items.map((it, i) => `<button type="button" class="share-item" data-i="${i}" data-id="${escapeHtmlAttr(it.id)}"><span class="share-ico">${escapeHtml(it.icon || "")}</span><span class="share-lab">${escapeHtml(it.label)}</span>${it.hint ? `<small>${escapeHtml(it.hint)}</small>` : ""}</button>`).join("")}</div>
+      </div>`;
+    document.body.appendChild(back);
+    const sheet = back.querySelector(".share-sheet");
+    ["pointerdown", "pointerup", "click", "contextmenu"].forEach((ty) => sheet.addEventListener(ty, (e) => e.stopPropagation()));
+    back.addEventListener("click", (e) => { if (e.target === back) closeShareSheet(); });
+    back.querySelector(".share-x").addEventListener("click", closeShareSheet);
+    back.querySelectorAll(".share-item").forEach((b) => b.addEventListener("click", async (e) => {
+      e.preventDefault();
+      const it = items[Number(b.dataset.i)];
+      if (!it) return;
+      try { await it.run(b); } catch (err) { console.warn("[piboard] share", err); }
+      if (!it.keep && document.getElementById("shareSheet") === back) closeShareSheet();
+    }));
+    const onKey = (e) => { if (e.key === "Escape") { closeShareSheet(); document.removeEventListener("keydown", onKey, true); } };
+    document.addEventListener("keydown", onKey, true);
+    const first = back.querySelector(".share-item");
+    if (first) first.focus();
+    return back;
+  }
+
   /* ---------- Clone complet d'une installation ----------
      Export : les cases cochees decident de ce qui part. Import : on
      REGARDE d'abord (combien de tuiles, quelle version, quels chemins
@@ -10029,6 +10178,9 @@
     $("setMultiColumnForms").checked = settings.multiColumnForms !== false;
     $("setQuickStart").checked = settings.quickStartOnLaunch !== false;
     $("setCartoKey").value = settings.cartoKey || "";
+    $("setShareNotifyUrl").value = settings.shareNotifyUrl || "";
+    $("setShareNotifyMethod").value = settings.shareNotifyMethod === "GET" ? "GET" : "POST";
+    $("setShareNotifyBody").value = settings.shareNotifyBody != null ? settings.shareNotifyBody : "{title}\n{url}";
     $("setUpdateChannel").value = settings.updateChannel === "preview" ? "preview" : "stable";
     $("setDisplayMode").value = settings.displayMode === "dashboard" ? "dashboard" : "classic";
     $("setPageAuto").checked = !!settings.pageAutoAdvance;
@@ -10093,6 +10245,9 @@
       multiColumnForms: $("setMultiColumnForms").checked,
       quickStartOnLaunch: $("setQuickStart").checked,
       cartoKey: $("setCartoKey").value.trim(),
+      shareNotifyUrl: $("setShareNotifyUrl").value.trim(),
+      shareNotifyMethod: $("setShareNotifyMethod").value === "GET" ? "GET" : "POST",
+      shareNotifyBody: $("setShareNotifyBody").value,
       updateChannel: $("setUpdateChannel").value === "preview" ? "preview" : "stable",
       displayMode: $("setDisplayMode").value === "dashboard" ? "dashboard" : "classic",
       immersive: $("setImmersive").checked,

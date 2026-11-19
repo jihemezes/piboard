@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.176.0
+
+- **Tuile Flux RSS : partage d'un article.** Bouton « ⤴ Partager » dans la fenêtre de lecture, appui long
+  (550 ms) ou clic droit sur un titre (le clic droit remplace le menu de tuile sur les titres). Fenêtre de
+  partage commune (`window.PiBoard.share`) : partage système (app Mac : `ShareMenu` d'Electron — AirDrop,
+  Messages, Mail, Notes — via `POST /api/share/native`, réservée aux appels locaux ; navigateur : `navigator.share`),
+  Courriel (`mailto:`), Messages (app Mac, `sms:`), WhatsApp, Telegram, QR code, Envoyer sur mon téléphone
+  (notification par l'adresse commune des réglages), Copier le lien. En kiosque sur le Pi, les liens à ouvrir
+  deviennent des QR codes. L'app de bureau ouvre désormais `mailto:` et `sms:` dans l'application du système.
+- « Lire plus tard » : liste propre à la tuile (50 au plus, réglage caché `readLater`), pastille « 📑 À lire (n) ».
+  Réglages `shareText` (titre + lien / titre + résumé + lien) et `shareSource`.
+- Réglages généraux → Contenus et services → Partage : adresse, méthode, message ({title} {url} {source} {text}),
+  bouton « Envoyer un essai ».
+- Tests : `rssShare.test.js`, bloc « Partage » dans `dom-smoke.js`. Aide FR/EN.
+
 ## 1.175.0
 
 - **Analyse réseau, fenêtre d'un hôte : étendue du test de ports.** Rapide (36 ports courants), Étendue (1 163 :

@@ -252,6 +252,14 @@
       // re-renders (rotation, refresh, language change) which fully
       // replace the innerHTML.
       this.ctx.el.addEventListener("click", (e) => {
+        // Un appui long vient d'ouvrir le partage : le clic qui suit est ignore.
+        if (this.suppressClick) { this.suppressClick = false; e.stopPropagation(); return; }
+        const rl = e.target.closest(".pwr-rl-chip");
+        if (rl) { e.stopPropagation(); this.view = this.view === "later" ? "list" : "later"; this.render(); return; }
+        const del = e.target.closest(".pwr-rl-del");
+        if (del) { e.stopPropagation(); this.removeReadLater(Number(del.dataset.i)); return; }
+        const rli = e.target.closest(".pwr-rl-item");
+        if (rli) { e.stopPropagation(); const it = this.readLaterList()[Number(rli.dataset.i)]; if (it) this.openArticleItem(it); return; }
         const chip = e.target.closest(".pwr-group-chip");
         if (chip) {
           e.stopPropagation();
@@ -266,8 +274,102 @@
         e.stopPropagation(); // sinon rouvre les reglages en mode edition / else reopens settings in edit mode
         this.openArticle(Number(li.dataset.idx));
       });
+      this.wireShareGestures();
       await this.refresh();
       this.arm();
+    }
+
+    /* ---------- Partage d'un article (1.176.0) ----------
+       Appui long (doigt ou souris) ou clic droit sur un titre : fenetre de
+       partage, sans ouvrir l'article. Long press or right-click on a
+       title: share window, without opening the article. */
+    wireShareGestures() {
+      const el = this.ctx.el;
+      let timer = null, start = null;
+      const itemAt = (target) => {
+        const li = target && target.closest ? target.closest(".pwr-item[data-link='1'], .pwr-rl-item") : null;
+        if (!li) return null;
+        if (li.classList.contains("pwr-rl-item")) return this.readLaterList()[Number(li.dataset.i)] || null;
+        return (this.currentItems || [])[Number(li.dataset.idx)] || null;
+      };
+      el.addEventListener("pointerdown", (e) => {
+        if (e.button && e.button !== 0) return;
+        const it = itemAt(e.target);
+        if (!it || document.body.classList.contains("editing")) return;
+        start = { x: e.clientX || 0, y: e.clientY || 0 };
+        clearTimeout(timer);
+        timer = setTimeout(() => { timer = null; this.suppressClick = true; this.shareItem(it, start); }, 550);
+      });
+      const cancel = (e) => {
+        if (!timer) return;
+        if (e && e.type === "pointermove" && start && Math.abs((e.clientX || 0) - start.x) + Math.abs((e.clientY || 0) - start.y) < 10) return;
+        clearTimeout(timer); timer = null;
+      };
+      ["pointerup", "pointercancel", "pointerleave", "pointermove"].forEach((ty) => el.addEventListener(ty, cancel));
+      el.addEventListener("contextmenu", (e) => {
+        const it = itemAt(e.target);
+        if (!it) return;
+        e.preventDefault();
+        e.stopPropagation(); // pas le menu de la tuile / not the tile menu
+        clearTimeout(timer); timer = null;
+        this.shareItem(it, { x: e.clientX, y: e.clientY });
+      });
+    }
+
+    shareData(it) {
+      const s = this.ctx.settings;
+      const source = it.sourceLabel || (this.feed && this.feed.source) || "";
+      const parts = [it.title];
+      if (s.shareText === "summary") {
+        const sum = String(it.content || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+        if (sum) parts.push(sum.length > 280 ? sum.slice(0, 277) + "…" : sum);
+      }
+      if (s.shareSource !== false && source) parts.push("— " + source);
+      if (it.link) parts.push(it.link);
+      return { title: it.title, url: it.link || "", source, text: parts.filter(Boolean).join("\n") };
+    }
+
+    shareItem(it, pos) {
+      if (!it || !window.PiBoard || typeof window.PiBoard.share !== "function") return;
+      const t = (k) => this.ctx.i18n.t(k);
+      const saved = this.isReadLater(it);
+      return window.PiBoard.share(this.shareData(it), {
+        x: pos && pos.x, y: pos && pos.y,
+        extras: [{ id: "later", icon: "📑", label: saved ? t("rss.later.remove") : t("rss.later.add"), run: () => {
+          if (saved) this.removeReadLater(this.readLaterList().findIndex((x) => x.link === it.link));
+          else this.addReadLater(it);
+        } }]
+      });
+    }
+
+    /* ---------- Lire plus tard ----------
+       Liste propre a la tuile, enregistree avec ses reglages (50 au plus).
+       Per-tile list, saved with its settings (50 at most). */
+    readLaterList() {
+      const raw = this.ctx.settings.readLater;
+      try { const v = typeof raw === "string" ? JSON.parse(raw || "[]") : raw; return Array.isArray(v) ? v : []; }
+      catch (e) { return []; }
+    }
+    saveReadLater(list) {
+      const v = JSON.stringify(list.slice(0, 50));
+      this.ctx.settings = Object.assign({}, this.ctx.settings, { readLater: v });
+      if (typeof this.ctx.updateSettings === "function") this.ctx.updateSettings({ readLater: v });
+      if (!list.length && this.view === "later") this.view = "list";
+      this.render();
+    }
+    isReadLater(it) { return !!(it && it.link) && this.readLaterList().some((x) => x.link === it.link); }
+    addReadLater(it) {
+      if (!it || !it.link || this.isReadLater(it)) return;
+      const list = this.readLaterList();
+      list.unshift({ title: it.title, link: it.link, date: it.date || "", sourceLabel: it.sourceLabel || (this.feed && this.feed.source) || "",
+        sourceColor: it.sourceColor || "", image: it.image || null, content: String(it.content || "").slice(0, 4000), addedAt: new Date().toISOString() });
+      this.saveReadLater(list);
+    }
+    removeReadLater(i) {
+      const list = this.readLaterList();
+      if (i < 0 || i >= list.length) return;
+      list.splice(i, 1);
+      this.saveReadLater(list);
     }
 
     arm() {
@@ -579,8 +681,20 @@
       const lang = this.ctx.i18n.lang;
       clearInterval(this.rotateTimer);
 
+      const later = this.readLaterList();
+      const laterChip = later.length
+        ? `<button type="button" class="pwr-rl-chip${this.view === "later" ? " active" : ""}">📑 ${escapeHtml(this.ctx.i18n.t(this.view === "later" ? "rss.later.back" : "rss.later.chip").replace("{n}", String(later.length)))}</button>`
+        : "";
+      if (this.view === "later" && later.length) {
+        this.ctx.el.innerHTML = `<div class="pw-rss">${laterChip}<ul>${later.map((it, i) => `
+          <li class="pwr-item pwr-rl-item pwr-clickable" data-i="${i}">
+            <div class="pwr-title">${it.sourceLabel ? `<span class="pwr-tag"${tagStyle(it.sourceColor)}>${escapeHtml(it.sourceLabel)}</span>` : ""}${escapeHtml(it.title)}</div>
+            <div class="pwr-meta">${niceDate(it.date, lang)}<button type="button" class="pwr-rl-del" data-i="${i}" title="${escapeAttr(this.ctx.i18n.t("rss.later.remove"))}">✕</button></div>
+          </li>`).join("")}</ul></div>`;
+        return;
+      }
       if (!this.feed || !this.feed.items.length) {
-        this.ctx.el.innerHTML = `<div class="pw-rss"><div class="pwr-empty">${this.ctx.i18n.t("rss.empty")}</div></div>`;
+        this.ctx.el.innerHTML = `<div class="pw-rss">${laterChip}<div class="pwr-empty">${this.ctx.i18n.t("rss.empty")}</div></div>`;
         return;
       }
 
@@ -622,7 +736,7 @@
 
       this.ctx.el.innerHTML = `
         <div class="pw-rss ${s.rotate ? "pwr-rotate" : ""}">
-          ${chips}${warn}
+          ${laterChip}${chips}${warn}
           <div class="pwr-source${this.feed.sourceColor ? " pwr-source-coloured" : ""}"${tagStyle(this.feed.sourceColor)} ${s.showSource !== false && !multiFeed ? "" : "hidden"}>${this.feed.source || ""}</div>
           <ul>
             ${items.map((it, idx) => `
@@ -661,6 +775,7 @@
         <div class="modal-card pwr-modal-card">
           <header class="modal-head">
             <h2 class="pwr-modal-title"></h2>
+            <button type="button" class="pwr-modal-share" data-share title="${i18n.t("share.title")}">⤴ ${i18n.t("share.title")}</button>
             <button type="button" class="modal-close" data-close aria-label="${i18n.t("common.close")}">&times;</button>
           </header>
           <div class="pwr-modal-meta"></div>
@@ -669,6 +784,8 @@
       document.body.appendChild(wrap);
 
       wrap.addEventListener("click", (e) => {
+        const sh = e.target.closest && e.target.closest("[data-share]");
+        if (sh) { e.stopPropagation(); const r = sh.getBoundingClientRect(); this.shareItem(this.modalItem, { x: Math.round(r.left), y: Math.round(r.bottom) }); return; }
         if (e.target === wrap || e.target.hasAttribute("data-close")) wrap.hidden = true;
       });
       this._escHandler = (e) => { if (e.key === "Escape" && !wrap.hidden) wrap.hidden = true; };
@@ -694,6 +811,12 @@
     async openArticle(idx) {
       const it = this.currentItems[idx];
       if (!it || !it.link) return;
+      return this.openArticleItem(it);
+    }
+
+    async openArticleItem(it) {
+      if (!it || !it.link) return;
+      this.modalItem = it;
       const token = ++this.openToken;
       const i18n = this.ctx.i18n;
       const lang = i18n.lang;

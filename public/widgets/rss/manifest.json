@@ -1,6 +1,6 @@
 {
   "id": "rss",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "name": {
     "en": "RSS feed",
     "fr": "Flux RSS"
@@ -266,6 +266,62 @@
       "group": {
         "en": "Filters",
         "fr": "Filtres"
+      }
+    },
+    {
+      "key": "shareText",
+      "type": "select",
+      "default": "title",
+      "options": [
+        {
+          "value": "title",
+          "label": {
+            "en": "Title + link",
+            "fr": "Titre + lien"
+          }
+        },
+        {
+          "value": "summary",
+          "label": {
+            "en": "Title + summary + link",
+            "fr": "Titre + résumé + lien"
+          }
+        }
+      ],
+      "label": {
+        "en": "Shared text",
+        "fr": "Texte partagé"
+      },
+      "group": {
+        "en": "Sharing",
+        "fr": "Partage"
+      }
+    },
+    {
+      "key": "shareSource",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Add the source name to the shared text",
+        "fr": "Ajouter le nom de la source au texte partagé"
+      },
+      "group": {
+        "en": "Sharing",
+        "fr": "Partage"
+      }
+    },
+    {
+      "key": "readLater",
+      "type": "text",
+      "default": "",
+      "hidden": true,
+      "label": {
+        "en": "Read later",
+        "fr": "Lire plus tard"
+      },
+      "group": {
+        "en": "Sharing",
+        "fr": "Partage"
       }
     },
     {

@@ -32,6 +32,27 @@
 
 # Nouveautes / What's new
 
+## 1.176.0
+
+**Flux RSS : partagez un article avec les moyens de votre système**
+
+Un article vous plaît ? Touchez **⤴ Partager** dans la fenêtre de lecture, ou faites un **appui long**
+(ou un clic droit) sur son titre. Sur Mac, le menu de partage du système propose **AirDrop**, **Messages**
+et **Mail** ; partout, vous avez aussi le **courriel**, **WhatsApp**, **Telegram**, un **QR code** à
+scanner, l'**envoi sur votre téléphone** par notification et la copie du lien. Sur le Raspberry Pi, les
+liens s'affichent en QR code pour finir sur le téléphone. Nouveau aussi : une liste **« À lire »** pour
+garder un article de côté.
+
+---
+
+**RSS feeds: share an article with your system's tools**
+
+Like an article? Tap **⤴ Share** in the reading window, or **long-press** (or right-click) its title.
+On a Mac the system share menu offers **AirDrop**, **Messages** and **Mail**; everywhere you also get
+**email**, **WhatsApp**, **Telegram**, a **QR code** to scan, **sending to your phone** as a
+notification and copying the link. On the Raspberry Pi, links show as a QR code to finish on the phone.
+Also new: a **"To read"** list to keep an article aside.
+
 ## 1.175.0
 
 **Analyse réseau : test de ports rapide, étendu ou complet**

@@ -239,3 +239,13 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Partage et « Lire plus tard » (1.176.0) */
+.pw-rss .pwr-rl-chip { all: unset; cursor: pointer; display: inline-block; font-size: 12px; padding: 3px 10px; margin: 0 0 6px; border-radius: 999px;
+  background: rgba(127,127,127,.15); border: 1px solid rgba(127,127,127,.3); }
+.pw-rss .pwr-rl-chip.active { background: var(--accent, #4aa3ff); color: var(--on-accent, #fff); border-color: var(--accent, #4aa3ff); }
+.pw-rss .pwr-rl-del { all: unset; cursor: pointer; margin-left: 8px; padding: 0 6px; border-radius: 6px; opacity: .7; }
+.pw-rss .pwr-rl-del:hover { opacity: 1; background: rgba(127,127,127,.2); }
+.pwr-modal-share { margin-left: auto; margin-right: 6px; border: 1px solid var(--tile-edge, rgba(127,127,127,.35)); background: transparent; color: inherit;
+  border-radius: 8px; padding: 5px 10px; font: inherit; font-size: 13px; cursor: pointer; white-space: nowrap; }
+.pwr-modal-share:hover { background: rgba(127,127,127,.2); }

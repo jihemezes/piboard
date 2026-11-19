@@ -238,6 +238,12 @@ const DEFAULT_SETTINGS = {
      with the passwords would give a false impression of
      confidentiality. */
   cartoKey: "",
+  /* Partage d'articles « Envoyer sur mon telephone » (1.176.0) : une
+     adresse de notification commune (ntfy, Home Assistant, SMS Free
+     Mobile...). Share to phone: one shared notification address. */
+  shareNotifyUrl: "",
+  shareNotifyMethod: "POST",
+  shareNotifyBody: "{title}\n{url}",
   colors: {
     dark: { bg: "#0B0E14", tile: "#141926" },
     light: { bg: "#EFEDE7", tile: "#FFFFFF" }
@@ -4138,4 +4144,36 @@ if (require.main === module) {
   });
 }
 
-module.exports = { app, start };
+/* Partage natif (1.176.0). L'application de bureau (electron/main.js)
+   enregistre ici une fonction qui ouvre le menu de partage du systeme
+   (macOS : AirDrop, Messages, Mail, Notes...). La route n'accepte que les
+   appels de la machine elle-meme : un navigateur d'une autre machine ne
+   doit pas pouvoir ouvrir un menu sur l'ecran du Mac.
+   Native share: the desktop app registers a function opening the system
+   share menu. Loopback callers only. */
+let nativeShare = null;
+function setNativeShare(fn) { nativeShare = typeof fn === "function" ? fn : null; }
+function isLoopback(req) {
+  const a = String((req.socket && req.socket.remoteAddress) || "");
+  return a === "127.0.0.1" || a === "::1" || a === "::ffff:127.0.0.1";
+}
+app.get("/api/share/native", (req, res) => {
+  res.json({ available: !!nativeShare && isLoopback(req) });
+});
+app.post("/api/share/native", async (req, res) => {
+  if (!nativeShare || !isLoopback(req)) return res.status(404).json({ error: "unavailable" });
+  const b = req.body || {};
+  const url = String(b.url || "");
+  if (url && !/^https?:\/\//i.test(url)) return res.status(400).json({ error: "invalid url" });
+  try {
+    const ok = await nativeShare({
+      urls: url ? [url] : [],
+      texts: b.text ? [String(b.text).slice(0, 4000)] : [],
+      x: Number.isFinite(Number(b.x)) ? Math.round(Number(b.x)) : undefined,
+      y: Number.isFinite(Number(b.y)) ? Math.round(Number(b.y)) : undefined
+    });
+    res.json({ ok: !!ok });
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+
+module.exports = { app, start, setNativeShare };

@@ -214,7 +214,8 @@
           <p><u>Outils multimédias</u></p>
           <p>ffmpeg et VLC, utilisés uniquement par la tuile Chaînes TV (son AC3/DTS inaudible, chaînes récalcitrantes, enregistrement). La section dit s'ils sont présents et, selon le système, propose un bouton <b>Installer</b> (Linux, macOS) ou la commande à taper. Sur Mac, ffmpeg est téléchargé dans le dossier de PiBoard et VLC copié dans Applications, après vérification de son empreinte et de sa signature. En cas d'échec, un message rouge dit pourquoi, avec un bouton <b>Ouvrir le journal</b>. Détails : fiche <i>Chaînes TV</i>.</p>
           <p><u>Cartes</u></p>
-          <div class="help-opt"><span class="help-opt-name">Clé CARTO des fonds de carte</span><span class="help-opt-desc">Les tuiles <b>Carte de trafic</b>, <b>Radar météo</b> et <b>Avions en vue</b> partagent le même fond de carte, fourni par CARTO. Ce service était historiquement libre d'accès ; il exige désormais une clé. Sans elle, les cartes s'affichent toujours mais chaque tuile d'image est barrée d'un filigrane « API KEY REQUIRED », ce qui donne l'impression que la tuile est cassée alors qu'elle fonctionne.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Partage — Adresse de notification</span><span class="help-opt-desc">Sert au choix « Envoyer sur mon téléphone » quand on partage un article de la tuile Flux RSS. Toute adresse de notification convient (ntfy, Home Assistant, SMS Free Mobile, Pushover, IFTTT…). Avec <b>Méthode</b> et <b>Message (POST)</b>, les repères {title}, {url}, {source} et {text} sont remplacés par l'article (encodés dans l'adresse). Exemples : ntfy = POST https://ntfy.sh/mon-sujet avec « {title} {url} » ; SMS Free Mobile = GET https://smsapi.free-mobile.fr/sendmsg?user=…&amp;pass=…&amp;msg={text}. Le bouton <b>Envoyer un essai</b> teste les valeurs saisies, avant même d'enregistrer.</span></div>
+<div class="help-opt"><span class="help-opt-name">Clé CARTO des fonds de carte</span><span class="help-opt-desc">Les tuiles <b>Carte de trafic</b>, <b>Radar météo</b> et <b>Avions en vue</b> partagent le même fond de carte, fourni par CARTO. Ce service était historiquement libre d'accès ; il exige désormais une clé. Sans elle, les cartes s'affichent toujours mais chaque tuile d'image est barrée d'un filigrane « API KEY REQUIRED », ce qui donne l'impression que la tuile est cassée alors qu'elle fonctionne.</span></div>
           <p>La clé est <b>gratuite</b> et s'obtient en deux minutes sur <a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener">carto.com/basemaps/apikey</a>, sans compte CARTO ni carte bancaire, dans une limite d'usage courant très large (5 millions de tuiles par mois civil, tous services confondus). Elle se saisit <b>une seule fois ici</b> et non dans chaque tuile : les trois affichent le même fond, la ressaisir trois fois n'aurait aucun sens. Le changement s'applique immédiatement, sans recharger la page.</p>
           <p><b>Pourquoi PiBoard n'embarque pas de clé.</b> CARTO délivre des clés par client et interdit de les partager entre projets sans lien. Une clé placée dans le dépôt serait utilisée par toutes les installations à la fois : le quota commun serait épuisé rapidement et, une fois la clé révoquée, les cartes de tout le monde tomberaient d'un coup.</p>
           <p><b>Ce n'est pas un secret.</b> Une clé CARTO circule en clair dans l'adresse de chaque tuile d'image, visible dans l'onglet réseau du navigateur. Elle n'est donc pas rangée dans le coffre chiffré avec les mots de passe, qui donnerait une fausse impression de confidentialité. À ne pas confondre avec la clé <b>TomTom</b> de la tuile Trafic, qui est distincte, se saisit dans les réglages de cette tuile, et ne concerne que les couches de flux et d'incidents posées <i>par-dessus</i> le fond.</p>
@@ -314,7 +315,8 @@
           <p><u>Media tools</u></p>
           <p>ffmpeg and VLC, used only by the TV channels tile (inaudible AC3/DTS sound, stubborn channels, recording). The section says whether they are present and, depending on the system, offers an <b>Install</b> button (Linux, macOS) or the command to type. On a Mac, ffmpeg is downloaded into PiBoard's folder and VLC copied into Applications, after checking its fingerprint and signature. On failure, a red message says why, with an <b>Open log</b> button. Details: <i>TV channels</i> sheet.</p>
           <p><u>Maps</u></p>
-          <div class="help-opt"><span class="help-opt-name">CARTO base map key</span><span class="help-opt-desc">The <b>Traffic map</b>, <b>Weather radar</b> and <b>Planes overhead</b> tiles share the same base map, supplied by CARTO. That service was historically open to all; it now requires a key. Without one the maps still appear, but every image tile is stamped with an "API KEY REQUIRED" watermark, which makes the tile look broken when it is in fact working.</span></div>
+          <div class="help-opt"><span class="help-opt-name">Sharing — Notification address</span><span class="help-opt-desc">Used by the "Send to my phone" choice when sharing an article from the RSS feed tile. Any notification address works (ntfy, Home Assistant, Free Mobile SMS, Pushover, IFTTT…). With <b>Method</b> and <b>Message (POST)</b>, the placeholders {title}, {url}, {source} and {text} are replaced by the article (encoded inside the address). Examples: ntfy = POST https://ntfy.sh/my-topic with "{title} {url}"; Free Mobile SMS = GET https://smsapi.free-mobile.fr/sendmsg?user=…&amp;pass=…&amp;msg={text}. The <b>Send a test</b> button tests the values typed, even before saving.</span></div>
+<div class="help-opt"><span class="help-opt-name">CARTO base map key</span><span class="help-opt-desc">The <b>Traffic map</b>, <b>Weather radar</b> and <b>Planes overhead</b> tiles share the same base map, supplied by CARTO. That service was historically open to all; it now requires a key. Without one the maps still appear, but every image tile is stamped with an "API KEY REQUIRED" watermark, which makes the tile look broken when it is in fact working.</span></div>
           <p>The key is <b>free</b> and takes two minutes to obtain at <a href="https://carto.com/basemaps/apikey/" target="_blank" rel="noopener">carto.com/basemaps/apikey</a>, with no CARTO account and no credit card, within a very generous everyday limit (5 million tiles per calendar month across all services). You type it <b>once here</b> rather than in each tile: all three show the same base map, so re-typing it three times would make no sense. The change applies immediately, without reloading the page.</p>
           <p><b>Why PiBoard ships no key.</b> CARTO issues keys per customer and forbids sharing them across unrelated projects. A key placed in the repository would be used by every installation at once: the shared quota would run out quickly and, once the key was revoked, everyone's maps would fail at the same moment.</p>
           <p><b>This is not a secret.</b> A CARTO key travels in the clear inside every image tile's address, visible in the browser's network tab. It is therefore not filed in the encrypted vault alongside passwords, which would give a false impression of confidentiality. Not to be confused with the Traffic tile's <b>TomTom</b> key, which is separate, is entered in that tile's own settings, and concerns only the flow and incident layers drawn <i>on top of</i> the base map.</p>
@@ -2454,6 +2456,7 @@ Franceinfo".</span></div>
   <li><b>Jusqu'à 12 flux</b> RSS ou Atom réunis dans une liste que vous éditez (ajouter, retirer, réordonner, suspendre), chacun avec un nom court et <b>sa couleur</b> (automatique ou choisie).</li>
   <li><b>Groupes</b> de flux (Actualités, Tech, Sport…) avec sélecteur sur la tuile ou rotation automatique.</li>
   <li><b>Filtres par mots-clés</b> (à garder ou à masquer), <b>quota par flux</b> et <b>doublons</b> masqués entre flux.</li>
+  <li><b>Partage d'un article</b> adapté à votre système (AirDrop, Messages et Mail sur Mac ; courriel, WhatsApp, Telegram, QR code, envoi sur votre téléphone partout) et liste <b>« À lire »</b>.</li>
   <li><b>Flux en panne signalés</b> par une ligne d'avertissement, sans gêner les autres.</li>
   <li><b>Liste</b> des derniers titres ou <b>défilement</b> d'un titre à la fois, source affichée en option.</li>
   <li><b>Lecture de l'article complet</b> d'un toucher, en mode lecture (sans publicités ni menus), avec l'illustration du flux ; repli sur le résumé si l'extraction échoue.</li>
@@ -2473,6 +2476,19 @@ Franceinfo".</span></div>
 <h4>Un flux refusé par son site (erreur 403)</h4>
           <p>Certains sites (actu.fr par exemple) refusent les requêtes de PiBoard avec l'erreur <b>403</b> : le flux est valide dans un navigateur, mais pas dans la tuile. Dans ce cas, ouvrez les options <b>⋯</b> de ce flux, cochez <b>« Se présenter comme un navigateur ordinaire »</b> puis enregistrez : PiBoard se présente alors au site comme un navigateur classique au lieu de s'annoncer comme « PiBoard ». La case est <b>propre à chaque flux</b> et décochée par défaut : ne la cochez que pour un flux refusé, les autres restent exactement comme avant. Pour repérer le flux concerné, regardez la ligne d'avertissement de la tuile, qui indique le code : « Actu Toulouse (403) ».</p>
 
+<h4>Partager un article</h4>
+          <p>Trois façons d'ouvrir la fenêtre <b>Partager</b> : le bouton <b>⤴ Partager</b> en haut de la fenêtre de lecture, un <b>appui long</b> (un demi-seconde) sur un titre de la liste, ou un <b>clic droit</b> sur un titre. Les deux derniers partagent sans ouvrir l'article. Les choix proposés dépendent de l'endroit où tourne PiBoard :</p>
+          <ul>
+            <li><b>Partager…</b> : le partage du système. Dans l'application PiBoard sur <b>Mac</b>, c'est le menu de macOS, avec <b>AirDrop</b>, <b>Messages</b>, <b>Mail</b>, Notes, Rappels et les apps installées. Dans un navigateur qui sait partager (Safari, Edge, Chrome sous Windows ou Android), c'est le partage du navigateur. Absent ailleurs (application sous Windows ou Linux, Raspberry Pi) : les autres choix prennent le relais.</li>
+            <li><b>Courriel</b> : ouvre votre messagerie avec le titre en objet et le texte prêt. Sur Mac, <b>Messages</b> est aussi proposé directement.</li>
+            <li><b>WhatsApp</b> et <b>Telegram</b> : message prérempli, vous choisissez le destinataire. Signal ne propose pas de lien de partage : passez par « Partager… » ou le QR code.</li>
+            <li><b>QR code</b> : le lien de l'article à scanner avec le téléphone, qui offre ensuite tous ses propres partages.</li>
+            <li><b>Envoyer sur mon téléphone</b> : l'article part en notification (ntfy, Home Assistant, SMS Free Mobile…), d'après l'adresse définie une fois dans <b>Réglages → Contenus et services → Partage</b>. Tant qu'elle n'est pas définie, ce choix ouvre ces réglages.</li>
+            <li><b>Copier le lien</b> et <b>Lire plus tard</b>.</li>
+          </ul>
+          <p><b>Sur le Raspberry Pi en kiosque</b>, il n'y a ni messagerie ni navigateur à côté du tableau : courriel, WhatsApp et Telegram s'affichent alors en <b>QR code</b>, que le téléphone ouvre directement avec le message prêt.</p>
+          <p><b>Lire plus tard</b> range l'article dans une liste propre à la tuile (50 au plus), enregistrée avec ses réglages. Une pastille <b>📑 À lire (n)</b> apparaît alors en haut de la tuile : touchez-la pour voir la liste, touchez un article pour le lire, ✕ pour le retirer, et la pastille de nouveau pour revenir aux flux. Le texte partagé se règle avec <b>Texte partagé</b> et <b>Ajouter le nom de la source au texte partagé</b>.</p>
+
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
 <p class="help-opt-group">Flux</p>
@@ -2491,6 +2507,9 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Garder seulement les articles contenant (mots séparés par des virgules)</span><span class="help-opt-desc">Vide par défaut = tout garder. S'applique à tous les flux, en plus des mots propres à chaque flux.</span></div>
 <div class="help-opt"><span class="help-opt-name">Masquer les articles contenant (mots séparés par des virgules)</span><span class="help-opt-desc">Utile contre les spoilers, un sport qu'on ne suit pas ou un sujet récurrent.</span></div>
 <div class="help-opt"><span class="help-opt-name">Signaler un flux qui ne répond pas</span><span class="help-opt-desc">Coché par défaut. Une petite ligne d'avertissement nomme les flux en panne.</span></div>
+<p class="help-opt-group">Partage</p>
+<div class="help-opt"><span class="help-opt-name">Texte partagé</span><span class="help-opt-desc">« Titre + lien » (par défaut) ou « Titre + résumé + lien » (les 280 premiers caractères du résumé du flux).</span></div>
+<div class="help-opt"><span class="help-opt-name">Ajouter le nom de la source au texte partagé</span><span class="help-opt-desc">Coché par défaut : « — Le Monde » avant le lien.</span></div>
 
 <h4>Articles réservés aux abonnés</h4>
           <p>Sans abonnement, PiBoard affiche ce que le site laisse voir à tout le monde : souvent un <b>aperçu</b>, signalé comme tel. Un article déclaré payant par son éditeur et ouvert sans accès complet est ensuite marqué d'un <b>🔒</b> dans la liste.</p>
@@ -2510,6 +2529,7 @@ Franceinfo".</span></div>
   <li><b>Up to 12 feeds</b>, RSS or Atom, combined in a list you edit (add, remove, reorder, pause), each with a short name and <b>its own colour</b> (automatic or chosen).</li>
   <li>Feed <b>groups</b> (News, Tech, Sport…) with a selector on the tile or automatic rotation.</li>
   <li><b>Keyword filters</b> (to keep or hide), a <b>per-feed quota</b> and <b>duplicates</b> hidden between feeds.</li>
+  <li><b>Sharing an article</b> suited to your system (AirDrop, Messages and Mail on a Mac; email, WhatsApp, Telegram, QR code, sending to your phone everywhere) and a <b>"To read"</b> list.</li>
   <li><b>Failing feeds flagged</b> by a warning line, without bothering the others.</li>
   <li><b>List</b> of the latest headlines or <b>one headline at a time</b>, source shown optionally.</li>
   <li><b>Full article</b> with a touch, in reading mode (no ads or menus), with the feed's illustration; falls back to the summary if extraction fails.</li>
@@ -2529,6 +2549,19 @@ Franceinfo".</span></div>
 <h4>A feed refused by its site (error 403)</h4>
           <p>Some sites (actu.fr for example) refuse PiBoard's requests with error <b>403</b>: the feed is valid in a browser, but not in the tile. In that case, open that feed's <b>⋯</b> options, tick <b>“Present as a regular browser”</b> and save: PiBoard then introduces itself to the site as an ordinary browser instead of announcing itself as “PiBoard”. The box is <b>specific to each feed</b> and unticked by default: tick it only for a refused feed, the others stay exactly as before. To spot the feed concerned, look at the tile's warning line, which shows the code: “Actu Toulouse (403)”.</p>
 
+<h4>Sharing an article</h4>
+          <p>Three ways to open the <b>Share</b> window: the <b>⤴ Share</b> button at the top of the reading window, a <b>long press</b> (half a second) on a title in the list, or a <b>right-click</b> on a title. The last two share without opening the article. The choices offered depend on where PiBoard runs:</p>
+          <ul>
+            <li><b>Share…</b>: the system's sharing. In the PiBoard app on a <b>Mac</b>, it is the macOS menu, with <b>AirDrop</b>, <b>Messages</b>, <b>Mail</b>, Notes, Reminders and installed apps. In a browser that can share (Safari, Edge, Chrome on Windows or Android), it is the browser's sharing. Absent elsewhere (app on Windows or Linux, Raspberry Pi): the other choices take over.</li>
+            <li><b>Email</b>: opens your mail app with the title as subject and the text ready. On a Mac, <b>Messages</b> is also offered directly.</li>
+            <li><b>WhatsApp</b> and <b>Telegram</b>: a prefilled message, you pick the recipient. Signal offers no share link: use "Share…" or the QR code.</li>
+            <li><b>QR code</b>: the article's link to scan with the phone, which then offers all its own sharing options.</li>
+            <li><b>Send to my phone</b>: the article goes out as a notification (ntfy, Home Assistant, Free Mobile SMS…), using the address set once in <b>Settings → Content and services → Sharing</b>. Until it is set, this choice opens those settings.</li>
+            <li><b>Copy link</b> and <b>Read later</b>.</li>
+          </ul>
+          <p><b>On the kiosk Raspberry Pi</b> there is no mail app or browser beside the dashboard: email, WhatsApp and Telegram then show as a <b>QR code</b>, which the phone opens directly with the message ready.</p>
+          <p><b>Read later</b> files the article in a list belonging to the tile (50 at most), saved with its settings. A <b>📑 To read (n)</b> pill then appears at the top of the tile: tap it to see the list, tap an article to read it, ✕ to remove it, and the pill again to go back to the feeds. The shared text is set with <b>Shared text</b> and <b>Add the source name to the shared text</b>.</p>
+
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
 <p class="help-opt-group">Feeds</p>
@@ -2547,6 +2580,9 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Keep only articles containing (words, comma-separated)</span><span class="help-opt-desc">Empty by default = keep everything. Applies to every feed, on top of each feed's own words.</span></div>
 <div class="help-opt"><span class="help-opt-name">Hide articles containing (words, comma-separated)</span><span class="help-opt-desc">Useful against spoilers, a sport you don't follow or a recurring topic.</span></div>
 <div class="help-opt"><span class="help-opt-name">Warn when a feed does not answer</span><span class="help-opt-desc">Ticked by default. A small warning line names the failing feeds.</span></div>
+<p class="help-opt-group">Sharing</p>
+<div class="help-opt"><span class="help-opt-name">Shared text</span><span class="help-opt-desc">"Title + link" (default) or "Title + summary + link" (the first 280 characters of the feed's summary).</span></div>
+<div class="help-opt"><span class="help-opt-name">Add the source name to the shared text</span><span class="help-opt-desc">Ticked by default: "— Le Monde" before the link.</span></div>
 
 <h4>Subscriber-only articles</h4>
           <p>Without a subscription, PiBoard shows what the site lets everyone see: often a <b>preview</b>, flagged as such. An article its publisher declares as paid and opened without full access is then marked with a <b>🔒</b> in the list.</p>

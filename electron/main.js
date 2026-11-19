@@ -287,7 +287,8 @@ function createWindow() {
      browser rather than replacing the dashboard inside the window, from
      which the user could not navigate back. */
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    if (/^https?:\/\//i.test(url)) shell.openExternal(url);
+    // mailto: / sms: : partage d'un article (1.176.0) vers Mail ou Messages.
+    if (/^(https?:\/\/|mailto:|sms:)/i.test(url)) shell.openExternal(url);
     return { action: "deny" };
   });
 
@@ -615,6 +616,21 @@ app.whenReady().then(async () => {
       }
     }
     serverPort = started.port;
+
+    /* Menu de partage du systeme pour la tuile Flux RSS (1.176.0). Electron
+       ne le propose que sous macOS (AirDrop, Messages, Mail, Notes...).
+       System share menu for the RSS tile; Electron offers it on macOS only. */
+    if (platform.id === "darwin" && typeof server.setNativeShare === "function") {
+      server.setNativeShare(({ urls, texts, x, y }) => {
+        const { ShareMenu } = require("electron");
+        if (!ShareMenu || !mainWindow) return false;
+        const menu = new ShareMenu({ urls, texts });
+        const opts = { window: mainWindow };
+        if (Number.isFinite(x) && Number.isFinite(y)) { opts.x = x; opts.y = y; }
+        menu.popup(opts);
+        return true;
+      });
+    }
 
     registerController();
     buildMenu();
