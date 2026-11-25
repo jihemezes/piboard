@@ -61,6 +61,46 @@
 
 const { app, dialog } = require("electron");
 const { autoUpdater } = require("electron-updater");
+const fallback = require("./updateFallback");
+const platformId = require("../server/platform").id;
+
+/* Source normale des mises a jour : la derniere release GitHub. Remise
+   en place avant chaque verification, car le repli (1.179.0) pointe
+   ponctuellement electron-updater vers une release precise.
+   Normal update source: the latest GitHub release, restored before each
+   check since the fallback temporarily points at a specific release. */
+const GITHUB_FEED = { provider: "github", owner: "jihemezes", repo: "piboard" };
+let usingFallback = false;
+function useGithubFeed() {
+  if (!usingFallback) return;
+  try { autoUpdater.setFeedURL(GITHUB_FEED); } catch (e) { /* noop */ }
+  usingFallback = false;
+}
+
+/* Le paquet de la toute derniere version manque encore pour ce systeme :
+   on cherche la release la plus recente qui le contient deja. Renvoie
+   true si une verification de repli a ete lancee.
+   Newest package missing for this system: look for the newest release
+   that already has it. Returns true if a fallback check was started. */
+async function tryFallback() {
+  if (usingFallback) return false;
+  try {
+    const rel = await fallback.findFallback({
+      currentVersion: app.getVersion(),
+      yml: fallback.ymlName(platformId, process.arch),
+      allowPrerelease: autoUpdater.allowPrerelease
+    });
+    if (!rel) return false;
+    console.log("[piboard] mise a jour de repli / fallback update:", rel.tag);
+    autoUpdater.setFeedURL({ provider: "generic", url: rel.url });
+    usingFallback = true;
+    autoUpdater.checkForUpdates().catch(() => { /* signale par l'evenement error */ });
+    return true;
+  } catch (e) {
+    console.warn("[piboard] repli de mise a jour impossible / fallback failed:", (e && e.message) || e);
+    return false;
+  }
+}
 
 /* ---------- MACOS : pourquoi ce n'etait PAS automatique avant la 1.139.3 ----------
    Historique conserve pour qui retomberait sur ce fichier en cherchant
@@ -168,6 +208,27 @@ function parentWindow() {
   return win && !win.isDestroyed() ? win : null;
 }
 
+function showNotYet() {
+  const win = parentWindow();
+  const notYet = {
+        type: "info",
+        title: "PiBoard",
+        message: "Mise a jour pas encore disponible / Update not available yet",
+        detail:
+          "Une version plus recente existe, mais le paquet pour ce systeme n'a pas encore ete " +
+          "publie : sa construction prend quelques minutes de plus que celle de la version " +
+          "Windows. Reessaie dans un quart d'heure. Si le message persiste, les fichiers sont " +
+          "peut-etre absents de la release : " + RELEASES_URL + "\n\n" +
+          "A newer version exists, but the package for this system has not been published yet: " +
+          "building it takes a few minutes longer than the Windows one. Try again in fifteen " +
+          "minutes. If the message persists, the files may be missing from the release: " +
+          RELEASES_URL
+      };
+  if (win) dialog.showMessageBox(win, notYet);
+  else dialog.showMessageBox(notYet);
+}
+
+
 function wireEvents() {
   if (wired) return;
   wired = true;
@@ -183,6 +244,10 @@ function wireEvents() {
       message: `PiBoard ${info.version} est disponible / is available`,
       detail:
         `Version installee / installed version : ${app.getVersion()}\n` +
+        (usingFallback
+          ? "Une version encore plus recente est en cours de publication pour ce systeme ; elle sera proposee ensuite.\n" +
+            "An even newer version is still being published for this system; it will be offered afterwards.\n"
+          : "") +
         "La mise a jour sera installee a la fermeture de l'application.\n" +
         "The update will be installed when the application closes."
     };
@@ -270,6 +335,22 @@ function wireEvents() {
        missing release must NEVER prevent the dashboard from working: the
        error is only reported if the user explicitly asked to check. */
     console.warn("[piboard] mise a jour / update:", (err && err.message) || err);
+    const rawMsg = String((err && err.message) || err);
+    const missing = /cannot find .*\.yml/i.test(rawMsg) || /404/.test(rawMsg);
+    /* Paquet de la derniere version pas encore publie pour ce systeme :
+       repli sur la release la plus recente qui l'a deja (1.179.0). La
+       verification manuelle reste « en cours » : la reponse viendra de
+       la verification de repli. Newest package missing: fall back. */
+    if (missing && !usingFallback) {
+      const wasManual = manualCheck;
+      tryFallback().then((started) => {
+        if (started) return;
+        if (!wasManual) return;
+        manualCheck = false;
+        showNotYet();
+      });
+      return;
+    }
     if (!manualCheck) return;
     manualCheck = false;
     const win = parentWindow();
@@ -289,27 +370,8 @@ function wireEvents() {
        unreadable 404 error, along with the whole HTTP header and a call
        stack, which tells the user nothing and worries them for
        nothing. */
-    const raw = String((err && err.message) || err);
-    const missingFile = /cannot find .*\.yml/i.test(raw) || /404/.test(raw);
-    if (missingFile) {
-      const notYet = {
-        type: "info",
-        title: "PiBoard",
-        message: "Mise a jour pas encore disponible / Update not available yet",
-        detail:
-          "Une version plus recente existe, mais le paquet pour ce systeme n'a pas encore ete " +
-          "publie : sa construction prend quelques minutes de plus que celle de la version " +
-          "Windows. Reessaie dans un quart d'heure. Si le message persiste, les fichiers sont " +
-          "peut-etre absents de la release : " + RELEASES_URL + "\n\n" +
-          "A newer version exists, but the package for this system has not been published yet: " +
-          "building it takes a few minutes longer than the Windows one. Try again in fifteen " +
-          "minutes. If the message persists, the files may be missing from the release: " +
-          RELEASES_URL
-      };
-      if (win) dialog.showMessageBox(win, notYet);
-      else dialog.showMessageBox(notYet);
-      return;
-    }
+    const raw = rawMsg;
+    if (missing) { showNotYet(); return; }
 
     const options = {
       type: "warning",
@@ -348,6 +410,7 @@ function initAutoUpdate(windowGetter) {
   setTimeout(() => {
     manualCheck = false;
     applyChannel();
+    useGithubFeed();
     autoUpdater.checkForUpdates().catch(() => { /* signale par l'evenement error / reported by the error event */ });
   }, STARTUP_DELAY_MS);
 }
@@ -371,6 +434,7 @@ function checkForUpdatesManually(win) {
   wireEvents();
   manualCheck = true;
   applyChannel();
+  useGithubFeed();
   autoUpdater.checkForUpdates().catch(() => { /* signale par l'evenement error / reported by the error event */ });
 }
 

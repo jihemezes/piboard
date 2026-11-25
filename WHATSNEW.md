@@ -32,6 +32,22 @@
 
 # Nouveautes / What's new
 
+## 1.179.0
+
+**Mises à jour : plus d'attente juste après une publication**
+
+Quand une nouvelle version vient de sortir mais que son paquet pour votre système (Mac surtout) est encore en
+construction, l'application de bureau vous propose désormais la **version la plus récente déjà prête** au lieu
+de vous demander de réessayer plus tard.
+
+---
+
+**Updates: no more waiting right after a release**
+
+When a new version has just come out but its package for your system (the Mac above all) is still being
+built, the desktop application now offers the **newest version already ready** instead of asking you to try
+again later.
+
 ## 1.178.0
 
 **État système : les adresses IPv6**

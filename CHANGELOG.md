@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.179.0
+
+- **Application de bureau : repli de mise à jour.** Juste après une publication, la release la plus récente peut
+  ne pas encore contenir le paquet du système (macOS est construit ~10 min après Windows) : electron-updater
+  échouait (« Mise à jour pas encore disponible »). Désormais l'application cherche, via l'API publique GitHub,
+  la release la plus récente qui contient déjà `latest-mac.yml` / `latest.yml` / `latest-linux(-arm64).yml` et qui
+  reste plus récente que la version installée (pré-versions selon le canal, brouillons et fichiers en cours de
+  téléversement ignorés), et la propose via une source « generic » ponctuelle. La source GitHub normale est
+  remise en place avant chaque vérification. Le message « pas encore disponible » ne reste que si rien n'est prêt.
+- Nouveau `electron/updateFallback.js` (fonctions pures testées). Test : `updateFallback.test.js`. Aide FR/EN.
+
 ## 1.178.0
 
 - **Tuile État système : IPv6.** Réglages « Adresses des cartes réseau : IPv4, IPv6 ou les deux » et « Adresse
