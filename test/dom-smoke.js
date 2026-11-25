@@ -11604,8 +11604,13 @@ function catalogItemFor(catalog, document, widgetId) {
     click(item("telegram")); await sleep(10);
     assert("partage : Telegram avec le lien", /^https:\/\/t\.me\/share\/url\?url=https%3A%2F%2Fjournal\.test%2Fa1/.test(opened[opened.length - 1] || ""));
     await window.PiBoard.share(d, {});
+    const reader = document.createElement("div");
+    reader.className = "modal"; document.body.appendChild(reader);
     click(item("qr")); await sleep(10);
     assert("partage : QR code du lien", !document.getElementById("qrModal").hidden && document.getElementById("qrUrl").textContent === d.url);
+    assert("partage : le QR passe devant une fenetre ouverte (1.176.1)",
+      document.body.lastElementChild === document.getElementById("qrModal") && document.getElementById("qrModal").classList.contains("modal-front"));
+    reader.remove();
     document.getElementById("qrModal").hidden = true;
     // Telephone : non configure -> renvoie aux reglages ; configure -> /api/notify.
     await window.PiBoard.share(d, {});

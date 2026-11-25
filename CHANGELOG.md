@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.177.0
+
+- **Tuile Astronomie : prochains lancements de fusées.** Nouvelle section (activée par défaut) alimentée par
+  Launch Library 2 (The Space Devs), lue par le serveur pour toutes les tuiles (`server/launches.js`,
+  `GET /api/launches`, mode `detailed` pour les liens vidéo) : cache, lecture toutes les 30 min, toutes les 10 min
+  dans les 3 h avant un tir, lancements passés toutes les heures, report après un 429.
+- Liste : date (ou mois si imprécise), état, fusée, mission, opérateur, site, compte à rebours T− (à la seconde
+  dans la dernière heure), favoris (« Ariane, Vega » par défaut), filtre par opérateur ou fusée, derniers
+  lancements avec résultat et rediffusion. Bouton « ▶ Regarder » / « ● EN DIRECT » vers la meilleure diffusion
+  (YouTube en priorité). Fenêtre de détail (image, fenêtre de tir, motif de report/échec, orbite, clients, pas de
+  tir, météo, description, toutes les diffusions, dernières nouvelles, page officielle).
+- Alerte avant un lancement favori : flash + son, bandeau dans la tuile, notification sur le téléphone (adresse
+  des réglages → Partage) revendiquée une seule fois (`POST /api/launches/claim`).
+- `window.PiBoard.openLink(url, titre)` (QR code en kiosque) et `window.PiBoard.notifyPhone(d)` exposés aux tuiles.
+- Inclut le correctif 1.176.1 (QR code du partage RSS au premier plan).
+- Tests : `launches.test.js`, `astronomyLaunches.test.js`. Aide FR/EN.
+
+## 1.176.1
+
+- Partage RSS : « QR code » semblait ne rien faire quand le partage était ouvert depuis la fenêtre de lecture.
+  La fenêtre QR (`#qrModal`, `.modal`) s'ouvrait bien, mais DERRIÈRE la fenêtre de lecture, ajoutée plus tard à
+  `<body>` au même `z-index`. `openQr()` la replace maintenant en fin de `<body>` avec un `z-index` supérieur
+  (`.modal-front`). Test ajouté dans `dom-smoke.js`.
+
 ## 1.176.0
 
 - **Tuile Flux RSS : partage d'un article.** Bouton « ⤴ Partager » dans la fenêtre de lecture, appui long

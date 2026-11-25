@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.176.0
+   Version 1.177.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -113,6 +113,20 @@
     openLibrary(target, section, onPicked) { openLibrary(target, section, onPicked); },
     /* Fenetre de partage commune (1.176.0). Common share window. */
     share(d, opts) { return openShareSheet(d || {}, opts || {}); },
+    /* Ouvre un lien externe ; en kiosque sur le Pi, l'affiche en QR code
+       (1.177.0). Opens an external link; on the kiosk Pi, shows a QR code. */
+    openLink(url, title) {
+      if (!url) return;
+      if (isKioskScreen()) { openQr(url, title); return; }
+      const w = window.open(url, "_blank", "noopener");
+      if (!w && /^https?:/i.test(url) && appIntegration.desktopApp === false) openQr(url, title);
+    },
+    /* Notification vers le telephone, par l'adresse des reglages generaux
+       (Contenus et services -> Partage). Resout false si non configuree. */
+    notifyPhone(d) {
+      if (!settings || !settings.shareNotifyUrl) return Promise.resolve(false);
+      return sendShareToPhone(d || {}).then(() => true, () => false);
+    },
     /* Ouvre les reglages generaux sur une famille (general, look, layout,
        input, saver, content, project) et, au choix, une section.
        Opens the general settings on a family and, optionally, a section. */
@@ -7759,6 +7773,12 @@
   function openQr(url, title) {
     const modal = $("qrModal");
     if (!modal) return;
+    /* Au premier plan : ouverte depuis une autre fenetre (lecture d'un
+       article RSS, posee plus tard sur la page au meme niveau), elle
+       s'affichait DERRIERE et semblait ne rien faire (1.176.1).
+       Brought to the front: opened from another window, it showed BEHIND it. */
+    document.body.appendChild(modal);
+    modal.classList.add("modal-front");
     $("qrTitle").textContent = title || i18n.t("qr.title");
     $("qrUrl").textContent = url;
     const box = $("qrImage");

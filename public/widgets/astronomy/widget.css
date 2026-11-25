@@ -124,3 +124,47 @@
   font-size: 11.5px;
   color: var(--faint);
 }
+
+/* ---------- Lancements spatiaux (1.177.0) / rocket launches ---------- */
+.pwa-l-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pwa-l-item { padding: 5px 7px; border-radius: 8px; cursor: pointer; border-left: 3px solid transparent; }
+.pwa-l-item:hover { background: rgba(127,127,127,.12); }
+.pwa-l-item.fav { border-left-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.pwa-l-item.past { opacity: .85; }
+.pwa-l-top { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.pwa-l-name { font-size: 13px; line-height: 1.25; margin: 1px 0; overflow: hidden; text-overflow: ellipsis; }
+.pwa-l-sub { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 8px; font-size: 11.5px; color: var(--muted); }
+.pwa-l-sub > span:first-child { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pwa-l-cd { font-family: var(--mono); color: var(--text); font-variant-numeric: tabular-nums; }
+.pwa-l-cd.soon { color: var(--accent); font-weight: 700; }
+.pwa-l-st { font-size: 10.5px; padding: 1px 6px; border-radius: 999px; background: rgba(127,127,127,.2); color: var(--text); white-space: nowrap; }
+.pwa-l-go { background: color-mix(in srgb, var(--ok, #3fb950) 25%, transparent); }
+.pwa-l-ok { background: color-mix(in srgb, var(--ok, #3fb950) 25%, transparent); }
+.pwa-l-ko { background: color-mix(in srgb, var(--danger, #e5534b) 30%, transparent); }
+.pwa-l-wait { background: color-mix(in srgb, var(--warn, #d29922) 28%, transparent); }
+.pwa-l-live { background: var(--danger, #e5534b); color: #fff; }
+.pwa-l-watch { border: 1px solid var(--tile-edge); background: transparent; color: var(--text); border-radius: 6px; padding: 1px 7px; font: inherit; font-size: 11.5px; cursor: pointer; touch-action: manipulation; }
+.pwa-l-watch:hover { background: rgba(127,127,127,.2); }
+.pwa-l-watch.live { background: var(--danger, #e5534b); border-color: var(--danger, #e5534b); color: #fff; font-weight: 700; }
+.pwa-l-subtitle { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 8px 0 4px; }
+.pwa-l-banner { margin: 2px 0 6px; padding: 6px 8px; border-radius: 8px; background: color-mix(in srgb, var(--accent) 22%, transparent); font-size: 12.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pwa-l-back { position: fixed; inset: 0; z-index: 8600; background: rgba(0,0,0,.55); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.pwa-l-win { width: min(640px, 100%); max-height: 92vh; overflow: auto; box-sizing: border-box; background: var(--tile, #1b1f27); color: var(--text, #e8eaed);
+  border: 1px solid var(--tile-edge); border-radius: 14px; box-shadow: 0 16px 50px rgba(0,0,0,.55); padding: 14px 16px; font-size: 13.5px; }
+.pwa-l-whead { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 10px; font-size: 16px; }
+.pwa-l-whead b { flex: 1; }
+.pwa-l-x { all: unset; cursor: pointer; padding: 2px 10px; border-radius: 8px; font-size: 18px; }
+.pwa-l-x:hover { background: rgba(127,127,127,.2); }
+.pwa-l-img { width: 100%; max-height: 220px; object-fit: cover; border-radius: 10px; margin-bottom: 10px; }
+.pwa-l-tbl { width: 100%; border-collapse: collapse; }
+.pwa-l-tbl td { padding: 3px 8px 3px 0; vertical-align: top; border-top: 1px solid rgba(127,127,127,.15); }
+.pwa-l-tbl td:first-child { color: var(--muted); white-space: nowrap; width: 1%; }
+.pwa-l-desc { line-height: 1.45; margin: 10px 0; }
+.pwa-l-vids { display: flex; flex-direction: column; gap: 6px; }
+.pwa-l-vid { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 1px; border: 1px solid var(--tile-edge); background: rgba(127,127,127,.1);
+  color: inherit; border-radius: 8px; padding: 7px 10px; font: inherit; cursor: pointer; touch-action: manipulation; }
+.pwa-l-vid:hover { background: rgba(127,127,127,.22); }
+.pwa-l-vid small { color: var(--muted); font-size: 11.5px; }
+.pwa-l-upd { margin: 0; padding-left: 18px; font-size: 12.5px; }
+.pwa-l-upd span { color: var(--muted); }
+.pwa-l-credit { color: var(--muted); font-size: 11px; margin-top: 10px; }

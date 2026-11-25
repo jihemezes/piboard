@@ -32,6 +32,27 @@
 
 # Nouveautes / What's new
 
+## 1.177.0
+
+**Astronomie : les prochains lancements de fusées, et le direct en un geste**
+
+La tuile **Astronomie** affiche maintenant les **prochains lancements** du monde entier : Ariane, Vega,
+SpaceX, ULA, Rocket Lab… avec la date, l'état (Go, à confirmer, reporté), la mission et un **compte à
+rebours**. Dès que la diffusion est publiée, un bouton **▶ Regarder** ouvre le direct sur YouTube (en QR code
+sur le Raspberry Pi). Touchez un lancement pour tous les détails, retrouvez la **rediffusion** des derniers
+tirs, filtrez par opérateur, marquez vos **favoris** et recevez une **alerte** (écran, son, téléphone) quelques
+minutes avant le décollage.
+
+---
+
+**Astronomy: upcoming rocket launches, and the live stream in one tap**
+
+The **Astronomy** tile now shows **upcoming launches** worldwide: Ariane, Vega, SpaceX, ULA, Rocket Lab…
+with the date, status (Go, to be confirmed, on hold), mission and a **countdown**. As soon as the webcast is
+published, a **▶ Watch** button opens the live stream on YouTube (as a QR code on the Raspberry Pi). Tap a
+launch for every detail, find the **replay** of recent launches, filter by operator, mark your
+**favourites** and get an **alert** (screen, sound, phone) a few minutes before lift-off.
+
 ## 1.176.0
 
 **Flux RSS : partagez un article avec les moyens de votre système**

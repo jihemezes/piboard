@@ -131,12 +131,16 @@
               .then((r) => r.json()).catch((e) => { console.warn("[piboard/astronomy] planets", e); return null; })
           : Promise.resolve(null));
         jobs.push(s.showIss !== false ? this.loadIss(lat, lon, elevation) : Promise.resolve(null));
+        jobs.push(s.showLaunches !== false
+          ? fetch("/api/launches").then((r) => r.json()).catch((e) => { console.warn("[piboard/astronomy] launches", e); return null; })
+          : Promise.resolve(null));
         jobs.push(s.showEclipse !== false
           ? fetch(`/api/astronomy/eclipse?lat=${lat}&lon=${lon}&elevation=${elevation}`)
               .then((r) => r.json()).catch((e) => { console.warn("[piboard/astronomy] eclipse", e); return null; })
           : Promise.resolve(null));
 
-        const [moon, planetsData, iss, eclipse] = await Promise.all(jobs);
+        const [moon, planetsData, iss, launchData, eclipse] = await Promise.all(jobs);
+        this.launchData = launchData && Array.isArray(launchData.upcoming) ? launchData : null;
         this.data = {
           moon,
           planets: planetsData && planetsData.planets ? planetsData.planets.filter((p) => p.aboveHorizon) : null,
@@ -194,12 +198,260 @@
       if (s.showIss !== false) sections.push(this.renderIss(d.iss));
       if (s.showPlanets !== false) sections.push(this.renderPlanets(d.planets));
       if (s.showEclipse !== false) sections.push(this.renderEclipse(d.eclipse));
+      if (s.showLaunches !== false) sections.push(this.renderLaunches());
 
       if (!sections.length) {
         this.ctx.el.innerHTML = `<div class="pw-astronomy"><div class="pwa-msg">${i18n.t("astronomy.nothingShown")}</div></div>`;
         return;
       }
       this.ctx.el.innerHTML = `<div class="pw-astronomy">${sections.join("")}</div>`;
+      this.wireLaunches();
+      this.armLaunchTimers();
+    }
+
+    /* ====================================================================
+       LANCEMENTS SPATIAUX (1.177.0)
+       Donnees servies par le serveur PiBoard (/api/launches, cache de
+       Launch Library 2). Compte a rebours a la seconde dans la derniere
+       heure, bouton « Regarder » vers la diffusion (YouTube surtout),
+       fenetre de detail, alerte avant un lancement favori.
+       ROCKET LAUNCHES: server-cached Launch Library 2 data, countdown,
+       "Watch" button, detail window, alert before a favourite launch.
+       ==================================================================== */
+    words(v) {
+      return String(v || "").split(/[,;]+/).map((x) => x.trim().toLowerCase()).filter(Boolean);
+    }
+    matches(l, words) {
+      const hay = [l.provider && l.provider.name, l.provider && l.provider.abbrev, l.rocket, l.name].join(" ").toLowerCase();
+      return words.some((w) => hay.includes(w));
+    }
+    launchLists() {
+      const s = this.ctx.settings;
+      const d = this.launchData || { upcoming: [], previous: [] };
+      const only = this.words(s.launchOperators);
+      const keep = (l) => !only.length || this.matches(l, only);
+      const now = Date.now();
+      const upcoming = (d.upcoming || []).filter((l) => keep(l) && new Date(l.net).getTime() > now - 30 * 60000
+        && !(l.status && /^(success|failure|partial failure)$/i.test(l.status.abbrev)));
+      const days = Math.max(0, Number(s.launchPastDays != null ? s.launchPastDays : 3));
+      const seen = new Set(upcoming.map((l) => l.id));
+      const recent = days ? [...(d.previous || []), ...(d.upcoming || [])]
+        .filter((l) => keep(l) && !seen.has(l.id) && l.status && /^(success|failure|partial failure)$/i.test(l.status.abbrev)
+          && now - new Date(l.net).getTime() < days * 86400000)
+        .filter((l, i, a) => a.findIndex((x) => x.id === l.id) === i)
+        .sort((a, b) => new Date(b.net) - new Date(a.net)) : [];
+      return { upcoming, recent };
+    }
+    statusClass(st) {
+      const a = String(st && st.abbrev || "").toLowerCase();
+      if (a === "go") return "go";
+      if (a === "success") return "ok";
+      if (/failure/.test(a)) return "ko";
+      if (a === "hold" || a === "tbd") return "wait";
+      if (a === "in flight") return "live";
+      return "tbc";
+    }
+    tMinus(iso, fine) {
+      const ms = new Date(iso).getTime() - Date.now();
+      const neg = ms < 0;
+      let sec = Math.floor(Math.abs(ms) / 1000);
+      const d = Math.floor(sec / 86400); sec -= d * 86400;
+      const h = Math.floor(sec / 3600); sec -= h * 3600;
+      const m = Math.floor(sec / 60); sec -= m * 60;
+      const pad = (n) => String(n).padStart(2, "0");
+      const core = d > 0 ? `${d} j ${pad(h)} h ${pad(m)} min`.replace(" j ", this.ctx.i18n.lang === "en" ? "d " : " j ")
+        : fine ? `${pad(h)}:${pad(m)}:${pad(sec)}` : `${h} h ${pad(m)} min`;
+      return (neg ? "T+ " : "T− ") + core;
+    }
+    bestVideo(l) {
+      const v = l.videos || [];
+      return v.find((x) => x.live) || v.find((x) => x.youtube) || v[0] || null;
+    }
+    launchWhen(l) {
+      const i18n = this.ctx.i18n;
+      const locale = i18n.t("clock.date.format");
+      const day = fmtDay(l.net, locale, i18n);
+      const prec = String(l.precision || "").toUpperCase();
+      if (/^(MONTH|M|Q|Y|H1|H2|YEAR|QUARTER)/.test(prec) || /^(Q|H)\d/.test(prec)) {
+        return new Date(l.net).toLocaleDateString(locale, { month: "long", year: "numeric" });
+      }
+      if (prec === "DAY" || prec === "D") return day;
+      return day + " · " + fmtTime(l.net, locale);
+    }
+
+    renderLaunches() {
+      const i18n = this.ctx.i18n;
+      const t = (k) => i18n.t("astronomy.launch." + k);
+      const s = this.ctx.settings;
+      const title = `<div class="pwa-section-title">🚀 ${escapeHtml(t("title"))}</div>`;
+      if (!this.launchData) return `<div class="pwa-section">${title}<div class="pwa-msg-inline">${escapeHtml(t("error"))}</div></div>`;
+      const { upcoming, recent } = this.launchLists();
+      this.launchIndex = new Map();
+      const fav = this.words(s.launchFavorites);
+      const n = Math.max(1, Math.min(10, Number(s.launchCount) || 3));
+      const row = (l, past) => {
+        this.launchIndex.set(l.id, l);
+        const isFav = fav.length && this.matches(l, fav);
+        const vid = this.bestVideo(l);
+        const live = vid && vid.live;
+        const st = l.status || {};
+        const badge = `<span class="pwa-l-st pwa-l-${this.statusClass(st)}" title="${escapeHtml(st.name || "")}">${escapeHtml(t("st." + this.statusClass(st)))}</span>`;
+        const watch = vid ? `<button type="button" class="pwa-l-watch${live ? " live" : ""}" data-watch="${escapeHtml(l.id)}" title="${escapeHtml(vid.title || vid.url)}">${live ? "● " + escapeHtml(t("live")) : past ? "▶ " + escapeHtml(t("replay")) : "▶ " + escapeHtml(t("watch"))}</button>` : "";
+        const mission = l.mission && l.mission.name ? l.mission.name : (l.name.split("|")[1] || "").trim();
+        return `<li class="pwa-l-item${isFav ? " fav" : ""}${past ? " past" : ""}" data-launch="${escapeHtml(l.id)}">
+            <div class="pwa-l-top"><span class="pwa-l-when">${escapeHtml(this.launchWhen(l))}</span>${badge}</div>
+            <div class="pwa-l-name">${isFav ? "★ " : ""}<b>${escapeHtml(l.rocket || l.name)}</b>${mission ? " · " + escapeHtml(mission) : ""}</div>
+            <div class="pwa-l-sub"><span>${escapeHtml(l.provider.abbrev || l.provider.name || "")}${l.pad && l.pad.location ? " · " + escapeHtml(l.pad.location.split(",")[0]) : ""}</span>${past ? "" : `<span class="pwa-l-cd" data-net="${escapeHtml(l.net)}">${escapeHtml(this.tMinus(l.net))}</span>`}${watch}</div>
+          </li>`;
+      };
+      const list = upcoming.slice(0, n).map((l) => row(l, false)).join("");
+      const past = recent.length ? `<div class="pwa-l-subtitle">${escapeHtml(t("recent"))}</div><ul class="pwa-l-list">${recent.slice(0, n).map((l) => row(l, true)).join("")}</ul>` : "";
+      const stale = this.launchData.stale ? `<div class="pwa-msg-inline">${escapeHtml(t("stale"))}</div>` : "";
+      const body = list ? `<ul class="pwa-l-list">${list}</ul>` : `<div class="pwa-msg-inline">${escapeHtml(t("none"))}</div>`;
+      return `<div class="pwa-section pwa-launches">${title}${stale}${body}${past}</div>`;
+    }
+
+    wireLaunches() {
+      const root = this.ctx.el.querySelector(".pwa-launches");
+      if (!root) return;
+      root.addEventListener("click", (e) => {
+        const w = e.target.closest("[data-watch]");
+        if (w) { e.stopPropagation(); const l = this.launchIndex.get(w.dataset.watch); const v = l && this.bestVideo(l); if (v) this.openUrl(v.url, l.name); return; }
+        const li = e.target.closest("[data-launch]");
+        if (li) { e.stopPropagation(); const l = this.launchIndex.get(li.dataset.launch); if (l) this.openLaunch(l); }
+      });
+    }
+
+    openUrl(url, title) {
+      if (window.PiBoard && typeof window.PiBoard.openLink === "function") window.PiBoard.openLink(url, title);
+      else window.open(url, "_blank", "noopener");
+    }
+
+    /* Compte a rebours : a la seconde dans la derniere heure, sinon chaque
+       minute ; verifie aussi les alertes. Countdown: per second in the last
+       hour, otherwise per minute; also checks alerts. */
+    armLaunchTimers() {
+      clearInterval(this.cdTimer);
+      if (this.ctx.settings.showLaunches === false) return;
+      const tick = () => {
+        const els = this.ctx.el.querySelectorAll(".pwa-l-cd[data-net]");
+        let fine = false;
+        els.forEach((el) => {
+          const ms = new Date(el.dataset.net).getTime() - Date.now();
+          const f = ms < 3600000 && ms > -3600000;
+          if (f) fine = true;
+          el.textContent = this.tMinus(el.dataset.net, f);
+          el.classList.toggle("soon", f);
+        });
+        this.checkLaunchAlerts();
+        return fine;
+      };
+      const fine = tick();
+      this.cdTimer = setInterval(tick, fine ? 1000 : 30000);
+    }
+
+    checkLaunchAlerts() {
+      const s = this.ctx.settings;
+      const min = Number(s.launchAlertMinutes) || 0;
+      const fav = this.words(s.launchFavorites);
+      if (!min || !fav.length || !this.launchData) return;
+      this.alerted = this.alerted || new Set();
+      const now = Date.now();
+      const { upcoming } = this.launchLists();
+      for (const l of upcoming) {
+        if (!this.matches(l, fav)) continue;
+        const ms = new Date(l.net).getTime() - now;
+        if (ms <= 0 || ms > min * 60000) continue;
+        if (l.status && /^(tbd|hold)$/i.test(l.status.abbrev)) continue;
+        const id = "launch:" + l.id + ":" + l.net;
+        if (this.alerted.has(id)) continue;
+        this.alerted.add(id);
+        this.fireLaunchAlert(l, id);
+      }
+    }
+
+    async fireLaunchAlert(l, id) {
+      const s = this.ctx.settings;
+      const t = (k) => this.ctx.i18n.t("astronomy.launch." + k);
+      if (s.launchAlertFlash !== false && this.ctx.api && this.ctx.api.startAlert) {
+        this.ctx.api.startAlert({ flash: true, soundName: "beep-double", durationMs: 15000 });
+      }
+      this.showLaunchBanner(l);
+      if (s.launchAlertPhone && window.PiBoard && window.PiBoard.notifyPhone) {
+        try {
+          const r = await fetch("/api/launches/claim", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ids: [id] }) });
+          const out = await r.json();
+          if (!out.granted || !out.granted.includes(id)) return;
+        } catch (e) { return; }
+        const v = this.bestVideo(l);
+        const mins = Math.max(1, Math.round((new Date(l.net).getTime() - Date.now()) / 60000));
+        const text = t("alertText").replace("{name}", l.name).replace("{n}", String(mins)) + (v ? "\n" + v.url : "");
+        window.PiBoard.notifyPhone({ title: "🚀 " + l.name, url: v ? v.url : (l.infoUrl || ""), source: l.provider.name, text });
+      }
+    }
+
+    showLaunchBanner(l) {
+      const root = this.ctx.el.querySelector(".pwa-launches");
+      if (!root) return;
+      const t = (k) => this.ctx.i18n.t("astronomy.launch." + k);
+      const old = root.querySelector(".pwa-l-banner"); if (old) old.remove();
+      const b = document.createElement("div");
+      b.className = "pwa-l-banner";
+      const v = this.bestVideo(l);
+      b.innerHTML = `🚀 ${escapeHtml(t("soon").replace("{name}", l.rocket || l.name))}${v ? ` <button type="button" class="pwa-l-watch live" data-watch="${escapeHtml(l.id)}">▶ ${escapeHtml(t("watch"))}</button>` : ""}`;
+      root.insertBefore(b, root.children[1] || null);
+    }
+
+    /* Fenetre de detail, posee sur <body>. Detail window on <body>. */
+    openLaunch(l) {
+      this.closeLaunch();
+      const i18n = this.ctx.i18n;
+      const t = (k) => i18n.t("astronomy.launch." + k);
+      const locale = i18n.t("clock.date.format");
+      const fmt = (iso) => { const d = new Date(iso); return isNaN(d) ? "" : d.toLocaleString(locale, { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }); };
+      const row = (k, v) => v ? `<tr><td>${escapeHtml(t(k))}</td><td>${v}</td></tr>` : "";
+      const m = l.mission || {};
+      const st = l.status || {};
+      const win = l.windowStart && l.windowEnd && l.windowStart !== l.windowEnd ? escapeHtml(fmt(l.windowStart) + " → " + fmt(l.windowEnd)) : "";
+      const vids = (l.videos || []).map((v) => `<button type="button" class="pwa-l-vid" data-url="${escapeHtml(v.url)}">${v.live ? "● " : "▶ "}${escapeHtml(v.publisher || v.source || "")}${v.lang ? " (" + escapeHtml(v.lang) + ")" : ""}<small>${escapeHtml(v.title || v.url)}</small></button>`).join("");
+      const back = document.createElement("div");
+      back.className = "pwa-l-back";
+      back.innerHTML = `<div class="pwa-l-win" role="dialog" aria-modal="true" aria-label="${escapeHtml(l.name)}">
+          <div class="pwa-l-whead"><b>${escapeHtml(l.name)}</b><button type="button" class="pwa-l-x" aria-label="${escapeHtml(i18n.t("common.close"))}">✕</button></div>
+          ${l.image ? `<img class="pwa-l-img" src="${escapeHtml(l.image)}" alt="">` : ""}
+          <table class="pwa-l-tbl">
+            ${row("date", escapeHtml(fmt(l.net)) + (l.precision && !/^(SEC|MIN|S|M)$/i.test(l.precision) ? " <i>(" + escapeHtml(t("approx")) + ")</i>" : ""))}
+            ${row("window", win)}
+            ${row("status", `<span class="pwa-l-st pwa-l-${this.statusClass(st)}">${escapeHtml(st.name || "")}</span>`)}
+            ${row("reason", escapeHtml(l.holdreason || l.failreason || ""))}
+            ${row("rocket", escapeHtml(l.rocket))}
+            ${row("provider", escapeHtml(l.provider.name))}
+            ${row("mission", escapeHtml([m.name, m.type].filter(Boolean).join(" · ")))}
+            ${row("orbit", escapeHtml(m.orbitName || m.orbit || ""))}
+            ${row("customers", escapeHtml((m.customers || []).join(", ")))}
+            ${row("pad", escapeHtml([l.pad.name, l.pad.location].filter(Boolean).join(" · ")))}
+            ${row("weather", l.probability != null ? escapeHtml(l.probability + " %" + (l.weather ? " · " + l.weather : "")) : escapeHtml(l.weather || ""))}
+          </table>
+          ${m.description ? `<p class="pwa-l-desc">${escapeHtml(m.description)}</p>` : ""}
+          ${vids ? `<div class="pwa-l-subtitle">${escapeHtml(t("webcasts"))}</div><div class="pwa-l-vids">${vids}</div>` : `<div class="pwa-msg-inline">${escapeHtml(t("noWebcast"))}</div>`}
+          ${(l.updates || []).length ? `<div class="pwa-l-subtitle">${escapeHtml(t("updates"))}</div><ul class="pwa-l-upd">${l.updates.map((u) => `<li><span>${escapeHtml(fmt(u.at))}</span> ${escapeHtml(u.text)}</li>`).join("")}</ul>` : ""}
+          ${l.infoUrl ? `<p><button type="button" class="pwa-l-vid pwa-l-info" data-url="${escapeHtml(l.infoUrl)}">ℹ ${escapeHtml(t("info"))}</button></p>` : ""}
+          <p class="pwa-l-credit">${escapeHtml(t("credit"))}</p>
+        </div>`;
+      document.body.appendChild(back);
+      this.launchWin = back;
+      const win2 = back.querySelector(".pwa-l-win");
+      ["pointerdown", "pointerup", "click", "contextmenu"].forEach((ty) => win2.addEventListener(ty, (e) => e.stopPropagation()));
+      back.addEventListener("click", (e) => { if (e.target === back) this.closeLaunch(); });
+      back.querySelector(".pwa-l-x").addEventListener("click", () => this.closeLaunch());
+      back.querySelectorAll("[data-url]").forEach((b) => b.addEventListener("click", () => this.openUrl(b.dataset.url, l.name)));
+      this.launchKey = (e) => { if (e.key === "Escape") this.closeLaunch(); };
+      document.addEventListener("keydown", this.launchKey);
+    }
+
+    closeLaunch() {
+      if (this.launchWin) { this.launchWin.remove(); this.launchWin = null; }
+      if (this.launchKey) { document.removeEventListener("keydown", this.launchKey); this.launchKey = null; }
     }
 
     renderMoon(moon) {
@@ -318,6 +570,8 @@
     }
 
     destroy() {
+      clearInterval(this.cdTimer);
+      this.closeLaunch();
       clearInterval(this.timer);
     }
   }

@@ -3261,6 +3261,16 @@ app.get("/api/mail/:tileId/message", async (req, res) => {
 /* ---------- Astronomie / astronomy ----------
    Voir server/astronomy.js : calcul local, sans dependance reseau.
    See server/astronomy.js: local computation, no network dependency. */
+/* Lancements spatiaux (voir server/launches.js) -- 1.177.0 */
+const launches = require("./launches");
+app.get("/api/launches", async (req, res) => {
+  try { res.json(await launches.getLaunches()); }
+  catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+app.post("/api/launches/claim", (req, res) => {
+  res.json({ ok: true, granted: launches.claim((req.body || {}).ids) });
+});
+
 app.get("/api/astronomy/moon", (req, res) => {
   try {
     res.json(astronomy.moonPhase(new Date()));

@@ -1,14 +1,14 @@
 {
   "id": "astronomy",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "name": {
     "en": "Astronomy",
     "fr": "Astronomie"
   },
   "titleBar": true,
   "description": {
-    "en": "Moon phase, upcoming visible ISS passes, which planets are up tonight, and the next solar or lunar eclipse actually visible from your city (with a compact countdown) — four independently toggleable sections. Moon phase and planet positions are computed locally (via the astronomy-engine library), with no network dependency; ISS passes come from a free, keyless community API that predicts them from up-to-date orbital data.",
-    "fr": "Phase de lune, prochains passages visibles de l'ISS, quelles planètes sont visibles ce soir, et la prochaine éclipse solaire ou lunaire réellement visible depuis votre ville (avec un compte à rebours compact) — quatre sections activables indépendamment. La phase de lune et la position des planètes sont calculées localement (via la bibliothèque astronomy-engine), sans dépendance réseau ; les passages de l'ISS viennent d'une API communautaire gratuite et sans clé qui les prédit à partir de données orbitales à jour."
+    "en": "Moon phase, upcoming visible ISS passes, which planets are up tonight, and the next solar or lunar eclipse actually visible from your city (with a compact countdown) — four independently toggleable sections. Moon phase and planet positions are computed locally (via the astronomy-engine library), with no network dependency; ISS passes come from a free, keyless community API that predicts them from up-to-date orbital data, plus upcoming rocket launches (Ariane, SpaceX…) with a countdown and a link to the live webcast.",
+    "fr": "Phase de lune, prochains passages visibles de l'ISS, quelles planètes sont visibles ce soir, et la prochaine éclipse solaire ou lunaire réellement visible depuis votre ville (avec un compte à rebours compact) — quatre sections activables indépendamment. La phase de lune et la position des planètes sont calculées localement (via la bibliothèque astronomy-engine), sans dépendance réseau ; les passages de l'ISS viennent d'une API communautaire gratuite et sans clé qui les prédit à partir de données orbitales à jour, ainsi que les prochains lancements de fusées (Ariane, SpaceX…) avec compte à rebours et lien vers la diffusion en direct."
   },
   "tagline": {
     "en": "Moon phase, ISS passes, visible planets.",
@@ -147,6 +147,135 @@
       }
     },
     {
+      "key": "showLaunches",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Show upcoming rocket launches",
+        "fr": "Afficher les prochains lancements de fusées"
+      },
+      "hint": {
+        "en": "Worldwide launch schedule (Launch Library 2, The Space Devs): date, rocket, mission, status, countdown and live webcast link (YouTube…).",
+        "fr": "Calendrier mondial des lancements (Launch Library 2, The Space Devs) : date, fusée, mission, état, compte à rebours et lien vers la diffusion en direct (YouTube…)."
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
+      "key": "launchCount",
+      "type": "number",
+      "default": 3,
+      "min": 1,
+      "max": 10,
+      "step": 1,
+      "label": {
+        "en": "Launches shown",
+        "fr": "Lancements affichés"
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
+      "key": "launchOperators",
+      "type": "text",
+      "default": "",
+      "label": {
+        "en": "Only these operators or rockets (comma-separated, empty = all)",
+        "fr": "Seulement ces opérateurs ou fusées (séparés par des virgules, vide = tous)"
+      },
+      "hint": {
+        "en": "Matched against the operator and the rocket, e.g. “Arianespace, SpaceX” or “Ariane, Vega, Falcon”.",
+        "fr": "Comparé à l'opérateur et à la fusée, par exemple « Arianespace, SpaceX » ou « Ariane, Vega, Falcon »."
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
+      "key": "launchFavorites",
+      "type": "text",
+      "default": "Ariane, Vega",
+      "label": {
+        "en": "Favourites (highlighted, alerts)",
+        "fr": "Favoris (mis en évidence, alertes)"
+      },
+      "hint": {
+        "en": "Launches matching these words are highlighted and can trigger the alert below.",
+        "fr": "Les lancements qui correspondent à ces mots sont mis en évidence et peuvent déclencher l'alerte ci-dessous."
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
+      "key": "launchPastDays",
+      "type": "number",
+      "default": 3,
+      "min": 0,
+      "max": 14,
+      "step": 1,
+      "label": {
+        "en": "Recent launches shown (days, 0 = none)",
+        "fr": "Lancements récents affichés (jours, 0 = aucun)"
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
+      "key": "launchAlertMinutes",
+      "type": "number",
+      "default": 0,
+      "min": 0,
+      "max": 1440,
+      "step": 5,
+      "label": {
+        "en": "Alert before a favourite launch (minutes, 0 = off)",
+        "fr": "Alerte avant un lancement favori (minutes, 0 = désactivée)"
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
+      "key": "launchAlertFlash",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "Alert: flash the screen and play a sound",
+        "fr": "Alerte : faire clignoter l'écran et jouer un son"
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
+      "key": "launchAlertPhone",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Alert: also send to my phone",
+        "fr": "Alerte : envoyer aussi sur mon téléphone"
+      },
+      "hint": {
+        "en": "Uses the notification address set in Settings → Content and services → Sharing. The message carries the webcast link.",
+        "fr": "Utilise l'adresse de notification définie dans Réglages → Contenus et services → Partage. Le message contient le lien de la diffusion."
+      },
+      "group": {
+        "en": "Rocket launches",
+        "fr": "Lancements spatiaux"
+      }
+    },
+    {
       "key": "refresh",
       "type": "number",
       "default": 30,
@@ -158,8 +287,8 @@
         "fr": "Rafraîchissement (minutes)"
       },
       "hint": {
-        "en": "All three sections change slowly; a long interval is plenty.",
-        "fr": "Les trois sections évoluent lentement ; un intervalle long suffit largement."
+        "en": "The sections change slowly; a long interval is plenty (launch data is refreshed by the server on its own).",
+        "fr": "Les sections évoluent lentement ; un intervalle long suffit largement (les lancements sont relus par le serveur de son côté)."
       }
     }
   ]

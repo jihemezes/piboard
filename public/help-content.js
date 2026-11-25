@@ -478,8 +478,8 @@
       group: "tiles",
       title: { fr: "Astronomie", en: "Astronomy" },
       sub: {
-        fr: "Phase de lune, prochains passages visibles de l'ISS, et quelles planètes sont visibles ce soir.",
-        en: "Moon phase, upcoming visible ISS passes, and which planets are up tonight."
+        fr: "Phase de lune, prochains passages visibles de l'ISS, planètes visibles ce soir, prochaine éclipse et prochains lancements de fusées.",
+        en: "Moon phase, upcoming visible ISS passes, planets up tonight, next eclipse and upcoming rocket launches."
       },
       html: {
         fr: `
@@ -493,7 +493,8 @@
   <li><b>Passages de la station spatiale (ISS)</b> au-dessus de votre ville, avec le choix de ne garder que les passages visibles à l'œil nu et le nombre de passages listés.</li>
   <li><b>Planètes visibles ce soir</b>, en option avec les planètes lointaines (Uranus, Neptune).</li>
   <li><b>Prochaine éclipse</b> solaire ou lunaire réellement visible depuis votre ville, avec un compte à rebours compact.</li>
-  <li>Quatre sections qui s'affichent ou se masquent indépendamment.</li>
+  <li><b>Prochains lancements de fusées</b> dans le monde (Ariane, Vega, SpaceX, ULA, Rocket Lab…), avec compte à rebours, bouton <b>Regarder</b> vers la diffusion en direct (YouTube le plus souvent), fenêtre de détail, rediffusion des derniers tirs et alerte avant un lancement favori.</li>
+  <li>Cinq sections qui s'affichent ou se masquent indépendamment.</li>
 </ul>
 
 <h4>Quatre sections indépendantes</h4>
@@ -505,6 +506,13 @@
 
 <h4>D'où viennent les données</h4>
           <p>La phase de lune et la position des planètes sont <b>calculées directement sur le PiBoard</b>, sans aucun appel réseau — aussi fiable qu'une horloge, jamais tributaire d'un service externe. Les passages ISS, eux, exigent des données orbitales à jour (impossibles à calculer à l'avance) et viennent d'un service communautaire gratuit et sans clé, réédition de l'ancienne API open-notify.org dont les prédictions de passage ont fermé — un projet individuel financé par des dons, à garder à l'esprit si cette section venait un jour à ne plus répondre.</p>
+
+<h4>Lancements de fusées</h4>
+          <p>La section <b>🚀 Prochains lancements</b> liste les tirs à venir, du plus proche au plus lointain : date et heure (ou seulement le mois quand la date n'est pas encore fixée), état (<b>Go</b>, <b>À confirmer</b>, <b>En attente</b>), fusée, mission, opérateur et site de lancement, et un compte à rebours <b>T−</b> qui passe à la seconde dans la dernière heure. Les lancements <b>favoris</b> (par défaut Ariane et Vega) sont marqués d'une étoile et d'un liseré.</p>
+          <p><b>Regarder.</b> Dès que l'opérateur publie sa diffusion (en général quelques jours avant le tir : Arianespace, CNES, ESA, SpaceX, NASA…), un bouton <b>▶ Regarder</b> apparaît ; il devient rouge <b>● EN DIRECT</b> pendant la retransmission. Il ouvre la vidéo dans le navigateur ; sur le Raspberry Pi en kiosque, le lien s'affiche en <b>QR code</b> à scanner avec le téléphone. Les <b>derniers lancements</b> (succès ou échec) restent affichés quelques jours avec un bouton <b>▶ Rediffusion</b>.</p>
+          <p><b>Fenêtre de détail.</b> Touchez un lancement : photo, date et fenêtre de tir, état et motif d'un report ou d'un échec, fusée, opérateur, mission et orbite, clients, pas de tir, probabilité météo quand elle est publiée, description de la mission, toutes les diffusions disponibles (par langue), dernières nouvelles et page officielle.</p>
+          <p><b>Alerte.</b> Avec <b>Alerte avant un lancement favori</b> réglée (par exemple 15 minutes), l'écran clignote avec un son et un bandeau « Lancement imminent » apparaît dans la tuile, avec le bouton Regarder. Avec <b>Alerte : envoyer aussi sur mon téléphone</b>, une notification part avec le lien de la diffusion, une seule fois même si plusieurs écrans affichent la tuile ; elle utilise l'adresse de <b>Réglages → Contenus et services → Partage</b>.</p>
+          <p><b>D'où viennent les données.</b> De <b>Launch Library 2</b> (The Space Devs), base communautaire gratuite utilisée par la plupart des applis de suivi. Le serveur PiBoard la lit pour toutes les tuiles et garde les données en cache : toutes les 30 minutes, toutes les 10 minutes dans les 3 heures qui précèdent un tir, pour rester sous la limite d'environ 15 appels par heure du niveau gratuit. Si la source ne répond pas, les dernières données restent affichées avec une mention.</p>
 
 <h4>Options</h4>
 <p class="help-sub">Dans l'ordre de la fenêtre de réglages de la tuile, avec les libellés exacts.</p>
@@ -521,7 +529,16 @@
 <div class="help-opt"><span class="help-opt-name">Inclure Uranus et Neptune</span><span class="help-opt-desc">Désactivé par défaut.</span></div>
 <p class="help-opt-group">Éclipse</p>
 <div class="help-opt"><span class="help-opt-name">Afficher la prochaine éclipse</span><span class="help-opt-desc">La prochaine éclipse solaire ou lunaire réellement visible depuis la ville ci-dessus (pas simplement en cours quelque part sur Terre), avec un compte à rebours compact. Activé par défaut.</span></div>
-<div class="help-opt"><span class="help-opt-name">Rafraîchissement (minutes)</span><span class="help-opt-desc">Les trois sections évoluent lentement ; un intervalle long suffit largement.</span></div>
+<p class="help-opt-group">Lancements spatiaux</p>
+<div class="help-opt"><span class="help-opt-name">Afficher les prochains lancements de fusées</span><span class="help-opt-desc">Activé par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Lancements affichés</span><span class="help-opt-desc">De 1 à 10 (3 par défaut), aussi pour les derniers lancements.</span></div>
+<div class="help-opt"><span class="help-opt-name">Seulement ces opérateurs ou fusées (séparés par des virgules, vide = tous)</span><span class="help-opt-desc">Comparé à l'opérateur et à la fusée, sans tenir compte des majuscules : « Arianespace, SpaceX » ou « Ariane, Vega, Falcon ». Vide par défaut : tous les lancements du monde.</span></div>
+<div class="help-opt"><span class="help-opt-name">Favoris (mis en évidence, alertes)</span><span class="help-opt-desc">« Ariane, Vega » par défaut. Les lancements qui correspondent sont marqués d'une étoile et sont les seuls à déclencher l'alerte.</span></div>
+<div class="help-opt"><span class="help-opt-name">Lancements récents affichés (jours, 0 = aucun)</span><span class="help-opt-desc">3 par défaut : les tirs des derniers jours, avec leur résultat et la rediffusion.</span></div>
+<div class="help-opt"><span class="help-opt-name">Alerte avant un lancement favori (minutes, 0 = désactivée)</span><span class="help-opt-desc">0 par défaut. Pas d'alerte pour un lancement « En attente » ou sans date fixée.</span></div>
+<div class="help-opt"><span class="help-opt-name">Alerte : faire clignoter l'écran et jouer un son</span><span class="help-opt-desc">Activé par défaut. Le bandeau « Lancement imminent » s'affiche dans tous les cas.</span></div>
+<div class="help-opt"><span class="help-opt-name">Alerte : envoyer aussi sur mon téléphone</span><span class="help-opt-desc">Désactivé par défaut. Utilise l'adresse de notification de Réglages → Contenus et services → Partage ; le message contient le lien de la diffusion.</span></div>
+<div class="help-opt"><span class="help-opt-name">Rafraîchissement (minutes)</span><span class="help-opt-desc">Les sections évoluent lentement ; un intervalle long suffit largement.</span></div>
 `,
         en: `
 <span class="help-size">Size: 4×5 by default, from 2×2 to 8×12</span>
@@ -534,7 +551,8 @@
   <li><b>International Space Station passes</b> over your city, optionally keeping only those visible to the naked eye, with the number of passes listed.</li>
   <li><b>Planets visible tonight</b>, optionally including the outer planets (Uranus, Neptune).</li>
   <li><b>Next eclipse</b>, solar or lunar, actually visible from your city, with a compact countdown.</li>
-  <li>Four sections shown or hidden independently.</li>
+  <li><b>Upcoming rocket launches</b> worldwide (Ariane, Vega, SpaceX, ULA, Rocket Lab…), with a countdown, a <b>Watch</b> button to the live webcast (mostly YouTube), a detail window, replays of the latest launches and an alert before a favourite launch.</li>
+  <li>Five sections shown or hidden independently.</li>
 </ul>
 
 <h4>Four independent sections</h4>
@@ -546,6 +564,13 @@
 
 <h4>Where the data comes from</h4>
           <p>Moon phase and planet positions are <b>computed directly on the PiBoard</b>, with no network call at all — as reliable as a clock, never dependent on an outside service. ISS passes, though, need up-to-date orbital data (impossible to compute in advance) and come from a free, keyless community service, a rebuild of the old open-notify.org API whose pass predictions shut down — a solo, donation-funded project, worth keeping in mind should this section ever stop responding one day.</p>
+
+<h4>Rocket launches</h4>
+          <p>The <b>🚀 Upcoming launches</b> section lists upcoming flights, nearest first: date and time (or just the month when the date is not set yet), status (<b>Go</b>, <b>To be confirmed</b>, <b>On hold</b>), rocket, mission, operator and launch site, and a <b>T−</b> countdown that switches to seconds in the last hour. <b>Favourite</b> launches (Ariane and Vega by default) carry a star and a coloured edge.</p>
+          <p><b>Watch.</b> As soon as the operator publishes its webcast (usually a few days before launch: Arianespace, CNES, ESA, SpaceX, NASA…), a <b>▶ Watch</b> button appears; it turns red <b>● LIVE</b> during the broadcast. It opens the video in the browser; on the kiosk Raspberry Pi, the link shows as a <b>QR code</b> to scan with the phone. The <b>latest launches</b> (success or failure) stay listed for a few days with a <b>▶ Replay</b> button.</p>
+          <p><b>Detail window.</b> Tap a launch: picture, date and launch window, status and reason for a delay or failure, rocket, operator, mission and orbit, customers, launch pad, weather probability when published, mission description, every available webcast (by language), latest news and official page.</p>
+          <p><b>Alert.</b> With <b>Alert before a favourite launch</b> set (for example 15 minutes), the screen flashes with a sound and a "Launch imminent" banner appears in the tile, with the Watch button. With <b>Alert: also send to my phone</b>, a notification goes out with the webcast link, only once even if several screens show the tile; it uses the address in <b>Settings → Content and services → Sharing</b>.</p>
+          <p><b>Where the data comes from.</b> <b>Launch Library 2</b> (The Space Devs), a free community database used by most launch-tracking apps. The PiBoard server reads it for all tiles and caches it: every 30 minutes, every 10 minutes in the 3 hours before a launch, to stay under the free tier's limit of about 15 calls per hour. If the source does not answer, the last data stays on screen with a note.</p>
 
 <h4>Options</h4>
 <p class="help-sub">In the order of the tile's settings window, with the exact labels.</p>
@@ -562,7 +587,16 @@
 <div class="help-opt"><span class="help-opt-name">Include Uranus and Neptune</span><span class="help-opt-desc">Off by default.</span></div>
 <p class="help-opt-group">Eclipse</p>
 <div class="help-opt"><span class="help-opt-name">Show next eclipse</span><span class="help-opt-desc">The next solar or lunar eclipse actually visible from the city above (not merely happening somewhere on Earth), with a compact countdown. On by default.</span></div>
-<div class="help-opt"><span class="help-opt-name">Refresh (minutes)</span><span class="help-opt-desc">All three sections change slowly; a long interval is plenty.</span></div>
+<p class="help-opt-group">Rocket launches</p>
+<div class="help-opt"><span class="help-opt-name">Show upcoming rocket launches</span><span class="help-opt-desc">On by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Launches shown</span><span class="help-opt-desc">From 1 to 10 (3 by default), also for the latest launches.</span></div>
+<div class="help-opt"><span class="help-opt-name">Only these operators or rockets (comma-separated, empty = all)</span><span class="help-opt-desc">Matched against the operator and the rocket, case-insensitive: "Arianespace, SpaceX" or "Ariane, Vega, Falcon". Empty by default: every launch in the world.</span></div>
+<div class="help-opt"><span class="help-opt-name">Favourites (highlighted, alerts)</span><span class="help-opt-desc">"Ariane, Vega" by default. Matching launches carry a star and are the only ones that trigger the alert.</span></div>
+<div class="help-opt"><span class="help-opt-name">Recent launches shown (days, 0 = none)</span><span class="help-opt-desc">3 by default: the launches of the last days, with their result and the replay.</span></div>
+<div class="help-opt"><span class="help-opt-name">Alert before a favourite launch (minutes, 0 = off)</span><span class="help-opt-desc">0 by default. No alert for a launch "On hold" or without a fixed date.</span></div>
+<div class="help-opt"><span class="help-opt-name">Alert: flash the screen and play a sound</span><span class="help-opt-desc">On by default. The "Launch imminent" banner shows in any case.</span></div>
+<div class="help-opt"><span class="help-opt-name">Alert: also send to my phone</span><span class="help-opt-desc">Off by default. Uses the notification address in Settings → Content and services → Sharing; the message carries the webcast link.</span></div>
+<div class="help-opt"><span class="help-opt-name">Refresh (minutes)</span><span class="help-opt-desc">The sections change slowly; a long interval is plenty.</span></div>
 `
       }
     },
