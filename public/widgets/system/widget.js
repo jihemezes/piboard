@@ -81,6 +81,34 @@
     return `${m}${i18n.t("system.m")}`;
   }
 
+  /* Masque la fin d'une adresse (captures d'ecran) : 82.64.x.x,
+     2a01:e0a:1f3:c4d0:****:****:****:****. Hides the end of an address. */
+  function maskIp(ip) {
+    const a = String(ip || "");
+    if (/^\d+\.\d+\.\d+\.\d+$/.test(a)) return a.split(".").slice(0, 2).join(".") + ".x.x";
+    if (a.includes(":")) {
+      const [head] = a.split("::");
+      const groups = (a.includes("::") ? head.split(":").filter(Boolean) : a.split(":")).slice(0, 4);
+      while (groups.length < 4) groups.push("0");
+      return groups.join(":") + ":****:****:****:****";
+    }
+    return a;
+  }
+
+  /* Copie dans le presse-papiers, avec repli pour les contextes non surs. */
+  function copyText(text) {
+    try { if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => fallbackCopy(text)); } catch (e) { /* repli */ }
+    return Promise.resolve(fallbackCopy(text));
+  }
+  function fallbackCopy(text) {
+    try {
+      const ta = document.createElement("textarea");
+      ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      const ok = document.execCommand && document.execCommand("copy"); ta.remove(); return !!ok;
+    } catch (e) { return false; }
+  }
+
   class SystemWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -95,6 +123,7 @@
       // without its addresses then jump on the next refresh.
       await this.loadNetwork();
       await this.loadPublicIp();
+      await this.loadPublicIp6();
       await this.refresh();
       this.arm();
     }
@@ -112,7 +141,9 @@
       // la charger sans raison solliciterait un service externe pour rien.
       // The public IP is only fetched when the option was just enabled:
       // loading it for no reason would hit an external service needlessly.
-      (wanted && !this.publicIp ? this.loadPublicIp() : Promise.resolve()).then(() => this.refresh());
+      (wanted && !this.publicIp ? this.loadPublicIp() : Promise.resolve())
+        .then(() => (this.needsIpv6Lookup() && !this.publicIp6 ? this.loadPublicIp6() : null))
+        .then(() => this.refresh());
       this.arm();
     }
 
@@ -175,6 +206,10 @@
 
         if (s.showPublicIp && (!this.publicIpAt || Date.now() - this.publicIpAt > 10 * 60 * 1000)) {
           this.loadPublicIp().then(() => { if (this.ctx.el.isConnected) this.refresh(); });
+        }
+        if (this.needsIpv6Lookup() && (!this.publicIp6At || Date.now() - this.publicIp6At > 10 * 60 * 1000)) {
+          this.publicIp6At = Date.now();
+          this.loadPublicIp6().then(() => { if (this.ctx.el.isConnected) this.refresh(); });
         }
         this.wireNetwork();
         this.record(d);
@@ -458,27 +493,73 @@
        `ipconfig` or `ip route` on every refresh, for an identical result. */
     netRows() {
       const i18n = this.ctx.i18n;
+      const s = this.ctx.settings;
+      const t = (k) => i18n.t("system." + k);
       const rows = [];
-      if (this.ctx.settings.showNetwork !== false) {
+      const fam = s.netFamily || "v4";
+      const pubFam = s.publicIpFamily || "v4";
+      const v6shown = (fam !== "v4" && s.showNetwork !== false) || (s.showPublicIp && pubFam !== "v4");
+      const dot = s.showIpv6Status !== false && v6shown
+        ? `<span class="pws-v6dot${this.publicIp6 && this.publicIp6.ip ? " ok" : ""}" title="${esc(t(this.publicIp6 && this.publicIp6.ip ? "ipv6Ok" : "ipv6Ko"))}"></span>` : "";
+      let dotUsed = false;
+      const line = (name, ip, full, cls, title, small) => `
+        <div class="pws-net${cls ? " " + cls : ""}" data-net="1" role="button" tabindex="0" title="${esc(title || t("netDetails"))}">
+          <span class="pws-net-name">${name}</span>
+          <span class="pws-net-ip${small ? " pws-ip6" : ""}"${full ? ` data-copy="${esc(full)}" title="${esc(t("copyHint"))}"` : ""}>${ip}</span>
+        </div>`;
+      if (s.showNetwork !== false) {
         const nets = this.net && this.net.adapters ? this.net.adapters : [];
-        for (const a of nets) rows.push(`
-        <div class="pws-net" data-net="1" role="button" tabindex="0"
-             title="${esc(i18n.t("system.netDetails"))}">
-          <span class="pws-net-name">${esc(a.name)}</span>
-          <span class="pws-net-ip">${esc(a.ipv4)}</span>
-        </div>`);
+        for (const a of nets) {
+          if (fam !== "v6") rows.push(line(esc(a.name), esc(a.ipv4), a.ipv4));
+          if (fam === "v4") continue;
+          const want = { global: s.ipv6Global !== false, ula: !!s.ipv6Ula, link: !!s.ipv6LinkLocal };
+          const list = (a.ipv6Detail || []).filter((x) => x.kind === "global" ? (x.temporary ? !!s.ipv6Temporary : want.global) : !!want[x.kind]);
+          for (const x of list) {
+            const label = esc(a.name) + " · " + esc(t("v6." + (x.temporary ? "temporary" : x.kind)));
+            const shown = x.kind === "global" && s.maskPublicIp ? maskIp(x.address) : x.address;
+            rows.push(line((dotUsed ? "" : dot) + label, esc(shown), x.address, x.deprecated ? "pws-stale" : "", null, true));
+            dotUsed = dotUsed || !!dot;
+          }
+          if (!list.length && s.ipv6Global !== false) rows.push(line((dotUsed ? "" : dot) + esc(a.name) + " · IPv6", `<span class="pws-net-na">${esc(t("v6.none"))}</span>`, null));
+          if (dot) dotUsed = true;
+          if (s.showIpv6Prefix) {
+            const g = (a.ipv6Detail || []).find((x) => x.kind === "global" && x.prefix);
+            if (g) rows.push(line(esc(t("v6.prefix")), esc(g.prefix), g.prefix, "", null, true));
+          }
+        }
       }
-      if (this.ctx.settings.showPublicIp) {
-        const p = this.publicIp;
-        const value = p && p.ip ? esc(p.ip) : `<span class="pws-net-na">${esc(i18n.t("system.netUnknown"))}</span>`;
-        rows.push(`
-        <div class="pws-net pws-net-public${p && p.stale ? " pws-stale" : ""}" data-net="1" role="button" tabindex="0"
-             title="${esc(p && p.stale ? i18n.t("system.publicIpStale") : i18n.t("system.netDetails"))}">
-          <span class="pws-net-name">${esc(i18n.t("system.publicIp"))}</span>
-          <span class="pws-net-ip">${value}</span>
-        </div>`);
+      if (s.showPublicIp) {
+        if (pubFam !== "v6") {
+          const p = this.publicIp;
+          const value = p && p.ip ? esc(s.maskPublicIp ? maskIp(p.ip) : p.ip) : `<span class="pws-net-na">${esc(t("netUnknown"))}</span>`;
+          rows.push(line(esc(t(pubFam === "both" ? "publicIp4" : "publicIp")), value, p && p.ip, "pws-net-public" + (p && p.stale ? " pws-stale" : ""), p && p.stale ? t("publicIpStale") : null));
+        }
+        if (pubFam !== "v4") {
+          const p = this.publicIp6;
+          const value = p && p.ip ? esc(s.maskPublicIp ? maskIp(p.ip) : p.ip) : `<span class="pws-net-na">${esc(t("v6.unavailable"))}</span>`;
+          rows.push(line((dotUsed ? "" : dot) + esc(t("publicIp6")), value, p && p.ip, "pws-net-public" + (p && p.stale ? " pws-stale" : ""), p && p.stale ? t("publicIpStale") : null, true));
+        }
       }
       return rows.join("");
+    }
+
+    /* L'IPv6 publique (et l'indicateur « IPv6 fonctionnel ») : meme cache
+       serveur de dix minutes que l'IPv4. Public IPv6 + "IPv6 working" dot. */
+    needsIpv6Lookup() {
+      const s = this.ctx.settings;
+      const v6local = s.showNetwork !== false && (s.netFamily || "v4") !== "v4";
+      return (s.showPublicIp && (s.publicIpFamily || "v4") !== "v4") || (v6local && s.showIpv6Status !== false);
+    }
+    async loadPublicIp6() {
+      if (!this.needsIpv6Lookup()) return;
+      try {
+        const r = await fetch("/api/public-ip?family=6");
+        if (!r.ok) throw new Error("status " + r.status);
+        this.publicIp6 = await r.json();
+      } catch (e) {
+        this.publicIp6 = this.publicIp6 || { ip: null, error: String(e.message || e) };
+      }
+      this.publicIp6At = Date.now();
     }
 
     /* Chargee a l'affichage puis rafraichie a la meme cadence que le
@@ -517,7 +598,23 @@
       // pointerup rather than click: the project's convention on touch
       // surfaces, where a click can follow a scroll.
       this.ctx.el.querySelectorAll("[data-net]").forEach((el) => {
-        el.addEventListener("pointerup", (e) => { e.preventDefault(); this.openNetwork(); });
+        el.addEventListener("pointerup", (e) => {
+          e.preventDefault();
+          /* Toucher l'adresse la copie (1.178.0) ; le reste de la ligne
+             ouvre la configuration reseau. Tapping the address copies it. */
+          const ip = e.target.closest && e.target.closest("[data-copy]");
+          if (ip) {
+            e.stopPropagation();
+            copyText(ip.dataset.copy).then((ok) => {
+              const old = ip.innerHTML;
+              ip.textContent = this.ctx.i18n.t(ok ? "system.copied" : "system.copyFail");
+              ip.classList.add("pws-copied");
+              setTimeout(() => { if (ip.isConnected) { ip.innerHTML = old; ip.classList.remove("pws-copied"); } }, 1200);
+            });
+            return;
+          }
+          this.openNetwork();
+        });
       });
     }
 
@@ -551,7 +648,14 @@
         rows.push([i18n.t("system.netDns"), a.dns && a.dns.length ? esc(a.dns.join(", ")) : na]);
         rows.push([i18n.t("system.netDomain"), val(a.domain || d.domain)]);
         if (a.mac) rows.push([i18n.t("system.netMac"), esc(a.mac)]);
-        if (a.ipv6 && a.ipv6.length) rows.push(["IPv6", esc(a.ipv6.join(", "))]);
+        if (a.ipv6Detail && a.ipv6Detail.length) {
+          for (const x of a.ipv6Detail) {
+            rows.push(["IPv6 · " + i18n.t("system.v6." + (x.temporary ? "temporary" : x.kind)),
+              esc(x.address + (x.prefixLen != null ? "/" + x.prefixLen : "")) + (x.deprecated ? ` <span class="pwn-na">(${esc(i18n.t("system.v6.deprecated"))})</span>` : "")]);
+          }
+          const g = a.ipv6Detail.find((x) => x.kind === "global" && x.prefix);
+          if (g) rows.push([i18n.t("system.v6.prefix"), esc(g.prefix)]);
+        } else if (a.ipv6 && a.ipv6.length) rows.push(["IPv6", esc(a.ipv6.join(", "))]);
 
         return `<div class="pwn-card">
           <h3 class="pwn-title"><span class="pwn-kind pwn-${a.type === "wifi" ? "wifi" : "wired"}"></span>${esc(a.name)}</h3>

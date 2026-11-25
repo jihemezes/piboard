@@ -1,6 +1,6 @@
 {
   "id": "system",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "name": {
     "en": "System status",
     "fr": "État système"
@@ -68,6 +68,157 @@
       "hint": {
         "en": "The address your local network shows on the Internet (the one websites see). Looked up by the PiBoard server through an external service, refreshed every ten minutes. Off by default: it is a piece of information you may not want on a wall display.",
         "fr": "L'adresse sous laquelle votre réseau local apparaît sur Internet (celle que voient les sites web). Obtenue par le serveur PiBoard via un service externe, rafraîchie toutes les dix minutes. Désactivé par défaut : c'est une information que l'on ne souhaite pas forcément sur un écran mural."
+      }
+    },
+    {
+      "key": "publicIpFamily",
+      "type": "select",
+      "default": "v4",
+      "options": [
+        {
+          "value": "v4",
+          "label": {
+            "en": "IPv4",
+            "fr": "IPv4"
+          }
+        },
+        {
+          "value": "v6",
+          "label": {
+            "en": "IPv6",
+            "fr": "IPv6"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "IPv4 and IPv6",
+            "fr": "IPv4 et IPv6"
+          }
+        }
+      ],
+      "label": {
+        "en": "Public address: IPv4, IPv6 or both",
+        "fr": "Adresse publique : IPv4, IPv6 ou les deux"
+      },
+      "hint": {
+        "en": "The public IPv6 is looked up through an IPv6-only service: if it answers, IPv6 really works.",
+        "fr": "L'IPv6 publique est obtenue par un service joignable uniquement en IPv6 : s'il répond, l'IPv6 fonctionne vraiment."
+      }
+    },
+    {
+      "key": "netFamily",
+      "type": "select",
+      "default": "v4",
+      "options": [
+        {
+          "value": "v4",
+          "label": {
+            "en": "IPv4",
+            "fr": "IPv4"
+          }
+        },
+        {
+          "value": "v6",
+          "label": {
+            "en": "IPv6",
+            "fr": "IPv6"
+          }
+        },
+        {
+          "value": "both",
+          "label": {
+            "en": "IPv4 and IPv6",
+            "fr": "IPv4 et IPv6"
+          }
+        }
+      ],
+      "label": {
+        "en": "Adapter addresses: IPv4, IPv6 or both",
+        "fr": "Adresses des cartes réseau : IPv4, IPv6 ou les deux"
+      }
+    },
+    {
+      "key": "ipv6Global",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "IPv6: main global address",
+        "fr": "IPv6 : adresse globale principale"
+      },
+      "hint": {
+        "en": "The stable 2a01:… / 2001:… address of the machine, reachable from the Internet.",
+        "fr": "L'adresse stable 2a01:… / 2001:… de la machine, joignable depuis Internet."
+      }
+    },
+    {
+      "key": "ipv6Temporary",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "IPv6: temporary addresses",
+        "fr": "IPv6 : adresses temporaires"
+      },
+      "hint": {
+        "en": "Privacy addresses that change regularly; often the ones used to go out to the Internet.",
+        "fr": "Adresses de confidentialité qui changent régulièrement ; souvent celles utilisées pour sortir sur Internet."
+      }
+    },
+    {
+      "key": "ipv6Ula",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "IPv6: unique local address (fd…)",
+        "fr": "IPv6 : adresse locale unique (fd…)"
+      }
+    },
+    {
+      "key": "ipv6LinkLocal",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "IPv6: link-local address (fe80::…)",
+        "fr": "IPv6 : adresse de lien local (fe80::…)"
+      }
+    },
+    {
+      "key": "showIpv6Prefix",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Show the IPv6 network prefix",
+        "fr": "Afficher le préfixe réseau IPv6"
+      },
+      "hint": {
+        "en": "The network part of the global address (usually a /64) given by the router.",
+        "fr": "La partie réseau de l'adresse globale (un /64 le plus souvent), attribuée par la box."
+      }
+    },
+    {
+      "key": "showIpv6Status",
+      "type": "checkbox",
+      "default": true,
+      "label": {
+        "en": "“IPv6 working” indicator",
+        "fr": "Indicateur « IPv6 fonctionnel »"
+      },
+      "hint": {
+        "en": "Green dot when the machine reaches the Internet over IPv6, grey otherwise. Shown when IPv6 addresses are displayed.",
+        "fr": "Pastille verte quand la machine joint Internet en IPv6, grise sinon. Visible quand des adresses IPv6 sont affichées."
+      }
+    },
+    {
+      "key": "maskPublicIp",
+      "type": "checkbox",
+      "default": false,
+      "label": {
+        "en": "Hide the end of public addresses",
+        "fr": "Masquer la fin des adresses publiques"
+      },
+      "hint": {
+        "en": "For screenshots: the public IPv4, the public IPv6 and the global IPv6 addresses only show their beginning.",
+        "fr": "Pour les captures d'écran : l'IPv4 publique, l'IPv6 publique et les adresses IPv6 globales n'affichent que leur début."
       }
     },
     {

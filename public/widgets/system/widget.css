@@ -214,3 +214,11 @@ body.touch .pwg-tab { font-size: 15px; padding: 8px 20px; }
 
 /* Axe temporel commun sous la courbe / shared time axis under the curve */
 .pwg-taxis { margin-bottom: 2px; }
+
+/* ---------- IPv6 (1.178.0) ---------- */
+.pws-net-ip.pws-ip6 { font-size: 0.78em; white-space: normal; overflow-wrap: anywhere; text-align: right; font-family: var(--mono, monospace); }
+.pws-net-ip[data-copy] { cursor: copy; border-radius: 4px; }
+.pws-net-ip[data-copy]:hover { text-decoration: underline dotted; }
+.pws-net-ip.pws-copied { color: var(--ok, #3fb950); font-family: inherit; }
+.pws-v6dot { display: inline-block; width: 0.55em; height: 0.55em; border-radius: 50%; background: var(--muted); margin-right: 0.35em; vertical-align: middle; }
+.pws-v6dot.ok { background: var(--ok, #3fb950); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ok, #3fb950) 30%, transparent); }

@@ -31,6 +31,7 @@
    ============================================================ */
 "use strict";
 
+const net = require("net");
 const { isValidIp } = require("./ipv4");
 
 const CACHE_MS = 10 * 60 * 1000;
@@ -40,7 +41,7 @@ const TIMEOUT_MS = 6000;
    les deux formats coexistent selon le service.
    Plain-text ("1.2.3.4\n") or JSON ({"ip":"1.2.3.4"}) answer: both
    formats coexist depending on the service. */
-function parseIpResponse(text) {
+function parseIpResponse(text, family) {
   const raw = String(text || "").trim();
   if (!raw) return null;
   let candidate = raw;
@@ -48,8 +49,18 @@ function parseIpResponse(text) {
     try { candidate = String(JSON.parse(raw).ip || ""); } catch (e) { return null; }
   }
   candidate = candidate.trim();
+  if (family === 6) return net.isIPv6(candidate) ? candidate.toLowerCase() : null;
   return isValidIp(candidate) ? candidate : null;
 }
+
+/* Services IPv6 seulement (1.178.0) : ils ne repondent QUE par IPv6, ce
+   qui prouve au passage que la connexion IPv6 fonctionne. IPv6-only
+   services: answering at all proves IPv6 connectivity works. */
+const SERVICES_V6 = [
+  "https://api6.ipify.org?format=json",
+  "https://ipv6.icanhazip.com/",
+  "https://v6.ident.me/"
+];
 
 const SERVICES = [
   "https://api.ipify.org?format=json",
@@ -60,6 +71,7 @@ const SERVICES = [
 function createPublicIpLookup(options) {
   const opts = Object.assign({
     services: SERVICES,
+    family: 4,
     fetchImpl: typeof fetch === "function" ? fetch : null,
     cacheMs: CACHE_MS,
     now: () => Date.now()
@@ -80,7 +92,7 @@ function createPublicIpLookup(options) {
           headers: { "User-Agent": "PiBoard", "Accept": "text/plain, application/json" }
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
-        const ip = parseIpResponse(await res.text());
+        const ip = parseIpResponse(await res.text(), opts.family);
         if (ip) return { ip, source: url };
         throw new Error("unrecognized answer");
       } catch (e) {
@@ -122,4 +134,4 @@ function createPublicIpLookup(options) {
   return { lookup, snapshot };
 }
 
-module.exports = { createPublicIpLookup, parseIpResponse, SERVICES };
+module.exports = { createPublicIpLookup, parseIpResponse, SERVICES, SERVICES_V6 };

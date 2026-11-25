@@ -32,6 +32,24 @@
 
 # Nouveautes / What's new
 
+## 1.178.0
+
+**État système : les adresses IPv6**
+
+La tuile **État système** sait maintenant afficher vos adresses en **IPv6**, à côté ou à la place de l'IPv4 :
+l'adresse globale de la machine, ses adresses temporaires, locale unique ou de lien local, le **préfixe
+réseau**, l'**IPv6 publique** et une pastille **« IPv6 fonctionnel »**. Touchez une adresse pour la
+**copier**, et masquez la fin des adresses publiques avant une capture d'écran.
+
+---
+
+**System status: IPv6 addresses**
+
+The **System status** tile can now show your addresses in **IPv6**, alongside or instead of IPv4: the
+machine's global address, its temporary, unique local or link-local addresses, the **network prefix**, the
+**public IPv6** and an **"IPv6 working"** dot. Tap an address to **copy** it, and hide the end of public
+addresses before a screenshot.
+
 ## 1.177.0
 
 **Astronomie : les prochains lancements de fusées, et le direct en un geste**

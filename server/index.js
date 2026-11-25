@@ -479,8 +479,11 @@ app.get("/api/system", async (req, res) => {
    malgre le cache. See server/publicIp.js. ?refresh=1 forces a fresh
    query despite the cache. */
 const publicIp = require("./publicIp").createPublicIpLookup();
+const publicIp6 = require("./publicIp").createPublicIpLookup({ services: require("./publicIp").SERVICES_V6, family: 6 });
 app.get("/api/public-ip", async (req, res) => {
-  res.json(await publicIp.lookup(req.query.refresh === "1"));
+  // ?family=6 : adresse publique IPv6 (1.178.0) ; sinon IPv4 comme avant.
+  const lookup = String(req.query.family) === "6" ? publicIp6 : publicIp;
+  res.json(await lookup.lookup(req.query.refresh === "1"));
 });
 
 /* ---------- Analyse reseau (widget "network scan") ----------

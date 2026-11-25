@@ -30,6 +30,7 @@
    someone hunting a fault that does not exist.
    ============================================================ */
 "use strict";
+const ipv6Info = require("./ipv6Info");
 
 const os = require("os");
 const platform = require("./platform");
@@ -101,7 +102,7 @@ function isVirtualMac(mac) {
    returns one entry PER ADDRESS: an adapter with one IPv4 and two IPv6
    shows up three times. A window listing the same adapter three times
    would be unreadable. */
-function collectInterfaces(raw) {
+function collectInterfaces(raw, v6flags) {
   const all = raw || os.networkInterfaces();
   const out = [];
 
@@ -135,6 +136,8 @@ function collectInterfaces(raw) {
       netmask: v4.netmask || null,
       cidr: v4.cidr || null,
       ipv6: v6,
+      // Detail IPv6 (1.178.0) : type, prefixe, adresses temporaires.
+      ipv6Detail: ipv6Info.describe(addrs, v6flags),
       gateway: null,
       dhcp: null,
       dhcpServer: null,
@@ -189,7 +192,9 @@ function guessType(name) {
 }
 
 async function getNetworkConfig() {
-  const base = collectInterfaces();
+  let v6flags = null;
+  try { v6flags = await ipv6Info.readFlags(platform.id); } catch (e) { v6flags = null; }
+  const base = collectInterfaces(null, v6flags);
 
   let details = null;
   try {

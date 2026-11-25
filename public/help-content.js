@@ -3729,6 +3729,7 @@ Franceinfo".</span></div>
   <li><b>CPU, RAM, disque et température</b>, avec <b>courbes d'utilisation</b> sur la durée choisie.</li>
   <li><b>Charge du GPU</b> et sa courbe, quand le système la fournit.</li>
   <li><b>Nom de la machine</b>, <b>disponibilité</b> (temps depuis le démarrage), <b>adresses réseau</b> des cartes et <b>adresse IP publique</b>.</li>
+  <li><b>IPv6</b> en plus ou à la place de l'IPv4 : adresse globale, temporaires, locale unique, lien local, préfixe réseau, IPv6 publique et indicateur « IPv6 fonctionnel » ; copie d'une adresse au toucher et masquage pour les captures d'écran.</li>
   <li><b>Couleurs par niveau</b> (normal, élevé, critique), avec des courbes qui peuvent suivre le niveau actuel.</li>
   <li>Chaque élément s'affiche ou se masque ; rafraîchissement réglable à la seconde.</li>
 </ul>
@@ -3764,6 +3765,11 @@ Franceinfo".</span></div>
 <h4>Adresse IP publique</h4>
           <p>En option, la tuile affiche aussi l'adresse sous laquelle votre réseau local apparaît sur Internet — celle que voient les sites web, différente des adresses locales des cartes. Elle est obtenue <b>par le serveur PiBoard</b> auprès d'un service externe (trois services indépendants sont essayés à tour de rôle), et gardée en cache dix minutes : un seul appel pour tous vos écrans, jamais toutes les cinq secondes. Si le service devient injoignable, la dernière adresse connue reste affichée, atténuée, plutôt qu'un vide. <b>Désactivée par défaut</b> : c'est une information que l'on ne souhaite pas forcément sur un écran mural.</p>
 
+<h4>IPv6</h4>
+          <p>En IPv6, la box ne traduit généralement pas les adresses comme en IPv4 : chaque machine porte <b>plusieurs adresses</b>. L'<b>adresse globale</b> (2a01:… chez Free, 2001:…, 2a02:…) est joignable depuis Internet : c'est l'équivalent de l'« IP publique ». Les <b>adresses temporaires</b> sont des adresses de confidentialité qui changent régulièrement, souvent celles qui servent à sortir sur Internet. L'<b>adresse locale unique</b> (fd…) n'existe que si la box en distribue, comme un 192.168.x.x. L'adresse de <b>lien local</b> (fe80::…) est toujours présente et ne sert qu'au réseau local.</p>
+          <p>Avec <b>Adresses des cartes réseau : IPv4, IPv6 ou les deux</b>, la tuile ajoute une ligne par adresse IPv6 choisie, en police réduite pour tenir dans la tuile (sur deux lignes si besoin). Le <b>préfixe réseau</b> est la partie réseau de l'adresse globale, un /64 le plus souvent ; le préfixe plus large délégué à la box (un /56 par exemple) n'est pas visible depuis la machine. <b>Adresse publique : IPv4, IPv6 ou les deux</b> fait de même pour l'adresse vue d'Internet : l'IPv6 publique est demandée à un service joignable <i>uniquement</i> en IPv6, ce qui donne l'<b>indicateur « IPv6 fonctionnel »</b> (pastille verte : la machine joint Internet en IPv6 ; grise : pas d'IPv6 de bout en bout). Une adresse obsolète (en fin de vie) apparaît atténuée.</p>
+          <p><b>Toucher une adresse la copie</b> dans le presse-papiers (« Copié ✓ » s'affiche un instant), pour n'importe quelle adresse IPv4 ou IPv6 ; toucher le nom de la carte ouvre toujours la configuration réseau complète, qui liste aussi toutes les adresses IPv6 avec leur longueur de préfixe. <b>Masquer la fin des adresses publiques</b> n'affiche que le début de l'IPv4 publique (82.64.x.x), de l'IPv6 publique et des adresses IPv6 globales (2a01:e0a:1f3:c4d0:****:…), pour une capture d'écran ; la copie, elle, donne l'adresse complète.</p>
+
 <h4>Couleurs et seuils</h4>
           <p>Chaque barre (CPU, RAM, disque) prend l'une de trois couleurs selon le niveau : <b>normal</b> (vert par défaut), <b>élevé</b> (ambre) et <b>critique</b> (rouge). <b>Le rouge est réservé au niveau critique</b> — les versions précédentes peignaient l'usage normal avec la couleur d'accent du thème, un rouge framboise qui faisait passer un Pi au repos pour une machine en surchauffe. Les deux seuils (65 % et 85 % par défaut) et les trois couleurs se règlent dans la section « Couleurs &amp; seuils ». Un seuil critique placé sous le seuil élevé est aligné dessus plutôt qu'ignoré en silence.</p>
           <p>Les courbes ont leur propre couleur (bleu par défaut), ou peuvent suivre le niveau du dernier relevé si vous cochez l'option correspondante. Le chiffre courant en tête de la fenêtre prend toujours la couleur de son niveau.</p>
@@ -3774,6 +3780,15 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher le nom de machine</span><span class="help-opt-desc">Utile si plusieurs machines hébergent chacune une instance PiBoard.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher les adresses IP des cartes réseau</span><span class="help-opt-desc">Uniquement les cartes réelles et connectées (WiFi et Ethernet). Cliquez sur une adresse pour ouvrir la configuration réseau complète. Activé par défaut.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher l'adresse IP publique</span><span class="help-opt-desc">Voir ci-dessus. Désactivée par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Adresse publique : IPv4, IPv6 ou les deux</span><span class="help-opt-desc">IPv4 par défaut. Voir « IPv6 » ci-dessus.</span></div>
+<div class="help-opt"><span class="help-opt-name">Adresses des cartes réseau : IPv4, IPv6 ou les deux</span><span class="help-opt-desc">IPv4 par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6 : adresse globale principale</span><span class="help-opt-desc">Coché par défaut (quand l'IPv6 est affichée).</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6 : adresses temporaires</span><span class="help-opt-desc">Décoché par défaut. Leur repérage vient de <code>ip</code> (Linux), <code>ifconfig</code> (macOS) ou <code>netsh</code> (Windows).</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6 : adresse locale unique (fd…)</span><span class="help-opt-desc">Décoché par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6 : adresse de lien local (fe80::…)</span><span class="help-opt-desc">Décoché par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Afficher le préfixe réseau IPv6</span><span class="help-opt-desc">Décoché par défaut.</span></div>
+<div class="help-opt"><span class="help-opt-name">Indicateur « IPv6 fonctionnel »</span><span class="help-opt-desc">Coché par défaut ; visible quand des adresses IPv6 sont affichées.</span></div>
+<div class="help-opt"><span class="help-opt-name">Masquer la fin des adresses publiques</span><span class="help-opt-desc">Décoché par défaut. Pour les captures d'écran.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher la charge du GPU</span><span class="help-opt-desc">La barre GPU. Sans effet si la machine n'expose pas cette information (Raspberry Pi).</span></div>
 <div class="help-opt"><span class="help-opt-name">Courbe d'utilisation du GPU</span><span class="help-opt-desc">Ajoute l'onglet GPU aux courbes et rend la barre cliquable. Décochez pour garder la barre seule.</span></div>
 <div class="help-opt"><span class="help-opt-name">Afficher la disponibilité</span><span class="help-opt-desc">Depuis combien de temps la machine tourne sans interruption.</span></div>
@@ -3797,6 +3812,7 @@ Franceinfo".</span></div>
   <li><b>CPU, RAM, disk and temperature</b>, with <b>usage charts</b> over the chosen period.</li>
   <li><b>GPU load</b> and its chart, when the system provides it.</li>
   <li><b>Machine name</b>, <b>uptime</b>, network card <b>addresses</b> and <b>public IP address</b>.</li>
+  <li><b>IPv6</b> alongside or instead of IPv4: global, temporary, unique local and link-local addresses, network prefix, public IPv6 and an "IPv6 working" indicator; tap to copy an address, and masking for screenshots.</li>
   <li><b>Colours by level</b> (normal, high, critical), with charts that can follow the current level.</li>
   <li>Each item can be shown or hidden; refresh adjustable to the second.</li>
 </ul>
@@ -3832,6 +3848,11 @@ Franceinfo".</span></div>
 <h4>Public IP address</h4>
           <p>Optionally, the tile also shows the address your local network presents on the Internet — the one websites see, distinct from the adapters' local addresses. It is obtained <b>by the PiBoard server</b> from an external service (three independent services are tried in turn), and cached for ten minutes: a single call for all your screens, never every five seconds. If the service becomes unreachable, the last known address stays shown, dimmed, rather than a blank. <b>Off by default</b>: it is a piece of information you may not want on a wall display.</p>
 
+<h4>IPv6</h4>
+          <p>With IPv6 the router usually does not translate addresses as with IPv4: each machine carries <b>several addresses</b>. The <b>global address</b> (2a01:…, 2001:…, 2a02:…) is reachable from the Internet: it is the equivalent of the "public IP". <b>Temporary addresses</b> are privacy addresses that change regularly, often the ones used to go out to the Internet. The <b>unique local address</b> (fd…) only exists if the router hands one out, like a 192.168.x.x. The <b>link-local</b> address (fe80::…) is always present and only serves the local network.</p>
+          <p>With <b>Adapter addresses: IPv4, IPv6 or both</b>, the tile adds one line per chosen IPv6 address, in a smaller font to fit the tile (on two lines if needed). The <b>network prefix</b> is the network part of the global address, usually a /64; the wider prefix delegated to the router (a /56 for example) is not visible from the machine. <b>Public address: IPv4, IPv6 or both</b> does the same for the address seen from the Internet: the public IPv6 is asked of a service reachable <i>only</i> over IPv6, which gives the <b>"IPv6 working" indicator</b> (green dot: the machine reaches the Internet over IPv6; grey: no end-to-end IPv6). A deprecated (expiring) address shows dimmed.</p>
+          <p><b>Tapping an address copies it</b> to the clipboard ("Copied ✓" shows for a moment), for any IPv4 or IPv6 address; tapping the adapter name still opens the full network configuration, which also lists every IPv6 address with its prefix length. <b>Hide the end of public addresses</b> only shows the beginning of the public IPv4 (82.64.x.x), the public IPv6 and the global IPv6 addresses (2a01:e0a:1f3:c4d0:****:…), for a screenshot; copying still gives the full address.</p>
+
 <h4>Colors and thresholds</h4>
           <p>Every bar (CPU, RAM, disk) takes one of three colors by level: <b>normal</b> (green by default), <b>high</b> (amber) and <b>critical</b> (red). <b>Red is reserved for the critical level</b> — previous versions painted normal usage with the theme's accent color, a raspberry red that made an idle Pi look like an overheating machine. Both thresholds (65% and 85% by default) and the three colors are set in the "Colors &amp; thresholds" section. A critical threshold placed below the high one is aligned to it rather than silently ignored.</p>
           <p>The charts have their own color (blue by default), or can follow the latest reading's level if you tick the matching option. The current figure at the top of the window always takes its level color.</p>
@@ -3842,6 +3863,15 @@ Franceinfo".</span></div>
 <div class="help-opt"><span class="help-opt-name">Show hostname</span><span class="help-opt-desc">Useful if several machines each host a PiBoard instance.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show network adapter IP addresses</span><span class="help-opt-desc">Only real, connected adapters (WiFi and Ethernet). Click an address to open the full network configuration. On by default.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show the public IP address</span><span class="help-opt-desc">See above. Off by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Public address: IPv4, IPv6 or both</span><span class="help-opt-desc">IPv4 by default. See "IPv6" above.</span></div>
+<div class="help-opt"><span class="help-opt-name">Adapter addresses: IPv4, IPv6 or both</span><span class="help-opt-desc">IPv4 by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6: main global address</span><span class="help-opt-desc">Ticked by default (when IPv6 is shown).</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6: temporary addresses</span><span class="help-opt-desc">Unticked by default. They are identified through <code>ip</code> (Linux), <code>ifconfig</code> (macOS) or <code>netsh</code> (Windows).</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6: unique local address (fd…)</span><span class="help-opt-desc">Unticked by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">IPv6: link-local address (fe80::…)</span><span class="help-opt-desc">Unticked by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">Show the IPv6 network prefix</span><span class="help-opt-desc">Unticked by default.</span></div>
+<div class="help-opt"><span class="help-opt-name">“IPv6 working” indicator</span><span class="help-opt-desc">Ticked by default; visible when IPv6 addresses are shown.</span></div>
+<div class="help-opt"><span class="help-opt-name">Hide the end of public addresses</span><span class="help-opt-desc">Unticked by default. For screenshots.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show GPU load</span><span class="help-opt-desc">The GPU bar. No effect if the machine does not expose this information (Raspberry Pi).</span></div>
 <div class="help-opt"><span class="help-opt-name">GPU usage chart</span><span class="help-opt-desc">Adds the GPU tab to the charts and makes the bar clickable. Untick to keep the bar alone.</span></div>
 <div class="help-opt"><span class="help-opt-name">Show uptime</span><span class="help-opt-desc">How long the machine has been running without interruption.</span></div>

@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.178.0
+
+- **Tuile État système : IPv6.** Réglages « Adresses des cartes réseau : IPv4, IPv6 ou les deux » et « Adresse
+  publique : IPv4, IPv6 ou les deux » ; choix des adresses IPv6 affichées (globale principale, temporaires,
+  locale unique fd…, lien local fe80::…), préfixe réseau (/64), indicateur « IPv6 fonctionnel » (service
+  joignable uniquement en IPv6), masquage de la fin des adresses publiques et globales pour les captures.
+  Toucher une adresse la copie (le nom de la carte ouvre toujours la configuration réseau).
+- Nouveau `server/ipv6Info.js` : type d'adresse, préfixe, adresses temporaires/obsolètes lues dans `ip -6 -o addr`
+  (Linux), `ifconfig` (macOS), `netsh interface ipv6 show addresses` (Windows). `netConfig` ajoute `ipv6Detail`
+  à chaque carte (le champ `ipv6` reste inchangé). `/api/public-ip?family=6` (api6.ipify.org, ipv6.icanhazip.com,
+  v6.ident.me), cache de 10 min comme l'IPv4.
+- La fenêtre de configuration réseau liste toutes les adresses IPv6 avec leur longueur de préfixe.
+- Tests : `ipv6.test.js`. Aide FR/EN.
+
 ## 1.177.0
 
 - **Tuile Astronomie : prochains lancements de fusées.** Nouvelle section (activée par défaut) alimentée par
