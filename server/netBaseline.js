@@ -36,6 +36,8 @@
    ============================================================ */
 "use strict";
 
+const os = require("os");
+const crypto = require("crypto");
 const store = require("./store");
 const { hostKey, normalizeMac } = require("./netHosts");
 
@@ -53,8 +55,53 @@ const MISS_LIMIT = 2;
 const KEY_RE = /^(mac:[0-9a-f:]{17}|ip:[0-9.]{7,15})$/;
 const EVENT_RE = /^(new|changed|absent):(mac:[0-9a-f:]{17}|ip:[0-9.]{7,15})(:[0-9TZ:.\-]{0,40})?$/;
 
+/* 1.181.0 - REFERENTIEL. La reference n'est plus une photo des hotes
+   presents a un instant T : c'est un referentiel CUMULATIF, une fiche par
+   appareil (cle MAC), qui ne perd jamais un appareil sauf « Oublier ».
+     baseline.hosts[key] : fiche (mac, ip, nom reseau, fabricant, premiere
+                           et derniere apparition, IP connues par reseau,
+                           reseaux, « vu par » chaque PiBoard, champs
+                           saisis : type, proprietaire, notes, confiance,
+                           nom -- chacun date pour la fusion, voir
+                           server/netRegistry.js)
+     deleted[key]        : appareils oublies {at, by} (propages a la fusion)
+     networks[id]        : reseaux reconnus (MAC de la passerelle)
+     self                : identite de CE PiBoard {id, name}
+   REGISTRY. The reference is no longer a snapshot of the hosts present at
+   a moment T: it is a CUMULATIVE registry, one record per device (MAC
+   key), which never loses a device except through "Forget". */
+const FIELD_NAMES = ["name", "type", "owner", "notes", "trusted"];
+const DEVICE_TYPES = ["router", "computer", "laptop", "phone", "tablet", "tv", "printer", "nas", "camera", "speaker", "console", "iot", "network", "server", "other"];
+const MAX_IPS = 20;
+const MAX_NETWORKS = 20;
+const MAX_SEENBY = 20;
+const MAX_DELETED = 2000;
+const ID_RE = /^pb-[0-9a-f]{12}$/;
+const NET_RE = /^(gw:[0-9a-f:]{17}|net:[0-9./]{9,18})$/;
+
 function emptyState() {
-  return { baseline: null, seen: {}, log: [], claims: {} };
+  return { baseline: null, seen: {}, log: [], claims: {}, deleted: {}, networks: {}, currentNet: null, self: null };
+}
+
+/* Identite de ce PiBoard, creee une fois / this PiBoard's identity, created once */
+function ensureSelf(state) {
+  if (!state.self || !ID_RE.test(String(state.self.id))) {
+    state.self = { id: "pb-" + crypto.randomBytes(6).toString("hex"), name: String(os.hostname() || "PiBoard").slice(0, 40) };
+  }
+  return state.self;
+}
+
+/* Identifiant du reseau : MAC de la passerelle, a defaut le sous-reseau
+   (« suppose », moins sur). Network id: gateway MAC, failing that the
+   subnet ("assumed", less certain). */
+function networkIdOf(result) {
+  const gw = result && result.gateway;
+  const mac = gw && normalizeMac(gw.mac);
+  if (mac) return { id: "gw:" + mac, assumed: false, gatewayIp: gw.ip || null, gatewayMac: mac };
+  if (result && typeof result.cidr === "string" && /^[0-9./]{9,18}$/.test(result.cidr)) {
+    return { id: "net:" + result.cidr, assumed: true, gatewayIp: gw ? gw.ip || null : null, gatewayMac: null };
+  }
+  return null;
 }
 
 /* ---------- Utilitaires / helpers ---------- */
@@ -65,6 +112,11 @@ function isRandomMac(mac) {
   const m = normalizeMac(mac);
   if (!m) return false;
   return (parseInt(m.slice(0, 2), 16) & 2) === 2;
+}
+
+function netName(state, id) {
+  const n = state && state.networks ? state.networks[id] : null;
+  return n && n.name && n.name.v ? n.name.v : null;
 }
 
 function labelOf(h, alias) {
@@ -78,6 +130,54 @@ function pushLog(state, entry) {
 
 function clone(state) {
   return JSON.parse(JSON.stringify(state || emptyState()));
+}
+
+/* Champ date pour la fusion : {v, at, by, bases} -- `bases` = dates des
+   valeurs qu'il remplace (voir server/netRegistry.js).
+   Dated field for merging: {v, at, by, bases}. */
+function sanitizeField(f, str, iso, max) {
+  if (!f || typeof f !== "object" || !iso(f.at)) return null;
+  let v = f.v;
+  if (typeof v === "boolean") { /* confiance / trusted */ }
+  else v = typeof v === "string" ? v.replace(/[\u0000-\u0008\u000b-\u001f]/g, "").slice(0, max || 80) : "";
+  const bases = Array.isArray(f.bases) ? f.bases.filter((b) => iso(b)).slice(-6) : [];
+  return { v, at: f.at, by: str(f.by, 15), bases };
+}
+
+function sanitizeRecord(v, str, iso) {
+  const rec = {
+    firstSeen: iso(v.firstSeen),
+    lastSeen: iso(v.lastSeen),
+    randomMac: v.randomMac === true || isRandomMac(v.mac),
+    ips: [],
+    networks: [],
+    seenBy: {},
+    fields: {}
+  };
+  if (Array.isArray(v.ips)) {
+    for (const e of v.ips.slice(-MAX_IPS)) {
+      if (e && typeof e.ip === "string" && /^[0-9.]{7,15}$/.test(e.ip)) {
+        rec.ips.push({ ip: e.ip, net: NET_RE.test(String(e.net)) ? e.net : null, first: iso(e.first), last: iso(e.last) });
+      }
+    }
+  }
+  if (Array.isArray(v.networks)) rec.networks = v.networks.filter((n) => NET_RE.test(String(n))).slice(0, MAX_NETWORKS);
+  if (v.seenBy && typeof v.seenBy === "object") {
+    for (const [id, sb] of Object.entries(v.seenBy).slice(0, MAX_SEENBY)) {
+      if (ID_RE.test(id) && sb && iso(sb.at)) rec.seenBy[id] = { name: str(sb.name, 40) || id, at: sb.at };
+    }
+  }
+  if (v.fields && typeof v.fields === "object") {
+    for (const f of FIELD_NAMES) {
+      const clean = sanitizeField(v.fields[f], str, iso, f === "notes" ? 500 : f === "name" ? 40 : 60);
+      if (!clean) continue;
+      if (f === "trusted") clean.v = clean.v === true;
+      else if (typeof clean.v !== "string") clean.v = "";
+      if (f === "type" && clean.v && !DEVICE_TYPES.includes(clean.v)) clean.v = "other";
+      rec.fields[f] = clean;
+    }
+  }
+  return rec;
 }
 
 /* Ecarte ce qui n'a pas la forme attendue (fichier edite a la main ou
@@ -101,9 +201,31 @@ function sanitize(raw) {
         name: str(v.name),
         at: iso(v.at)
       };
+      Object.assign(hosts[key], sanitizeRecord(v, str, iso));
     }
     out.baseline = { at: iso(raw.baseline.at), hosts };
   }
+  if (raw.deleted && typeof raw.deleted === "object") {
+    for (const [key, v] of Object.entries(raw.deleted).slice(-MAX_DELETED)) {
+      if (KEY_RE.test(key) && v && iso(v.at)) out.deleted[key] = { at: v.at, by: str(v.by, 15) };
+    }
+  }
+  if (raw.networks && typeof raw.networks === "object") {
+    for (const [id, v] of Object.entries(raw.networks).slice(0, MAX_NETWORKS)) {
+      if (!NET_RE.test(id) || !v || typeof v !== "object") continue;
+      out.networks[id] = {
+        name: sanitizeField(v.name, str, iso, 40),
+        gatewayIp: str(v.gatewayIp, 15),
+        gatewayMac: normalizeMac(v.gatewayMac) || null,
+        cidr: str(v.cidr, 18),
+        assumed: v.assumed === true,
+        firstSeen: iso(v.firstSeen),
+        lastSeen: iso(v.lastSeen)
+      };
+    }
+  }
+  if (typeof raw.currentNet === "string" && NET_RE.test(raw.currentNet)) out.currentNet = raw.currentNet;
+  if (raw.self && ID_RE.test(String(raw.self.id))) out.self = { id: raw.self.id, name: str(raw.self.name, 40) || "PiBoard" };
   if (raw.seen && typeof raw.seen === "object") {
     for (const [key, v] of Object.entries(raw.seen).slice(0, MAX_SEEN)) {
       if (!KEY_RE.test(key) || !v || typeof v !== "object") continue;
@@ -127,7 +249,7 @@ function sanitize(raw) {
   if (Array.isArray(raw.log)) {
     for (const e of raw.log.slice(-MAX_LOG)) {
       if (!e || typeof e !== "object" || !iso(e.t)) continue;
-      if (!/^(baseline|reset|new|arrive|leave|changed|ack|forget)$/.test(String(e.type))) continue;
+      if (!/^(baseline|reset|new|arrive|leave|changed|ack|forget|merge)$/.test(String(e.type))) continue;
       out.log.push({
         t: e.t,
         type: e.type,
@@ -162,6 +284,18 @@ function observe(state, result, now) {
   const hosts = (result && Array.isArray(result.hosts)) ? result.hosts : [];
   const keyed = hosts.map((h) => ({ h, key: hostKey(h) })).filter((x) => x.key);
   if (!keyed.some((x) => !x.h.isSelf)) return next;
+
+  // Reseau courant (1.181.0) / current network
+  const self = ensureSelf(next);
+  const net = recordNetwork(next, result, t);
+  // Fiches du referentiel vues dans cette analyse / registry records seen in this scan
+  if (next.baseline) {
+    for (const { h, key } of keyed) {
+      const r = next.baseline.hosts[key];
+      if (!r) continue;
+      touchRecord(r, h, net ? net.id : null, self, t);
+    }
+  }
 
   const inScan = new Set();
   const known = next.baseline ? next.baseline.hosts : null;
@@ -265,10 +399,29 @@ function annotate(state, hosts, aliases, opts) {
       changed: null,
       eventId: null
     };
+    if (base && key && base.hosts[key]) {
+      // Fiche du referentiel pour la tuile / registry record for the tile
+      const r = base.hosts[key];
+      const f = r.fields || {};
+      extra.reg = {
+        type: f.type ? f.type.v || null : null,
+        owner: f.owner ? f.owner.v || null : null,
+        notes: f.notes ? f.notes.v || null : null,
+        trusted: !!(f.trusted && f.trusted.v === true),
+        firstSeen: r.firstSeen || null,
+        lastSeen: r.lastSeen || null,
+        networks: (r.networks || []).map((id) => ({ id, name: netName(state, id) })),
+        seenBy: Object.entries(r.seenBy || {}).map(([id, sb]) => ({ id, name: sb.name, at: sb.at }))
+          .sort((a, b) => String(b.at).localeCompare(String(a.at))),
+        ips: (r.ips || []).slice().sort((a, b) => String(b.last).localeCompare(String(a.last)))
+          .map((e) => ({ ip: e.ip, net: e.net ? netName(state, e.net) : null, first: e.first, last: e.last }))
+      };
+      if (r.firstSeen && (!extra.firstSeen || r.firstSeen < extra.firstSeen)) extra.firstSeen = r.firstSeen;
+    }
     if (base && key) {
       if (base.hosts[key]) {
         extra.status = "known";
-        if (rec && rec.changed) {
+        if (rec && rec.changed && !(extra.reg && extra.reg.trusted)) {
           extra.changed = rec.changed;
           extra.eventId = "changed:" + key + ":" + rec.changed.at;
           changedCount++;
@@ -303,8 +456,18 @@ function annotate(state, hosts, aliases, opts) {
     absent.sort((a, b) => String(a.lastSeen).localeCompare(String(b.lastSeen)));
   }
 
+  const cur = state && state.currentNet && state.networks ? state.networks[state.currentNet] : null;
   return {
     hosts: out,
+    network: cur ? {
+      id: state.currentNet,
+      name: cur.name && cur.name.v ? cur.name.v : null,
+      gatewayIp: cur.gatewayIp || null,
+      gatewayMac: cur.gatewayMac || null,
+      assumed: !!cur.assumed,
+      known: Object.keys(state.networks).length
+    } : null,
+    self: state && state.self ? state.self : null,
     absent,
     baseline: base ? { at: base.at, count: Object.keys(base.hosts).length } : null,
     newCount, alertCount, changedCount
@@ -330,16 +493,81 @@ function entryFromHost(h, aliases, t) {
    de la derniere analyse. Les alertes en attente sont purgees.
    "Memorize now": the reference becomes exactly the hosts of the last
    scan. Pending alerts are cleared. */
-function memorize(state, hosts, aliases, now) {
+/* 1.181.0 : « Mettre a jour la reference » est CUMULATIF. Les hotes de la
+   derniere analyse sont ajoutes ou mis a jour ; les appareils absents ce
+   jour-la restent dans le referentiel avec tout ce qu'on sait d'eux.
+   "Update the reference" is CUMULATIVE: the last scan's hosts are added
+   or updated; devices absent that day stay in the registry. */
+function memorize(state, hosts, aliases, now, net) {
   const t = now || new Date().toISOString();
-  const keyed = (Array.isArray(hosts) ? hosts : []).map((h) => entryFromHost(h, aliases, t)).filter((e) => e[0]);
-  if (!keyed.some((e) => e[1].mac || e[1].ip)) throw new Error("no host to memorize");
+  const list = (Array.isArray(hosts) ? hosts : []).filter((h) => h && (h.key || hostKey(h)));
+  if (!list.length) throw new Error("no host to memorize");
   const next = clone(state);
-  next.baseline = { at: t, hosts: Object.fromEntries(keyed.slice(0, MAX_BASELINE)) };
+  const self = ensureSelf(next);
+  if (!next.baseline) next.baseline = { at: t, hosts: {} };
+  next.baseline.at = t;
+  let added = 0;
+  for (const h of list) {
+    const key = h.key || hostKey(h);
+    if (!next.baseline.hosts[key]) {
+      if (Object.keys(next.baseline.hosts).length >= MAX_BASELINE) continue;
+      const [, entry] = entryFromHost(h, aliases, t);
+      next.baseline.hosts[key] = entry;
+      added++;
+    }
+    delete next.deleted[key];
+    touchRecord(next.baseline.hosts[key], h, net || next.currentNet, self, t);
+  }
   next.claims = {};
   for (const rec of Object.values(next.seen)) rec.changed = null;
-  pushLog(next, { t, type: "baseline", count: keyed.length });
+  pushLog(next, { t, type: "baseline", count: list.length });
+  next.lastMemorize = { added, total: Object.keys(next.baseline.hosts).length };
   return next;
+}
+
+/* Note le reseau d'une analyse (en place). Records a scan's network (in place). */
+function recordNetwork(next, result, t) {
+  const net = networkIdOf(result);
+  if (!net) return null;
+  const n = next.networks[net.id] || (next.networks[net.id] = { name: null, firstSeen: t });
+  n.gatewayIp = net.gatewayIp || n.gatewayIp || null;
+  n.gatewayMac = net.gatewayMac || n.gatewayMac || null;
+  n.cidr = (result && result.cidr) || n.cidr || null;
+  n.assumed = net.assumed;
+  n.lastSeen = t;
+  next.currentNet = net.id;
+  return net;
+}
+function noteNetwork(state, result, now) {
+  const next = clone(state);
+  recordNetwork(next, result, now || new Date().toISOString());
+  return next;
+}
+
+/* Met a jour une fiche avec une observation / updates a record with a sighting */
+function touchRecord(r, h, netId, self, t) {
+  r.mac = normalizeMac(h.mac) || r.mac || null;
+  r.ip = h.ip || r.ip || null;
+  r.hostname = h.hostname || r.hostname || null;
+  r.vendor = h.vendor || r.vendor || null;
+  if (!r.firstSeen) r.firstSeen = t;
+  if (!r.lastSeen || t > r.lastSeen) r.lastSeen = t;
+  r.randomMac = isRandomMac(r.mac);
+  r.ips = Array.isArray(r.ips) ? r.ips : [];
+  if (h.ip) {
+    const e = r.ips.find((x) => x.ip === h.ip && x.net === (netId || null));
+    if (e) e.last = t;
+    else r.ips.push({ ip: h.ip, net: netId || null, first: t, last: t });
+    if (r.ips.length > MAX_IPS) {
+      r.ips.sort((a, b) => String(a.last).localeCompare(String(b.last)));
+      r.ips.splice(0, r.ips.length - MAX_IPS);
+    }
+  }
+  r.networks = Array.isArray(r.networks) ? r.networks : [];
+  if (netId && !r.networks.includes(netId)) r.networks.push(netId);
+  r.seenBy = r.seenBy || {};
+  if (self) r.seenBy[self.id] = { name: self.name, at: t };
+  r.fields = r.fields || {};
 }
 
 /* « Reconnaitre » : ajoute des hotes a la reference (nouvel appareil
@@ -379,6 +607,9 @@ function forget(state, keys, now) {
     const b = next.baseline.hosts[key];
     if (!b) continue;
     delete next.baseline.hosts[key];
+    // Pierre tombale : l'oubli se propage aux autres PiBoard a la fusion.
+    // Tombstone: forgetting spreads to the other PiBoards on merge.
+    next.deleted[key] = { at: t, by: ensureSelf(next).id };
     pushLog(next, { t, type: "forget", key, label: labelOf(b), ip: b.ip || null });
   }
   return next;
@@ -432,8 +663,9 @@ function save(state) {
 }
 
 module.exports = {
-  STORE_KEY, MAX_LOG, MISS_LIMIT, KEY_RE, EVENT_RE,
-  emptyState, sanitize, isRandomMac,
+  STORE_KEY, MAX_LOG, MISS_LIMIT, KEY_RE, EVENT_RE, NET_RE, ID_RE, FIELD_NAMES, DEVICE_TYPES,
+  MAX_BASELINE, MAX_DELETED, MAX_IPS, MAX_NETWORKS,
+  emptyState, sanitize, sanitizeRecord, sanitizeField, isRandomMac, ensureSelf, networkIdOf, noteNetwork, touchRecord, clone,
   observe, annotate, memorize, acknowledge, forget, reset, claim,
   load, save
 };

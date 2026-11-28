@@ -32,6 +32,28 @@
 
 # Nouveautes / What's new
 
+## 1.181.0
+
+**Analyse réseau : un vrai référentiel de vos appareils, partagé entre vos PiBoard**
+
+La tuile Analyse réseau construit désormais un **référentiel** : chaque mémorisation enrichit une fiche par
+appareil, sans jamais oublier ceux qui étaient éteints ce jour-là. Chaque fiche peut recevoir un **type** (avec
+son icône), un **propriétaire**, des **notes** et la mention **de confiance**, et indique où et quand l'appareil a
+été vu. Le **réseau** est reconnu par sa box : deux réseaux identiques en apparence restent distincts. Enfin,
+exportez le référentiel d'un PiBoard et **fusionnez-le** sur un autre : un écran vous montre ce qui arrive et
+vous laisse trancher les conflits. Vos noms déjà saisis sont conservés. Et PiBoard **démarre plus vite**.
+
+---
+
+**Network scan: a real registry of your devices, shared between your PiBoards**
+
+The Network scan tile now builds a **registry**: each memorization enriches one record per device, never
+forgetting the ones that were off that day. Each record can get a **type** (with its icon), an **owner**,
+**notes** and the **trusted** mark, and tells where and when the device was seen. The **network** is recognised
+by its router: two networks that look identical stay distinct. And export a PiBoard's registry and **merge it**
+on another: a screen shows what comes in and lets you settle conflicts. The names you already typed are kept.
+And PiBoard **starts faster**.
+
 ## 1.180.0
 
 **Raspberry Pi : une icône pour relancer PiBoard**

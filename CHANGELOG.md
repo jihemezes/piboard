@@ -1,5 +1,33 @@
 # Changelog
 
+## 1.181.0
+
+- **Tuile Analyse réseau : référentiel des appareils.** « Mémoriser / Mettre à jour » n'écrase plus la référence
+  par la photo des hôtes présents : c'est désormais un référentiel cumulatif (une fiche par MAC, jamais d'appareil
+  perdu sauf « Oublier », plus de double confirmation). Fiche : type (15 types avec icône), propriétaire, notes,
+  appareil de confiance (aucune alerte, ni « modifié »), première/dernière apparition, historique des IP par
+  réseau, réseaux, « vu par » chaque PiBoard (identité `self` : id stable + nom de la machine). Éditable dans la
+  fenêtre de l'hôte. Les noms de `data/netHosts.json` sont conservés et repris automatiquement, y compris ceux
+  d'appareils jamais mémorisés (`syncNames`) ; l'ancienne référence et son journal sont migrés.
+- **Réseau reconnu par la MAC de la passerelle** (`gw:<mac>`, lue via la table de routage + ARP ; à défaut
+  `net:<cidr>`, marqué « supposé »). Bandeau « Nouveau réseau détecté » pour le nommer, ✎ pour le renommer,
+  message au changement de réseau. Tous les réseaux dans le même référentiel.
+- **Fusion entre PiBoard, sans base centrale.** Boutons « Référentiel ⇩ » (export JSON
+  `piboard-network-registry` v1) et « Fusionner… ». Écran de fusion avant écriture : ajouts, mises à jour,
+  suppressions, réseaux, conflits à trancher (valeur, PiBoard, date ; la plus récente pré-cochée). Champs datés
+  `{v, at, by, bases}` : une valeur saisie en connaissant l'autre est une mise à jour, pas un conflit ; le choix de
+  l'utilisateur « connaît » les deux valeurs et se propage sans nouveau conflit. Oublis propagés (pierres tombales
+  `deleted`), MAC aléatoires jamais exportées. Les noms retenus sont écrits dans `netHosts.json`.
+- **CSV enrichi** : toutes les fiches, colonnes `type_appareil`, `proprietaire`, `notes`, `confiance` (relues à
+  l'import, types en clair acceptés) + colonnes d'information (fabricant, dernière IP, réseaux, vu par, dates).
+- Nouveau `server/netRegistry.js` ; routes `/api/network-registry` (+ `/export`, `/preview`, `/merge`, `/device`,
+  `/network`, `/self`) ; `networkScan` renvoie `gateway`. Tests : `netRegistry.test.js` (39), `netRegistryRoutes.test.js`.
+- **Démarrage allégé** : seules les tuiles présentes dans la disposition (et les tuiles hébergées Plan du circuit,
+  Logo, Diaporama) sont chargées avant l'affichage, les autres juste après ou à la première utilisation ;
+  compression gzip (dépendance `compression`, hors SSE et vidéo) ; fichiers appelés avec `?v=` gardés en cache un
+  an au lieu d'être revalidés à chaque démarrage. Temps mesurés dans le journal et sur `/api/startup-timing`.
+- Aide FR/EN de la tuile Analyse réseau mise à jour (référentiel, fiche, réseaux, fusion, CSV).
+
 ## 1.180.0
 
 - **Raspberry Pi / Linux avec bureau : icône « PiBoard » pour relancer complètement PiBoard** sans redémarrer

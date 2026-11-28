@@ -89,7 +89,35 @@ const LEAFLET_DIST = path.join(__dirname, "..", "node_modules", "leaflet", "dist
 const HLS_DIST = path.join(__dirname, "..", "node_modules", "hls.js", "dist");
 
 const app = express();
-app.use(express.json({ limit: "1mb" }));
+
+/* 1.181.0 - Chronometrage du demarrage / startup timing */
+const BOOT_T0 = Date.now();
+const bootTiming = { processUptimeAtLoad: Math.round(process.uptime() * 1000), serverReadyMs: null, client: null };
+
+/* 1.181.0 - Compression gzip : 4 a 5 fois moins de donnees pour les scripts.
+   Jamais sur le flux SSE (il doit partir tout de suite) ni sur la video.
+   gzip compression: 4-5x less data for scripts. Never on the SSE stream
+   (must go out immediately) nor on video. */
+const compression = require("compression");
+app.use(compression({
+  filter: (req, res) => !/^\/api\/(events|iptv|media|webview)/.test(req.path) && compression.filter(req, res)
+}));
+
+/* Les fichiers de referentiel reseau a fusionner peuvent depasser 1 Mo :
+   leurs deux routes ont leur propre lecteur JSON (8 Mo).
+   Network registry files to merge can exceed 1 MB: their two routes have
+   their own JSON reader (8 MB). */
+const jsonBody = express.json({ limit: "1mb" });
+app.use((req, res, next) => (/^\/api\/network-registry\/(preview|merge)$/.test(req.path) ? next() : jsonBody(req, res, next)));
+
+app.get("/api/startup-timing", (req, res) => res.json(bootTiming));
+app.post("/api/startup-timing", (req, res) => {
+  const b = req.body || {};
+  const num = (v) => (Number.isFinite(Number(v)) ? Math.round(Number(v)) : null);
+  bootTiming.client = { at: Date.now(), firstPaintMs: num(b.firstPaintMs), layoutMs: num(b.layoutMs), allWidgetsMs: num(b.allWidgetsMs), widgetsAtBoot: num(b.widgetsAtBoot), widgetsTotal: num(b.widgetsTotal) };
+  console.log(`[piboard] demarrage client / client startup: tableau ${bootTiming.client.layoutMs} ms, toutes les tuiles ${bootTiming.client.allWidgetsMs} ms (${bootTiming.client.widgetsAtBoot}/${bootTiming.client.widgetsTotal} au demarrage)`);
+  res.json({ ok: true });
+});
 
 /* ---------- Valeurs par defaut / defaults ---------- */
 
@@ -514,7 +542,7 @@ networkScan.onScan((result) => {
 function networkScanPayload(result, scanning, query) {
   const aliases = netHosts.loadAliases();
   const named = netHosts.applyAliases(result.hosts, aliases);
-  const ann = netBaseline.annotate(netBaseline.load(), named, aliases, {
+  const ann = netBaseline.annotate(registryState(aliases), named, aliases, {
     absentHours: Number(query.absentHours) || 0,
     alertRandom: query.alertRandom === "1"
   });
@@ -527,9 +555,98 @@ function networkScanPayload(result, scanning, query) {
     absent: ann.absent,
     newCount: ann.newCount,
     alertCount: ann.alertCount,
-    changedCount: ann.changedCount
+    changedCount: ann.changedCount,
+    network: ann.network,
+    self: ann.self ? { id: ann.self.id, name: ann.self.name } : null
   };
 }
+
+/* ---------- Referentiel des appareils (1.181.0, server/netRegistry.js) ----------
+   Fiches cumulatives par MAC, champs saisis, export et fusion entre
+   PiBoard (sans base centrale). Cumulative per-MAC records, user fields,
+   export and merge between PiBoards (no central database). */
+const netRegistry = require("./netRegistry");
+
+/* Etat du referentiel, noms de netHosts.json repris (enregistre si besoin).
+   Registry state, with netHosts.json names folded in (saved if needed). */
+function registryState(aliases) {
+  const out = netRegistry.syncNames(netBaseline.load(), aliases || netHosts.loadAliases());
+  return out.changed ? netBaseline.save(out.state) : out.state;
+}
+
+function registrySummary(st) {
+  const hosts = st.baseline ? st.baseline.hosts : {};
+  return {
+    self: st.self,
+    count: Object.keys(hosts).length,
+    exportable: Object.entries(hosts).filter(([k, r]) => k.startsWith("mac:") && !r.randomMac).length,
+    deleted: Object.keys(st.deleted || {}).length,
+    currentNet: st.currentNet,
+    networks: Object.entries(st.networks || {}).map(([id, n]) => ({
+      id, name: n.name && n.name.v ? n.name.v : null, gatewayIp: n.gatewayIp, gatewayMac: n.gatewayMac,
+      cidr: n.cidr, assumed: !!n.assumed, firstSeen: n.firstSeen, lastSeen: n.lastSeen
+    })),
+    types: netBaseline.DEVICE_TYPES
+  };
+}
+
+app.get("/api/network-registry", (req, res) => {
+  try { res.json(registrySummary(registryState())); }
+  catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+
+app.get("/api/network-registry/export", (req, res) => {
+  try {
+    const st = registryState();
+    const file = netRegistry.exportRegistry(st);
+    const who = String(file.from.name || "piboard").normalize("NFD").replace(/[^a-zA-Z0-9_-]+/g, "_").slice(0, 30) || "piboard";
+    res.setHeader("Content-Disposition", `attachment; filename="piboard-referentiel-${who}-${file.exportedAt.slice(0, 10)}.json"`);
+    res.json(file);
+  } catch (e) { res.status(500).json({ error: String(e.message || e) }); }
+});
+
+const bigJson = express.json({ limit: "8mb" });
+app.post("/api/network-registry/preview", bigJson, (req, res) => {
+  try {
+    const aliases = netHosts.loadAliases();
+    res.json(netRegistry.planMerge(registryState(aliases), aliases, req.body));
+  } catch (e) { res.status(400).json({ error: String(e.message || e) }); }
+});
+
+app.post("/api/network-registry/merge", bigJson, (req, res) => {
+  try {
+    const b = req.body || {};
+    const aliases = netHosts.loadAliases();
+    const out = netRegistry.applyMerge(registryState(aliases), aliases, b.file, b.choices || {});
+    netHosts.saveAliases(out.aliases);
+    netBaseline.save(out.state);
+    res.json({ ok: true, report: out.report, registry: registrySummary(registryState()) });
+  } catch (e) { res.status(400).json({ error: String(e.message || e) }); }
+});
+
+app.post("/api/network-registry/device", (req, res) => {
+  try {
+    const b = req.body || {};
+    if (!netBaseline.KEY_RE.test(String(b.key))) return res.status(400).json({ error: "bad key" });
+    netBaseline.save(netRegistry.setFields(registryState(), b.key, b.fields || {}));
+    res.json({ ok: true });
+  } catch (e) { res.status(400).json({ error: String(e.message || e) }); }
+});
+
+app.post("/api/network-registry/network", (req, res) => {
+  try {
+    const b = req.body || {};
+    netBaseline.save(netRegistry.setNetworkName(registryState(), String(b.id || ""), b.name));
+    res.json({ ok: true });
+  } catch (e) { res.status(400).json({ error: String(e.message || e) }); }
+});
+
+app.post("/api/network-registry/self", (req, res) => {
+  try {
+    const st = netBaseline.save(netRegistry.setSelfName(registryState(), (req.body || {}).name));
+    res.json({ ok: true, self: st.self });
+  } catch (e) { res.status(400).json({ error: String(e.message || e) }); }
+});
 
 app.get("/api/network-scan", async (req, res) => {
   const forceRescan = req.query.rescan === "1";
@@ -576,8 +693,12 @@ app.post("/api/network-baseline/memorize", (req, res) => {
   try {
     const last = networkScan.getState().result;
     if (!last) return res.status(409).json({ error: "no scan yet" });
-    const next = netBaseline.memorize(netBaseline.load(), netHosts.applyAliases(last.hosts, netHosts.loadAliases()), netHosts.loadAliases());
-    res.json({ ok: true, baseline: baselineSummary(netBaseline.save(next)) });
+    const aliases = netHosts.loadAliases();
+    const base = netBaseline.noteNetwork(registryState(aliases), last);
+    const net = netBaseline.networkIdOf(last);
+    const next = netBaseline.memorize(base, netHosts.applyAliases(last.hosts, aliases), aliases, undefined, net ? net.id : null);
+    const added = next.lastMemorize ? next.lastMemorize.added : 0;
+    res.json({ ok: true, added, baseline: baselineSummary(netBaseline.save(next)) });
   } catch (e) {
     res.status(400).json({ error: String(e.message || e) });
   }
@@ -828,7 +949,8 @@ app.get("/api/youtube/:tileId/search", async (req, res) => {
 
 app.get("/api/network-hosts/export.csv", (req, res) => {
   try {
-    const csv = netHosts.toCsv(netHosts.loadAliases(), { dialect: req.query.dialect });
+    const aliases = netHosts.loadAliases();
+    const csv = netHosts.toCsv(aliases, { dialect: req.query.dialect, extras: netRegistry.csvExtras(registryState(aliases)) });
     const stamp = new Date().toISOString().slice(0, 10);
     res.setHeader("Content-Type", "text/csv; charset=utf-8");
     res.setHeader("Content-Disposition", `attachment; filename="piboard-reseau-${stamp}.csv"`);
@@ -854,7 +976,13 @@ app.post("/api/network-hosts/import", express.text({ type: ["text/csv", "text/pl
   try {
     const body = typeof req.body === "string" ? req.body : String((req.body && req.body.csv) || "");
     if (!body.trim()) return res.status(400).json({ error: "empty file" });
-    res.json(Object.assign({ ok: true }, netHosts.importCsv(body, { mode: req.query.mode })));
+    const out = netHosts.importCsv(body, { mode: req.query.mode });
+    // 1.181.0 : noms repris dans le referentiel, puis champs des fiches.
+    // Names folded into the registry, then the records' fields.
+    const ex = netRegistry.applyCsvExtras(registryState(out.aliases), out.extras);
+    if (ex.count) netBaseline.save(ex.state);
+    delete out.extras;
+    res.json(Object.assign({ ok: true, fieldsUpdated: ex.count }, out));
   } catch (e) {
     res.status(400).json({ error: String(e.message || e) });
   }
@@ -4085,8 +4213,21 @@ app.post("/api/iptv/xtream-unmask", (req, res) => {
 app.use("/vendor/gridstack", express.static(GRIDSTACK_DIST, { maxAge: "7d" }));
 app.use("/vendor/leaflet", express.static(LEAFLET_DIST, { maxAge: "7d" }));
 app.use("/vendor/hls", express.static(HLS_DIST, { maxAge: "7d" }));
+/* 1.181.0 : un fichier demande avec ?v=<version> ne change jamais pour cette
+   version : le navigateur le garde un an au lieu de le revalider a chaque
+   demarrage (plus de 80 allers-retours evites).
+   A file requested with ?v=<version> never changes for that version: the
+   browser keeps it a year instead of revalidating it at every startup. */
+app.use((req, res, next) => {
+  if (req.query && req.query.v && /\.(js|css|svg)$/.test(req.path)) res.locals.pbImmutable = true;
+  next();
+});
 app.use(express.static(PUBLIC_DIR, {
   setHeaders(res, filePath) {
+    if (res.locals && res.locals.pbImmutable) {
+      res.set("Cache-Control", "public, max-age=31536000, immutable");
+      return;
+    }
     // Le front evolue : pas de cache agressif sur js/html/css
     // Front-end iterates: no aggressive caching on js/html/css
     if (/\.(js|html|css|json)$/.test(filePath)) {
@@ -4140,6 +4281,8 @@ function start(options) {
       // With port 0 the system assigns a free one, so the real address
       // must be read back rather than assuming "port".
       const actual = server.address().port;
+      bootTiming.serverReadyMs = Date.now() - BOOT_T0 + bootTiming.processUptimeAtLoad;
+      console.log(`[piboard] serveur pret en ${bootTiming.serverReadyMs} ms / server ready in ${bootTiming.serverReadyMs} ms`);
       console.log(`[piboard] listening on http://${host}:${actual}  (data: ${store.DATA_DIR})`);
       // Verification differee des mises a jour (Linux) : le tableau
       // d'abord, GitHub ensuite. Deferred update check (Linux): the

@@ -47,6 +47,13 @@
     return h.vendor ? base + " (" + h.vendor + ")" : base;
   }
 
+  /* 1.181.0 - Types d'appareils de la fiche / record device types */
+  const TYPE_ICONS = {
+    router: "📶", computer: "🖥️", laptop: "💻", phone: "📱", tablet: "📲", tv: "📺", printer: "🖨️",
+    nas: "🗄️", camera: "📷", speaker: "🔊", console: "🎮", iot: "💡", network: "🔀", server: "🧰", other: "🔹"
+  };
+  const TYPES = Object.keys(TYPE_ICONS);
+
   class NetworkScanWidget {
     constructor(ctx) {
       this.ctx = ctx;
@@ -61,6 +68,9 @@
       this.confirm = null; // action en attente de confirmation (double touche) / action awaiting confirmation (double tap)
       this.screenSeen = null; // evenements deja annonces a l'ecran (null = 1er chargement) / events already announced on screen (null = first load)
       this.claimTried = new Set(); // evenements deja proposes au serveur pour le webhook / events already offered to the server for the webhook
+      this.editingNet = false; // nom du reseau en cours de saisie / network name being typed
+      this.lastNetId = null;   // reseau de la derniere analyse / last scan's network
+      try { this.lastNetId = localStorage.getItem("piboard.netscan.net." + ctx.instanceId) || null; } catch (e) { /* noop */ }
     }
 
     async init() {
@@ -105,6 +115,7 @@
         if (!res.ok) throw new Error(data.error || ("status " + res.status));
         this.lastData = data;
         this.scanning = !!data.scanning;
+        this.noteNetworkChange(data);
         this.render();
         this.processAlerts(data);
       } catch (e) {
@@ -152,12 +163,97 @@
        (re)memorize it, journal, deletion. Destructive actions ask for a
        second tap ("Confirm?") rather than a dialog box, which the touch
        kiosk handles poorly. */
+    /* ---------- Reseau (1.181.0) ----------
+       Le reseau est reconnu par la MAC de sa box (passerelle) : deux
+       reseaux en 192.168.1.0/24 restent distincts. Un reseau sans nom est
+       signale pour qu'on le nomme ; un changement de reseau est annonce.
+       Network: recognised by its router's MAC. An unnamed network is
+       flagged so it gets a name; a network change is announced. */
+    noteNetworkChange(data) {
+      const n = data && data.network;
+      if (!n || !n.id) return;
+      if (this.lastNetId && this.lastNetId !== n.id) {
+        const i18n = this.ctx.i18n;
+        const label = n.name || i18n.t("netscan.netUnnamed");
+        this.setNote(i18n.t(n.assumed ? "netscan.netChangedAssumed" : "netscan.netChanged").replace("{name}", label), "ok");
+      }
+      this.lastNetId = n.id;
+      try { localStorage.setItem("piboard.netscan.net." + this.ctx.instanceId, n.id); } catch (e) { /* noop */ }
+    }
+
+    networkHtml(data) {
+      const i18n = this.ctx.i18n;
+      const n = data.network;
+      if (!n) return "";
+      if (this.editingNet) {
+        return `
+          <div class="pwn-net pwn-editing">
+            <span class="pwn-net-ico">🌐</span>
+            <input type="text" class="pwn-net-input" maxlength="40" value="${escapeHtmlAttr(n.name || "")}" placeholder="${escapeHtmlAttr(i18n.t("netscan.netPlaceholder"))}">
+            <button type="button" class="pwn-edit-ok" data-net="ok" title="${escapeHtmlAttr(i18n.t("netscan.save"))}">✓</button>
+            <button type="button" class="pwn-edit-cancel" data-net="cancel" title="${escapeHtmlAttr(i18n.t("netscan.cancel"))}">✕</button>
+          </div>`;
+      }
+      const gw = n.gatewayIp ? i18n.t("netscan.netGateway") + " " + n.gatewayIp : "";
+      if (!n.name) {
+        return `
+          <div class="pwn-banner pwn-net-new">
+            <span>🌐 ${escapeHtml((n.assumed ? i18n.t("netscan.netNewAssumed") : i18n.t("netscan.netNew")).replace("{gw}", n.gatewayIp || "?"))}</span>
+            <button type="button" class="pwn-io-btn" data-net="edit">${escapeHtml(i18n.t("netscan.netName"))}</button>
+          </div>`;
+      }
+      return `
+          <div class="pwn-net">
+            <span class="pwn-net-ico">🌐</span>
+            <span class="pwn-net-name">${escapeHtml(n.name)}</span>
+            ${n.assumed ? `<span class="pwn-badge pwn-badge-rnd" title="${escapeHtmlAttr(i18n.t("netscan.netAssumedTitle"))}">${escapeHtml(i18n.t("netscan.netAssumed"))}</span>` : ""}
+            <span class="pwn-net-gw">${escapeHtml(gw)}</span>
+            <button type="button" class="pwn-rename-btn" data-net="edit" title="${escapeHtmlAttr(i18n.t("netscan.netRename"))}">✎</button>
+          </div>`;
+    }
+
+    wireNetwork() {
+      const el = this.ctx.el;
+      el.querySelectorAll("[data-net]").forEach((b) => {
+        b.addEventListener("pointerup", (e) => {
+          e.stopPropagation(); e.preventDefault();
+          const act = b.dataset.net;
+          if (act === "edit") {
+            this.editingNet = true;
+            this.render();
+            const input = this.ctx.el.querySelector(".pwn-net-input");
+            if (input) { input.focus(); input.select(); }
+          } else if (act === "cancel") { this.editingNet = false; this.render(); }
+          else if (act === "ok") this.saveNetworkName();
+        });
+      });
+      const input = el.querySelector(".pwn-net-input");
+      if (!input) return;
+      ["pointerdown", "pointerup", "click"].forEach((ty) => input.addEventListener(ty, (e) => e.stopPropagation()));
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); this.saveNetworkName(); }
+        else if (e.key === "Escape") { e.preventDefault(); this.editingNet = false; this.render(); }
+      });
+    }
+
+    async saveNetworkName() {
+      const input = this.ctx.el.querySelector(".pwn-net-input");
+      const n = this.lastData && this.lastData.network;
+      this.editingNet = false;
+      if (!input || !n) { this.render(); return; }
+      try {
+        await this.api("/api/network-registry/network", "POST", { id: n.id, name: input.value });
+        n.name = String(input.value || "").trim() || null;
+      } catch (e) { this.setNote(String(e.message || e), "err"); }
+      this.render();
+    }
+
     baselineBarHtml(data) {
       const i18n = this.ctx.i18n;
       const b = data.baseline;
       const noHost = !(data.hosts && data.hosts.length);
       const text = b
-        ? i18n.t("netscan.baseSince") + " " + this.formatDateTime(b.at) + " · " + b.count + " " + i18n.t("netscan.baseDevices")
+        ? i18n.t("netscan.regSummary").replace("{n}", String(b.count)).replace("{date}", this.formatDateTime(b.at))
         : i18n.t("netscan.baseNone");
       const memLabel = this.confirm === "memorize"
         ? i18n.t("netscan.baseConfirm")
@@ -209,11 +305,13 @@
       const log = this.logData;
       if (!log) return `<div class="pwn-empty">${escapeHtml(i18n.t("netscan.scanning"))}</div>`;
       if (!log.length) return `<div class="pwn-empty">${escapeHtml(i18n.t("netscan.logEmpty"))}</div>`;
-      const ICON = { new: "🆕", arrive: "➕", leave: "➖", changed: "🔁", baseline: "📌", reset: "♻️", ack: "✓", forget: "🗑" };
+      const ICON = { new: "🆕", arrive: "➕", leave: "➖", changed: "🔁", baseline: "📌", reset: "♻️", ack: "✓", forget: "🗑", merge: "🔀" };
       return log.map((e) => {
         const label = e.type === "baseline"
           ? i18n.t("netscan.log_baseline").replace("{n}", String(e.count || 0))
-          : (e.label ? e.label : "");
+          : e.type === "merge"
+            ? i18n.t("netscan.log_mergeFrom").replace("{name}", e.label || "?").replace("{n}", String(e.count || 0))
+            : (e.label ? e.label : "");
         return `
           <div class="pwn-row pwn-logrow">
             <span class="pwn-log-time">${escapeHtml(this.formatDateTime(e.t))}</span>
@@ -250,9 +348,12 @@
             <span class="pwn-count">${hosts.length ? hosts.length + " " + i18n.t(hosts.length > 1 ? "netscan.hostsPlural" : "netscan.hostsSingular") : ""}</span>
             <button type="button" class="pwn-io-btn" data-io="export" title="${escapeHtmlAttr(i18n.t("netscan.exportTitle"))}">${i18n.t("netscan.export")}</button>
             <button type="button" class="pwn-io-btn" data-io="import" title="${escapeHtmlAttr(i18n.t("netscan.importTitle"))}">${i18n.t("netscan.import")}</button>
+            <button type="button" class="pwn-io-btn" data-io="regexport" title="${escapeHtmlAttr(i18n.t("netscan.regExportTitle"))}">${i18n.t("netscan.regExport")}</button>
+            <button type="button" class="pwn-io-btn" data-io="regmerge" title="${escapeHtmlAttr(i18n.t("netscan.regMergeTitle"))}">${i18n.t("netscan.regMerge")}</button>
             <button type="button" class="pwn-scan-btn" ${this.scanning ? "disabled" : ""}>${this.scanning ? i18n.t("netscan.scanning") : i18n.t("netscan.scanNow")}</button>
           </div>
           <div class="pwn-status">${escapeHtml(statusParts.join(" · "))}</div>
+          ${this.networkHtml(data)}
           ${this.baselineBarHtml(data)}
           ${this.bannerHtml(data)}
           <div class="pwn-note${this.noteKind ? " pwn-note-" + this.noteKind : ""}">${escapeHtml(this.note || "")}</div>
@@ -262,6 +363,7 @@
       this.wireIoButtons();
       this.wireActions();
       this.wireRows();
+      this.wireNetwork();
     }
 
     /* Nom affiche pour un hote : le nom personnalise s'il existe, sinon
@@ -312,9 +414,16 @@
       if (h.status === "new" || h.changed) {
         ack = `<button type="button" class="pwn-rename-btn pwn-ack-btn" data-act="ack" title="${escapeHtmlAttr(i18n.t("netscan.ack"))}">✓</button>`;
       }
+      // Fiche du referentiel : icone du type, proprietaire, confiance (1.181.0)
+      // Registry record: type icon, owner, trusted
+      const reg = h.reg || null;
+      const icon = reg && reg.type && TYPE_ICONS[reg.type]
+        ? `<span class="pwn-type" title="${escapeHtmlAttr(i18n.t("netscan.type." + reg.type))}">${TYPE_ICONS[reg.type]}</span>` : "";
+      const owner = reg && reg.owner ? `<span class="pwn-owner">${escapeHtml(reg.owner)}</span>` : "";
+      const trusted = reg && reg.trusted ? `<span class="pwn-trusted" title="${escapeHtmlAttr(i18n.t("netscan.trustedTitle"))}">🛡</span>` : "";
       return `
         <div class="pwn-row${h.isSelf ? " pwn-self" : ""}${h.alias ? " pwn-aliased" : ""}${h.status === "new" ? " pwn-new" : ""}${h.changed ? " pwn-changed" : ""}" data-idx="${idx}">
-          <span class="pwn-name">${escapeHtml(this.displayName(h))}</span>
+          ${icon}<span class="pwn-name">${escapeHtml(this.displayName(h))}</span>${trusted}${owner}
           ${badges}
           ${orig}
           <span class="pwn-sep">—</span>
@@ -353,7 +462,7 @@
       // pointerup rather than click: on the kiosk touchscreen, click
       // can be swallowed by underlying layers (same finding as on the
       // project's other touch tiles).
-      el.querySelectorAll(".pwn-rename-btn:not([data-act])").forEach((btn) => {
+      el.querySelectorAll(".pwn-rename-btn:not([data-act]):not([data-net])").forEach((btn) => {
         btn.addEventListener("pointerup", (e) => {
           e.stopPropagation();
           e.preventDefault();
@@ -475,11 +584,11 @@
           return;
         }
         if (act === "memorize") {
-          if (data.baseline && !this.armed("memorize")) return;
+          // 1.181.0 : cumulatif, plus rien a confirmer. Cumulative, nothing to confirm.
           const out = await this.api("/api/network-baseline/memorize", "POST", {});
           this.screenSeen = null;
           this.claimTried.clear();
-          this.setNote(i18n.t("netscan.baseDone") + " " + out.baseline.count + " " + i18n.t("netscan.baseDevices"), "ok");
+          this.setNote(i18n.t("netscan.regDone").replace("{a}", String(out.added || 0)).replace("{n}", String(out.baseline.count)), "ok");
           await this.refresh(false);
           return;
         }
@@ -669,7 +778,10 @@
         btn.addEventListener("pointerup", (e) => {
           e.stopPropagation();
           e.preventDefault();
-          if (btn.dataset.io === "export") this.exportCsv();
+          const io = btn.dataset.io;
+          if (io === "export") this.exportCsv();
+          else if (io === "regexport") this.exportRegistry();
+          else if (io === "regmerge") this.pickMergeFile();
           else this.pickImportFile();
         });
       });
@@ -783,6 +895,7 @@
             <div><span>${esc(t("hostname"))}</span><b>${esc(h.hostname || "—")}</b></div>
             <div><span>${esc(t("state"))}</span><b>${esc(h.absent ? t("stateAbsent") : h.isSelf ? t("stateSelf") : h.status === "new" ? t("stateNew") : t("statePresent"))}</b></div>
           </div>
+          ${this.recordHtml(h)}
           <div class="pwn-hw-acts">
             <button type="button" class="pwn-hw-btn" data-hw="ping">${esc(t("ping"))}</button>
             <button type="button" class="pwn-hw-btn" data-hw="ports">${esc(t("ports"))}</button>
@@ -821,6 +934,183 @@
       document.addEventListener("keydown", this.hwKey);
       const firstBtn = box.querySelector('[data-hw="ping"]');
       if (firstBtn && firstBtn.focus) firstBtn.focus();
+    }
+
+    /* ---------- Fiche de l'appareil (1.181.0) / device record ---------- */
+    recordHtml(h) {
+      const i18n = this.ctx.i18n;
+      const t = (k) => i18n.t("netscan.rec." + k);
+      const esc = escapeHtml, attr = escapeHtmlAttr;
+      const r = h.reg;
+      if (!r) {
+        if (h.absent || h.isSelf && !h.key) return "";
+        return `<div class="pwn-rec pwn-rec-hint">${esc(t("notInRegistry"))}</div>`;
+      }
+      const opts = [`<option value="">${esc(t("typeNone"))}</option>`].concat(TYPES.map((ty) =>
+        `<option value="${ty}"${r.type === ty ? " selected" : ""}>${TYPE_ICONS[ty]} ${esc(i18n.t("netscan.type." + ty))}</option>`)).join("");
+      const seen = (r.seenBy || []).map((s) => `<span>${esc(s.name)} · ${esc(this.formatDateTime(s.at))}</span>`).join("") || "—";
+      const nets = (r.networks || []).map((n) => `<span>${esc(n.name || t("netUnnamed"))}</span>`).join("") || "—";
+      const ips = (r.ips || []).slice(0, 8).map((e) => `<span title="${attr(this.formatDateTime(e.first) + " → " + this.formatDateTime(e.last))}">${esc(e.ip)}${e.net ? " · " + esc(e.net) : ""}</span>`).join("") || "—";
+      return `
+          <div class="pwn-rec">
+            <div class="pwn-rec-t">${esc(t("title"))}</div>
+            <div class="pwn-rec-grid">
+              <label><span>${esc(t("type"))}</span><select class="pwn-rec-type">${opts}</select></label>
+              <label><span>${esc(t("owner"))}</span><input type="text" class="pwn-rec-owner" maxlength="60" value="${attr(r.owner || "")}"></label>
+              <label class="pwn-rec-wide"><span>${esc(t("notes"))}</span><textarea class="pwn-rec-notes" maxlength="500" rows="2">${esc(r.notes || "")}</textarea></label>
+              <label class="pwn-rec-check"><input type="checkbox" class="pwn-rec-trusted"${r.trusted ? " checked" : ""}> ${esc(t("trusted"))}</label>
+              <div class="pwn-rec-save"><button type="button" class="pwn-hw-btn" data-hw="regsave">${esc(t("save"))}</button></div>
+            </div>
+            <table class="pwn-hw-tbl pwn-rec-info">
+              <tr><td>${esc(t("firstSeen"))}</td><td>${esc(r.firstSeen ? this.formatDateTime(r.firstSeen) : "—")}</td></tr>
+              <tr><td>${esc(t("lastSeen"))}</td><td>${esc(r.lastSeen ? this.formatDateTime(r.lastSeen) : "—")}</td></tr>
+              <tr><td>${esc(t("seenBy"))}</td><td><div class="pwn-hw-chips">${seen}</div></td></tr>
+              <tr><td>${esc(t("networks"))}</td><td><div class="pwn-hw-chips">${nets}</div></td></tr>
+              <tr><td>${esc(t("ips"))}</td><td><div class="pwn-hw-chips">${ips}</div></td></tr>
+            </table>
+          </div>`;
+    }
+
+    async saveRecord(btn) {
+      const h = this.hw && this.hw.host;
+      if (!h || !h.reg) return;
+      const box = this.hw.back;
+      const fields = {
+        type: box.querySelector(".pwn-rec-type").value,
+        owner: box.querySelector(".pwn-rec-owner").value,
+        notes: box.querySelector(".pwn-rec-notes").value,
+        trusted: box.querySelector(".pwn-rec-trusted").checked
+      };
+      const t = (k) => this.ctx.i18n.t("netscan.rec." + k);
+      try {
+        if (btn) btn.disabled = true;
+        await this.api("/api/network-registry/device", "POST", { key: h.key, fields });
+        Object.assign(h.reg, { type: fields.type || null, owner: fields.owner.trim() || null, notes: fields.notes.trim() || null, trusted: fields.trusted });
+        if (btn) { btn.textContent = t("saved"); setTimeout(() => { btn.textContent = t("save"); btn.disabled = false; }, 1500); }
+        this.render();
+      } catch (e) {
+        if (btn) { btn.disabled = false; btn.textContent = t("saveFail"); }
+      }
+    }
+
+    /* ---------- Export et fusion du referentiel (1.181.0) ----------
+       Pas de base centrale : un fichier exporte ici se fusionne sur un
+       autre PiBoard, et inversement. Avant d'ecrire quoi que ce soit, la
+       fusion montre ce qui arrive et les conflits a trancher.
+       No central database: a file exported here is merged on another
+       PiBoard, and vice versa. Before writing anything, the merge shows
+       what comes in and the conflicts to decide. */
+    exportRegistry() {
+      window.open("/api/network-registry/export", "_blank");
+    }
+
+    pickMergeFile() {
+      const input = document.createElement("input");
+      input.type = "file";
+      input.accept = ".json,application/json";
+      input.addEventListener("change", async () => {
+        const file = input.files && input.files[0];
+        if (!file) return;
+        const i18n = this.ctx.i18n;
+        try {
+          const data = JSON.parse(await file.text());
+          const plan = await this.api("/api/network-registry/preview", "POST", data);
+          this.openMerge(data, plan);
+        } catch (e) {
+          this.setNote(i18n.t("netscan.merge.bad") + " " + String(e.message || e), "err");
+        }
+      });
+      input.click();
+    }
+
+    openMerge(file, plan) {
+      this.closeMerge();
+      const i18n = this.ctx.i18n;
+      const t = (k) => i18n.t("netscan.merge." + k);
+      const esc = escapeHtml, attr = escapeHtmlAttr;
+      const fieldName = (f) => i18n.t("netscan.merge.f_" + f);
+      const val = (f, v) => (f === "trusted" ? (v === true ? t("yes") : t("no")) : f === "type" ? (v ? (TYPE_ICONS[v] || "") + " " + i18n.t("netscan.type." + v) : "—") : (v === "" || v == null ? t("empty") : String(v)));
+      const list = (items, fn) => items.length ? `<ul class="pwn-mg-list">${items.slice(0, 200).map(fn).join("")}</ul>` : "";
+      const nothing = !plan.added.length && !plan.updated.length && !plan.removed.length && !plan.conflicts.length && !plan.networks.length;
+      const conflicts = plan.conflicts.map((c, i) => `
+          <div class="pwn-mg-conf" data-cid="${attr(c.id)}">
+            <div class="pwn-mg-conf-t"><b>${esc(c.label)}</b> — ${esc(fieldName(c.field))}</div>
+            <label><input type="radio" name="pwn-mg-${i}" value="local"${c.suggested === "local" ? " checked" : ""}>
+              <span class="pwn-mg-v">${esc(val(c.field, c.local.v))}</span>
+              <span class="pwn-mg-by">${esc(t("here"))} · ${esc(c.local.byName || "?")} · ${esc(this.formatDateTime(c.local.at))}</span></label>
+            <label><input type="radio" name="pwn-mg-${i}" value="remote"${c.suggested === "remote" ? " checked" : ""}>
+              <span class="pwn-mg-v">${esc(val(c.field, c.remote.v))}</span>
+              <span class="pwn-mg-by">${esc(plan.from.name || "?")} · ${esc(c.remote.byName || "?")} · ${esc(this.formatDateTime(c.remote.at))}</span></label>
+          </div>`).join("");
+      const back = document.createElement("div");
+      back.className = "pwn-hw-back";
+      back.innerHTML = `
+        <div class="pwn-hw pwn-mg" role="dialog" aria-modal="true" aria-label="${attr(t("title"))}">
+          <div class="pwn-hw-head">
+            <div class="pwn-hw-title"><b>${esc(t("title"))}</b><span>${esc(t("from").replace("{name}", plan.from.name || "?"))}</span></div>
+            <button type="button" class="pwn-hw-x" data-mg="close" aria-label="${attr(t("cancel"))}">✕</button>
+          </div>
+          ${plan.sameMachine ? `<div class="pwn-hw-alert">${esc(t("sameMachine"))}</div>` : ""}
+          <div class="pwn-mg-sum">
+            <span>➕ ${plan.added.length} ${esc(t("added"))}</span>
+            <span>✎ ${plan.updated.length} ${esc(t("updated"))}</span>
+            <span>🗑 ${plan.removed.length} ${esc(t("removed"))}</span>
+            <span>🌐 ${plan.networks.length} ${esc(t("networks"))}</span>
+            <span class="${plan.conflicts.length ? "pwn-hw-alert" : ""}">⚠ ${plan.conflicts.length} ${esc(t("conflicts"))}</span>
+          </div>
+          ${nothing ? `<div class="pwn-hw-muted">${esc(t("nothing"))}</div>` : ""}
+          ${plan.conflicts.length ? `<div class="pwn-hw-card"><div class="pwn-hw-card-t">${esc(t("conflictsTitle"))}</div><div class="pwn-hw-muted">${esc(t("conflictsHint"))}</div>${conflicts}</div>` : ""}
+          ${plan.added.length ? `<details class="pwn-mg-det"><summary>${esc(t("addedTitle"))} (${plan.added.length})</summary>${list(plan.added, (a) => `<li>${esc(a.label)}${a.vendor ? ` <span class="pwn-hw-muted">${esc(a.vendor)}</span>` : ""}</li>`)}</details>` : ""}
+          ${plan.updated.length ? `<details class="pwn-mg-det"><summary>${esc(t("updatedTitle"))} (${plan.updated.length})</summary>${list(plan.updated, (u) => `<li><b>${esc(u.label)}</b> : ${u.changes.map((c) => esc(fieldName(c.field)) + " → " + esc(val(c.field, c.to))).join(", ")}</li>`)}</details>` : ""}
+          ${plan.removed.length ? `<details class="pwn-mg-det" open><summary>${esc(t("removedTitle"))} (${plan.removed.length})</summary>${list(plan.removed, (r) => `<li>${esc(r.label)} <span class="pwn-hw-muted">${esc((r.byName || "?") + " · " + this.formatDateTime(r.at))}</span></li>`)}</details>` : ""}
+          ${plan.networks.length ? `<details class="pwn-mg-det"><summary>${esc(t("networksTitle"))} (${plan.networks.length})</summary>${list(plan.networks, (n) => `<li>${esc(n.name || t("unnamed"))}${n.isNew ? ` <span class="pwn-hw-muted">${esc(t("newNetwork"))}</span>` : ""}</li>`)}</details>` : ""}
+          <div class="pwn-mg-acts">
+            <button type="button" class="pwn-hw-btn" data-mg="close">${esc(t("cancel"))}</button>
+            <button type="button" class="pwn-hw-btn on" data-mg="apply"${nothing ? " disabled" : ""}>${esc(t("apply"))}</button>
+          </div>
+        </div>`;
+      document.body.appendChild(back);
+      this.mg = { back, file, plan };
+      const box = back.querySelector(".pwn-hw");
+      ["pointerdown", "pointerup", "click", "keydown", "contextmenu"].forEach((ty) => box.addEventListener(ty, (e) => e.stopPropagation()));
+      back.addEventListener("pointerup", (e) => { if (e.target === back) this.closeMerge(); });
+      box.querySelectorAll("button[data-mg]").forEach((b) => b.addEventListener("pointerup", (e) => {
+        e.preventDefault();
+        if (b.disabled) return;
+        if (b.dataset.mg === "close") this.closeMerge();
+        else this.applyMerge(b);
+      }));
+      this.mgKey = (e) => { if (e.key === "Escape") this.closeMerge(); };
+      document.addEventListener("keydown", this.mgKey);
+    }
+
+    async applyMerge(btn) {
+      if (!this.mg) return;
+      const i18n = this.ctx.i18n;
+      const choices = {};
+      this.mg.back.querySelectorAll(".pwn-mg-conf").forEach((c) => {
+        const r = c.querySelector("input[type=radio]:checked");
+        if (r) choices[c.dataset.cid] = r.value;
+      });
+      try {
+        btn.disabled = true;
+        const out = await this.api("/api/network-registry/merge", "POST", { file: this.mg.file, choices });
+        const r = out.report;
+        this.closeMerge();
+        this.setNote(i18n.t("netscan.merge.done").replace("{name}", r.from.name || "?")
+          .replace("{a}", r.added).replace("{u}", r.updated).replace("{r}", r.removed), "ok");
+        await this.refresh(false);
+      } catch (e) {
+        btn.disabled = false;
+        this.setNote(i18n.t("netscan.merge.bad") + " " + String(e.message || e), "err");
+      }
+    }
+
+    closeMerge() {
+      if (!this.mg) return;
+      this.mg.back.remove();
+      this.mg = null;
+      if (this.mgKey) { document.removeEventListener("keydown", this.mgKey); this.mgKey = null; }
     }
 
     closeHost() {
@@ -886,6 +1176,7 @@
       const fail = (body, e) => { body.innerHTML = `<div class="pwn-hw-err">${esc(e && e.code === "private-only" ? t("privateOnly") : t("error") + " " + (e && e.message || ""))}</div>`; };
 
       if (act === "close") return this.closeHost();
+      if (act === "regsave") return this.saveRecord(btn);
       if (act === "copyip" || act === "copymac") {
         const ok = await this.copyText(act === "copyip" ? ip : h.mac);
         if (btn) { const old = btn.textContent; btn.textContent = ok ? t("copied") : t("copyFail"); setTimeout(() => { btn.textContent = old; }, 1500); }
@@ -1085,6 +1376,7 @@
 
     destroy() {
       this.closeHost();
+      this.closeMerge();
       clearInterval(this.timer);
       clearTimeout(this.noteTimer);
       clearTimeout(this.confirmTimer);

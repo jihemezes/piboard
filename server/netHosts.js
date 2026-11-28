@@ -257,8 +257,19 @@ const CSV_HEADERS = {
   type: ["type"],
   id: ["identifiant", "identifier", "id", "adresse", "address", "mac", "ip"],
   name: ["nom", "name", "nom_convivial", "friendly_name", "alias"],
-  updatedAt: ["modifie_le", "modified_at", "updated_at", "date"]
+  updatedAt: ["modifie_le", "modified_at", "updated_at", "date"],
+  // 1.181.0 - colonnes du referentiel (server/netRegistry.js) / registry columns
+  deviceType: ["type_appareil", "device_type", "categorie", "category"],
+  owner: ["proprietaire", "owner", "utilisateur", "user"],
+  notes: ["notes", "note", "commentaire", "comment"],
+  trusted: ["confiance", "trusted", "de_confiance"]
 };
+/* Colonnes informatives exportees mais jamais relues (calculees par les
+   analyses). Informational columns exported but never read back. */
+const CSV_INFO = [
+  ["vendor", "fabricant"], ["lastIp", "derniere_ip"], ["networks", "reseaux"],
+  ["seenBy", "vu_par"], ["firstSeen", "premiere_vue"], ["lastSeen", "derniere_vue"]
+];
 
 /* Une cellule CSV. Les guillemets sont doubles a l'interieur, et tout
    champ contenant separateur, guillemet ou saut de ligne est entoure de
@@ -286,17 +297,29 @@ function csvCell(value, sep) {
 function toCsv(aliases, opts) {
   const sep = (opts && opts.dialect === "international") ? "," : ";";
   const table = sanitizeAliases(aliases);
-  const lines = [["type", "identifiant", "nom", "modifie_le"].join(sep)];
+  const extras = (opts && opts.extras) || null;
+  const head = ["type", "identifiant", "nom", "modifie_le"];
+  if (extras) head.push("type_appareil", "proprietaire", "notes", "confiance", ...CSV_INFO.map((c) => c[1]));
+  const lines = [head.join(sep)];
+  // 1.181.0 : toutes les fiches du referentiel, nommees ou non.
+  // All registry records, named or not.
+  const keys = new Set(Object.keys(table));
+  if (extras) for (const k of Object.keys(extras)) keys.add(k);
   // Tri par identifiant : un ordre stable d'un export a l'autre rend
   // deux fichiers comparables, et le tableau plus agreable a relire.
   // Sorted by identifier: a stable order from one export to the next
   // makes two files comparable, and the table nicer to read.
-  for (const key of Object.keys(table).sort()) {
+  for (const key of Array.from(keys).sort()) {
     const sepIdx = key.indexOf(":");
     const type = key.slice(0, sepIdx);
     const id = key.slice(sepIdx + 1);
-    const entry = table[key];
-    lines.push([type, id, entry.name, entry.updatedAt || ""].map((v) => csvCell(v, sep)).join(sep));
+    const entry = table[key] || { name: "", updatedAt: "" };
+    const row = [type, id, entry.name, entry.updatedAt || ""];
+    if (extras) {
+      const e = extras[key] || {};
+      row.push(e.deviceType || "", e.owner || "", e.notes || "", e.trusted || "", ...CSV_INFO.map((c) => e[c[0]] || ""));
+    }
+    lines.push(row.map((v) => csvCell(v, sep)).join(sep));
   }
   return lines.join("\r\n") + "\r\n";
 }
@@ -380,6 +403,8 @@ function parseCsv(text) {
   }
 
   const aliases = {};
+  const extras = {};
+  const hasExtras = ["deviceType", "owner", "notes", "trusted"].some((f) => col[f] >= 0);
   const reasons = { badId: 0, noName: 0, duplicate: 0 };
   let rows = 0;
   let skipped = 0;
@@ -403,13 +428,25 @@ function parseCsv(text) {
     else if (isValidIp(rawId)) key = "ip:" + rawId;
 
     if (!key) { skipped++; reasons.badId++; continue; }
-    if (!name) { skipped++; reasons.noName++; continue; }
+    if (hasExtras) {
+      const e = {};
+      for (const f of ["deviceType", "owner", "notes", "trusted"]) {
+        if (col[f] >= 0) e[f] = String(cells[col[f]] == null ? "" : cells[col[f]]).trim();
+      }
+      extras[key] = e;
+    }
+    if (!name) {
+      // Ligne sans nom mais avec des champs du referentiel : acceptee.
+      // A row with no name but registry fields: accepted.
+      if (hasExtras) { rows++; continue; }
+      skipped++; reasons.noName++; continue;
+    }
     if (aliases[key]) { skipped++; reasons.duplicate++; }
     const updatedAt = col.updatedAt >= 0 ? String(cells[col.updatedAt] || "").trim() : "";
     aliases[key] = { name, updatedAt: updatedAt || new Date().toISOString() };
     rows++;
   }
-  return { aliases: sanitizeAliases(aliases), rows, skipped, reasons };
+  return { aliases: sanitizeAliases(aliases), extras, rows, skipped, reasons };
 }
 
 /* Fusionne une table importee dans celle deja en place.
@@ -453,6 +490,7 @@ function importCsv(text, opts) {
     skipped: parsed.skipped,
     reasons: parsed.reasons,
     total: Object.keys(saved).length,
+    extras: parsed.extras,
     mode: replace ? "replace" : "merge",
     aliases: saved
   };

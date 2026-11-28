@@ -472,6 +472,48 @@ async function mapWithConcurrency(items, limit, fn) {
 
 /* ---------- Scan complet / full scan ---------- */
 
+/* ---------- Passerelle par defaut (1.181.0) / default gateway ----------
+   Sert a reconnaitre le RESEAU sur lequel on se trouve : deux reseaux
+   prives peuvent tous deux etre en 192.168.1.0/24, mais leurs box n'ont
+   pas la meme adresse MAC. L'IP de la passerelle est lue dans la table de
+   routage, sa MAC dans la table ARP remplie par l'analyse.
+   Used to recognise WHICH network we are on: two private networks may
+   both be 192.168.1.0/24, but their routers do not share a MAC address.
+   The gateway IP comes from the routing table, its MAC from the ARP
+   table filled by the scan. */
+function parseGatewayLinux(raw) {
+  const m = String(raw || "").match(/^default\s+via\s+(\d{1,3}(?:\.\d{1,3}){3})/m);
+  return m ? m[1] : null;
+}
+function parseGatewayDarwin(raw) {
+  const m = String(raw || "").match(/^\s*gateway:\s*(\d{1,3}(?:\.\d{1,3}){3})/m);
+  return m ? m[1] : null;
+}
+function parseGatewayWin32(raw) {
+  // "route print -4 0.0.0.0" : ligne "0.0.0.0  0.0.0.0  <passerelle>  <interface>  <metrique>"
+  let best = null;
+  for (const line of String(raw || "").split(/\r?\n/)) {
+    const m = line.trim().match(/^0\.0\.0\.0\s+0\.0\.0\.0\s+(\d{1,3}(?:\.\d{1,3}){3})\s+\S+\s+(\d+)/);
+    if (m && (!best || Number(m[2]) < best.metric)) best = { ip: m[1], metric: Number(m[2]) };
+  }
+  return best ? best.ip : null;
+}
+function defaultGatewayIp() {
+  const plat = process.platform;
+  const cmd = plat === "win32" ? ["route", ["print", "-4", "0.0.0.0"]]
+    : plat === "darwin" ? ["route", ["-n", "get", "default"]]
+    : ["ip", ["-4", "route", "show", "default"]];
+  return new Promise((resolve) => {
+    try {
+      execFile(cmd[0], cmd[1], { timeout: 3000, encoding: "utf8", windowsHide: true }, (err, stdout) => {
+        const out = String(stdout || "");
+        const ip = plat === "win32" ? parseGatewayWin32(out) : plat === "darwin" ? parseGatewayDarwin(out) : parseGatewayLinux(out);
+        resolve(isValidIp(ip) ? ip : null);
+      });
+    } catch (e) { resolve(null); }
+  });
+}
+
 async function performScan(cidrOverride) {
   const cidr = (cidrOverride && String(cidrOverride).trim()) || (await preferredCidr());
   if (!cidr) throw new Error("no local IPv4 network interface found");
@@ -527,7 +569,10 @@ async function performScan(cidrOverride) {
     return { ip, hostname, isSelf, vendor, mac };
   });
 
-  return { cidr, hosts, scannedAt: new Date().toISOString(), addressCount: ips.length };
+  const gwIp = await defaultGatewayIp().catch(() => null);
+  const gateway = gwIp && ipSet.has(gwIp) ? { ip: gwIp, mac: macByIp.get(gwIp) || null } : null;
+
+  return { cidr, hosts, gateway, scannedAt: new Date().toISOString(), addressCount: ips.length };
 }
 
 /* ---------- Etat partage / cache + verrou anti-scans concurrents ----------
@@ -582,6 +627,10 @@ function getState() {
 
 module.exports = {
   scanNetwork,
+  parseGatewayLinux,
+  parseGatewayDarwin,
+  parseGatewayWin32,
+  defaultGatewayIp,
   getState,
   onScan,
   detectSubnets,

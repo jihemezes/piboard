@@ -1,6 +1,6 @@
 /* ============================================================
    PiBoard - app.js
-   Version 1.180.0
+   Version 1.181.0
 
    Coeur du tableau de bord :
      - grille Gridstack (12 colonnes) et persistance serveur, plus un
@@ -1217,7 +1217,40 @@
     }
   }
 
+  /* 1.181.0 - Chargement des tuiles a la demande. Chaque tuile n'est
+     chargee qu'une fois (promesse memorisee) : au demarrage, seules
+     celles de la disposition (et leurs tuiles hebergees) ; les autres
+     juste apres, en tache de fond, ou a la premiere utilisation.
+     On-demand tile loading. Each tile loads once (memoized promise): at
+     startup only those in the layout (and their hosted tiles); the
+     others right after, in the background, or on first use. */
+  const widgetLoads = new Map();
+  function ensureWidget(id) {
+    const manifest = catalog.find((m) => m.id === id);
+    if (!manifest) return Promise.resolve(false);
+    return loadWidgetAssets(manifest);
+  }
+  /* Identifiants de tuiles cites dans la disposition (toutes pages et
+     tiroirs) / tile ids found anywhere in the layout (all pages, drawers) */
+  function usedWidgetIds(layout) {
+    const ids = new Set(["circuit", "logo", "slideshow"]); // hebergees / hosted
+    const known = new Set(catalog.map((m) => m.id));
+    (function walk(v) {
+      if (!v || typeof v !== "object") return;
+      if (Array.isArray(v)) { v.forEach(walk); return; }
+      if (typeof v.widget === "string" && known.has(v.widget)) ids.add(v.widget);
+      for (const k in v) walk(v[k]);
+    })(layout);
+    return ids;
+  }
+
   function loadWidgetAssets(manifest) {
+    if (widgetLoads.has(manifest.id)) return widgetLoads.get(manifest.id);
+    const p = loadWidgetAssetsNow(manifest);
+    widgetLoads.set(manifest.id, p);
+    return p;
+  }
+  function loadWidgetAssetsNow(manifest) {
     return new Promise((resolve) => {
       const base = "widgets/" + manifest.dir + "/";
       const bust = assetVersion ? "?v=" + encodeURIComponent(assetVersion) : "";
@@ -2500,6 +2533,13 @@
     if (!body) return;
     const Klass = widgetClasses.get(rec.conf.widget);
     if (!Klass) {
+      // 1.181.0 : tuile pas encore chargee -> on la charge puis on relance.
+      // Tile not loaded yet -> load it, then start again.
+      if (!rec.pbLoadTried && catalog.some((m) => m.id === rec.conf.widget)) {
+        rec.pbLoadTried = true;
+        ensureWidget(rec.conf.widget).then(() => { if (rec.el.isConnected !== false) startWidget(rec); });
+        return;
+      }
       body.innerHTML = `<div class="tile-error">${i18n.t("tile.error")}</div>`;
       return;
     }
@@ -12578,9 +12618,29 @@
     applyDisplayMode();
 
     catalog = await apiGet("/api/widgets");
-    await Promise.all(catalog.map(loadWidgetAssets));
+    const bootLayout = await apiGet("/api/layout");
+    const bootIds = usedWidgetIds(bootLayout);
+    await Promise.all(catalog.filter((m) => bootIds.has(m.id)).map(loadWidgetAssets));
 
-    await renderLayout(await apiGet("/api/layout"));
+    await renderLayout(bootLayout);
+    const pbLayoutMs = Math.round(performance.now());
+
+    /* Les autres tuiles se chargent maintenant, sans retarder l'affichage.
+       Other tiles load now, without delaying the display. */
+    window.PiBoard.widgetsReady = Promise.all(catalog.map(loadWidgetAssets)).then(() => {
+      const timing = {
+        layoutMs: pbLayoutMs,
+        allWidgetsMs: Math.round(performance.now()),
+        widgetsAtBoot: catalog.filter((m) => bootIds.has(m.id)).length,
+        widgetsTotal: catalog.length
+      };
+      try {
+        const fp = performance.getEntriesByType && performance.getEntriesByType("paint").find((e) => e.name === "first-contentful-paint");
+        if (fp) timing.firstPaintMs = Math.round(fp.startTime);
+      } catch (e) { /* noop */ }
+      window.PiBoard.startupTiming = timing;
+      fetch("/api/startup-timing", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(timing) }).catch(() => {});
+    });
 
     initSse();
 
