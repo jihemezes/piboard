@@ -112,6 +112,10 @@ echo "==> Droit d'eteindre la machine depuis PiBoard / right to power off from P
 # installed before 1.104.0 (updates do not touch /etc).
 bash "$APP_DIR/install/enable-poweroff.sh" "$RUN_USER" || true
 
+# Icone « PiBoard » du bureau : redemarrer le serveur sans mot de passe (1.180.0).
+# Desktop "PiBoard" icon: restart the server without a password.
+bash "$APP_DIR/install/enable-launcher.sh" "$RUN_USER" || true
+
 # ---------- 3. Kiosque (optionnel) ----------
 if [[ "$KIOSK" -eq 1 ]]; then
   # cage (compositeur Wayland minimal) ne fonctionne que si RIEN d'autre ne

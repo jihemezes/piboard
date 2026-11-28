@@ -536,3 +536,29 @@ sudo systemctl daemon-reload
 rm -rf ~/.config/labwc/autostart   # if the labwc method was used: only remove the PiBoard block
 rm -rf /path/to/piboard            # the project folder, with your data in data/
 ```
+
+### Relancer PiBoard depuis le bureau (icône « PiBoard », 1.180.0)
+
+Sur un Pi avec bureau, PiBoard crée tout seul une icône **PiBoard** sur le bureau et une entrée **PiBoard**
+dans le menu des applications (Accessoires). Un double-clic relance **complètement** PiBoard : il ferme
+l'affichage plein écran s'il tourne, redémarre le serveur, attend qu'il réponde puis rouvre le tableau en
+plein écran — pratique après « Revenir au bureau », sans redémarrer le Pi.
+
+Pour que l'icône redémarre le serveur **sans demander de mot de passe**, lancez une seule fois, depuis le
+dossier de PiBoard :
+
+```bash
+sudo bash install/enable-launcher.sh
+```
+
+(Une installation neuve avec `install.sh` le fait déjà.) Sans cette autorisation, l'icône fonctionne aussi :
+le système demande simplement le mot de passe. Journal de la dernière relance : `$XDG_RUNTIME_DIR/piboard-launch.log`.
+Pour ne pas créer l'icône : `Environment=PIBOARD_NO_LAUNCHER=1` dans le service.
+
+### Relaunching PiBoard from the desktop ("PiBoard" icon, 1.180.0)
+
+On a Pi with a desktop, PiBoard creates a **PiBoard** desktop icon and a **PiBoard** entry in the
+applications menu (Accessories). Double-click it to **fully** relaunch PiBoard: it closes the full-screen
+display if running, restarts the server, waits for it, then reopens the dashboard full screen — handy after
+"Return to the desktop", without rebooting. To restart the server **without a password**, run once from
+the PiBoard folder: `sudo bash install/enable-launcher.sh` (a fresh `install.sh` already does it).

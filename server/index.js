@@ -4151,7 +4151,17 @@ function start(options) {
 }
 
 if (require.main === module) {
-  start().catch((e) => {
+  start().then(() => {
+    /* Icone « PiBoard » du bureau et du menu (Linux avec bureau, 1.180.0) :
+       relance complete sans redemarrer. Voir server/desktopLauncher.js.
+       Desktop / menu "PiBoard" icon on Linux. */
+    try {
+      const r = require("./desktopLauncher").ensureLauncher({ platformId: platform.id, desktopApp: platform.isDesktopApp() });
+      if (r.done && r.written.length) console.log("[piboard] icone PiBoard creee / PiBoard icon written:", r.written.join(", "));
+    } catch (e) {
+      console.warn("[piboard] icone PiBoard non creee / PiBoard icon not written:", e.message || e);
+    }
+  }).catch((e) => {
     console.error(`[piboard] impossible de demarrer le serveur / cannot start server: ${e.message || e}`);
     process.exit(1);
   });

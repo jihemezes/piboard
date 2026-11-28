@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.180.0
+
+- **Raspberry Pi / Linux avec bureau : icône « PiBoard » pour relancer complètement PiBoard** sans redémarrer
+  (après « Revenir au bureau » par exemple). Le serveur crée au démarrage `~/.local/share/applications/piboard.desktop`
+  et `piboard.desktop` dans le dossier Bureau de l'utilisateur (`user-dirs.dirs` respecté), seulement sous Linux
+  avec bureau, hors application de bureau, réécrits seulement s'ils changent (`server/desktopLauncher.js`,
+  désactivable par `PIBOARD_NO_LAUNCHER=1`).
+- `install/piboard-launch.sh` : ferme le kiosque (lwrespawn/chromium), redémarre `piboard.service`
+  (`--no-ask-password`, sinon `pkexec`, sinon continue si le serveur répond), attend le serveur (60 s), rouvre
+  Chromium en kiosque (via `lwrespawn` s'il existe). Journal : `$XDG_RUNTIME_DIR/piboard-launch.log`.
+- `install/enable-launcher.sh` (sudo, une fois ; appelé par `install.sh`) : règle polkit autorisant l'utilisateur
+  du service à redémarrer `piboard.service`, et rien d'autre.
+- Test : `desktopLauncher.test.js`. Aide FR/EN (« Revenir au bureau ») et INSTALL.md.
+
 ## 1.179.0
 
 - **Application de bureau : repli de mise à jour.** Juste après une publication, la release la plus récente peut

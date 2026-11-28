@@ -32,6 +32,22 @@
 
 # Nouveautes / What's new
 
+## 1.180.0
+
+**Raspberry Pi : une icône pour relancer PiBoard**
+
+Après « Revenir au bureau », plus besoin de redémarrer le Pi : double-cliquez sur l'icône **PiBoard** du
+bureau (ou choisissez PiBoard dans le menu des applications). Elle relance complètement PiBoard, serveur
+compris, et rouvre le tableau en plein écran. L'icône est créée automatiquement.
+
+---
+
+**Raspberry Pi: an icon to relaunch PiBoard**
+
+After "Return to the desktop", no need to reboot the Pi any more: double-click the **PiBoard** icon on the
+desktop (or pick PiBoard in the applications menu). It fully relaunches PiBoard, server included, and
+reopens the dashboard full screen. The icon is created automatically.
+
 ## 1.179.0
 
 **Mises à jour : plus d'attente juste après une publication**
